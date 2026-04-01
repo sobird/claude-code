@@ -1,18 +1,18 @@
 {
-  "name": "@sobird/murph",
+  "name": "@sobird/claude-code",
   "type": "module",
-  "version": "1.3.1",
+  "version": "2.1.88",
   "packageManager": "pnpm@10.30.3",
-  "description": "A pristine TypeScript template for rapid project inception.",
+  "description": "Use Claude, Anthropic's AI assistant, right from your terminal. Claude can understand your codebase, edit files, run terminal commands, and handle entire workflows for you.",
   "author": "sobird",
   "license": "MIT",
-  "homepage": "https://github.com/sobird/murph",
+  "homepage": "https://github.com/sobird/claude-code",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sobird/murph.git"
+    "url": "git+https://github.com/sobird/claude-code.git"
   },
   "bugs": {
-    "url": "https://github.com/sobird/murph/issues"
+    "url": "https://github.com/sobird/claude-code/issues"
   },
   "keywords": [
     "typescript"
@@ -20,6 +20,9 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "claude": "cli.js"
+  },
   "files": [
     "dist"
   ],
