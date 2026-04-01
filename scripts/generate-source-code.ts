@@ -3,6 +3,9 @@
  *
  * ```typescript
  * tsx scripts/generate-source-code.ts
+ *
+ * // or
+ * bun run scripts/generate-source-code.ts
  * ```
  *
  * sobird<i@sobird.me> at 2026/04/01 4:45:05 created.
@@ -28,10 +31,10 @@ await SourceMapConsumer.with(rawSourceMap, null, (consumer) => {
 
     fs.mkdirSync(path.dirname(filename), { recursive: true });
 
-    const content = consumer.sourceContentFor(file);
+    const content = consumer.sourceContentFor(file) ?? '';
 
-    if (content !== null) {
-      fs.writeFileSync(filename, content, 'utf-8');
-    }
+    // eslint-disable-next-line no-console
+    console.log(filename);
+    fs.writeFileSync(filename, content, 'utf-8');
   });
 });
