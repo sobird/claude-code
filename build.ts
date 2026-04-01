@@ -11,7 +11,7 @@ await rm(outdir, { recursive: true, force: true });
 const result = await Bun.build({
   entrypoints: ['src/entrypoints/cli.tsx'],
   outdir,
-  target: 'bun',
+  target: 'node',
   define: {
     'MACRO.VERSION': `"${version}"`,
     'MACRO.BUILD_TIME': `"${new Date().toISOString()}"`,

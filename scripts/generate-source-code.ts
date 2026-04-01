@@ -31,6 +31,7 @@ await SourceMapConsumer.with(rawSourceMap, null, (consumer) => {
 
     fs.mkdirSync(path.dirname(filename), { recursive: true });
 
+    // todo remove //# sourceMappingURL=data:application/json.*
     const content = consumer.sourceContentFor(file) ?? '';
 
     // eslint-disable-next-line no-console
