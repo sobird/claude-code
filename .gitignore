@@ -15,6 +15,7 @@ node_modules
 dist
 *.tsbuildinfo
 cli.js.map
+cli.js
 
 # Testing
 coverage
