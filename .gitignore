@@ -1,0 +1,38 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# System
+.DS_Store
+
+# Logs
+*.log
+*-debug.log*
+*-error.log*
+
+# Dependencies
+node_modules
+
+# Build
+dist
+*.tsbuildinfo
+
+# Testing
+coverage
+.vitest
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Editor directories and files
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
