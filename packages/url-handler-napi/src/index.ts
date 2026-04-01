@@ -1,28 +1,28 @@
-import { createRequire } from 'module'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-type UrlHandlerNapi = {
-  waitForUrlEvent(timeoutMs: number): string | null
+interface UrlHandlerNapi {
+  waitForUrlEvent: (timeoutMs: number) => null | string;
 }
 
-let cachedModule: UrlHandlerNapi | null = null
+let cachedModule: null | UrlHandlerNapi = null;
 
-function loadModule(): UrlHandlerNapi | null {
+function loadModule(): null | UrlHandlerNapi {
   if (cachedModule) {
-    return cachedModule
+    return cachedModule;
   }
 
   // Only works on macOS
   if (process.platform !== 'darwin') {
-    return null
+    return null;
   }
 
   try {
     if (process.env.URL_HANDLER_NODE_PATH) {
       // Bundled mode - use the env var path
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      cachedModule = require(process.env.URL_HANDLER_NODE_PATH) as UrlHandlerNapi
+      cachedModule = require(process.env.URL_HANDLER_NODE_PATH) as UrlHandlerNapi;
     } else {
       // Dev mode - load from vendor directory
       const modulePath = join(
@@ -31,12 +31,12 @@ function loadModule(): UrlHandlerNapi | null {
         'url-handler',
         `${process.arch}-darwin`,
         'url-handler.node',
-      )
-      cachedModule = createRequire(import.meta.url)(modulePath) as UrlHandlerNapi
+      );
+      cachedModule = createRequire(import.meta.url)(modulePath) as UrlHandlerNapi;
     }
-    return cachedModule
+    return cachedModule;
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -49,10 +49,10 @@ function loadModule(): UrlHandlerNapi | null {
  * Returns the URL string if one was received, or null.
  * Only functional on macOS — returns null on other platforms.
  */
-export function waitForUrlEvent(timeoutMs: number): string | null {
-  const mod = loadModule()
+export function waitForUrlEvent(timeoutMs: number): null | string {
+  const mod = loadModule();
   if (!mod) {
-    return null
+    return null;
   }
-  return mod.waitForUrlEvent(timeoutMs)
+  return mod.waitForUrlEvent(timeoutMs);
 }

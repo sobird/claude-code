@@ -15,10 +15,10 @@ const result = await Bun.build({
   define: {
     'MACRO.VERSION': `"${version}"`,
     'MACRO.BUILD_TIME': `"${new Date().toISOString()}"`,
-    'MACRO.ISSUES_EXPLAINER': '"production"',
-    'MACRO.PACKAGE_URL': '""',
-    'MACRO.README_URL': '""',
-    'MACRO.FEEDBACK_CHANNEL': '""',
+    'MACRO.ISSUES_EXPLAINER': '"report the issue at https://github.com/sobird/claude-code/issues"',
+    'MACRO.FEEDBACK_CHANNEL': '"https://github.com/sobird/claude-code/issues"',
+    'MACRO.PACKAGE_URL': '"@sobird/claude-code"',
+    'MACRO.README_URL': '"https://code.claude.com/docs/en/overview"',
   },
 });
 

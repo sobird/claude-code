@@ -89,3 +89,9 @@ declare module '*.css' {
   const content: string
   export default content
 }
+
+declare namespace NodeJS {
+  interface ProcessEnv {
+    AUDIO_CAPTURE_NODE_PATH?: string;
+  }
+}

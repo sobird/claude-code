@@ -1,11 +1,11 @@
 {
-  "name": "color-diff-napi",
+  "name": "image-processor-napi",
   "type": "module",
   "version": "1.0.0",
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "highlight.js": "latest"
+    "sharp": "^0.33.5"
   }
 }

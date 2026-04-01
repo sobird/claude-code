@@ -1,5 +1,5 @@
 {
-  "name": "modifiers-napi",
+  "name": "url-handler-napi",
   "type": "module",
   "version": "1.0.0",
   "private": true,

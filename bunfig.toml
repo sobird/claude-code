@@ -1,2 +1,7 @@
 [define]
 "MACRO.VERSION" = "'2.1.88'"
+"MACRO.BUILD_TIME" = "''"
+"MACRO.ISSUES_EXPLAINER" = "'report the issue at https://github.com/sobird/claude-code/issues'"
+"MACRO.FEEDBACK_CHANNEL"= "'https://github.com/sobird/claude-code/issues'"
+"MACRO.PACKAGE_URL"= "'@sobird/claude-code'"
+"MACRO.README_URL"= "'https://code.claude.com/docs/en/overview'"
