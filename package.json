@@ -30,7 +30,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "bun run build.ts",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "test": "vitest run --passWithNoTests --coverage",
