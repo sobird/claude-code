@@ -2,7 +2,6 @@
   "name": "@sobird/claude-code",
   "type": "module",
   "version": "2.1.88",
-  "packageManager": "pnpm@10.30.3",
   "description": "Use Claude, Anthropic's AI assistant, right from your terminal. Claude can understand your codebase, edit files, run terminal commands, and handle entire workflows for you.",
   "author": "sobird",
   "license": "MIT",
@@ -156,8 +155,6 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "source-map": "^0.7.6",
-    "tsup": "^8.5.1",
-    "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vitest": "^4.1.0"
   },
