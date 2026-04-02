@@ -9,5 +9,5 @@ export const define = {
   'MACRO.PACKAGE_URL': JSON.stringify(name),
   'MACRO.VERSION_CHANGELOG': JSON.stringify(''),
   //
-  'MACRO.USER_TYPE': JSON.stringify('external'),
+  'MACRO.USER_TYPE': JSON.stringify('ant'),
 };
