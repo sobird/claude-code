@@ -130,6 +130,7 @@
       "name": "@ant/claude-for-chrome-mcp",
       "version": "1.0.0",
       "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.29.0",
         "ws": "^8.20.0",
       },
       "devDependencies": {

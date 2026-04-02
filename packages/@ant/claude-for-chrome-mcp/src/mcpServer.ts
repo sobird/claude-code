@@ -1,16 +1,18 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+
+import type { ClaudeForChromeContext, SocketClient } from './types.js';
+
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+} from '@modelcontextprotocol/sdk/types.js';
 
-import { createBridgeClient } from "./bridgeClient.js";
-import { BROWSER_TOOLS } from "./browserTools.js";
-import { createMcpSocketClient } from "./mcpSocketClient.js";
-import { createMcpSocketPool } from "./mcpSocketPool.js";
-import { handleToolCall } from "./toolCalls.js";
-import type { ClaudeForChromeContext, SocketClient } from "./types.js";
+import { createBridgeClient } from './bridgeClient.js';
+import { BROWSER_TOOLS } from './browserTools.js';
+import { createMcpSocketClient } from './mcpSocketClient.js';
+import { createMcpSocketPool } from './mcpSocketPool.js';
+import { handleToolCall } from './toolCalls.js';
 
 /**
  * Create the socket/bridge client for the Chrome extension MCP server.
@@ -34,13 +36,12 @@ export function createClaudeForChromeMcpServer(
   const { serverName, logger } = context;
 
   // Choose transport: bridge (WebSocket) > socket pool (multi-profile) > single socket.
-  const socketClient =
-    existingSocketClient ?? createChromeSocketClient(context);
+  const socketClient = existingSocketClient ?? createChromeSocketClient(context);
 
   const server = new Server(
     {
       name: serverName,
-      version: "1.0.0",
+      version: '1.0.0',
     },
     {
       capabilities: {
@@ -57,7 +58,7 @@ export function createClaudeForChromeMcpServer(
     return {
       tools: context.bridgeConfig
         ? BROWSER_TOOLS
-        : BROWSER_TOOLS.filter((t) => t.name !== "switch_browser"),
+        : BROWSER_TOOLS.filter(t => t.name !== 'switch_browser'),
     };
   });
 
