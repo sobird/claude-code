@@ -15,7 +15,7 @@ const result = await Bun.build({
   format: 'esm',
   // minify: true,
   // compile: true,
-  define,
+  define: define(),
 });
 
 if (!result.success) {

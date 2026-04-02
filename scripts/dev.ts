@@ -1,6 +1,6 @@
 import { define } from './define';
 
-const defineArgs = Object.entries(define).flatMap(([k, v]) => ['-d', `${k}:${v}`]);
+const defineArgs = Object.entries(define()).flatMap(([k, v]) => ['-d', `${k}:${v}`]);
 
 const result = Bun.spawnSync(
   ['bun', ...defineArgs, 'src/entrypoints/cli.tsx', ...process.argv.slice(2)],

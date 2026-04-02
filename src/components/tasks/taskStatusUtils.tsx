@@ -96,7 +96,7 @@ export function shouldHideTasksFooter(tasks: {
   if (!showSpinnerTree) return false;
   let hasVisibleTask = false;
   for (const t of Object.values(tasks) as TaskState[]) {
-    if (!isBackgroundTask(t) || MACRO.USER_TYPE === 'ant' && isPanelAgentTask(t)) {
+    if (!isBackgroundTask(t) || BUILD_TARGET === 'ant' && isPanelAgentTask(t)) {
       continue;
     }
     hasVisibleTask = true;

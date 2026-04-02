@@ -25,7 +25,7 @@ export function renderToolResultMessage(output: Output, _progressMessagesForMess
 }: {
   verbose: boolean;
 }): React.ReactNode {
-  if (MACRO.USER_TYPE === 'ant') {
+  if (BUILD_TARGET === 'ant') {
     return null;
   }
   const rawCommand = output.command ?? '';

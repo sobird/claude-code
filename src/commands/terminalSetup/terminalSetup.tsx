@@ -119,7 +119,7 @@ export async function setupTerminal(theme: ThemeName): Promise<string> {
   maybeMarkProjectOnboardingComplete();
 
   // Install shell completions (ant-only, since the completion command is ant-only)
-  if (MACRO.USER_TYPE === 'ant') {
+  if (BUILD_TARGET === 'ant') {
     result += await setupShellCompletion(theme);
   }
   return result;
