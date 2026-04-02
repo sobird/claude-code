@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises';
 
-import { define } from './define';
+import { define, FEATURES } from './config';
 
 const outdir = 'dist';
 
@@ -16,6 +16,7 @@ const result = await Bun.build({
   // minify: true,
   // compile: true,
   define: define(),
+  features: FEATURES,
 });
 
 if (!result.success) {

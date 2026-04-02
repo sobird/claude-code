@@ -15,12 +15,10 @@ import type { RawSourceMap } from 'source-map';
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { SourceMapConsumer } from 'source-map';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = import.meta.dir;
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const rawSourceMap: RawSourceMap = JSON.parse(fs.readFileSync('cli.js.map', 'utf8'));

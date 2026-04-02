@@ -1,4 +1,4 @@
-import { define } from './define';
+import { define } from './config';
 
 const defineArgs = Object.entries(define()).flatMap(([k, v]) => ['-d', `${k}:${v}`]);
 
