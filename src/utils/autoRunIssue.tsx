@@ -100,7 +100,7 @@ export function shouldAutoRunIssue(reason: AutoRunIssueReason): boolean {
  */
 export function getAutoRunCommand(reason: AutoRunIssueReason): string {
   // Only ant builds have the /good-claude command
-  if ("external" === 'ant' && reason === 'feedback_survey_good') {
+  if (MACRO.USER_TYPE === 'ant' && reason === 'feedback_survey_good') {
     return '/good-claude';
   }
   return '/issue';

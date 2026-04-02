@@ -8,4 +8,6 @@ export const define = {
   'MACRO.NATIVE_PACKAGE_URL': JSON.stringify(name),
   'MACRO.PACKAGE_URL': JSON.stringify(name),
   'MACRO.VERSION_CHANGELOG': JSON.stringify(''),
+  //
+  'MACRO.USER_TYPE': JSON.stringify('external'),
 };

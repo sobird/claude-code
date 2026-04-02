@@ -15,6 +15,7 @@ declare namespace MACRO {
   export const NATIVE_PACKAGE_URL: string
   export const PACKAGE_URL: string
   export const VERSION_CHANGELOG: string
+  export const USER_TYPE: string
 }
 declare function MACRO<T>(fn: () => T): T
 
