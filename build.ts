@@ -12,6 +12,8 @@ const result = await Bun.build({
   entrypoints: ['src/entrypoints/cli.tsx'],
   outdir,
   target: 'node',
+  format: 'esm',
+  minify: true,
   define: {
     'MACRO.VERSION': `"${version}"`,
     'MACRO.BUILD_TIME': `"${new Date().toISOString()}"`,

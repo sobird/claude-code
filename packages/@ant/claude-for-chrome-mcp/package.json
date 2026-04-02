@@ -1,13 +1,14 @@
 {
   "name": "@ant/claude-for-chrome-mcp",
   "version": "1.0.0",
+  "private": true,
   "description": "Claude for Chrome MCP package",
   "main": "src/index.ts",
   "types": "src/index.ts",
-  "files": [
-    "src/"
-  ],
-  "scripts": {
-    "build": "echo 'No build step required - pure TypeScript'"
+  "dependencies": {
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
   }
 }

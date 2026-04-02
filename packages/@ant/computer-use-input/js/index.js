@@ -1,9 +1,9 @@
-const path = require("path");
+const path = require('node:path');
 
 // Discriminated union: { isSupported: false } on non-darwin,
 // { isSupported: true, ...nativeFns } on darwin. Cross-platform consumers
 // (claude-cli-internal) require() unconditionally and narrow on isSupported.
-if (process.platform !== "darwin") {
+if (process.platform !== 'darwin') {
   module.exports = { isSupported: false };
 } else {
   // COMPUTER_USE_INPUT_NODE_PATH: escape hatch for bundlers. Bun's --compile
@@ -18,8 +18,8 @@ if (process.platform !== "darwin") {
   // running under libuv must pump CFRunLoop while key()/keys() are pending —
   // e.g. claude-cli-internal borrows @ant/computer-use-swift's _drainMainRunLoop.
   const native = require(
-    process.env.COMPUTER_USE_INPUT_NODE_PATH ??
-      path.resolve(__dirname, "../prebuilds/computer-use-input.node"),
+    process.env.COMPUTER_USE_INPUT_NODE_PATH
+    ?? path.resolve(__dirname, '../prebuilds/computer-use-input.node'),
   );
   module.exports = { isSupported: true, ...native };
 }

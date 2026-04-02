@@ -1,13 +1,13 @@
 {
   "name": "@ant/computer-use-mcp",
+  "type": "module",
   "version": "1.0.0",
-  "packageManager": "pnpm@10.30.3",
-  "description": "",
-  "author": "",
-  "license": "ISC",
-  "keywords": [],
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./sentinelApps": "./src/sentinelApps.ts",
+    "./types": "./src/types.ts"
+  },
   "main": "src/index.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  }
+  "types": "src/index.ts"
 }
