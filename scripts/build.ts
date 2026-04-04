@@ -4,6 +4,8 @@ import { BANNER, define, FEATURES } from './config';
 
 const outdir = 'dist';
 
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 // Clean output directory
 await rm(outdir, { recursive: true, force: true });
 
@@ -13,7 +15,7 @@ const result = await Bun.build({
   outdir,
   target: 'node',
   format: 'esm',
-  // minify: true,
+  minify: !isDevelopment,
   // compile: true,
   define: define(),
   features: FEATURES,

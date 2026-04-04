@@ -39,12 +39,20 @@ export type Message = {
   isVisibleInTranscriptOnly?: boolean
   attachment?: { type: string; toolUseID?: string; [key: string]: unknown }
   message: {
-    role?: string
     id?: string
-    content?: MessageContent
+    role: string
+    model?: string;
+    content: MessageContent
     usage?: BetaUsage | Record<string, unknown>
+    stop_reason?: string | null
+    stop_sequence?: string | null
     [key: string]: unknown
   }
+  snapshotFiles: {
+    key: string
+    path: string
+    content: string
+  }[]
   [key: string]: unknown
 }
 
