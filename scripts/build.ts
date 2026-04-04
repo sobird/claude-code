@@ -13,7 +13,7 @@ const result = await Bun.build({
   outdir,
   target: 'node',
   format: 'esm',
-  // minify: true,
+  minify: true,
   // compile: true,
   define: define(),
   // features: FEATURES,

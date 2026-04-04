@@ -13,32 +13,27 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           registry-url: https://registry.npmjs.org/
-          cache: pnpm
 
-      - name: Cache pnpm dependencies
+      - name: Cache bun dependencies
         id: cache
         uses: actions/cache@v5
         with:
           path: |
             node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
 
       - name: Install Dependencies
         if: steps.cache.outputs.cache-hit != 'true'
-        run: pnpm install
+        run: npm run setup
 
       - name: Build ☕️
-        run: |
-          pnpm build
+        run: npm run build
 
       - name: Publish to NPM
-        run: pnpm -r publish --access public --no-git-checks
+        run: npm -r publish --access public --no-git-checks

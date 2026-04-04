@@ -20,7 +20,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "claude": "cli.js"
+    "sobird": "dist/cli.js"
   },
   "files": [
     "dist"
@@ -33,8 +33,9 @@
     "build": "bun scripts/build.ts",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "test": "vitest run --passWithNoTests --coverage",
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
+    "setup": "bun install --ignore-scripts",
     "postinstall": "echo \"postinstall\"",
     "prepare": "husky"
   },
@@ -149,15 +150,13 @@
     "@types/semver": "^7.7.1",
     "@types/turndown": "^5.0.6",
     "@types/ws": "^8.18.1",
-    "@vitest/coverage-v8": "4.1.0",
     "bun": "^1.3.11",
     "eslint": "^9.39.4",
     "eslint-config-sobird": "^1.1.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "source-map": "^0.7.6",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.0"
+    "typescript": "^6.0.2"
   },
   "lint-staged": {
     "*": "eslint --fix"
