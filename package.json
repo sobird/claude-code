@@ -1,7 +1,7 @@
 {
   "name": "@sobird/claude-code",
   "type": "module",
-  "version": "2.1.88",
+  "version": "1.0.0",
   "description": "Use Claude, Anthropic's AI assistant, right from your terminal. Claude can understand your codebase, edit files, run terminal commands, and handle entire workflows for you.",
   "author": "sobird",
   "license": "MIT",
