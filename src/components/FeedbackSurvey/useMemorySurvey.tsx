@@ -117,7 +117,7 @@ export function useMemorySurvey(
 
   const shouldShowTranscriptPrompt = useCallback(
     (selected: FeedbackSurveyResponse) => {
-      if ("external" !== 'ant') {
+      if (process.env.USER_TYPE !== 'ant') {
         return false
       }
       if (selected !== 'bad' && selected !== 'good') {

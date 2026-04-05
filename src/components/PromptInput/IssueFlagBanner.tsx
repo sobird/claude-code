@@ -7,7 +7,7 @@ import { Box, Text } from '../../ink.js'
  * issues via /issue. Appears when friction is detected in the conversation.
  */
 export function IssueFlagBanner(): React.ReactNode {
-  if ("external" !== 'ant') {
+  if (process.env.USER_TYPE !== 'ant') {
     return null
   }
 

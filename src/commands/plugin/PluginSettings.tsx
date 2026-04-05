@@ -68,7 +68,7 @@ function MarketplaceList({
 }
 
 function McpRedirectBanner(): React.ReactNode {
-  if ("external" !== 'ant') {
+  if (process.env.USER_TYPE !== 'ant') {
     return null
   }
 

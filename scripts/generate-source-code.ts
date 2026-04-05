@@ -51,6 +51,7 @@ await SourceMapConsumer.with(rawSourceMap, null, (consumer) => {
       tsxFileCount += 1;
 
       content = content.replaceAll('"external" ===', 'process.env.USER_TYPE ===');
+      content = content.replaceAll('"external" !==', 'process.env.USER_TYPE !==');
       content = content.replaceAll('"production" ===', 'process.env.NODE_ENV ===');
     }
 

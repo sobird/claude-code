@@ -126,7 +126,7 @@ function processProgressMessages(
   isAgentRunning: boolean,
 ): ProcessedMessage[] {
   // Only process for ants
-  if ("external" !== 'ant') {
+  if (process.env.USER_TYPE !== 'ant') {
     return messages
       .filter(
         (m): m is ProgressMessage<AgentToolProgress> =>
