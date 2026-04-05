@@ -1,8 +1,0 @@
-{
-  "packages": {
-    ".": {
-      "release-type": "node",
-      "initial-version": "2.1.88"
-    }
-  }
-}
