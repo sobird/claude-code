@@ -46,3 +46,12 @@ export function createContinueConnector(content: any): ConnectorTextBlock {
 export function createStopConnector(content: any): ConnectorTextBlock {
   return new ConnectorTextBlock(CONNECTOR_TEXT_TYPES.STOP, content);
 }
+
+export type ConnectorTextDelta = {
+  type: string;
+  connector_text: string;
+  text?: string;
+  thinking?: string;
+  signature?: string;
+  [key: string]: unknown
+}
