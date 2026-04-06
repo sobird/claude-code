@@ -1,3 +1,2 @@
 // Auto-generated stub — replace with real implementation
-export {};
-export const OverflowTestTool: Record<string, unknown> = {};
+export const OverflowTestTool = { name: 'OverflowTestTool', isEnabled: () => false }

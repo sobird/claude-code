@@ -1,3 +1,3 @@
 // Auto-generated stub — replace with real implementation
 export {};
-export const WorkflowTool: Record<string, unknown> = {};
+export const WorkflowTool = { name: 'WorkflowTool', isEnabled: () => false }

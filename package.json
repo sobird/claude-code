@@ -25,7 +25,7 @@
   },
   "scripts": {
     "dev": "bun scripts/dev.ts",
-    "debug": "bun scripts/debug.ts",
+    "debug": "bun scripts/debug.ts --debug",
     "build": "bun scripts/build.ts",
     "lint": "eslint",
     "lint:fix": "eslint --fix",

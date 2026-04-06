@@ -1,3 +1,2 @@
 // Auto-generated stub — replace with real implementation
-export {};
-export const ReviewArtifactTool: Record<string, unknown> = {};
+export const ReviewArtifactTool = { name: 'ReviewArtifactTool', isEnabled: () => false }

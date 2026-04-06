@@ -1,3 +1,2 @@
 // Auto-generated stub — replace with real implementation
-export {};
-export const SubscribePRTool: Record<string, unknown> = {};
+export const SubscribePRTool = { name: 'SubscribePRTool', isEnabled: () => false }

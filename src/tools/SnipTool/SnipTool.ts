@@ -1,3 +1,3 @@
 // Auto-generated stub — replace with real implementation
 export {};
-export const SnipTool: Record<string, unknown> = {};
+export const SnipTool = { name: 'SnipTool', isEnabled: () => false }

@@ -108,9 +108,9 @@ export function define(
     'MACRO.NATIVE_PACKAGE_URL': JSON.stringify(name),
     'MACRO.PACKAGE_URL': JSON.stringify(name),
     'MACRO.VERSION_CHANGELOG': JSON.stringify(''),
-    //
-    'process.env.NODE_ENV': JSON.stringify(buildEnv),
-    'process.env.USER_TYPE': JSON.stringify(buildTraget),
+    // 测试使用.env中
+    // 'process.env.NODE_ENV': JSON.stringify(buildEnv),
+    // 'process.env.USER_TYPE': JSON.stringify(buildTraget),
   };
 }
 

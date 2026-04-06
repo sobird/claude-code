@@ -10,7 +10,7 @@
         "reveal": "always",
         "focus": false,
         "panel": "shared",
-        // "showReuseMessage": true,
+        "showReuseMessage": true,
         "clear": true
       },
       "isBackground": true,
@@ -22,7 +22,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".*Bun Inspector.*",
-          "endsPattern": "ws://localhost:6499/"
+          "endsPattern": ".*Listening:.*"
         }
       },
       "runOptions": {
