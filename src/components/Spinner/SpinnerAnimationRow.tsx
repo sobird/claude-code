@@ -60,6 +60,9 @@ export type SpinnerAnimationRowProps = {
   thinkingStatus: 'thinking' | number | null
   effortSuffix: string
 
+  // API metrics (for TTFT display, ant users only)
+  ttftText?: string | null
+
 }
 
 /**
@@ -93,6 +96,7 @@ export function SpinnerAnimationRow({
   leaderIsIdle = false,
   thinkingStatus,
   effortSuffix,
+  ttftText,
 }: SpinnerAnimationRowProps): React.ReactNode {
   const [viewportRef, time] = useAnimationFrame(reducedMotion ? null : 50)
 
@@ -202,6 +206,11 @@ export function SpinnerAnimationRow({
         : null
   let thinkingWidthValue = thinkingText ? stringWidth(thinkingText) : 0
 
+  // === TTFT text ===
+  const ttftTextValue = ttftText || null
+  const wantsTtft = ttftTextValue !== null
+  const ttftWidthValue = ttftTextValue ? stringWidth(ttftTextValue) : 0
+
   // === Progressive width gating ===
   const messageWidth = glimmerMessageWidth + 2
   const sep = SEP_WIDTH
@@ -236,6 +245,9 @@ export function SpinnerAnimationRow({
     totalTokens > 0 &&
     availableSpace > usedAfterTimer + tokensWidth
 
+  const showTtft =
+    wantsTtft &&
+    availableSpace > usedAfterTimer + tokensWidth + (showTokens ? sep : 0) + ttftWidthValue
 
   const thinkingOnly =
     showThinking &&
@@ -285,6 +297,13 @@ export function SpinnerAnimationRow({
             {!hasRunningTeammates && <SpinnerModeGlyph mode={mode} />}
             <Text dimColor>{tokenCount} tokens</Text>
           </Box>,
+        ]
+      : []),
+    ...(showTtft
+      ? [
+          <Text dimColor key="ttft">
+            {ttftTextValue}
+          </Text>,
         ]
       : []),
     ...(showThinking && thinkingText

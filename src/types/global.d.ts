@@ -23,29 +23,12 @@ declare function MACRO<T>(fn: () => T): T
 // Internal Anthropic-only identifiers (dead-code eliminated in open-source)
 // These are referenced inside `MACRO(() => ...)` or `false && ...` blocks.
 
-// Model resolution (internal)
-declare function resolveAntModel(model: string): import('../utils/model/antModels.js').AntModel | undefined
-declare function getAntModels(): import('../utils/model/antModels.js').AntModel[]
-declare function getAntModelOverrideConfig(): {
-  defaultSystemPromptSuffix?: string
-  [key: string]: unknown
-} | null
 
 // Companion/buddy observer (internal)
 declare function fireCompanionObserver(
   messages: unknown[],
   callback: (reaction: unknown) => void,
 ): void
-
-// Metrics (internal)
-type ApiMetricEntry = { ttftMs: number; firstTokenTime: number; lastTokenTime: number; responseLengthBaseline: number; endResponseLength: number }
-declare const apiMetricsRef: React.RefObject<ApiMetricEntry[]> | null
-declare function computeTtftText(metrics: ApiMetricEntry[]): string
-
-// Gate/feature system (internal)
-declare const Gates: Record<string, boolean>
-declare function GateOverridesWarning(): JSX.Element | null
-declare function ExperimentEnrollmentNotice(): JSX.Element | null
 
 // Hook timing threshold (re-exported from services/tools/toolExecution.ts)
 declare const HOOK_TIMING_DISPLAY_THRESHOLD_MS: number

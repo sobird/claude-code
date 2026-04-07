@@ -43,7 +43,7 @@ import {
   getCurrentTurnTokenBudget,
   getTurnOutputTokens,
 } from '../bootstrap/state.js'
-
+import { computeTtftText, type ApiMetricEntry } from '../utils/computeTtftText'
 import { TeammateSpinnerTree } from './Spinner/TeammateSpinnerTree.js'
 import { useAnimationFrame } from '../ink.js'
 import { getGlobalConfig } from '../utils/config.js'
@@ -68,6 +68,7 @@ type Props = {
   overrideShimmerColor?: keyof Theme | null
   overrideMessage?: string | null
   spinnerSuffix?: string | null
+  apiMetricsRef?: React.RefObject<ApiMetricEntry[]> | null
   verbose: boolean
   hasActiveTools?: boolean
   /** Leader's turn has completed (no active query). Used to suppress stall-red spinner when only teammates are running. */
@@ -123,6 +124,7 @@ function SpinnerWithVerbInner({
   overrideMessage,
   spinnerSuffix,
   verbose,
+  apiMetricsRef,
   hasActiveTools = false,
   leaderIsIdle = false,
 }: Props): React.ReactNode {
@@ -395,6 +397,7 @@ function SpinnerWithVerbInner({
         leaderIsIdle={leaderIsIdle}
         thinkingStatus={thinkingStatus}
         effortSuffix={effortSuffix}
+        ttftText={ttftText}
       />
       {showSpinnerTree && hasRunningTeammates ? (
         <TeammateSpinnerTree

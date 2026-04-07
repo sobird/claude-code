@@ -513,7 +513,7 @@ if (process.env.USER_TYPE !== 'ant' && isBeingDebugged()) {
   // Use process.exit directly here since we're in the top-level code before imports
   // and gracefulShutdown is not yet available
   // eslint-disable-next-line custom-rules/no-top-level-side-effects
-  process.exit(1)
+  // process.exit(1)
 }
 
 /**
