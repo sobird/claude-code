@@ -40,6 +40,7 @@
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",
     "@anthropic-ai/bedrock-sdk": "^0.26.4",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.96",
     "@anthropic-ai/foundry-sdk": "^0.2.3",
     "@anthropic-ai/mcpb": "^2.1.2",
     "@anthropic-ai/sandbox-runtime": "^0.0.46",
@@ -49,6 +50,7 @@
     "@aws-sdk/client-bedrock-runtime": "^3.1021.0",
     "@aws-sdk/client-sts": "^3.1021.0",
     "@aws-sdk/credential-provider-node": "^3.972.29",
+    "@aws-sdk/credential-providers": "^3.1026.0",
     "@azure/identity": "^4.13.1",
     "@commander-js/extra-typings": "^14.0.0",
     "@growthbook/growthbook": "^1.6.5",
@@ -83,6 +85,7 @@
     "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
     "cli-boxes": "^4.0.1",
+    "cli-highlight": "^2.1.11",
     "code-excerpt": "^4.0.0",
     "color-diff-napi": "workspace:*",
     "diff": "^8.0.4",
@@ -155,6 +158,7 @@
     "eslint": "^9.39.4",
     "eslint-config-sobird": "^1.1.1",
     "husky": "^9.1.7",
+    "knip": "^6.3.0",
     "lint-staged": "^16.4.0",
     "source-map": "^0.7.6",
     "typescript": "^6.0.2"

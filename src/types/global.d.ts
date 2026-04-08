@@ -19,11 +19,6 @@ declare namespace MACRO {
 }
 declare function MACRO<T>(fn: () => T): T
 
-// ============================================================================
-// Internal Anthropic-only identifiers (dead-code eliminated in open-source)
-// These are referenced inside `MACRO(() => ...)` or `false && ...` blocks.
-
-
 // Companion/buddy observer (internal)
 declare function fireCompanionObserver(
   messages: unknown[],
@@ -34,13 +29,6 @@ declare function fireCompanionObserver(
 declare function UltraplanChoiceDialog(props: Record<string, unknown>): JSX.Element | null
 declare function UltraplanLaunchDialog(props: Record<string, unknown>): JSX.Element | null
 // declare function launchUltraplan(...args: unknown[]): Promise<string>
-
-// T — Generic type parameter leaked from React compiler output
-// (react/compiler-runtime emits compiled JSX that loses generic type params)
-declare type T = unknown
-
-// ============================================================================
-// Ink custom JSX intrinsic elements — see src/types/ink-jsx.d.ts
 
 // ============================================================================
 // Bun text/file loaders — allow importing non-TS assets as strings
