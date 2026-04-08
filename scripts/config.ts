@@ -1,4 +1,17 @@
-import { bugs, name, version } from '../package.json';
+import { bugs, name, version } from '../package.json'
+
+export type BuildTarget = 'ant' | 'external'
+export type BuildEnv = 'development' | 'production' | 'test'
+
+export const defines = {
+  'MACRO.VERSION': JSON.stringify(version),
+  'MACRO.BUILD_TIME': JSON.stringify(new Date().toISOString()),
+  'MACRO.FEEDBACK_CHANNEL': JSON.stringify(bugs.url),
+  'MACRO.ISSUES_EXPLAINER': JSON.stringify(`report the issue at ${bugs.url}`),
+  'MACRO.NATIVE_PACKAGE_URL': JSON.stringify(name),
+  'MACRO.PACKAGE_URL': JSON.stringify(name),
+  'MACRO.VERSION_CHANGELOG': JSON.stringify(''),
+}
 
 export const features = [
   // 'ABLATION_BASELINE',
@@ -83,7 +96,7 @@ export const features = [
   // 'TREE_SITTER_BASH',
   // 'TREE_SITTER_BASH_SHADOW',
   // 'UDS_INBOX',
-  // 'ULTRAPLAN',
+  'ULTRAPLAN',
   // 'ULTRATHINK',
   // 'UNATTENDED_RETRY',
   // 'UPLOAD_USER_SETTINGS',
@@ -91,20 +104,7 @@ export const features = [
   'VOICE_MODE',
   // 'WEB_BROWSER_TOOL',
   // 'WORKFLOW_SCRIPTS',
-];
-
-export const defines = {
-  'MACRO.VERSION': JSON.stringify(version),
-  'MACRO.BUILD_TIME': JSON.stringify(new Date().toISOString()),
-  'MACRO.FEEDBACK_CHANNEL': JSON.stringify(bugs.url),
-  'MACRO.ISSUES_EXPLAINER': JSON.stringify(`report the issue at ${bugs.url}`),
-  'MACRO.NATIVE_PACKAGE_URL': JSON.stringify(name),
-  'MACRO.PACKAGE_URL': JSON.stringify(name),
-  'MACRO.VERSION_CHANGELOG': JSON.stringify(''),
-};
-
-export type BuildTarget = 'ant' | 'external';
-export type BuildEnv = 'development' | 'production' | 'test';
+]
 
 export function define(
   buildTraget: BuildTarget = 'external',
@@ -114,10 +114,11 @@ export function define(
     ...defines,
     'process.env.NODE_ENV': JSON.stringify(buildEnv),
     'process.env.USER_TYPE': JSON.stringify(buildTraget),
-  };
+  }
 }
 
-export const defineArgs = Object.entries(defines).flatMap(([k, v]) => ['-d', `${k}:${v}`]);
+export const defineArgs = Object.entries(defines).flatMap(([k, v]) => ['-d', `${k}:${v}`])
+export const featureArgs = features.flatMap(feature => ['--feature', feature])
 
 export const banner = `#!/usr/bin/env node
 // (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
@@ -125,6 +126,6 @@ export const banner = `#!/usr/bin/env node
 // Version: ${version}
 
 // Want to see the unminified source? We're hiring!
-// https://job-boards.greenhouse.io/anthropic/jobs/4816199008`;
+// https://job-boards.greenhouse.io/anthropic/jobs/4816199008`
 
-export const external = ['@vscode/ripgrep'];
+export const external = ['@vscode/ripgrep']
