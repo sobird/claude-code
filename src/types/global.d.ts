@@ -26,8 +26,8 @@ declare function fireCompanionObserver(
 ): void
 
 // Ultraplan (internal)
-declare function UltraplanChoiceDialog(props: Record<string, unknown>): JSX.Element | null
-declare function UltraplanLaunchDialog(props: Record<string, unknown>): JSX.Element | null
+// declare function UltraplanChoiceDialog(props: Record<string, unknown>): JSX.Element | null
+// declare function UltraplanLaunchDialog(props: Record<string, unknown>): JSX.Element | null
 // declare function launchUltraplan(...args: unknown[]): Promise<string>
 
 // ============================================================================

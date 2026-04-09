@@ -1,8 +1,8 @@
-import { defineArgs } from './config';
+import { defineArgs, featureArgs } from './config'
 
 const result = Bun.spawnSync(
-  ['bun', '--inspect-brk=/', ...defineArgs, 'src/entrypoints/cli.tsx', ...process.argv.slice(2)],
+  ['bun', '--inspect-brk=/', ...defineArgs, ...featureArgs, 'src/entrypoints/cli.tsx', ...process.argv.slice(2)],
   { stdio: ['inherit', 'inherit', 'inherit'] },
-);
+)
 
-process.exit(result.exitCode);
+process.exit(result.exitCode)

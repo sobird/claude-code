@@ -34,6 +34,8 @@ import {
 import type { TabStatusKind } from '../ink/hooks/use-tab-status.js'
 import { CostThresholdDialog } from '../components/CostThresholdDialog.js'
 import { IdleReturnDialog } from '../components/IdleReturnDialog.js'
+import { UltraplanLaunchDialog } from '../components/UltraplanLaunchDialog.js'
+import { UltraplanChoiceDialog } from '../components/UltraplanChoiceDialog.js'
 import * as React from 'react'
 import {
   useEffect,
@@ -6718,6 +6720,7 @@ export function REPL({
                           }
                           void launchUltraplan({
                             blurb,
+                            promptIdentifier: opts?.promptIdentifier,
                             getAppState: () => store.getState(),
                             setAppState,
                             signal: createAbortController().signal,

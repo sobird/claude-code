@@ -1,7 +1,7 @@
 import sobird from 'eslint-config-sobird'
 
 export default sobird({
-  // ignores: ["src/**/*"]
+  ignores: ['src/**/*'],
   stylistic: {
     semi: false,
   },

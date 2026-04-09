@@ -1,16 +1,15 @@
 import { Box, Text } from '../ink.js'
-import { saveGlobalConfig, getGlobalConfig} from '../utils/config.js'
+import { saveGlobalConfig, getGlobalConfig } from '../utils/config.js'
 import { Dialog } from 'src/components/design-system/Dialog.js'
 import { Select } from './CustomSelect/index.js'
 
-
 interface Props {
-  onDone: () => void
+  readonly onDone: () => void
 }
 
 export function UndercoverAutoCallout({ onDone }: Props): React.ReactNode {
   const handleConfirm = () => {
-    onDone();
+    onDone()
 
     saveGlobalConfig(current => ({
       ...current,
@@ -22,7 +21,8 @@ export function UndercoverAutoCallout({ onDone }: Props): React.ReactNode {
       title="⚠️ Undercover Mode Activated"
       subtitle="Auto-detection indicates you're working in a public/open-source environment. All outputs will be sanitized to prevent internal information leaks."
       onCancel={handleConfirm}
-      hideInputGuide>
+      hideInputGuide
+    >
       <Box flexDirection="column" marginBottom={1}>
         <Text bold>Undercover Mode Requirements:</Text>
         <Box flexDirection="column" marginLeft={2} marginTop={1}>
