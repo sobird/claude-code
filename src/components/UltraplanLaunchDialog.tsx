@@ -6,7 +6,7 @@ import { CCR_TERMS_URL } from 'src/commands/ultraplan.jsx'
 import { getGlobalConfig, saveGlobalConfig } from 'src/utils/config.js'
 import { useAppState, useSetAppState } from 'src/state/AppState.jsx'
 import { useRegisterOverlay } from 'src/context/overlayContext.js'
-import { getPromptIdentifier, getDialogConfig, PromptIdentifier } from 'src/utils/ultraplan/prompt.js'
+import { getPromptIdentifier, getDialogConfig, type PromptIdentifier } from 'src/utils/ultraplan/prompt.js'
 
 type ChoiceValue = 'run' | 'cancel'
 

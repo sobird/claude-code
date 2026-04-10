@@ -3,10 +3,9 @@ import simple_plan from './prompts/simple_plan.txt'
 import visual_plan from './prompts/visual_plan.txt'
 import three_subagents_with_critique from './prompts/three_subagents_with_critique.txt'
 
+export type PromptIdentifier = keyof typeof  PROMPTS
 
-export type PromptIdentifier = 'simple_plan' | 'visual_plan' | 'three_subagents_with_critique'
-
-const DEFAULT_PROMPT_IDENTIFIER = 'three_subagents_with_critique';
+const DEFAULT_PROMPT_IDENTIFIER = 'simple_plan';
 
 const PROMPTS = {
   simple_plan,
