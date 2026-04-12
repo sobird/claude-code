@@ -166,7 +166,7 @@
       "name": "color-diff-napi",
       "version": "1.0.0",
       "dependencies": {
-        "highlight.js": "latest",
+        "highlight.js": "^11.11.1",
       },
     },
     "packages/image-processor-napi": {
