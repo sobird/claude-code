@@ -6,6 +6,10 @@
       "name": "@sobird/claude-code",
       "dependencies": {
         "@alcalzone/ansi-tokenize": "^0.3.0",
+        "@ant/claude-for-chrome-mcp": "workspace:*",
+        "@ant/computer-use-input": "workspace:*",
+        "@ant/computer-use-mcp": "workspace:*",
+        "@ant/computer-use-swift": "workspace:*",
         "@anthropic-ai/bedrock-sdk": "^0.26.4",
         "@anthropic-ai/claude-agent-sdk": "^0.2.96",
         "@anthropic-ai/foundry-sdk": "^0.2.3",
@@ -103,10 +107,6 @@
         "zod": "^3.24.1",
       },
       "devDependencies": {
-        "@ant/claude-for-chrome-mcp": "workspace:*",
-        "@ant/computer-use-input": "workspace:*",
-        "@ant/computer-use-mcp": "workspace:*",
-        "@ant/computer-use-swift": "workspace:*",
         "@commitlint/cli": "^20.5.0",
         "@commitlint/config-conventional": "^20.5.0",
         "@commitlint/types": "^20.5.0",

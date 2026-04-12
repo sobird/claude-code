@@ -1,60 +1,75 @@
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
+export type ModifierKey = 'shift' | 'command' | 'control' | 'option'
 interface ModifiersNapi {
-  getModifiers: () => string[];
-  isModifierPressed: (modifier: string) => boolean;
+  getModifiers: () => ModifierKey[]
+  isModifierPressed: (modifier: ModifierKey) => boolean
 }
 
-let cachedModule: ModifiersNapi | null = null;
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+let cachedModule: ModifiersNapi | null = null
 
 function loadModule(): ModifiersNapi | null {
   if (cachedModule) {
-    return cachedModule;
+    return cachedModule
   }
 
   // Only works on macOS
   if (process.platform !== 'darwin') {
-    return null;
+    return null
   }
 
   try {
     if (process.env.MODIFIERS_NODE_PATH) {
       // Bundled mode - use the env var path
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      cachedModule = require(process.env.MODIFIERS_NODE_PATH) as ModifiersNapi;
+      cachedModule = require(process.env.MODIFIERS_NODE_PATH)
     } else {
-      // Dev mode - load from vendor directory
-      const modulePath = join(
-        dirname(fileURLToPath(import.meta.url)),
-        '..',
-        'modifiers-napi',
-        `${process.arch}-darwin`,
-        'modifiers.node',
-      );
-      cachedModule = createRequire(import.meta.url)(modulePath) as ModifiersNapi;
+      const platformDir = `${process.arch}-${process.platform}`
+      const candidates = [
+        // 本地编译出的
+        `build/Release/modifiers.node`,
+        `build/Debug/modifiers.node`,
+        `../build/Release/modifiers.node`,
+        `../build/Debug/modifiers.node`,
+        // 预编译好的
+        `vendor/modifiers-napi/${platformDir}/modifiers.node`,
+        `../vendor/modifiers-napi/${platformDir}/modifiers.node`,
+        `../../vendor/modifiers-napi/${platformDir}/modifiers.node`,
+        `../../../vendor/modifiers-napi/${platformDir}/modifiers.node`,
+      ]
+
+      for (const candidate of candidates) {
+        try {
+          cachedModule = createRequire(import.meta.url)(join(__dirname, candidate))
+          return cachedModule
+        } catch {
+          // try next
+        }
+      }
     }
-    return cachedModule;
+    return cachedModule
   } catch {
-    return null;
+    return null
   }
 }
 
-export function getModifiers(): string[] {
-  const mod = loadModule();
+export function getModifiers(): ModifierKey[] {
+  const mod = loadModule()
   if (!mod) {
-    return [];
+    return []
   }
-  return mod.getModifiers();
+  return mod.getModifiers()
 }
 
-export function isModifierPressed(modifier: string): boolean {
-  const mod = loadModule();
+export function isModifierPressed(modifier: ModifierKey): boolean {
+  const mod = loadModule()
   if (!mod) {
-    return false;
+    return false
   }
-  return mod.isModifierPressed(modifier);
+  return mod.isModifierPressed(modifier)
 }
 
 /**
@@ -63,5 +78,5 @@ export function isModifierPressed(modifier: string): boolean {
  */
 export function prewarm(): void {
   // Just call loadModule to cache it
-  loadModule();
+  loadModule()
 }

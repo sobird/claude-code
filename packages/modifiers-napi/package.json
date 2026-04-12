@@ -1,8 +1,14 @@
 {
   "name": "modifiers-napi",
-  "type": "module",
   "version": "1.0.0",
   "private": true,
+  "files": [
+    "index.js",
+    "binding.gyp",
+    "src/**/*"
+  ],
+  "type": "module",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "gypfile": true
 }
