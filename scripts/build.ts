@@ -1,11 +1,7 @@
-import type { BuildTarget } from './config'
-
 import { rm } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
-
-import {
-  banner, define, external, features,
-} from './config'
+import type { BuildTarget } from './config'
+import { banner, define, external, features } from './config'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 const outdir = 'dist'

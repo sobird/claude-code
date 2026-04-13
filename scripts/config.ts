@@ -106,10 +106,7 @@ export const features = [
   // 'WORKFLOW_SCRIPTS',
 ]
 
-export function define(
-  buildTraget: BuildTarget = 'external',
-  buildEnv: BuildEnv = 'production',
-) {
+export function define(buildTraget: BuildTarget = 'external', buildEnv: BuildEnv = 'production') {
   return {
     ...defines,
     'process.env.NODE_ENV': JSON.stringify(buildEnv),
@@ -118,7 +115,7 @@ export function define(
 }
 
 export const defineArgs = Object.entries(defines).flatMap(([k, v]) => ['-d', `${k}:${v}`])
-export const featureArgs = features.flatMap(feature => ['--feature', feature])
+export const featureArgs = features.flatMap((feature) => ['--feature', feature])
 
 export const banner = `#!/usr/bin/env node
 // (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
