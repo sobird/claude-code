@@ -95,20 +95,22 @@ async function isMarketplacePluginRelevant(
 const externalTips: Tip[] = [
   {
     id: 'new-user-warmup',
-    content: async () =>
-      `Start with small features or bug fixes, tell Claude to propose a plan, and verify its suggested edits`,
+    content: async (): Promise<string> => {
+      return `Start with small features or bug fixes, tell Claude to propose a plan, and verify its suggested edits`
+    },
     cooldownSessions: 3,
-    async isRelevant() {
+    async isRelevant(): Promise<boolean> {
       const config = getGlobalConfig()
       return config.numStartups < 10
     },
   },
   {
     id: 'plan-mode-for-complex-tasks',
-    content: async () =>
-      `Use Plan Mode to prepare for a complex request before making changes. Press ${getShortcutDisplay('chat:cycleMode', 'Chat', 'shift+tab')} twice to enable.`,
+    content: async (): Promise<string> => {
+      return `Use Plan Mode to prepare for a complex request before making changes. Press ${getShortcutDisplay('chat:cycleMode', 'Chat', 'shift+tab')} twice to enable.`
+    },
     cooldownSessions: 5,
-    isRelevant: async () => {
+    isRelevant: async (): Promise<boolean> => {
       if (process.env.USER_TYPE === 'ant') return false
       const config = getGlobalConfig()
       // Show to users who haven't used plan mode recently (7+ days)
@@ -120,10 +122,11 @@ const externalTips: Tip[] = [
   },
   {
     id: 'default-permission-mode-config',
-    content: async () =>
-      `Use /config to change your default permission mode (including Plan Mode)`,
+    content: async (): Promise<string> => {
+      return `Use /config to change your default permission mode (including Plan Mode)`
+    },
     cooldownSessions: 10,
-    isRelevant: async () => {
+    isRelevant: async (): Promise<boolean> => {
       try {
         const config = getGlobalConfig()
         const settings = getSettings_DEPRECATED()
@@ -142,10 +145,11 @@ const externalTips: Tip[] = [
   },
   {
     id: 'git-worktrees',
-    content: async () =>
-      'Use git worktrees to run multiple Claude sessions in parallel.',
+    content: async (): Promise<string> => {
+      return 'Use git worktrees to run multiple Claude sessions in parallel.'
+    },
     cooldownSessions: 10,
-    isRelevant: async () => {
+    isRelevant: async (): Promise<boolean> => {
       try {
         const config = getGlobalConfig()
         const worktreeCount = await getWorktreeCount()
@@ -157,10 +161,11 @@ const externalTips: Tip[] = [
   },
   {
     id: 'color-when-multi-clauding',
-    content: async () =>
-      'Running multiple Claude sessions? Use /color and /rename to tell them apart at a glance.',
+    content: async (): Promise<string> => {
+      return 'Running multiple Claude sessions? Use /color and /rename to tell them apart at a glance.'
+    },
     cooldownSessions: 10,
-    isRelevant: async () => {
+    isRelevant: async (): Promise<boolean> => {
       if (getCurrentSessionAgentColor()) return false
       const count = await countConcurrentSessions()
       return count >= 2
@@ -168,12 +173,13 @@ const externalTips: Tip[] = [
   },
   {
     id: 'terminal-setup',
-    content: async () =>
-      env.terminal === 'Apple_Terminal'
+    content: async (): Promise<string> => {
+      return env.terminal === 'Apple_Terminal'
         ? 'Run /terminal-setup to enable convenient terminal integration like Option + Enter for new line and more'
-        : 'Run /terminal-setup to enable convenient terminal integration like Shift + Enter for new line and more',
+        : 'Run /terminal-setup to enable convenient terminal integration like Shift + Enter for new line and more'
+    },
     cooldownSessions: 10,
-    async isRelevant() {
+    isRelevant: async (): Promise<boolean> => {
       const config = getGlobalConfig()
       if (env.terminal === 'Apple_Terminal') {
         return !config.optionAsMetaKeyInstalled
@@ -443,12 +449,12 @@ const externalTips: Tip[] = [
   },
   {
     id: 'desktop-shortcut',
-    content: async ctx => {
+    content: async (ctx: TipContext): Promise<string> => {
       const blue = color('suggestion', ctx.theme)
       return `Continue your session in Claude Code Desktop with ${blue('/desktop')}`
     },
     cooldownSessions: 15,
-    isRelevant: async () => {
+    isRelevant: async (): Promise<boolean> => {
       if (!getDesktopUpsellConfig().enable_shortcut_tip) return false
       return (
         process.platform === 'darwin' ||
@@ -489,24 +495,24 @@ const externalTips: Tip[] = [
   },
   {
     id: 'frontend-design-plugin',
-    content: async ctx => {
+    content: async (ctx: TipContext): Promise<string> => {
       const blue = color('suggestion', ctx.theme)
       return `Working with HTML/CSS? Install the frontend-design plugin:\n${blue(`/plugin install frontend-design@${OFFICIAL_MARKETPLACE_NAME}`)}`
     },
     cooldownSessions: 3,
-    isRelevant: async context =>
+    isRelevant: async (context?: TipContext): Promise<boolean> =>
       isMarketplacePluginRelevant('frontend-design', context, {
         filePath: /\.(html|css|htm)$/i,
       }),
   },
   {
     id: 'vercel-plugin',
-    content: async ctx => {
+    content: async (ctx: TipContext): Promise<string> => {
       const blue = color('suggestion', ctx.theme)
       return `Working with Vercel? Install the vercel plugin:\n${blue(`/plugin install vercel@${OFFICIAL_MARKETPLACE_NAME}`)}`
     },
     cooldownSessions: 3,
-    isRelevant: async context =>
+    isRelevant: async (context?: TipContext): Promise<boolean> =>
       isMarketplacePluginRelevant('vercel', context, {
         filePath: /(?:^|[/\\])vercel\.json$/i,
         cli: ['vercel'],
@@ -514,7 +520,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'effort-high-nudge',
-    content: async ctx => {
+    content: async (ctx: TipContext): Promise<string> => {
       const blue = color('suggestion', ctx.theme)
       const cmd = blue('/effort high')
       const variant = getFeatureValue_CACHED_MAY_BE_STALE<
@@ -525,7 +531,7 @@ const externalTips: Tip[] = [
         : `Working on something tricky? ${cmd} gives better first answers`
     },
     cooldownSessions: 3,
-    isRelevant: async () => {
+    isRelevant: async (): Promise<boolean> => {
       if (!is1PApiCustomer()) return false
       if (!modelSupportsEffort(getMainLoopModel())) return false
       if (getSettingsForSource('policySettings')?.effortLevel !== undefined) {
@@ -554,7 +560,7 @@ const externalTips: Tip[] = [
         : `Say ${blue('"fan out subagents"')} and Claude sends a team. Each one digs deep so nothing gets missed.`
     },
     cooldownSessions: 3,
-    isRelevant: async () => {
+    isRelevant: async (): Promise<boolean> => {
       if (!is1PApiCustomer()) return false
       return (
         getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>(
@@ -576,7 +582,7 @@ const externalTips: Tip[] = [
         : `${blue('/loop')} runs any prompt on a recurring schedule. Great for monitoring deploys, babysitting PRs, or polling status.`
     },
     cooldownSessions: 3,
-    isRelevant: async () => {
+    isRelevant: async (): Promise<boolean> => {
       if (!is1PApiCustomer()) return false
       if (!isKairosCronEnabled()) return false
       return (
@@ -597,7 +603,7 @@ const externalTips: Tip[] = [
         : `You have free guest passes to share · ${claude('/passes')}`
     },
     cooldownSessions: 3,
-    isRelevant: async () => {
+    isRelevant: async (): Promise<boolean> => {
       const config = getGlobalConfig()
       if (config.hasVisitedPasses) {
         return false
@@ -617,13 +623,15 @@ const externalTips: Tip[] = [
       return `${claude(`${amount} in extra usage, on us`)} · third-party apps · ${claude('/extra-usage')}`
     },
     cooldownSessions: 3,
-    isRelevant: async () => shouldShowOverageCreditUpsell(),
+    isRelevant: async (): Promise<boolean> => shouldShowOverageCreditUpsell(),
   },
   {
     id: 'feedback-command',
-    content: async () => 'Use /feedback to help us improve!',
+    content: async (): Promise<string> => {
+      return 'Use /feedback to help us improve!'
+    },
     cooldownSessions: 15,
-    async isRelevant() {
+    isRelevant: async (): Promise<boolean> => {
       if (process.env.USER_TYPE === 'ant') {
         return false
       }
@@ -637,17 +645,19 @@ const internalOnlyTips: Tip[] =
     ? [
         {
           id: 'important-claudemd',
-          content: async () =>
-            '[ANT-ONLY] Use "IMPORTANT:" prefix for must-follow CLAUDE.md rules',
+          content: async (): Promise<string> => {
+            return '[ANT-ONLY] Use "IMPORTANT:" prefix for must-follow CLAUDE.md rules'
+          },
           cooldownSessions: 30,
-          isRelevant: async () => true,
+          isRelevant: async (): Promise<boolean> => true,
         },
         {
           id: 'skillify',
-          content: async () =>
-            '[ANT-ONLY] Use /skillify at the end of a workflow to turn it into a reusable skill',
+          content: async (): Promise<string> => {
+            return '[ANT-ONLY] Use /skillify at the end of a workflow to turn it into a reusable skill'
+          },
           cooldownSessions: 15,
-          isRelevant: async () => true,
+          isRelevant: async (): Promise<boolean> => true,
         },
       ]
     : []
@@ -659,9 +669,9 @@ function getCustomTips(): Tip[] {
 
   return override.tips.map((content, i) => ({
     id: `custom-tip-${i}`,
-    content: async () => content,
+    content: async (): Promise<string> => content,
     cooldownSessions: 0,
-    isRelevant: async () => true,
+    isRelevant: async (): Promise<boolean> => true,
   }))
 }
 
