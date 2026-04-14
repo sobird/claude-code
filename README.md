@@ -1,6 +1,7 @@
 # @sobird/claude-code
 
 [![npm][npm]][npm-url]
+[![bun][bun]][bun-url]
 ![TypeScript][typescript]
 ![Node.js][node]
 ![CLI][cli]
@@ -8,51 +9,27 @@
 [![License][license]][license-url]
 [![Install Size][size]][size-url]
 
-Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows -- all through natural language commands. Use it in your terminal, IDE, or tag @claude on Github.
+## 开发调试
 
-**Learn more at [Claude Code Homepage](https://claude.com/product/claude-code)** | [Documentation](https://code.claude.com/docs/en/overview)
+打开`vscode`运行和调试面板，选择`⚡️ Attach to claude code`，点击`开始调试（F5）`。
 
-<img src="https://github.com/anthropics/claude-code/blob/main/demo.gif?raw=1" alt="claude-code-demo" />
+编译后调试（代码未压缩）
 
-## Get started
+按下 `command + shift + p`，输入 `Debug: JavaScript Debug Terminal`，回车。
+在`JavaScript Debug Terminal`终端面板下输入：
 
-1. Install Claude Code:
-
-```sh
-npm install -g @anthropic-ai/claude-code
+```bash
+node dist/cli.js
 ```
 
-2. Navigate to your project directory and run `claude`.
-
-## Configuration
-
-For detailed information about environment variables and configuration options, see our [Environment Variables Documentation](docs/environment-variables.md).
-
-## Reporting Bugs
-
-We welcome your feedback. Use the `/bug` command to report issues directly within Claude Code, or file a [GitHub issue](https://github.com/anthropics/claude-code/issues).
-
-## Connect on Discord
-
-Join the [Claude Developers Discord](https://anthropic.com/discord) to connect with other developers using Claude Code. Get help, share feedback, and discuss your projects with the community.
-
-## Data collection, usage, and retention
-
-When you use Claude Code, we collect feedback, which includes usage data (such as code acceptance or rejections), associated conversation data, and user feedback submitted via the `/bug` command.
-
-### How we use your data
-
-See our [data usage policies](https://code.claude.com/docs/en/data-usage).
-
-### Privacy safeguards
-
-We have implemented several safeguards to protect your data, including limited retention periods for sensitive information and restricted access to user session data.
-
-For full details, please review our [Commercial Terms of Service](https://www.anthropic.com/legal/commercial-terms) and [Privacy Policy](https://www.anthropic.com/legal/privacy).
+即可进入代码调试
 
 <!-- Badges -->
+
 [npm]: https://img.shields.io/npm/v/@sobird/claude-code.svg?style=flat-square&logo=npm&label=@sobird/claude-code
 [npm-url]: https://www.npmjs.com/package/@sobird/claude-code
+[bun]: https://img.shields.io/badge/bundler-Bun-black?style=flat-square&logo=bun
+[bun-url]: https://bun.sh/
 [build-status]: https://img.shields.io/github/actions/workflow/status/sobird/claude-code/release.yml?label=CI&logo=github&style=flat-square
 [build-status-url]: https://github.com/sobird/claude-code/actions
 [size]: https://img.shields.io/badge/dynamic/json?style=flat-square&label=mass&query=$.publish.pretty&url=https://packagephobia.com/v2/api.json?p=@sobird/claude-code&color=blueviolet
