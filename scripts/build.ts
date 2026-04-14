@@ -18,7 +18,7 @@ const { values } = parseArgs({
   allowPositionals: true,
 })
 
-const buildTraget: BuildTarget = Boolean(values.ant) ? 'ant' : 'external'
+const buildTraget: BuildTarget = values.ant ? 'ant' : 'external'
 
 // Bundle
 const result = await Bun.build({

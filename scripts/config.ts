@@ -106,10 +106,10 @@ export const features = [
   // 'WORKFLOW_SCRIPTS',
 ]
 
-export function define(buildTraget: BuildTarget = 'external', buildEnv: BuildEnv = 'production') {
+export function define(buildTraget: BuildTarget = 'external', _buildEnv: BuildEnv = 'production') {
   return {
     ...defines,
-    'process.env.NODE_ENV': JSON.stringify(buildEnv),
+    // 'process.env.NODE_ENV': JSON.stringify(_buildEnv),
     'process.env.USER_TYPE': JSON.stringify(buildTraget),
   }
 }
