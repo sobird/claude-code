@@ -1,22 +1,23 @@
 // Auto-generated stub — replace with real implementation
 import type { UUID } from 'crypto'
-import type {
-  ContentBlockParam,
-  ContentBlock,
-} from '@anthropic-ai/sdk/resources/index.mjs'
 import type { BetaUsage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import type {
-  BranchAction,
-  CommitKind,
-  PrAction,
-} from '../tools/shared/gitOperationTracking.js'
+import type { ContentBlockParam, ContentBlock } from '@anthropic-ai/sdk/resources/index.mjs'
+import type { BranchAction, CommitKind, PrAction } from '../tools/shared/gitOperationTracking.js'
+import type { ToolProgressData } from './tools.js'
 
 /**
  * Base message type with discriminant `type` field and common properties.
  * Individual message subtypes (UserMessage, AssistantMessage, etc.) extend
  * this with narrower `type` literals and additional fields.
  */
-export type MessageType = 'user' | 'assistant' | 'system' | 'attachment' | 'progress' | 'grouped_tool_use' | 'collapsed_read_search'
+export type MessageType =
+  | 'user'
+  | 'assistant'
+  | 'system'
+  | 'attachment'
+  | 'progress'
+  | 'grouped_tool_use'
+  | 'collapsed_read_search'
 
 /** A single content element inside message.content arrays. */
 export type ContentItem = ContentBlockParam | ContentBlock
@@ -41,7 +42,7 @@ export type Message = {
   message: {
     id?: string
     role: string
-    model?: string;
+    model?: string
     content: MessageContent
     usage?: BetaUsage | Record<string, unknown>
     stop_reason?: string | null
@@ -57,8 +58,11 @@ export type Message = {
 }
 
 export type AssistantMessage = Message & { type: 'assistant' }
-export type AttachmentMessage<T = unknown> = Message & { type: 'attachment'; attachment: { type: string; [key: string]: unknown } }
-export type ProgressMessage<T = unknown> = Message & { type: 'progress'; data: T }
+export type AttachmentMessage<T = unknown> = Message & {
+  type: 'attachment'
+  attachment: { type: string; [key: string]: unknown }
+}
+export type ProgressMessage<T = ToolProgressData> = Message & { data: T }
 export type SystemLocalCommandMessage = Message & { type: 'system' }
 export type SystemMessage = Message & { type: 'system' }
 export type UserMessage = Message & { type: 'user' }
@@ -127,15 +131,19 @@ export type RenderableMessage =
   | AssistantMessage
   | UserMessage
   | (Message & { type: 'system' })
-  | (Message & { type: 'attachment'; attachment: { type: string; memories?: { path: string; content: string; mtimeMs: number }[]; [key: string]: unknown } })
+  | (Message & {
+      type: 'attachment'
+      attachment: {
+        type: string
+        memories?: { path: string; content: string; mtimeMs: number }[]
+        [key: string]: unknown
+      }
+    })
   | (Message & { type: 'progress' })
   | GroupedToolUseMessage
   | CollapsedReadSearchGroup
 
-export type CollapsibleMessage =
-  | AssistantMessage
-  | UserMessage
-  | GroupedToolUseMessage
+export type CollapsibleMessage = AssistantMessage | UserMessage | GroupedToolUseMessage
 
 export type CollapsedReadSearchGroup = {
   type: 'collapsed_read_search'
