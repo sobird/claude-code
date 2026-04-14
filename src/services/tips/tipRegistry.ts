@@ -1,24 +1,18 @@
 import chalk from 'chalk'
 import { logForDebugging } from 'src/utils/debug.js'
+import { errorMessage } from 'src/utils/errors.js'
 import { fileHistoryEnabled } from 'src/utils/fileHistory.js'
-import {
-  getInitialSettings,
-  getSettings_DEPRECATED,
-  getSettingsForSource,
-} from 'src/utils/settings/settings.js'
+import { getInitialSettings, getSettings_DEPRECATED, getSettingsForSource } from 'src/utils/settings/settings.js'
 import { shouldOfferTerminalSetup } from '../../commands/terminalSetup/terminalSetup.js'
-import { getDesktopUpsellConfig } from '../../components/DesktopUpsell/DesktopUpsellStartup.js'
 import { color } from '../../components/design-system/color.js'
+import { getDesktopUpsellConfig } from '../../components/DesktopUpsell/DesktopUpsellStartup.js'
 import { shouldShowOverageCreditUpsell } from '../../components/LogoV2/OverageCreditUpsell.js'
 import { getShortcutDisplay } from '../../keybindings/shortcutFormat.js'
 import { isKairosCronEnabled } from '../../tools/ScheduleCronTool/prompt.js'
 import { is1PApiCustomer } from '../../utils/auth.js'
 import { countConcurrentSessions } from '../../utils/concurrentSessions.js'
 import { getGlobalConfig } from '../../utils/config.js'
-import {
-  getEffortEnvOverride,
-  modelSupportsEffort,
-} from '../../utils/effort.js'
+import { getEffortEnvOverride, modelSupportsEffort } from '../../utils/effort.js'
 import { env } from '../../utils/env.js'
 import { cacheKeys } from '../../utils/fileStateCache.js'
 import { getWorktreeCount } from '../../utils/git.js'
@@ -31,28 +25,15 @@ import {
   isVSCodeInstalled,
   isWindsurfInstalled,
 } from '../../utils/ide.js'
-import {
-  getMainLoopModel,
-  getUserSpecifiedModelSetting,
-} from '../../utils/model/model.js'
+import { getMainLoopModel, getUserSpecifiedModelSetting } from '../../utils/model/model.js'
 import { getPlatform } from '../../utils/platform.js'
 import { isPluginInstalled } from '../../utils/plugins/installedPluginsManager.js'
 import { loadKnownMarketplacesConfigSafe } from '../../utils/plugins/marketplaceManager.js'
 import { OFFICIAL_MARKETPLACE_NAME } from '../../utils/plugins/officialMarketplace.js'
-import {
-  getCurrentSessionAgentColor,
-  isCustomTitleEnabled,
-} from '../../utils/sessionStorage.js'
+import { getCurrentSessionAgentColor, isCustomTitleEnabled } from '../../utils/sessionStorage.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
-import {
-  formatGrantAmount,
-  getCachedOverageCreditGrant,
-} from '../api/overageCreditGrant.js'
-import {
-  checkCachedPassesEligibility,
-  formatCreditAmount,
-  getCachedReferrerReward,
-} from '../api/referral.js'
+import { formatGrantAmount, getCachedOverageCreditGrant } from '../api/overageCreditGrant.js'
+import { checkCachedPassesEligibility, formatCreditAmount, getCachedReferrerReward } from '../api/referral.js'
 import { getSessionsSinceLastShown } from './tipHistory.js'
 import type { Tip, TipContext } from './types.js'
 
@@ -79,13 +60,13 @@ async function isMarketplacePluginRelevant(
   }
   const { bashTools } = context ?? {}
   if (signals.cli && bashTools?.size) {
-    if (signals.cli.some(cmd => bashTools.has(cmd))) {
+    if (signals.cli.some((cmd) => bashTools.has(cmd))) {
       return true
     }
   }
   if (signals.filePath && context?.readFileState) {
     const readFiles = cacheKeys(context.readFileState)
-    if (readFiles.some(fp => signals.filePath!.test(fp))) {
+    if (readFiles.some((fp) => signals.filePath!.test(fp))) {
       return true
     }
   }
@@ -135,10 +116,9 @@ const externalTips: Tip[] = [
         const hasDefaultMode = Boolean(settings?.permissions?.defaultMode)
         return hasUsedPlanMode && !hasDefaultMode
       } catch (error) {
-        logForDebugging(
-          `Failed to check default-permission-mode-config tip relevance: ${error}`,
-          { level: 'warn' },
-        )
+        logForDebugging(`Failed to check default-permission-mode-config tip relevance: ${errorMessage(error)}`, {
+          level: 'warn',
+        })
         return false
       }
     },
@@ -154,7 +134,7 @@ const externalTips: Tip[] = [
         const config = getGlobalConfig()
         const worktreeCount = await getWorktreeCount()
         return worktreeCount <= 1 && config.numStartups > 50
-      } catch (_) {
+      } catch {
         return false
       }
     },
@@ -197,9 +177,8 @@ const externalTips: Tip[] = [
     async isRelevant() {
       const config = getGlobalConfig()
       return Boolean(
-        (env.terminal === 'Apple_Terminal'
-          ? config.optionAsMetaKeyInstalled
-          : config.shiftEnterKeyBindingInstalled) && config.numStartups > 3,
+        (env.terminal === 'Apple_Terminal' ? config.optionAsMetaKeyInstalled : config.shiftEnterKeyBindingInstalled) &&
+        config.numStartups > 3,
       )
     },
   },
@@ -237,31 +216,25 @@ const externalTips: Tip[] = [
   },
   {
     id: 'colorterm-truecolor',
-    content: async () =>
-      'Try setting environment variable COLORTERM=truecolor for richer colors',
+    content: async () => 'Try setting environment variable COLORTERM=truecolor for richer colors',
     cooldownSessions: 30,
     isRelevant: async () => !process.env.COLORTERM && chalk.level < 3,
   },
   {
     id: 'powershell-tool-env',
-    content: async () =>
-      'Set CLAUDE_CODE_USE_POWERSHELL_TOOL=1 to enable the PowerShell tool (preview)',
+    content: async () => 'Set CLAUDE_CODE_USE_POWERSHELL_TOOL=1 to enable the PowerShell tool (preview)',
     cooldownSessions: 10,
-    isRelevant: async () =>
-      getPlatform() === 'windows' &&
-      process.env.CLAUDE_CODE_USE_POWERSHELL_TOOL === undefined,
+    isRelevant: async () => getPlatform() === 'windows' && process.env.CLAUDE_CODE_USE_POWERSHELL_TOOL === undefined,
   },
   {
     id: 'status-line',
-    content: async () =>
-      'Use /statusline to set up a custom status line that will display beneath the input box',
+    content: async () => 'Use /statusline to set up a custom status line that will display beneath the input box',
     cooldownSessions: 25,
     isRelevant: async () => getSettings_DEPRECATED().statusLine === undefined,
   },
   {
     id: 'prompt-queue',
-    content: async () =>
-      'Hit Enter to queue up additional messages while Claude is working.',
+    content: async () => 'Hit Enter to queue up additional messages while Claude is working.',
     cooldownSessions: 5,
     async isRelevant() {
       const config = getGlobalConfig()
@@ -270,8 +243,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'enter-to-steer-in-relatime',
-    content: async () =>
-      'Send messages to Claude while it works to steer Claude in real-time',
+    content: async () => 'Send messages to Claude while it works to steer Claude in real-time',
     cooldownSessions: 20,
     isRelevant: async () => true,
   },
@@ -330,8 +302,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'install-github-app',
-    content: async () =>
-      'Run /install-github-app to tag @claude right from your Github issues and PRs',
+    content: async () => 'Run /install-github-app to tag @claude right from your Github issues and PRs',
     cooldownSessions: 10,
     isRelevant: async () => !getGlobalConfig().githubActionSetupCount,
   },
@@ -343,8 +314,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'permissions',
-    content: async () =>
-      'Use /permissions to pre-approve and pre-deny bash, edit, and MCP tools',
+    content: async () => 'Use /permissions to pre-approve and pre-deny bash, edit, and MCP tools',
     cooldownSessions: 10,
     async isRelevant() {
       const config = getGlobalConfig()
@@ -353,46 +323,39 @@ const externalTips: Tip[] = [
   },
   {
     id: 'drag-and-drop-images',
-    content: async () =>
-      'Did you know you can drag and drop image files into your terminal?',
+    content: async () => 'Did you know you can drag and drop image files into your terminal?',
     cooldownSessions: 10,
     isRelevant: async () => !env.isSSH(),
   },
   {
     id: 'paste-images-mac',
-    content: async () =>
-      'Paste images into Claude Code using control+v (not cmd+v!)',
+    content: async () => 'Paste images into Claude Code using control+v (not cmd+v!)',
     cooldownSessions: 10,
     isRelevant: async () => getPlatform() === 'macos',
   },
   {
     id: 'double-esc',
-    content: async () =>
-      'Double-tap esc to rewind the conversation to a previous point in time',
+    content: async () => 'Double-tap esc to rewind the conversation to a previous point in time',
     cooldownSessions: 10,
     isRelevant: async () => !fileHistoryEnabled(),
   },
   {
     id: 'double-esc-code-restore',
-    content: async () =>
-      'Double-tap esc to rewind the code and/or conversation to a previous point in time',
+    content: async () => 'Double-tap esc to rewind the code and/or conversation to a previous point in time',
     cooldownSessions: 10,
     isRelevant: async () => fileHistoryEnabled(),
   },
   {
     id: 'continue',
-    content: async () =>
-      'Run claude --continue or claude --resume to resume a conversation',
+    content: async () => 'Run claude --continue or claude --resume to resume a conversation',
     cooldownSessions: 10,
     isRelevant: async () => true,
   },
   {
     id: 'rename-conversation',
-    content: async () =>
-      'Name your conversations with /rename to find them easily in /resume later',
+    content: async () => 'Name your conversations with /rename to find them easily in /resume later',
     cooldownSessions: 15,
-    isRelevant: async () =>
-      isCustomTitleEnabled() && getGlobalConfig().numStartups > 10,
+    isRelevant: async () => isCustomTitleEnabled() && getGlobalConfig().numStartups > 10,
   },
   {
     id: 'custom-commands',
@@ -422,8 +385,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'custom-agents',
-    content: async () =>
-      'Use /agents to optimize specific tasks. Eg. Software Architect, Code Writer, Code Reviewer',
+    content: async () => 'Use /agents to optimize specific tasks. Eg. Software Architect, Code Writer, Code Reviewer',
     cooldownSessions: 15,
     async isRelevant() {
       const config = getGlobalConfig()
@@ -432,8 +394,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'agent-flag',
-    content: async () =>
-      'Use --agent <agent_name> to directly start a conversation with a subagent',
+    content: async () => 'Use --agent <agent_name> to directly start a conversation with a subagent',
     cooldownSessions: 15,
     async isRelevant() {
       const config = getGlobalConfig()
@@ -442,8 +403,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'desktop-app',
-    content: async () =>
-      'Run Claude Code locally or remotely using the Claude desktop app: clau.de/desktop',
+    content: async () => 'Run Claude Code locally or remotely using the Claude desktop app: clau.de/desktop',
     cooldownSessions: 15,
     isRelevant: async () => getPlatform() !== 'linux',
   },
@@ -456,23 +416,18 @@ const externalTips: Tip[] = [
     cooldownSessions: 15,
     isRelevant: async (): Promise<boolean> => {
       if (!getDesktopUpsellConfig().enable_shortcut_tip) return false
-      return (
-        process.platform === 'darwin' ||
-        (process.platform === 'win32' && process.arch === 'x64')
-      )
+      return process.platform === 'darwin' || (process.platform === 'win32' && process.arch === 'x64')
     },
   },
   {
     id: 'web-app',
-    content: async () =>
-      'Run tasks in the cloud while you keep coding locally · clau.de/web',
+    content: async () => 'Run tasks in the cloud while you keep coding locally · clau.de/web',
     cooldownSessions: 15,
     isRelevant: async () => true,
   },
   {
     id: 'mobile-app',
-    content: async () =>
-      '/mobile to use Claude Code from the Claude app on your phone',
+    content: async () => '/mobile to use Claude Code from the Claude app on your phone',
     cooldownSessions: 15,
     isRelevant: async () => true,
   },
@@ -500,7 +455,7 @@ const externalTips: Tip[] = [
       return `Working with HTML/CSS? Install the frontend-design plugin:\n${blue(`/plugin install frontend-design@${OFFICIAL_MARKETPLACE_NAME}`)}`
     },
     cooldownSessions: 3,
-    isRelevant: async (context?: TipContext): Promise<boolean> =>
+    isRelevant: async (context: TipContext): Promise<boolean> =>
       isMarketplacePluginRelevant('frontend-design', context, {
         filePath: /\.(html|css|htm)$/i,
       }),
@@ -523,9 +478,7 @@ const externalTips: Tip[] = [
     content: async (ctx: TipContext): Promise<string> => {
       const blue = color('suggestion', ctx.theme)
       const cmd = blue('/effort high')
-      const variant = getFeatureValue_CACHED_MAY_BE_STALE<
-        'off' | 'copy_a' | 'copy_b'
-      >('tengu_tide_elm', 'off')
+      const variant = getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>('tengu_tide_elm', 'off')
       return variant === 'copy_b'
         ? `Use ${cmd} for better one-shot answers. Claude thinks it through first.`
         : `Working on something tricky? ${cmd} gives better first answers`
@@ -540,21 +493,14 @@ const externalTips: Tip[] = [
       if (getEffortEnvOverride() !== undefined) return false
       const persisted = getInitialSettings().effortLevel
       if (persisted === 'high' || persisted === 'max') return false
-      return (
-        getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>(
-          'tengu_tide_elm',
-          'off',
-        ) !== 'off'
-      )
+      return getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>('tengu_tide_elm', 'off') !== 'off'
     },
   },
   {
     id: 'subagent-fanout-nudge',
-    content: async ctx => {
+    content: async (ctx: TipContext) => {
       const blue = color('suggestion', ctx.theme)
-      const variant = getFeatureValue_CACHED_MAY_BE_STALE<
-        'off' | 'copy_a' | 'copy_b'
-      >('tengu_tern_alloy', 'off')
+      const variant = getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>('tengu_tern_alloy', 'off')
       return variant === 'copy_b'
         ? `For big tasks, tell Claude to ${blue('use subagents')}. They work in parallel and keep your main thread clean.`
         : `Say ${blue('"fan out subagents"')} and Claude sends a team. Each one digs deep so nothing gets missed.`
@@ -562,21 +508,14 @@ const externalTips: Tip[] = [
     cooldownSessions: 3,
     isRelevant: async (): Promise<boolean> => {
       if (!is1PApiCustomer()) return false
-      return (
-        getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>(
-          'tengu_tern_alloy',
-          'off',
-        ) !== 'off'
-      )
+      return getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>('tengu_tern_alloy', 'off') !== 'off'
     },
   },
   {
     id: 'loop-command-nudge',
-    content: async ctx => {
+    content: async (ctx: TipContext) => {
       const blue = color('suggestion', ctx.theme)
-      const variant = getFeatureValue_CACHED_MAY_BE_STALE<
-        'off' | 'copy_a' | 'copy_b'
-      >('tengu_timber_lark', 'off')
+      const variant = getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>('tengu_timber_lark', 'off')
       return variant === 'copy_b'
         ? `Use ${blue('/loop 5m check the deploy')} to run any prompt on a schedule. Set it and forget it.`
         : `${blue('/loop')} runs any prompt on a recurring schedule. Great for monitoring deploys, babysitting PRs, or polling status.`
@@ -585,17 +524,12 @@ const externalTips: Tip[] = [
     isRelevant: async (): Promise<boolean> => {
       if (!is1PApiCustomer()) return false
       if (!isKairosCronEnabled()) return false
-      return (
-        getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>(
-          'tengu_timber_lark',
-          'off',
-        ) !== 'off'
-      )
+      return getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>('tengu_timber_lark', 'off') !== 'off'
     },
   },
   {
     id: 'guest-passes',
-    content: async ctx => {
+    content: async (ctx: TipContext) => {
       const claude = color('claude', ctx.theme)
       const reward = getCachedReferrerReward()
       return reward
@@ -614,7 +548,7 @@ const externalTips: Tip[] = [
   },
   {
     id: 'overage-credit',
-    content: async ctx => {
+    content: async (ctx) => {
       const claude = color('claude', ctx.theme)
       const info = getCachedOverageCreditGrant()
       const amount = info ? formatGrantAmount(info) : null
@@ -687,10 +621,10 @@ export async function getRelevantTips(context?: TipContext): Promise<Tip[]> {
 
   // Otherwise, filter built-in tips as before and combine with custom
   const tips = [...externalTips, ...internalOnlyTips]
-  const isRelevant = await Promise.all(tips.map(_ => _.isRelevant(context)))
+  const isRelevant = await Promise.all(tips.map((_) => _.isRelevant(context)))
   const filtered = tips
     .filter((_, index) => isRelevant[index])
-    .filter(_ => getSessionsSinceLastShown(_.id) >= _.cooldownSessions)
+    .filter((_) => getSessionsSinceLastShown(_.id) >= _.cooldownSessions)
 
   return [...filtered, ...customTips]
 }
