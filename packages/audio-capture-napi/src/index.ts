@@ -1,17 +1,17 @@
-interface AudioCaptureNapi {
-  startRecording: (onData: (data: Buffer) => void, onEnd: () => void) => boolean
-  stopRecording: () => void
-  isRecording: () => boolean
-  startPlayback: (sampleRate: number, channels: number) => boolean
-  writePlaybackData: (data: Buffer) => void
-  stopPlayback: () => void
-  isPlaying: () => boolean
+type AudioCaptureNapi = {
+  startRecording(onData: (data: Buffer) => void, onEnd: () => void): boolean
+  stopRecording(): void
+  isRecording(): boolean
+  startPlayback(sampleRate: number, channels: number): boolean
+  writePlaybackData(data: Buffer): void
+  stopPlayback(): void
+  isPlaying(): boolean
   // TCC microphone authorization status (macOS only):
   // 0 = notDetermined, 1 = restricted, 2 = denied, 3 = authorized.
   // Linux: always returns 3 (authorized) — no system-level microphone permission API.
   // Windows: returns 3 (authorized) if registry key absent or allowed,
   //          2 (denied) if microphone access is explicitly denied.
-  microphoneAuthorizationStatus?: () => number
+  microphoneAuthorizationStatus?(): number
 }
 
 let cachedModule: AudioCaptureNapi | null = null
@@ -24,7 +24,7 @@ function loadModule(): AudioCaptureNapi | null {
   loadAttempted = true
 
   // Supported platforms: macOS (darwin), Linux, Windows (win32)
-  const { platform } = process
+  const platform = process.platform
   if (platform !== 'darwin' && platform !== 'linux' && platform !== 'win32') {
     return null
   }

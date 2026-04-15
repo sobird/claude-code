@@ -1,4 +1,4 @@
-export interface ClipboardImageResult {
+export type ClipboardImageResult = {
   png: Buffer
   originalWidth: number
   originalHeight: number
@@ -11,7 +11,7 @@ export interface ClipboardImageResult {
 // Typed as optional so callers can guard. These property names appear only
 // in type-space here; all runtime property access lives in src/ behind
 // feature() so they tree-shake out of builds that don't want them.
-export interface NativeModule {
+export type NativeModule = {
   processImage: (input: Buffer) => Promise<ImageProcessor>
   readClipboardImage?: (maxWidth: number, maxHeight: number) => ClipboardImageResult | null
   hasClipboardImage?: () => boolean
@@ -28,9 +28,7 @@ let loadAttempted = false
 // functions) reach through this; keeping the wrappers on the caller side lets
 // feature() tree-shake the property access strings out of external builds.
 export function getNativeModule(): NativeModule | null {
-  if (loadAttempted) {
-    return cachedModule
-  }
+  if (loadAttempted) return cachedModule
   loadAttempted = true
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -42,29 +40,29 @@ export function getNativeModule(): NativeModule | null {
 }
 
 interface ImageProcessor {
-  metadata: () => { width: number; height: number; format: string }
-  resize: (width: number, height: number, options?: { fit?: string; withoutEnlargement?: boolean }) => ImageProcessor
-  jpeg: (quality?: number) => ImageProcessor
-  png: (options?: { compressionLevel?: number; palette?: boolean; colors?: number }) => ImageProcessor
-  webp: (quality?: number) => ImageProcessor
-  toBuffer: () => Promise<Buffer>
+  metadata(): { width: number; height: number; format: string }
+  resize(width: number, height: number, options?: { fit?: string; withoutEnlargement?: boolean }): ImageProcessor
+  jpeg(quality?: number): ImageProcessor
+  png(options?: { compressionLevel?: number; palette?: boolean; colors?: number }): ImageProcessor
+  webp(quality?: number): ImageProcessor
+  toBuffer(): Promise<Buffer>
 }
 
 interface SharpInstance {
-  metadata: () => Promise<{ width: number; height: number; format: string }>
-  resize: (width: number, height: number, options?: { fit?: string; withoutEnlargement?: boolean }) => SharpInstance
-  jpeg: (options?: { quality?: number }) => SharpInstance
-  png: (options?: { compressionLevel?: number; palette?: boolean; colors?: number }) => SharpInstance
-  webp: (options?: { quality?: number }) => SharpInstance
-  toBuffer: () => Promise<Buffer>
+  metadata(): Promise<{ width: number; height: number; format: string }>
+  resize(width: number, height: number, options?: { fit?: string; withoutEnlargement?: boolean }): SharpInstance
+  jpeg(options?: { quality?: number }): SharpInstance
+  png(options?: { compressionLevel?: number; palette?: boolean; colors?: number }): SharpInstance
+  webp(options?: { quality?: number }): SharpInstance
+  toBuffer(): Promise<Buffer>
 }
 
 // Factory function that matches sharp's API
 export function sharp(input: Buffer): SharpInstance {
-  let processorPromise: null | Promise<ImageProcessor> = null
+  let processorPromise: Promise<ImageProcessor> | null = null
 
   // Create a chain of operations
-  const operations: ((proc: ImageProcessor) => void)[] = []
+  const operations: Array<(proc: ImageProcessor) => void> = []
 
   // Track how many operations have been applied to avoid re-applying
   let appliedOperationsCount = 0

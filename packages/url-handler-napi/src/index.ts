@@ -1,14 +1,14 @@
-import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { createRequire } from 'module'
+import { dirname, join } from 'path'
+import { fileURLToPath } from 'url'
 
-interface UrlHandlerNapi {
-  waitForUrlEvent: (timeoutMs: number) => null | string
+type UrlHandlerNapi = {
+  waitForUrlEvent(timeoutMs: number): string | null
 }
 
-let cachedModule: null | UrlHandlerNapi = null
+let cachedModule: UrlHandlerNapi | null = null
 
-function loadModule(): null | UrlHandlerNapi {
+function loadModule(): UrlHandlerNapi | null {
   if (cachedModule) {
     return cachedModule
   }
@@ -32,7 +32,6 @@ function loadModule(): null | UrlHandlerNapi {
         `${process.arch}-darwin`,
         'url-handler.node',
       )
-      console.log('modulePath', modulePath)
       cachedModule = createRequire(import.meta.url)(modulePath) as UrlHandlerNapi
     }
     return cachedModule
@@ -50,7 +49,7 @@ function loadModule(): null | UrlHandlerNapi {
  * Returns the URL string if one was received, or null.
  * Only functional on macOS — returns null on other platforms.
  */
-export function waitForUrlEvent(timeoutMs: number): null | string {
+export function waitForUrlEvent(timeoutMs: number): string | null {
   const mod = loadModule()
   if (!mod) {
     return null
