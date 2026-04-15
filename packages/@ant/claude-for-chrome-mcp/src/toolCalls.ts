@@ -1,12 +1,6 @@
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-
-import { SocketConnectionError } from "./mcpSocketClient.js";
-import type {
-  ClaudeForChromeContext,
-  PermissionMode,
-  PermissionOverrides,
-  SocketClient,
-} from "./types.js";
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import { SocketConnectionError } from './mcpSocketClient.js'
+import type { ClaudeForChromeContext, PermissionMode, PermissionOverrides, SocketClient } from './types.js'
 
 export const handleToolCall = async (
   context: ClaudeForChromeContext,
@@ -16,51 +10,45 @@ export const handleToolCall = async (
   permissionOverrides?: PermissionOverrides,
 ): Promise<CallToolResult> => {
   // Handle permission mode changes locally (not forwarded to extension)
-  if (name === "set_permission_mode") {
-    return handleSetPermissionMode(socketClient, args);
+  if (name === 'set_permission_mode') {
+    return handleSetPermissionMode(socketClient, args)
   }
 
   // Handle switch_browser outside the normal tool call flow (manages its own connection)
-  if (name === "switch_browser") {
-    return handleSwitchBrowser(context, socketClient);
+  if (name === 'switch_browser') {
+    return handleSwitchBrowser(context, socketClient)
   }
 
   try {
-    const isConnected = await socketClient.ensureConnected();
+    const isConnected = await socketClient.ensureConnected()
 
     context.logger.silly(
       `[${context.serverName}] Server is connected: ${isConnected}. Received tool call: ${name} with args: ${JSON.stringify(args)}.`,
-    );
+    )
 
     if (isConnected) {
-      return await handleToolCallConnected(
-        context,
-        socketClient,
-        name,
-        args,
-        permissionOverrides,
-      );
+      return await handleToolCallConnected(context, socketClient, name, args, permissionOverrides)
     }
 
-    return handleToolCallDisconnected(context);
+    return handleToolCallDisconnected(context)
   } catch (error) {
-    context.logger.info(`[${context.serverName}] Error calling tool:`, error);
+    context.logger.info(`[${context.serverName}] Error calling tool:`, error)
 
     if (error instanceof SocketConnectionError) {
-      return handleToolCallDisconnected(context);
+      return handleToolCallDisconnected(context)
     }
 
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: `Error calling tool, please try again. : ${error instanceof Error ? error.message : String(error)}`,
         },
       ],
       isError: true,
-    };
+    }
   }
-};
+}
 
 async function handleToolCallConnected(
   context: ClaudeForChromeContext,
@@ -69,119 +57,104 @@ async function handleToolCallConnected(
   args: Record<string, unknown>,
   permissionOverrides?: PermissionOverrides,
 ): Promise<CallToolResult> {
-  const response = await socketClient.callTool(name, args, permissionOverrides);
+  const response = await socketClient.callTool(name, args, permissionOverrides)
 
-  context.logger.silly(
-    `[${context.serverName}] Received result from socket bridge: ${JSON.stringify(response)}`,
-  );
+  context.logger.silly(`[${context.serverName}] Received result from socket bridge: ${JSON.stringify(response)}`)
 
   if (response === null || response === undefined) {
     return {
-      content: [{ type: "text", text: "Tool execution completed" }],
-    };
+      content: [{ type: 'text', text: 'Tool execution completed' }],
+    }
   }
 
   // Response will have either result or error field
   const { result, error } = response as {
-    result?: { content: unknown[] | string };
-    error?: { content: unknown[] | string };
-  };
+    result?: { content: unknown[] | string }
+    error?: { content: unknown[] | string }
+  }
 
   // Determine which field has the content and whether it's an error
-  const contentData = error || result;
-  const isError = !!error;
+  const contentData = error || result
+  const isError = !!error
 
   if (!contentData) {
     return {
-      content: [{ type: "text", text: "Tool execution completed" }],
-    };
+      content: [{ type: 'text', text: 'Tool execution completed' }],
+    }
   }
 
   if (isError && isAuthenticationError(contentData.content)) {
-    context.onAuthenticationError();
+    context.onAuthenticationError()
   }
 
-  const { content } = contentData;
+  const { content } = contentData
 
   if (content && Array.isArray(content)) {
     if (isError) {
       return {
         content: content.map((item: unknown) => {
-          if (typeof item === "object" && item !== null && "type" in item) {
-            return item;
+          if (typeof item === 'object' && item !== null && 'type' in item) {
+            return item
           }
 
-          return { type: "text", text: String(item) };
+          return { type: 'text', text: String(item) }
         }),
         isError: true,
-      } as CallToolResult;
+      } as CallToolResult
     }
 
     const convertedContent = content.map((item: unknown) => {
-      if (
-        typeof item === "object" &&
-        item !== null &&
-        "type" in item &&
-        "source" in item
-      ) {
-        const typedItem = item;
+      if (typeof item === 'object' && item !== null && 'type' in item && 'source' in item) {
+        const typedItem = item
         if (
-          typedItem.type === "image" &&
-          typeof typedItem.source === "object" &&
+          typedItem.type === 'image' &&
+          typeof typedItem.source === 'object' &&
           typedItem.source !== null &&
-          "data" in typedItem.source
+          'data' in typedItem.source
         ) {
           return {
-            type: "image",
+            type: 'image',
             data: typedItem.source.data,
-            mimeType:
-              "media_type" in typedItem.source
-                ? typedItem.source.media_type || "image/png"
-                : "image/png",
-          };
+            mimeType: 'media_type' in typedItem.source ? typedItem.source.media_type || 'image/png' : 'image/png',
+          }
         }
       }
 
-      if (typeof item === "object" && item !== null && "type" in item) {
-        return item;
+      if (typeof item === 'object' && item !== null && 'type' in item) {
+        return item
       }
 
-      return { type: "text", text: String(item) };
-    });
+      return { type: 'text', text: String(item) }
+    })
 
     return {
       content: convertedContent,
       isError,
-    } as CallToolResult;
+    } as CallToolResult
   }
 
   // Handle string content
-  if (typeof content === "string") {
+  if (typeof content === 'string') {
     return {
-      content: [{ type: "text", text: content }],
+      content: [{ type: 'text', text: content }],
       isError,
-    } as CallToolResult;
+    } as CallToolResult
   }
 
   // Fallback for unexpected result format
-  context.logger.warn(
-    `[${context.serverName}] Unexpected result format from socket bridge`,
-    response,
-  );
+  context.logger.warn(`[${context.serverName}] Unexpected result format from socket bridge`, response)
 
   return {
-    content: [{ type: "text", text: JSON.stringify(response) }],
+    content: [{ type: 'text', text: JSON.stringify(response) }],
     isError,
-  };
+  }
 }
 
-function handleToolCallDisconnected(
-  context: ClaudeForChromeContext,
-): CallToolResult {
-  const text = context.onToolCallDisconnected();
+function handleToolCallDisconnected(context: ClaudeForChromeContext): CallToolResult {
+  const text = context.onToolCallDisconnected()
   return {
-    content: [{ type: "text", text }],
-  };
+    content: [{ type: 'text', text }],
+  }
 }
 
 /**
@@ -193,29 +166,18 @@ async function handleSetPermissionMode(
   args: Record<string, unknown>,
 ): Promise<CallToolResult> {
   // Validate permission mode at runtime
-  const validModes = [
-    "ask",
-    "skip_all_permission_checks",
-    "follow_a_plan",
-  ] as const;
-  const mode = args.mode as string | undefined;
+  const validModes = ['ask', 'skip_all_permission_checks', 'follow_a_plan'] as const
+  const mode = args.mode as string | undefined
   const permissionMode: PermissionMode =
-    mode && validModes.includes(mode as PermissionMode)
-      ? (mode as PermissionMode)
-      : "ask";
+    mode && validModes.includes(mode as PermissionMode) ? (mode as PermissionMode) : 'ask'
 
   if (socketClient.setPermissionMode) {
-    await socketClient.setPermissionMode(
-      permissionMode,
-      args.allowed_domains as string[] | undefined,
-    );
+    await socketClient.setPermissionMode(permissionMode, args.allowed_domains as string[] | undefined)
   }
 
   return {
-    content: [
-      { type: "text", text: `Permission mode set to: ${permissionMode}` },
-    ],
-  };
+    content: [{ type: 'text', text: `Permission mode set to: ${permissionMode}` }],
+  }
 }
 
 /**
@@ -230,50 +192,48 @@ async function handleSwitchBrowser(
     return {
       content: [
         {
-          type: "text",
-          text: "Browser switching is only available with bridge connections.",
+          type: 'text',
+          text: 'Browser switching is only available with bridge connections.',
         },
       ],
       isError: true,
-    };
+    }
   }
 
-  const isConnected = await socketClient.ensureConnected();
+  const isConnected = await socketClient.ensureConnected()
   if (!isConnected) {
-    return handleToolCallDisconnected(context);
+    return handleToolCallDisconnected(context)
   }
 
-  const result = (await socketClient.switchBrowser?.()) ?? null;
+  const result = (await socketClient.switchBrowser?.()) ?? null
 
-  if (result === "no_other_browsers") {
+  if (result === 'no_other_browsers') {
     return {
       content: [
         {
-          type: "text",
-          text: "No other browsers available to switch to. Open Chrome with the Claude extension in another browser to switch.",
+          type: 'text',
+          text: 'No other browsers available to switch to. Open Chrome with the Claude extension in another browser to switch.',
         },
       ],
       isError: true,
-    };
+    }
   }
 
   if (result) {
     return {
-      content: [
-        { type: "text", text: `Connected to browser "${result.name}".` },
-      ],
-    };
+      content: [{ type: 'text', text: `Connected to browser "${result.name}".` }],
+    }
   }
 
   return {
     content: [
       {
-        type: "text",
-        text: "No browser responded within the timeout. Make sure Chrome is open with the Claude extension installed, then try again.",
+        type: 'text',
+        text: 'No browser responded within the timeout. Make sure Chrome is open with the Claude extension installed, then try again.',
       },
     ],
     isError: true,
-  };
+  }
 }
 
 /**
@@ -283,19 +243,14 @@ function isAuthenticationError(content: unknown[] | string): boolean {
   const errorText = Array.isArray(content)
     ? content
         .map((item) => {
-          if (typeof item === "string") return item;
-          if (
-            typeof item === "object" &&
-            item !== null &&
-            "text" in item &&
-            typeof item.text === "string"
-          ) {
-            return item.text;
+          if (typeof item === 'string') return item
+          if (typeof item === 'object' && item !== null && 'text' in item && typeof item.text === 'string') {
+            return item.text
           }
-          return "";
+          return ''
         })
-        .join(" ")
-    : String(content);
+        .join(' ')
+    : content
 
-  return errorText.toLowerCase().includes("re-authenticated");
+  return errorText.toLowerCase().includes('re-authenticated')
 }

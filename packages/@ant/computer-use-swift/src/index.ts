@@ -7,58 +7,58 @@
  * 仅 macOS 支持。
  */
 
-import { readFileSync, unlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { readFileSync, unlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 // ---------------------------------------------------------------------------
 // Types (exported for callers)
 // ---------------------------------------------------------------------------
 
 export interface DisplayGeometry {
-  width: number;
-  height: number;
-  scaleFactor: number;
-  displayId: number;
+  width: number
+  height: number
+  scaleFactor: number
+  displayId: number
 }
 
 export interface PrepareDisplayResult {
-  activated: string;
-  hidden: string[];
+  activated: string
+  hidden: string[]
 }
 
 export interface AppInfo {
-  bundleId: string;
-  displayName: string;
+  bundleId: string
+  displayName: string
 }
 
 export interface InstalledApp {
-  bundleId: string;
-  displayName: string;
-  path: string;
-  iconDataUrl?: string;
+  bundleId: string
+  displayName: string
+  path: string
+  iconDataUrl?: string
 }
 
 export interface RunningApp {
-  bundleId: string;
-  displayName: string;
+  bundleId: string
+  displayName: string
 }
 
 export interface ScreenshotResult {
-  base64: string;
-  width: number;
-  height: number;
+  base64: string
+  width: number
+  height: number
 }
 
 export interface ResolvePrepareCaptureResult {
-  base64: string;
-  width: number;
-  height: number;
+  base64: string
+  width: number
+  height: number
 }
 
 export interface WindowDisplayInfo {
-  bundleId: string;
-  displayIds: number[];
+  bundleId: string
+  displayIds: number[]
 }
 
 // ---------------------------------------------------------------------------
@@ -70,8 +70,8 @@ function jxaSync(script: string): string {
     cmd: ['osascript', '-l', 'JavaScript', '-e', script],
     stdout: 'pipe',
     stderr: 'pipe',
-  });
-  return new TextDecoder().decode(result.stdout).trim();
+  })
+  return new TextDecoder().decode(result.stdout).trim()
 }
 
 function osascriptSync(script: string): string {
@@ -79,26 +79,28 @@ function osascriptSync(script: string): string {
     cmd: ['osascript', '-e', script],
     stdout: 'pipe',
     stderr: 'pipe',
-  });
-  return new TextDecoder().decode(result.stdout).trim();
+  })
+  return new TextDecoder().decode(result.stdout).trim()
 }
 
 async function osascript(script: string): Promise<string> {
   const proc = Bun.spawn(['osascript', '-e', script], {
-    stdout: 'pipe', stderr: 'pipe',
-  });
-  const text = await new Response(proc.stdout).text();
-  await proc.exited;
-  return text.trim();
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+  const text = await new Response(proc.stdout).text()
+  await proc.exited
+  return text.trim()
 }
 
 async function jxa(script: string): Promise<string> {
   const proc = Bun.spawn(['osascript', '-l', 'JavaScript', '-e', script], {
-    stdout: 'pipe', stderr: 'pipe',
-  });
-  const text = await new Response(proc.stdout).text();
-  await proc.exited;
-  return text.trim();
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+  const text = await new Response(proc.stdout).text()
+  await proc.exited
+  return text.trim()
 }
 
 // ---------------------------------------------------------------------------
@@ -106,22 +108,27 @@ async function jxa(script: string): Promise<string> {
 // ---------------------------------------------------------------------------
 
 interface DisplayAPI {
-  getSize: (displayId?: number) => DisplayGeometry;
-  listAll: () => DisplayGeometry[];
+  getSize: (displayId?: number) => DisplayGeometry
+  listAll: () => DisplayGeometry[]
 }
 
 const displayAPI: DisplayAPI = {
   getSize(displayId?: number): DisplayGeometry {
-    const all = this.listAll();
+    const all = this.listAll()
     if (displayId !== undefined) {
-      const found = all.find(d => d.displayId === displayId);
+      const found = all.find((d) => d.displayId === displayId)
       if (found) {
-        return found;
+        return found
       }
     }
-    return all[0] ?? {
-      width: 1920, height: 1080, scaleFactor: 2, displayId: 1,
-    };
+    return (
+      all[0] ?? {
+        width: 1920,
+        height: 1080,
+        scaleFactor: 2,
+        displayId: 1,
+      }
+    )
   },
 
   listAll(): DisplayGeometry[] {
@@ -146,13 +153,13 @@ const displayAPI: DisplayAPI = {
           result.push({width: w, height: h, scaleFactor: sf, displayId: did});
         }
         JSON.stringify(result);
-      `);
-      return (JSON.parse(raw) as DisplayGeometry[]).map(d => ({
+      `)
+      return (JSON.parse(raw) as DisplayGeometry[]).map((d) => ({
         width: Number(d.width),
         height: Number(d.height),
         scaleFactor: Number(d.scaleFactor),
         displayId: Number(d.displayId),
-      }));
+      }))
     } catch {
       // Fallback: use NSScreen via JXA
       try {
@@ -174,36 +181,45 @@ const displayAPI: DisplayAPI = {
             });
           }
           JSON.stringify(result);
-        `);
-        return (JSON.parse(raw) as DisplayGeometry[]).map(d => ({
+        `)
+        return (JSON.parse(raw) as DisplayGeometry[]).map((d) => ({
           width: Number(d.width),
           height: Number(d.height),
           scaleFactor: Number(d.scaleFactor),
           displayId: Number(d.displayId),
-        }));
+        }))
       } catch {
-        return [{
-          width: 1920, height: 1080, scaleFactor: 2, displayId: 1,
-        }];
+        return [
+          {
+            width: 1920,
+            height: 1080,
+            scaleFactor: 2,
+            displayId: 1,
+          },
+        ]
       }
     }
   },
-};
+}
 
 // ---------------------------------------------------------------------------
 // AppsAPI
 // ---------------------------------------------------------------------------
 
 interface AppsAPI {
-  prepareDisplay: (allowlistBundleIds: string[], surrogateHost: string, displayId?: number) => Promise<PrepareDisplayResult>;
-  previewHideSet: (bundleIds: string[], displayId?: number) => Promise<AppInfo[]>;
-  findWindowDisplays: (bundleIds: string[]) => Promise<WindowDisplayInfo[]>;
-  appUnderPoint: (x: number, y: number) => Promise<AppInfo | null>;
-  listInstalled: () => Promise<InstalledApp[]>;
-  iconDataUrl: (path: string) => null | string;
-  listRunning: () => RunningApp[];
-  open: (bundleId: string) => Promise<void>;
-  unhide: (bundleIds: string[]) => Promise<void>;
+  prepareDisplay: (
+    allowlistBundleIds: string[],
+    surrogateHost: string,
+    displayId?: number,
+  ) => Promise<PrepareDisplayResult>
+  previewHideSet: (bundleIds: string[], displayId?: number) => Promise<AppInfo[]>
+  findWindowDisplays: (bundleIds: string[]) => Promise<WindowDisplayInfo[]>
+  appUnderPoint: (x: number, y: number) => Promise<AppInfo | null>
+  listInstalled: () => Promise<InstalledApp[]>
+  iconDataUrl: (path: string) => null | string
+  listRunning: () => RunningApp[]
+  open: (bundleId: string) => Promise<void>
+  unhide: (bundleIds: string[]) => Promise<void>
 }
 
 const appsAPI: AppsAPI = {
@@ -212,19 +228,16 @@ const appsAPI: AppsAPI = {
     _surrogateHost: string,
     _displayId?: number,
   ): Promise<PrepareDisplayResult> {
-    return { activated: '', hidden: [] };
+    return { activated: '', hidden: [] }
   },
 
-  async previewHideSet(
-    _bundleIds: string[],
-    _displayId?: number,
-  ): Promise<AppInfo[]> {
-    return [];
+  async previewHideSet(_bundleIds: string[], _displayId?: number): Promise<AppInfo[]> {
+    return []
   },
 
   async findWindowDisplays(bundleIds: string[]): Promise<WindowDisplayInfo[]> {
     // Each running app is assumed to be on display 1
-    return bundleIds.map(bundleId => ({ bundleId, displayIds: [1] }));
+    return bundleIds.map((bundleId) => ({ bundleId, displayIds: [1] }))
   },
 
   async appUnderPoint(_x: number, _y: number): Promise<AppInfo | null> {
@@ -237,10 +250,10 @@ const appsAPI: AppsAPI = {
         // Get frontmost app as a fallback
         var app = $.NSWorkspace.sharedWorkspace.frontmostApplication;
         JSON.stringify({bundleId: app.bundleIdentifier.js, displayName: app.localizedName.js});
-      `);
-      return JSON.parse(result);
+      `)
+      return JSON.parse(result)
     } catch {
-      return null;
+      return null
     }
   },
 
@@ -256,24 +269,27 @@ const appsAPI: AppsAPI = {
           end repeat
           return appList
         end tell
-      `);
-      return result.split('\n').filter(Boolean).map((line) => {
-        const [path, name] = line.split('|', 2);
-        // Derive bundleId from Info.plist would be ideal, but use path-based fallback
-        const displayName = (name ?? '').replace(/\.app$/, '');
-        return {
-          bundleId: `com.app.${displayName.toLowerCase().replace(/\s+/g, '-')}`,
-          displayName,
-          path: path ?? '',
-        };
-      });
+      `)
+      return result
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          const [path, name] = line.split('|', 2)
+          // Derive bundleId from Info.plist would be ideal, but use path-based fallback
+          const displayName = (name ?? '').replace(/\.app$/, '')
+          return {
+            bundleId: `com.app.${displayName.toLowerCase().replace(/\s+/g, '-')}`,
+            displayName,
+            path: path ?? '',
+          }
+        })
     } catch {
-      return [];
+      return []
     }
   },
 
   iconDataUrl(_path: string): null | string {
-    return null;
+    return null
   },
 
   listRunning(): RunningApp[] {
@@ -288,15 +304,15 @@ const appsAPI: AppsAPI = {
           } catch(e) {}
         }
         JSON.stringify(result);
-      `);
-      return JSON.parse(raw);
+      `)
+      return JSON.parse(raw)
     } catch {
-      return [];
+      return []
     }
   },
 
   async open(bundleId: string): Promise<void> {
-    await osascript(`tell application id "${bundleId}" to activate`);
+    await osascript(`tell application id "${bundleId}" to activate`)
   },
 
   async unhide(bundleIds: string[]): Promise<void> {
@@ -305,10 +321,10 @@ const appsAPI: AppsAPI = {
         tell application "System Events"
           set visible of application process (name of application process whose bundle identifier is "${bundleId}") to true
         end tell
-      `);
+      `)
     }
   },
-};
+}
 
 // ---------------------------------------------------------------------------
 // ScreenshotAPI
@@ -316,33 +332,43 @@ const appsAPI: AppsAPI = {
 
 interface ScreenshotAPI {
   captureExcluding: (
-    allowedBundleIds: string[], quality: number,
-    targetW: number, targetH: number, displayId?: number,
-  ) => Promise<ScreenshotResult>;
+    allowedBundleIds: string[],
+    quality: number,
+    targetW: number,
+    targetH: number,
+    displayId?: number,
+  ) => Promise<ScreenshotResult>
   captureRegion: (
     allowedBundleIds: string[],
-    x: number, y: number, w: number, h: number,
-    outW: number, outH: number, quality: number, displayId?: number,
-  ) => Promise<ScreenshotResult>;
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    outW: number,
+    outH: number,
+    quality: number,
+    displayId?: number,
+  ) => Promise<ScreenshotResult>
 }
 
 async function captureScreenToBase64(args: string[]): Promise<{ base64: string; width: number; height: number }> {
-  const tmpFile = join(tmpdir(), `cu-screenshot-${Date.now()}.png`);
+  const tmpFile = join(tmpdir(), `cu-screenshot-${Date.now()}.png`)
   const proc = Bun.spawn(['screencapture', ...args, tmpFile], {
-    stdout: 'pipe', stderr: 'pipe',
-  });
-  await proc.exited;
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+  await proc.exited
 
   try {
-    const buf = readFileSync(tmpFile);
-    const base64 = buf.toString('base64');
+    const buf = readFileSync(tmpFile)
+    const base64 = buf.toString('base64')
     // Parse PNG header for dimensions (bytes 16-23)
-    const width = buf.readUInt32BE(16);
-    const height = buf.readUInt32BE(20);
-    return { base64, width, height };
+    const width = buf.readUInt32BE(16)
+    const height = buf.readUInt32BE(20)
+    return { base64, width, height }
   } finally {
     try {
-      unlinkSync(tmpFile);
+      unlinkSync(tmpFile)
     } catch {}
   }
 }
@@ -355,35 +381,40 @@ const screenshotAPI: ScreenshotAPI = {
     _targetH: number,
     displayId?: number,
   ): Promise<ScreenshotResult> {
-    const args = ['-x']; // silent
+    const args = ['-x'] // silent
     if (displayId !== undefined) {
-      args.push('-D', String(displayId));
+      args.push('-D', String(displayId))
     }
-    return captureScreenToBase64(args);
+    return captureScreenToBase64(args)
   },
 
   async captureRegion(
     _allowedBundleIds: string[],
-    x: number, y: number, w: number, h: number,
-    _outW: number, _outH: number, _quality: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    _outW: number,
+    _outH: number,
+    _quality: number,
     displayId?: number,
   ): Promise<ScreenshotResult> {
-    const args = ['-x', '-R', `${x},${y},${w},${h}`];
+    const args = ['-x', '-R', `${x},${y},${w},${h}`]
     if (displayId !== undefined) {
-      args.push('-D', String(displayId));
+      args.push('-D', String(displayId))
     }
-    return captureScreenToBase64(args);
+    return captureScreenToBase64(args)
   },
-};
+}
 
 // ---------------------------------------------------------------------------
 // ComputerUseAPI — Main export
 // ---------------------------------------------------------------------------
 
 export class ComputerUseAPI {
-  apps: AppsAPI = appsAPI;
-  display: DisplayAPI = displayAPI;
-  screenshot: ScreenshotAPI = screenshotAPI;
+  apps: AppsAPI = appsAPI
+  display: DisplayAPI = displayAPI
+  screenshot: ScreenshotAPI = screenshotAPI
 
   async resolvePrepareCapture(
     allowedBundleIds: string[],
@@ -395,6 +426,6 @@ export class ComputerUseAPI {
     _autoResolve?: boolean,
     _doHide?: boolean,
   ): Promise<ResolvePrepareCaptureResult> {
-    return this.screenshot.captureExcluding(allowedBundleIds, quality, targetW, targetH, displayId);
+    return this.screenshot.captureExcluding(allowedBundleIds, quality, targetW, targetH, displayId)
   }
 }

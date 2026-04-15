@@ -1,8 +1,8 @@
 {
   "name": "@ant/computer-use-swift",
-  "type": "module",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts"
 }

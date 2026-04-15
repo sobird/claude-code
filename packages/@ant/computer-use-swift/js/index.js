@@ -1,7 +1,7 @@
-const path = require("path");
+const path = require('path')
 
-if (process.platform !== "darwin") {
-  throw new Error("@ant/computer-use-swift is only available on macOS");
+if (process.platform !== 'darwin') {
+  throw new Error('@ant/computer-use-swift is only available on macOS')
 }
 
 // COMPUTER_USE_SWIFT_NODE_PATH: escape hatch for bundlers. Bun's --compile
@@ -17,7 +17,6 @@ if (process.platform !== "darwin") {
 // pending. Consumers under Electron don't need to (CFRunLoop drains
 // automatically).
 const native = require(
-  process.env.COMPUTER_USE_SWIFT_NODE_PATH ??
-    path.resolve(__dirname, "../prebuilds/computer_use.node"),
-);
-module.exports = native.computerUse;
+  process.env.COMPUTER_USE_SWIFT_NODE_PATH ?? path.resolve(__dirname, '../prebuilds/computer_use.node'),
+)
+module.exports = native.computerUse

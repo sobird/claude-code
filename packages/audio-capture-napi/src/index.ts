@@ -1,35 +1,32 @@
 interface AudioCaptureNapi {
-  startRecording: (
-    onData: (data: Buffer) => void,
-    onEnd: () => void,
-  ) => boolean;
-  stopRecording: () => void;
-  isRecording: () => boolean;
-  startPlayback: (sampleRate: number, channels: number) => boolean;
-  writePlaybackData: (data: Buffer) => void;
-  stopPlayback: () => void;
-  isPlaying: () => boolean;
+  startRecording: (onData: (data: Buffer) => void, onEnd: () => void) => boolean
+  stopRecording: () => void
+  isRecording: () => boolean
+  startPlayback: (sampleRate: number, channels: number) => boolean
+  writePlaybackData: (data: Buffer) => void
+  stopPlayback: () => void
+  isPlaying: () => boolean
   // TCC microphone authorization status (macOS only):
   // 0 = notDetermined, 1 = restricted, 2 = denied, 3 = authorized.
   // Linux: always returns 3 (authorized) — no system-level microphone permission API.
   // Windows: returns 3 (authorized) if registry key absent or allowed,
   //          2 (denied) if microphone access is explicitly denied.
-  microphoneAuthorizationStatus?: () => number;
+  microphoneAuthorizationStatus?: () => number
 }
 
-let cachedModule: AudioCaptureNapi | null = null;
-let loadAttempted = false;
+let cachedModule: AudioCaptureNapi | null = null
+let loadAttempted = false
 
 function loadModule(): AudioCaptureNapi | null {
   if (loadAttempted) {
-    return cachedModule;
+    return cachedModule
   }
-  loadAttempted = true;
+  loadAttempted = true
 
   // Supported platforms: macOS (darwin), Linux, Windows (win32)
-  const { platform } = process;
+  const { platform } = process
   if (platform !== 'darwin' && platform !== 'linux' && platform !== 'win32') {
-    return null;
+    return null
   }
 
   // Candidate 1: native-embed path (bun compile). AUDIO_CAPTURE_NODE_PATH is
@@ -40,10 +37,8 @@ function loadModule(): AudioCaptureNapi | null {
   if (process.env.AUDIO_CAPTURE_NODE_PATH) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      cachedModule = require(
-        process.env.AUDIO_CAPTURE_NODE_PATH,
-      ) as AudioCaptureNapi;
-      return cachedModule;
+      cachedModule = require(process.env.AUDIO_CAPTURE_NODE_PATH) as AudioCaptureNapi
+      return cachedModule
     } catch {
       // fall through to runtime fallbacks below
     }
@@ -53,87 +48,81 @@ function loadModule(): AudioCaptureNapi | null {
   // fine here — in bundled output (node --target build) require() resolves at
   // runtime relative to cli.js at the package root; in dev it resolves
   // relative to this file (vendor/audio-capture-src/index.ts).
-  const platformDir = `${process.arch}-${platform}`;
+  const platformDir = `${process.arch}-${platform}`
   const fallbacks = [
     `./vendor/audio-capture/${platformDir}/audio-capture.node`,
     `../audio-capture/${platformDir}/audio-capture.node`,
-  ];
+  ]
   for (const p of fallbacks) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      cachedModule = require(p) as AudioCaptureNapi;
-      return cachedModule;
+      cachedModule = require(p) as AudioCaptureNapi
+      return cachedModule
     } catch {
       // try next
     }
   }
-  return null;
+  return null
 }
 
 export function isNativeAudioAvailable(): boolean {
-  return loadModule() !== null;
+  return loadModule() !== null
 }
 
-export function startNativeRecording(
-  onData: (data: Buffer) => void,
-  onEnd: () => void,
-): boolean {
-  const mod = loadModule();
+export function startNativeRecording(onData: (data: Buffer) => void, onEnd: () => void): boolean {
+  const mod = loadModule()
   if (!mod) {
-    return false;
+    return false
   }
-  return mod.startRecording(onData, onEnd);
+  return mod.startRecording(onData, onEnd)
 }
 
 export function stopNativeRecording(): void {
-  const mod = loadModule();
+  const mod = loadModule()
   if (!mod) {
-    return;
+    return
   }
-  mod.stopRecording();
+  mod.stopRecording()
 }
 
 export function isNativeRecordingActive(): boolean {
-  const mod = loadModule();
+  const mod = loadModule()
   if (!mod) {
-    return false;
+    return false
   }
-  return mod.isRecording();
+  return mod.isRecording()
 }
 
-export function startNativePlayback(
-  sampleRate: number,
-  channels: number,
-): boolean {
-  const mod = loadModule();
+export function startNativePlayback(sampleRate: number, channels: number): boolean {
+  const mod = loadModule()
   if (!mod) {
-    return false;
+    return false
   }
-  return mod.startPlayback(sampleRate, channels);
+  return mod.startPlayback(sampleRate, channels)
 }
 
 export function writeNativePlaybackData(data: Buffer): void {
-  const mod = loadModule();
+  const mod = loadModule()
   if (!mod) {
-    return;
+    return
   }
-  mod.writePlaybackData(data);
+  mod.writePlaybackData(data)
 }
 
 export function stopNativePlayback(): void {
-  const mod = loadModule();
+  const mod = loadModule()
   if (!mod) {
-    return;
+    return
   }
-  mod.stopPlayback();
+  mod.stopPlayback()
 }
 
 export function isNativePlaying(): boolean {
-  const mod = loadModule();
+  const mod = loadModule()
   if (!mod) {
-    return false;
+    return false
   }
-  return mod.isPlaying();
+  return mod.isPlaying()
 }
 
 // Returns the microphone authorization status.
@@ -142,9 +131,9 @@ export function isNativePlaying(): boolean {
 // On Windows, returns 3 (authorized) if registry key absent or allowed, 2 (denied) if explicitly denied.
 // Returns 0 (notDetermined) if the native module is unavailable.
 export function microphoneAuthorizationStatus(): number {
-  const mod = loadModule();
+  const mod = loadModule()
   if (!mod || !mod.microphoneAuthorizationStatus) {
-    return 0;
+    return 0
   }
-  return mod.microphoneAuthorizationStatus();
+  return mod.microphoneAuthorizationStatus()
 }

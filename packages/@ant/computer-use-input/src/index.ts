@@ -8,14 +8,14 @@
  * 仅 macOS 支持。其他平台返回 { isSupported: false }
  */
 
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
 
-const execAsync = promisify(exec);
+const execAsync = promisify(exec)
 
 interface FrontmostAppInfo {
-  bundleId: string;
-  appName: string;
+  bundleId: string
+  appName: string
 }
 
 // AppleScript key code mapping
@@ -48,7 +48,7 @@ const KEY_MAP: Record<string, number> = {
   end: 119,
   pageup: 116,
   pagedown: 121,
-};
+}
 
 const MODIFIER_MAP: Record<string, string> = {
   command: 'command down',
@@ -60,35 +60,35 @@ const MODIFIER_MAP: Record<string, string> = {
   alt: 'option down',
   control: 'control down',
   ctrl: 'control down',
-};
+}
 
 async function osascript(script: string): Promise<string> {
   try {
     // 使用 -e 参数执行 osascript
-    const { stdout, stderr } = await execAsync(`osascript -e ${JSON.stringify(script)}`);
+    const { stdout, stderr } = await execAsync(`osascript -e ${JSON.stringify(script)}`)
 
     if (stderr && !stdout) {
       // 如果有错误输出且没有标准输出，可以根据需要处理
-      return '';
+      return ''
     }
 
-    return stdout.trim();
+    return stdout.trim()
   } catch (error) {
     // 对应 Bun 的 .nothrow()，捕获异常并不抛出
-    return '';
+    return ''
   }
 }
 
 async function jxa(script: string): Promise<string> {
   try {
     // 关键点：使用 JSON.stringify 处理 script，防止 shell 报错
-    const command = `osascript -l JavaScript -e ${JSON.stringify(script)}`;
+    const command = `osascript -l JavaScript -e ${JSON.stringify(script)}`
 
-    const { stdout } = await execAsync(command);
-    return stdout.trim();
+    const { stdout } = await execAsync(command)
+    return stdout.trim()
   } catch (error) {
     // 模拟 Bun 的 .nothrow()，出错时返回空字符串
-    return '';
+    return ''
   }
 }
 
@@ -97,66 +97,70 @@ function jxaSync(script: string): string {
     cmd: ['osascript', '-l', 'JavaScript', '-e', script],
     stdout: 'pipe',
     stderr: 'pipe',
-  });
-  return new TextDecoder().decode(result.stdout).trim();
+  })
+  return new TextDecoder().decode(result.stdout).trim()
 }
 
 function buildMouseJxa(eventType: string, x: number, y: number, btn: number, clickState?: number): string {
-  let script = `ObjC.import("CoreGraphics"); var p = $.CGPointMake(${x},${y}); var e = $.CGEventCreateMouseEvent(null, $.${eventType}, p, ${btn});`;
+  let script = `ObjC.import("CoreGraphics"); var p = $.CGPointMake(${x},${y}); var e = $.CGEventCreateMouseEvent(null, $.${eventType}, p, ${btn});`
   if (clickState !== undefined) {
-    script += ` $.CGEventSetIntegerValueField(e, $.kCGMouseEventClickState, ${clickState});`;
+    script += ` $.CGEventSetIntegerValueField(e, $.kCGMouseEventClickState, ${clickState});`
   }
-  script += ' $.CGEventPost($.kCGHIDEventTap, e);';
-  return script;
+  script += ' $.CGEventPost($.kCGHIDEventTap, e);'
+  return script
 }
 
 // ---- Implementation functions ----
 
 async function moveMouse(x: number, y: number, _animated: boolean): Promise<void> {
-  await jxa(buildMouseJxa('kCGEventMouseMoved', x, y, 0));
+  await jxa(buildMouseJxa('kCGEventMouseMoved', x, y, 0))
 }
 
 async function key(keyName: string, action: 'press' | 'release'): Promise<void> {
   if (action === 'release') {
-    return;
+    return
   }
-  const lower = keyName.toLowerCase();
-  const keyCode = KEY_MAP[lower];
+  const lower = keyName.toLowerCase()
+  const keyCode = KEY_MAP[lower]
   if (keyCode !== undefined) {
-    await osascript(`tell application "System Events" to key code ${keyCode}`);
+    await osascript(`tell application "System Events" to key code ${keyCode}`)
   } else {
-    await osascript(`tell application "System Events" to keystroke "${keyName.length === 1 ? keyName : lower}"`);
+    await osascript(`tell application "System Events" to keystroke "${keyName.length === 1 ? keyName : lower}"`)
   }
 }
 
 async function keys(parts: string[]): Promise<void> {
-  const modifiers: string[] = [];
-  let finalKey: null | string = null;
+  const modifiers: string[] = []
+  let finalKey: null | string = null
   for (const part of parts) {
-    const mod = MODIFIER_MAP[part.toLowerCase()];
+    const mod = MODIFIER_MAP[part.toLowerCase()]
     if (mod) {
-      modifiers.push(mod);
+      modifiers.push(mod)
     } else {
-      finalKey = part;
+      finalKey = part
     }
   }
   if (!finalKey) {
-    return;
+    return
   }
-  const lower = finalKey.toLowerCase();
-  const keyCode = KEY_MAP[lower];
-  const modStr = modifiers.length > 0 ? ` using {${modifiers.join(', ')}}` : '';
+  const lower = finalKey.toLowerCase()
+  const keyCode = KEY_MAP[lower]
+  const modStr = modifiers.length > 0 ? ` using {${modifiers.join(', ')}}` : ''
   if (keyCode !== undefined) {
-    await osascript(`tell application "System Events" to key code ${keyCode}${modStr}`);
+    await osascript(`tell application "System Events" to key code ${keyCode}${modStr}`)
   } else {
-    await osascript(`tell application "System Events" to keystroke "${finalKey.length === 1 ? finalKey : lower}"${modStr}`);
+    await osascript(
+      `tell application "System Events" to keystroke "${finalKey.length === 1 ? finalKey : lower}"${modStr}`,
+    )
   }
 }
 
 async function mouseLocation(): Promise<{ x: number; y: number }> {
-  const result = await jxa('ObjC.import("CoreGraphics"); var e = $.CGEventCreate(null); var p = $.CGEventGetLocation(e); p.x + "," + p.y');
-  const [xStr, yStr] = result.split(',');
-  return { x: Math.round(Number(xStr)), y: Math.round(Number(yStr)) };
+  const result = await jxa(
+    'ObjC.import("CoreGraphics"); var e = $.CGEventCreate(null); var p = $.CGEventGetLocation(e); p.x + "," + p.y',
+  )
+  const [xStr, yStr] = result.split(',')
+  return { x: Math.round(Number(xStr)), y: Math.round(Number(yStr)) }
 }
 
 async function mouseButton(
@@ -164,82 +168,89 @@ async function mouseButton(
   action: 'click' | 'press' | 'release',
   count?: number,
 ): Promise<void> {
-  const pos = await mouseLocation();
-  const btn = button === 'left' ? 0 : button === 'right' ? 1 : 2;
-  const downType = btn === 0 ? 'kCGEventLeftMouseDown' : btn === 1 ? 'kCGEventRightMouseDown' : 'kCGEventOtherMouseDown';
-  const upType = btn === 0 ? 'kCGEventLeftMouseUp' : btn === 1 ? 'kCGEventRightMouseUp' : 'kCGEventOtherMouseUp';
+  const pos = await mouseLocation()
+  const btn = button === 'left' ? 0 : button === 'right' ? 1 : 2
+  const downType = btn === 0 ? 'kCGEventLeftMouseDown' : btn === 1 ? 'kCGEventRightMouseDown' : 'kCGEventOtherMouseDown'
+  const upType = btn === 0 ? 'kCGEventLeftMouseUp' : btn === 1 ? 'kCGEventRightMouseUp' : 'kCGEventOtherMouseUp'
 
   if (action === 'click') {
     for (let i = 0; i < (count ?? 1); i++) {
-      await jxa(buildMouseJxa(downType, pos.x, pos.y, btn, i + 1));
-      await jxa(buildMouseJxa(upType, pos.x, pos.y, btn, i + 1));
+      await jxa(buildMouseJxa(downType, pos.x, pos.y, btn, i + 1))
+      await jxa(buildMouseJxa(upType, pos.x, pos.y, btn, i + 1))
     }
   } else if (action === 'press') {
-    await jxa(buildMouseJxa(downType, pos.x, pos.y, btn));
+    await jxa(buildMouseJxa(downType, pos.x, pos.y, btn))
   } else {
-    await jxa(buildMouseJxa(upType, pos.x, pos.y, btn));
+    await jxa(buildMouseJxa(upType, pos.x, pos.y, btn))
   }
 }
 
 async function mouseScroll(amount: number, direction: 'horizontal' | 'vertical'): Promise<void> {
-  const script = direction === 'vertical'
-    ? `ObjC.import("CoreGraphics"); var e = $.CGEventCreateScrollWheelEvent(null, 0, 1, ${amount}); $.CGEventPost($.kCGHIDEventTap, e);`
-    : `ObjC.import("CoreGraphics"); var e = $.CGEventCreateScrollWheelEvent(null, 0, 2, 0, ${amount}); $.CGEventPost($.kCGHIDEventTap, e);`;
-  await jxa(script);
+  const script =
+    direction === 'vertical'
+      ? `ObjC.import("CoreGraphics"); var e = $.CGEventCreateScrollWheelEvent(null, 0, 1, ${amount}); $.CGEventPost($.kCGHIDEventTap, e);`
+      : `ObjC.import("CoreGraphics"); var e = $.CGEventCreateScrollWheelEvent(null, 0, 2, 0, ${amount}); $.CGEventPost($.kCGHIDEventTap, e);`
+  await jxa(script)
 }
 
 async function typeText(text: string): Promise<void> {
-  const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  await osascript(`tell application "System Events" to keystroke "${escaped}"`);
+  const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  await osascript(`tell application "System Events" to keystroke "${escaped}"`)
 }
 
 function getFrontmostAppInfo(): FrontmostAppInfo | null {
   try {
     const result = Bun.spawnSync({
-      cmd: ['osascript', '-e', `
+      cmd: [
+        'osascript',
+        '-e',
+        `
         tell application "System Events"
           set frontApp to first application process whose frontmost is true
           set appName to name of frontApp
           set bundleId to bundle identifier of frontApp
           return bundleId & "|" & appName
         end tell
-      `],
+      `,
+      ],
       stdout: 'pipe',
       stderr: 'pipe',
-    });
-    const output = new TextDecoder().decode(result.stdout).trim();
+    })
+    const output = new TextDecoder().decode(result.stdout).trim()
     if (!output || !output.includes('|')) {
-      return null;
+      return null
     }
-    const [bundleId, appName] = output.split('|', 2);
-    return { bundleId, appName };
+    const [bundleId, appName] = output.split('|', 2)
+    return { bundleId, appName }
   } catch {
-    return null;
+    return null
   }
 }
 
 // ---- Exports ----
 
 export class ComputerUseInputAPI {
-  declare getFrontmostAppInfo: () => FrontmostAppInfo | null;
-  declare isSupported: true;
-  declare key: (key: string, action: 'press' | 'release') => Promise<void>;
-  declare keys: (parts: string[]) => Promise<void>;
-  declare mouseButton: (button: 'left' | 'middle' | 'right', action: 'click' | 'press' | 'release', count?: number) => Promise<void>;
-  declare mouseLocation: () => Promise<{ x: number; y: number }>;
-  declare mouseScroll: (amount: number, direction: 'horizontal' | 'vertical') => Promise<void>;
-  declare moveMouse: (x: number, y: number, animated: boolean) => Promise<void>;
-  declare typeText: (text: string) => Promise<void>;
+  declare getFrontmostAppInfo: () => FrontmostAppInfo | null
+  declare isSupported: true
+  declare key: (key: string, action: 'press' | 'release') => Promise<void>
+  declare keys: (parts: string[]) => Promise<void>
+  declare mouseButton: (
+    button: 'left' | 'middle' | 'right',
+    action: 'click' | 'press' | 'release',
+    count?: number,
+  ) => Promise<void>
+  declare mouseLocation: () => Promise<{ x: number; y: number }>
+  declare mouseScroll: (amount: number, direction: 'horizontal' | 'vertical') => Promise<void>
+  declare moveMouse: (x: number, y: number, animated: boolean) => Promise<void>
+  declare typeText: (text: string) => Promise<void>
 }
 
 interface ComputerUseInputUnsupported {
-  isSupported: false;
+  isSupported: false
 }
 
-export type ComputerUseInput = ComputerUseInputAPI | ComputerUseInputUnsupported;
+export type ComputerUseInput = ComputerUseInputAPI | ComputerUseInputUnsupported
 
 // Plain object with all methods as own properties — compatible with require()
-export const isSupported = process.platform === 'darwin';
-export {
-  getFrontmostAppInfo, key, keys, mouseButton, mouseLocation, mouseScroll, moveMouse, typeText,
-};
+export const isSupported = process.platform === 'darwin'
+export { getFrontmostAppInfo, key, keys, mouseButton, mouseLocation, mouseScroll, moveMouse, typeText }
