@@ -2,10 +2,7 @@ import { feature } from 'bun:bundle'
 import { appendFileSync } from 'fs'
 import React from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
-import {
-  gracefulShutdown,
-  gracefulShutdownSync,
-} from 'src/utils/gracefulShutdown.js'
+import { gracefulShutdown, gracefulShutdownSync } from 'src/utils/gracefulShutdown.js'
 import {
   type ChannelEntry,
   getAllowedChannels,
@@ -15,18 +12,14 @@ import {
   setStatsStore,
 } from './bootstrap/state.js'
 import type { Command } from './commands.js'
-import { createStatsStore, type StatsStore } from './context/stats.js'
 import { getSystemContext } from './context.js'
+import { createStatsStore, type StatsStore } from './context/stats.js'
 import { initializeTelemetryAfterTrust } from './entrypoints/init.js'
-import { isSynchronizedOutputSupported } from './ink/terminal.js'
 import type { RenderOptions, Root, TextProps } from './ink.js'
+import { isSynchronizedOutputSupported } from './ink/terminal.js'
 import { KeybindingSetup } from './keybindings/KeybindingProviderSetup.js'
 import { startDeferredPrefetches } from './main.js'
-import {
-  checkGate_CACHED_OR_BLOCKING,
-  initializeGrowthBook,
-  resetGrowthBook,
-} from './services/analytics/growthbook.js'
+import { checkGate_CACHED_OR_BLOCKING, initializeGrowthBook, resetGrowthBook } from './services/analytics/growthbook.js'
 import { isQualifiedForGrove } from './services/api/grove.js'
 import { handleMcpjsonServerApprovals } from './services/mcpServerApproval.js'
 import { AppStateProvider } from './state/AppState.js'
@@ -51,24 +44,18 @@ import { applyConfigEnvironmentVariables } from './utils/managedEnv.js'
 import type { PermissionMode } from './utils/permissions/PermissionMode.js'
 import { getBaseRenderOptions } from './utils/renderOptions.js'
 import { getSettingsWithAllErrors } from './utils/settings/allErrors.js'
-import {
-  hasAutoModeOptIn,
-  hasSkipDangerousModePermissionPrompt,
-} from './utils/settings/settings.js'
+import { hasAutoModeOptIn, hasSkipDangerousModePermissionPrompt } from './utils/settings/settings.js'
 
 export function completeOnboarding(): void {
-  saveGlobalConfig(current => ({
+  saveGlobalConfig((current) => ({
     ...current,
     hasCompletedOnboarding: true,
     lastOnboardingVersion: MACRO.VERSION,
   }))
 }
-export function showDialog<T = void>(
-  root: Root,
-  renderer: (done: (result: T) => void) => React.ReactNode,
-): Promise<T> {
-  return new Promise<T>(resolve => {
-    const done = (result: T): void => void resolve(result)
+export function showDialog<T = void>(root: Root, renderer: (done: (result: T) => void) => React.ReactNode): Promise<T> {
+  return new Promise<T>((resolve) => {
+    const done = (result: T): void => resolve(result)
     root.render(renderer(done))
   })
 }
@@ -79,11 +66,7 @@ export function showDialog<T = void>(
  * console.error is swallowed by Ink's patchConsole, so we render
  * through the React tree instead.
  */
-export async function exitWithError(
-  root: Root,
-  message: string,
-  beforeExit?: () => Promise<void>,
-): Promise<never> {
+export async function exitWithError(root: Root, message: string, beforeExit?: () => Promise<void>): Promise<never> {
   return exitWithMessage(root, message, { color: 'error', beforeExit })
 }
 
@@ -105,9 +88,7 @@ export async function exitWithMessage(
   const { Text } = await import('./ink.js')
   const color = options?.color
   const exitCode = options?.exitCode ?? 1
-  root.render(
-    color ? <Text color={color}>{message}</Text> : <Text>{message}</Text>,
-  )
+  root.render(color ? <Text color={color}>{message}</Text> : <Text>{message}</Text>)
   root.unmount()
   await options?.beforeExit?.()
   // eslint-disable-next-line custom-rules/no-process-exit -- exit after Ink unmount
@@ -123,7 +104,7 @@ export function showSetupDialog<T = void>(
   renderer: (done: (result: T) => void) => React.ReactNode,
   options?: { onChangeAppState?: typeof onChangeAppState },
 ): Promise<T> {
-  return showDialog<T>(root, done => (
+  return showDialog<T>(root, (done) => (
     <AppStateProvider onChangeAppState={options?.onChangeAppState}>
       <KeybindingSetup>{renderer(done)}</KeybindingSetup>
     </AppStateProvider>
@@ -134,10 +115,7 @@ export function showSetupDialog<T = void>(
  * Render the main UI into the root and wait for it to exit.
  * Handles the common epilogue: start deferred prefetches, wait for exit, graceful shutdown.
  */
-export async function renderAndRun(
-  root: Root,
-  element: React.ReactNode,
-): Promise<void> {
+export async function renderAndRun(root: Root, element: React.ReactNode): Promise<void> {
   root.render(element)
   startDeferredPrefetches()
   await root.waitUntilExit()
@@ -170,11 +148,11 @@ export async function showSetupScreens(
     const { Onboarding } = await import('./components/Onboarding.js')
     await showSetupDialog(
       root,
-      done => (
+      (done) => (
         <Onboarding
           onDone={() => {
             completeOnboarding()
-            void done()
+            done()
           }}
         />
       ),
@@ -193,12 +171,8 @@ export async function showSetupScreens(
     // If it returns true, the TrustDialog would auto-resolve regardless of
     // security features, so we can skip the dynamic import and render cycle.
     if (!checkHasTrustDialogAccepted()) {
-      const { TrustDialog } = await import(
-        './components/TrustDialog/TrustDialog.js'
-      )
-      await showSetupDialog(root, done => (
-        <TrustDialog commands={commands} onDone={done} />
-      ))
+      const { TrustDialog } = await import('./components/TrustDialog/TrustDialog.js')
+      await showSetupDialog(root, (done) => <TrustDialog commands={commands} onDone={done} />)
     }
 
     // Signal that trust has been verified for this session.
@@ -222,18 +196,10 @@ export async function showSetupScreens(
 
     // Check for claude.md includes that need approval
     if (await shouldShowClaudeMdExternalIncludesWarning()) {
-      const externalIncludes = getExternalClaudeMdIncludes(
-        await getMemoryFiles(true),
-      )
-      const { ClaudeMdExternalIncludesDialog } = await import(
-        './components/ClaudeMdExternalIncludesDialog.js'
-      )
-      await showSetupDialog(root, done => (
-        <ClaudeMdExternalIncludesDialog
-          onDone={done}
-          isStandaloneDialog
-          externalIncludes={externalIncludes}
-        />
+      const externalIncludes = getExternalClaudeMdIncludes(await getMemoryFiles(true))
+      const { ClaudeMdExternalIncludesDialog } = await import('./components/ClaudeMdExternalIncludesDialog.js')
+      await showSetupDialog(root, (done) => (
+        <ClaudeMdExternalIncludesDialog onDone={done} isStandaloneDialog externalIncludes={externalIncludes} />
       ))
     }
   }
@@ -259,7 +225,7 @@ export async function showSetupScreens(
 
   if (await isQualifiedForGrove()) {
     const { GroveDialog } = await import('src/components/grove/Grove.js')
-    const decision = await showSetupDialog<string>(root, done => (
+    const decision = await showSetupDialog<string>(root, (done) => (
       <GroveDialog
         showIfAlreadyViewed={false}
         location={onboardingShown ? 'onboarding' : 'policy_update_modal'}
@@ -277,36 +243,24 @@ export async function showSetupScreens(
   // On homespace, ANTHROPIC_API_KEY is preserved in process.env for child
   // processes but ignored by Claude Code itself (see auth.ts).
   if (process.env.ANTHROPIC_API_KEY && !isRunningOnHomespace()) {
-    const customApiKeyTruncated = normalizeApiKeyForConfig(
-      process.env.ANTHROPIC_API_KEY,
-    )
+    const customApiKeyTruncated = normalizeApiKeyForConfig(process.env.ANTHROPIC_API_KEY)
     const keyStatus = getCustomApiKeyStatus(customApiKeyTruncated)
     if (keyStatus === 'new') {
       const { ApproveApiKey } = await import('./components/ApproveApiKey.js')
       await showSetupDialog<boolean>(
         root,
-        done => (
-          <ApproveApiKey
-            customApiKeyTruncated={customApiKeyTruncated}
-            onDone={done}
-          />
-        ),
+        (done) => <ApproveApiKey customApiKeyTruncated={customApiKeyTruncated} onDone={done} />,
         { onChangeAppState },
       )
     }
   }
 
   if (
-    (permissionMode === 'bypassPermissions' ||
-      allowDangerouslySkipPermissions) &&
+    (permissionMode === 'bypassPermissions' || allowDangerouslySkipPermissions) &&
     !hasSkipDangerousModePermissionPrompt()
   ) {
-    const { BypassPermissionsModeDialog } = await import(
-      './components/BypassPermissionsModeDialog.js'
-    )
-    await showSetupDialog(root, done => (
-      <BypassPermissionsModeDialog onAccept={done} />
-    ))
+    const { BypassPermissionsModeDialog } = await import('./components/BypassPermissionsModeDialog.js')
+    await showSetupDialog(root, (done) => <BypassPermissionsModeDialog onAccept={done} />)
   }
 
   if (feature('TRANSCRIPT_CLASSIFIER')) {
@@ -315,15 +269,9 @@ export async function showSetupScreens(
     // consent for an unavailable feature is pointless. The
     // verifyAutoModeGateAccess notification will explain why instead.
     if (permissionMode === 'auto' && !hasAutoModeOptIn()) {
-      const { AutoModeOptInDialog } = await import(
-        './components/AutoModeOptInDialog.js'
-      )
-      await showSetupDialog(root, done => (
-        <AutoModeOptInDialog
-          onAccept={done}
-          onDecline={() => gracefulShutdownSync(1)}
-          declineExits
-        />
+      const { AutoModeOptInDialog } = await import('./components/AutoModeOptInDialog.js')
+      await showSetupDialog(root, (done) => (
+        <AutoModeOptInDialog onAccept={done} onDecline={() => gracefulShutdownSync(1)} declineExits />
       ))
     }
   }
@@ -346,11 +294,10 @@ export async function showSetupScreens(
     }
 
     if (devChannels && devChannels.length > 0) {
-      const [{ isChannelsEnabled }, { getClaudeAIOAuthTokens }] =
-        await Promise.all([
-          import('./services/mcp/channelAllowlist.js'),
-          import('./utils/auth.js'),
-        ])
+      const [{ isChannelsEnabled }, { getClaudeAIOAuthTokens }] = await Promise.all([
+        import('./services/mcp/channelAllowlist.js'),
+        import('./utils/auth.js'),
+      ])
       // Skip the dialog when channels are blocked (tengu_harbor off or no
       // OAuth) — accepting then immediately seeing "not available" in
       // ChannelsNotice is worse than no dialog. Append entries anyway so
@@ -359,27 +306,19 @@ export async function showSetupScreens(
       // (hasNonDev check); the allowlist bypass it also grants is moot
       // since the gate blocks upstream.
       if (!isChannelsEnabled() || !getClaudeAIOAuthTokens()?.accessToken) {
-        setAllowedChannels([
-          ...getAllowedChannels(),
-          ...devChannels.map(c => ({ ...c, dev: true })),
-        ])
+        setAllowedChannels([...getAllowedChannels(), ...devChannels.map((c) => ({ ...c, dev: true }))])
         setHasDevChannels(true)
       } else {
-        const { DevChannelsDialog } = await import(
-          './components/DevChannelsDialog.js'
-        )
-        await showSetupDialog(root, done => (
+        const { DevChannelsDialog } = await import('./components/DevChannelsDialog.js')
+        await showSetupDialog(root, (done) => (
           <DevChannelsDialog
             channels={devChannels}
             onAccept={() => {
               // Mark dev entries per-entry so the allowlist bypass doesn't leak
               // to --channels entries when both flags are passed.
-              setAllowedChannels([
-                ...getAllowedChannels(),
-                ...devChannels.map(c => ({ ...c, dev: true })),
-              ])
+              setAllowedChannels([...getAllowedChannels(), ...devChannels.map((c) => ({ ...c, dev: true }))])
               setHasDevChannels(true)
-              void done()
+              done()
             }}
           />
         ))
@@ -388,16 +327,9 @@ export async function showSetupScreens(
   }
 
   // Show Chrome onboarding for first-time Claude in Chrome users
-  if (
-    claudeInChrome &&
-    !getGlobalConfig().hasCompletedClaudeInChromeOnboarding
-  ) {
-    const { ClaudeInChromeOnboarding } = await import(
-      './components/ClaudeInChromeOnboarding.js'
-    )
-    await showSetupDialog(root, done => (
-      <ClaudeInChromeOnboarding onDone={done} />
-    ))
+  if (claudeInChrome && !getGlobalConfig().hasCompletedClaudeInChromeOnboarding) {
+    const { ClaudeInChromeOnboarding } = await import('./components/ClaudeInChromeOnboarding.js')
+    await showSetupDialog(root, (done) => <ClaudeInChromeOnboarding onDone={done} />)
   }
 
   return onboardingShown
@@ -430,7 +362,7 @@ export function getRenderContext(exitOnCtrlC: boolean): {
     stats,
     renderOptions: {
       ...baseOptions,
-      onFrame: event => {
+      onFrame: (event) => {
         fpsTracker.record(event.durationMs)
         stats.observe('frame_duration_ms', event.durationMs)
         if (frameTimingLogPath && event.phases) {

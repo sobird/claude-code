@@ -21,9 +21,9 @@ export class SSHSessionError extends Error {
   }
 }
 
-export const createSSHSession: (...args: unknown[]) => Promise<SSHSession> = (async () => {
+export const createSSHSession: (...args: unknown[]) => Promise<SSHSession> = async () => {
   throw new SSHSessionError('SSH sessions are not supported in this build')
-});
-export const createLocalSSHSession: (...args: unknown[]) => Promise<SSHSession> = (async () => {
+}
+export const createLocalSSHSession: (...args: unknown[]) => SSHSession = () => {
   throw new SSHSessionError('Local SSH sessions are not supported in this build')
-});
+}

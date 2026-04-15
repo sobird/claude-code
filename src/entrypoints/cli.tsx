@@ -1,25 +1,18 @@
 import { feature } from 'bun:bundle'
 
 // Bugfix for corepack auto-pinning, which adds yarnpkg to peoples' package.jsons
-// eslint-disable-next-line custom-rules/no-top-level-side-effects
 process.env.COREPACK_ENABLE_AUTO_PIN = '0'
 
 // Set max heap size for child processes in CCR environments (containers have 16GB)
-// eslint-disable-next-line custom-rules/no-top-level-side-effects, custom-rules/no-process-env-top-level, custom-rules/safe-env-boolean-check
 if (process.env.CLAUDE_CODE_REMOTE === 'true') {
-  // eslint-disable-next-line custom-rules/no-top-level-side-effects, custom-rules/no-process-env-top-level
   const existing = process.env.NODE_OPTIONS || ''
-  // eslint-disable-next-line custom-rules/no-top-level-side-effects, custom-rules/no-process-env-top-level
-  process.env.NODE_OPTIONS = existing
-    ? `${existing} --max-old-space-size=8192`
-    : '--max-old-space-size=8192'
+  process.env.NODE_OPTIONS = existing ? `${existing} --max-old-space-size=8192` : '--max-old-space-size=8192'
 }
 
 // Harness-science L0 ablation baseline. Inlined here (not init.ts) because
 // BashTool/AgentTool/PowerShellTool capture DISABLE_BACKGROUND_TASKS into
 // module-level consts at import time — init() runs too late. feature() gate
 // DCEs this entire block from external builds.
-// eslint-disable-next-line custom-rules/no-top-level-side-effects, custom-rules/no-process-env-top-level
 if (feature('ABLATION_BASELINE') && process.env.CLAUDE_CODE_ABLATION_BASELINE) {
   for (const k of [
     'CLAUDE_CODE_SIMPLE',
@@ -30,7 +23,6 @@ if (feature('ABLATION_BASELINE') && process.env.CLAUDE_CODE_ABLATION_BASELINE) {
     'CLAUDE_CODE_DISABLE_AUTO_MEMORY',
     'CLAUDE_CODE_DISABLE_BACKGROUND_TASKS',
   ]) {
-    // eslint-disable-next-line custom-rules/no-top-level-side-effects, custom-rules/no-process-env-top-level
     process.env[k] ??= '1'
   }
 }
@@ -44,12 +36,8 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2)
 
   // Fast-path for --version/-v: zero module loading needed
-  if (
-    args.length === 1 &&
-    (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')
-  ) {
+  if (args.length === 1 && (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {
     // MACRO.VERSION is inlined at build time
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`${MACRO.VERSION} (Claude Code)`)
     return
   }
@@ -70,33 +58,23 @@ async function main(): Promise<void> {
     const model = (modelIdx !== -1 && args[modelIdx + 1]) || getMainLoopModel()
     const { getSystemPrompt } = await import('../constants/prompts.js')
     const prompt = await getSystemPrompt([], model)
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(prompt.join('\n'))
     return
   }
 
   if (process.argv[2] === '--claude-in-chrome-mcp') {
     profileCheckpoint('cli_claude_in_chrome_mcp_path')
-    const { runClaudeInChromeMcpServer } = await import(
-      '../utils/claudeInChrome/mcpServer.js'
-    )
+    const { runClaudeInChromeMcpServer } = await import('../utils/claudeInChrome/mcpServer.js')
     await runClaudeInChromeMcpServer()
     return
   } else if (process.argv[2] === '--chrome-native-host') {
     profileCheckpoint('cli_chrome_native_host_path')
-    const { runChromeNativeHost } = await import(
-      '../utils/claudeInChrome/chromeNativeHost.js'
-    )
+    const { runChromeNativeHost } = await import('../utils/claudeInChrome/chromeNativeHost.js')
     await runChromeNativeHost()
     return
-  } else if (
-    feature('CHICAGO_MCP') &&
-    process.argv[2] === '--computer-use-mcp'
-  ) {
+  } else if (feature('CHICAGO_MCP') && process.argv[2] === '--computer-use-mcp') {
     profileCheckpoint('cli_computer_use_mcp_path')
-    const { runComputerUseMcpServer } = await import(
-      '../utils/computerUse/mcpServer.js'
-    )
+    const { runComputerUseMcpServer } = await import('../utils/computerUse/mcpServer.js')
     await runComputerUseMcpServer()
     return
   }
@@ -128,9 +106,7 @@ async function main(): Promise<void> {
     const { enableConfigs } = await import('../utils/config.js')
     enableConfigs()
 
-    const { getBridgeDisabledReason, checkBridgeMinVersion } = await import(
-      '../bridge/bridgeEnabled.js'
-    )
+    const { getBridgeDisabledReason, checkBridgeMinVersion } = await import('../bridge/bridgeEnabled.js')
     const { BRIDGE_LOGIN_ERROR } = await import('../bridge/types.js')
     const { bridgeMain } = await import('../bridge/bridgeMain.js')
     const { exitWithError } = await import('../utils/process.js')
@@ -153,14 +129,10 @@ async function main(): Promise<void> {
     }
 
     // Bridge is a remote control feature - check policy limits
-    const { waitForPolicyLimitsToLoad, isPolicyAllowed } = await import(
-      '../services/policyLimits/index.js'
-    )
+    const { waitForPolicyLimitsToLoad, isPolicyAllowed } = await import('../services/policyLimits/index.js')
     await waitForPolicyLimitsToLoad()
     if (!isPolicyAllowed('allow_remote_control')) {
-      exitWithError(
-        "Error: Remote Control is disabled by your organization's policy.",
-      )
+      exitWithError("Error: Remote Control is disabled by your organization's policy.")
     }
 
     await bridgeMain(args.slice(1))
@@ -215,16 +187,12 @@ async function main(): Promise<void> {
   }
 
   // Fast-path for template job commands.
-  if (
-    feature('TEMPLATES') &&
-    (args[0] === 'new' || args[0] === 'list' || args[0] === 'reply')
-  ) {
+  if (feature('TEMPLATES') && (args[0] === 'new' || args[0] === 'list' || args[0] === 'reply')) {
     profileCheckpoint('cli_templates_path')
     const { templatesMain } = await import('../cli/handlers/templateJobs.js')
     await templatesMain(args)
     // process.exit (not return) — mountFleetView's Ink TUI can leave event
     // loop handles that prevent natural exit.
-    // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   }
 
@@ -232,9 +200,7 @@ async function main(): Promise<void> {
   // feature() must stay inline for build-time dead code elimination.
   if (feature('BYOC_ENVIRONMENT_RUNNER') && args[0] === 'environment-runner') {
     profileCheckpoint('cli_environment_runner_path')
-    const { environmentRunnerMain } = await import(
-      '../environment-runner/main.js'
-    )
+    const { environmentRunnerMain } = await import('../environment-runner/main.js')
     await environmentRunnerMain(args.slice(1))
     return
   }
@@ -244,9 +210,7 @@ async function main(): Promise<void> {
   // heartbeat). feature() must stay inline for build-time dead code elimination.
   if (feature('SELF_HOSTED_RUNNER') && args[0] === 'self-hosted-runner') {
     profileCheckpoint('cli_self_hosted_runner_path')
-    const { selfHostedRunnerMain } = await import(
-      '../self-hosted-runner/main.js'
-    )
+    const { selfHostedRunnerMain } = await import('../self-hosted-runner/main.js')
     await selfHostedRunnerMain(args.slice(1))
     return
   }
@@ -255,16 +219,12 @@ async function main(): Promise<void> {
   const hasTmuxFlag = args.includes('--tmux') || args.includes('--tmux=classic')
   if (
     hasTmuxFlag &&
-    (args.includes('-w') ||
-      args.includes('--worktree') ||
-      args.some(a => a.startsWith('--worktree=')))
+    (args.includes('-w') || args.includes('--worktree') || args.some((a) => a.startsWith('--worktree=')))
   ) {
     profileCheckpoint('cli_tmux_worktree_fast_path')
     const { enableConfigs } = await import('../utils/config.js')
     enableConfigs()
-    const { isWorktreeModeEnabled } = await import(
-      '../utils/worktreeModeEnabled.js'
-    )
+    const { isWorktreeModeEnabled } = await import('../utils/worktreeModeEnabled.js')
     if (isWorktreeModeEnabled()) {
       const { execIntoTmuxWorktree } = await import('../utils/worktree.js')
       const result = await execIntoTmuxWorktree(args)
@@ -280,11 +240,8 @@ async function main(): Promise<void> {
   }
 
   // Redirect common update flag mistakes to the update subcommand
-  if (
-    args.length === 1 &&
-    (args[0] === '--update' || args[0] === '--upgrade')
-  ) {
-    process.argv = [process.argv[0]!, process.argv[1]!, 'update']
+  if (args.length === 1 && (args[0] === '--update' || args[0] === '--upgrade')) {
+    process.argv = [process.argv[0], process.argv[1], 'update']
   }
 
   // --bare: set SIMPLE early so gates fire during module eval / commander
@@ -303,5 +260,4 @@ async function main(): Promise<void> {
   profileCheckpoint('cli_after_main_complete')
 }
 
-// eslint-disable-next-line custom-rules/no-top-level-side-effects
 void main()
