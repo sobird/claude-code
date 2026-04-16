@@ -22,7 +22,9 @@
     "packages/*",
     "packages/@ant/*"
   ],
-  "files": [],
+  "files": [
+    "vendor"
+  ],
   "type": "module",
   "publishConfig": {
     "access": "public",
@@ -165,6 +167,7 @@
     "oxfmt": "^0.44.0",
     "oxlint": "^1.59.0",
     "oxlint-tsgolint": "^0.20.0",
+    "release-please": "^17.6.0",
     "source-map": "^0.7.6",
     "typescript": "^6.0.2"
   },

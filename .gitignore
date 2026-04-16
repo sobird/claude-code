@@ -15,6 +15,7 @@ node_modules
 dist
 build
 *.tsbuildinfo
+vendor
 cli.js.map
 cli.js
 
