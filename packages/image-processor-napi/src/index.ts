@@ -22,20 +22,51 @@ export type NativeModule = {
 // startup because imagePaste.ts pulls this into the REPL chunk via static
 // import. Same pattern as audio-capture-src/index.ts.
 let cachedModule: NativeModule | null = null
-let loadAttempted = false
 
 // Raw binding accessor. Callers that need optional exports (e.g. clipboard
 // functions) reach through this; keeping the wrappers on the caller side lets
 // feature() tree-shake the property access strings out of external builds.
 export function getNativeModule(): NativeModule | null {
-  if (loadAttempted) return cachedModule
-  loadAttempted = true
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    cachedModule = require('../../image-processor.node')
-  } catch {
-    cachedModule = null
+  if (cachedModule) {
+    return cachedModule
   }
+
+  // Supported platforms: macOS (darwin), Linux, Windows (win32)
+  const platform = process.platform
+  if (platform !== 'darwin' && platform !== 'linux' && platform !== 'win32') {
+    return null
+  }
+
+  if (process.env.IMAGE_PROCESSOR_NODE_PATH) {
+    try {
+      cachedModule = require(process.env.IMAGE_PROCESSOR_NODE_PATH) as NativeModule
+      return cachedModule
+    } catch {
+      // fall through to runtime fallbacks below
+    }
+  }
+
+  const platformDir = `${process.arch}-${platform}`
+  const candidates = [
+    // 预编译
+    `./vendor/image-processor/${platformDir}/image-processor.node`,
+    `../vendor/image-processor/${platformDir}/image-processor.node`,
+    `../../vendor/image-processor/${platformDir}/image-processor.node`,
+    `../../../vendor/image-processor/${platformDir}/image-processor.node`,
+
+    // 本地编译
+    `../image-processor/${platformDir}/image-processor.node`,
+  ]
+
+  for (const candidate of candidates) {
+    try {
+      cachedModule = require(candidate)
+      return cachedModule
+    } catch {
+      // try next
+    }
+  }
+
   return cachedModule
 }
 

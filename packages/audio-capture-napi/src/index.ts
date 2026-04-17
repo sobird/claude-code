@@ -15,13 +15,11 @@ type AudioCaptureNapi = {
 }
 
 let cachedModule: AudioCaptureNapi | null = null
-let loadAttempted = false
 
 function loadModule(): AudioCaptureNapi | null {
-  if (loadAttempted) {
+  if (cachedModule) {
     return cachedModule
   }
-  loadAttempted = true
 
   // Supported platforms: macOS (darwin), Linux, Windows (win32)
   const platform = process.platform
@@ -49,20 +47,25 @@ function loadModule(): AudioCaptureNapi | null {
   // runtime relative to cli.js at the package root; in dev it resolves
   // relative to this file (vendor/audio-capture-src/index.ts).
   const platformDir = `${process.arch}-${platform}`
-  const fallbacks = [
+  const candidates = [
+    // 预编译
     `./vendor/audio-capture/${platformDir}/audio-capture.node`,
+    `../vendor/audio-capture/${platformDir}/audio-capture.node`,
+    `../../vendor/audio-capture/${platformDir}/audio-capture.node`,
+    `../../../vendor/audio-capture/${platformDir}/audio-capture.node`,
+
+    // 本地编译
     `../audio-capture/${platformDir}/audio-capture.node`,
   ]
-  for (const p of fallbacks) {
+  for (const p of candidates) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       cachedModule = require(p) as AudioCaptureNapi
       return cachedModule
     } catch {
       // try next
     }
   }
-  return null
+  return cachedModule
 }
 
 export function isNativeAudioAvailable(): boolean {

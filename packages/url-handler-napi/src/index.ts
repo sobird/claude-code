@@ -1,7 +1,3 @@
-import { createRequire } from 'module'
-import { dirname, join } from 'path'
-import { fileURLToPath } from 'url'
-
 type UrlHandlerNapi = {
   waitForUrlEvent(timeoutMs: number): string | null
 }
@@ -24,15 +20,29 @@ function loadModule(): UrlHandlerNapi | null {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       cachedModule = require(process.env.URL_HANDLER_NODE_PATH) as UrlHandlerNapi
     } else {
-      // Dev mode - load from vendor directory
-      const modulePath = join(
-        dirname(fileURLToPath(import.meta.url)),
-        '..',
-        'url-handler',
-        `${process.arch}-darwin`,
-        'url-handler.node',
-      )
-      cachedModule = createRequire(import.meta.url)(modulePath) as UrlHandlerNapi
+      const platformDir = `${process.arch}-${process.platform}`
+      const candidates = [
+        // 预编译好的
+        `./vendor/url-handler/${platformDir}/url-handler.node`,
+        `../vendor/url-handler/${platformDir}/url-handler.node`,
+        `../../vendor/url-handler/${platformDir}/url-handler.node`,
+        `../../../vendor/url-handler/${platformDir}/url-handler.node`,
+
+        // 本地编译出的
+        `build/Release/url-handler.node`,
+        `build/Debug/url-handler.node`,
+        `../build/Release/url-handler.node`,
+        `../build/Debug/url-handler.node`,
+      ]
+
+      for (const candidate of candidates) {
+        try {
+          cachedModule = require(candidate)
+          return cachedModule
+        } catch {
+          // try next
+        }
+      }
     }
     return cachedModule
   } catch {
