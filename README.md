@@ -9,11 +9,69 @@
 [![License][license]][license-url]
 [![Install Size][size]][size-url]
 
-## 开发调试
+> 源于一个 59.8 MB 的 JavaScript 源映射文件（Source Map）`cli.js.map`
+
+## 📦 安装
+
+### 全局安装
+
+```bash
+npm install -g @sobird/claude-code
+```
+
+2. 进入到你的项目目录并运行 `sobird`
+
+## 🛠️ 开发设置
+
+### 前提条件
+
+- Node.js 18+
+- Bun
+
+```bash
+npm i -g bun
+```
+
+### 克隆和安装
+
+```bash
+# 克隆仓库
+git clone https://github.com/sobird/claude-code.git
+
+# 进入仓库目录
+cd claude-code
+
+# 安装依赖
+bun install
+```
+
+### 在开发模式下运行
+
+```bash
+# 在终端运行（基于当前项目） claude code
+bun run dev
+```
+
+### 构建项目
+
+```bash
+# 生产环境构建
+bun run build
+
+# 在本项目目录运行构建后的版本
+node dist/cli.js
+
+# 或者 链接到本机全局命令 sobird，使用sobird命令运行任意项目 （可选）
+npm link
+```
+
+## 🐛 调试
+
+### 开发模式调试
 
 打开`vscode`运行和调试面板，选择`⚡️ Attach to claude code`，点击`开始调试（F5）`。
 
-编译后调试（代码未压缩）
+### 生产构建调试
 
 按下 `command + shift + p`，输入 `Debug: JavaScript Debug Terminal`，回车。
 在`JavaScript Debug Terminal`终端面板下输入：
@@ -22,7 +80,9 @@
 node dist/cli.js
 ```
 
-即可进入代码调试
+## 免责声明
+
+本仓库仅供个人学习、研究、交流和参考使用，请勿将其用于任何商业活动
 
 <!-- Badges -->
 

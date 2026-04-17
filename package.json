@@ -9,8 +9,8 @@
   "bugs": {
     "url": "https://github.com/sobird/claude-code/issues"
   },
-  "license": "MIT",
-  "author": "sobird",
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "sobird <i@sobird.me>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sobird/claude-code.git"

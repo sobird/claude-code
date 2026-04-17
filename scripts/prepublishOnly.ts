@@ -1,18 +1,17 @@
-import { rename, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises'
+import pkg from '../package.json'
+import { external } from './config'
 
-import pkg from '../package.json';
-import { external } from './config';
-
-await rename('dist/cli.js', 'cli.js');
-pkg.bin.sobird = 'cli.js';
+// await rename('dist/cli.js', 'cli.js');
+// pkg.bin.sobird = 'cli.js';
 
 // @ts-expect-error: reset
-const dependencies = Object.fromEntries(external.map(dep => [dep, pkg.dependencies[dep]]));
+const dependencies = Object.fromEntries(external.map((dep) => [dep, pkg.dependencies[dep]]))
 // @ts-expect-error: reset
-pkg.dependencies = dependencies;
+pkg.dependencies = dependencies
 // @ts-expect-error: reset
-pkg.devDependencies = undefined;
+pkg.devDependencies = undefined
 // @ts-expect-error: reset
-pkg.workspaces = undefined;
+pkg.workspaces = undefined
 
-await writeFile('package.json', JSON.stringify(pkg, null, 2));
+await writeFile('package.json', JSON.stringify(pkg, null, 2))
