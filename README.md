@@ -13,24 +13,18 @@
 
 ## 📦 安装
 
-### 全局安装
-
 ```bash
 npm install -g @sobird/claude-code
 ```
 
-2. 进入到你的项目目录并运行 `sobird`
+进入到你的项目目录并运行 `sobird`
 
 ## 🛠️ 开发设置
 
 ### 前提条件
 
-- Node.js 18+
-- Bun
-
-```bash
-npm i -g bun
-```
+- [x] Node.js 18+ 请自行安装
+- [x] Bun 全局安装 `npm i -g bun`
 
 ### 克隆和安装
 
