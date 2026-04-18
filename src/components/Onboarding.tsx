@@ -3,10 +3,7 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
-import {
-  setupTerminal,
-  shouldOfferTerminalSetup,
-} from '../commands/terminalSetup/terminalSetup.js'
+import { setupTerminal, shouldOfferTerminalSetup } from '../commands/terminalSetup/terminalSetup.js'
 import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { Box, Link, Newline, Text, useTheme } from '../ink.js'
 import { useKeybindings } from '../keybindings/useKeybinding.js'
@@ -25,13 +22,7 @@ import { PressEnterToContinue } from './PressEnterToContinue.js'
 import { ThemePicker } from './ThemePicker.js'
 import { OrderedList } from './ui/OrderedList.js'
 
-type StepId =
-  | 'preflight'
-  | 'theme'
-  | 'oauth'
-  | 'api-key'
-  | 'security'
-  | 'terminal-setup'
+type StepId = 'preflight' | 'theme' | 'oauth' | 'api-key' | 'security' | 'terminal-setup'
 
 interface OnboardingStep {
   id: StepId
@@ -39,7 +30,7 @@ interface OnboardingStep {
 }
 
 type Props = {
-  onDone(): void
+  onDone: () => void
 }
 
 export function Onboarding({ onDone }: Props): React.ReactNode {
@@ -61,8 +52,7 @@ export function Onboarding({ onDone }: Props): React.ReactNode {
 
       logEvent('tengu_onboarding_step', {
         oauthEnabled,
-        stepId: steps[nextIndex]
-          ?.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        stepId: steps[nextIndex]?.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
     } else {
       onDone()
@@ -108,9 +98,7 @@ export function Onboarding({ onDone }: Props): React.ReactNode {
             </Text>
           </OrderedList.Item>
           <OrderedList.Item>
-            <Text>
-              Due to prompt injection risks, only use it with code you trust
-            </Text>
+            <Text>Due to prompt injection risks, only use it with code you trust</Text>
             <Text dimColor wrap="wrap">
               For more details see:
               <Newline />
@@ -132,12 +120,11 @@ export function Onboarding({ onDone }: Props): React.ReactNode {
     if (!process.env.ANTHROPIC_API_KEY || isRunningOnHomespace()) {
       return ''
     }
-    const customApiKeyTruncated = normalizeApiKeyForConfig(
-      process.env.ANTHROPIC_API_KEY,
-    )
+    const customApiKeyTruncated = normalizeApiKeyForConfig(process.env.ANTHROPIC_API_KEY)
     if (getCustomApiKeyStatus(customApiKeyTruncated) === 'new') {
       return customApiKeyTruncated
     }
+    return ''
   }, [])
 
   function handleApiKeyDone(approved: boolean) {
@@ -156,12 +143,7 @@ export function Onboarding({ onDone }: Props): React.ReactNode {
   if (apiKeyNeedingApproval) {
     steps.push({
       id: 'api-key',
-      component: (
-        <ApproveApiKey
-          customApiKeyTruncated={apiKeyNeedingApproval}
-          onDone={handleApiKeyDone}
-        />
-      ),
+      component: <ApproveApiKey customApiKeyTruncated={apiKeyNeedingApproval} onDone={handleApiKeyDone} />,
     })
   }
 
@@ -204,7 +186,7 @@ export function Onboarding({ onDone }: Props): React.ReactNode {
                   value: 'no',
                 },
               ]}
-              onChange={value => {
+              onChange={(value) => {
                 if (value === 'install') {
                   // Errors already logged in setupTerminal, just swallow and proceed
                   void setupTerminal(theme)
@@ -217,11 +199,7 @@ export function Onboarding({ onDone }: Props): React.ReactNode {
               onCancel={() => goToNextStep()}
             />
             <Text dimColor>
-              {exitState.pending ? (
-                <>Press {exitState.keyName} again to exit</>
-              ) : (
-                <>Enter to confirm · Esc to skip</>
-              )}
+              {exitState.pending ? <>Press {exitState.keyName} again to exit</> : <>Enter to confirm · Esc to skip</>}
             </Text>
           </Box>
         </Box>
@@ -286,7 +264,7 @@ export function SkippableStep({
   children,
 }: {
   skip: boolean
-  onSkip(): void
+  onSkip: () => void
   children: React.ReactNode
 }): React.ReactNode {
   useEffect(() => {

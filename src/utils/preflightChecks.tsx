@@ -19,14 +19,9 @@ async function checkEndpoints(): Promise<PreflightCheckResult> {
   try {
     const oauthConfig = getOauthConfig()
     const tokenUrl = new URL(oauthConfig.TOKEN_URL)
-    const endpoints = [
-      `${oauthConfig.BASE_API_URL}/api/hello`,
-      `${tokenUrl.origin}/v1/oauth/hello`,
-    ]
+    const endpoints = [`${oauthConfig.BASE_API_URL}/api/hello`, `${tokenUrl.origin}/v1/oauth/hello`]
 
-    const checkEndpoint = async (
-      url: string,
-    ): Promise<PreflightCheckResult> => {
+    const checkEndpoint = async (url: string): Promise<PreflightCheckResult> => {
       try {
         const response = await axios.get(url, {
           headers: { 'User-Agent': getUserAgent() },
@@ -51,7 +46,7 @@ async function checkEndpoints(): Promise<PreflightCheckResult> {
     }
 
     const results = await Promise.all(endpoints.map(checkEndpoint))
-    const failedResult = results.find(result => !result.success)
+    const failedResult = results.find((result) => !result.success)
 
     if (failedResult) {
       // Log failure to Statsig
@@ -82,9 +77,7 @@ interface PreflightStepProps {
   onSuccess: () => void
 }
 
-export function PreflightStep({
-  onSuccess,
-}: PreflightStepProps): React.ReactNode {
+export function PreflightStep({ onSuccess }: PreflightStepProps): React.ReactNode {
   const [result, setResult] = useState<PreflightCheckResult | null>(null)
   const [isChecking, setIsChecking] = useState(true)
 
@@ -102,12 +95,15 @@ export function PreflightStep({
   }, [])
 
   useEffect(() => {
+    let timer: NodeJS.Timeout | undefined
+
     if (result?.success) {
       onSuccess()
     } else if (result && !result.success) {
-      const timer = setTimeout(() => process.exit(1), 100)
-      return () => clearTimeout(timer)
+      timer = setTimeout(() => process.exit(1), 100)
     }
+
+    return () => clearTimeout(timer)
   }, [result, onSuccess])
 
   return (
@@ -126,21 +122,14 @@ export function PreflightStep({
             {result?.sslHint ? (
               <Box flexDirection="column" gap={1}>
                 <Text>{result.sslHint}</Text>
-                <Text color="suggestion">
-                  See https://code.claude.com/docs/en/network-config
-                </Text>
+                <Text color="suggestion">See https://code.claude.com/docs/en/network-config</Text>
               </Box>
             ) : (
               <Box flexDirection="column" gap={1}>
+                <Text>Please check your internet connection and network settings.</Text>
                 <Text>
-                  Please check your internet connection and network settings.
-                </Text>
-                <Text>
-                  Note: Claude Code might not be available in your country.
-                  Check supported countries at{' '}
-                  <Text color="suggestion">
-                    https://anthropic.com/supported-countries
-                  </Text>
+                  Note: Claude Code might not be available in your country. Check supported countries at{' '}
+                  <Text color="suggestion">https://anthropic.com/supported-countries</Text>
                 </Text>
               </Box>
             )}

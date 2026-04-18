@@ -27,6 +27,8 @@ export function fileSuffixForOauthConfig(): string {
     case 'prod':
       // No suffix for production config
       return ''
+    default:
+      return ''
   }
 }
 
@@ -36,10 +38,7 @@ const CONSOLE_SCOPE = 'org:create_api_key' as const
 export const OAUTH_BETA_HEADER = 'oauth-2025-04-20' as const
 
 // Console OAuth scopes - for API key creation via Console
-export const CONSOLE_OAUTH_SCOPES = [
-  CONSOLE_SCOPE,
-  CLAUDE_AI_PROFILE_SCOPE,
-] as const
+export const CONSOLE_OAUTH_SCOPES = [CONSOLE_SCOPE, CLAUDE_AI_PROFILE_SCOPE] as const
 
 // Claude.ai OAuth scopes - for Claude.ai subscribers (Pro/Max/Team/Enterprise)
 export const CLAUDE_AI_OAUTH_SCOPES = [
@@ -53,9 +52,7 @@ export const CLAUDE_AI_OAUTH_SCOPES = [
 // All OAuth scopes - union of all scopes used in Claude CLI
 // When logging in, request all scopes in order to handle both Console -> Claude.ai redirect
 // Ensure that `OAuthConsentPage` in apps repo is kept in sync with this list.
-export const ALL_OAUTH_SCOPES = Array.from(
-  new Set([...CONSOLE_OAUTH_SCOPES, ...CLAUDE_AI_OAUTH_SCOPES]),
-)
+export const ALL_OAUTH_SCOPES = Array.from(new Set([...CONSOLE_OAUTH_SCOPES, ...CLAUDE_AI_OAUTH_SCOPES]))
 
 type OauthConfig = {
   BASE_API_URL: string
@@ -91,10 +88,8 @@ const PROD_OAUTH_CONFIG = {
   TOKEN_URL: 'https://platform.claude.com/v1/oauth/token',
   API_KEY_URL: 'https://api.anthropic.com/api/oauth/claude_cli/create_api_key',
   ROLES_URL: 'https://api.anthropic.com/api/oauth/claude_cli/roles',
-  CONSOLE_SUCCESS_URL:
-    'https://platform.claude.com/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dclaude-code',
-  CLAUDEAI_SUCCESS_URL:
-    'https://platform.claude.com/oauth/code/success?app=claude-code',
+  CONSOLE_SUCCESS_URL: 'https://platform.claude.com/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dclaude-code',
+  CLAUDEAI_SUCCESS_URL: 'https://platform.claude.com/oauth/code/success?app=claude-code',
   MANUAL_REDIRECT_URL: 'https://platform.claude.com/oauth/code/callback',
   CLIENT_ID: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
   // No suffix for production config
@@ -110,8 +105,7 @@ const PROD_OAUTH_CONFIG = {
  * The URL must point to a JSON document hosted by Anthropic.
  * See: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-00
  */
-export const MCP_CLIENT_METADATA_URL =
-  'https://claude.ai/oauth/claude-code-client-metadata'
+export const MCP_CLIENT_METADATA_URL = 'https://claude.ai/oauth/claude-code-client-metadata'
 
 // Staging OAuth configuration - only included in ant builds with staging flag
 // Uses literal check for dead code elimination
@@ -119,22 +113,16 @@ const STAGING_OAUTH_CONFIG =
   process.env.USER_TYPE === 'ant'
     ? ({
         BASE_API_URL: 'https://api-staging.anthropic.com',
-        CONSOLE_AUTHORIZE_URL:
-          'https://platform.staging.ant.dev/oauth/authorize',
-        CLAUDE_AI_AUTHORIZE_URL:
-          'https://claude-ai.staging.ant.dev/oauth/authorize',
+        CONSOLE_AUTHORIZE_URL: 'https://platform.staging.ant.dev/oauth/authorize',
+        CLAUDE_AI_AUTHORIZE_URL: 'https://claude-ai.staging.ant.dev/oauth/authorize',
         CLAUDE_AI_ORIGIN: 'https://claude-ai.staging.ant.dev',
         TOKEN_URL: 'https://platform.staging.ant.dev/v1/oauth/token',
-        API_KEY_URL:
-          'https://api-staging.anthropic.com/api/oauth/claude_cli/create_api_key',
-        ROLES_URL:
-          'https://api-staging.anthropic.com/api/oauth/claude_cli/roles',
+        API_KEY_URL: 'https://api-staging.anthropic.com/api/oauth/claude_cli/create_api_key',
+        ROLES_URL: 'https://api-staging.anthropic.com/api/oauth/claude_cli/roles',
         CONSOLE_SUCCESS_URL:
           'https://platform.staging.ant.dev/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dclaude-code',
-        CLAUDEAI_SUCCESS_URL:
-          'https://platform.staging.ant.dev/oauth/code/success?app=claude-code',
-        MANUAL_REDIRECT_URL:
-          'https://platform.staging.ant.dev/oauth/code/callback',
+        CLAUDEAI_SUCCESS_URL: 'https://platform.staging.ant.dev/oauth/code/success?app=claude-code',
+        MANUAL_REDIRECT_URL: 'https://platform.staging.ant.dev/oauth/code/callback',
         CLIENT_ID: '22422756-60c9-4084-8eb7-27705fd5cf9a',
         OAUTH_FILE_SUFFIX: '-staging-oauth',
         MCP_PROXY_URL: 'https://mcp-proxy-staging.anthropic.com',
@@ -146,15 +134,9 @@ const STAGING_OAUTH_CONFIG =
 // :4000 claude-ai frontend, :3000 Console frontend. Env vars let
 // scripts/claude-localhost override if your layout differs.
 function getLocalOauthConfig(): OauthConfig {
-  const api =
-    process.env.CLAUDE_LOCAL_OAUTH_API_BASE?.replace(/\/$/, '') ??
-    'http://localhost:8000'
-  const apps =
-    process.env.CLAUDE_LOCAL_OAUTH_APPS_BASE?.replace(/\/$/, '') ??
-    'http://localhost:4000'
-  const consoleBase =
-    process.env.CLAUDE_LOCAL_OAUTH_CONSOLE_BASE?.replace(/\/$/, '') ??
-    'http://localhost:3000'
+  const api = process.env.CLAUDE_LOCAL_OAUTH_API_BASE?.replace(/\/$/, '') ?? 'http://localhost:8000'
+  const apps = process.env.CLAUDE_LOCAL_OAUTH_APPS_BASE?.replace(/\/$/, '') ?? 'http://localhost:4000'
+  const consoleBase = process.env.CLAUDE_LOCAL_OAUTH_CONSOLE_BASE?.replace(/\/$/, '') ?? 'http://localhost:3000'
   return {
     BASE_API_URL: api,
     CONSOLE_AUTHORIZE_URL: `${consoleBase}/oauth/authorize`,
@@ -176,11 +158,11 @@ function getLocalOauthConfig(): OauthConfig {
 // Allowed base URLs for CLAUDE_CODE_CUSTOM_OAUTH_URL override.
 // Only FedStart/PubSec deployments are permitted to prevent OAuth tokens
 // from being sent to arbitrary endpoints.
-const ALLOWED_OAUTH_BASE_URLS = [
+const ALLOWED_OAUTH_BASE_URLS = new Set([
   'https://beacon.claude-ai.staging.ant.dev',
   'https://claude.fedstart.com',
   'https://claude-staging.fedstart.com',
-]
+])
 
 // Default to prod config, override with test/staging if enabled
 export function getOauthConfig(): OauthConfig {
@@ -192,6 +174,8 @@ export function getOauthConfig(): OauthConfig {
         return STAGING_OAUTH_CONFIG ?? PROD_OAUTH_CONFIG
       case 'prod':
         return PROD_OAUTH_CONFIG
+      default:
+        return PROD_OAUTH_CONFIG
     }
   })()
 
@@ -200,10 +184,8 @@ export function getOauthConfig(): OauthConfig {
   const oauthBaseUrl = process.env.CLAUDE_CODE_CUSTOM_OAUTH_URL
   if (oauthBaseUrl) {
     const base = oauthBaseUrl.replace(/\/$/, '')
-    if (!ALLOWED_OAUTH_BASE_URLS.includes(base)) {
-      throw new Error(
-        'CLAUDE_CODE_CUSTOM_OAUTH_URL is not an approved endpoint.',
-      )
+    if (!ALLOWED_OAUTH_BASE_URLS.has(base)) {
+      throw new Error('CLAUDE_CODE_CUSTOM_OAUTH_URL is not an approved endpoint.')
     }
     config = {
       ...config,

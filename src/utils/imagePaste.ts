@@ -1,12 +1,8 @@
 import { feature } from 'bun:bundle'
 import { randomBytes } from 'crypto'
-import { execa } from 'execa'
 import { basename, extname, isAbsolute, join } from 'path'
-import {
-  IMAGE_MAX_HEIGHT,
-  IMAGE_MAX_WIDTH,
-  IMAGE_TARGET_RAW_SIZE,
-} from '../constants/apiLimits.js'
+import { execa } from 'execa'
+import { IMAGE_MAX_HEIGHT, IMAGE_MAX_WIDTH, IMAGE_TARGET_RAW_SIZE } from '../constants/apiLimits.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import { getImageProcessor } from '../tools/FileReadTool/imageProcessor.js'
 import { logForDebugging } from './debug.js'
@@ -33,9 +29,7 @@ function getClipboardCommands() {
 
   // Platform-specific temporary file paths
   // Use CLAUDE_CODE_TMPDIR if set, otherwise fall back to platform defaults
-  const baseTmpDir =
-    process.env.CLAUDE_CODE_TMPDIR ||
-    (platform === 'win32' ? process.env.TEMP || 'C:\\Temp' : '/tmp')
+  const baseTmpDir = process.env.CLAUDE_CODE_TMPDIR || (platform === 'win32' ? process.env.TEMP || 'C:\\Temp' : '/tmp')
   const screenshotFilename = 'claude_cli_latest_screenshot.png'
   const tempPaths: Record<SupportedPlatform, string> = {
     darwin: join(baseTmpDir, screenshotFilename),
@@ -65,13 +59,11 @@ function getClipboardCommands() {
       checkImage:
         'xclip -selection clipboard -t TARGETS -o 2>/dev/null | grep -E "image/(png|jpeg|jpg|gif|webp|bmp)" || wl-paste -l 2>/dev/null | grep -E "image/(png|jpeg|jpg|gif|webp|bmp)"',
       saveImage: `xclip -selection clipboard -t image/png -o > "${screenshotPath}" 2>/dev/null || wl-paste --type image/png > "${screenshotPath}" 2>/dev/null || xclip -selection clipboard -t image/bmp -o > "${screenshotPath}" 2>/dev/null || wl-paste --type image/bmp > "${screenshotPath}"`,
-      getPath:
-        'xclip -selection clipboard -t text/plain -o 2>/dev/null || wl-paste 2>/dev/null',
+      getPath: 'xclip -selection clipboard -t text/plain -o 2>/dev/null || wl-paste 2>/dev/null',
       deleteFile: `rm -f "${screenshotPath}"`,
     },
     win32: {
-      checkImage:
-        'powershell -NoProfile -Command "(Get-Clipboard -Format Image) -ne $null"',
+      checkImage: 'powershell -NoProfile -Command "(Get-Clipboard -Format Image) -ne $null"',
       saveImage: `powershell -NoProfile -Command "$img = Get-Clipboard -Format Image; if ($img) { $img.Save('${screenshotPath.replace(/\\/g, '\\\\')}', [System.Drawing.Imaging.ImageFormat]::Png) }"`,
       getPath: 'powershell -NoProfile -Command "Get-Clipboard"',
       deleteFile: `del /f "${screenshotPath}"`,
@@ -97,10 +89,7 @@ export async function hasImageInClipboard(): Promise<boolean> {
   if (process.platform !== 'darwin') {
     return false
   }
-  if (
-    feature('NATIVE_CLIPBOARD_IMAGE') &&
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_collage_kaleidoscope', true)
-  ) {
+  if (feature('NATIVE_CLIPBOARD_IMAGE') && getFeatureValue_CACHED_MAY_BE_STALE('tengu_collage_kaleidoscope', true)) {
     // Native NSPasteboard check (~0.03ms warm). Fall through to osascript
     // when the module/export is missing. Catch a throw too: it would surface
     // as an unhandled rejection in useClipboardImageHint's setTimeout.
@@ -114,10 +103,7 @@ export async function hasImageInClipboard(): Promise<boolean> {
       logError(e as Error)
     }
   }
-  const result = await execFileNoThrowWithCwd('osascript', [
-    '-e',
-    'the clipboard as «class PNGf»',
-  ])
+  const result = await execFileNoThrowWithCwd('osascript', ['-e', 'the clipboard as «class PNGf»'])
   return result.code === 0
 }
 
@@ -150,11 +136,7 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
       // already under: just a sharp metadata read.
       const buffer: Buffer = native.png
       if (buffer.length > IMAGE_TARGET_RAW_SIZE) {
-        const resized = await maybeResizeAndDownsampleImageBuffer(
-          buffer,
-          buffer.length,
-          'png',
-        )
+        const resized = await maybeResizeAndDownsampleImageBuffer(buffer, buffer.length, 'png')
         return {
           base64: resized.buffer.toString('base64'),
           mediaType: `image/${resized.mediaType}`,
@@ -208,21 +190,13 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
 
     // BMP is not supported by the API — convert to PNG via Sharp.
     // This handles WSL2 where Windows copies images as BMP by default.
-    if (
-      imageBuffer.length >= 2 &&
-      imageBuffer[0] === 0x42 &&
-      imageBuffer[1] === 0x4d
-    ) {
+    if (imageBuffer.length >= 2 && imageBuffer[0] === 0x42 && imageBuffer[1] === 0x4d) {
       const sharp = await getImageProcessor()
       imageBuffer = await sharp(imageBuffer).png().toBuffer()
     }
 
     // Resize if needed to stay under 5MB API limit
-    const resized = await maybeResizeAndDownsampleImageBuffer(
-      imageBuffer,
-      imageBuffer.length,
-      'png',
-    )
+    const resized = await maybeResizeAndDownsampleImageBuffer(imageBuffer, imageBuffer.length, 'png')
     const base64Image = resized.buffer.toString('base64')
 
     // Detect format from magic bytes
@@ -275,10 +249,7 @@ export const IMAGE_EXTENSION_REGEX = /\.(png|jpe?g|gif|webp)$/i
  * @returns Text without outer quotes
  */
 function removeOuterQuotes(text: string): string {
-  if (
-    (text.startsWith('"') && text.endsWith('"')) ||
-    (text.startsWith("'") && text.endsWith("'"))
-  ) {
+  if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) {
     return text.slice(1, -1)
   }
   return text
@@ -348,9 +319,7 @@ export function asImageFilePath(text: string): string | null {
  * @param text Pasted text that might be an image filename or path
  * @returns Object containing the image path and base64 data, or null if not found
  */
-export async function tryReadImageFromPath(
-  text: string,
-): Promise<(ImageWithDimensions & { path: string }) | null> {
+export async function tryReadImageFromPath(text: string): Promise<(ImageWithDimensions & { path: string }) | null> {
   // Strip terminal added spaces or quotes to dragged in paths
   const cleanedPath = asImageFilePath(text)
 
@@ -386,11 +355,7 @@ export async function tryReadImageFromPath(
   }
 
   // BMP is not supported by the API — convert to PNG via Sharp.
-  if (
-    imageBuffer.length >= 2 &&
-    imageBuffer[0] === 0x42 &&
-    imageBuffer[1] === 0x4d
-  ) {
+  if (imageBuffer.length >= 2 && imageBuffer[0] === 0x42 && imageBuffer[1] === 0x4d) {
     const sharp = await getImageProcessor()
     imageBuffer = await sharp(imageBuffer).png().toBuffer()
   }
@@ -398,11 +363,7 @@ export async function tryReadImageFromPath(
   // Resize if needed to stay under 5MB API limit
   // Extract extension from path for format hint
   const ext = extname(imagePath).slice(1).toLowerCase() || 'png'
-  const resized = await maybeResizeAndDownsampleImageBuffer(
-    imageBuffer,
-    imageBuffer.length,
-    ext,
-  )
+  const resized = await maybeResizeAndDownsampleImageBuffer(imageBuffer, imageBuffer.length, ext)
   const base64Image = resized.buffer.toString('base64')
 
   // Detect format from the actual file contents using magic bytes
