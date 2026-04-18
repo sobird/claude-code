@@ -34,6 +34,7 @@
     "build": "bun scripts/build.ts",
     "build:ant": "bun scripts/build.ts --ant",
     "debug": "bun scripts/debug.ts",
+    "debug:dist": "node --inspect-brk dist/cli.js",
     "dev": "bun scripts/dev.ts",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",

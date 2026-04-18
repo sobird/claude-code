@@ -14,26 +14,19 @@
       "internalConsoleOptions": "neverOpen"
     },
     {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug Bun (TTY)",
-      "runtimeExecutable": "bun",
-      "runtimeArgs": ["--inspect"],
-      "program": "${workspaceFolder}/index.ts",
-      "console": "externalTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "restart": true
-    },
-
-    {
+      "name": "Attach to claude code",
       "type": "bun",
-      "internalConsoleOptions": "neverOpen",
-      "request": "launch",
-      "name": "Debug File",
-      "program": "${file}",
-      "cwd": "${workspaceFolder}",
+      "request": "attach",
+      "url": "ws://localhost:6499/",
       "stopOnEntry": false,
-      "watchMode": false
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Attach to dist",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "internalConsoleOptions": "neverOpen"
     },
     {
       "type": "bun",
@@ -45,6 +38,5 @@
       "noDebug": true,
       "watchMode": false
     }
-
   ]
 }
