@@ -23,9 +23,12 @@
     "packages/@ant/*"
   ],
   "files": [
-    "vendor"
+    "vendor/audio-capture",
+    "vendor/modifiers",
+    "vendor/url-handler"
   ],
   "type": "module",
+  "main": "./dist/index.js",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
