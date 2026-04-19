@@ -6,38 +6,29 @@ import { Dialog } from './design-system/Dialog.js'
 
 type Props = {
   customApiKeyTruncated: string
-  onDone(approved: boolean): void
+  onDone: (approved: boolean) => void
 }
 
-export function ApproveApiKey({
-  customApiKeyTruncated,
-  onDone,
-}: Props): React.ReactNode {
+export function ApproveApiKey({ customApiKeyTruncated, onDone }: Props): React.ReactNode {
   function onChange(value: 'yes' | 'no') {
     switch (value) {
       case 'yes': {
-        saveGlobalConfig(current => ({
+        saveGlobalConfig((current) => ({
           ...current,
           customApiKeyResponses: {
             ...current.customApiKeyResponses,
-            approved: [
-              ...(current.customApiKeyResponses?.approved ?? []),
-              customApiKeyTruncated,
-            ],
+            approved: [...(current.customApiKeyResponses?.approved ?? []), customApiKeyTruncated],
           },
         }))
         onDone(true)
         break
       }
       case 'no': {
-        saveGlobalConfig(current => ({
+        saveGlobalConfig((current) => ({
           ...current,
           customApiKeyResponses: {
             ...current.customApiKeyResponses,
-            rejected: [
-              ...(current.customApiKeyResponses?.rejected ?? []),
-              customApiKeyTruncated,
-            ],
+            rejected: [...(current.customApiKeyResponses?.rejected ?? []), customApiKeyTruncated],
           },
         }))
         onDone(false)
@@ -47,11 +38,7 @@ export function ApproveApiKey({
   }
 
   return (
-    <Dialog
-      title="Detected a custom API key in your environment"
-      color="warning"
-      onCancel={() => onChange('no')}
-    >
+    <Dialog title="Detected a custom API key in your environment" color="warning" onCancel={() => onChange('no')}>
       <Text>
         <Text bold>ANTHROPIC_API_KEY</Text>
         <Text>: sk-ant-...{customApiKeyTruncated}</Text>
@@ -71,7 +58,7 @@ export function ApproveApiKey({
             value: 'no',
           },
         ]}
-        onChange={value => onChange(value as 'yes' | 'no')}
+        onChange={(value) => onChange(value as 'yes' | 'no')}
         onCancel={() => onChange('no')}
       />
     </Dialog>

@@ -1,6 +1,6 @@
-import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import { join } from 'path'
+import memoize from 'lodash-es/memoize.js'
 import { fileSuffixForOauthConfig } from '../constants/oauth.js'
 import { isRunningWithBun } from './bundledMode.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
@@ -13,11 +13,7 @@ type Platform = 'win32' | 'darwin' | 'linux'
 // Config and data paths
 export const getGlobalClaudeFile = memoize((): string => {
   // Legacy fallback for backwards compatibility
-  if (
-    getFsImplementation().existsSync(
-      join(getClaudeConfigHomeDir(), '.config.json'),
-    )
-  ) {
+  if (getFsImplementation().existsSync(join(getClaudeConfigHomeDir(), '.config.json'))) {
     return join(getClaudeConfigHomeDir(), '.config.json')
   }
 
@@ -73,10 +69,8 @@ const detectRuntimes = memoize(async (): Promise<string[]> => {
 const isWslEnvironment = memoize((): boolean => {
   try {
     // Check for WSLInterop file which is a reliable indicator of WSL
-    return getFsImplementation().existsSync(
-      '/proc/sys/fs/binfmt_misc/WSLInterop',
-    )
-  } catch (_error) {
+    return getFsImplementation().existsSync('/proc/sys/fs/binfmt_misc/WSLInterop')
+  } catch {
     // If there's an error checking, assume not WSL
     return false
   }
@@ -98,7 +92,7 @@ const isNpmFromWindowsPath = memoize((): boolean => {
 
     // If npm is in Windows path, it will start with /mnt/c/
     return cmd.startsWith('/mnt/c/')
-  } catch (_error) {
+  } catch {
     // If there's an error, assume it's not from Windows
     return false
   }
@@ -201,11 +195,7 @@ function detectTerminal(): string | null {
   if (process.env.WT_SESSION) return 'windows-terminal'
   if (process.env.SESSIONNAME && process.env.TERM === 'cygwin') return 'cygwin'
   if (process.env.MSYSTEM) return process.env.MSYSTEM.toLowerCase() // MINGW64, MSYS2, etc.
-  if (
-    process.env.ConEmuANSI ||
-    process.env.ConEmuPID ||
-    process.env.ConEmuTask
-  ) {
+  if (process.env.ConEmuANSI || process.env.ConEmuPID || process.env.ConEmuTask) {
     return 'conemu'
   }
 
@@ -246,10 +236,7 @@ export const detectDeploymentEnvironment = memoize((): string => {
 
   // Cloud platforms
   if (isEnvTruthy(process.env.VERCEL)) return 'vercel'
-  if (
-    process.env.RAILWAY_ENVIRONMENT_NAME ||
-    process.env.RAILWAY_SERVICE_NAME
-  ) {
+  if (process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_SERVICE_NAME) {
     return 'railway'
   }
   if (isEnvTruthy(process.env.RENDER)) return 'render'
@@ -263,18 +250,14 @@ export const detectDeploymentEnvironment = memoize((): string => {
   if (process.env.AWS_EXECUTION_ENV === 'AWS_ECS_EC2') return 'aws-ecs'
   // Check for EC2 via hypervisor UUID
   try {
-    const uuid = getFsImplementation()
-      .readFileSync('/sys/hypervisor/uuid', { encoding: 'utf8' })
-      .trim()
-      .toLowerCase()
+    const uuid = getFsImplementation().readFileSync('/sys/hypervisor/uuid', { encoding: 'utf8' }).trim().toLowerCase()
     if (uuid.startsWith('ec2')) return 'aws-ec2'
   } catch {
     // Ignore errors reading hypervisor UUID (ENOENT on non-EC2, etc.)
   }
   if (process.env.K_SERVICE) return 'gcp-cloud-run'
   if (process.env.GOOGLE_CLOUD_PROJECT) return 'gcp'
-  if (process.env.WEBSITE_SITE_NAME || process.env.WEBSITE_SKU)
-    return 'azure-app-service'
+  if (process.env.WEBSITE_SITE_NAME || process.env.WEBSITE_SKU) return 'azure-app-service'
   if (process.env.AZURE_FUNCTIONS_ENVIRONMENT) return 'azure-functions'
   if (process.env.APP_URL?.includes('ondigitalocean.app')) {
     return 'digitalocean-app-platform'
@@ -306,19 +289,13 @@ export const detectDeploymentEnvironment = memoize((): string => {
 
 // all of these should be immutable
 function isSSHSession(): boolean {
-  return !!(
-    process.env.SSH_CONNECTION ||
-    process.env.SSH_CLIENT ||
-    process.env.SSH_TTY
-  )
+  return !!(process.env.SSH_CONNECTION || process.env.SSH_CLIENT || process.env.SSH_TTY)
 }
 
 export const env = {
   hasInternetAccess,
   isCI: isEnvTruthy(process.env.CI),
-  platform: (['win32', 'darwin'].includes(process.platform)
-    ? process.platform
-    : 'linux') as Platform,
+  platform: (['win32', 'darwin'].includes(process.platform) ? process.platform : 'linux') as Platform,
   arch: process.arch,
   nodeVersion: process.version,
   terminal: detectTerminal(),
