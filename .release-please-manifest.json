@@ -1,5 +1,4 @@
 {
   "$schema": "./node_modules/release-please/schemas/manifest.json",
-  ".": "2.1.88",
-  "packages/modifiers-napi": "0.0.1"
+  ".": "2.1.88"
 }
