@@ -6,7 +6,6 @@
 ![Node.js][node]
 ![CLI][cli]
 [![Build Status][build-status]][build-status-url]
-[![License][license]][license-url]
 [![Install Size][size]][size-url]
 
 > 源于一个 59.8 MB 的 JavaScript 源映射文件（Source Map）`cli.js.map`
