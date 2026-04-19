@@ -1,4 +1,4 @@
 {
   "$schema": "./node_modules/release-please/schemas/manifest.json",
-  ".": "2.1.88"
+  ".": "1.0.0"
 }
