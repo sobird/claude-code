@@ -13,5 +13,11 @@ pkg.dependencies = dependencies
 pkg.devDependencies = undefined
 // @ts-expect-error: reset
 pkg.workspaces = undefined
+// @ts-expect-error: reset
+pkg.publishConfig = undefined
+// @ts-expect-error: reset
+pkg.scripts = {}
+// @ts-expect-error: reset
+pkg['lint-staged'] = undefined
 
 await writeFile('package.json', JSON.stringify(pkg, null, 2))

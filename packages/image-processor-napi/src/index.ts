@@ -15,6 +15,7 @@ export type NativeModule = {
   processImage: (input: Buffer) => Promise<ImageProcessor>
   readClipboardImage?: (maxWidth: number, maxHeight: number) => ClipboardImageResult | null
   hasClipboardImage?: () => boolean
+  ImageProcessor: ImageProcessor
 }
 
 // Lazy: defers dlopen until first call. The .node binary links against

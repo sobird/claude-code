@@ -5,3 +5,5 @@
 "MACRO.FEEDBACK_CHANNEL"= "'https://github.com/anthropics/claude-code/issues'"
 "MACRO.PACKAGE_URL"= "'@anthropic-ai/claude-code'"
 "MACRO.README_URL"= "'https://code.claude.com/docs/en/overview'"
+# [install]
+# linker = "hoisted"
