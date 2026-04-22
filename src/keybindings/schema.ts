@@ -3,6 +3,7 @@
  * Used for validation and JSON schema generation.
  */
 
+import { feature } from 'bun:bundle'
 import { z } from 'zod/v4'
 import { lazySchema } from '../utils/lazySchema.js'
 
@@ -21,10 +22,12 @@ export const KEYBINDING_CONTEXTS = [
   'ThemePicker',
   'Settings',
   'Tabs',
+  'Scroll',
   // New contexts for keybindings migration
   'Attachments',
   'Footer',
   'MessageSelector',
+  ...(feature('MESSAGE_ACTIONS') ? ['MessageActions'] : []),
   'DiffDialog',
   'ModelPicker',
   'Select',
@@ -34,10 +37,7 @@ export const KEYBINDING_CONTEXTS = [
 /**
  * Human-readable descriptions for each keybinding context.
  */
-export const KEYBINDING_CONTEXT_DESCRIPTIONS: Record<
-  (typeof KEYBINDING_CONTEXTS)[number],
-  string
-> = {
+export const KEYBINDING_CONTEXT_DESCRIPTIONS: Record<(typeof KEYBINDING_CONTEXTS)[number], string> = {
   Global: 'Active everywhere, regardless of focus',
   Chat: 'When the chat input is focused',
   Autocomplete: 'When autocomplete menu is visible',
@@ -49,6 +49,12 @@ export const KEYBINDING_CONTEXT_DESCRIPTIONS: Record<
   ThemePicker: 'When the theme picker is open',
   Settings: 'When the settings menu is open',
   Tabs: 'When tab navigation is active',
+  Scroll: 'When content is scrollable (page up/down, wheel, etc.)',
+  ...(feature('MESSAGE_ACTIONS')
+    ? {
+        MessageActions: 'When navigating message actions (rewind dialog)',
+      }
+    : {}),
   Attachments: 'When navigating image attachments in a select dialog',
   Footer: 'When footer indicators are focused',
   MessageSelector: 'When the message selector (rewind) is open',
@@ -169,6 +175,31 @@ export const KEYBINDING_ACTIONS = [
   'settings:close',
   // Voice actions
   'voice:pushToTalk',
+  ...(feature('MESSAGE_ACTIONS')
+    ? [
+        // Message actions (conditional)
+        'messageActions:prev',
+        'messageActions:next',
+        'messageActions:top',
+        'messageActions:bottom',
+        'messageActions:prevUser',
+        'messageActions:nextUser',
+        'messageActions:escape',
+        'messageActions:ctrlc',
+        'messageActions:enter',
+        'messageActions:c',
+        'messageActions:p',
+      ]
+    : []),
+  // Scroll actions
+  'scroll:pageUp',
+  'scroll:pageDown',
+  'scroll:lineUp',
+  'scroll:lineDown',
+  'scroll:top',
+  'scroll:bottom',
+  // Selection actions
+  'selection:copy',
 ] as const
 
 /**
@@ -179,14 +210,10 @@ export const KeybindingBlockSchema = lazySchema(() =>
     .object({
       context: z
         .enum(KEYBINDING_CONTEXTS)
-        .describe(
-          'UI context where these bindings apply. Global bindings work everywhere.',
-        ),
+        .describe('UI context where these bindings apply. Global bindings work everywhere.'),
       bindings: z
         .record(
-          z
-            .string()
-            .describe('Keystroke pattern (e.g., "ctrl+k", "shift+tab")'),
+          z.string().describe('Keystroke pattern (e.g., "ctrl+k", "shift+tab")'),
           z
             .union([
               z.enum(KEYBINDING_ACTIONS),
@@ -198,9 +225,7 @@ export const KeybindingBlockSchema = lazySchema(() =>
                 ),
               z.null().describe('Set to null to unbind a default shortcut'),
             ])
-            .describe(
-              'Action to trigger, command to invoke, or null to unbind',
-            ),
+            .describe('Action to trigger, command to invoke, or null to unbind'),
         )
         .describe('Map of keystroke patterns to actions'),
     })
@@ -214,23 +239,14 @@ export const KeybindingBlockSchema = lazySchema(() =>
 export const KeybindingsSchema = lazySchema(() =>
   z
     .object({
-      $schema: z
-        .string()
-        .optional()
-        .describe('JSON Schema URL for editor validation'),
+      $schema: z.string().optional().describe('JSON Schema URL for editor validation'),
       $docs: z.string().optional().describe('Documentation URL'),
-      bindings: z
-        .array(KeybindingBlockSchema())
-        .describe('Array of keybinding blocks by context'),
+      bindings: z.array(KeybindingBlockSchema()).describe('Array of keybinding blocks by context'),
     })
-    .describe(
-      'Claude Code keybindings configuration. Customize keyboard shortcuts by context.',
-    ),
+    .describe('Claude Code keybindings configuration. Customize keyboard shortcuts by context.'),
 )
 
 /**
  * TypeScript types derived from the schema.
  */
-export type KeybindingsSchemaType = z.infer<
-  ReturnType<typeof KeybindingsSchema>
->
+export type KeybindingsSchemaType = z.infer<ReturnType<typeof KeybindingsSchema>>

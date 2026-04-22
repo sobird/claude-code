@@ -1,16 +1,8 @@
 import { DEFAULT_BINDINGS } from '../../keybindings/defaultBindings.js'
 import { isKeybindingCustomizationEnabled } from '../../keybindings/loadUserBindings.js'
-import {
-  MACOS_RESERVED,
-  NON_REBINDABLE,
-  TERMINAL_RESERVED,
-} from '../../keybindings/reservedShortcuts.js'
+import { MACOS_RESERVED, NON_REBINDABLE, TERMINAL_RESERVED } from '../../keybindings/reservedShortcuts.js'
 import type { KeybindingsSchemaType } from '../../keybindings/schema.js'
-import {
-  KEYBINDING_ACTIONS,
-  KEYBINDING_CONTEXT_DESCRIPTIONS,
-  KEYBINDING_CONTEXTS,
-} from '../../keybindings/schema.js'
+import { KEYBINDING_ACTIONS, KEYBINDING_CONTEXT_DESCRIPTIONS, KEYBINDING_CONTEXTS } from '../../keybindings/schema.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { registerBundledSkill } from '../bundledSkills.js'
 
@@ -20,10 +12,7 @@ import { registerBundledSkill } from '../bundledSkills.js'
 function generateContextsTable(): string {
   return markdownTable(
     ['Context', 'Description'],
-    KEYBINDING_CONTEXTS.map(ctx => [
-      `\`${ctx}\``,
-      KEYBINDING_CONTEXT_DESCRIPTIONS[ctx],
-    ]),
+    KEYBINDING_CONTEXTS.map((ctx) => [`\`${ctx}\``, KEYBINDING_CONTEXT_DESCRIPTIONS[ctx]]),
   )
 }
 
@@ -46,9 +35,9 @@ function generateActionsTable(): string {
 
   return markdownTable(
     ['Action', 'Default Key(s)', 'Context'],
-    KEYBINDING_ACTIONS.map(action => {
+    KEYBINDING_ACTIONS.map((action) => {
       const info = actionInfo[action]
-      const keys = info ? info.keys.map(k => `\`${k}\``).join(', ') : '(none)'
+      const keys = info ? info.keys.map((k) => `\`${k}\``).join(', ') : '(none)'
       const context = info ? info.context : inferContextFromAction(action)
       return [`\`${action}\``, keys, context]
     }),
@@ -97,9 +86,7 @@ function generateReservedShortcuts(): string {
   lines.push('')
   lines.push('### Terminal reserved (errors/warnings)')
   for (const s of TERMINAL_RESERVED) {
-    lines.push(
-      `- \`${s.key}\` — ${s.reason} (${s.severity === 'error' ? 'will not work' : 'may conflict'})`,
-    )
+    lines.push(`- \`${s.key}\` — ${s.reason} (${s.severity === 'error' ? 'will not work' : 'may conflict'})`)
   }
 
   lines.push('')
@@ -334,6 +321,6 @@ function markdownTable(headers: string[], rows: string[][]): string {
   return [
     `| ${headers.join(' | ')} |`,
     `| ${separator.join(' | ')} |`,
-    ...rows.map(row => `| ${row.join(' | ')} |`),
+    ...rows.map((row) => `| ${row.join(' | ')} |`),
   ].join('\n')
 }

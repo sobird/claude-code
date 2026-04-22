@@ -2,7 +2,7 @@
  * Keybinding types for Claude Code
  */
 
-import { KEYBINDING_ACTIONS } from './schema.js'
+import { KEYBINDING_CONTEXTS, KEYBINDING_ACTIONS } from './schema.js'
 
 /**
  * A parsed keystroke with modifier flags.
@@ -64,25 +64,7 @@ export interface ParsedBinding {
  * These correspond to different UI states/focus areas in the application.
  * Bindings are scoped to specific contexts to avoid conflicts.
  */
-export type KeybindingContextName =
-  | 'Global'
-  | 'Chat'
-  | 'Autocomplete'
-  | 'Confirmation'
-  | 'Help'
-  | 'Transcript'
-  | 'HistorySearch'
-  | 'Task'
-  | 'ThemePicker'
-  | 'Settings'
-  | 'Tabs'
-  | 'Attachments'
-  | 'Footer'
-  | 'MessageSelector'
-  | 'DiffDialog'
-  | 'ModelPicker'
-  | 'Select'
-  | 'Plugin'
+export type KeybindingContextName = (typeof KEYBINDING_CONTEXTS)[number]
 
 /**
  * A block of keybindings for a specific context.
