@@ -60,11 +60,7 @@ function buildSecondarySection({
 
   return [
     { label: 'Model', value: modelLabel },
-    ...buildIDEProperties(
-      mcp.clients,
-      context.options.ideInstallationStatus,
-      theme,
-    ),
+    ...buildIDEProperties(mcp.clients, context.options.ideInstallationStatus, theme),
     ...buildMcpProperties(mcp.clients, theme),
     ...buildSandboxProperties(),
     ...buildSettingSourcesProperties(),
@@ -79,11 +75,7 @@ export async function buildDiagnostics(): Promise<Diagnostic[]> {
   ]
 }
 
-function PropertyValue({
-  value,
-}: {
-  value: Property['value']
-}): React.ReactNode {
+function PropertyValue({ value }: { value: Property['value'] }): React.ReactNode {
   if (Array.isArray(value)) {
     return (
       <Box flexWrap="wrap" columnGap={1} flexShrink={99}>
@@ -106,12 +98,9 @@ function PropertyValue({
   return value
 }
 
-export function Status({
-  context,
-  diagnosticsPromise,
-}: Props): React.ReactNode {
-  const mainLoopModel = useAppState(s => s.mainLoopModel)
-  const mcp = useAppState(s => s.mcp)
+export function Status({ context, diagnosticsPromise }: Props): React.ReactNode {
+  const mainLoopModel = useAppState((s) => s.mainLoopModel)
+  const mcp = useAppState((s) => s.mcp)
   const [theme] = useTheme()
 
   // Sections are synchronous — compute in render so they're never empty.
@@ -119,10 +108,7 @@ export function Status({
   // per pane invocation instead of re-fetching on every tab switch (Tab
   // unmounts children when not selected, which was causing the flash).
   const sections = React.useMemo(
-    () => [
-      buildPrimarySection(),
-      buildSecondarySection({ mainLoopModel, mcp, theme, context }),
-    ],
+    () => [buildPrimarySection(), buildSecondarySection({ mainLoopModel, mcp, theme, context })],
     [mainLoopModel, mcp, theme, context],
   )
 
@@ -136,7 +122,7 @@ export function Status({
 
   return (
     <Box flexDirection="column" flexGrow={grow}>
-      <Box flexDirection="column" gap={1} flexGrow={grow}>
+      <Box flexDirection="column" gap={1} flexGrow={grow} marginBottom={1}>
         {sections.map(
           (properties, i) =>
             properties.length > 0 && (
@@ -156,22 +142,13 @@ export function Status({
         </Suspense>
       </Box>
       <Text dimColor>
-        <ConfigurableShortcutHint
-          action="confirm:no"
-          context="Settings"
-          fallback="Esc"
-          description="cancel"
-        />
+        <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
       </Text>
     </Box>
   )
 }
 
-function Diagnostics({
-  promise,
-}: {
-  promise: Promise<Diagnostic[]>
-}): React.ReactNode {
+function Diagnostics({ promise }: { promise: Promise<Diagnostic[]> }): React.ReactNode {
   const diagnostics = use(promise)
   if (diagnostics.length === 0) return null
   return (
@@ -180,11 +157,7 @@ function Diagnostics({
       {diagnostics.map((diagnostic, i) => (
         <Box key={i} flexDirection="row" gap={1} paddingX={1}>
           <Text color="error">{figures.warning}</Text>
-          {typeof diagnostic === 'string' ? (
-            <Text wrap="wrap">{diagnostic}</Text>
-          ) : (
-            diagnostic
-          )}
+          {typeof diagnostic === 'string' ? <Text wrap="wrap">{diagnostic}</Text> : diagnostic}
         </Box>
       ))}
     </Box>

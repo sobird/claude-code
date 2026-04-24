@@ -1,10 +1,7 @@
 import { feature } from 'bun:bundle'
 import * as React from 'react'
 import { resetCostState } from '../../bootstrap/state.js'
-import {
-  clearTrustedDeviceToken,
-  enrollTrustedDevice,
-} from '../../bridge/trustedDevice.js'
+import { clearTrustedDeviceToken, enrollTrustedDevice } from '../../bridge/trustedDevice.js'
 import type { LocalJSXCommandContext } from '../../commands.js'
 import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint.js'
 import { ConsoleOAuthFlow } from '../../components/ConsoleOAuthFlow.js'
@@ -24,13 +21,10 @@ import {
 } from '../../utils/permissions/bypassPermissionsKillswitch.js'
 import { resetUserCache } from '../../utils/user.js'
 
-export async function call(
-  onDone: LocalJSXCommandOnDone,
-  context: LocalJSXCommandContext,
-): Promise<React.ReactNode> {
+export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXCommandContext): Promise<React.ReactNode> {
   return (
     <Login
-      onDone={async success => {
+      onDone={async (success) => {
         context.onChangeAPIKey()
         // Signature-bearing blocks (thinking, connector_text) are bound to the API key —
         // strip them so the new key doesn't reject stale signatures.
@@ -56,20 +50,13 @@ export async function call(
           // Reset killswitch gate checks and re-run with new org
           resetBypassPermissionsCheck()
           const appState = context.getAppState()
-          void checkAndDisableBypassPermissionsIfNeeded(
-            appState.toolPermissionContext,
-            context.setAppState,
-          )
+          void checkAndDisableBypassPermissionsIfNeeded(appState.toolPermissionContext, context.setAppState)
           if (feature('TRANSCRIPT_CLASSIFIER')) {
             resetAutoModeGateCheck()
-            void checkAndDisableAutoModeIfNeeded(
-              appState.toolPermissionContext,
-              context.setAppState,
-              appState.fastMode,
-            )
+            void checkAndDisableAutoModeIfNeeded(appState.toolPermissionContext, context.setAppState, appState.fastMode)
           }
           // Increment authVersion to trigger re-fetching of auth-dependent data in hooks (e.g., MCP servers)
-          context.setAppState(prev => ({
+          context.setAppState((prev) => ({
             ...prev,
             authVersion: prev.authVersion + 1,
           }))
@@ -91,23 +78,15 @@ export function Login(props: {
       title="Login"
       onCancel={() => props.onDone(false, mainLoopModel)}
       color="permission"
-      inputGuide={exitState =>
+      inputGuide={(exitState) =>
         exitState.pending ? (
           <Text>Press {exitState.keyName} again to exit</Text>
         ) : (
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="cancel"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
         )
       }
     >
-      <ConsoleOAuthFlow
-        onDone={() => props.onDone(true, mainLoopModel)}
-        startingMessage={props.startingMessage}
-      />
+      <ConsoleOAuthFlow onDone={() => props.onDone(true, mainLoopModel)} startingMessage={props.startingMessage} />
     </Dialog>
   )
 }

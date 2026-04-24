@@ -1,38 +1,26 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import * as React from 'react'
 import { Suspense, useState } from 'react'
-import { useKeybinding } from '../../keybindings/useKeybinding.js'
+import type { LocalJSXCommandContext, CommandResultDisplay } from '../../commands.js'
+import { useIsInsideModal, useModalOrTerminalSize } from '../../context/modalContext.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
-import {
-  useIsInsideModal,
-  useModalOrTerminalSize,
-} from '../../context/modalContext.js'
+import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import { Pane } from '../design-system/Pane.js'
 import { Tabs, Tab } from '../design-system/Tabs.js'
-import { Status, buildDiagnostics } from './Status.js'
 import { Config } from './Config.js'
-import { Usage } from './Usage.js'
 import { Gates } from './Gates.js'
-import type {
-  LocalJSXCommandContext,
-  CommandResultDisplay,
-} from '../../commands.js'
+import { Status, buildDiagnostics } from './Status.js'
+import { Usage } from './Usage.js'
 
 type Props = {
-  onClose: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onClose: (result?: string, options?: { display?: CommandResultDisplay }) => void
   context: LocalJSXCommandContext
   defaultTab: 'Status' | 'Config' | 'Usage' | 'Gates'
 }
 
-export function Settings({
-  onClose,
-  context,
-  defaultTab,
-}: Props): React.ReactNode {
+export function Settings({ onClose, context, defaultTab }: Props): React.ReactNode {
+  // oxlint-disable-next-line typescript/no-unnecessary-type-arguments
   const [selectedTab, setSelectedTab] = useState<string>(defaultTab)
   const [tabsHidden, setTabsHidden] = useState(false)
   // True while Config's own Esc handler is active (search mode with content
@@ -50,15 +38,11 @@ export function Settings({
   // from the paneCap-10 estimate being slightly generous. Net: rows + 1.
   const insideModal = useIsInsideModal()
   const { rows } = useModalOrTerminalSize(useTerminalSize())
-  const contentHeight = insideModal
-    ? rows + 1
-    : Math.max(15, Math.min(Math.floor(rows * 0.8), 30))
+  const contentHeight = insideModal ? rows + 1 : Math.max(15, Math.min(Math.floor(rows * 0.8), 30))
   // Kick off diagnostics once when the pane opens. Status use()s this so
   // it resolves once per /config invocation — no re-fetch flash when
   // tabbing back to Status (Tab unmounts children when not selected).
-  const [diagnosticsPromise] = useState(() =>
-    buildDiagnostics().catch(() => []),
-  )
+  const [diagnosticsPromise] = useState(() => buildDiagnostics().catch(() => []))
 
   useExitOnCtrlCDWithKeybindings()
 
@@ -78,10 +62,7 @@ export function Settings({
   // (clear query → exit search) processes Escape first.
   useKeybinding('confirm:no', handleEscape, {
     context: 'Settings',
-    isActive:
-      !tabsHidden &&
-      !(selectedTab === 'Config' && configOwnsEsc) &&
-      !(selectedTab === 'Gates' && gatesOwnsEsc),
+    isActive: !tabsHidden && !(selectedTab === 'Config' && configOwnsEsc) && !(selectedTab === 'Gates' && gatesOwnsEsc),
   })
 
   const tabs = [
@@ -105,10 +86,7 @@ export function Settings({
     ...(process.env.USER_TYPE === 'ant'
       ? [
           <Tab key="gates" title="Gates">
-            <Gates
-              onOwnsEscChange={setGatesOwnsEsc}
-              contentHeight={contentHeight}
-            />
+            <Gates onOwnsEscChange={setGatesOwnsEsc} contentHeight={contentHeight} />
           </Tab>,
         ]
       : []),

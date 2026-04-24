@@ -26,11 +26,7 @@ import type { KeybindingContextName } from './types.js'
  * const expandShortcut = useShortcutDisplay('app:toggleTranscript', 'Global', 'ctrl+o')
  * // Returns the user's configured binding, or 'ctrl+o' as default
  */
-export function useShortcutDisplay(
-  action: string,
-  context: KeybindingContextName,
-  fallback: string,
-): string {
+export function useShortcutDisplay(action: string, context: KeybindingContextName, fallback: string): string {
   const keybindingContext = useOptionalKeybindingContext()
   const resolved = keybindingContext?.getDisplayText(action, context)
   const isFallback = resolved === undefined
@@ -43,14 +39,10 @@ export function useShortcutDisplay(
     if (isFallback && !hasLoggedRef.current) {
       hasLoggedRef.current = true
       logEvent('tengu_keybinding_fallback_used', {
-        action:
-          action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        context:
-          context as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        fallback:
-          fallback as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        reason:
-          reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        action: action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        context: context as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        fallback: fallback as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
     }
   }, [isFallback, action, context, fallback, reason])

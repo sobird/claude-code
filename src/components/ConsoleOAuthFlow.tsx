@@ -705,13 +705,6 @@ function OAuthStatusMessage({
         },
         { context: 'Tabs' },
       )
-      useKeybinding(
-        'confirm:no',
-        () => {
-          setOAuthStatus({ state: 'idle' })
-        },
-        { context: 'Confirmation' },
-      )
 
       const columns = useTerminalSize().columns - 20
 
@@ -719,21 +712,23 @@ function OAuthStatusMessage({
         const active = activeField === field
         const val = displayValues[field]
         return (
-          <Box>
-            <Text backgroundColor={active ? 'suggestion' : undefined} color={active ? 'inverseText' : undefined}>
-              {` ${label} `}
-            </Text>
+          <Box gap={1}>
+            <Box width={10} backgroundColor={active ? 'suggestion' : undefined} justifyContent="flex-end">
+              <Text color={active ? 'inverseText' : undefined}>{` ${label} `}</Text>
+            </Box>
             <TextInput
-              value={inputValue}
+              value={active ? inputValue : val}
               onChange={setInputValue}
               onSubmit={handleEnter}
               cursorOffset={inputCursorOffset}
               onChangeCursorOffset={setInputCursorOffset}
               columns={columns}
               mask={opts?.mask ? '*' : undefined}
-              focus={true}
+              focus={active}
+              dimColor={active}
+              showCursor={active}
             />
-            {active ? (
+            {/* {active ? (
               <TextInput
                 value={inputValue}
                 onChange={setInputValue}
@@ -748,7 +743,7 @@ function OAuthStatusMessage({
               <Text color="success">
                 {opts?.mask ? val.slice(0, 8) + '\u00b7'.repeat(Math.max(0, val.length - 8)) : val}
               </Text>
-            ) : null}
+            ) : null} */}
           </Box>
         )
       }
@@ -756,12 +751,12 @@ function OAuthStatusMessage({
       return (
         <Box flexDirection="column" gap={1}>
           <Text bold>Anthropic Compatible Setup</Text>
-          <Box flexDirection="column" gap={1}>
-            {renderRow('base_url', 'Base URL ')}
-            {renderRow('api_key', 'API Key  ', { mask: true })}
-            {renderRow('haiku_model', 'Haiku    ')}
-            {renderRow('sonnet_model', 'Sonnet   ')}
-            {renderRow('opus_model', 'Opus     ')}
+          <Box flexDirection="column">
+            {renderRow('base_url', 'Base URL')}
+            {renderRow('api_key', 'API Key', { mask: true })}
+            {renderRow('haiku_model', 'Haiku')}
+            {renderRow('sonnet_model', 'Sonnet')}
+            {renderRow('opus_model', 'Opus')}
           </Box>
           <Text dimColor>
             {figures.arrowUp + figures.arrowDown}/Tab to switch · Enter on last field to save · Esc to go back
