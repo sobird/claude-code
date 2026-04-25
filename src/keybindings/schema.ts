@@ -27,7 +27,7 @@ export const KEYBINDING_CONTEXTS = [
   'Attachments',
   'Footer',
   'MessageSelector',
-  ...(feature('MESSAGE_ACTIONS') ? ['MessageActions'] : []),
+  ...(feature('MESSAGE_ACTIONS') ? (['MessageActions'] as const) : ([] as const)),
   'DiffDialog',
   'ModelPicker',
   'Select',
@@ -50,11 +50,11 @@ export const KEYBINDING_CONTEXT_DESCRIPTIONS: Record<(typeof KEYBINDING_CONTEXTS
   Settings: 'When the settings menu is open',
   Tabs: 'When tab navigation is active',
   Scroll: 'When content is scrollable (page up/down, wheel, etc.)',
-  ...(feature('MESSAGE_ACTIONS')
+  ...((feature('MESSAGE_ACTIONS')
     ? {
         MessageActions: 'When navigating message actions (rewind dialog)',
       }
-    : {}),
+    : {}) as { MessageActions: string }),
   Attachments: 'When navigating image attachments in a select dialog',
   Footer: 'When footer indicators are focused',
   MessageSelector: 'When the message selector (rewind) is open',

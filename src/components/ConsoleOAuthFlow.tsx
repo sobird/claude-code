@@ -178,6 +178,18 @@ export function ConsoleOAuthFlow({
     },
   )
 
+  // Use Settings context so 'n' key doesn't cancel (allows typing 'n' in filename input)
+  useKeybinding(
+    'confirm:no',
+    () => {
+      setOAuthStatus({ state: 'idle' })
+    },
+    {
+      context: 'Settings',
+      isActive: oauthStatus.state === 'custom_platform',
+    },
+  )
+
   useEffect(() => {
     if (pastedCode === 'c' && oauthStatus.state === 'waiting_for_login' && showPastePrompt && !urlCopied) {
       void setClipboard(oauthStatus.url).then((raw) => {
