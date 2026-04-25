@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/sobird/claude-code/compare/v1.0.0...v1.1.0) (2026-04-25)
+
+
+### Features
+
+* add custom AI platform configuration support ([52f1d99](https://github.com/sobird/claude-code/commit/52f1d991b4f6209a2ec5bddd0fdd38a9d3176471))
+* clean up preflight checks ([084b7b1](https://github.com/sobird/claude-code/commit/084b7b161ba6df9208a04ec5af2ec30de6cb5a24))
+
 ## 1.0.0 (2026-04-19)
 
 
