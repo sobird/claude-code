@@ -3,7 +3,7 @@
   "options": {
     "typeAware": true
   },
-  "plugins": ["unicorn", "typescript", "oxc"],
+  "plugins": ["react", "jsx-a11y", "import", "promise", "node", "unicorn", "typescript", "oxc"],
   "categories": {
     "correctness": "error",
     "perf": "error",

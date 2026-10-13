@@ -1,5 +1,20 @@
 {
   "enabledPlugins": {
     "github@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-edited-file.mjs\" || true",
+            "timeout": 30,
+            "statusMessage": "Formatting edited file"
+          }
+        ]
+      }
+    ]
   }
 }
