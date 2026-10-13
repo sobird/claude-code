@@ -73,7 +73,7 @@ async function osascript(script: string): Promise<string> {
     }
 
     return stdout.trim()
-  } catch (error) {
+  } catch {
     // 对应 Bun 的 .nothrow()，捕获异常并不抛出
     return ''
   }
@@ -86,20 +86,20 @@ async function jxa(script: string): Promise<string> {
 
     const { stdout } = await execAsync(command)
     return stdout.trim()
-  } catch (error) {
+  } catch {
     // 模拟 Bun 的 .nothrow()，出错时返回空字符串
     return ''
   }
 }
 
-function jxaSync(script: string): string {
-  const result = Bun.spawnSync({
-    cmd: ['osascript', '-l', 'JavaScript', '-e', script],
-    stdout: 'pipe',
-    stderr: 'pipe',
-  })
-  return new TextDecoder().decode(result.stdout).trim()
-}
+// function jxaSync(script: string): string {
+//   const result = Bun.spawnSync({
+//     cmd: ['osascript', '-l', 'JavaScript', '-e', script],
+//     stdout: 'pipe',
+//     stderr: 'pipe',
+//   })
+//   return new TextDecoder().decode(result.stdout).trim()
+// }
 
 function buildMouseJxa(eventType: string, x: number, y: number, btn: number, clickState?: number): string {
   let script = `ObjC.import("CoreGraphics"); var p = $.CGPointMake(${x},${y}); var e = $.CGEventCreateMouseEvent(null, $.${eventType}, p, ${btn});`

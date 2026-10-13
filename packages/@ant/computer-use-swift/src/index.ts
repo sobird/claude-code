@@ -1,3 +1,4 @@
+// oxlint-disable no-unused-vars
 /**
  * @ant/computer-use-swift — macOS 实现
  *
@@ -155,10 +156,10 @@ const displayAPI: DisplayAPI = {
         JSON.stringify(result);
       `)
       return (JSON.parse(raw) as DisplayGeometry[]).map((d) => ({
-        width: Number(d.width),
-        height: Number(d.height),
-        scaleFactor: Number(d.scaleFactor),
-        displayId: Number(d.displayId),
+        width: d.width,
+        height: d.height,
+        scaleFactor: d.scaleFactor,
+        displayId: d.displayId,
       }))
     } catch {
       // Fallback: use NSScreen via JXA
@@ -183,10 +184,10 @@ const displayAPI: DisplayAPI = {
           JSON.stringify(result);
         `)
         return (JSON.parse(raw) as DisplayGeometry[]).map((d) => ({
-          width: Number(d.width),
-          height: Number(d.height),
-          scaleFactor: Number(d.scaleFactor),
-          displayId: Number(d.displayId),
+          width: d.width,
+          height: d.height,
+          scaleFactor: d.scaleFactor,
+          displayId: d.displayId,
         }))
       } catch {
         return [

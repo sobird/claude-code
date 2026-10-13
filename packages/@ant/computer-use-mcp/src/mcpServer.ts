@@ -1,3 +1,4 @@
+// oxlint-disable typescript/unbound-method
 /**
  * MCP server factory + session-context binder.
  *

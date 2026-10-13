@@ -1,3 +1,5 @@
+// oxlint-disable typescript/unbound-method
+// oxlint-disable no-unused-vars
 /**
  * Tool dispatch. Every security decision from plan §2 is enforced HERE,
  * before any executor method is called.
@@ -456,7 +458,7 @@ async function runInputActionGates(
             ? ' Use the Claude-in-Chrome MCP for browser interaction (tools ' +
               'named `mcp__Claude_in_Chrome__*`; load via ToolSearch if ' +
               'deferred).'
-            : ' No interaction is permitted; ask the user to take any ' + 'actions in this app themselves.') +
+            : ' No interaction is permitted; ask the user to take any actions in this app themselves.') +
           TIER_ANTI_SUBVERSION,
         'tier_insufficient',
       )
