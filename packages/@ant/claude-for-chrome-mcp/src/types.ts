@@ -46,7 +46,7 @@ export interface ClaudeForChromeContext {
   /** If set, permission mode is sent to the extension immediately on bridge connection. */
   initialPermissionMode?: PermissionMode
   /** Optional callback to track telemetry events for bridge connections */
-  trackEvent?: <K extends string>(eventName: K, metadata: Record<string, unknown> | null) => void
+  trackEvent?: (eventName: string, metadata: Record<string, unknown> | null) => void
   /** Called when user pairs with an extension via the browser pairing flow. */
   onExtensionPaired?: (deviceId: string, name: string) => void
   /** Returns the previously paired deviceId, if any. */

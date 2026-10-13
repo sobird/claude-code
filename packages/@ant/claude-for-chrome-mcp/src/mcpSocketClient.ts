@@ -128,10 +128,10 @@ class McpSocketClient {
               this.notificationHandler(message)
             }
           } else if (isToolResponse(message)) {
-            logger.info(`[${serverName}] Received tool response: ${message}`)
+            logger.info(`[${serverName}] Received tool response: ${JSON.stringify(message)}`)
             this.handleResponse(message)
           } else {
-            logger.info(`[${serverName}] Received unknown message: ${message}`)
+            logger.info(`[${serverName}] Received unknown message: ${JSON.stringify(message)}`)
           }
         } catch (error) {
           logger.info(`[${serverName}] Failed to parse message:`, error)

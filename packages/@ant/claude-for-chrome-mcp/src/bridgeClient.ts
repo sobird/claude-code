@@ -1,9 +1,13 @@
+// oxlint-disable promise/no-multiple-resolved
+// oxlint-disable typescript/no-base-to-string
+// oxlint-disable typescript/restrict-template-expressions
+
 /**
  * WebSocket bridge client for the Chrome extension MCP server.
  * Communicates with the Chrome extension via the office bridge server's /chrome path.
  */
 
-import WebSocket from 'ws'
+import { WebSocket } from 'ws'
 
 import { SocketConnectionError } from './mcpSocketClient.js'
 import {
