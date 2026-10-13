@@ -5,11 +5,9 @@
  * confirmation screen and directs users to settings.json or Claude for edits.
  */
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
-import {
-  hookSourceDescriptionDisplayString,
-  type IndividualHookConfig,
-} from '../../utils/hooks/hooksSettings.js'
+import { hookSourceDescriptionDisplayString, type IndividualHookConfig } from '../../utils/hooks/hooksSettings.js'
 import { Dialog } from '../design-system/Dialog.js'
 
 type Props = {
@@ -18,17 +16,9 @@ type Props = {
   onCancel: () => void
 }
 
-export function ViewHookMode({
-  selectedHook,
-  eventSupportsMatcher,
-  onCancel,
-}: Props): React.ReactNode {
+export function ViewHookMode({ selectedHook, eventSupportsMatcher, onCancel }: Props): React.ReactNode {
   return (
-    <Dialog
-      title="Hook details"
-      onCancel={onCancel}
-      inputGuide={() => <Text>Esc to go back</Text>}
-    >
+    <Dialog title="Hook details" onCancel={onCancel} inputGuide={() => <Text>Esc to go back</Text>}>
       <Box flexDirection="column" gap={1}>
         <Box flexDirection="column">
           <Text>
@@ -43,10 +33,7 @@ export function ViewHookMode({
             Type: <Text bold>{selectedHook.config.type}</Text>
           </Text>
           <Text>
-            Source:{' '}
-            <Text dimColor>
-              {hookSourceDescriptionDisplayString(selectedHook.source)}
-            </Text>
+            Source: <Text dimColor>{hookSourceDescriptionDisplayString(selectedHook.source)}</Text>
           </Text>
           {selectedHook.pluginName && (
             <Text>
@@ -56,26 +43,16 @@ export function ViewHookMode({
         </Box>
         <Box flexDirection="column">
           <Text dimColor>{getContentFieldLabel(selectedHook.config)}:</Text>
-          <Box
-            borderStyle="round"
-            borderDimColor
-            paddingLeft={1}
-            paddingRight={1}
-          >
+          <Box borderStyle="round" borderDimColor paddingLeft={1} paddingRight={1}>
             <Text>{getContentFieldValue(selectedHook.config)}</Text>
           </Box>
         </Box>
-        {'statusMessage' in selectedHook.config &&
-          selectedHook.config.statusMessage && (
-            <Text>
-              Status message:{' '}
-              <Text dimColor>{selectedHook.config.statusMessage}</Text>
-            </Text>
-          )}
-        <Text dimColor>
-          To modify or remove this hook, edit settings.json directly or ask
-          Claude to help.
-        </Text>
+        {'statusMessage' in selectedHook.config && selectedHook.config.statusMessage && (
+          <Text>
+            Status message: <Text dimColor>{selectedHook.config.statusMessage}</Text>
+          </Text>
+        )}
+        <Text dimColor>To modify or remove this hook, edit settings.json directly or ask Claude to help.</Text>
       </Box>
     </Dialog>
   )

@@ -1,5 +1,6 @@
 import { homedir } from 'os'
 import { join } from 'path'
+
 import { logForDebugging } from './debug.js'
 import { getPlatform, type Platform } from './platform.js'
 
@@ -24,9 +25,7 @@ type SystemDirectoriesOptions = {
  * Handles differences between Windows, macOS, Linux, and WSL
  * @param options Optional overrides for testing (env, homedir, platform)
  */
-export function getSystemDirectories(
-  options?: SystemDirectoriesOptions,
-): SystemDirectories {
+export function getSystemDirectories(options?: SystemDirectoriesOptions): SystemDirectories {
   const platform = options?.platform ?? getPlatform()
   const homeDir = options?.homedir ?? homedir()
   const env = options?.env ?? process.env

@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
+import { CCR_TERMS_URL } from 'src/commands/ultraplan.jsx'
+import { useRegisterOverlay } from 'src/context/overlayContext.js'
+import { useAppState, useSetAppState } from 'src/state/AppState.jsx'
+import { getGlobalConfig, saveGlobalConfig } from 'src/utils/config.js'
+import { getPromptIdentifier, getDialogConfig, type PromptIdentifier } from 'src/utils/ultraplan/prompt.js'
+
 import { Box, Text, Link } from '../ink.js'
 import { Select } from './CustomSelect/index.js'
 import { Dialog } from './design-system/Dialog.js'
-import { CCR_TERMS_URL } from 'src/commands/ultraplan.jsx'
-import { getGlobalConfig, saveGlobalConfig } from 'src/utils/config.js'
-import { useAppState, useSetAppState } from 'src/state/AppState.jsx'
-import { useRegisterOverlay } from 'src/context/overlayContext.js'
-import { getPromptIdentifier, getDialogConfig, type PromptIdentifier } from 'src/utils/ultraplan/prompt.js'
 
 type ChoiceValue = 'run' | 'cancel'
 
@@ -20,7 +21,7 @@ interface Props {
   ) => void
 }
 
-function dispatchShowTermsLink(){
+function dispatchShowTermsLink() {
   return !getGlobalConfig().hasSeenUltraplanTerms
 }
 
@@ -41,11 +42,12 @@ export function UltraplanLaunchDialog({ onChoice }: Props): React.ReactNode {
   }, [promptIdentifier])
 
   // Whether the remote-control bridge is currently active
-  const isBridgeEnabled = useAppState(state => state.replBridgeEnabled)
+  const isBridgeEnabled = useAppState((state) => state.replBridgeEnabled)
 
   const setAppState = useSetAppState()
 
-  const handleChoice = React.useCallback((value: ChoiceValue) => {
+  const handleChoice = React.useCallback(
+    (value: ChoiceValue) => {
       // If the user chose "run" while the bridge is enabled, disconnect it
       // first so the ultraplan session doesn't collide with remote control.
       const disconnectedBridge = value === 'run' && isBridgeEnabled
@@ -66,10 +68,10 @@ export function UltraplanLaunchDialog({ onChoice }: Props): React.ReactNode {
 
       // Persist that the user has now seen the ultraplan terms
       if (value !== 'cancel' && showTermsLink) {
-        saveGlobalConfig(prev => (prev.hasSeenUltraplanTerms ? prev : { ...prev, hasSeenUltraplanTerms: true }))
+        saveGlobalConfig((prev) => (prev.hasSeenUltraplanTerms ? prev : { ...prev, hasSeenUltraplanTerms: true }))
       }
 
-      onChoice(value, { disconnectedBridge, promptIdentifier})
+      onChoice(value, { disconnectedBridge, promptIdentifier })
     },
     [onChoice, isBridgeEnabled, setAppState, showTermsLink],
   )
@@ -92,24 +94,16 @@ export function UltraplanLaunchDialog({ onChoice }: Props): React.ReactNode {
   ]
 
   return (
-    <Dialog
-      title="Run ultraplan in the cloud?"
-      subtitle={dialogConfig.timeEstimate}
-      onCancel={handleCancel}
-    >
+    <Dialog title="Run ultraplan in the cloud?" subtitle={dialogConfig.timeEstimate} onCancel={handleCancel}>
       <Box flexDirection="column" gap={1}>
         <Box flexDirection="column">
           <Text dimColor>{dialogConfig.dialogBody}</Text>
-          {
-            showTermsLink
-              ? (
-                  <Text dimColor>
-                  For more information on Claude Code on the web:
-                  <Link url={CCR_TERMS_URL}>{CCR_TERMS_URL}</Link>
-                  </Text>
-                )
-              : null
-          }
+          {showTermsLink ? (
+            <Text dimColor>
+              For more information on Claude Code on the web:
+              <Link url={CCR_TERMS_URL}>{CCR_TERMS_URL}</Link>
+            </Text>
+          ) : null}
         </Box>
 
         {/* Pipeline description (hidden when bridge will be disconnected) */}
@@ -117,10 +111,7 @@ export function UltraplanLaunchDialog({ onChoice }: Props): React.ReactNode {
           {isBridgeEnabled ? 'This will disable Remote Control for this session.' : dialogConfig.dialogPipeline}
         </Text>
 
-        <Select
-          options={options}
-          onChange={handleChoice}
-        />
+        <Select options={options} onChange={handleChoice} />
       </Box>
     </Dialog>
   )

@@ -1,4 +1,5 @@
 import isEqual from 'lodash-es/isEqual.js'
+
 import { toError } from '../errors.js'
 import { logError } from '../log.js'
 import { getSettingsForSource } from '../settings/settings.js'
@@ -20,7 +21,7 @@ export function formatFailureDetails(
   const maxShow = 2
   const details = failures
     .slice(0, maxShow)
-    .map(f => {
+    .map((f) => {
       const reason = f.reason || f.error || 'unknown error'
       return includeReasons ? `${f.name} (${reason})` : f.name
     })
@@ -57,10 +58,7 @@ export function getMarketplaceSourceDisplay(source: MarketplaceSource): string {
 /**
  * Create a plugin ID from plugin name and marketplace name
  */
-export function createPluginId(
-  pluginName: string,
-  marketplaceName: string,
-): string {
+export function createPluginId(pluginName: string, marketplaceName: string): string {
   return `${pluginName}@${marketplaceName}`
 }
 
@@ -68,9 +66,7 @@ export function createPluginId(
  * Load marketplaces with graceful degradation for individual failures.
  * Blocked marketplaces (per enterprise policy) are excluded from the results.
  */
-export async function loadMarketplacesWithGracefulDegradation(
-  config: Record<string, KnownMarketplace>,
-): Promise<{
+export async function loadMarketplacesWithGracefulDegradation(config: Record<string, KnownMarketplace>): Promise<{
   marketplaces: Array<{
     name: string
     config: KnownMarketplace
@@ -140,16 +136,12 @@ export function formatMarketplaceLoadingErrors(
   }
 }
 
-function formatFailureNames(
-  failures: Array<{ name: string; error: string }>,
-): string {
-  return failures.map(f => f.name).join(', ')
+function formatFailureNames(failures: Array<{ name: string; error: string }>): string {
+  return failures.map((f) => f.name).join(', ')
 }
 
-function formatFailureErrors(
-  failures: Array<{ name: string; error: string }>,
-): string {
-  return failures.map(f => `${f.name}: ${f.error}`).join('; ')
+function formatFailureErrors(failures: Array<{ name: string; error: string }>): string {
+  return failures.map((f) => `${f.name}: ${f.error}`).join('; ')
 }
 
 /**
@@ -213,10 +205,7 @@ function areSourcesEqual(a: MarketplaceSource, b: MarketplaceSource): boolean {
     case 'directory':
       return a.path === (b as typeof a).path
     case 'settings':
-      return (
-        a.name === (b as typeof a).name &&
-        isEqual(a.plugins, (b as typeof a).plugins)
-      )
+      return a.name === (b as typeof a).name && isEqual(a.plugins, (b as typeof a).plugins)
     default:
       return false
   }
@@ -232,9 +221,7 @@ function areSourcesEqual(a: MarketplaceSource, b: MarketplaceSource): boolean {
  * @param source - The marketplace source to extract host from
  * @returns The hostname string, or null if extraction fails or source type not supported
  */
-export function extractHostFromSource(
-  source: MarketplaceSource,
-): string | null {
+export function extractHostFromSource(source: MarketplaceSource): string | null {
   switch (source.source) {
     case 'github':
       // GitHub shorthand always means github.com
@@ -329,11 +316,8 @@ export function getHostPatternsFromAllowlist(): string[] {
   if (!allowlist) return []
 
   return allowlist
-    .filter(
-      (entry): entry is MarketplaceSource & { source: 'hostPattern' } =>
-        entry.source === 'hostPattern',
-    )
-    .map(entry => entry.hostPattern)
+    .filter((entry): entry is MarketplaceSource & { source: 'hostPattern' } => entry.source === 'hostPattern')
+    .map((entry) => entry.hostPattern)
 }
 
 /**
@@ -353,9 +337,7 @@ function extractGitHubRepoFromGitUrl(url: string): string | null {
   }
 
   // HTTPS format: https://github.com/owner/repo.git or https://github.com/owner/repo
-  const httpsMatch = url.match(
-    /^https?:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?$/,
-  )
+  const httpsMatch = url.match(/^https?:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?$/)
   if (httpsMatch && httpsMatch[1]) {
     return httpsMatch[1]
   }
@@ -368,10 +350,7 @@ function extractGitHubRepoFromGitUrl(url: string): string | null {
  * If the blocklist entry has no ref/path, it matches ALL refs/paths (wildcard).
  * If the blocklist entry has a specific ref/path, it only matches that exact value.
  */
-function blockedConstraintMatches(
-  blockedValue: string | undefined,
-  sourceValue: string | undefined,
-): boolean {
+function blockedConstraintMatches(blockedValue: string | undefined, sourceValue: string | undefined): boolean {
   // If blocklist doesn't specify a constraint, it's a wildcard - matches anything
   if (!blockedValue) {
     return true
@@ -388,28 +367,19 @@ function blockedConstraintMatches(
  * - If blocklist entry has no ref/path, it blocks ALL refs/paths (wildcard)
  * - If blocklist entry has a specific ref/path, only that exact value is blocked
  */
-function areSourcesEquivalentForBlocklist(
-  source: MarketplaceSource,
-  blocked: MarketplaceSource,
-): boolean {
+function areSourcesEquivalentForBlocklist(source: MarketplaceSource, blocked: MarketplaceSource): boolean {
   // Check exact same source type
   if (source.source === blocked.source) {
     switch (source.source) {
       case 'github': {
         const b = blocked as typeof source
         if (source.repo !== b.repo) return false
-        return (
-          blockedConstraintMatches(b.ref, source.ref) &&
-          blockedConstraintMatches(b.path, source.path)
-        )
+        return blockedConstraintMatches(b.ref, source.ref) && blockedConstraintMatches(b.path, source.path)
       }
       case 'git': {
         const b = blocked as typeof source
         if (source.url !== b.url) return false
-        return (
-          blockedConstraintMatches(b.ref, source.ref) &&
-          blockedConstraintMatches(b.path, source.path)
-        )
+        return blockedConstraintMatches(b.ref, source.ref) && blockedConstraintMatches(b.path, source.path)
       }
       case 'url':
         return source.url === (blocked as typeof source).url
@@ -430,10 +400,7 @@ function areSourcesEquivalentForBlocklist(
   if (source.source === 'git' && blocked.source === 'github') {
     const extractedRepo = extractGitHubRepoFromGitUrl(source.url)
     if (extractedRepo === blocked.repo) {
-      return (
-        blockedConstraintMatches(blocked.ref, source.ref) &&
-        blockedConstraintMatches(blocked.path, source.path)
-      )
+      return blockedConstraintMatches(blocked.ref, source.ref) && blockedConstraintMatches(blocked.path, source.path)
     }
   }
 
@@ -441,10 +408,7 @@ function areSourcesEquivalentForBlocklist(
   if (source.source === 'github' && blocked.source === 'git') {
     const extractedRepo = extractGitHubRepoFromGitUrl(blocked.url)
     if (extractedRepo === source.repo) {
-      return (
-        blockedConstraintMatches(blocked.ref, source.ref) &&
-        blockedConstraintMatches(blocked.path, source.path)
-      )
+      return blockedConstraintMatches(blocked.ref, source.ref) && blockedConstraintMatches(blocked.path, source.path)
     }
   }
 
@@ -463,9 +427,7 @@ export function isSourceInBlocklist(source: MarketplaceSource): boolean {
   if (blocklist === null) {
     return false
   }
-  return blocklist.some(blocked =>
-    areSourcesEquivalentForBlocklist(source, blocked),
-  )
+  return blocklist.some((blocked) => areSourcesEquivalentForBlocklist(source, blocked))
 }
 
 /**
@@ -490,7 +452,7 @@ export function isSourceAllowedByPolicy(source: MarketplaceSource): boolean {
   }
 
   // Check each entry in the allowlist
-  return allowlist.some(allowed => {
+  return allowlist.some((allowed) => {
     // Handle hostPattern entries - match by extracted host
     if (allowed.source === 'hostPattern') {
       return doesSourceMatchHostPattern(source, allowed)
@@ -579,10 +541,7 @@ export async function detectEmptyMarketplaceReason({
   }
 
   // Check if all configured marketplaces failed to load
-  if (
-    failedMarketplaceCount > 0 &&
-    failedMarketplaceCount === configuredMarketplaceCount
-  ) {
+  if (failedMarketplaceCount > 0 && failedMarketplaceCount === configuredMarketplaceCount) {
     return 'all-marketplaces-failed'
   }
 

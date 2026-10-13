@@ -15,11 +15,7 @@ import { logForDebugging } from '../debug.js'
 import { withDiagnosticsTiming } from '../diagLogs.js'
 import { getFsImplementation } from '../fsOperations.js'
 import { logError } from '../log.js'
-import {
-  clearMarketplacesCache,
-  getDeclaredMarketplaces,
-  registerSeedMarketplaces,
-} from './marketplaceManager.js'
+import { clearMarketplacesCache, getDeclaredMarketplaces, registerSeedMarketplaces } from './marketplaceManager.js'
 import { detectAndUninstallDelistedPlugins } from './pluginBlocklist.js'
 import { clearPluginCache } from './pluginLoader.js'
 import { reconcileMarketplaces } from './reconciler.js'
@@ -42,9 +38,7 @@ import { syncMarketplacesToZipCache } from './zipCacheAdapters.js'
  */
 export async function installPluginsForHeadless(): Promise<boolean> {
   const zipCacheMode = isPluginZipCacheEnabled()
-  logForDebugging(
-    `installPluginsForHeadless: starting${zipCacheMode ? ' (zip cache mode)' : ''}`,
-  )
+  logForDebugging(`installPluginsForHeadless: starting${zipCacheMode ? ' (zip cache mode)' : ''}`)
 
   // Register seed marketplaces (CLAUDE_CODE_PLUGIN_SEED_DIR) before diffing.
   // Idempotent; no-op if seed not configured. Without this, findMissingMarketplaces
@@ -95,15 +89,10 @@ export async function installPluginsForHeadless(): Promise<boolean> {
         'headless_marketplace_reconcile',
         () =>
           reconcileMarketplaces({
-            skip: zipCacheMode
-              ? (_name, source) =>
-                  !isMarketplaceSourceSupportedByZipCache(source)
-              : undefined,
-            onProgress: event => {
+            skip: zipCacheMode ? (_name, source) => !isMarketplaceSourceSupportedByZipCache(source) : undefined,
+            onProgress: (event) => {
               if (event.type === 'installed') {
-                logForDebugging(
-                  `installPluginsForHeadless: installed marketplace ${event.name}`,
-                )
+                logForDebugging(`installPluginsForHeadless: installed marketplace ${event.name}`)
               } else if (event.type === 'failed') {
                 logForDebugging(
                   `installPluginsForHeadless: failed to install marketplace ${event.name}: ${event.error}`,
@@ -111,7 +100,7 @@ export async function installPluginsForHeadless(): Promise<boolean> {
               }
             },
           }),
-        r => ({
+        (r) => ({
           installed_count: r.installed.length,
           updated_count: r.updated.length,
           failed_count: r.failed.length,
@@ -125,8 +114,7 @@ export async function installPluginsForHeadless(): Promise<boolean> {
         )
       }
 
-      const marketplacesChanged =
-        reconcileResult.installed.length + reconcileResult.updated.length
+      const marketplacesChanged = reconcileResult.installed.length + reconcileResult.updated.length
 
       // Clear caches so newly-installed marketplace plugins are discoverable.
       // Plugin caching is the loader's job — after caches clear, the caller's

@@ -81,11 +81,7 @@ export function calculateHorizontalScrollWindow(
   let endIndex = 1
 
   // Expand from start as much as possible
-  while (
-    endIndex < totalItems &&
-    rangeWidth(startIndex, endIndex + 1) <=
-      getEffectiveWidth(startIndex, endIndex + 1)
-  ) {
+  while (endIndex < totalItems && rangeWidth(startIndex, endIndex + 1) <= getEffectiveWidth(startIndex, endIndex + 1)) {
     endIndex++
   }
 
@@ -106,11 +102,7 @@ export function calculateHorizontalScrollWindow(
     startIndex = clampedSelected
 
     // Expand left as much as possible (selected stays at right edge)
-    while (
-      startIndex > 0 &&
-      rangeWidth(startIndex - 1, endIndex) <=
-        getEffectiveWidth(startIndex - 1, endIndex)
-    ) {
+    while (startIndex > 0 && rangeWidth(startIndex - 1, endIndex) <= getEffectiveWidth(startIndex - 1, endIndex)) {
       startIndex--
     }
   } else {
@@ -121,8 +113,7 @@ export function calculateHorizontalScrollWindow(
     // Expand right as much as possible (selected stays at left edge)
     while (
       endIndex < totalItems &&
-      rangeWidth(startIndex, endIndex + 1) <=
-        getEffectiveWidth(startIndex, endIndex + 1)
+      rangeWidth(startIndex, endIndex + 1) <= getEffectiveWidth(startIndex, endIndex + 1)
     ) {
       endIndex++
     }

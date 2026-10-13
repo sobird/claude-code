@@ -8,6 +8,7 @@
  */
 
 import { useEffect } from 'react'
+
 import { getSessionId } from '../bootstrap/state.js'
 import type { AppState } from '../state/AppState.js'
 import type { Message } from '../types/message.js'
@@ -39,13 +40,9 @@ export function useSwarmInitialization(
       // Resumed sessions have teamName/agentName stored in transcript messages
       const firstMessage = initialMessages?.[0]
       const teamName =
-        firstMessage && 'teamName' in firstMessage
-          ? (firstMessage.teamName as string | undefined)
-          : undefined
+        firstMessage && 'teamName' in firstMessage ? (firstMessage.teamName as string | undefined) : undefined
       const agentName =
-        firstMessage && 'agentName' in firstMessage
-          ? (firstMessage.agentName as string | undefined)
-          : undefined
+        firstMessage && 'agentName' in firstMessage ? (firstMessage.agentName as string | undefined) : undefined
 
       if (teamName && agentName) {
         // Resumed agent session - set up team context from stored info
@@ -53,9 +50,7 @@ export function useSwarmInitialization(
 
         // Get agentId from team file for hook initialization
         const teamFile = readTeamFile(teamName)
-        const member = teamFile?.members.find(
-          (m: { name: string }) => m.name === agentName,
-        )
+        const member = teamFile?.members.find((m: { name: string }) => m.name === agentName)
         if (member) {
           initializeTeammateHooks(setAppState, getSessionId(), {
             teamName,

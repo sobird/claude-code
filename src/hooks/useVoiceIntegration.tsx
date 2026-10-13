@@ -1,16 +1,14 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+
 import { useNotifications } from '../context/notifications.js'
 import { useIsModalOverlayActive } from '../context/overlayContext.js'
-import {
-  useGetVoiceState,
-  useSetVoiceState,
-  useVoiceState,
-} from '../context/voice.js'
-import { KeyboardEvent } from '../ink/events/keyboard-event.js'
+import { useGetVoiceState, useSetVoiceState, useVoiceState } from '../context/voice.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- backward-compat bridge until REPL wires handleKeyDown to <Box onKeyDown>
 import { useInput } from '../ink.js'
+import { KeyboardEvent } from '../ink/events/keyboard-event.js'
 import { useOptionalKeybindingContext } from '../keybindings/KeybindingContext.js'
 import { keystrokesEqual } from '../keybindings/resolver.js'
 import type { ParsedKeystroke } from '../keybindings/types.js'
@@ -22,17 +20,10 @@ import { useVoiceEnabled } from './useVoiceEnabled.js'
 // Capture the module namespace, not the function: spyOn() mutates the module
 // object, so `voiceNs.useVoice(...)` resolves to the spy even if this module
 // was loaded before the spy was installed (test ordering independence).
-const voiceNs: { useVoice: typeof import('./useVoice.js').useVoice } = feature(
-  'VOICE_MODE',
-)
+const voiceNs: { useVoice: typeof import('./useVoice.js').useVoice } = feature('VOICE_MODE')
   ? require('./useVoice.js')
   : {
-      useVoice: ({
-        enabled: _e,
-      }: {
-        onTranscript: (t: string) => void
-        enabled: boolean
-      }) => ({
+      useVoice: ({ enabled: _e }: { onTranscript: (t: string) => void; enabled: boolean }) => ({
         state: 'idle' as const,
         handleKeyEvent: (_fallbackMs?: number) => {},
       }),
@@ -64,14 +55,10 @@ const WARMUP_THRESHOLD = 2
 // `input` arg — KeyboardEvent.key holds normalized names (e.g. 'space',
 // 'f9') that getKeyName() didn't handle, so modifier combos and f-keys
 // silently failed to match after the onKeyDown migration (#23524).
-function matchesKeyboardEvent(
-  e: KeyboardEvent,
-  target: ParsedKeystroke,
-): boolean {
+function matchesKeyboardEvent(e: KeyboardEvent, target: ParsedKeystroke): boolean {
   // KeyboardEvent stores key names; ParsedKeystroke stores ' ' for space
   // and 'enter' for return (see parser.ts case 'space'/'return').
-  const key =
-    e.key === 'space' ? ' ' : e.key === 'return' ? 'enter' : e.key.toLowerCase()
+  const key = e.key === 'space' ? ' ' : e.key === 'return' ? 'enter' : e.key.toLowerCase()
   if (key !== target.key) return false
   if (e.ctrl !== target.ctrl) return false
   if (e.shift !== target.shift) return false
@@ -161,10 +148,7 @@ export function useVoiceIntegration({
   // trailing chars remaining after stripping. When nothing changes, no
   // state update is performed.
   const stripTrailing = useCallback(
-    (
-      maxStrip: number,
-      { char = ' ', anchor = false, floor = 0 }: StripOpts = {},
-    ) => {
+    (maxStrip: number, { char = ' ', anchor = false, floor = 0 }: StripOpts = {}) => {
       const prev = inputValueRef.current
       const offset = insertTextRef.current?.cursorOffset ?? prev.length
       const beforeCursor = prev.slice(0, offset)
@@ -172,13 +156,9 @@ export function useVoiceIntegration({
       // When the hold key is space, also count full-width spaces (U+3000)
       // that a CJK IME may have inserted for the same physical key.
       // U+3000 is BMP single-code-unit so indices align with beforeCursor.
-      const scan =
-        char === ' ' ? normalizeFullWidthSpace(beforeCursor) : beforeCursor
+      const scan = char === ' ' ? normalizeFullWidthSpace(beforeCursor) : beforeCursor
       let trailing = 0
-      while (
-        trailing < scan.length &&
-        scan[scan.length - 1 - trailing] === char
-      ) {
+      while (trailing < scan.length && scan[scan.length - 1 - trailing] === char) {
         trailing++
       }
       const stripCount = Math.max(0, Math.min(trailing - floor, maxStrip))
@@ -241,11 +221,11 @@ export function useVoiceIntegration({
   const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false
   const voiceState = feature('VOICE_MODE')
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-      useVoiceState(s => s.voiceState)
+      useVoiceState((s) => s.voiceState)
     : ('idle' as const)
   const voiceInterimTranscript = feature('VOICE_MODE')
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-      useVoiceState(s => s.voiceInterimTranscript)
+      useVoiceState((s) => s.voiceInterimTranscript)
     : ''
 
   // Set the voice anchor for focus mode (where recording starts via terminal
@@ -280,21 +260,16 @@ export function useVoiceIntegration({
     // window between CloseStream and WS close — this catches refined
     // TranscriptText arriving then and re-filling a cleared input.
     if (inputValueRef.current !== lastSetInputRef.current) return
-    const needsSpace =
-      prefix.length > 0 &&
-      !/\s$/.test(prefix) &&
-      voiceInterimTranscript.length > 0
+    const needsSpace = prefix.length > 0 && !/\s$/.test(prefix) && voiceInterimTranscript.length > 0
     // Don't gate on voiceInterimTranscript.length -- when interim clears to ''
     // after handleVoiceTranscript sets the final text, the trailing space
     // between prefix and suffix must still be preserved.
     const needsTrailingSpace = suffix.length > 0 && !/^\s/.test(suffix)
     const leadingSpace = needsSpace ? ' ' : ''
     const trailingSpace = needsTrailingSpace ? ' ' : ''
-    const newValue =
-      prefix + leadingSpace + voiceInterimTranscript + trailingSpace + suffix
+    const newValue = prefix + leadingSpace + voiceInterimTranscript + trailingSpace + suffix
     // Position cursor after the transcribed text (before suffix)
-    const cursorPos =
-      prefix.length + leadingSpace.length + voiceInterimTranscript.length
+    const cursorPos = prefix.length + leadingSpace.length + voiceInterimTranscript.length
     if (insertTextRef.current) {
       insertTextRef.current.setInputWithCursor(newValue, cursorPos)
     } else {
@@ -317,10 +292,8 @@ export function useVoiceIntegration({
       // against `text.length` would false-positive when the final is longer
       // than the interim (ASR routinely adds punctuation/corrections).
       if (inputValueRef.current !== lastSetInputRef.current) return
-      const needsSpace =
-        prefix.length > 0 && !/\s$/.test(prefix) && text.length > 0
-      const needsTrailingSpace =
-        suffix.length > 0 && !/^\s/.test(suffix) && text.length > 0
+      const needsSpace = prefix.length > 0 && !/\s$/.test(prefix) && text.length > 0
+      const needsTrailingSpace = suffix.length > 0 && !/^\s/.test(suffix) && text.length > 0
       const leadingSpace = needsSpace ? ' ' : ''
       const trailingSpace = needsTrailingSpace ? ' ' : ''
       const newInput = prefix + leadingSpace + text + trailingSpace + suffix
@@ -361,10 +334,7 @@ export function useVoiceIntegration({
     if (voicePrefixRef.current === null) return null
     if (voiceInterimTranscript.length === 0) return null
     const prefix = voicePrefixRef.current
-    const needsSpace =
-      prefix.length > 0 &&
-      !/\s$/.test(prefix) &&
-      voiceInterimTranscript.length > 0
+    const needsSpace = prefix.length > 0 && !/\s$/.test(prefix) && voiceInterimTranscript.length > 0
     const start = prefix.length + (needsSpace ? 1 : 0)
     const end = start + voiceInterimTranscript.length
     return { start, end }
@@ -421,7 +391,7 @@ export function useVoiceKeybindingHandler({
   const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false
   const voiceState = feature('VOICE_MODE')
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-      useVoiceState(s => s.voiceState)
+      useVoiceState((s) => s.voiceState)
     : 'idle'
 
   // Find the configured key for voice:pushToTalk from keybinding context.
@@ -497,7 +467,7 @@ export function useVoiceKeybindingHandler({
       rapidCountRef.current = 0
       charsInInputRef.current = 0
       recordingFloorRef.current = 0
-      setVoiceState(prev => {
+      setVoiceState((prev) => {
         if (!prev.voiceWarmingUp) return prev
         return { ...prev, voiceWarmingUp: false }
       })
@@ -531,17 +501,12 @@ export function useVoiceKeybindingHandler({
       if (e.ctrl || e.meta || e.shift) return
       // When bound to space, also accept U+3000 (full-width space) —
       // CJK IMEs emit it for the same physical key.
-      const normalized =
-        bareChar === ' ' ? normalizeFullWidthSpace(e.key) : e.key
+      const normalized = bareChar === ' ' ? normalizeFullWidthSpace(e.key) : e.key
       // Fast-path: normal typing (any char that isn't the bound one)
       // bails here without allocating. The repeat() check only matters
       // for batched auto-repeat (input.length > 1) which is rare.
       if (normalized[0] !== bareChar) return
-      if (
-        normalized.length > 1 &&
-        normalized !== bareChar.repeat(normalized.length)
-      )
-        return
+      if (normalized.length > 1 && normalized !== bareChar.repeat(normalized.length)) return
       repeatCount = normalized.length
     } else {
       if (!matchesKeyboardEvent(e, voiceKeystroke)) return
@@ -602,7 +567,7 @@ export function useVoiceKeybindingHandler({
       }
       rapidCountRef.current = 0
       isHoldActiveRef.current = true
-      setVoiceState(prev => {
+      setVoiceState((prev) => {
         if (!prev.voiceWarmingUp) return prev
         return { ...prev, voiceWarmingUp: false }
       })
@@ -612,10 +577,10 @@ export function useVoiceKeybindingHandler({
         // handles the no-leak case. Anchor the voice prefix here.
         // The return value (remaining) becomes the floor for
         // recording-time leak cleanup.
-        recordingFloorRef.current = stripTrailing(
-          charsInInputRef.current + repeatCount,
-          { char: bareChar, anchor: true },
-        )
+        recordingFloorRef.current = stripTrailing(charsInInputRef.current + repeatCount, {
+          char: bareChar,
+          anchor: true,
+        })
         charsInInputRef.current = 0
         voiceHandleKeyEvent()
       } else {
@@ -661,7 +626,7 @@ export function useVoiceKeybindingHandler({
 
     // Show warmup feedback once we detect a hold pattern
     if (rapidCountRef.current >= WARMUP_THRESHOLD) {
-      setVoiceState(prev => {
+      setVoiceState((prev) => {
         if (prev.voiceWarmingUp) return prev
         return { ...prev, voiceWarmingUp: true }
       })
@@ -675,7 +640,7 @@ export function useVoiceKeybindingHandler({
         resetTimerRef.current = null
         rapidCountRef.current = 0
         charsInInputRef.current = 0
-        setVoiceState(prev => {
+        setVoiceState((prev) => {
           if (!prev.voiceWarmingUp) return prev
           return { ...prev, voiceWarmingUp: false }
         })

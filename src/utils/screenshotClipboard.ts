@@ -1,6 +1,7 @@
 import { mkdir, unlink, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
+
 import { type AnsiToPngOptions, ansiToPng } from './ansiToPng.js'
 import { execFileNoThrowWithCwd } from './execFileNoThrow.js'
 import { logError } from './log.js'
@@ -43,9 +44,7 @@ export async function copyAnsiToClipboard(
   }
 }
 
-async function copyPngToClipboard(
-  pngPath: string,
-): Promise<{ success: boolean; message: string }> {
+async function copyPngToClipboard(pngPath: string): Promise<{ success: boolean; message: string }> {
   const platform = getPlatform()
 
   if (platform === 'macos') {
@@ -79,11 +78,9 @@ async function copyPngToClipboard(
     }
 
     // Try xsel as fallback
-    const xselResult = await execFileNoThrowWithCwd(
-      'xsel',
-      ['--clipboard', '--input', '--type', 'image/png'],
-      { timeout: 5000 },
-    )
+    const xselResult = await execFileNoThrowWithCwd('xsel', ['--clipboard', '--input', '--type', 'image/png'], {
+      timeout: 5000,
+    })
 
     if (xselResult.code === 0) {
       return { success: true, message: 'Screenshot copied to clipboard' }
@@ -91,19 +88,14 @@ async function copyPngToClipboard(
 
     return {
       success: false,
-      message:
-        'Failed to copy to clipboard. Please install xclip or xsel: sudo apt install xclip',
+      message: 'Failed to copy to clipboard. Please install xclip or xsel: sudo apt install xclip',
     }
   }
 
   if (platform === 'windows') {
     // Windows: Use PowerShell to copy image to clipboard
     const psScript = `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Clipboard]::SetImage([System.Drawing.Image]::FromFile('${pngPath.replace(/'/g, "''")}'))`
-    const result = await execFileNoThrowWithCwd(
-      'powershell',
-      ['-NoProfile', '-Command', psScript],
-      { timeout: 5000 },
-    )
+    const result = await execFileNoThrowWithCwd('powershell', ['-NoProfile', '-Command', psScript], { timeout: 5000 })
 
     if (result.code === 0) {
       return { success: true, message: 'Screenshot copied to clipboard' }

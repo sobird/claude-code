@@ -22,10 +22,7 @@ import type { FileStateCache } from './fileStateCache.js'
 import type { CacheSafeParams } from './forkedAgent.js'
 import { getMainLoopModel } from './model/model.js'
 import { asSystemPrompt } from './systemPromptType.js'
-import {
-  shouldEnableThinkingByDefault,
-  type ThinkingConfig,
-} from './thinking.js'
+import { shouldEnableThinkingByDefault, type ThinkingConfig } from './thinking.js'
 
 /**
  * Fetch the three context pieces that form the API cache-key prefix:
@@ -61,12 +58,7 @@ export async function fetchSystemPromptParts({
   const [defaultSystemPrompt, userContext, systemContext] = await Promise.all([
     customSystemPrompt !== undefined
       ? Promise.resolve([])
-      : getSystemPrompt(
-          tools,
-          mainLoopModel,
-          additionalWorkingDirectories,
-          mcpClients,
-        ),
+      : getSystemPrompt(tools, mainLoopModel, additionalWorkingDirectories, mcpClients),
     getUserContext(),
     customSystemPrompt !== undefined ? Promise.resolve({}) : getSystemContext(),
   ])
@@ -113,21 +105,16 @@ export async function buildSideQuestionFallbackParams({
   const mainLoopModel = getMainLoopModel()
   const appState = getAppState()
 
-  const { defaultSystemPrompt, userContext, systemContext } =
-    await fetchSystemPromptParts({
-      tools,
-      mainLoopModel,
-      additionalWorkingDirectories: Array.from(
-        appState.toolPermissionContext.additionalWorkingDirectories.keys(),
-      ),
-      mcpClients,
-      customSystemPrompt,
-    })
+  const { defaultSystemPrompt, userContext, systemContext } = await fetchSystemPromptParts({
+    tools,
+    mainLoopModel,
+    additionalWorkingDirectories: Array.from(appState.toolPermissionContext.additionalWorkingDirectories.keys()),
+    mcpClients,
+    customSystemPrompt,
+  })
 
   const systemPrompt = asSystemPrompt([
-    ...(customSystemPrompt !== undefined
-      ? [customSystemPrompt]
-      : defaultSystemPrompt),
+    ...(customSystemPrompt !== undefined ? [customSystemPrompt] : defaultSystemPrompt),
     ...(appendSystemPrompt ? [appendSystemPrompt] : []),
   ])
 
@@ -135,9 +122,7 @@ export async function buildSideQuestionFallbackParams({
   // as btw.tsx. The SDK can fire side_question mid-turn.
   const last = messages.at(-1)
   const forkContextMessages =
-    last?.type === 'assistant' && last.message.stop_reason === null
-      ? messages.slice(0, -1)
-      : messages
+    last?.type === 'assistant' && last.message.stop_reason === null ? messages.slice(0, -1) : messages
 
   const toolUseContext: ToolUseContext = {
     options: {
@@ -147,10 +132,7 @@ export async function buildSideQuestionFallbackParams({
       tools,
       verbose: false,
       thinkingConfig:
-        thinkingConfig ??
-        (shouldEnableThinkingByDefault() !== false
-          ? { type: 'adaptive' }
-          : { type: 'disabled' }),
+        thinkingConfig ?? (shouldEnableThinkingByDefault() !== false ? { type: 'adaptive' } : { type: 'disabled' }),
       mcpClients,
       mcpResources: {},
       isNonInteractiveSession: true,

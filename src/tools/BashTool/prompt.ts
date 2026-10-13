@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import { prependBullets } from '../../constants/prompts.js'
 import { getAttributionTexts } from '../../utils/attribution.js'
 import { hasEmbeddedSearchTools } from '../../utils/embeddedTools.js'
@@ -7,14 +8,8 @@ import { shouldIncludeGitInstructions } from '../../utils/gitSettings.js'
 import { getClaudeTempDir } from '../../utils/permissions/filesystem.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
-import {
-  getDefaultBashTimeoutMs,
-  getMaxBashTimeoutMs,
-} from '../../utils/timeouts.js'
-import {
-  getUndercoverInstructions,
-  isUndercover,
-} from '../../utils/undercover.js'
+import { getDefaultBashTimeoutMs, getMaxBashTimeoutMs } from '../../utils/timeouts.js'
+import { getUndercoverInstructions, isUndercover } from '../../utils/undercover.js'
 import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'
 import { FILE_EDIT_TOOL_NAME } from '../FileEditTool/constants.js'
 import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt.js'
@@ -45,10 +40,7 @@ function getCommitAndPRInstructions(): string {
   // hiding are mechanical and work regardless, but the explicit "don't blow
   // your cover" instructions are the last line of defense against the model
   // volunteering an internal codename in a commit message.
-  const undercoverSection =
-    process.env.USER_TYPE === 'ant' && isUndercover()
-      ? getUndercoverInstructions() + '\n'
-      : ''
+  const undercoverSection = process.env.USER_TYPE === 'ant' && isUndercover() ? getUndercoverInstructions() + '\n' : ''
 
   if (!shouldIncludeGitInstructions()) return undercoverSection
 
@@ -179,15 +171,14 @@ function getSimpleSandboxSection(): string {
   const networkRestrictionConfig = SandboxManager.getNetworkRestrictionConfig()
   const allowUnixSockets = SandboxManager.getAllowUnixSockets()
   const ignoreViolations = SandboxManager.getIgnoreViolations()
-  const allowUnsandboxedCommands =
-    SandboxManager.areUnsandboxedCommandsAllowed()
+  const allowUnsandboxedCommands = SandboxManager.areUnsandboxedCommandsAllowed()
 
   // Replace the per-UID temp dir literal (e.g. /private/tmp/claude-1001/) with
   // "$TMPDIR" so the prompt is identical across users — avoids busting the
   // cross-user global prompt cache. The sandbox already sets $TMPDIR at runtime.
   const claudeTempDir = getClaudeTempDir()
   const normalizeAllowOnly = (paths: string[]): string[] =>
-    [...new Set(paths)].map(p => (p === claudeTempDir ? '$TMPDIR' : p))
+    [...new Set(paths)].map((p) => (p === claudeTempDir ? '$TMPDIR' : p))
 
   const filesystemConfig = {
     read: {
@@ -220,40 +211,37 @@ function getSimpleSandboxSection(): string {
     restrictionsLines.push(`Network: ${jsonStringify(networkConfig)}`)
   }
   if (ignoreViolations) {
-    restrictionsLines.push(
-      `Ignored violations: ${jsonStringify(ignoreViolations)}`,
-    )
+    restrictionsLines.push(`Ignored violations: ${jsonStringify(ignoreViolations)}`)
   }
 
-  const sandboxOverrideItems: Array<string | string[]> =
-    allowUnsandboxedCommands
-      ? [
-          'You should always default to running commands within the sandbox. Do NOT attempt to set `dangerouslyDisableSandbox: true` unless:',
-          [
-            'The user *explicitly* asks you to bypass sandbox',
-            'A specific command just failed and you see evidence of sandbox restrictions causing the failure. Note that commands can fail for many reasons unrelated to the sandbox (missing files, wrong arguments, network issues, etc.).',
-          ],
-          'Evidence of sandbox-caused failures includes:',
-          [
-            '"Operation not permitted" errors for file/network operations',
-            'Access denied to specific paths outside allowed directories',
-            'Network connection failures to non-whitelisted hosts',
-            'Unix socket connection errors',
-          ],
-          'When you see evidence of sandbox-caused failure:',
-          [
-            "Immediately retry with `dangerouslyDisableSandbox: true` (don't ask, just do it)",
-            'Briefly explain what sandbox restriction likely caused the failure. Be sure to mention that the user can use the `/sandbox` command to manage restrictions.',
-            'This will prompt the user for permission',
-          ],
-          'Treat each command you execute with `dangerouslyDisableSandbox: true` individually. Even if you have recently run a command with this setting, you should default to running future commands within the sandbox.',
-          'Do not suggest adding sensitive paths like ~/.bashrc, ~/.zshrc, ~/.ssh/*, or credential files to the sandbox allowlist.',
-        ]
-      : [
-          'All commands MUST run in sandbox mode - the `dangerouslyDisableSandbox` parameter is disabled by policy.',
-          'Commands cannot run outside the sandbox under any circumstances.',
-          'If a command fails due to sandbox restrictions, work with the user to adjust sandbox settings instead.',
-        ]
+  const sandboxOverrideItems: Array<string | string[]> = allowUnsandboxedCommands
+    ? [
+        'You should always default to running commands within the sandbox. Do NOT attempt to set `dangerouslyDisableSandbox: true` unless:',
+        [
+          'The user *explicitly* asks you to bypass sandbox',
+          'A specific command just failed and you see evidence of sandbox restrictions causing the failure. Note that commands can fail for many reasons unrelated to the sandbox (missing files, wrong arguments, network issues, etc.).',
+        ],
+        'Evidence of sandbox-caused failures includes:',
+        [
+          '"Operation not permitted" errors for file/network operations',
+          'Access denied to specific paths outside allowed directories',
+          'Network connection failures to non-whitelisted hosts',
+          'Unix socket connection errors',
+        ],
+        'When you see evidence of sandbox-caused failure:',
+        [
+          "Immediately retry with `dangerouslyDisableSandbox: true` (don't ask, just do it)",
+          'Briefly explain what sandbox restriction likely caused the failure. Be sure to mention that the user can use the `/sandbox` command to manage restrictions.',
+          'This will prompt the user for permission',
+        ],
+        'Treat each command you execute with `dangerouslyDisableSandbox: true` individually. Even if you have recently run a command with this setting, you should default to running future commands within the sandbox.',
+        'Do not suggest adding sensitive paths like ~/.bashrc, ~/.zshrc, ~/.ssh/*, or credential files to the sandbox allowlist.',
+      ]
+    : [
+        'All commands MUST run in sandbox mode - the `dangerouslyDisableSandbox` parameter is disabled by policy.',
+        'Commands cannot run outside the sandbox under any circumstances.',
+        'If a command fails due to sandbox restrictions, work with the user to adjust sandbox settings instead.',
+      ]
 
   const items: Array<string | string[]> = [
     ...sandboxOverrideItems,

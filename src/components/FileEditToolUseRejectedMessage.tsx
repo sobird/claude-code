@@ -1,8 +1,10 @@
-import type { StructuredPatchHunk } from 'diff'
 import { relative } from 'path'
+
+import type { StructuredPatchHunk } from 'diff'
 import * as React from 'react'
 import { useTerminalSize } from 'src/hooks/useTerminalSize.js'
 import { getCwd } from 'src/utils/cwd.js'
+
 import { Box, Text } from '../ink.js'
 import { HighlightedCode } from './HighlightedCode.js'
 import { MessageResponse } from './MessageResponse.js'
@@ -53,23 +55,14 @@ export function FileEditToolUseRejectedMessage({
     const lines = content.split('\n')
     const numLines = lines.length
     const plusLines = numLines - MAX_LINES_TO_RENDER
-    const truncatedContent = verbose
-      ? content
-      : lines.slice(0, MAX_LINES_TO_RENDER).join('\n')
+    const truncatedContent = verbose ? content : lines.slice(0, MAX_LINES_TO_RENDER).join('\n')
 
     return (
       <MessageResponse>
         <Box flexDirection="column">
           {text}
-          <HighlightedCode
-            code={truncatedContent || '(No content)'}
-            filePath={file_path}
-            width={columns - 12}
-            dim
-          />
-          {!verbose && plusLines > 0 && (
-            <Text dimColor>… +{plusLines} lines</Text>
-          )}
+          <HighlightedCode code={truncatedContent || '(No content)'} filePath={file_path} width={columns - 12} dim />
+          {!verbose && plusLines > 0 && <Text dimColor>… +{plusLines} lines</Text>}
         </Box>
       </MessageResponse>
     )

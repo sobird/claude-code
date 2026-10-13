@@ -1,17 +1,13 @@
 import { feature } from 'bun:bundle'
+
 import chalk from 'chalk'
 import React, { useMemo, useRef } from 'react'
+
 import { useVoiceState } from '../context/voice.js'
 import { useClipboardImageHint } from '../hooks/useClipboardImageHint.js'
 import { useSettings } from '../hooks/useSettings.js'
 import { useTextInput } from '../hooks/useTextInput.js'
-import {
-  Box,
-  color,
-  useAnimationFrame,
-  useTerminalFocus,
-  useTheme,
-} from '../ink.js'
+import { Box, color, useAnimationFrame, useTerminalFocus, useTheme } from '../ink.js'
 import type { BaseTextInputProps } from '../types/textInputTypes.js'
 import { isEnvTruthy } from '../utils/envUtils.js'
 import type { TextHighlight } from '../utils/textHighlighting.js'
@@ -46,22 +42,19 @@ export default function TextInput(props: Props): React.ReactNode {
   const [theme] = useTheme()
   const isTerminalFocused = useTerminalFocus()
   // Hoisted to mount-time — this component re-renders on every keystroke.
-  const accessibilityEnabled = useMemo(
-    () => isEnvTruthy(process.env.CLAUDE_CODE_ACCESSIBILITY),
-    [],
-  )
+  const accessibilityEnabled = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_ACCESSIBILITY), [])
   const settings = useSettings()
   const reducedMotion = settings.prefersReducedMotion ?? false
 
   const voiceState = feature('VOICE_MODE')
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-      useVoiceState(s => s.voiceState)
+      useVoiceState((s) => s.voiceState)
     : ('idle' as const)
   const isVoiceRecording = voiceState === 'recording'
 
   const audioLevels = feature('VOICE_MODE')
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-      useVoiceState(s => s.voiceAudioLevels)
+      useVoiceState((s) => s.voiceAudioLevels)
     : []
   const smoothedRef = useRef<number[]>(new Array(CURSOR_WAVEFORM_WIDTH).fill(0))
 
@@ -86,15 +79,11 @@ export default function TextInput(props: Props): React.ReactNode {
   } else if (isVoiceRecording && !reducedMotion) {
     // Single-bar waveform from the latest audio level
     const smoothed = smoothedRef.current
-    const raw =
-      audioLevels.length > 0 ? (audioLevels[audioLevels.length - 1] ?? 0) : 0
+    const raw = audioLevels.length > 0 ? (audioLevels[audioLevels.length - 1] ?? 0) : 0
     const target = Math.min(raw * LEVEL_BOOST, 1)
     smoothed[0] = (smoothed[0] ?? 0) * SMOOTH + target * (1 - SMOOTH)
     const displayLevel = smoothed[0] ?? 0
-    const barIndex = Math.max(
-      1,
-      Math.min(Math.round(displayLevel * (BARS.length - 1)), BARS.length - 1),
-    )
+    const barIndex = Math.max(1, Math.min(Math.round(displayLevel * (BARS.length - 1)), BARS.length - 1))
     const isSilent = raw < SILENCE_THRESHOLD
     const hue = ((animTime / 1000) * 90) % 360
     const { r, g, b } = isSilent ? { r: 128, g: 128, b: 128 } : hueToRgb(hue)
@@ -123,8 +112,7 @@ export default function TextInput(props: Props): React.ReactNode {
     columns: props.columns,
     maxVisibleLines: props.maxVisibleLines,
     onImagePaste: props.onImagePaste,
-    disableCursorMovementForUpDownKeys:
-      props.disableCursorMovementForUpDownKeys,
+    disableCursorMovementForUpDownKeys: props.disableCursorMovementForUpDownKeys,
     disableEscapeDoublePress: props.disableEscapeDoublePress,
     externalOffset: props.cursorOffset,
     onOffsetChange: props.onChangeCursorOffset,

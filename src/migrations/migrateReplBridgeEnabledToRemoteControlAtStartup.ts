@@ -8,7 +8,7 @@ import { saveGlobalConfig } from '../utils/config.js'
  * Idempotent — only acts when the old key exists and the new one doesn't.
  */
 export function migrateReplBridgeEnabledToRemoteControlAtStartup(): void {
-  saveGlobalConfig(prev => {
+  saveGlobalConfig((prev) => {
     // The old key is no longer in the GlobalConfig type, so access it via
     // an untyped cast. Only migrate if the old key exists and the new key
     // hasn't been set yet.

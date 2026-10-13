@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+
 import useApp from '../ink/hooks/use-app.js'
 import type { KeybindingContextName } from '../keybindings/types.js'
 import { useDoublePress } from './useDoublePress.js'
@@ -13,10 +14,7 @@ type KeybindingOptions = {
   isActive?: boolean
 }
 
-type UseKeybindingsHook = (
-  handlers: Record<string, () => void>,
-  options?: KeybindingOptions,
-) => void
+type UseKeybindingsHook = (handlers: Record<string, () => void>, options?: KeybindingOptions) => void
 
 /**
  * Handle ctrl+c and ctrl+d for exiting the application.
@@ -57,16 +55,10 @@ export function useExitOnCtrlCD(
   const exitFn = useMemo(() => onExit ?? exit, [onExit, exit])
 
   // Double-press handler for ctrl+c
-  const handleCtrlCDoublePress = useDoublePress(
-    pending => setExitState({ pending, keyName: 'Ctrl-C' }),
-    exitFn,
-  )
+  const handleCtrlCDoublePress = useDoublePress((pending) => setExitState({ pending, keyName: 'Ctrl-C' }), exitFn)
 
   // Double-press handler for ctrl+d
-  const handleCtrlDDoublePress = useDoublePress(
-    pending => setExitState({ pending, keyName: 'Ctrl-D' }),
-    exitFn,
-  )
+  const handleCtrlDDoublePress = useDoublePress((pending) => setExitState({ pending, keyName: 'Ctrl-D' }), exitFn)
 
   // Handler for app:interrupt (ctrl+c by default)
   // Let features handle interrupt first via callback

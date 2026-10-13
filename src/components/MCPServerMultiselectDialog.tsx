@@ -1,11 +1,9 @@
 import partition from 'lodash-es/partition.js'
 import React, { useCallback } from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
+
 import { Box, Text } from '../ink.js'
-import {
-  getSettings_DEPRECATED,
-  updateSettingsForSource,
-} from '../utils/settings/settings.js'
+import { getSettings_DEPRECATED, updateSettingsForSource } from '../utils/settings/settings.js'
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint.js'
 import { SelectMulti } from './CustomSelect/SelectMulti.js'
 import { Byline } from './design-system/Byline.js'
@@ -18,19 +16,14 @@ type Props = {
   onDone(): void
 }
 
-export function MCPServerMultiselectDialog({
-  serverNames,
-  onDone,
-}: Props): React.ReactNode {
+export function MCPServerMultiselectDialog({ serverNames, onDone }: Props): React.ReactNode {
   function onSubmit(selectedServers: string[]) {
     const currentSettings = getSettings_DEPRECATED() || {}
     const enabledServers = currentSettings.enabledMcpjsonServers || []
     const disabledServers = currentSettings.disabledMcpjsonServers || []
 
     // Use partition to separate approved and rejected servers
-    const [approvedServers, rejectedServers] = partition(serverNames, server =>
-      selectedServers.includes(server),
-    )
+    const [approvedServers, rejectedServers] = partition(serverNames, (server) => selectedServers.includes(server))
 
     logEvent('tengu_mcp_multidialog_choice', {
       approved: approvedServers.length,
@@ -39,9 +32,7 @@ export function MCPServerMultiselectDialog({
 
     // Update settings with approved servers
     if (approvedServers.length > 0) {
-      const newEnabledServers = [
-        ...new Set([...enabledServers, ...approvedServers]),
-      ]
+      const newEnabledServers = [...new Set([...enabledServers, ...approvedServers])]
       updateSettingsForSource('localSettings', {
         enabledMcpjsonServers: newEnabledServers,
       })
@@ -49,9 +40,7 @@ export function MCPServerMultiselectDialog({
 
     // Update settings with rejected servers
     if (rejectedServers.length > 0) {
-      const newDisabledServers = [
-        ...new Set([...disabledServers, ...rejectedServers]),
-      ]
+      const newDisabledServers = [...new Set([...disabledServers, ...rejectedServers])]
       updateSettingsForSource('localSettings', {
         disabledMcpjsonServers: newDisabledServers,
       })
@@ -65,9 +54,7 @@ export function MCPServerMultiselectDialog({
     const currentSettings = getSettings_DEPRECATED() || {}
     const disabledServers = currentSettings.disabledMcpjsonServers || []
 
-    const newDisabledServers = [
-      ...new Set([...disabledServers, ...serverNames]),
-    ]
+    const newDisabledServers = [...new Set([...disabledServers, ...serverNames])]
 
     updateSettingsForSource('localSettings', {
       disabledMcpjsonServers: newDisabledServers,
@@ -88,7 +75,7 @@ export function MCPServerMultiselectDialog({
         <MCPServerDialogCopy />
 
         <SelectMulti
-          options={serverNames.map(server => ({
+          options={serverNames.map((server) => ({
             label: server,
             value: server,
           }))}

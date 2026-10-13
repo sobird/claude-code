@@ -31,6 +31,7 @@ AWAY_SUMMARY 启用的主要功能包括：
 ## 🔧 技术实现细节
 
 ### 启用条件
+
 - 通过 feature('AWAY_SUMMARY') 控制
 - 还需要 `tengu_sedge_lantern` GrowthBook 实验性 flag 支持
 - 默认未启用（在 scripts/config.ts 中被注释）
@@ -56,10 +57,7 @@ useEffect(() => {
 })
 
 // 2. 摘要生成服务
-export async function generateAwaySummary(
-  messages: readonly Message[],
-  signal: AbortSignal,
-): Promise<string | null> {
+export async function generateAwaySummary(messages: readonly Message[], signal: AbortSignal): Promise<string | null> {
   const memory = await getSessionMemoryContent()
   const recent = messages.slice(-RECENT_MESSAGE_WINDOW)
   recent.push(createUserMessage({ content: buildAwaySummaryPrompt(memory) }))
@@ -73,10 +71,12 @@ export async function generateAwaySummary(
 ```
 
 ### 时间参数
+
 - **BLUR_DELAY_MS**: 5 分钟（300,000 毫秒）
 - **RECENT_MESSAGE_WINDOW**: 30 条消息（约 15 次交互）
 
 ### 摘要提示词结构
+
 ```
 [Session memory (broader context)]
 The user stepped away and is coming back. Write exactly 1-3 short sentences.
@@ -87,17 +87,20 @@ Next: the concrete next step. Skip status reports and commit recaps.
 ## 📊 工作原理
 
 ### 触发条件
+
 1. 终端失焦（blur）
 2. 超过 5 分钟无活动
 3. 当前没有进行中的对话
 4. 距离上次用户消息后有 summary message
 
 ### 去重机制
+
 - `hasSummarySinceLastUserTurn()` 检查最近是否有 summary
 - 避免重复生成相同的摘要
 - 基于用户消息和 system 消息类型判断
 
 ### Abort 处理
+
 - 支持 AbortController 取消正在生成的摘要
 - 当用户返回焦点时立即停止生成
 - 防止资源浪费和 UI 闪烁
@@ -105,11 +108,13 @@ Next: the concrete next step. Skip status reports and commit recaps.
 ## 💾 数据依赖
 
 ### 会话记忆
+
 - 从 `getSessionMemoryContent()` 获取 broader context
 - 需要 SessionMemory 功能已启用并初始化
 - 提供项目背景和历史信息
 
 ### 消息历史
+
 - 只使用最近的 30 条消息
 - 过滤 sidechain 消息（工具调用等）
 - 保持摘要的相关性和时效性
@@ -117,12 +122,14 @@ Next: the concrete next step. Skip status reports and commit recaps.
 ## 🎯 使用场景
 
 ### 主要目的
+
 1. **用户体验提升**: 让用户重新进入时快速了解进展
 2. **工作效率**: 减少重新理解上下文的时间
 3. **连续性**: 保持开发工作的连贯性
 4. **团队协作**: 让团队成员了解工作状态
 
 ### 适用场景
+
 - **长时间调试**: 用户离开解决复杂问题
 - **代码重构**: 大型重构任务的中断恢复
 - **文档编写**: 撰写技术文档时的中断
@@ -131,16 +138,19 @@ Next: the concrete next step. Skip status reports and commit recaps.
 ## ⚙️ 配置和管理
 
 ### 启用方式
+
 ```javascript
 // 在 config 文件中取消注释
 'AWAY_SUMMARY',
 ```
 
 ### 禁用选项
+
 - 保持默认禁用状态
 - 需要用户明确启用
 
 ### 性能考虑
+
 - 使用小型快速模型（getSmallFastModel）
 - 跳过缓存写入（skipCacheWrite: true）
 - 15 秒超时防止长时间等待
@@ -148,11 +158,13 @@ Next: the concrete next step. Skip status reports and commit recaps.
 ## 🔍 调试和监控
 
 ### 日志记录
+
 - 记录摘要生成事件到 analytics
 - 调试日志显示生成过程
 - 错误处理和异常情况记录
 
 ### 状态跟踪
+
 - 跟踪焦点状态变化
 - 监控摘要生成进度
 - 记录会话记忆加载情况
@@ -160,12 +172,14 @@ Next: the concrete next step. Skip status reports and commit recaps.
 ## 📈 影响和用途
 
 ### 主要优势
+
 - **无缝恢复**: 用户离开后能快速回到工作状态
 - **智能洞察**: 基于 AI 分析的上下文理解
 - **时间节省**: 减少重新理解上下文的时间
 - **工作流优化**: 提高开发效率
 
 ### 技术价值
+
 - 支持复杂的长时间任务
 - 提供可操作的下一步建议
 - 增强用户对 AI 助手的信任

@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { MessageResponse } from '../../components/MessageResponse.js'
 import { Text } from '../../ink.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
@@ -36,8 +37,7 @@ export function renderToolResultMessage(content: Output): React.ReactNode {
   return (
     <MessageResponse>
       <Text>
-        Set <Text bold>{content.setting}</Text> to{' '}
-        <Text bold>{jsonStringify(content.newValue)}</Text>
+        Set <Text bold>{content.setting}</Text> to <Text bold>{jsonStringify(content.newValue)}</Text>
       </Text>
     </MessageResponse>
   )

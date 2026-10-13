@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+
 import { lazySchema } from '../../utils/lazySchema.js'
 
 /**
@@ -11,9 +12,7 @@ export const PolicyLimitsResponseSchema = lazySchema(() =>
   }),
 )
 
-export type PolicyLimitsResponse = z.infer<
-  ReturnType<typeof PolicyLimitsResponseSchema>
->
+export type PolicyLimitsResponse = z.infer<ReturnType<typeof PolicyLimitsResponseSchema>>
 
 /**
  * Result of fetching policy limits

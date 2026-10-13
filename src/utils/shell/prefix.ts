@@ -8,6 +8,7 @@
  */
 
 import chalk from 'chalk'
+
 import type { QuerySource } from '../../constants/querySource.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import {
@@ -118,7 +119,7 @@ export function createCommandPrefixExtractor(config: PrefixExtractorConfig) {
       })
       return promise
     },
-    command => command, // memoize by command only
+    (command) => command, // memoize by command only
     200,
   )
 
@@ -162,7 +163,7 @@ export function createSubcommandPrefixExtractor(
       })
       return promise
     },
-    command => command, // memoize by command only
+    (command) => command, // memoize by command only
     200,
   )
 
@@ -212,24 +213,17 @@ async function getCommandPrefixImpl(
       isNonInteractiveSession,
     )
 
-    const useSystemPromptPolicySpec = getFeatureValue_CACHED_MAY_BE_STALE(
-      'tengu_cork_m4q',
-      false,
-    )
+    const useSystemPromptPolicySpec = getFeatureValue_CACHED_MAY_BE_STALE('tengu_cork_m4q', false)
 
     const response = await queryHaiku({
       systemPrompt: asSystemPrompt(
         useSystemPromptPolicySpec
-          ? [
-              `Your task is to process ${toolName} commands that an AI coding agent wants to run.\n\n${policySpec}`,
-            ]
+          ? [`Your task is to process ${toolName} commands that an AI coding agent wants to run.\n\n${policySpec}`]
           : [
               `Your task is to process ${toolName} commands that an AI coding agent wants to run.\n\nThis policy spec defines how to determine the prefix of a ${toolName} command:`,
             ],
       ),
-      userPrompt: useSystemPromptPolicySpec
-        ? `Command: ${command}`
-        : `${policySpec}\n\nCommand: ${command}`,
+      userPrompt: useSystemPromptPolicySpec ? `Command: ${command}` : `${policySpec}\n\nCommand: ${command}`,
       signal: abortSignal,
       options: {
         enablePromptCaching: useSystemPromptPolicySpec,
@@ -249,15 +243,13 @@ async function getCommandPrefixImpl(
       typeof response.message.content === 'string'
         ? response.message.content
         : Array.isArray(response.message.content)
-          ? (response.message.content.find(_ => _.type === 'text')?.text ??
-            'none')
+          ? (response.message.content.find((_) => _.type === 'text')?.text ?? 'none')
           : 'none'
 
     if (startsWithApiErrorPrefix(prefix)) {
       logEvent(eventName, {
         success: false,
-        error:
-          'API error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error: 'API error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         durationMs,
       })
       result = null
@@ -265,22 +257,17 @@ async function getCommandPrefixImpl(
       // Haiku detected something suspicious - treat as no prefix available
       logEvent(eventName, {
         success: false,
-        error:
-          'command_injection_detected' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error: 'command_injection_detected' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         durationMs,
       })
       result = {
         commandPrefix: null,
       }
-    } else if (
-      prefix === 'git' ||
-      DANGEROUS_SHELL_PREFIXES.has(prefix.toLowerCase())
-    ) {
+    } else if (prefix === 'git' || DANGEROUS_SHELL_PREFIXES.has(prefix.toLowerCase())) {
       // Never accept bare `git` or shell executables as a prefix
       logEvent(eventName, {
         success: false,
-        error:
-          'dangerous_shell_prefix' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error: 'dangerous_shell_prefix' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         durationMs,
       })
       result = {
@@ -290,8 +277,7 @@ async function getCommandPrefixImpl(
       // No prefix detected
       logEvent(eventName, {
         success: false,
-        error:
-          'prefix "none"' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error: 'prefix "none"' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         durationMs,
       })
       result = {
@@ -304,8 +290,7 @@ async function getCommandPrefixImpl(
         // Prefix isn't actually a prefix of the command
         logEvent(eventName, {
           success: false,
-          error:
-            'command did not start with prefix' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          error: 'command did not start with prefix' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           durationMs,
         })
         result = {
@@ -340,7 +325,7 @@ async function getCommandSubcommandPrefixImpl(
 
   const [fullCommandPrefix, ...subcommandPrefixesResults] = await Promise.all([
     getPrefix(command, abortSignal, isNonInteractiveSession),
-    ...subcommands.map(async subcommand => ({
+    ...subcommands.map(async (subcommand) => ({
       subcommand,
       prefix: await getPrefix(subcommand, abortSignal, isNonInteractiveSession),
     })),
@@ -350,15 +335,12 @@ async function getCommandSubcommandPrefixImpl(
     return null
   }
 
-  const subcommandPrefixes = subcommandPrefixesResults.reduce(
-    (acc, { subcommand, prefix }) => {
-      if (prefix) {
-        acc.set(subcommand, prefix)
-      }
-      return acc
-    },
-    new Map<string, CommandPrefixResult>(),
-  )
+  const subcommandPrefixes = subcommandPrefixesResults.reduce((acc, { subcommand, prefix }) => {
+    if (prefix) {
+      acc.set(subcommand, prefix)
+    }
+    return acc
+  }, new Map<string, CommandPrefixResult>())
 
   return {
     ...fullCommandPrefix,

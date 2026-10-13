@@ -1,60 +1,33 @@
 import { feature } from 'bun:bundle'
-import chalk from 'chalk'
 import * as path from 'path'
+
+import chalk from 'chalk'
 import * as React from 'react'
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useNotifications } from 'src/context/notifications.js'
 import { useCommandQueue } from 'src/hooks/useCommandQueue.js'
-import {
-  type IDEAtMentioned,
-  useIdeAtMentioned,
-} from 'src/hooks/useIdeAtMentioned.js'
+import { type IDEAtMentioned, useIdeAtMentioned } from 'src/hooks/useIdeAtMentioned.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
-import {
-  type AppState,
-  useAppState,
-  useAppStateStore,
-  useSetAppState,
-} from 'src/state/AppState.js'
+import { type AppState, useAppState, useAppStateStore, useSetAppState } from 'src/state/AppState.js'
 import type { FooterItem } from 'src/state/AppStateStore.js'
 import { getCwd } from 'src/utils/cwd.js'
-import {
-  isQueuedCommandEditable,
-  popAllEditable,
-} from 'src/utils/messageQueueManager.js'
+import { isQueuedCommandEditable, popAllEditable } from 'src/utils/messageQueueManager.js'
 import stripAnsi from 'strip-ansi'
+
 import { companionReservedColumns } from '../../buddy/CompanionSprite.js'
-import {
-  findBuddyTriggerPositions,
-  useBuddyNotification,
-} from '../../buddy/useBuddyNotification.js'
+import { findBuddyTriggerPositions, useBuddyNotification } from '../../buddy/useBuddyNotification.js'
+import { type Command, hasCommand } from '../../commands.js'
 import { FastModePicker } from '../../commands/fast/fast.js'
 import { isUltrareviewEnabled } from '../../commands/review/ultrareviewEnabled.js'
 import { getNativeCSIuTerminalDisplayName } from '../../commands/terminalSetup/terminalSetup.js'
-import { type Command, hasCommand } from '../../commands.js'
 import { useIsModalOverlayActive } from '../../context/overlayContext.js'
 import { useSetPromptOverlayDialog } from '../../context/promptOverlayContext.js'
-import {
-  formatImageRef,
-  formatPastedTextRef,
-  getPastedTextRefNumLines,
-  parseReferences,
-} from '../../history.js'
+import { formatImageRef, formatPastedTextRef, getPastedTextRefNumLines, parseReferences } from '../../history.js'
 import type { VerificationStatus } from '../../hooks/useApiKeyVerification.js'
-import {
-  type HistoryMode,
-  useArrowKeyHistory,
-} from '../../hooks/useArrowKeyHistory.js'
+import { type HistoryMode, useArrowKeyHistory } from '../../hooks/useArrowKeyHistory.js'
 import { useDoublePress } from '../../hooks/useDoublePress.js'
 import { useHistorySearch } from '../../hooks/useHistorySearch.js'
 import type { IDESelection } from '../../hooks/useIdeSelection.js'
@@ -63,41 +36,22 @@ import { useMainLoopModel } from '../../hooks/useMainLoopModel.js'
 import { usePromptSuggestion } from '../../hooks/usePromptSuggestion.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { useTypeahead } from '../../hooks/useTypeahead.js'
+import { Box, type ClickEvent, type Key, Text, useInput } from '../../ink.js'
 import type { BorderTextOptions } from '../../ink/render-border.js'
 import { stringWidth } from '../../ink/stringWidth.js'
-import { Box, type ClickEvent, type Key, Text, useInput } from '../../ink.js'
 import { useOptionalKeybindingContext } from '../../keybindings/KeybindingContext.js'
 import { getShortcutDisplay } from '../../keybindings/shortcutFormat.js'
-import {
-  useKeybinding,
-  useKeybindings,
-} from '../../keybindings/useKeybinding.js'
+import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { MCPServerConnection } from '../../services/mcp/types.js'
-import {
-  abortPromptSuggestion,
-  logSuggestionSuppressed,
-} from '../../services/PromptSuggestion/promptSuggestion.js'
-import {
-  type ActiveSpeculationState,
-  abortSpeculation,
-} from '../../services/PromptSuggestion/speculation.js'
-import {
-  getActiveAgentForInput,
-  getViewedTeammateTask,
-} from '../../state/selectors.js'
-import {
-  enterTeammateView,
-  exitTeammateView,
-  stopOrDismissAgent,
-} from '../../state/teammateViewHelpers.js'
-import type { ToolPermissionContext } from '../../Tool.js'
+import { abortPromptSuggestion, logSuggestionSuppressed } from '../../services/PromptSuggestion/promptSuggestion.js'
+import { type ActiveSpeculationState, abortSpeculation } from '../../services/PromptSuggestion/speculation.js'
+import { getActiveAgentForInput, getViewedTeammateTask } from '../../state/selectors.js'
+import { enterTeammateView, exitTeammateView, stopOrDismissAgent } from '../../state/teammateViewHelpers.js'
 import { getRunningTeammatesSorted } from '../../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
 import type { InProcessTeammateTaskState } from '../../tasks/InProcessTeammateTask/types.js'
-import {
-  isPanelAgentTask,
-  type LocalAgentTaskState,
-} from '../../tasks/LocalAgentTask/LocalAgentTask.js'
+import { isPanelAgentTask, type LocalAgentTaskState } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
 import { isBackgroundTask } from '../../tasks/types.js'
+import type { ToolPermissionContext } from '../../Tool.js'
 import {
   AGENT_COLOR_TO_THEME_COLOR,
   AGENT_COLORS,
@@ -106,25 +60,14 @@ import {
 import type { AgentDefinition } from '../../tools/AgentTool/loadAgentsDir.js'
 import type { Message } from '../../types/message.js'
 import type { PermissionMode } from '../../types/permissions.js'
-import type {
-  BaseTextInputProps,
-  PromptInputMode,
-  VimMode,
-} from '../../types/textInputTypes.js'
+import type { BaseTextInputProps, PromptInputMode, VimMode } from '../../types/textInputTypes.js'
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
 import { count } from '../../utils/array.js'
 import type { AutoUpdaterResult } from '../../utils/autoUpdater.js'
+import { getGlobalConfig, type PastedContent, saveGlobalConfig } from '../../utils/config.js'
 import { Cursor } from '../../utils/Cursor.js'
-import {
-  getGlobalConfig,
-  type PastedContent,
-  saveGlobalConfig,
-} from '../../utils/config.js'
 import { logForDebugging } from '../../utils/debug.js'
-import {
-  parseDirectMemberMessage,
-  sendDirectMemberMessage,
-} from '../../utils/directMemberMessage.js'
+import { parseDirectMemberMessage, sendDirectMemberMessage } from '../../utils/directMemberMessage.js'
 import type { EffortLevel } from '../../utils/effort.js'
 import { env } from '../../utils/env.js'
 import { errorMessage } from '../../utils/errors.js'
@@ -138,26 +81,14 @@ import {
 } from '../../utils/fastMode.js'
 import { isFullscreenEnvEnabled } from '../../utils/fullscreen.js'
 import type { PromptInputHelpers } from '../../utils/handlePromptSubmit.js'
-import {
-  getImageFromClipboard,
-  PASTE_THRESHOLD,
-} from '../../utils/imagePaste.js'
+import { getImageFromClipboard, PASTE_THRESHOLD } from '../../utils/imagePaste.js'
 import type { ImageDimensions } from '../../utils/imageResizer.js'
 import { cacheImagePath, storeImage } from '../../utils/imageStore.js'
-import {
-  isMacosOptionChar,
-  MACOS_OPTION_SPECIAL_CHARS,
-} from '../../utils/keyboardShortcuts.js'
+import { isMacosOptionChar, MACOS_OPTION_SPECIAL_CHARS } from '../../utils/keyboardShortcuts.js'
 import { logError } from '../../utils/log.js'
-import {
-  isOpus1mMergeEnabled,
-  modelDisplayString,
-} from '../../utils/model/model.js'
+import { isOpus1mMergeEnabled, modelDisplayString } from '../../utils/model/model.js'
 import { setAutoModeActive } from '../../utils/permissions/autoModeState.js'
-import {
-  cyclePermissionMode,
-  getNextPermissionMode,
-} from '../../utils/permissions/getNextPermissionMode.js'
+import { cyclePermissionMode, getNextPermissionMode } from '../../utils/permissions/getNextPermissionMode.js'
 import { transitionPermissionMode } from '../../utils/permissions/permissionSetup.js'
 import { getPlatform } from '../../utils/platform.js'
 import type { ProcessUserInputContext } from '../../utils/processUserInput/processUserInput.js'
@@ -179,40 +110,27 @@ import { isInProcessTeammate } from '../../utils/teammateContext.js'
 import { writeToMailbox } from '../../utils/teammateMailbox.js'
 import type { TextHighlight } from '../../utils/textHighlighting.js'
 import type { Theme } from '../../utils/theme.js'
-import {
-  findThinkingTriggerPositions,
-  getRainbowColor,
-  isUltrathinkEnabled,
-} from '../../utils/thinking.js'
+import { findThinkingTriggerPositions, getRainbowColor, isUltrathinkEnabled } from '../../utils/thinking.js'
 import { findTokenBudgetPositions } from '../../utils/tokenBudget.js'
-import {
-  findUltraplanTriggerPositions,
-  findUltrareviewTriggerPositions,
-} from '../../utils/ultraplan/keyword.js'
+import { findUltraplanTriggerPositions, findUltrareviewTriggerPositions } from '../../utils/ultraplan/keyword.js'
 import { AutoModeOptInDialog } from '../AutoModeOptInDialog.js'
 import { BridgeDialog } from '../BridgeDialog.js'
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js'
-import {
-  getVisibleAgentTasks,
-  useCoordinatorTaskCount,
-} from '../CoordinatorAgentStatus.js'
+import { getVisibleAgentTasks, useCoordinatorTaskCount } from '../CoordinatorAgentStatus.js'
 import { getEffortNotificationText } from '../EffortIndicator.js'
 import { getFastIconString } from '../FastIcon.js'
 import { GlobalSearchDialog } from '../GlobalSearchDialog.js'
 import { HistorySearchDialog } from '../HistorySearchDialog.js'
 import { ModelPicker } from '../ModelPicker.js'
 import { QuickOpenDialog } from '../QuickOpenDialog.js'
-import TextInput from '../TextInput.js'
-import { ThinkingToggle } from '../ThinkingToggle.js'
 import { BackgroundTasksDialog } from '../tasks/BackgroundTasksDialog.js'
 import { shouldHideTasksFooter } from '../tasks/taskStatusUtils.js'
 import { TeamsDialog } from '../teams/TeamsDialog.js'
+import TextInput from '../TextInput.js'
+import { ThinkingToggle } from '../ThinkingToggle.js'
 import VimTextInput from '../VimTextInput.js'
 import { getModeFromInput, getValueFromInput } from './inputModes.js'
-import {
-  FOOTER_TEMPORARY_STATUS_TIMEOUT,
-  Notifications,
-} from './Notifications.js'
+import { FOOTER_TEMPORARY_STATUS_TIMEOUT, Notifications } from './Notifications.js'
 import PromptInputFooter from './PromptInputFooter.js'
 import type { SuggestionItem } from './PromptInputFooterSuggestions.js'
 import { PromptInputModeIndicator } from './PromptInputModeIndicator.js'
@@ -263,9 +181,7 @@ type Props = {
   onMessageActionsEnter?: () => void
   mcpClients: MCPServerConnection[]
   pastedContents: Record<number, PastedContent>
-  setPastedContents: React.Dispatch<
-    React.SetStateAction<Record<number, PastedContent>>
-  >
+  setPastedContents: React.Dispatch<React.SetStateAction<Record<number, PastedContent>>>
   vimMode: VimMode
   setVimMode: (mode: VimMode) => void
   showBashesDialog: string | boolean
@@ -362,8 +278,7 @@ function PromptInput({
   // shouldHidePromptInput: false. Those dialogs don't register in the overlay
   // system, so treat them as a modal overlay here to stop navigation keys from
   // leaking into TextInput/footer handlers and stacking a second dialog.
-  const isModalOverlayActive =
-    useIsModalOverlayActive() || isLocalJSXCommandActive
+  const isModalOverlayActive = useIsModalOverlayActive() || isLocalJSXCommandActive
   const [isAutoUpdating, setIsAutoUpdating] = useState(false)
   const [exitMessage, setExitMessage] = useState<{
     show: boolean
@@ -392,13 +307,9 @@ function PromptInput({
     insertTextRef.current = {
       cursorOffset,
       insert: (text: string) => {
-        const needsSpace =
-          cursorOffset === input.length &&
-          input.length > 0 &&
-          !/\s$/.test(input)
+        const needsSpace = cursorOffset === input.length && input.length > 0 && !/\s$/.test(input)
         const insertText = needsSpace ? ' ' + text : text
-        const newValue =
-          input.slice(0, cursorOffset) + insertText + input.slice(cursorOffset)
+        const newValue = input.slice(0, cursorOffset) + insertText + input.slice(cursorOffset)
         lastInternalInputRef.current = newValue
         onInputChange(newValue)
         setCursorOffset(cursorOffset + insertText.length)
@@ -412,36 +323,29 @@ function PromptInput({
   }
   const store = useAppStateStore()
   const setAppState = useSetAppState()
-  const tasks = useAppState(s => s.tasks)
-  const replBridgeConnected = useAppState(s => s.replBridgeConnected)
-  const replBridgeExplicit = useAppState(s => s.replBridgeExplicit)
-  const replBridgeReconnecting = useAppState(s => s.replBridgeReconnecting)
+  const tasks = useAppState((s) => s.tasks)
+  const replBridgeConnected = useAppState((s) => s.replBridgeConnected)
+  const replBridgeExplicit = useAppState((s) => s.replBridgeExplicit)
+  const replBridgeReconnecting = useAppState((s) => s.replBridgeReconnecting)
   // Must match BridgeStatusIndicator's render condition (PromptInputFooter.tsx) —
   // the pill returns null for implicit-and-not-reconnecting, so nav must too,
   // otherwise bridge becomes an invisible selection stop.
-  const bridgeFooterVisible =
-    replBridgeConnected && (replBridgeExplicit || replBridgeReconnecting)
+  const bridgeFooterVisible = replBridgeConnected && (replBridgeExplicit || replBridgeReconnecting)
   // Tmux pill (ant-only) — visible when there's an active tungsten session
   const hasTungstenSession = useAppState(
-    s =>
-      process.env.USER_TYPE === 'ant' && s.tungstenActiveSession !== undefined,
+    (s) => process.env.USER_TYPE === 'ant' && s.tungstenActiveSession !== undefined,
   )
-  const tmuxFooterVisible =
-    process.env.USER_TYPE === 'ant' && hasTungstenSession
+  const tmuxFooterVisible = process.env.USER_TYPE === 'ant' && hasTungstenSession
   // WebBrowser pill — visible when a browser is open
-  const bagelFooterVisible = useAppState(s =>
-        false,
-  )
-  const teamContext = useAppState(s => s.teamContext)
+  const bagelFooterVisible = useAppState((s) => false)
+  const teamContext = useAppState((s) => s.teamContext)
   const queuedCommands = useCommandQueue()
-  const promptSuggestionState = useAppState(s => s.promptSuggestion)
-  const speculation = useAppState(s => s.speculation)
-  const speculationSessionTimeSavedMs = useAppState(
-    s => s.speculationSessionTimeSavedMs,
-  )
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId)
-  const viewSelectionMode = useAppState(s => s.viewSelectionMode)
-  const showSpinnerTree = useAppState(s => s.expandedView) === 'teammates'
+  const promptSuggestionState = useAppState((s) => s.promptSuggestion)
+  const speculation = useAppState((s) => s.speculation)
+  const speculationSessionTimeSavedMs = useAppState((s) => s.speculationSessionTimeSavedMs)
+  const viewingAgentTaskId = useAppState((s) => s.viewingAgentTaskId)
+  const viewSelectionMode = useAppState((s) => s.viewSelectionMode)
+  const showSpinnerTree = useAppState((s) => s.expandedView) === 'teammates'
   const { companion: _companion, companionMuted } = feature('BUDDY')
     ? getGlobalConfig()
     : { companion: undefined, companionMuted: undefined }
@@ -454,34 +358,27 @@ function PromptInput({
   const briefOwnsGap =
     feature('KAIROS') || feature('KAIROS_BRIEF')
       ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-        useAppState(s => s.isBriefOnly) && !viewingAgentTaskId
+        useAppState((s) => s.isBriefOnly) && !viewingAgentTaskId
       : false
-  const mainLoopModel_ = useAppState(s => s.mainLoopModel)
-  const mainLoopModelForSession = useAppState(s => s.mainLoopModelForSession)
-  const thinkingEnabled = useAppState(s => s.thinkingEnabled)
-  const isFastMode = useAppState(s =>
-    isFastModeEnabled() ? s.fastMode : false,
-  )
-  const effortValue = useAppState(s => s.effortValue)
+  const mainLoopModel_ = useAppState((s) => s.mainLoopModel)
+  const mainLoopModelForSession = useAppState((s) => s.mainLoopModelForSession)
+  const thinkingEnabled = useAppState((s) => s.thinkingEnabled)
+  const isFastMode = useAppState((s) => (isFastModeEnabled() ? s.fastMode : false))
+  const effortValue = useAppState((s) => s.effortValue)
   const viewedTeammate = getViewedTeammateTask(store.getState())
   const viewingAgentName = viewedTeammate?.identity.agentName
   // identity.color is typed as `string | undefined` (not AgentColorName) because
   // teammate identity comes from file-based config. Validate before casting to
   // ensure we only use valid color names (falls back to cyan if invalid).
   const viewingAgentColor =
-    viewedTeammate?.identity.color &&
-    AGENT_COLORS.includes(viewedTeammate.identity.color as AgentColorName)
+    viewedTeammate?.identity.color && AGENT_COLORS.includes(viewedTeammate.identity.color as AgentColorName)
       ? (viewedTeammate.identity.color as AgentColorName)
       : undefined
   // In-process teammates sorted alphabetically for footer team selector
-  const inProcessTeammates = useMemo(
-    () => getRunningTeammatesSorted(tasks),
-    [tasks],
-  )
+  const inProcessTeammates = useMemo(() => getRunningTeammatesSorted(tasks), [tasks])
 
   // Team mode: all background tasks are in-process teammates
-  const isTeammateMode =
-    inProcessTeammates.length > 0 || viewedTeammate !== undefined
+  const isTeammateMode = inProcessTeammates.length > 0 || viewedTeammate !== undefined
 
   // When viewing a teammate, show their permission mode in the footer instead of the leader's
   const effectiveToolPermissionContext = useMemo((): ToolPermissionContext => {
@@ -493,23 +390,22 @@ function PromptInput({
     }
     return toolPermissionContext
   }, [viewedTeammate, toolPermissionContext])
-  const { historyQuery, setHistoryQuery, historyMatch, historyFailedMatch } =
-    useHistorySearch(
-      entry => {
-        setPastedContents(entry.pastedContents)
-        void onSubmit(entry.display)
-      },
-      input,
-      trackAndSetInput,
-      setCursorOffset,
-      cursorOffset,
-      onModeChange,
-      mode,
-      isSearchingHistory,
-      setIsSearchingHistory,
-      setPastedContents,
-      pastedContents,
-    )
+  const { historyQuery, setHistoryQuery, historyMatch, historyFailedMatch } = useHistorySearch(
+    (entry) => {
+      setPastedContents(entry.pastedContents)
+      void onSubmit(entry.display)
+    },
+    input,
+    trackAndSetInput,
+    setCursorOffset,
+    cursorOffset,
+    onModeChange,
+    mode,
+    isSearchingHistory,
+    setIsSearchingHistory,
+    setPastedContents,
+    pastedContents,
+  )
   // Counter for paste IDs (shared between images and text).
   // Compute initial value once from existing messages (for --continue/--resume).
   // useRef(fn()) evaluates fn() on every render and discards the result after
@@ -530,10 +426,10 @@ function PromptInput({
   // -1 sentinel: tasks pill is selected but no specific agent row is selected yet.
   // First ↓ selects the pill, second ↓ moves to row 0. Prevents double-select
   // of pill + row when both bg tasks (pill) and forked agents (rows) are visible.
-  const coordinatorTaskIndex = useAppState(s => s.coordinatorTaskIndex)
+  const coordinatorTaskIndex = useAppState((s) => s.coordinatorTaskIndex)
   const setCoordinatorTaskIndex = useCallback(
     (v: number | ((prev: number) => number)) =>
-      setAppState(prev => {
+      setAppState((prev) => {
         const next = typeof v === 'function' ? v(prev.coordinatorTaskIndex) : v
         if (next === prev.coordinatorTaskIndex) return prev
         return { ...prev, coordinatorTaskIndex: next }
@@ -548,9 +444,7 @@ function PromptInput({
   const hasBgTaskPill = useMemo(
     () =>
       Object.values(tasks).some(
-        t =>
-          isBackgroundTask(t) &&
-          !(process.env.USER_TYPE === 'ant' && isPanelAgentTask(t)),
+        (t) => isBackgroundTask(t) && !(process.env.USER_TYPE === 'ant' && isPanelAgentTask(t)),
       ),
     [tasks],
   )
@@ -558,9 +452,7 @@ function PromptInput({
   // Clamp index when tasks complete and the list shrinks beneath the cursor
   useEffect(() => {
     if (coordinatorTaskIndex >= coordinatorTaskCount) {
-      setCoordinatorTaskIndex(
-        Math.max(minCoordinatorIndex, coordinatorTaskCount - 1),
-      )
+      setCoordinatorTaskIndex(Math.max(minCoordinatorIndex, coordinatorTaskCount - 1))
     } else if (coordinatorTaskIndex < minCoordinatorIndex) {
       setCoordinatorTaskIndex(minCoordinatorIndex)
     }
@@ -574,8 +466,7 @@ function PromptInput({
   const [showFastModePicker, setShowFastModePicker] = useState(false)
   const [showThinkingToggle, setShowThinkingToggle] = useState(false)
   const [showAutoModeOptIn, setShowAutoModeOptIn] = useState(false)
-  const [previousModeBeforeAuto, setPreviousModeBeforeAuto] =
-    useState<PermissionMode | null>(null)
+  const [previousModeBeforeAuto, setPreviousModeBeforeAuto] = useState<PermissionMode | null>(null)
   const autoModeOptInTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Check if cursor is on the first line of input
@@ -604,10 +495,7 @@ function PromptInput({
     if (!teamContext) {
       return []
     }
-    const teammateCount = count(
-      Object.values(teamContext.teammates),
-      t => t.name !== 'team-lead',
-    )
+    const teammateCount = count(Object.values(teamContext.teammates), (t) => t.name !== 'team-lead')
     return [
       {
         name: teamContext.teamName,
@@ -622,16 +510,12 @@ function PromptInput({
   // Which pills render below the input box. Order here IS the nav order
   // (down/right = forward, up/left = back). Selection lives in AppState so
   // pills rendered outside PromptInput (CompanionSprite) can read focus.
-  const runningTaskCount = useMemo(
-    () => count(Object.values(tasks), t => t.status === 'running'),
-    [tasks],
-  )
+  const runningTaskCount = useMemo(() => count(Object.values(tasks), (t) => t.status === 'running'), [tasks])
   // Panel shows retained-completed agents too (getVisibleAgentTasks), so the
   // pill must stay navigable whenever the panel has rows — not just when
   // something is running.
   const tasksFooterVisible =
-    (runningTaskCount > 0 ||
-      (process.env.USER_TYPE === 'ant' && coordinatorTaskCount > 0)) &&
+    (runningTaskCount > 0 || (process.env.USER_TYPE === 'ant' && coordinatorTaskCount > 0)) &&
     !shouldHideTasksFooter(tasks, showSpinnerTree)
   const teamsFooterVisible = cachedTeams.length > 0
 
@@ -659,19 +543,12 @@ function PromptInput({
   // disconnected, task finished). The derivation makes the UI correct
   // immediately; the useEffect below clears the raw state so it doesn't
   // resurrect when the same pill reappears (new task starts → focus stolen).
-  const rawFooterSelection = useAppState(s => s.footerSelection)
-  const footerItemSelected =
-    rawFooterSelection && footerItems.includes(rawFooterSelection)
-      ? rawFooterSelection
-      : null
+  const rawFooterSelection = useAppState((s) => s.footerSelection)
+  const footerItemSelected = rawFooterSelection && footerItems.includes(rawFooterSelection) ? rawFooterSelection : null
 
   useEffect(() => {
     if (rawFooterSelection && !footerItemSelected) {
-      setAppState(prev =>
-        prev.footerSelection === null
-          ? prev
-          : { ...prev, footerSelection: null },
-      )
+      setAppState((prev) => (prev.footerSelection === null ? prev : { ...prev, footerSelection: null }))
     }
   }, [rawFooterSelection, footerItemSelected, setAppState])
 
@@ -682,9 +559,7 @@ function PromptInput({
   const bridgeSelected = footerItemSelected === 'bridge'
 
   function selectFooterItem(item: FooterItem | null): void {
-    setAppState(prev =>
-      prev.footerSelection === item ? prev : { ...prev, footerSelection: item },
-    )
+    setAppState((prev) => (prev.footerSelection === item ? prev : { ...prev, footerSelection: item }))
     if (item === 'tasks') {
       setTeammateFooterIndex(0)
       setCoordinatorTaskIndex(minCoordinatorIndex)
@@ -694,9 +569,7 @@ function PromptInput({
   // delta: +1 = down/right, -1 = up/left. Returns true if nav happened
   // (including deselecting at the start), false if at a boundary.
   function navigateFooter(delta: 1 | -1, exitAtStart = false): boolean {
-    const idx = footerItemSelected
-      ? footerItems.indexOf(footerItemSelected)
-      : -1
+    const idx = footerItemSelected ? footerItems.indexOf(footerItemSelected) : -1
     const next = footerItems[idx + delta]
     if (next) {
       selectFooterItem(next)
@@ -723,22 +596,15 @@ function PromptInput({
   const displayedValue = useMemo(
     () =>
       isSearchingHistory && historyMatch
-        ? getValueFromInput(
-            typeof historyMatch === 'string'
-              ? historyMatch
-              : historyMatch.display,
-          )
+        ? getValueFromInput(typeof historyMatch === 'string' ? historyMatch : historyMatch.display)
         : input,
     [isSearchingHistory, historyMatch, input],
   )
 
-  const thinkTriggers = useMemo(
-    () => findThinkingTriggerPositions(displayedValue),
-    [displayedValue],
-  )
+  const thinkTriggers = useMemo(() => findThinkingTriggerPositions(displayedValue), [displayedValue])
 
-  const ultraplanSessionUrl = useAppState(s => s.ultraplanSessionUrl)
-  const ultraplanLaunching = useAppState(s => s.ultraplanLaunching)
+  const ultraplanSessionUrl = useAppState((s) => s.ultraplanSessionUrl)
+  const ultraplanLaunching = useAppState((s) => s.ultraplanLaunching)
   const ultraplanTriggers = useMemo(
     () =>
       feature('ULTRAPLAN') && !ultraplanSessionUrl && !ultraplanLaunching
@@ -748,47 +614,31 @@ function PromptInput({
   )
 
   const ultrareviewTriggers = useMemo(
-    () =>
-      isUltrareviewEnabled()
-        ? findUltrareviewTriggerPositions(displayedValue)
-        : [],
+    () => (isUltrareviewEnabled() ? findUltrareviewTriggerPositions(displayedValue) : []),
     [displayedValue],
   )
 
-  const btwTriggers = useMemo(
-    () => findBtwTriggerPositions(displayedValue),
-    [displayedValue],
-  )
+  const btwTriggers = useMemo(() => findBtwTriggerPositions(displayedValue), [displayedValue])
 
-  const buddyTriggers = useMemo(
-    () => findBuddyTriggerPositions(displayedValue),
-    [displayedValue],
-  )
+  const buddyTriggers = useMemo(() => findBuddyTriggerPositions(displayedValue), [displayedValue])
 
   const slashCommandTriggers = useMemo(() => {
     const positions = findSlashCommandPositions(displayedValue)
     // Only highlight valid commands
-    return positions.filter(pos => {
+    return positions.filter((pos) => {
       const commandName = displayedValue.slice(pos.start + 1, pos.end) // +1 to skip "/"
       return hasCommand(commandName, commands)
     })
   }, [displayedValue, commands])
 
   const tokenBudgetTriggers = useMemo(
-    () =>
-      feature('TOKEN_BUDGET') ? findTokenBudgetPositions(displayedValue) : [],
+    () => (feature('TOKEN_BUDGET') ? findTokenBudgetPositions(displayedValue) : []),
     [displayedValue],
   )
 
-  const knownChannelsVersion = useSyncExternalStore(
-    subscribeKnownChannels,
-    getKnownChannelsVersion,
-  )
+  const knownChannelsVersion = useSyncExternalStore(subscribeKnownChannels, getKnownChannelsVersion)
   const slackChannelTriggers = useMemo(
-    () =>
-      hasSlackMcpServer(store.getState().mcp.clients)
-        ? findSlackChannelPositions(displayedValue)
-        : [],
+    () => (hasSlackMcpServer(store.getState().mcp.clients) ? findSlackChannelPositions(displayedValue) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- store is a stable ref
     [displayedValue, knownChannelsVersion],
   )
@@ -821,10 +671,9 @@ function PromptInput({
       const name = match[2]
 
       // Check if this name matches a team member
-      const member = memberValues.find(t => t.name === name)
+      const member = memberValues.find((t) => t.name === name)
       if (member?.color) {
-        const themeColor =
-          AGENT_COLOR_TO_THEME_COLOR[member.color as AgentColorName]
+        const themeColor = AGENT_COLOR_TO_THEME_COLOR[member.color as AgentColorName]
         if (themeColor) {
           highlights.push({
             start: nameStart,
@@ -840,25 +689,21 @@ function PromptInput({
   const imageRefPositions = useMemo(
     () =>
       parseReferences(displayedValue)
-        .filter(r => r.match.startsWith('[Image'))
-        .map(r => ({ start: r.index, end: r.index + r.match.length })),
+        .filter((r) => r.match.startsWith('[Image'))
+        .map((r) => ({ start: r.index, end: r.index + r.match.length })),
     [displayedValue],
   )
 
   // chip.start is the "selected" state: the inverted chip IS the cursor.
   // chip.end stays a normal position so you can park the cursor right after
   // `]` like any other character.
-  const cursorAtImageChip = imageRefPositions.some(
-    r => r.start === cursorOffset,
-  )
+  const cursorAtImageChip = imageRefPositions.some((r) => r.start === cursorOffset)
 
   // up/down movement or a fullscreen click can land the cursor strictly
   // inside a chip; snap to the nearer boundary so it's never editable
   // char-by-char.
   useEffect(() => {
-    const inside = imageRefPositions.find(
-      r => cursorOffset > r.start && cursorOffset < r.end,
-    )
+    const inside = imageRefPositions.find((r) => cursorOffset > r.start && cursorOffset < r.end)
     if (inside) {
       const mid = (inside.start + inside.end) / 2
       setCursorOffset(cursorOffset < mid ? inside.start : inside.end)
@@ -1108,13 +953,7 @@ function PromptInput({
           key: 'stash-hint',
           jsx: (
             <Text dimColor>
-              Tip:{' '}
-              <ConfigurableShortcutHint
-                action="chat:stash"
-                context="Chat"
-                fallback="ctrl+s"
-                description="stash"
-              />
+              Tip: <ConfigurableShortcutHint action="chat:stash" context="Chat" fallback="ctrl+s" description="stash" />
             </Text>
           ),
           priority: 'immediate',
@@ -1149,7 +988,7 @@ function PromptInput({
     (value: string) => {
       if (value === '?') {
         logEvent('tengu_help_toggled', {})
-        setHelpOpen(v => !v)
+        setHelpOpen((v) => !v)
         return
       }
       setHelpOpen(false)
@@ -1174,10 +1013,7 @@ function PromptInput({
         // Multi-char insertion into empty input (e.g. tab-accepting "! gcloud auth login")
         if (input.length === 0) {
           onModeChange(mode)
-          const valueWithoutMode = getValueFromInput(value).replaceAll(
-            '\t',
-            '    ',
-          )
+          const valueWithoutMode = getValueFromInput(value).replaceAll('\t', '    ')
           pushToBuffer(input, cursorOffset, pastedContents)
           trackAndSetInput(valueWithoutMode)
           setCursorOffset(valueWithoutMode.length)
@@ -1193,38 +1029,15 @@ function PromptInput({
       }
 
       // Deselect footer items when user types
-      setAppState(prev =>
-        prev.footerSelection === null
-          ? prev
-          : { ...prev, footerSelection: null },
-      )
+      setAppState((prev) => (prev.footerSelection === null ? prev : { ...prev, footerSelection: null }))
 
       trackAndSetInput(processedValue)
     },
-    [
-      trackAndSetInput,
-      onModeChange,
-      input,
-      cursorOffset,
-      pushToBuffer,
-      pastedContents,
-      dismissStashHint,
-      setAppState,
-    ],
+    [trackAndSetInput, onModeChange, input, cursorOffset, pushToBuffer, pastedContents, dismissStashHint, setAppState],
   )
 
-  const {
-    resetHistory,
-    onHistoryUp,
-    onHistoryDown,
-    dismissSearchHint,
-    historyIndex,
-  } = useArrowKeyHistory(
-    (
-      value: string,
-      historyMode: HistoryMode,
-      pastedContents: Record<number, PastedContent>,
-    ) => {
+  const { resetHistory, onHistoryUp, onHistoryDown, dismissSearchHint, historyIndex } = useArrowKeyHistory(
+    (value: string, historyMode: HistoryMode, pastedContents: Record<number, PastedContent>) => {
       onChange(value)
       onModeChange(historyMode)
       setPastedContents(pastedContents)
@@ -1284,9 +1097,7 @@ function PromptInput({
       const first = footerItems[0]!
       selectFooterItem(first)
       if (first === 'tasks' && !getGlobalConfig().hasSeenTasksHint) {
-        saveGlobalConfig(c =>
-          c.hasSeenTasksHint ? c : { ...c, hasSeenTasksHint: true },
-        )
+        saveGlobalConfig((c) => (c.hasSeenTasksHint ? c : { ...c, hasSeenTasksHint: true }))
       }
     }
   }
@@ -1304,14 +1115,8 @@ function PromptInput({
 
   // Setter for suggestions state
   const setSuggestionsState = useCallback(
-    (
-      updater:
-        | typeof suggestionsState
-        | ((prev: typeof suggestionsState) => typeof suggestionsState),
-    ) => {
-      setSuggestionsStateRaw(prev =>
-        typeof updater === 'function' ? updater(prev) : updater,
-      )
+    (updater: typeof suggestionsState | ((prev: typeof suggestionsState) => typeof suggestionsState)) => {
+      setSuggestionsStateRaw((prev) => (typeof updater === 'function' ? updater(prev) : updater))
     },
     [],
   )
@@ -1326,10 +1131,7 @@ function PromptInput({
       // same "still visible?" derivation as footerItemSelected so a stale
       // selection (pill disappeared) doesn't swallow Enter.
       const state = store.getState()
-      if (
-        state.footerSelection &&
-        footerItems.includes(state.footerSelection)
-      ) {
+      if (state.footerSelection && footerItems.includes(state.footerSelection)) {
         return
       }
 
@@ -1341,23 +1143,15 @@ function PromptInput({
       }
 
       // Check for images early - we need this for suggestion logic below
-      const hasImages = Object.values(pastedContents).some(
-        c => c.type === 'image',
-      )
+      const hasImages = Object.values(pastedContents).some((c) => c.type === 'image')
 
       // If input is empty OR matches the suggestion, submit it
       // But if there are images attached, don't auto-accept the suggestion -
       // the user wants to submit just the image(s).
       // Only in leader view — promptSuggestion is leader-context, not teammate.
       const suggestionText = promptSuggestionState.text
-      const inputMatchesSuggestion =
-        inputParam.trim() === '' || inputParam === suggestionText
-      if (
-        inputMatchesSuggestion &&
-        suggestionText &&
-        !hasImages &&
-        !state.viewingAgentTaskId
-      ) {
+      const inputMatchesSuggestion = inputParam.trim() === '' || inputParam === suggestionText
+      if (inputMatchesSuggestion && suggestionText && !hasImages && !state.viewingAgentTaskId) {
         // If speculation is active, inject messages immediately as they stream
         if (speculation.status === 'active') {
           markAccepted()
@@ -1428,16 +1222,10 @@ function PromptInput({
       // For directory suggestions, allow submission (Tab is used for completion)
       const hasDirectorySuggestions =
         suggestionsState.suggestions.length > 0 &&
-        suggestionsState.suggestions.every(s => s.description === 'directory')
+        suggestionsState.suggestions.every((s) => s.description === 'directory')
 
-      if (
-        suggestionsState.suggestions.length > 0 &&
-        !isSubmittingSlashCommand &&
-        !hasDirectorySuggestions
-      ) {
-        logForDebugging(
-          `[onSubmit] early return: suggestions showing (count=${suggestionsState.suggestions.length})`,
-        )
+      if (suggestionsState.suggestions.length > 0 && !isSubmittingSlashCommand && !hasDirectorySuggestions) {
+        logForDebugging(`[onSubmit] early return: suggestions showing (count=${suggestionsState.suggestions.length})`)
         return // Don't submit, user needs to clear suggestions first
       }
 
@@ -1488,13 +1276,7 @@ function PromptInput({
     ],
   )
 
-  const {
-    suggestions,
-    selectedSuggestion,
-    commandArgumentHint,
-    inlineGhostText,
-    maxColumnWidth,
-  } = useTypeahead({
+  const { suggestions, selectedSuggestion, commandArgumentHint, inlineGhostText, maxColumnWidth } = useTypeahead({
     commands,
     onInputChange: trackAndSetInput,
     onSubmit,
@@ -1512,11 +1294,7 @@ function PromptInput({
 
   // Track if prompt suggestion should be shown (computed later with terminal width).
   // Hidden in teammate view — suggestion is leader-context only.
-  const showPromptSuggestion =
-    mode === 'prompt' &&
-    suggestions.length === 0 &&
-    promptSuggestion &&
-    !viewingAgentTaskId
+  const showPromptSuggestion = mode === 'prompt' && suggestions.length === 0 && promptSuggestion && !viewingAgentTaskId
   if (showPromptSuggestion) {
     markShown()
   }
@@ -1524,14 +1302,9 @@ function PromptInput({
   // If suggestion was generated but can't be shown due to timing, log suppression.
   // Exclude teammate view: markShown() is gated above, so shownAt stays 0 there —
   // but that's not a timing failure, the suggestion is valid when returning to leader.
-  if (
-    promptSuggestionState.text &&
-    !promptSuggestion &&
-    promptSuggestionState.shownAt === 0 &&
-    !viewingAgentTaskId
-  ) {
+  if (promptSuggestionState.text && !promptSuggestion && promptSuggestionState.shownAt === 0 && !viewingAgentTaskId) {
     logSuggestionSuppressed('timing', promptSuggestionState.text)
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
       promptSuggestion: {
         text: null,
@@ -1572,7 +1345,7 @@ function PromptInput({
     void storeImage(newContent)
 
     // Update UI
-    setPastedContents(prev => ({ ...prev, [pasteId]: newContent }))
+    setPastedContents((prev) => ({ ...prev, [pasteId]: newContent }))
     // Multi-image paste calls onImagePaste in a loop. If the ref is already
     // armed, the previous pill's lazy space fires now (before this pill)
     // rather than being lost.
@@ -1586,11 +1359,9 @@ function PromptInput({
   // the ref. onImagePaste batches setPastedContents + insertTextAtCursor in the
   // same event, so this effect sees the placeholder already present.
   useEffect(() => {
-    const referencedIds = new Set(parseReferences(input).map(r => r.id))
-    setPastedContents(prev => {
-      const orphaned = Object.values(prev).filter(
-        c => c.type === 'image' && !referencedIds.has(c.id),
-      )
+    const referencedIds = new Set(parseReferences(input).map((r) => r.id))
+    setPastedContents((prev) => {
+      const orphaned = Object.values(prev).filter((c) => c.type === 'image' && !referencedIds.has(c.id))
       if (orphaned.length === 0) return prev
       const next = { ...prev }
       for (const img of orphaned) delete next[img.id]
@@ -1631,7 +1402,7 @@ function PromptInput({
         content: text,
       }
 
-      setPastedContents(prev => ({ ...prev, [pasteId]: newContent }))
+      setPastedContents((prev) => ({ ...prev, [pasteId]: newContent }))
 
       insertTextAtCursor(formatPastedTextRef(pasteId, numLines))
     } else {
@@ -1640,22 +1411,18 @@ function PromptInput({
     }
   }
 
-  const lazySpaceInputFilter = useCallback(
-    (input: string, key: Key): string => {
-      if (!pendingSpaceAfterPillRef.current) return input
-      pendingSpaceAfterPillRef.current = false
-      if (isNonSpacePrintable(input, key)) return ' ' + input
-      return input
-    },
-    [],
-  )
+  const lazySpaceInputFilter = useCallback((input: string, key: Key): string => {
+    if (!pendingSpaceAfterPillRef.current) return input
+    pendingSpaceAfterPillRef.current = false
+    if (isNonSpacePrintable(input, key)) return ' ' + input
+    return input
+  }, [])
 
   function insertTextAtCursor(text: string) {
     // Push current state to buffer before inserting
     pushToBuffer(input, cursorOffset, pastedContents)
 
-    const newInput =
-      input.slice(0, cursorOffset) + text + input.slice(cursorOffset)
+    const newInput = input.slice(0, cursorOffset) + text + input.slice(cursorOffset)
     trackAndSetInput(newInput)
     setCursorOffset(cursorOffset + text.length)
   }
@@ -1678,7 +1445,7 @@ function PromptInput({
 
     // Restore images from queued commands to pastedContents
     if (result.images.length > 0) {
-      setPastedContents(prev => {
+      setPastedContents((prev) => {
         const newContents = { ...prev }
         for (const image of result.images) {
           newContents[image.id] = image
@@ -1727,18 +1494,10 @@ function PromptInput({
   // Handler for chat:newline - insert a newline at the cursor position
   const handleNewline = useCallback(() => {
     pushToBuffer(input, cursorOffset, pastedContents)
-    const newInput =
-      input.slice(0, cursorOffset) + '\n' + input.slice(cursorOffset)
+    const newInput = input.slice(0, cursorOffset) + '\n' + input.slice(cursorOffset)
     trackAndSetInput(newInput)
     setCursorOffset(cursorOffset + 1)
-  }, [
-    input,
-    cursorOffset,
-    trackAndSetInput,
-    setCursorOffset,
-    pushToBuffer,
-    pastedContents,
-  ])
+  }, [input, cursorOffset, trackAndSetInput, setCursorOffset, pushToBuffer, pastedContents])
 
   // Handler for chat:externalEditor - edit in $EDITOR
   const handleExternalEditor = useCallback(async () => {
@@ -1778,14 +1537,7 @@ function PromptInput({
     } finally {
       setIsExternalEditorActive(false)
     }
-  }, [
-    input,
-    cursorOffset,
-    pastedContents,
-    pushToBuffer,
-    trackAndSetInput,
-    addNotification,
-  ])
+  }, [input, cursorOffset, pastedContents, pushToBuffer, trackAndSetInput, addNotification])
 
   // Handler for chat:stash - stash/unstash prompt
   const handleStash = useCallback(() => {
@@ -1802,24 +1554,16 @@ function PromptInput({
       setCursorOffset(0)
       setPastedContents({})
       // Track usage for /discover and stop showing hint
-      saveGlobalConfig(c => {
+      saveGlobalConfig((c) => {
         if (c.hasUsedStash) return c
         return { ...c, hasUsedStash: true }
       })
     }
-  }, [
-    input,
-    cursorOffset,
-    stashedPrompt,
-    trackAndSetInput,
-    setStashedPrompt,
-    pastedContents,
-    setPastedContents,
-  ])
+  }, [input, cursorOffset, stashedPrompt, trackAndSetInput, setStashedPrompt, pastedContents, setPastedContents])
 
   // Handler for chat:modelPicker - toggle model picker
   const handleModelPicker = useCallback(() => {
-    setShowModelPicker(prev => !prev)
+    setShowModelPicker((prev) => !prev)
     if (helpOpen) {
       setHelpOpen(false)
     }
@@ -1827,7 +1571,7 @@ function PromptInput({
 
   // Handler for chat:fastMode - toggle fast mode picker
   const handleFastModePicker = useCallback(() => {
-    setShowFastModePicker(prev => !prev)
+    setShowFastModePicker((prev) => !prev)
     if (helpOpen) {
       setHelpOpen(false)
     }
@@ -1835,7 +1579,7 @@ function PromptInput({
 
   // Handler for chat:thinkingToggle - toggle thinking mode
   const handleThinkingToggle = useCallback(() => {
-    setShowThinkingToggle(prev => !prev)
+    setShowThinkingToggle((prev) => !prev)
     if (helpOpen) {
       setHelpOpen(false)
     }
@@ -1857,7 +1601,7 @@ function PromptInput({
       })
 
       const teammateTaskId = viewingAgentTaskId
-      setAppState(prev => {
+      setAppState((prev) => {
         const task = prev.tasks[teammateTaskId]
         if (!task || task.type !== 'in_process_teammate') {
           return prev
@@ -1897,10 +1641,7 @@ function PromptInput({
     let isEnteringAutoModeFirstTime = false
     if (feature('TRANSCRIPT_CLASSIFIER')) {
       isEnteringAutoModeFirstTime =
-        nextMode === 'auto' &&
-        toolPermissionContext.mode !== 'auto' &&
-        !hasAutoModeOptIn() &&
-        !viewingAgentTaskId // Only show for primary agent, not subagents
+        nextMode === 'auto' && toolPermissionContext.mode !== 'auto' && !hasAutoModeOptIn() && !viewingAgentTaskId // Only show for primary agent, not subagents
     }
 
     if (feature('TRANSCRIPT_CLASSIFIER')) {
@@ -1910,7 +1651,7 @@ function PromptInput({
 
         // Only update the UI mode label — do NOT call transitionPermissionMode
         // or cyclePermissionMode yet; we haven't confirmed with the user.
-        setAppState(prev => ({
+        setAppState((prev) => ({
           ...prev,
           toolPermissionContext: {
             ...prev.toolPermissionContext,
@@ -1966,10 +1707,7 @@ function PromptInput({
     // Now that we know this is NOT the first-time auto mode path,
     // call cyclePermissionMode to apply side effects (e.g. strip
     // dangerous permissions, activate classifier)
-    const { context: preparedContext } = cyclePermissionMode(
-      toolPermissionContext,
-      teamContext,
-    )
+    const { context: preparedContext } = cyclePermissionMode(toolPermissionContext, teamContext)
 
     logEvent('tengu_mode_cycle', {
       to: nextMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -1977,7 +1715,7 @@ function PromptInput({
 
     // Track when user enters plan mode
     if (nextMode === 'plan') {
-      saveGlobalConfig(current => ({
+      saveGlobalConfig((current) => ({
         ...current,
         lastPlanModeUse: Date.now(),
       }))
@@ -1987,7 +1725,7 @@ function PromptInput({
     // intentionally preserves the existing mode (to prevent coordinator mode
     // corruption from workers). Then call setToolPermissionContext to trigger
     // recheck of queued permission prompts.
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
       toolPermissionContext: {
         ...preparedContext,
@@ -2031,7 +1769,7 @@ function PromptInput({
         'auto',
         toolPermissionContext,
       )
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
         toolPermissionContext: {
           ...strippedContext,
@@ -2048,14 +1786,7 @@ function PromptInput({
         setHelpOpen(false)
       }
     }
-  }, [
-    helpOpen,
-    setHelpOpen,
-    previousModeBeforeAuto,
-    toolPermissionContext,
-    setAppState,
-    setToolPermissionContext,
-  ])
+  }, [helpOpen, setHelpOpen, previousModeBeforeAuto, toolPermissionContext, setAppState, setToolPermissionContext])
 
   // Handler for auto mode opt-in dialog decline
   const handleAutoModeOptInDecline = useCallback(() => {
@@ -2073,7 +1804,7 @@ function PromptInput({
       // for the rest of this session
       if (previousModeBeforeAuto) {
         setAutoModeActive(false)
-        setAppState(prev => ({
+        setAppState((prev) => ({
           ...prev,
           toolPermissionContext: {
             ...prev.toolPermissionContext,
@@ -2089,24 +1820,15 @@ function PromptInput({
         setPreviousModeBeforeAuto(null)
       }
     }
-  }, [
-    previousModeBeforeAuto,
-    toolPermissionContext,
-    setAppState,
-    setToolPermissionContext,
-  ])
+  }, [previousModeBeforeAuto, toolPermissionContext, setAppState, setToolPermissionContext])
 
   // Handler for chat:imagePaste - paste image from clipboard
   const handleImagePaste = useCallback(() => {
-    void getImageFromClipboard().then(imageData => {
+    void getImageFromClipboard().then((imageData) => {
       if (imageData) {
         onImagePaste(imageData.base64, imageData.mediaType)
       } else {
-        const shortcutDisplay = getShortcutDisplay(
-          'chat:imagePaste',
-          'Chat',
-          'ctrl+v',
-        )
+        const shortcutDisplay = getShortcutDisplay('chat:imagePaste', 'Chat', 'ctrl+v')
         const message = env.isSSH()
           ? "No image found in clipboard. You're SSH'd; try scp?"
           : `No image found in clipboard. Use ${shortcutDisplay} to paste images.`
@@ -2181,8 +1903,7 @@ function PromptInput({
   // Fast mode keybinding is only active when fast mode is enabled and available
   useKeybinding('chat:fastMode', handleFastModePicker, {
     context: 'Chat',
-    isActive:
-      !isModalOverlayActive && isFastModeEnabled() && isFastModeAvailable(),
+    isActive: !isModalOverlayActive && isFastModeEnabled() && isFastModeAvailable(),
   })
 
   // Handle help:dismiss keybinding (ESC closes help menu)
@@ -2199,9 +1920,7 @@ function PromptInput({
   // Quick Open / Global Search. Hook calls are unconditional (Rules of Hooks);
   // the handler body is feature()-gated so the setState calls and component
   // references get tree-shaken in external builds.
-  const quickSearchActive = feature('QUICK_SEARCH')
-    ? !isModalOverlayActive
-    : false
+  const quickSearchActive = feature('QUICK_SEARCH') ? !isModalOverlayActive : false
   useKeybinding(
     'app:quickOpen',
     () => {
@@ -2263,20 +1982,16 @@ function PromptInput({
           coordinatorTaskCount > 0 &&
           coordinatorTaskIndex > minCoordinatorIndex
         ) {
-          setCoordinatorTaskIndex(prev => prev - 1)
+          setCoordinatorTaskIndex((prev) => prev - 1)
           return
         }
         navigateFooter(-1, true)
       },
       'footer:down': () => {
         // ↓ scrolls within the coordinator task list, never leaves the pill
-        if (
-          tasksSelected &&
-          process.env.USER_TYPE === 'ant' &&
-          coordinatorTaskCount > 0
-        ) {
+        if (tasksSelected && process.env.USER_TYPE === 'ant' && coordinatorTaskCount > 0) {
           if (coordinatorTaskIndex < coordinatorTaskCount - 1) {
-            setCoordinatorTaskIndex(prev => prev + 1)
+            setCoordinatorTaskIndex((prev) => prev + 1)
           }
           return
         }
@@ -2291,7 +2006,7 @@ function PromptInput({
         // Teammate mode: ←/→ cycles within the team member list
         if (tasksSelected && isTeammateMode) {
           const totalAgents = 1 + inProcessTeammates.length
-          setTeammateFooterIndex(prev => (prev + 1) % totalAgents)
+          setTeammateFooterIndex((prev) => (prev + 1) % totalAgents)
           return
         }
         navigateFooter(1)
@@ -2299,7 +2014,7 @@ function PromptInput({
       'footer:previous': () => {
         if (tasksSelected && isTeammateMode) {
           const totalAgents = 1 + inProcessTeammates.length
-          setTeammateFooterIndex(prev => (prev - 1 + totalAgents) % totalAgents)
+          setTeammateFooterIndex((prev) => (prev - 1 + totalAgents) % totalAgents)
           return
         }
         navigateFooter(-1)
@@ -2327,8 +2042,7 @@ function PromptInput({
             } else if (coordinatorTaskIndex === 0 && coordinatorTaskCount > 0) {
               exitTeammateView(setAppState)
             } else {
-              const selectedTaskId =
-                getVisibleAgentTasks(tasks)[coordinatorTaskIndex - 1]?.id
+              const selectedTaskId = getVisibleAgentTasks(tasks)[coordinatorTaskIndex - 1]?.id
               if (selectedTaskId) {
                 enterTeammateView(selectedTaskId, setAppState)
               } else {
@@ -2339,14 +2053,12 @@ function PromptInput({
             break
           case 'tmux':
             if (process.env.USER_TYPE === 'ant') {
-              setAppState(prev =>
+              setAppState((prev) =>
                 prev.tungstenPanelAutoHidden
                   ? { ...prev, tungstenPanelAutoHidden: false }
                   : {
                       ...prev,
-                      tungstenPanelVisible: !(
-                        prev.tungstenPanelVisible ?? true
-                      ),
+                      tungstenPanelVisible: !(prev.tungstenPanelVisible ?? true),
                     },
               )
             }
@@ -2372,19 +2084,14 @@ function PromptInput({
           if (!task) return false
           // When the selected row IS the viewed agent, 'x' types into the
           // steering input. Any other row — dismiss it.
-          if (
-            viewSelectionMode === 'viewing-agent' &&
-            task.id === viewingAgentTaskId
-          ) {
-            onChange(
-              input.slice(0, cursorOffset) + 'x' + input.slice(cursorOffset),
-            )
+          if (viewSelectionMode === 'viewing-agent' && task.id === viewingAgentTaskId) {
+            onChange(input.slice(0, cursorOffset) + 'x' + input.slice(cursorOffset))
             setCursorOffset(cursorOffset + 1)
             return
           }
           stopOrDismissAgent(task.id, setAppState)
           if (task.status !== 'running') {
-            setCoordinatorTaskIndex(i => Math.max(minCoordinatorIndex, i - 1))
+            setCoordinatorTaskIndex((i) => Math.max(minCoordinatorIndex, i - 1))
           }
           return
         }
@@ -2402,12 +2109,7 @@ function PromptInput({
     // Skip all input handling when a full-screen dialog is open. These dialogs
     // render via early return, but hooks run unconditionally — so without this
     // guard, Escape inside a dialog leaks to the double-press message-selector.
-    if (
-      showTeamsDialog ||
-      showQuickOpen ||
-      showGlobalSearch ||
-      showHistoryPicker
-    ) {
+    if (showTeamsDialog || showQuickOpen || showGlobalSearch || showHistoryPicker) {
       return
     }
 
@@ -2417,8 +2119,7 @@ function PromptInput({
       const terminalName = getNativeCSIuTerminalDisplayName()
       const jsx = terminalName ? (
         <Text dimColor>
-          To enable {shortcut}, set <Text bold>Option as Meta</Text> in{' '}
-          {terminalName} preferences (⌘,)
+          To enable {shortcut}, set <Text bold>Option as Meta</Text> in {terminalName} preferences (⌘,)
         </Text>
       ) : (
         <Text dimColor>To enable {shortcut}, run /terminal-setup</Text>
@@ -2440,24 +2141,14 @@ function PromptInput({
     // the input and type the char. Nav keys are captured by useKeybindings
     // above, so anything reaching here is genuinely not a footer action.
     // onChange clears footerSelection, so no explicit deselect.
-    if (
-      footerItemSelected &&
-      char &&
-      !key.ctrl &&
-      !key.meta &&
-      !key.escape &&
-      !key.return
-    ) {
+    if (footerItemSelected && char && !key.ctrl && !key.meta && !key.escape && !key.return) {
       onChange(input.slice(0, cursorOffset) + char + input.slice(cursorOffset))
       setCursorOffset(cursorOffset + char.length)
       return
     }
 
     // Exit special modes when backspace/escape/delete/ctrl+u is pressed at cursor position 0
-    if (
-      cursorOffset === 0 &&
-      (key.escape || key.backspace || key.delete || (key.ctrl && char === 'u'))
-    ) {
+    if (cursorOffset === 0 && (key.escape || key.backspace || key.delete || (key.ctrl && char === 'u'))) {
       onModeChange('prompt')
       setHelpOpen(false)
     }
@@ -2520,18 +2211,14 @@ function PromptInput({
   const swarmBanner = useSwarmBanner()
 
   const fastModeCooldown = isFastModeEnabled() ? isFastModeCooldown() : false
-  const showFastIcon = isFastModeEnabled()
-    ? isFastMode && (isFastModeAvailable() || fastModeCooldown)
-    : false
+  const showFastIcon = isFastModeEnabled() ? isFastMode && (isFastModeAvailable() || fastModeCooldown) : false
 
   const showFastIconHint = useShowFastIconHint(showFastIcon ?? false)
 
   // Show effort notification on startup and when effort changes.
   // Suppressed in brief/assistant mode — the value reflects the local
   // client's effort, not the connected agent's.
-  const effortNotificationText = briefOwnsGap
-    ? undefined
-    : getEffortNotificationText(effortValue, mainLoopModel)
+  const effortNotificationText = briefOwnsGap ? undefined : getEffortNotificationText(effortValue, mainLoopModel)
   useEffect(() => {
     if (!effortNotificationText) {
       removeNotification('effort-level')
@@ -2549,11 +2236,10 @@ function PromptInput({
 
   const companionSpeaking = feature('BUDDY')
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-      useAppState(s => s.companionReaction !== undefined)
+      useAppState((s) => s.companionReaction !== undefined)
     : false
   const { columns, rows } = useTerminalSize()
-  const textInputColumns =
-    columns - 3 - companionReservedColumns(columns, companionSpeaking)
+  const textInputColumns = columns - 3 - companionReservedColumns(columns, companionSpeaking)
 
   // POC: click-to-position-cursor. Mouse tracking is only enabled inside
   // <AlternateScreen>, so this is dormant in the normal main-screen REPL.
@@ -2562,10 +2248,7 @@ function PromptInput({
   // in the Cursor wrap model. MeasuredText.getOffsetFromPosition handles
   // wide chars, wrapped lines, and clamps past-end clicks to line end.
   const maxVisibleLines = isFullscreenEnvEnabled()
-    ? Math.max(
-        MIN_INPUT_VIEWPORT_LINES,
-        Math.floor(rows / 2) - PROMPT_FOOTER_LINES,
-      )
+    ? Math.max(MIN_INPUT_VIEWPORT_LINES, Math.floor(rows / 2) - PROMPT_FOOTER_LINES)
     : undefined
 
   const handleInputClick = useCallback(
@@ -2582,13 +2265,7 @@ function PromptInput({
       })
       setCursorOffset(offset)
     },
-    [
-      input,
-      textInputColumns,
-      isSearchingHistory,
-      cursorOffset,
-      maxVisibleLines,
-    ],
+    [input, textInputColumns, isSearchingHistory, cursorOffset, maxVisibleLines],
   )
 
   const handleOpenTasksDialog = useCallback(
@@ -2596,10 +2273,7 @@ function PromptInput({
     [setShowBashesDialog],
   )
 
-  const placeholder =
-    showPromptSuggestion && promptSuggestion
-      ? promptSuggestion
-      : defaultPlaceholder
+  const placeholder = showPromptSuggestion && promptSuggestion ? promptSuggestion : defaultPlaceholder
 
   // Calculate if input has multiple lines
   const isInputWrapped = useMemo(() => input.includes('\n'), [input])
@@ -2610,11 +2284,8 @@ function PromptInput({
   const handleModelSelect = useCallback(
     (model: string | null, _effort: EffortLevel | undefined) => {
       let wasFastModeDisabled = false
-      setAppState(prev => {
-        wasFastModeDisabled =
-          isFastModeEnabled() &&
-          !isFastModeSupportedByModel(model) &&
-          !!prev.fastMode
+      setAppState((prev) => {
+        wasFastModeDisabled = isFastModeEnabled() && !isFastModeSupportedByModel(model) && !!prev.fastMode
         return {
           ...prev,
           mainLoopModel: model,
@@ -2626,9 +2297,7 @@ function PromptInput({
       setShowModelPicker(false)
       const effectiveFastMode = (isFastMode ?? false) && !wasFastModeDisabled
       let message = `Model set to ${modelDisplayString(model)}`
-      if (
-        isBilledAsExtraUsage(model, effectiveFastMode, isOpus1mMergeEnabled())
-      ) {
+      if (isBilledAsExtraUsage(model, effectiveFastMode, isOpus1mMergeEnabled())) {
         message += ' · Billed as extra usage'
       }
       if (wasFastModeDisabled) {
@@ -2641,8 +2310,7 @@ function PromptInput({
         timeoutMs: 3000,
       })
       logEvent('tengu_model_picker_hotkey', {
-        model:
-          model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        model: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
     },
     [setAppState, addNotification, isFastMode],
@@ -2665,21 +2333,12 @@ function PromptInput({
           onCancel={handleModelCancel}
           isStandaloneCommand
           showFastModeNotice={
-            isFastModeEnabled() &&
-            isFastMode &&
-            isFastModeSupportedByModel(mainLoopModel_) &&
-            isFastModeAvailable()
+            isFastModeEnabled() && isFastMode && isFastModeSupportedByModel(mainLoopModel_) && isFastModeAvailable()
           }
         />
       </Box>
     )
-  }, [
-    showModelPicker,
-    mainLoopModel_,
-    mainLoopModelForSession,
-    handleModelSelect,
-    handleModelCancel,
-  ])
+  }, [showModelPicker, mainLoopModel_, mainLoopModelForSession, handleModelSelect, handleModelCancel])
 
   const handleFastModeSelect = useCallback(
     (result?: string) => {
@@ -2701,10 +2360,7 @@ function PromptInput({
     if (!showFastModePicker) return null
     return (
       <Box flexDirection="column" marginTop={1}>
-        <FastModePicker
-          onDone={handleFastModeSelect}
-          unavailableReason={getFastModeUnavailableReason()}
-        />
+        <FastModePicker onDone={handleFastModeSelect} unavailableReason={getFastModeUnavailableReason()} />
       </Box>
     )
   }, [showFastModePicker, handleFastModeSelect])
@@ -2712,7 +2368,7 @@ function PromptInput({
   // Memoized callbacks for thinking toggle
   const handleThinkingSelect = useCallback(
     (enabled: boolean) => {
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
         thinkingEnabled: enabled,
       }))
@@ -2745,17 +2401,11 @@ function PromptInput({
           currentValue={thinkingEnabled ?? true}
           onSelect={handleThinkingSelect}
           onCancel={handleThinkingCancel}
-          isMidConversation={messages.some(m => m.type === 'assistant')}
+          isMidConversation={messages.some((m) => m.type === 'assistant')}
         />
       </Box>
     )
-  }, [
-    showThinkingToggle,
-    thinkingEnabled,
-    handleThinkingSelect,
-    handleThinkingCancel,
-    messages.length,
-  ])
+  }, [showThinkingToggle, thinkingEnabled, handleThinkingSelect, handleThinkingCancel, messages.length])
 
   // Portal dialog to DialogOverlay in fullscreen so it escapes the bottom
   // slot's overflowY:hidden clip (same pattern as SuggestionsOverlay).
@@ -2764,30 +2414,18 @@ function PromptInput({
   const autoModeOptInDialog = useMemo(
     () =>
       feature('TRANSCRIPT_CLASSIFIER') && showAutoModeOptIn ? (
-        <AutoModeOptInDialog
-          onAccept={handleAutoModeOptInAccept}
-          onDecline={handleAutoModeOptInDecline}
-        />
+        <AutoModeOptInDialog onAccept={handleAutoModeOptInAccept} onDecline={handleAutoModeOptInDecline} />
       ) : null,
     [showAutoModeOptIn, handleAutoModeOptInAccept, handleAutoModeOptInDecline],
   )
-  useSetPromptOverlayDialog(
-    isFullscreenEnvEnabled() ? autoModeOptInDialog : null,
-  )
+  useSetPromptOverlayDialog(isFullscreenEnvEnabled() ? autoModeOptInDialog : null)
 
   if (showBashesDialog) {
     return (
       <BackgroundTasksDialog
         onDone={() => setShowBashesDialog(false)}
-        toolUseContext={getToolUseContext(
-          messages,
-          [],
-          new AbortController(),
-          mainLoopModel,
-        )}
-        initialDetailTaskId={
-          typeof showBashesDialog === 'string' ? showBashesDialog : undefined
-        }
+        toolUseContext={getToolUseContext(messages, [], new AbortController(), mainLoopModel)}
+        initialDetailTaskId={typeof showBashesDialog === 'string' ? showBashesDialog : undefined}
       />
     )
   }
@@ -2809,20 +2447,10 @@ function PromptInput({
       insertTextAtCursor(/\s/.test(cursorChar) ? text : ` ${text}`)
     }
     if (showQuickOpen) {
-      return (
-        <QuickOpenDialog
-          onDone={() => setShowQuickOpen(false)}
-          onInsert={insertWithSpacing}
-        />
-      )
+      return <QuickOpenDialog onDone={() => setShowQuickOpen(false)} onInsert={insertWithSpacing} />
     }
     if (showGlobalSearch) {
-      return (
-        <GlobalSearchDialog
-          onDone={() => setShowGlobalSearch(false)}
-          onInsert={insertWithSpacing}
-        />
-      )
+      return <GlobalSearchDialog onDone={() => setShowGlobalSearch(false)} onInsert={insertWithSpacing} />
     }
   }
 
@@ -2830,7 +2458,7 @@ function PromptInput({
     return (
       <HistorySearchDialog
         initialQuery={input}
-        onSelect={entry => {
+        onSelect={(entry) => {
           const entryMode = getModeFromInput(entry.display)
           const value = getValueFromInput(entry.display)
           onModeChange(entryMode)
@@ -2873,11 +2501,7 @@ function PromptInput({
     onSubmit,
     onChange,
     value: historyMatch
-      ? getValueFromInput(
-          typeof historyMatch === 'string'
-            ? historyMatch
-            : historyMatch.display,
-        )
+      ? getValueFromInput(typeof historyMatch === 'string' ? historyMatch : historyMatch.display)
       : input,
     // History navigation is handled via TextInput props (onHistoryUp/onHistoryDown),
     // NOT via useKeybindings. This allows useTextInput's upOrHistoryUp/downOrHistoryDown
@@ -2892,16 +2516,14 @@ function PromptInput({
     onImagePaste,
     columns: textInputColumns,
     maxVisibleLines,
-    disableCursorMovementForUpDownKeys:
-      suggestions.length > 0 || !!footerItemSelected,
+    disableCursorMovementForUpDownKeys: suggestions.length > 0 || !!footerItemSelected,
     disableEscapeDoublePress: suggestions.length > 0,
     cursorOffset,
     onChangeCursorOffset: setCursorOffset,
     onPaste: onTextPaste,
     onIsPastingChange: setIsPasting,
     focus: !isSearchingHistory && !isModalOverlayActive && !footerItemSelected,
-    showCursor:
-      !footerItemSelected && !isSearchingHistory && !cursorAtImageChip,
+    showCursor: !footerItemSelected && !isSearchingHistory && !cursorAtImageChip,
     argumentHint: commandArgumentHint,
     onUndo: canUndo
       ? () => {
@@ -2935,10 +2557,7 @@ function PromptInput({
 
     // Check for teammate color from environment
     const teammateColorName = getTeammateColor()
-    if (
-      teammateColorName &&
-      AGENT_COLORS.includes(teammateColorName as AgentColorName)
-    ) {
+    if (teammateColorName && AGENT_COLORS.includes(teammateColorName as AgentColorName)) {
       return AGENT_COLOR_TO_THEME_COLOR[teammateColorName as AgentColorName]
     }
 
@@ -2966,11 +2585,7 @@ function PromptInput({
   }
 
   const textInputElement = isVimModeEnabled() ? (
-    <VimTextInput
-      {...baseProps}
-      initialMode={vimMode}
-      onModeChange={setVimMode}
-    />
+    <VimTextInput {...baseProps} initialMode={vimMode} onModeChange={setVimMode} />
   ) : (
     <TextInput {...baseProps} />
   )
@@ -2989,9 +2604,7 @@ function PromptInput({
           <Text color={swarmBanner.bgColor}>
             {swarmBanner.text ? (
               <>
-                {'─'.repeat(
-                  Math.max(0, columns - stringWidth(swarmBanner.text) - 4),
-                )}
+                {'─'.repeat(Math.max(0, columns - stringWidth(swarmBanner.text) - 4))}
                 <Text backgroundColor={swarmBanner.bgColor} color="inverseText">
                   {' '}
                   {swarmBanner.text}{' '}
@@ -3026,11 +2639,7 @@ function PromptInput({
           borderRight={false}
           borderBottom
           width="100%"
-          borderText={buildBorderText(
-            showFastIcon ?? false,
-            showFastIconHint,
-            fastModeCooldown,
-          )}
+          borderText={buildBorderText(showFastIcon ?? false, showFastIconHint, fastModeCooldown)}
         >
           <PromptInputModeIndicator
             mode={mode}
@@ -3075,9 +2684,7 @@ function PromptInput({
         historyQuery={historyQuery}
         setHistoryQuery={setHistoryQuery}
         historyFailedMatch={historyFailedMatch}
-        onOpenTasksDialog={
-          isFullscreenEnvEnabled() ? handleOpenTasksDialog : undefined
-        }
+        onOpenTasksDialog={isFullscreenEnvEnabled() ? handleOpenTasksDialog : undefined}
       />
       {isFullscreenEnvEnabled() ? null : autoModeOptInDialog}
       {isFullscreenEnvEnabled() ? (

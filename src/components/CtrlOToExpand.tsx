@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 import React, { useContext } from 'react'
+
 import { Text } from '../ink.js'
 import { getShortcutDisplay } from '../keybindings/shortcutFormat.js'
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js'
@@ -11,24 +12,14 @@ import { InVirtualListContext } from './messageActions.js'
 // too many "(ctrl+o to expand)" hints in sub agent output
 const SubAgentContext = React.createContext(false)
 
-export function SubAgentProvider({
-  children,
-}: {
-  children: React.ReactNode
-}): React.ReactNode {
-  return (
-    <SubAgentContext.Provider value={true}>{children}</SubAgentContext.Provider>
-  )
+export function SubAgentProvider({ children }: { children: React.ReactNode }): React.ReactNode {
+  return <SubAgentContext.Provider value={true}>{children}</SubAgentContext.Provider>
 }
 
 export function CtrlOToExpand(): React.ReactNode {
   const isInSubAgent = useContext(SubAgentContext)
   const inVirtualList = useContext(InVirtualListContext)
-  const expandShortcut = useShortcutDisplay(
-    'app:toggleTranscript',
-    'Global',
-    'ctrl+o',
-  )
+  const expandShortcut = useShortcutDisplay('app:toggleTranscript', 'Global', 'ctrl+o')
   if (isInSubAgent || inVirtualList) {
     return null
   }
@@ -40,10 +31,6 @@ export function CtrlOToExpand(): React.ReactNode {
 }
 
 export function ctrlOToExpand(): string {
-  const shortcut = getShortcutDisplay(
-    'app:toggleTranscript',
-    'Global',
-    'ctrl+o',
-  )
+  const shortcut = getShortcutDisplay('app:toggleTranscript', 'Global', 'ctrl+o')
   return chalk.dim(`(${shortcut} to expand)`)
 }

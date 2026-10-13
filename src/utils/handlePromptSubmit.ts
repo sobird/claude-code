@@ -1,6 +1,8 @@
 import type { UUID } from 'crypto'
+
 import { logEvent } from 'src/services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/metadata.js'
+
 import { type Command, getCommandName, isCommandEnabled } from '../commands.js'
 import { selectableUserMessagesFilter } from '../components/MessageSelector.js'
 import type { SpinnerMode } from '../components/Spinner/types.js'
@@ -12,11 +14,7 @@ import type { AppState } from '../state/AppState.js'
 import type { SetToolJSXFn } from '../Tool.js'
 import type { LocalJSXCommandOnDone } from '../types/command.js'
 import type { Message } from '../types/message.js'
-import {
-  isValidImagePaste,
-  type PromptInputMode,
-  type QueuedCommand,
-} from '../types/textInputTypes.js'
+import { isValidImagePaste, type PromptInputMode, type QueuedCommand } from '../types/textInputTypes.js'
 import { createAbortController } from './abortController.js'
 import type { PastedContent } from './config.js'
 import { logForDebugging } from './debug.js'
@@ -96,9 +94,7 @@ export type HandlePromptSubmitParams = BaseExecutionParams & {
   pastedContents?: Record<number, PastedContent>
   helpers: PromptInputHelpers
   onInputChange: (value: string) => void
-  setPastedContents: React.Dispatch<
-    React.SetStateAction<Record<number, PastedContent>>
-  >
+  setPastedContents: React.Dispatch<React.SetStateAction<Record<number, PastedContent>>>
   abortController?: AbortController | null
   addNotification?: (notification: {
     key: string
@@ -117,9 +113,7 @@ export type HandlePromptSubmitParams = BaseExecutionParams & {
   skipSlashCommands?: boolean
 }
 
-export async function handlePromptSubmit(
-  params: HandlePromptSubmitParams,
-): Promise<void> {
+export async function handlePromptSubmit(params: HandlePromptSubmitParams): Promise<void> {
   const {
     helpers,
     queryGuard,
@@ -177,11 +171,9 @@ export async function handlePromptSubmit(
 
   // Images are only sent if their [Image #N] placeholder is still in the text.
   // Deleting the inline pill drops the image; orphaned entries are filtered here.
-  const referencedIds = new Set(parseReferences(input).map(r => r.id))
+  const referencedIds = new Set(parseReferences(input).map((r) => r.id))
   const pastedContents = Object.fromEntries(
-    Object.entries(rawPastedContents).filter(
-      ([, c]) => c.type !== 'image' || referencedIds.has(c.id),
-    ),
+    Object.entries(rawPastedContents).filter(([, c]) => c.type !== 'image' || referencedIds.has(c.id)),
   )
 
   const hasImages = Object.values(pastedContents).some(isValidImagePaste)
@@ -191,12 +183,9 @@ export async function handlePromptSubmit(
 
   // Handle exit commands by triggering the exit command instead of direct process.exit
   // Skip for remote bridge messages — "exit" typed on iOS shouldn't kill the local session
-  if (
-    !skipSlashCommands &&
-    ['exit', 'quit', ':q', ':q!', ':wq', ':wq!'].includes(input.trim())
-  ) {
+  if (!skipSlashCommands && ['exit', 'quit', ':q', ':q!', ':wq', ':wq!'].includes(input.trim())) {
     // Trigger the exit command which will show the feedback dialog
-    const exitCommand = commands.find(cmd => cmd.name === 'exit')
+    const exitCommand = commands.find((cmd) => cmd.name === 'exit')
     if (exitCommand) {
       // Submit the /exit command instead - recursive call needs to be handled
       void handlePromptSubmit({
@@ -214,14 +203,9 @@ export async function handlePromptSubmit(
   // or immediate-command dispatch, so queued commands and immediate commands
   // both receive the expanded text from when it was submitted.
   const finalInput = expandPastedTextRefs(input, pastedContents)
-  const pastedTextRefs = parseReferences(input).filter(
-    r => pastedContents[r.id]?.type === 'text',
-  )
+  const pastedTextRefs = parseReferences(input).filter((r) => pastedContents[r.id]?.type === 'text')
   const pastedTextCount = pastedTextRefs.length
-  const pastedTextBytes = pastedTextRefs.reduce(
-    (sum, r) => sum + (pastedContents[r.id]?.content.length ?? 0),
-    0,
-  )
+  const pastedTextBytes = pastedTextRefs.reduce((sum, r) => sum + (pastedContents[r.id]?.content.length ?? 0), 0)
   logEvent('tengu_paste_text', { pastedTextCount, pastedTextBytes })
 
   // Handle local-jsx immediate commands (e.g., /config, /doctor)
@@ -229,30 +213,19 @@ export async function handlePromptSubmit(
   if (!skipSlashCommands && finalInput.trim().startsWith('/')) {
     const trimmedInput = finalInput.trim()
     const spaceIndex = trimmedInput.indexOf(' ')
-    const commandName =
-      spaceIndex === -1
-        ? trimmedInput.slice(1)
-        : trimmedInput.slice(1, spaceIndex)
-    const commandArgs =
-      spaceIndex === -1 ? '' : trimmedInput.slice(spaceIndex + 1).trim()
+    const commandName = spaceIndex === -1 ? trimmedInput.slice(1) : trimmedInput.slice(1, spaceIndex)
+    const commandArgs = spaceIndex === -1 ? '' : trimmedInput.slice(spaceIndex + 1).trim()
 
     const immediateCommand = commands.find(
-      cmd =>
+      (cmd) =>
         cmd.immediate &&
         isCommandEnabled(cmd) &&
-        (cmd.name === commandName ||
-          cmd.aliases?.includes(commandName) ||
-          getCommandName(cmd) === commandName),
+        (cmd.name === commandName || cmd.aliases?.includes(commandName) || getCommandName(cmd) === commandName),
     )
 
-    if (
-      immediateCommand &&
-      immediateCommand.type === 'local-jsx' &&
-      (queryGuard.isActive || isExternalLoading)
-    ) {
+    if (immediateCommand && immediateCommand.type === 'local-jsx' && (queryGuard.isActive || isExternalLoading)) {
       logEvent('tengu_immediate_command_executed', {
-        commandName:
-          immediateCommand.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        commandName: immediateCommand.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
 
       // Clear input
@@ -261,12 +234,7 @@ export async function handlePromptSubmit(
       setPastedContents({})
       clearBuffer()
 
-      const context = getToolUseContext(
-        messages,
-        [],
-        createAbortController(),
-        mainLoopModel,
-      )
+      const context = getToolUseContext(messages, [], createAbortController(), mainLoopModel)
 
       let doneWasCalled = false
       const onDone: LocalJSXCommandOnDone = (result, options) => {
@@ -319,14 +287,10 @@ export async function handlePromptSubmit(
     // Interrupt the current turn when all executing tools have
     // interruptBehavior 'cancel' (e.g. SleepTool).
     if (params.hasInterruptibleToolInProgress) {
-      logForDebugging(
-        `[interrupt] Aborting current turn: streamMode=${params.streamMode}`,
-      )
+      logForDebugging(`[interrupt] Aborting current turn: streamMode=${params.streamMode}`)
       logEvent('tengu_cancel', {
-        source:
-          'interrupt_on_submit' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        streamMode:
-          params.streamMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        source: 'interrupt_on_submit' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        streamMode: params.streamMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
       params.abortController?.abort('interrupt')
     }
@@ -456,10 +420,7 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
     // mix is actively waiting.
     const firstWorkload = commands[0]?.workload
     const turnWorkload =
-      firstWorkload !== undefined &&
-      commands.every(c => c.workload === firstWorkload)
-        ? firstWorkload
-        : undefined
+      firstWorkload !== undefined && commands.every((c) => c.workload === firstWorkload) ? firstWorkload : undefined
 
     // Wrap the entire turn (processUserInput loop + onQuery) in an
     // AsyncLocalStorage context. This is the ONLY way to correctly
@@ -481,9 +442,7 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
           context: makeContext(),
           pastedContents: isFirst ? cmd.pastedContents : undefined,
           messages,
-          setUserInputOnProcessing: isFirst
-            ? setUserInputOnProcessing
-            : undefined,
+          setUserInputOnProcessing: isFirst ? setUserInputOnProcessing : undefined,
           isAlreadyProcessing: !isFirst,
           querySource,
           canUseTool,
@@ -501,10 +460,7 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
         // does NOT mirror its isMeta:true so idle-dequeued notifications stay
         // visible in the transcript via UserAgentNotificationMessage.
         const origin =
-          cmd.origin ??
-          (cmd.mode === 'task-notification'
-            ? ({ kind: 'task-notification' } as const)
-            : undefined)
+          cmd.origin ?? (cmd.mode === 'task-notification' ? ({ kind: 'task-notification' } as const) : undefined)
         if (origin) {
           for (const m of result.messages) {
             if (m.type === 'user') m.origin = origin
@@ -524,16 +480,13 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
       queryCheckpoint('query_process_user_input_end')
       if (fileHistoryEnabled()) {
         queryCheckpoint('query_file_history_snapshot_start')
-        newMessages.filter(selectableUserMessagesFilter).forEach(message => {
-          void fileHistoryMakeSnapshot(
-            (updater: (prev: FileHistoryState) => FileHistoryState) => {
-              setAppState(prev => ({
-                ...prev,
-                fileHistory: updater(prev.fileHistory),
-              }))
-            },
-            message.uuid,
-          )
+        newMessages.filter(selectableUserMessagesFilter).forEach((message) => {
+          void fileHistoryMakeSnapshot((updater: (prev: FileHistoryState) => FileHistoryState) => {
+            setAppState((prev) => ({
+              ...prev,
+              fileHistory: updater(prev.fileHistory),
+            }))
+          }, message.uuid)
         })
         queryCheckpoint('query_file_history_snapshot_end')
       }
@@ -552,19 +505,14 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
 
         const primaryCmd = commands[0]
         const primaryMode = primaryCmd?.mode ?? 'prompt'
-        const primaryInput =
-          primaryCmd && typeof primaryCmd.value === 'string'
-            ? primaryCmd.value
-            : undefined
+        const primaryInput = primaryCmd && typeof primaryCmd.value === 'string' ? primaryCmd.value : undefined
         const shouldCallBeforeQuery = primaryMode === 'prompt'
         await onQuery(
           newMessages,
           abortController,
           shouldQuery,
           allowedTools ?? [],
-          model
-            ? resolveSkillModelOverride(model, mainLoopModel)
-            : mainLoopModel,
+          model ? resolveSkillModelOverride(model, mainLoopModel) : mainLoopModel,
           shouldCallBeforeQuery ? onBeforeQuery : undefined,
           primaryInput,
           effort,

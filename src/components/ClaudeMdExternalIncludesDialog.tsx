@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
+
 import { Box, Link, Text } from '../ink.js'
 import type { ExternalClaudeMdInclude } from '../utils/claudemd.js'
 import { saveCurrentProjectConfig } from '../utils/config.js'
@@ -27,14 +28,14 @@ export function ClaudeMdExternalIncludesDialog({
       if (value === 'no') {
         logEvent('tengu_claude_md_external_includes_dialog_declined', {})
         // Mark that we've shown the dialog but it was declined
-        saveCurrentProjectConfig(current => ({
+        saveCurrentProjectConfig((current) => ({
           ...current,
           hasClaudeMdExternalIncludesApproved: false,
           hasClaudeMdExternalIncludesWarningShown: true,
         }))
       } else {
         logEvent('tengu_claude_md_external_includes_dialog_accepted', {})
-        saveCurrentProjectConfig(current => ({
+        saveCurrentProjectConfig((current) => ({
           ...current,
           hasClaudeMdExternalIncludesApproved: true,
           hasClaudeMdExternalIncludesWarningShown: true,
@@ -59,8 +60,8 @@ export function ClaudeMdExternalIncludesDialog({
       hideInputGuide={!isStandaloneDialog}
     >
       <Text>
-        This project&apos;s CLAUDE.md imports files outside the current working
-        directory. Never allow this for third-party repositories.
+        This project&apos;s CLAUDE.md imports files outside the current working directory. Never allow this for
+        third-party repositories.
       </Text>
 
       {externalIncludes && externalIncludes.length > 0 && (
@@ -76,8 +77,7 @@ export function ClaudeMdExternalIncludesDialog({
       )}
 
       <Text dimColor>
-        Important: Only use Claude Code with files you trust. Accessing
-        untrusted files may pose security risks{' '}
+        Important: Only use Claude Code with files you trust. Accessing untrusted files may pose security risks{' '}
         <Link url="https://code.claude.com/docs/en/security" />{' '}
       </Text>
 
@@ -86,7 +86,7 @@ export function ClaudeMdExternalIncludesDialog({
           { label: 'Yes, allow external imports', value: 'yes' },
           { label: 'No, disable external imports', value: 'no' },
         ]}
-        onChange={value => handleSelection(value as 'yes' | 'no')}
+        onChange={(value) => handleSelection(value as 'yes' | 'no')}
       />
     </Dialog>
   )

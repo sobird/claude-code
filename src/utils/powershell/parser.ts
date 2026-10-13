@@ -1,4 +1,5 @@
 import { execa } from 'execa'
+
 import { logForDebugging } from '../debug.js'
 import { memoizeWithLRU } from '../memoize.js'
 import { getCachedPowerShellPath } from '../shell/powershellDetection.js'
@@ -14,10 +15,7 @@ import { jsonParse } from '../slowOperations.js'
  * The PowerShell AST element type for pipeline elements.
  * Maps directly to CommandBaseAst derivatives in System.Management.Automation.Language.
  */
-type PipelineElementType =
-  | 'CommandAst'
-  | 'CommandExpressionAst'
-  | 'ParenExpressionAst'
+type PipelineElementType = 'CommandAst' | 'CommandExpressionAst' | 'ParenExpressionAst'
 
 /**
  * The AST node type for individual command elements (arguments, expressions).
@@ -620,14 +618,10 @@ const ENCODED_CMD_WRAPPER = `$EncodedCommand = ''\n`.length
 // measures actual UTF-8 bytes (Buffer.byteLength), not code units.
 const SAFETY_MARGIN = 100
 const SCRIPT_CHARS_BUDGET = ((WINDOWS_ARGV_CAP - FIXED_ARGV_OVERHEAD) * 3) / 8
-const CMD_B64_BUDGET =
-  SCRIPT_CHARS_BUDGET - PARSE_SCRIPT_BODY.length - ENCODED_CMD_WRAPPER
+const CMD_B64_BUDGET = SCRIPT_CHARS_BUDGET - PARSE_SCRIPT_BODY.length - ENCODED_CMD_WRAPPER
 // Exported for drift-guard tests (the drift-prone value is the Windows one).
 // Unit: UTF-8 BYTES. Compare against Buffer.byteLength, not .length.
-export const WINDOWS_MAX_COMMAND_LENGTH = Math.max(
-  0,
-  Math.floor((CMD_B64_BUDGET * 3) / 4) - SAFETY_MARGIN,
-)
+export const WINDOWS_MAX_COMMAND_LENGTH = Math.max(0, Math.floor((CMD_B64_BUDGET * 3) / 4) - SAFETY_MARGIN)
 // Pre-existing value, known to work on Unix. See comment above re: why the
 // Windows derivation must NOT be applied here. Unit: UTF-8 BYTES — for ASCII
 // commands (the common case) bytes==chars so no regression; for multibyte
@@ -635,26 +629,16 @@ export const WINDOWS_MAX_COMMAND_LENGTH = Math.max(
 // per-arg), so the argv spawn cannot overflow.
 const UNIX_MAX_COMMAND_LENGTH = 4_500
 // Unit: UTF-8 BYTES (see SECURITY note above).
-export const MAX_COMMAND_LENGTH =
-  process.platform === 'win32'
-    ? WINDOWS_MAX_COMMAND_LENGTH
-    : UNIX_MAX_COMMAND_LENGTH
+export const MAX_COMMAND_LENGTH = process.platform === 'win32' ? WINDOWS_MAX_COMMAND_LENGTH : UNIX_MAX_COMMAND_LENGTH
 
-const INVALID_RESULT_BASE: Omit<
-  ParsedPowerShellCommand,
-  'errors' | 'originalCommand'
-> = {
+const INVALID_RESULT_BASE: Omit<ParsedPowerShellCommand, 'errors' | 'originalCommand'> = {
   valid: false,
   statements: [],
   variables: [],
   hasStopParsing: false,
 }
 
-function makeInvalidResult(
-  command: string,
-  message: string,
-  errorId: string,
-): ParsedPowerShellCommand {
+function makeInvalidResult(command: string, message: string, errorId: string): ParsedPowerShellCommand {
   return {
     ...INVALID_RESULT_BASE,
     errors: [{ message, errorId }],
@@ -676,7 +660,7 @@ function toUtf16LeBase64(text: string): string {
     const code = text.charCodeAt(i)
     bytes.push(code & 0xff, (code >> 8) & 0xff)
   }
-  return btoa(bytes.map(b => String.fromCharCode(b)).join(''))
+  return btoa(bytes.map((b) => String.fromCharCode(b)).join(''))
 }
 
 /**
@@ -688,11 +672,7 @@ function buildParseScript(command: string): string {
   const encoded =
     typeof Buffer !== 'undefined'
       ? Buffer.from(command, 'utf8').toString('base64')
-      : btoa(
-          new TextEncoder()
-            .encode(command)
-            .reduce((s, b) => s + String.fromCharCode(b), ''),
-        )
+      : btoa(new TextEncoder().encode(command).reduce((s, b) => s + String.fromCharCode(b), ''))
   return `$EncodedCommand = '${encoded}'\n${PARSE_SCRIPT_BODY}`
 }
 
@@ -746,10 +726,7 @@ export function mapStatementType(rawType: string): StatementType {
 
 /** Map raw .NET AST type name to our CommandElementType union */
 // exported for testing
-export function mapElementType(
-  rawType: string,
-  expressionType?: string,
-): CommandElementType {
+export function mapElementType(rawType: string, expressionType?: string): CommandElementType {
   switch (rawType) {
     case 'ScriptBlockExpressionAst':
       return 'ScriptBlock'
@@ -797,9 +774,7 @@ export function mapElementType(
 
 /** Classify command name as cmdlet, application, or unknown */
 // exported for testing
-export function classifyCommandName(
-  name: string,
-): 'cmdlet' | 'application' | 'unknown' {
+export function classifyCommandName(name: string): 'cmdlet' | 'application' | 'unknown' {
   if (/^[A-Za-z]+-[A-Za-z][A-Za-z0-9_]*$/.test(name)) {
     return 'cmdlet'
   }
@@ -815,21 +790,14 @@ export function stripModulePrefix(name: string): string {
   const idx = name.lastIndexOf('\\')
   if (idx < 0) return name
   // Don't strip file paths: drive letters (C:\...), UNC paths (\\server\...), or relative paths (.\, ..\)
-  if (
-    /^[A-Za-z]:/.test(name) ||
-    name.startsWith('\\\\') ||
-    name.startsWith('.\\') ||
-    name.startsWith('..\\')
-  )
+  if (/^[A-Za-z]:/.test(name) || name.startsWith('\\\\') || name.startsWith('.\\') || name.startsWith('..\\'))
     return name
   return name.substring(idx + 1)
 }
 
 /** Transform a raw CommandAst pipeline element into ParsedCommandElement */
 // exported for testing
-export function transformCommandAst(
-  raw: RawPipelineElement,
-): ParsedCommandElement {
+export function transformCommandAst(raw: RawPipelineElement): ParsedCommandElement {
   const cmdElements = ensureArray(raw.commandElements)
   let name = ''
   const args: string[] = []
@@ -854,12 +822,8 @@ export function transformCommandAst(
     // integer .value that crashes stripModulePrefix() → parser falls through
     // to passthrough. For non-string-literal or non-string .value, use .text.
     const isFirstStringLiteral =
-      first.type === 'StringConstantExpressionAst' ||
-      first.type === 'ExpandableStringExpressionAst'
-    const rawNameUnstripped =
-      isFirstStringLiteral && typeof first.value === 'string'
-        ? first.value
-        : first.text
+      first.type === 'StringConstantExpressionAst' || first.type === 'ExpandableStringExpressionAst'
+    const rawNameUnstripped = isFirstStringLiteral && typeof first.value === 'string' ? first.value : first.text
     // SECURITY: strip surrounding quotes from the command name. When .value is
     // unavailable (no StaticType on the raw node), .text preserves quotes —
     // `& 'Invoke-Expression' 'x'` yields "'Invoke-Expression'". Stripping here
@@ -893,9 +857,7 @@ export function transformCommandAst(
       // backtick escapes like `n -> newline) but keep raw .text for parameters
       // (where .value loses the dash prefix, e.g. '-Path' -> 'Path'),
       // variables, and other non-string types.
-      const isStringLiteral =
-        ce.type === 'StringConstantExpressionAst' ||
-        ce.type === 'ExpandableStringExpressionAst'
+      const isStringLiteral = ce.type === 'StringConstantExpressionAst' || ce.type === 'ExpandableStringExpressionAst'
       args.push(isStringLiteral && ce.value != null ? ce.value : ce.text)
       elementTypes.push(mapElementType(ce.type, ce.expressionType))
       // Map raw children (CommandParameterAst.Argument) through
@@ -904,7 +866,7 @@ export function transformCommandAst(
       if (rawChildren.length > 0) {
         hasChildren = true
         children.push(
-          rawChildren.map(c => ({
+          rawChildren.map((c) => ({
             type: mapElementType(c.type),
             text: c.text,
           })),
@@ -936,16 +898,10 @@ export function transformCommandAst(
 
 /** Transform a non-CommandAst pipeline element into ParsedCommandElement */
 // exported for testing
-export function transformExpressionElement(
-  raw: RawPipelineElement,
-): ParsedCommandElement {
+export function transformExpressionElement(raw: RawPipelineElement): ParsedCommandElement {
   const elementType: PipelineElementType =
-    raw.type === 'ParenExpressionAst'
-      ? 'ParenExpressionAst'
-      : 'CommandExpressionAst'
-  const elementTypes: CommandElementType[] = [
-    mapElementType(raw.type, raw.expressionType),
-  ]
+    raw.type === 'ParenExpressionAst' ? 'ParenExpressionAst' : 'CommandExpressionAst'
+  const elementTypes: CommandElementType[] = [mapElementType(raw.type, raw.expressionType)]
 
   return {
     name: raw.text,
@@ -1035,7 +991,7 @@ export function transformStatement(raw: RawStatement): ParsedStatement {
     // The FindAll ALSO re-discovers direct-element redirections already
     // captured in the per-element loop above. Dedupe by (operator, target)
     // so tests and consumers see the real count.
-    const seen = new Set(redirections.map(r => `${r.operator}\0${r.target}`))
+    const seen = new Set(redirections.map((r) => `${r.operator}\0${r.target}`))
     for (const redir of ensureArray(raw.redirections)) {
       const r = transformRedirection(redir)
       const key = `${r.operator}\0${r.target}`
@@ -1133,9 +1089,7 @@ function transformRawOutput(raw: RawParsedOutput): ParsedPowerShellCommand {
  * @param command - The PowerShell command to parse
  * @returns Parsed command structure, or a result with valid=false on failure
  */
-async function parsePowerShellCommandImpl(
-  command: string,
-): Promise<ParsedPowerShellCommand> {
+async function parsePowerShellCommandImpl(command: string): Promise<ParsedPowerShellCommand> {
   // SECURITY: MAX_COMMAND_LENGTH is a UTF-8 BYTE budget (see derivation at the
   // constant definition). command.length counts UTF-16 code units; a CJK
   // character is 1 code unit but 3 UTF-8 bytes, so .length under-reports by
@@ -1143,9 +1097,7 @@ async function parsePowerShellCommandImpl(
   // valid:false → deny rules degrade to ask. Finding #36.
   const commandBytes = Buffer.byteLength(command, 'utf8')
   if (commandBytes > MAX_COMMAND_LENGTH) {
-    logForDebugging(
-      `PowerShell parser: command too long (${commandBytes} bytes, max ${MAX_COMMAND_LENGTH})`,
-    )
+    logForDebugging(`PowerShell parser: command too long (${commandBytes} bytes, max ${MAX_COMMAND_LENGTH})`)
     return makeInvalidResult(
       command,
       `Command too long for parsing (${commandBytes} bytes). Maximum supported length is ${MAX_COMMAND_LENGTH} bytes.`,
@@ -1155,11 +1107,7 @@ async function parsePowerShellCommandImpl(
 
   const pwshPath = await getCachedPowerShellPath()
   if (!pwshPath) {
-    return makeInvalidResult(
-      command,
-      'PowerShell is not available',
-      'NoPowerShell',
-    )
+    return makeInvalidResult(command, 'PowerShell is not available', 'NoPowerShell')
   }
 
   const script = buildParseScript(command)
@@ -1171,13 +1119,7 @@ async function parsePowerShellCommandImpl(
   // (3) temp files. The script itself is large but well within OS arg limits
   // (Windows: 32K chars, Unix: typically 2MB+).
   const encodedScript = toUtf16LeBase64(script)
-  const args = [
-    '-NoProfile',
-    '-NonInteractive',
-    '-NoLogo',
-    '-EncodedCommand',
-    encodedScript,
-  ]
+  const args = ['-NoProfile', '-NonInteractive', '-NoLogo', '-EncodedCommand', encodedScript]
 
   // Spawn pwsh with one retry on timeout. On loaded CI runners (Windows
   // especially), pwsh spawn + .NET JIT + ParseInput occasionally exceeds 5s
@@ -1201,9 +1143,7 @@ async function parsePowerShellCommandImpl(
       timedOut = result.timedOut
       code = result.failed ? (result.exitCode ?? 1) : 0
     } catch (e: unknown) {
-      logForDebugging(
-        `PowerShell parser: failed to spawn pwsh: ${e instanceof Error ? e.message : e}`,
-      )
+      logForDebugging(`PowerShell parser: failed to spawn pwsh: ${e instanceof Error ? e.message : e}`)
       return makeInvalidResult(
         command,
         `Failed to spawn PowerShell: ${e instanceof Error ? e.message : e}`,
@@ -1211,52 +1151,30 @@ async function parsePowerShellCommandImpl(
       )
     }
     if (!timedOut) break
-    logForDebugging(
-      `PowerShell parser: pwsh timed out after ${parseTimeoutMs}ms (attempt ${attempt + 1})`,
-    )
+    logForDebugging(`PowerShell parser: pwsh timed out after ${parseTimeoutMs}ms (attempt ${attempt + 1})`)
   }
 
   if (timedOut) {
-    return makeInvalidResult(
-      command,
-      `pwsh timed out after ${parseTimeoutMs}ms (2 attempts)`,
-      'PwshTimeout',
-    )
+    return makeInvalidResult(command, `pwsh timed out after ${parseTimeoutMs}ms (2 attempts)`, 'PwshTimeout')
   }
 
   if (code !== 0) {
-    logForDebugging(
-      `PowerShell parser: pwsh exited with code ${code}, stderr: ${stderr}`,
-    )
-    return makeInvalidResult(
-      command,
-      `pwsh exited with code ${code}: ${stderr}`,
-      'PwshError',
-    )
+    logForDebugging(`PowerShell parser: pwsh exited with code ${code}, stderr: ${stderr}`)
+    return makeInvalidResult(command, `pwsh exited with code ${code}: ${stderr}`, 'PwshError')
   }
 
   const trimmed = stdout.trim()
   if (!trimmed) {
     logForDebugging('PowerShell parser: empty stdout from pwsh')
-    return makeInvalidResult(
-      command,
-      'No output from PowerShell parser',
-      'EmptyOutput',
-    )
+    return makeInvalidResult(command, 'No output from PowerShell parser', 'EmptyOutput')
   }
 
   try {
     const raw = jsonParse(trimmed) as RawParsedOutput
     return transformRawOutput(raw)
   } catch {
-    logForDebugging(
-      `PowerShell parser: invalid JSON output: ${trimmed.slice(0, 200)}`,
-    )
-    return makeInvalidResult(
-      command,
-      'Invalid JSON from PowerShell parser',
-      'InvalidJson',
-    )
+    logForDebugging(`PowerShell parser: invalid JSON output: ${trimmed.slice(0, 200)}`)
+    return makeInvalidResult(command, 'Invalid JSON from PowerShell parser', 'InvalidJson')
   }
 }
 
@@ -1264,13 +1182,7 @@ async function parsePowerShellCommandImpl(
 // These should be evicted from the cache so subsequent calls can retry.
 // Deterministic failures (CommandTooLong, syntax errors from successful parses)
 // should stay cached since retrying would produce the same result.
-const TRANSIENT_ERROR_IDS = new Set([
-  'PwshSpawnError',
-  'PwshError',
-  'PwshTimeout',
-  'EmptyOutput',
-  'InvalidJson',
-])
+const TRANSIENT_ERROR_IDS = new Set(['PwshSpawnError', 'PwshError', 'PwshTimeout', 'EmptyOutput', 'InvalidJson'])
 
 const parsePowerShellCommandCached = memoizeWithLRU(
   (command: string) => {
@@ -1278,11 +1190,8 @@ const parsePowerShellCommandCached = memoizeWithLRU(
     // Evict transient failures after resolution so they can be retried.
     // The current caller still receives the cached promise for this call,
     // ensuring concurrent callers share the same result.
-    void promise.then(result => {
-      if (
-        !result.valid &&
-        TRANSIENT_ERROR_IDS.has(result.errors[0]?.errorId ?? '')
-      ) {
+    void promise.then((result) => {
+      if (!result.valid && TRANSIENT_ERROR_IDS.has(result.errors[0]?.errorId ?? '')) {
         parsePowerShellCommandCached.cache.delete(command)
       }
     })
@@ -1323,139 +1232,132 @@ type SecurityFlags = {
  * command names like 'constructor' or '__proto__' must return undefined, not inherited
  * Object.prototype properties.
  */
-export const COMMON_ALIASES: Record<string, string> = Object.assign(
-  Object.create(null) as Record<string, string>,
-  {
-    // Directory listing
-    ls: 'Get-ChildItem',
-    dir: 'Get-ChildItem',
-    gci: 'Get-ChildItem',
-    // Content
-    cat: 'Get-Content',
-    type: 'Get-Content',
-    gc: 'Get-Content',
-    // Navigation
-    cd: 'Set-Location',
-    sl: 'Set-Location',
-    chdir: 'Set-Location',
-    pushd: 'Push-Location',
-    popd: 'Pop-Location',
-    pwd: 'Get-Location',
-    gl: 'Get-Location',
-    // Items
-    gi: 'Get-Item',
-    gp: 'Get-ItemProperty',
-    ni: 'New-Item',
-    mkdir: 'New-Item',
-    // `md` is PowerShell's built-in alias for `mkdir`. resolveToCanonical is
-    // single-hop (no md→mkdir→New-Item chaining), so it needs its own entry
-    // or `md /etc/x` falls through while `mkdir /etc/x` is caught.
-    md: 'New-Item',
-    ri: 'Remove-Item',
-    del: 'Remove-Item',
-    rd: 'Remove-Item',
-    rmdir: 'Remove-Item',
-    rm: 'Remove-Item',
-    erase: 'Remove-Item',
-    mi: 'Move-Item',
-    mv: 'Move-Item',
-    move: 'Move-Item',
-    ci: 'Copy-Item',
-    cp: 'Copy-Item',
-    copy: 'Copy-Item',
-    cpi: 'Copy-Item',
-    si: 'Set-Item',
-    rni: 'Rename-Item',
-    ren: 'Rename-Item',
-    // Process
-    ps: 'Get-Process',
-    gps: 'Get-Process',
-    kill: 'Stop-Process',
-    spps: 'Stop-Process',
-    start: 'Start-Process',
-    saps: 'Start-Process',
-    sajb: 'Start-Job',
-    ipmo: 'Import-Module',
-    // Output
-    echo: 'Write-Output',
-    write: 'Write-Output',
-    sleep: 'Start-Sleep',
-    // Help
-    help: 'Get-Help',
-    man: 'Get-Help',
-    gcm: 'Get-Command',
-    // Service
-    gsv: 'Get-Service',
-    // Variables
-    gv: 'Get-Variable',
-    sv: 'Set-Variable',
-    // History
-    h: 'Get-History',
-    history: 'Get-History',
-    // Invoke
-    iex: 'Invoke-Expression',
-    iwr: 'Invoke-WebRequest',
-    irm: 'Invoke-RestMethod',
-    icm: 'Invoke-Command',
-    ii: 'Invoke-Item',
-    // PSSession — remote code execution surface
-    nsn: 'New-PSSession',
-    etsn: 'Enter-PSSession',
-    exsn: 'Exit-PSSession',
-    gsn: 'Get-PSSession',
-    rsn: 'Remove-PSSession',
-    // Misc
-    cls: 'Clear-Host',
-    clear: 'Clear-Host',
-    select: 'Select-Object',
-    where: 'Where-Object',
-    foreach: 'ForEach-Object',
-    '%': 'ForEach-Object',
-    '?': 'Where-Object',
-    measure: 'Measure-Object',
-    ft: 'Format-Table',
-    fl: 'Format-List',
-    fw: 'Format-Wide',
-    oh: 'Out-Host',
-    ogv: 'Out-GridView',
-    // SECURITY: The following aliases are deliberately omitted because PS Core 6+
-    // removed them (they collide with native executables). Our allowlist logic
-    // resolves aliases BEFORE checking safety — if we map 'sort' → 'Sort-Object'
-    // but PowerShell 7/Windows actually runs sort.exe, we'd auto-allow the wrong
-    // program.
-    //   'sc'   → sc.exe (Service Controller) — e.g. `sc config Svc binpath= ...`
-    //   'sort' → sort.exe — e.g. `sort /O C:\evil.txt` (arbitrary file write)
-    //   'curl' → curl.exe (shipped with Windows 10 1803+)
-    //   'wget' → wget.exe (if installed)
-    // Prefer to leave ambiguous aliases unmapped — users can write the full name.
-    // If adding aliases that resolve to SAFE_OUTPUT_CMDLETS or
-    // ACCEPT_EDITS_ALLOWED_CMDLETS, verify no native .exe collision on PS Core.
-    ac: 'Add-Content',
-    clc: 'Clear-Content',
-    // Write/export: tee-object/export-csv are in
-    // CMDLET_PATH_CONFIG so path-level Edit denies fire on the full cmdlet name,
-    // but PowerShell's built-in aliases fell through to ask-then-approve because
-    // resolveToCanonical couldn't resolve them). Neither tee-object nor
-    // export-csv is in SAFE_OUTPUT_CMDLETS or ACCEPT_EDITS_ALLOWED_CMDLETS, so
-    // the native-exe collision warning above doesn't apply — on Linux PS Core
-    // where `tee` runs /usr/bin/tee, that binary also writes to its positional
-    // file arg and we correctly extract+check it.
-    tee: 'Tee-Object',
-    epcsv: 'Export-Csv',
-    sp: 'Set-ItemProperty',
-    rp: 'Remove-ItemProperty',
-    cli: 'Clear-Item',
-    epal: 'Export-Alias',
-    // Text search
-    sls: 'Select-String',
-  },
-)
+export const COMMON_ALIASES: Record<string, string> = Object.assign(Object.create(null) as Record<string, string>, {
+  // Directory listing
+  ls: 'Get-ChildItem',
+  dir: 'Get-ChildItem',
+  gci: 'Get-ChildItem',
+  // Content
+  cat: 'Get-Content',
+  type: 'Get-Content',
+  gc: 'Get-Content',
+  // Navigation
+  cd: 'Set-Location',
+  sl: 'Set-Location',
+  chdir: 'Set-Location',
+  pushd: 'Push-Location',
+  popd: 'Pop-Location',
+  pwd: 'Get-Location',
+  gl: 'Get-Location',
+  // Items
+  gi: 'Get-Item',
+  gp: 'Get-ItemProperty',
+  ni: 'New-Item',
+  mkdir: 'New-Item',
+  // `md` is PowerShell's built-in alias for `mkdir`. resolveToCanonical is
+  // single-hop (no md→mkdir→New-Item chaining), so it needs its own entry
+  // or `md /etc/x` falls through while `mkdir /etc/x` is caught.
+  md: 'New-Item',
+  ri: 'Remove-Item',
+  del: 'Remove-Item',
+  rd: 'Remove-Item',
+  rmdir: 'Remove-Item',
+  rm: 'Remove-Item',
+  erase: 'Remove-Item',
+  mi: 'Move-Item',
+  mv: 'Move-Item',
+  move: 'Move-Item',
+  ci: 'Copy-Item',
+  cp: 'Copy-Item',
+  copy: 'Copy-Item',
+  cpi: 'Copy-Item',
+  si: 'Set-Item',
+  rni: 'Rename-Item',
+  ren: 'Rename-Item',
+  // Process
+  ps: 'Get-Process',
+  gps: 'Get-Process',
+  kill: 'Stop-Process',
+  spps: 'Stop-Process',
+  start: 'Start-Process',
+  saps: 'Start-Process',
+  sajb: 'Start-Job',
+  ipmo: 'Import-Module',
+  // Output
+  echo: 'Write-Output',
+  write: 'Write-Output',
+  sleep: 'Start-Sleep',
+  // Help
+  help: 'Get-Help',
+  man: 'Get-Help',
+  gcm: 'Get-Command',
+  // Service
+  gsv: 'Get-Service',
+  // Variables
+  gv: 'Get-Variable',
+  sv: 'Set-Variable',
+  // History
+  h: 'Get-History',
+  history: 'Get-History',
+  // Invoke
+  iex: 'Invoke-Expression',
+  iwr: 'Invoke-WebRequest',
+  irm: 'Invoke-RestMethod',
+  icm: 'Invoke-Command',
+  ii: 'Invoke-Item',
+  // PSSession — remote code execution surface
+  nsn: 'New-PSSession',
+  etsn: 'Enter-PSSession',
+  exsn: 'Exit-PSSession',
+  gsn: 'Get-PSSession',
+  rsn: 'Remove-PSSession',
+  // Misc
+  cls: 'Clear-Host',
+  clear: 'Clear-Host',
+  select: 'Select-Object',
+  where: 'Where-Object',
+  foreach: 'ForEach-Object',
+  '%': 'ForEach-Object',
+  '?': 'Where-Object',
+  measure: 'Measure-Object',
+  ft: 'Format-Table',
+  fl: 'Format-List',
+  fw: 'Format-Wide',
+  oh: 'Out-Host',
+  ogv: 'Out-GridView',
+  // SECURITY: The following aliases are deliberately omitted because PS Core 6+
+  // removed them (they collide with native executables). Our allowlist logic
+  // resolves aliases BEFORE checking safety — if we map 'sort' → 'Sort-Object'
+  // but PowerShell 7/Windows actually runs sort.exe, we'd auto-allow the wrong
+  // program.
+  //   'sc'   → sc.exe (Service Controller) — e.g. `sc config Svc binpath= ...`
+  //   'sort' → sort.exe — e.g. `sort /O C:\evil.txt` (arbitrary file write)
+  //   'curl' → curl.exe (shipped with Windows 10 1803+)
+  //   'wget' → wget.exe (if installed)
+  // Prefer to leave ambiguous aliases unmapped — users can write the full name.
+  // If adding aliases that resolve to SAFE_OUTPUT_CMDLETS or
+  // ACCEPT_EDITS_ALLOWED_CMDLETS, verify no native .exe collision on PS Core.
+  ac: 'Add-Content',
+  clc: 'Clear-Content',
+  // Write/export: tee-object/export-csv are in
+  // CMDLET_PATH_CONFIG so path-level Edit denies fire on the full cmdlet name,
+  // but PowerShell's built-in aliases fell through to ask-then-approve because
+  // resolveToCanonical couldn't resolve them). Neither tee-object nor
+  // export-csv is in SAFE_OUTPUT_CMDLETS or ACCEPT_EDITS_ALLOWED_CMDLETS, so
+  // the native-exe collision warning above doesn't apply — on Linux PS Core
+  // where `tee` runs /usr/bin/tee, that binary also writes to its positional
+  // file arg and we correctly extract+check it.
+  tee: 'Tee-Object',
+  epcsv: 'Export-Csv',
+  sp: 'Set-ItemProperty',
+  rp: 'Remove-ItemProperty',
+  cli: 'Clear-Item',
+  epal: 'Export-Alias',
+  // Text search
+  sls: 'Select-String',
+})
 
-const DIRECTORY_CHANGE_CMDLETS = new Set([
-  'set-location',
-  'push-location',
-  'pop-location',
-])
+const DIRECTORY_CHANGE_CMDLETS = new Set(['set-location', 'push-location', 'pop-location'])
 
 const DIRECTORY_CHANGE_ALIASES = new Set(['cd', 'sl', 'chdir', 'pushd', 'popd'])
 
@@ -1483,9 +1385,7 @@ export function getAllCommandNames(parsed: ParsedPowerShellCommand): string[] {
  * Get all pipeline segments as flat list of commands.
  * Useful for checking each command independently.
  */
-export function getAllCommands(
-  parsed: ParsedPowerShellCommand,
-): ParsedCommandElement[] {
+export function getAllCommands(parsed: ParsedPowerShellCommand): ParsedCommandElement[] {
   const commands: ParsedCommandElement[] = []
   for (const statement of parsed.statements) {
     for (const cmd of statement.commands) {
@@ -1504,9 +1404,7 @@ export function getAllCommands(
  * Get all redirections across all statements.
  */
 // exported for testing
-export function getAllRedirections(
-  parsed: ParsedPowerShellCommand,
-): ParsedRedirection[] {
+export function getAllRedirections(parsed: ParsedPowerShellCommand): ParsedRedirection[] {
   const redirections: ParsedRedirection[] = []
   for (const statement of parsed.statements) {
     for (const redir of statement.redirections) {
@@ -1530,22 +1428,16 @@ export function getAllRedirections(
  * Get all variables, optionally filtered by scope (e.g., 'env').
  * Variable paths in PowerShell can have scopes like "env:PATH", "global:x".
  */
-export function getVariablesByScope(
-  parsed: ParsedPowerShellCommand,
-  scope: string,
-): ParsedVariable[] {
+export function getVariablesByScope(parsed: ParsedPowerShellCommand, scope: string): ParsedVariable[] {
   const prefix = scope.toLowerCase() + ':'
-  return parsed.variables.filter(v => v.path.toLowerCase().startsWith(prefix))
+  return parsed.variables.filter((v) => v.path.toLowerCase().startsWith(prefix))
 }
 
 /**
  * Check if any command in the parsed result matches a given name (case-insensitive).
  * Handles common aliases too.
  */
-export function hasCommandNamed(
-  parsed: ParsedPowerShellCommand,
-  name: string,
-): boolean {
+export function hasCommandNamed(parsed: ParsedPowerShellCommand, name: string): boolean {
   const lowerName = name.toLowerCase()
   const canonicalFromAlias = COMMON_ALIASES[lowerName]?.toLowerCase()
 
@@ -1577,10 +1469,7 @@ export function hasCommandNamed(
 // exported for testing
 export function hasDirectoryChange(parsed: ParsedPowerShellCommand): boolean {
   for (const cmdName of getAllCommandNames(parsed)) {
-    if (
-      DIRECTORY_CHANGE_CMDLETS.has(cmdName) ||
-      DIRECTORY_CHANGE_ALIASES.has(cmdName)
-    ) {
+    if (DIRECTORY_CHANGE_CMDLETS.has(cmdName) || DIRECTORY_CHANGE_ALIASES.has(cmdName)) {
       return true
     }
   }
@@ -1605,12 +1494,9 @@ export function isSingleCommand(parsed: ParsedPowerShellCommand): boolean {
  * Check if a specific command has a given argument/flag (case-insensitive).
  * Useful for checking "-EncodedCommand", "-Recurse", etc.
  */
-export function commandHasArg(
-  command: ParsedCommandElement,
-  arg: string,
-): boolean {
+export function commandHasArg(command: ParsedCommandElement, arg: string): boolean {
   const lowerArg = arg.toLowerCase()
-  return command.args.some(a => a.toLowerCase() === lowerArg)
+  return command.args.some((a) => a.toLowerCase() === lowerArg)
 }
 
 /**
@@ -1644,10 +1530,7 @@ export const PS_TOKENIZER_DASH_CHARS = new Set([
  * When elementType is unavailable (backward compat / no AST detail), fall back
  * to a char check against PS_TOKENIZER_DASH_CHARS.
  */
-export function isPowerShellParameter(
-  arg: string,
-  elementType?: CommandElementType,
-): boolean {
+export function isPowerShellParameter(arg: string, elementType?: CommandElementType): boolean {
   if (elementType !== undefined) {
     return elementType === 'Parameter'
   }
@@ -1667,7 +1550,7 @@ export function commandHasArgAbbreviation(
 ): boolean {
   const lowerFull = fullParam.toLowerCase()
   const lowerMin = minPrefix.toLowerCase()
-  return command.args.some(a => {
+  return command.args.some((a) => {
     // Strip colon-bound value (e.g., -en:base64value -> -en)
     const colonIndex = a.indexOf(':', 1)
     const paramPart = colonIndex > 0 ? a.slice(0, colonIndex) : a
@@ -1675,11 +1558,7 @@ export function commandHasArgAbbreviation(
     // `-MemberName` but Extent.Text preserves the backtick, causing
     // prefix-comparison misses on the raw text.
     const lower = paramPart.replace(/`/g, '').toLowerCase()
-    return (
-      lower.startsWith(lowerMin) &&
-      lowerFull.startsWith(lower) &&
-      lower.length <= lowerFull.length
-    )
+    return lower.startsWith(lowerMin) && lowerFull.startsWith(lower) && lower.length <= lowerFull.length
   })
 }
 
@@ -1687,9 +1566,7 @@ export function commandHasArgAbbreviation(
  * Split a parsed command into its pipeline segments for per-segment permission checking.
  * Returns each pipeline's commands separately.
  */
-export function getPipelineSegments(
-  parsed: ParsedPowerShellCommand,
-): ParsedStatement[] {
+export function getPipelineSegments(parsed: ParsedPowerShellCommand): ParsedStatement[] {
   return parsed.statements
 }
 
@@ -1710,12 +1587,8 @@ export function isNullRedirectionTarget(target: string): boolean {
  * Returns only redirections that write to files.
  */
 // exported for testing
-export function getFileRedirections(
-  parsed: ParsedPowerShellCommand,
-): ParsedRedirection[] {
-  return getAllRedirections(parsed).filter(
-    r => !r.isMerging && !isNullRedirectionTarget(r.target),
-  )
+export function getFileRedirections(parsed: ParsedPowerShellCommand): ParsedRedirection[] {
+  return getAllRedirections(parsed).filter((r) => !r.isMerging && !isNullRedirectionTarget(r.target))
 }
 
 /**
@@ -1725,9 +1598,7 @@ export function getFileRedirections(
  * with its AST node type, and this function walks those types.
  */
 // exported for testing
-export function deriveSecurityFlags(
-  parsed: ParsedPowerShellCommand,
-): SecurityFlags {
+export function deriveSecurityFlags(parsed: ParsedPowerShellCommand): SecurityFlags {
   const flags: SecurityFlags = {
     hasSubExpressions: false,
     hasScriptBlocks: false,

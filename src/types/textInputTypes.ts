@@ -1,6 +1,8 @@
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import type { UUID } from 'crypto'
+
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import type React from 'react'
+
 import type { PermissionResult } from '../entrypoints/agentSdkTypes.js'
 import type { Key } from '../ink.js'
 import type { PastedContent } from '../utils/config.js'
@@ -262,16 +264,9 @@ export type VimInputState = BaseInputState & {
 /**
  * Input modes for the prompt
  */
-export type PromptInputMode =
-  | 'bash'
-  | 'prompt'
-  | 'orphaned-permission'
-  | 'task-notification'
+export type PromptInputMode = 'bash' | 'prompt' | 'orphaned-permission' | 'task-notification'
 
-export type EditablePromptInputMode = Exclude<
-  PromptInputMode,
-  `${string}-notification`
->
+export type EditablePromptInputMode = Exclude<PromptInputMode, `${string}-notification`>
 
 /**
  * Queue priority levels. Same semantics in both normal and proactive mode.
@@ -369,15 +364,13 @@ export function isValidImagePaste(c: PastedContent): boolean {
 }
 
 /** Extract image paste IDs from a QueuedCommand's pastedContents. */
-export function getImagePasteIds(
-  pastedContents: Record<number, PastedContent> | undefined,
-): number[] | undefined {
+export function getImagePasteIds(pastedContents: Record<number, PastedContent> | undefined): number[] | undefined {
   if (!pastedContents) {
     return undefined
   }
   const ids = Object.values(pastedContents)
     .filter(isValidImagePaste)
-    .map(c => c.id)
+    .map((c) => c.id)
   return ids.length > 0 ? ids : undefined
 }
 

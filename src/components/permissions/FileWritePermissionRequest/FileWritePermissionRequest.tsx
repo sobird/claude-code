@@ -1,6 +1,8 @@
 import { basename, relative } from 'path'
+
 import React, { useMemo } from 'react'
 import type { z } from 'zod/v4'
+
 import { Text } from '../../../ink.js'
 import { FileWriteTool } from '../../../tools/FileWriteTool/FileWriteTool.js'
 import { getCwd } from '../../../utils/cwd.js'
@@ -46,9 +48,7 @@ const ideDiffSupport: IDEDiffSupport<FileWriteToolInput> = {
   },
 }
 
-export function FileWritePermissionRequest(
-  props: PermissionRequestProps,
-): React.ReactNode {
+export function FileWritePermissionRequest(props: PermissionRequestProps): React.ReactNode {
   const parseInput = (input: unknown): FileWriteToolInput => {
     return FileWriteTool.inputSchema.parse(input)
   }
@@ -85,12 +85,7 @@ export function FileWritePermissionRequest(
         </Text>
       }
       content={
-        <FileWriteToolDiff
-          file_path={file_path}
-          content={content}
-          fileExists={fileExists}
-          oldContent={oldContent}
-        />
+        <FileWriteToolDiff file_path={file_path} content={content} fileExists={fileExists} oldContent={oldContent} />
       }
       path={file_path}
       completionType="write_file_single"

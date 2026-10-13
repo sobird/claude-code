@@ -1,5 +1,6 @@
 import React, { useRef } from 'react'
 import stripAnsi from 'strip-ansi'
+
 import { Messages } from '../components/Messages.js'
 import { KeybindingProvider } from '../keybindings/KeybindingContext.js'
 import { loadKeybindingsSyncWithWarnings } from '../keybindings/loadUserBindings.js'
@@ -14,11 +15,7 @@ import { renderToAnsiString } from './staticRender.js'
  * Provides keybinding context without the ChordInterceptor (which uses useInput
  * and would hang in headless renders with no stdin).
  */
-function StaticKeybindingProvider({
-  children,
-}: {
-  children: React.ReactNode
-}): React.ReactNode {
+function StaticKeybindingProvider({ children }: { children: React.ReactNode }): React.ReactNode {
   const { bindings } = loadKeybindingsSyncWithWarnings()
   const pendingChordRef = useRef(null)
   const handlerRegistryRef = useRef(new Map())
@@ -128,11 +125,6 @@ export async function renderMessagesToPlainText(
   columns?: number,
 ): Promise<string> {
   const parts: string[] = []
-  await streamRenderedMessages(
-    messages,
-    tools,
-    chunk => void parts.push(stripAnsi(chunk)),
-    { columns },
-  )
+  await streamRenderedMessages(messages, tools, (chunk) => void parts.push(stripAnsi(chunk)), { columns })
   return parts.join('')
 }

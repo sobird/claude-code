@@ -1,6 +1,8 @@
 import { feature } from 'bun:bundle'
 import { basename } from 'path'
+
 import { useCallback, useEffect, useRef } from 'react'
+
 import { getSessionId } from '../../bootstrap/state.js'
 import type { Command } from '../../commands.js'
 import type { Tool } from '../../Tool.js'
@@ -12,22 +14,14 @@ import {
   getMcpToolsCommandsAndResources,
   reconnectMcpServerImpl,
 } from './client.js'
-import type {
-  MCPServerConnection,
-  ScopedMcpServerConfig,
-  ServerResource,
-} from './types.js'
+import type { MCPServerConnection, ScopedMcpServerConfig, ServerResource } from './types.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const fetchMcpSkillsForClient = feature('MCP_SKILLS')
-  ? (
-      require('../../skills/mcpSkills.js') as typeof import('../../skills/mcpSkills.js')
-    ).fetchMcpSkillsForClient
+  ? (require('../../skills/mcpSkills.js') as typeof import('../../skills/mcpSkills.js')).fetchMcpSkillsForClient
   : null
 const clearSkillIndexCache = feature('EXPERIMENTAL_SKILL_SEARCH')
-  ? (
-      require('../skillSearch/localSearch.js') as typeof import('../skillSearch/localSearch.js')
-    ).clearSkillIndexCache
+  ? (require('../skillSearch/localSearch.js') as typeof import('../skillSearch/localSearch.js')).clearSkillIndexCache
   : null
 
 import {
@@ -52,13 +46,10 @@ import {
 import type { AppState } from 'src/state/AppState.js'
 import type { PluginError } from 'src/types/plugin.js'
 import { logForDebugging } from 'src/utils/debug.js'
+
 import { getAllowedChannels } from '../../bootstrap/state.js'
 import { useNotifications } from '../../context/notifications.js'
-import {
-  useAppState,
-  useAppStateStore,
-  useSetAppState,
-} from '../../state/AppState.js'
+import { useAppState, useAppStateStore, useSetAppState } from '../../state/AppState.js'
 import { errorMessage } from '../../utils/errors.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { logMCPDebug, logMCPError } from '../../utils/log.js'
@@ -76,10 +67,7 @@ import {
   createChannelPermissionCallbacks,
   isChannelPermissionRelayEnabled,
 } from './channelPermissions.js'
-import {
-  clearClaudeAIMcpConfigsCache,
-  fetchClaudeAIMcpConfigsIfEligible,
-} from './claudeai.js'
+import { clearClaudeAIMcpConfigsCache, fetchClaudeAIMcpConfigsIfEligible } from './claudeai.js'
 import { registerElicitationHandler } from './elicitationHandler.js'
 import { getMcpPrefix } from './mcpStringUtils.js'
 import { commandBelongsToServer, excludeStalePluginClients } from './utils.js'
@@ -106,16 +94,12 @@ function addErrorsToAppState(
 ): void {
   if (newErrors.length === 0) return
 
-  setAppState(prevState => {
+  setAppState((prevState) => {
     // Build set of existing error keys
-    const existingKeys = new Set(
-      prevState.plugins.errors.map(e => getErrorKey(e)),
-    )
+    const existingKeys = new Set(prevState.plugins.errors.map((e) => getErrorKey(e)))
 
     // Only add errors that don't already exist
-    const uniqueNewErrors = newErrors.filter(
-      error => !existingKeys.has(getErrorKey(error)),
-    )
+    const uniqueNewErrors = newErrors.filter((error) => !existingKeys.has(getErrorKey(error)))
 
     if (uniqueNewErrors.length === 0) {
       return prevState
@@ -145,12 +129,12 @@ export function useManageMCPConnections(
   isStrictMcpConfig = false,
 ) {
   const store = useAppStateStore()
-  const _authVersion = useAppState(s => s.authVersion)
+  const _authVersion = useAppState((s) => s.authVersion)
   // Incremented by /reload-plugins (refreshActivePlugins) to pick up newly
   // enabled plugin MCP servers. getClaudeCodeMcpConfigs() reads loadAllPlugins()
   // which has been cleared by refreshActivePlugins, so the effects below see
   // fresh plugin data on re-run.
-  const _pluginReconnectKey = useAppState(s => s.mcp.pluginReconnectKey)
+  const _pluginReconnectKey = useAppState((s) => s.mcp.pluginReconnectKey)
   const setAppState = useSetAppState()
 
   // Track active reconnection attempts to allow cancellation
@@ -159,19 +143,12 @@ export function useManageMCPConnections(
   // Dedup the --channels blocked warning per skip kind so that a user who
   // sees "run /login" (auth skip), logs in, then hits the policy gate
   // gets a second toast.
-  const channelWarnedKindsRef = useRef<
-    Set<'disabled' | 'auth' | 'policy' | 'marketplace' | 'allowlist'>
-  >(new Set())
+  const channelWarnedKindsRef = useRef<Set<'disabled' | 'auth' | 'policy' | 'marketplace' | 'allowlist'>>(new Set())
   // Channel permission callbacks — constructed once, stable ref. Stored in
   // AppState so interactiveHandler can subscribe. The pending Map lives inside
   // the closure (not module-level, not AppState — functions-in-state is brittle).
-  const channelPermCallbacksRef = useRef<ChannelPermissionCallbacks | null>(
-    null,
-  )
-  if (
-    (feature('KAIROS') || feature('KAIROS_CHANNELS')) &&
-    channelPermCallbacksRef.current === null
-  ) {
+  const channelPermCallbacksRef = useRef<ChannelPermissionCallbacks | null>(null)
+  if ((feature('KAIROS') || feature('KAIROS_CHANNELS')) && channelPermCallbacksRef.current === null) {
     channelPermCallbacksRef.current = createChannelPermissionCallbacks()
   }
   // Store callbacks in AppState so interactiveHandler.ts can reach them via
@@ -186,12 +163,12 @@ export function useManageMCPConnections(
       // undefined → never sends → intercept has nothing pending → "yes tbxkq"
       // flows to Claude as normal chat. One gate, full disable.
       if (!isChannelPermissionRelayEnabled()) return
-      setAppState(prev => {
+      setAppState((prev) => {
         if (prev.channelPermissionCallbacks === callbacks) return prev
         return { ...prev, channelPermissionCallbacks: callbacks }
       })
       return () => {
-        setAppState(prev => {
+        setAppState((prev) => {
           if (prev.channelPermissionCallbacks === undefined) return prev
           return { ...prev, channelPermissionCallbacks: undefined }
         })
@@ -219,62 +196,37 @@ export function useManageMCPConnections(
     if (updates.length === 0) return
     pendingUpdatesRef.current = []
 
-    setAppState(prevState => {
+    setAppState((prevState) => {
       let mcp = prevState.mcp
 
       for (const update of updates) {
-        const {
-          tools: rawTools,
-          commands: rawCmds,
-          resources: rawRes,
-          ...client
-        } = update
-        const tools =
-          client.type === 'disabled' || client.type === 'failed'
-            ? (rawTools ?? [])
-            : rawTools
-        const commands =
-          client.type === 'disabled' || client.type === 'failed'
-            ? (rawCmds ?? [])
-            : rawCmds
-        const resources =
-          client.type === 'disabled' || client.type === 'failed'
-            ? (rawRes ?? [])
-            : rawRes
+        const { tools: rawTools, commands: rawCmds, resources: rawRes, ...client } = update
+        const tools = client.type === 'disabled' || client.type === 'failed' ? (rawTools ?? []) : rawTools
+        const commands = client.type === 'disabled' || client.type === 'failed' ? (rawCmds ?? []) : rawCmds
+        const resources = client.type === 'disabled' || client.type === 'failed' ? (rawRes ?? []) : rawRes
 
         const prefix = getMcpPrefix(client.name)
-        const existingClientIndex = mcp.clients.findIndex(
-          c => c.name === client.name,
-        )
+        const existingClientIndex = mcp.clients.findIndex((c) => c.name === client.name)
 
         const updatedClients =
           existingClientIndex === -1
             ? [...mcp.clients, client]
-            : mcp.clients.map(c => (c.name === client.name ? client : c))
+            : mcp.clients.map((c) => (c.name === client.name ? client : c))
 
         const updatedTools =
-          tools === undefined
-            ? mcp.tools
-            : [...reject(mcp.tools, t => t.name?.startsWith(prefix)), ...tools]
+          tools === undefined ? mcp.tools : [...reject(mcp.tools, (t) => t.name?.startsWith(prefix)), ...tools]
 
         const updatedCommands =
           commands === undefined
             ? mcp.commands
-            : [
-                ...reject(mcp.commands, c =>
-                  commandBelongsToServer(c, client.name),
-                ),
-                ...commands,
-              ]
+            : [...reject(mcp.commands, (c) => commandBelongsToServer(c, client.name)), ...commands]
 
         const updatedResources =
           resources === undefined
             ? mcp.resources
             : {
                 ...mcp.resources,
-                ...(resources.length > 0
-                  ? { [client.name]: resources }
-                  : omit(mcp.resources, client.name)),
+                ...(resources.length > 0 ? { [client.name]: resources } : omit(mcp.resources, client.name)),
               }
 
         mcp = {
@@ -298,10 +250,7 @@ export function useManageMCPConnections(
     (update: PendingUpdate) => {
       pendingUpdatesRef.current.push(update)
       if (flushTimerRef.current === null) {
-        flushTimerRef.current = setTimeout(
-          flushPendingUpdates,
-          MCP_BATCH_FLUSH_MS,
-        )
+        flushTimerRef.current = setTimeout(flushPendingUpdates, MCP_BATCH_FLUSH_MS)
       }
     },
     [flushPendingUpdates],
@@ -334,9 +283,7 @@ export function useManageMCPConnections(
             const configType = client.config.type ?? 'stdio'
 
             clearServerCache(client.name, client.config).catch(() => {
-              logForDebugging(
-                `Failed to invalidate the server cache: ${client.name}`,
-              )
+              logForDebugging(`Failed to invalidate the server cache: ${client.name}`)
             })
 
             // TODO: This really isn't great: ideally we'd check appstate as the source of truth
@@ -344,10 +291,7 @@ export function useManageMCPConnections(
             // point. Getting a live reference to appstate feels a little hacky, so we'll just
             // check the disk state. We may want to refactor some of this.
             if (isMcpServerDisabled(client.name)) {
-              logMCPDebug(
-                client.name,
-                `Server is disabled, skipping automatic reconnection`,
-              )
+              logMCPDebug(client.name, `Server is disabled, skipping automatic reconnection`)
               return
             }
 
@@ -369,17 +313,10 @@ export function useManageMCPConnections(
 
               // Attempt reconnection with exponential backoff
               const reconnectWithBackoff = async () => {
-                for (
-                  let attempt = 1;
-                  attempt <= MAX_RECONNECT_ATTEMPTS;
-                  attempt++
-                ) {
+                for (let attempt = 1; attempt <= MAX_RECONNECT_ATTEMPTS; attempt++) {
                   // Check if server was disabled while we were waiting
                   if (isMcpServerDisabled(client.name)) {
-                    logMCPDebug(
-                      client.name,
-                      `Server disabled during reconnection, stopping retry`,
-                    )
+                    logMCPDebug(client.name, `Server disabled during reconnection, stopping retry`)
                     reconnectTimersRef.current.delete(client.name)
                     return
                   }
@@ -393,10 +330,7 @@ export function useManageMCPConnections(
 
                   const reconnectStartTime = Date.now()
                   try {
-                    const result = await reconnectMcpServerImpl(
-                      client.name,
-                      client.config,
-                    )
+                    const result = await reconnectMcpServerImpl(client.name, client.config)
                     const elapsed = Date.now() - reconnectStartTime
 
                     if (result.client.type === 'connected') {
@@ -444,16 +378,10 @@ export function useManageMCPConnections(
                   }
 
                   // Schedule next retry with exponential backoff
-                  const backoffMs = Math.min(
-                    INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1),
-                    MAX_BACKOFF_MS,
-                  )
-                  logMCPDebug(
-                    client.name,
-                    `Scheduling reconnection attempt ${attempt + 1} in ${backoffMs}ms`,
-                  )
+                  const backoffMs = Math.min(INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1), MAX_BACKOFF_MS)
+                  logMCPDebug(client.name, `Scheduling reconnection attempt ${attempt + 1} in ${backoffMs}ms`)
 
-                  await new Promise<void>(resolve => {
+                  await new Promise<void>((resolve) => {
                     // eslint-disable-next-line no-restricted-syntax -- timer stored in ref for cancellation; sleep() doesn't expose the handle
                     const timer = setTimeout(resolve, backoffMs)
                     reconnectTimersRef.current.set(client.name, timer)
@@ -471,11 +399,7 @@ export function useManageMCPConnections(
           // Gate decides whether to register the handler; connection stays
           // up either way (allowedMcpServers controls that).
           if (feature('KAIROS') || feature('KAIROS_CHANNELS')) {
-            const gate = gateChannelServer(
-              client.name,
-              client.capabilities,
-              client.config.pluginSource,
-            )
+            const gate = gateChannelServer(client.name, client.capabilities, client.config.pluginSource)
             const entry = findChannelEntry(client.name, getAllowedChannels())
             // Plugin identifier for telemetry — log name@marketplace for any
             // plugin-kind entry (same tier as tengu_plugin_installed, which
@@ -495,8 +419,7 @@ export function useManageMCPConnections(
                   gate.action === 'skip'
                     ? (gate.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
                     : undefined,
-                entry_kind:
-                  entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                entry_kind: entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 is_dev: entry?.dev ?? false,
                 plugin: pluginId,
               })
@@ -504,59 +427,41 @@ export function useManageMCPConnections(
             switch (gate.action) {
               case 'register':
                 logMCPDebug(client.name, 'Channel notifications registered')
-                client.client.setNotificationHandler(
-                  ChannelMessageNotificationSchema(),
-                  async notification => {
-                    const { content, meta } = notification.params
-                    logMCPDebug(
-                      client.name,
-                      `notifications/claude/channel: ${content.slice(0, 80)}`,
-                    )
-                    logEvent('tengu_mcp_channel_message', {
-                      content_length: content.length,
-                      meta_key_count: Object.keys(meta ?? {}).length,
-                      entry_kind:
-                        entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                      is_dev: entry?.dev ?? false,
-                      plugin: pluginId,
-                    })
-                    enqueue({
-                      mode: 'prompt',
-                      value: wrapChannelMessage(client.name, content, meta),
-                      priority: 'next',
-                      isMeta: true,
-                      origin: { kind: 'channel', server: client.name },
-                      skipSlashCommands: true,
-                    })
-                  },
-                )
+                client.client.setNotificationHandler(ChannelMessageNotificationSchema(), async (notification) => {
+                  const { content, meta } = notification.params
+                  logMCPDebug(client.name, `notifications/claude/channel: ${content.slice(0, 80)}`)
+                  logEvent('tengu_mcp_channel_message', {
+                    content_length: content.length,
+                    meta_key_count: Object.keys(meta ?? {}).length,
+                    entry_kind: entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                    is_dev: entry?.dev ?? false,
+                    plugin: pluginId,
+                  })
+                  enqueue({
+                    mode: 'prompt',
+                    value: wrapChannelMessage(client.name, content, meta),
+                    priority: 'next',
+                    isMeta: true,
+                    origin: { kind: 'channel', server: client.name },
+                    skipSlashCommands: true,
+                  })
+                })
                 // Permission-reply handler — separate event, separate
                 // capability. Only registers if the server declares
                 // claude/channel/permission (same opt-in check as the send
                 // path in interactiveHandler.ts). Server parses the user's
                 // reply and emits {request_id, behavior}; no regex on our
                 // side, text in the general channel can't accidentally match.
-                if (
-                  client.capabilities?.experimental?.[
-                    'claude/channel/permission'
-                  ] !== undefined
-                ) {
-                  client.client.setNotificationHandler(
-                    ChannelPermissionNotificationSchema(),
-                    async notification => {
-                      const { request_id, behavior } = notification.params
-                      const resolved =
-                        channelPermCallbacksRef.current?.resolve(
-                          request_id,
-                          behavior,
-                          client.name,
-                        ) ?? false
-                      logMCPDebug(
-                        client.name,
-                        `notifications/claude/channel/permission: ${request_id} → ${behavior} (${resolved ? 'matched pending' : 'no pending entry — stale or unknown ID'})`,
-                      )
-                    },
-                  )
+                if (client.capabilities?.experimental?.['claude/channel/permission'] !== undefined) {
+                  client.client.setNotificationHandler(ChannelPermissionNotificationSchema(), async (notification) => {
+                    const { request_id, behavior } = notification.params
+                    const resolved =
+                      channelPermCallbacksRef.current?.resolve(request_id, behavior, client.name) ?? false
+                    logMCPDebug(
+                      client.name,
+                      `notifications/claude/channel/permission: ${request_id} → ${behavior} (${resolved ? 'matched pending' : 'no pending entry — stale or unknown ID'})`,
+                    )
+                  })
                 }
                 break
               case 'skip':
@@ -565,16 +470,9 @@ export function useManageMCPConnections(
                 // handler. Without this, mid-session demotion is one-way:
                 // the gate says skip but the earlier handler keeps enqueuing.
                 // Map.delete — safe when never registered.
-                client.client.removeNotificationHandler(
-                  'notifications/claude/channel',
-                )
-                client.client.removeNotificationHandler(
-                  CHANNEL_PERMISSION_METHOD,
-                )
-                logMCPDebug(
-                  client.name,
-                  `Channel notifications skipped: ${gate.reason}`,
-                )
+                client.client.removeNotificationHandler('notifications/claude/channel')
+                client.client.removeNotificationHandler(CHANNEL_PERMISSION_METHOD)
+                logMCPDebug(client.name, `Channel notifications skipped: ${gate.reason}`)
                 // Surface a once-per-kind toast when a channel server is
                 // blocked. This is the only
                 // user-visible signal (logMCPDebug above requires --debug).
@@ -585,9 +483,7 @@ export function useManageMCPConnections(
                   gate.kind !== 'capability' &&
                   gate.kind !== 'session' &&
                   !channelWarnedKindsRef.current.has(gate.kind) &&
-                  (gate.kind === 'marketplace' ||
-                    gate.kind === 'allowlist' ||
-                    entry !== undefined)
+                  (gate.kind === 'marketplace' || gate.kind === 'allowlist' || entry !== undefined)
                 ) {
                   channelWarnedKindsRef.current.add(gate.kind)
                   // disabled/auth/policy get custom toast copy (shorter, actionable);
@@ -616,138 +512,115 @@ export function useManageMCPConnections(
           // Register notification handlers for list_changed notifications
           // These allow the server to notify us when tools, prompts, or resources change
           if (client.capabilities?.tools?.listChanged) {
-            client.client.setNotificationHandler(
-              ToolListChangedNotificationSchema,
-              async () => {
-                logMCPDebug(
-                  client.name,
-                  `Received tools/list_changed notification, refreshing tools`,
-                )
-                try {
-                  // Grab cached promise before invalidating to log previous count
-                  const previousToolsPromise = fetchToolsForClient.cache.get(
-                    client.name,
+            client.client.setNotificationHandler(ToolListChangedNotificationSchema, async () => {
+              logMCPDebug(client.name, `Received tools/list_changed notification, refreshing tools`)
+              try {
+                // Grab cached promise before invalidating to log previous count
+                const previousToolsPromise = fetchToolsForClient.cache.get(client.name)
+                fetchToolsForClient.cache.delete(client.name)
+                const newTools = await fetchToolsForClient(client)
+                const newCount = newTools.length
+                if (previousToolsPromise) {
+                  previousToolsPromise.then(
+                    (previousTools: Tool[]) => {
+                      logEvent('tengu_mcp_list_changed', {
+                        type: 'tools' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        previousCount: previousTools.length,
+                        newCount,
+                      })
+                    },
+                    () => {
+                      logEvent('tengu_mcp_list_changed', {
+                        type: 'tools' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        newCount,
+                      })
+                    },
                   )
-                  fetchToolsForClient.cache.delete(client.name)
-                  const newTools = await fetchToolsForClient(client)
-                  const newCount = newTools.length
-                  if (previousToolsPromise) {
-                    previousToolsPromise.then(
-                      (previousTools: Tool[]) => {
-                        logEvent('tengu_mcp_list_changed', {
-                          type: 'tools' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                          previousCount: previousTools.length,
-                          newCount,
-                        })
-                      },
-                      () => {
-                        logEvent('tengu_mcp_list_changed', {
-                          type: 'tools' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                          newCount,
-                        })
-                      },
-                    )
-                  } else {
-                    logEvent('tengu_mcp_list_changed', {
-                      type: 'tools' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                      newCount,
-                    })
-                  }
-                  updateServer({ ...client, tools: newTools })
-                } catch (error) {
-                  logMCPError(
-                    client.name,
-                    `Failed to refresh tools after list_changed notification: ${errorMessage(error)}`,
-                  )
+                } else {
+                  logEvent('tengu_mcp_list_changed', {
+                    type: 'tools' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                    newCount,
+                  })
                 }
-              },
-            )
+                updateServer({ ...client, tools: newTools })
+              } catch (error) {
+                logMCPError(
+                  client.name,
+                  `Failed to refresh tools after list_changed notification: ${errorMessage(error)}`,
+                )
+              }
+            })
           }
 
           if (client.capabilities?.prompts?.listChanged) {
-            client.client.setNotificationHandler(
-              PromptListChangedNotificationSchema,
-              async () => {
-                logMCPDebug(
-                  client.name,
-                  `Received prompts/list_changed notification, refreshing prompts`,
-                )
-                logEvent('tengu_mcp_list_changed', {
-                  type: 'prompts' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            client.client.setNotificationHandler(PromptListChangedNotificationSchema, async () => {
+              logMCPDebug(client.name, `Received prompts/list_changed notification, refreshing prompts`)
+              logEvent('tengu_mcp_list_changed', {
+                type: 'prompts' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              })
+              try {
+                // Skills come from resources, not prompts — don't invalidate their
+                // cache here. fetchMcpSkillsForClient returns the cached result.
+                fetchCommandsForClient.cache.delete(client.name)
+                const [mcpPrompts, mcpSkills] = await Promise.all([
+                  fetchCommandsForClient(client),
+                  feature('MCP_SKILLS') ? fetchMcpSkillsForClient!(client) : Promise.resolve([]),
+                ])
+                updateServer({
+                  ...client,
+                  commands: [...mcpPrompts, ...mcpSkills],
                 })
-                try {
-                  // Skills come from resources, not prompts — don't invalidate their
-                  // cache here. fetchMcpSkillsForClient returns the cached result.
+                // MCP skills changed — invalidate skill-search index so
+                // next discovery rebuilds with the new set.
+                clearSkillIndexCache?.()
+              } catch (error) {
+                logMCPError(
+                  client.name,
+                  `Failed to refresh prompts after list_changed notification: ${errorMessage(error)}`,
+                )
+              }
+            })
+          }
+
+          if (client.capabilities?.resources?.listChanged) {
+            client.client.setNotificationHandler(ResourceListChangedNotificationSchema, async () => {
+              logMCPDebug(client.name, `Received resources/list_changed notification, refreshing resources`)
+              logEvent('tengu_mcp_list_changed', {
+                type: 'resources' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              })
+              try {
+                fetchResourcesForClient.cache.delete(client.name)
+                if (feature('MCP_SKILLS')) {
+                  // Skills are discovered from resources, so refresh them too.
+                  // Invalidate prompts cache as well: we write commands here,
+                  // and a concurrent prompts/list_changed could otherwise have
+                  // us stomp its fresh result with our cached stale one.
+                  fetchMcpSkillsForClient!.cache.delete(client.name)
                   fetchCommandsForClient.cache.delete(client.name)
-                  const [mcpPrompts, mcpSkills] = await Promise.all([
+                  const [newResources, mcpPrompts, mcpSkills] = await Promise.all([
+                    fetchResourcesForClient(client),
                     fetchCommandsForClient(client),
-                    feature('MCP_SKILLS')
-                      ? fetchMcpSkillsForClient!(client)
-                      : Promise.resolve([]),
+                    fetchMcpSkillsForClient!(client),
                   ])
                   updateServer({
                     ...client,
+                    resources: newResources,
                     commands: [...mcpPrompts, ...mcpSkills],
                   })
                   // MCP skills changed — invalidate skill-search index so
                   // next discovery rebuilds with the new set.
                   clearSkillIndexCache?.()
-                } catch (error) {
-                  logMCPError(
-                    client.name,
-                    `Failed to refresh prompts after list_changed notification: ${errorMessage(error)}`,
-                  )
+                } else {
+                  const newResources = await fetchResourcesForClient(client)
+                  updateServer({ ...client, resources: newResources })
                 }
-              },
-            )
-          }
-
-          if (client.capabilities?.resources?.listChanged) {
-            client.client.setNotificationHandler(
-              ResourceListChangedNotificationSchema,
-              async () => {
-                logMCPDebug(
+              } catch (error) {
+                logMCPError(
                   client.name,
-                  `Received resources/list_changed notification, refreshing resources`,
+                  `Failed to refresh resources after list_changed notification: ${errorMessage(error)}`,
                 )
-                logEvent('tengu_mcp_list_changed', {
-                  type: 'resources' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                })
-                try {
-                  fetchResourcesForClient.cache.delete(client.name)
-                  if (feature('MCP_SKILLS')) {
-                    // Skills are discovered from resources, so refresh them too.
-                    // Invalidate prompts cache as well: we write commands here,
-                    // and a concurrent prompts/list_changed could otherwise have
-                    // us stomp its fresh result with our cached stale one.
-                    fetchMcpSkillsForClient!.cache.delete(client.name)
-                    fetchCommandsForClient.cache.delete(client.name)
-                    const [newResources, mcpPrompts, mcpSkills] =
-                      await Promise.all([
-                        fetchResourcesForClient(client),
-                        fetchCommandsForClient(client),
-                        fetchMcpSkillsForClient!(client),
-                      ])
-                    updateServer({
-                      ...client,
-                      resources: newResources,
-                      commands: [...mcpPrompts, ...mcpSkills],
-                    })
-                    // MCP skills changed — invalidate skill-search index so
-                    // next discovery rebuilds with the new set.
-                    clearSkillIndexCache?.()
-                  } else {
-                    const newResources = await fetchResourcesForClient(client)
-                    updateServer({ ...client, resources: newResources })
-                  }
-                } catch (error) {
-                  logMCPError(
-                    client.name,
-                    `Failed to refresh resources after list_changed notification: ${errorMessage(error)}`,
-                  )
-                }
-              },
-            )
+              }
+            })
           }
           break
         }
@@ -779,15 +652,12 @@ export function useManageMCPConnections(
       // Add MCP errors to plugin errors for UI visibility (deduplicated)
       addErrorsToAppState(setAppState, mcpErrors)
 
-      setAppState(prevState => {
+      setAppState((prevState) => {
         // Disconnect MCP servers that are stale: plugin servers removed from
         // config, or any server whose config hash changed (edited .mcp.json).
         // Stale servers get re-added as 'pending' below since their name is
         // now absent from mcpWithoutStale.clients.
-        const { stale, ...mcpWithoutStale } = excludeStalePluginClients(
-          prevState.mcp,
-          configs,
-        )
+        const { stale, ...mcpWithoutStale } = excludeStalePluginClients(prevState.mcp, configs)
         // Clean up stale connections. Fire-and-forget — state updaters must
         // be synchronous. Three hazards to defuse before calling cleanup:
         //   1. Pending reconnect timer would fire with the OLD config.
@@ -811,16 +681,12 @@ export function useManageMCPConnections(
           }
         }
 
-        const existingServerNames = new Set(
-          mcpWithoutStale.clients.map(c => c.name),
-        )
+        const existingServerNames = new Set(mcpWithoutStale.clients.map((c) => c.name))
         const newClients = Object.entries(configs)
           .filter(([name]) => !existingServerNames.has(name))
           .map(([name, config]) => ({
             name,
-            type: isMcpServerDisabled(name)
-              ? ('disabled' as const)
-              : ('pending' as const),
+            type: isMcpServerDisabled(name) ? ('disabled' as const) : ('pending' as const),
             config,
           }))
 
@@ -839,19 +705,10 @@ export function useManageMCPConnections(
       })
     }
 
-    void initializeServersAsPending().catch(error => {
-      logMCPError(
-        'useManageMCPConnections',
-        `Failed to initialize servers as pending: ${errorMessage(error)}`,
-      )
+    void initializeServersAsPending().catch((error) => {
+      logMCPError('useManageMCPConnections', `Failed to initialize servers as pending: ${errorMessage(error)}`)
     })
-  }, [
-    isStrictMcpConfig,
-    dynamicMcpConfig,
-    setAppState,
-    sessionId,
-    _pluginReconnectKey,
-  ])
+  }, [isStrictMcpConfig, dynamicMcpConfig, setAppState, sessionId, _pluginReconnectKey])
 
   // Load MCP configs and connect to servers
   // Two-phase loading: Claude Code configs first (fast), then claude.ai configs (may be slow)
@@ -875,10 +732,9 @@ export function useManageMCPConnections(
       // Phase 1: Load Claude Code configs. Plugin MCP servers that duplicate a
       // --mcp-config entry or a claude.ai connector are suppressed here so they
       // don't connect alongside the connector in Phase 2.
-      const { servers: claudeCodeConfigs, errors: mcpErrors } =
-        isStrictMcpConfig
-          ? { servers: {}, errors: [] }
-          : await getClaudeCodeMcpConfigs(dynamicMcpConfig, claudeaiPromise)
+      const { servers: claudeCodeConfigs, errors: mcpErrors } = isStrictMcpConfig
+        ? { servers: {}, errors: [] }
+        : await getClaudeCodeMcpConfigs(dynamicMcpConfig, claudeaiPromise)
       if (cancelled) return
 
       // Add MCP errors to plugin errors for UI visibility (deduplicated)
@@ -888,51 +744,34 @@ export function useManageMCPConnections(
 
       // Start connecting to Claude Code servers (don't wait - runs concurrently with Phase 2)
       // Filter out disabled servers to avoid unnecessary connection attempts
-      const enabledConfigs = Object.fromEntries(
-        Object.entries(configs).filter(([name]) => !isMcpServerDisabled(name)),
-      )
-      getMcpToolsCommandsAndResources(
-        onConnectionAttempt,
-        enabledConfigs,
-      ).catch(error => {
-        logMCPError(
-          'useManageMcpConnections',
-          `Failed to get MCP resources: ${errorMessage(error)}`,
-        )
+      const enabledConfigs = Object.fromEntries(Object.entries(configs).filter(([name]) => !isMcpServerDisabled(name)))
+      getMcpToolsCommandsAndResources(onConnectionAttempt, enabledConfigs).catch((error) => {
+        logMCPError('useManageMcpConnections', `Failed to get MCP resources: ${errorMessage(error)}`)
       })
 
       // Phase 2: Await claude.ai configs (started above; memoized — no second fetch)
       let claudeaiConfigs: Record<string, ScopedMcpServerConfig> = {}
       if (!isStrictMcpConfig) {
-        claudeaiConfigs = filterMcpServersByPolicy(
-          await claudeaiPromise,
-        ).allowed
+        claudeaiConfigs = filterMcpServersByPolicy(await claudeaiPromise).allowed
         if (cancelled) return
 
         // Suppress claude.ai connectors that duplicate an enabled manual server.
         // Keys never collide (`slack` vs `claude.ai Slack`) so the merge below
         // won't catch this — need content-based dedup by URL signature.
         if (Object.keys(claudeaiConfigs).length > 0) {
-          const { servers: dedupedClaudeAi } = dedupClaudeAiMcpServers(
-            claudeaiConfigs,
-            configs,
-          )
+          const { servers: dedupedClaudeAi } = dedupClaudeAiMcpServers(claudeaiConfigs, configs)
           claudeaiConfigs = dedupedClaudeAi
         }
 
         if (Object.keys(claudeaiConfigs).length > 0) {
           // Add claude.ai servers as pending immediately so they show up in UI
-          setAppState(prevState => {
-            const existingServerNames = new Set(
-              prevState.mcp.clients.map(c => c.name),
-            )
+          setAppState((prevState) => {
+            const existingServerNames = new Set(prevState.mcp.clients.map((c) => c.name))
             const newClients = Object.entries(claudeaiConfigs)
               .filter(([name]) => !existingServerNames.has(name))
               .map(([name, config]) => ({
                 name,
-                type: isMcpServerDisabled(name)
-                  ? ('disabled' as const)
-                  : ('pending' as const),
+                type: isMcpServerDisabled(name) ? ('disabled' as const) : ('pending' as const),
                 config,
               }))
             if (newClients.length === 0) return prevState
@@ -947,18 +786,10 @@ export function useManageMCPConnections(
 
           // Now start connecting (only enabled servers)
           const enabledClaudeaiConfigs = Object.fromEntries(
-            Object.entries(claudeaiConfigs).filter(
-              ([name]) => !isMcpServerDisabled(name),
-            ),
+            Object.entries(claudeaiConfigs).filter(([name]) => !isMcpServerDisabled(name)),
           )
-          getMcpToolsCommandsAndResources(
-            onConnectionAttempt,
-            enabledClaudeaiConfigs,
-          ).catch(error => {
-            logMCPError(
-              'useManageMcpConnections',
-              `Failed to get claude.ai MCP resources: ${errorMessage(error)}`,
-            )
+          getMcpToolsCommandsAndResources(onConnectionAttempt, enabledClaudeaiConfigs).catch((error) => {
+            logMCPError('useManageMcpConnections', `Failed to get claude.ai MCP resources: ${errorMessage(error)}`)
           })
         }
       }
@@ -1000,9 +831,7 @@ export function useManageMCPConnections(
           ? {
               stdio_commands: stdioCommands
                 .sort()
-                .join(
-                  ',',
-                ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                .join(',') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
             }
           : {}),
       })
@@ -1045,9 +874,7 @@ export function useManageMCPConnections(
   // across client state transitions (no need to re-create on every connect).
   const reconnectMcpServer = useCallback(
     async (serverName: string) => {
-      const client = store
-        .getState()
-        .mcp.clients.find(c => c.name === serverName)
+      const client = store.getState().mcp.clients.find((c) => c.name === serverName)
       if (!client) {
         throw new Error(`MCP server ${serverName} not found`)
       }
@@ -1073,9 +900,7 @@ export function useManageMCPConnections(
   // Expose function to toggle server enabled/disabled state
   const toggleMcpServer = useCallback(
     async (serverName: string): Promise<void> => {
-      const client = store
-        .getState()
-        .mcp.clients.find(c => c.name === serverName)
+      const client = store.getState().mcp.clients.find((c) => c.name === serverName)
       if (!client) {
         throw new Error(`MCP server ${serverName} not found`)
       }

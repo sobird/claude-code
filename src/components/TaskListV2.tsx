@@ -1,14 +1,12 @@
 import figures from 'figures'
 import * as React from 'react'
+
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
-import { stringWidth } from '../ink/stringWidth.js'
 import { Box, Text } from '../ink.js'
+import { stringWidth } from '../ink/stringWidth.js'
 import { useAppState } from '../state/AppState.js'
 import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js'
-import {
-  AGENT_COLOR_TO_THEME_COLOR,
-  type AgentColorName,
-} from '../tools/AgentTool/agentColorManager.js'
+import { AGENT_COLOR_TO_THEME_COLOR, type AgentColorName } from '../tools/AgentTool/agentColorManager.js'
 import { isAgentSwarmsEnabled } from '../utils/agentSwarmsEnabled.js'
 import { count } from '../utils/array.js'
 import { summarizeRecentActivities } from '../utils/collapseReadSearch.js'
@@ -33,12 +31,9 @@ function byIdAsc(a: Task, b: Task): number {
   return a.id.localeCompare(b.id)
 }
 
-export function TaskListV2({
-  tasks,
-  isStandalone = false,
-}: Props): React.ReactNode {
-  const teamContext = useAppState(s => s.teamContext)
-  const appStateTasks = useAppState(s => s.tasks)
+export function TaskListV2({ tasks, isStandalone = false }: Props): React.ReactNode {
+  const teamContext = useAppState((s) => s.teamContext)
+  const appStateTasks = useAppState((s) => s.tasks)
   const [, forceUpdate] = React.useState(0)
   const { rows, columns } = useTerminalSize()
 
@@ -46,16 +41,12 @@ export function TaskListV2({
   const completionTimestampsRef = React.useRef(new Map<string, number>())
   const previousCompletedIdsRef = React.useRef<Set<string> | null>(null)
   if (previousCompletedIdsRef.current === null) {
-    previousCompletedIdsRef.current = new Set(
-      tasks.filter(t => t.status === 'completed').map(t => t.id),
-    )
+    previousCompletedIdsRef.current = new Set(tasks.filter((t) => t.status === 'completed').map((t) => t.id))
   }
   const maxDisplay = rows <= 10 ? 0 : Math.min(10, Math.max(3, rows - 14))
 
   // Update completion timestamps: reset when a task transitions to completed
-  const currentCompletedIds = new Set(
-    tasks.filter(t => t.status === 'completed').map(t => t.id),
-  )
+  const currentCompletedIds = new Set(tasks.filter((t) => t.status === 'completed').map((t) => t.id))
   const now = Date.now()
   for (const id of currentCompletedIds) {
     if (!previousCompletedIdsRef.current.has(id)) {
@@ -88,7 +79,7 @@ export function TaskListV2({
       return
     }
     const timer = setTimeout(
-      forceUpdate => forceUpdate((n: number) => n + 1),
+      (forceUpdate) => forceUpdate((n: number) => n + 1),
       earliestExpiry - currentNow,
       forceUpdate,
     )
@@ -108,8 +99,7 @@ export function TaskListV2({
   if (isAgentSwarmsEnabled() && teamContext?.teammates) {
     for (const teammate of Object.values(teamContext.teammates)) {
       if (teammate.color) {
-        const themeColor =
-          AGENT_COLOR_TO_THEME_COLOR[teammate.color as AgentColorName]
+        const themeColor = AGENT_COLOR_TO_THEME_COLOR[teammate.color as AgentColorName]
         if (themeColor) {
           teammateColors[teammate.name] = themeColor
         }
@@ -131,8 +121,7 @@ export function TaskListV2({
         activeTeammates.add(bgTask.identity.agentId)
         const activities = bgTask.progress?.recentActivities
         const desc =
-          (activities && summarizeRecentActivities(activities)) ??
-          bgTask.progress?.lastActivity?.activityDescription
+          (activities && summarizeRecentActivities(activities)) ?? bgTask.progress?.lastActivity?.activityDescription
         if (desc) {
           teammateActivity[bgTask.identity.agentName] = desc
           teammateActivity[bgTask.identity.agentId] = desc
@@ -142,13 +131,11 @@ export function TaskListV2({
   }
 
   // Get task counts for display
-  const completedCount = count(tasks, t => t.status === 'completed')
-  const pendingCount = count(tasks, t => t.status === 'pending')
+  const completedCount = count(tasks, (t) => t.status === 'completed')
+  const pendingCount = count(tasks, (t) => t.status === 'pending')
   const inProgressCount = tasks.length - completedCount - pendingCount
   // Unresolved tasks (open or in_progress) block dependent tasks
-  const unresolvedTaskIds = new Set(
-    tasks.filter(t => t.status !== 'completed').map(t => t.id),
-  )
+  const unresolvedTaskIds = new Set(tasks.filter((t) => t.status !== 'completed').map((t) => t.id))
 
   // Check if we need to truncate
   const needsTruncation = tasks.length > maxDisplay
@@ -160,7 +147,7 @@ export function TaskListV2({
     // Prioritize: recently completed (within 30s), in-progress, pending, older completed
     const recentCompleted: Task[] = []
     const olderCompleted: Task[] = []
-    for (const task of tasks.filter(t => t.status === 'completed')) {
+    for (const task of tasks.filter((t) => t.status === 'completed')) {
       const ts = completionTimestampsRef.current.get(task.id)
       if (ts && now - ts < RECENT_COMPLETED_TTL_MS) {
         recentCompleted.push(task)
@@ -170,26 +157,19 @@ export function TaskListV2({
     }
     recentCompleted.sort(byIdAsc)
     olderCompleted.sort(byIdAsc)
-    const inProgress = tasks
-      .filter(t => t.status === 'in_progress')
-      .sort(byIdAsc)
+    const inProgress = tasks.filter((t) => t.status === 'in_progress').sort(byIdAsc)
     const pending = tasks
-      .filter(t => t.status === 'pending')
+      .filter((t) => t.status === 'pending')
       .sort((a, b) => {
-        const aBlocked = a.blockedBy.some(id => unresolvedTaskIds.has(id))
-        const bBlocked = b.blockedBy.some(id => unresolvedTaskIds.has(id))
+        const aBlocked = a.blockedBy.some((id) => unresolvedTaskIds.has(id))
+        const bBlocked = b.blockedBy.some((id) => unresolvedTaskIds.has(id))
         if (aBlocked !== bBlocked) {
           return aBlocked ? 1 : -1
         }
         return byIdAsc(a, b)
       })
 
-    const prioritized = [
-      ...recentCompleted,
-      ...inProgress,
-      ...pending,
-      ...olderCompleted,
-    ]
+    const prioritized = [...recentCompleted, ...inProgress, ...pending, ...olderCompleted]
     visibleTasks = prioritized.slice(0, maxDisplay)
     hiddenTasks = prioritized.slice(maxDisplay)
   } else {
@@ -201,9 +181,9 @@ export function TaskListV2({
   let hiddenSummary = ''
   if (hiddenTasks.length > 0) {
     const parts: string[] = []
-    const hiddenPending = count(hiddenTasks, t => t.status === 'pending')
-    const hiddenInProgress = count(hiddenTasks, t => t.status === 'in_progress')
-    const hiddenCompleted = count(hiddenTasks, t => t.status === 'completed')
+    const hiddenPending = count(hiddenTasks, (t) => t.status === 'pending')
+    const hiddenInProgress = count(hiddenTasks, (t) => t.status === 'in_progress')
+    const hiddenCompleted = count(hiddenTasks, (t) => t.status === 'completed')
     if (hiddenInProgress > 0) {
       parts.push(`${hiddenInProgress} in progress`)
     }
@@ -218,12 +198,12 @@ export function TaskListV2({
 
   const content = (
     <>
-      {visibleTasks.map(task => (
+      {visibleTasks.map((task) => (
         <TaskItem
           key={task.id}
           task={task}
           ownerColor={task.owner ? teammateColors[task.owner] : undefined}
-          openBlockers={task.blockedBy.filter(id => unresolvedTaskIds.has(id))}
+          openBlockers={task.blockedBy.filter((id) => unresolvedTaskIds.has(id))}
           activity={task.owner ? teammateActivity[task.owner] : undefined}
           ownerActive={task.owner ? activeTeammates.has(task.owner) : false}
           columns={columns}
@@ -283,14 +263,7 @@ function getTaskIcon(status: Task['status']): {
   }
 }
 
-function TaskItem({
-  task,
-  ownerColor,
-  openBlockers,
-  activity,
-  ownerActive,
-  columns,
-}: TaskItemProps): React.ReactNode {
+function TaskItem({ task, ownerColor, openBlockers, activity, ownerActive, columns }: TaskItemProps): React.ReactNode {
   const isCompleted = task.status === 'completed'
   const isInProgress = task.status === 'in_progress'
   const isBlocked = openBlockers.length > 0
@@ -310,29 +283,19 @@ function TaskItem({
 
   // Truncate activity for narrow screens
   const maxActivityWidth = Math.max(15, columns - 15)
-  const displayActivity = activity
-    ? truncateToWidth(activity, maxActivityWidth)
-    : undefined
+  const displayActivity = activity ? truncateToWidth(activity, maxActivityWidth) : undefined
 
   return (
     <Box flexDirection="column">
       <Box>
         <Text color={color}>{icon} </Text>
-        <Text
-          bold={isInProgress}
-          strikethrough={isCompleted}
-          dimColor={isCompleted || isBlocked}
-        >
+        <Text bold={isInProgress} strikethrough={isCompleted} dimColor={isCompleted || isBlocked}>
           {displaySubject}
         </Text>
         {showOwner && (
           <Text dimColor>
             {' ('}
-            {ownerColor ? (
-              <ThemedText color={ownerColor}>@{task.owner}</ThemedText>
-            ) : (
-              `@${task.owner}`
-            )}
+            {ownerColor ? <ThemedText color={ownerColor}>@{task.owner}</ThemedText> : `@${task.owner}`}
             {')'}
           </Text>
         )}
@@ -342,7 +305,7 @@ function TaskItem({
             {figures.pointerSmall} blocked by{' '}
             {[...openBlockers]
               .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
-              .map(id => `#${id}`)
+              .map((id) => `#${id}`)
               .join(', ')}
           </Text>
         )}

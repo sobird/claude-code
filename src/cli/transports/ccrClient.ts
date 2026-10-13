@@ -1,31 +1,18 @@
 import { randomUUID } from 'crypto'
-import type {
-  SDKPartialAssistantMessage,
-  StdoutMessage,
-} from 'src/entrypoints/sdk/controlTypes.js'
+
+import type { SDKPartialAssistantMessage, StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
+
 import { decodeJwtExpiry } from '../../bridge/jwtUtils.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { logForDiagnosticsNoPII } from '../../utils/diagLogs.js'
 import { errorMessage, getErrnoCode } from '../../utils/errors.js'
 import { createAxiosInstance } from '../../utils/proxy.js'
-import {
-  registerSessionActivityCallback,
-  unregisterSessionActivityCallback,
-} from '../../utils/sessionActivity.js'
-import {
-  getSessionIngressAuthHeaders,
-  getSessionIngressAuthToken,
-} from '../../utils/sessionIngressAuth.js'
-import type {
-  RequiresActionDetails,
-  SessionState,
-} from '../../utils/sessionState.js'
+import { registerSessionActivityCallback, unregisterSessionActivityCallback } from '../../utils/sessionActivity.js'
+import { getSessionIngressAuthHeaders, getSessionIngressAuthToken } from '../../utils/sessionIngressAuth.js'
+import type { RequiresActionDetails, SessionState } from '../../utils/sessionState.js'
 import { sleep } from '../../utils/sleep.js'
 import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
-import {
-  RetryableError,
-  SerialBatchEventUploader,
-} from './SerialBatchEventUploader.js'
+import { RetryableError, SerialBatchEventUploader } from './SerialBatchEventUploader.js'
 import type { SSETransport, StreamClientEvent } from './SSETransport.js'
 import { WorkerStateUploader } from './WorkerStateUploader.js'
 
@@ -46,10 +33,7 @@ function alwaysValidStatus(): boolean {
   return true
 }
 
-export type CCRInitFailReason =
-  | 'no_auth_headers'
-  | 'missing_epoch'
-  | 'worker_register_failed'
+export type CCRInitFailReason = 'no_auth_headers' | 'missing_epoch' | 'worker_register_failed'
 
 /** Thrown by initialize(); carries a typed reason for the diag classifier. */
 export class CCRInitError extends Error {
@@ -117,10 +101,7 @@ export function createStreamAccumulator(): StreamAccumulatorState {
   return { byMessage: new Map(), scopeToMessage: new Map() }
 }
 
-function scopeKey(m: {
-  session_id: string
-  parent_tool_use_id: string | null
-}): string {
+function scopeKey(m: { session_id: string; parent_tool_use_id: string | null }): string {
   return `${m.session_id}:${m.parent_tool_use_id ?? ''}`
 }
 
@@ -328,15 +309,12 @@ export class CCRClient {
         // eslint-disable-next-line custom-rules/no-process-exit
         process.exit(1)
       })
-    this.heartbeatIntervalMs =
-      opts?.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS
+    this.heartbeatIntervalMs = opts?.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS
     this.heartbeatJitterFraction = opts?.heartbeatJitterFraction ?? 0
     this.getAuthHeaders = opts?.getAuthHeaders ?? getSessionIngressAuthHeaders
     // Session URL: https://host/v1/code/sessions/{id}
     if (sessionUrl.protocol !== 'http:' && sessionUrl.protocol !== 'https:') {
-      throw new Error(
-        `CCRClient: Expected http(s) URL, got ${sessionUrl.protocol}`,
-      )
+      throw new Error(`CCRClient: Expected http(s) URL, got ${sessionUrl.protocol}`)
     }
     const pathname = sessionUrl.pathname.replace(/\/$/, '')
     this.sessionBaseUrl = `${sessionUrl.protocol}//${sessionUrl.host}${pathname}`
@@ -344,13 +322,8 @@ export class CCRClient {
     this.sessionId = pathname.split('/').pop() || ''
 
     this.workerState = new WorkerStateUploader({
-      send: body =>
-        this.request(
-          'put',
-          '/worker',
-          { worker_epoch: this.workerEpoch, ...body },
-          'PUT worker',
-        ).then(r => r.ok),
+      send: (body) =>
+        this.request('put', '/worker', { worker_epoch: this.workerEpoch, ...body }, 'PUT worker').then((r) => r.ok),
       baseDelayMs: 500,
       maxDelayMs: 30_000,
       jitterMs: 500,
@@ -365,7 +338,7 @@ export class CCRClient {
       // on the SerialBatchEventUploader backpressure check. Match
       // HybridTransport's bound — high enough to be memory-only.
       maxQueueSize: 100_000,
-      send: async batch => {
+      send: async (batch) => {
         const result = await this.request(
           'post',
           '/worker/events',
@@ -373,10 +346,7 @@ export class CCRClient {
           'client events',
         )
         if (!result.ok) {
-          throw new RetryableError(
-            'client event POST failed',
-            result.retryAfterMs,
-          )
+          throw new RetryableError('client event POST failed', result.retryAfterMs)
         }
       },
       baseDelayMs: 500,
@@ -388,7 +358,7 @@ export class CCRClient {
       maxBatchSize: 100,
       maxBatchBytes: 10 * 1024 * 1024,
       maxQueueSize: 200,
-      send: async batch => {
+      send: async (batch) => {
         const result = await this.request(
           'post',
           '/worker/internal-events',
@@ -396,10 +366,7 @@ export class CCRClient {
           'internal events',
         )
         if (!result.ok) {
-          throw new RetryableError(
-            'internal event POST failed',
-            result.retryAfterMs,
-          )
+          throw new RetryableError('internal event POST failed', result.retryAfterMs)
         }
       },
       baseDelayMs: 500,
@@ -413,13 +380,13 @@ export class CCRClient {
     }>({
       maxBatchSize: 64,
       maxQueueSize: 64,
-      send: async batch => {
+      send: async (batch) => {
         const result = await this.request(
           'post',
           '/worker/events/delivery',
           {
             worker_epoch: this.workerEpoch,
-            updates: batch.map(d => ({
+            updates: batch.map((d) => ({
               event_id: d.eventId,
               status: d.status,
             })),
@@ -564,20 +531,16 @@ export class CCRClient {
     if (Object.keys(authHeaders).length === 0) return { ok: false }
 
     try {
-      const response = await this.http[method](
-        `${this.sessionBaseUrl}${path}`,
-        body,
-        {
-          headers: {
-            ...authHeaders,
-            'Content-Type': 'application/json',
-            'anthropic-version': '2023-06-01',
-            'User-Agent': getClaudeCodeUserAgent(),
-          },
-          validateStatus: alwaysValidStatus,
-          timeout,
+      const response = await this.http[method](`${this.sessionBaseUrl}${path}`, body, {
+        headers: {
+          ...authHeaders,
+          'Content-Type': 'application/json',
+          'anthropic-version': '2023-06-01',
+          'User-Agent': getClaudeCodeUserAgent(),
         },
-      )
+        validateStatus: alwaysValidStatus,
+        timeout,
+      })
 
       if (response.status >= 200 && response.status < 300) {
         this.consecutiveAuthFailures = 0
@@ -678,10 +641,7 @@ export class CCRClient {
   private startHeartbeat(): void {
     this.stopHeartbeat()
     const schedule = (): void => {
-      const jitter =
-        this.heartbeatIntervalMs *
-        this.heartbeatJitterFraction *
-        (2 * Math.random() - 1)
+      const jitter = this.heartbeatIntervalMs * this.heartbeatJitterFraction * (2 * Math.random() - 1)
       this.heartbeatTimer = setTimeout(tick, this.heartbeatIntervalMs + jitter)
     }
     const tick = (): void => {
@@ -736,10 +696,7 @@ export class CCRClient {
     if (message.type === 'stream_event') {
       this.streamEventBuffer.push(message)
       if (!this.streamEventTimer) {
-        this.streamEventTimer = setTimeout(
-          () => void this.flushStreamEventBuffer(),
-          STREAM_EVENT_FLUSH_INTERVAL_MS,
-        )
+        this.streamEventTimer = setTimeout(() => void this.flushStreamEventBuffer(), STREAM_EVENT_FLUSH_INTERVAL_MS)
       }
       return
     }
@@ -776,13 +733,8 @@ export class CCRClient {
     if (this.streamEventBuffer.length === 0) return
     const buffered = this.streamEventBuffer
     this.streamEventBuffer = []
-    const payloads = accumulateStreamEvents(
-      buffered,
-      this.streamTextAccumulator,
-    )
-    await this.eventUploader.enqueue(
-      payloads.map(payload => ({ payload, ephemeral: true })),
-    )
+    const payloads = accumulateStreamEvents(buffered, this.streamTextAccumulator)
+    await this.eventUploader.enqueue(payloads.map((payload) => ({ payload, ephemeral: true })))
   }
 
   /**
@@ -850,11 +802,7 @@ export class CCRClient {
    * compaction point. Used for session resume.
    */
   async readSubagentInternalEvents(): Promise<InternalEvent[] | null> {
-    return this.paginatedGet(
-      '/worker/internal-events',
-      { subagents: 'true' },
-      'subagent_events',
-    )
+    return this.paginatedGet('/worker/internal-events', { subagents: 'true' }, 'subagent_events')
   }
 
   /**
@@ -881,11 +829,7 @@ export class CCRClient {
         url.searchParams.set('cursor', cursor)
       }
 
-      const page = await this.getWithRetry<ListInternalEventsResponse>(
-        url.toString(),
-        authHeaders,
-        context,
-      )
+      const page = await this.getWithRetry<ListInternalEventsResponse>(url.toString(), authHeaders, context)
       if (!page) return null
 
       allEvents.push(...(page.data ?? []))
@@ -902,11 +846,7 @@ export class CCRClient {
    * Single GET request with retry. Returns the parsed response body
    * on success, null if all retries are exhausted.
    */
-  private async getWithRetry<T>(
-    url: string,
-    authHeaders: Record<string, string>,
-    context: string,
-  ): Promise<T | null> {
+  private async getWithRetry<T>(url: string, authHeaders: Record<string, string>, context: string): Promise<T | null> {
     for (let attempt = 1; attempt <= 10; attempt++) {
       let response
       try {
@@ -920,13 +860,11 @@ export class CCRClient {
           timeout: 30_000,
         })
       } catch (error) {
-        logForDebugging(
-          `CCRClient: GET ${url} failed (attempt ${attempt}/10): ${errorMessage(error)}`,
-          { level: 'warn' },
-        )
+        logForDebugging(`CCRClient: GET ${url} failed (attempt ${attempt}/10): ${errorMessage(error)}`, {
+          level: 'warn',
+        })
         if (attempt < 10) {
-          const delay =
-            Math.min(500 * 2 ** (attempt - 1), 30_000) + Math.random() * 500
+          const delay = Math.min(500 * 2 ** (attempt - 1), 30_000) + Math.random() * 500
           await sleep(delay)
         }
         continue
@@ -938,14 +876,10 @@ export class CCRClient {
       if (response.status === 409) {
         this.handleEpochMismatch()
       }
-      logForDebugging(
-        `CCRClient: GET ${url} returned ${response.status} (attempt ${attempt}/10)`,
-        { level: 'warn' },
-      )
+      logForDebugging(`CCRClient: GET ${url} returned ${response.status} (attempt ${attempt}/10)`, { level: 'warn' })
 
       if (attempt < 10) {
-        const delay =
-          Math.min(500 * 2 ** (attempt - 1), 30_000) + Math.random() * 500
+        const delay = Math.min(500 * 2 ** (attempt - 1), 30_000) + Math.random() * 500
         await sleep(delay)
       }
     }
@@ -961,10 +895,7 @@ export class CCRClient {
    * Report delivery status for a client-to-worker event.
    * POST /v1/code/sessions/{id}/worker/events/delivery (batch endpoint)
    */
-  reportDelivery(
-    eventId: string,
-    status: 'received' | 'processing' | 'processed',
-  ): void {
+  reportDelivery(eventId: string, status: 'received' | 'processing' | 'processed'): void {
     void this.deliveryUploader.enqueue({ eventId, status })
   }
 

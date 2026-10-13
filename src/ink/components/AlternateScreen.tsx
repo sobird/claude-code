@@ -1,15 +1,7 @@
-import React, {
-  type PropsWithChildren,
-  useContext,
-  useInsertionEffect,
-} from 'react'
+import React, { type PropsWithChildren, useContext, useInsertionEffect } from 'react'
+
 import instances from '../instances.js'
-import {
-  DISABLE_MOUSE_TRACKING,
-  ENABLE_MOUSE_TRACKING,
-  ENTER_ALT_SCREEN,
-  EXIT_ALT_SCREEN,
-} from '../termio/dec.js'
+import { DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCREEN, EXIT_ALT_SCREEN } from '../termio/dec.js'
 import { TerminalWriteContext } from '../useTerminalNotification.js'
 import Box from './Box.js'
 import { TerminalSizeContext } from './TerminalSizeContext.js'
@@ -39,10 +31,7 @@ type Props = PropsWithChildren<{
  * from scrolling content) and so signal-exit cleanup can exit the alt
  * screen if the component's own unmount doesn't run.
  */
-export function AlternateScreen({
-  children,
-  mouseTracking = true,
-}: Props): React.ReactNode {
+export function AlternateScreen({ children, mouseTracking = true }: Props): React.ReactNode {
   const size = useContext(TerminalSizeContext)
   const writeRaw = useContext(TerminalWriteContext)
 
@@ -60,11 +49,7 @@ export function AlternateScreen({
     const ink = instances.get(process.stdout)
     if (!writeRaw) return
 
-    writeRaw(
-      ENTER_ALT_SCREEN +
-        '\x1b[2J\x1b[H' +
-        (mouseTracking ? ENABLE_MOUSE_TRACKING : ''),
-    )
+    writeRaw(ENTER_ALT_SCREEN + '\x1b[2J\x1b[H' + (mouseTracking ? ENABLE_MOUSE_TRACKING : ''))
     ink?.setAltScreenActive(true, mouseTracking)
 
     return () => {
@@ -75,12 +60,7 @@ export function AlternateScreen({
   }, [writeRaw, mouseTracking])
 
   return (
-    <Box
-      flexDirection="column"
-      height={size?.rows ?? 24}
-      width="100%"
-      flexShrink={0}
-    >
+    <Box flexDirection="column" height={size?.rows ?? 24} width="100%" flexShrink={0}>
       {children}
     </Box>
   )

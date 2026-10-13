@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Link, Text } from '../ink.js'
 import type { PrReviewState } from '../utils/ghPrStatus.js'
 
@@ -9,12 +10,7 @@ type Props = {
   bold?: boolean
 }
 
-export function PrBadge({
-  number,
-  url,
-  reviewState,
-  bold,
-}: Props): React.ReactNode {
+export function PrBadge({ number, url, reviewState, bold }: Props): React.ReactNode {
   const statusColor = getPrStatusColor(reviewState)
   const label = (
     <Text color={statusColor} dimColor={!statusColor && !bold} bold={bold}>
@@ -25,12 +21,7 @@ export function PrBadge({
     <Text>
       <Text dimColor={!bold}>PR</Text>{' '}
       <Link url={url} fallback={label}>
-        <Text
-          color={statusColor}
-          dimColor={!statusColor && !bold}
-          underline
-          bold={bold}
-        >
+        <Text color={statusColor} dimColor={!statusColor && !bold} underline bold={bold}>
           #{number}
         </Text>
       </Link>
@@ -38,9 +29,7 @@ export function PrBadge({
   )
 }
 
-function getPrStatusColor(
-  state?: PrReviewState,
-): 'success' | 'error' | 'warning' | 'merged' | undefined {
+function getPrStatusColor(state?: PrReviewState): 'success' | 'error' | 'warning' | 'merged' | undefined {
   switch (state) {
     case 'approved':
       return 'success'

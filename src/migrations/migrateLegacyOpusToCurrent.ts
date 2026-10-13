@@ -5,10 +5,7 @@ import {
 import { saveGlobalConfig } from '../utils/config.js'
 import { isLegacyModelRemapEnabled } from '../utils/model/model.js'
 import { getAPIProvider } from '../utils/model/providers.js'
-import {
-  getSettingsForSource,
-  updateSettingsForSource,
-} from '../utils/settings/settings.js'
+import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings.js'
 
 /**
  * Migrate first-party users off explicit Opus 4.0/4.1 model strings.
@@ -46,12 +43,11 @@ export function migrateLegacyOpusToCurrent(): void {
   }
 
   updateSettingsForSource('userSettings', { model: 'opus' })
-  saveGlobalConfig(current => ({
+  saveGlobalConfig((current) => ({
     ...current,
     legacyOpusMigrationTimestamp: Date.now(),
   }))
   logEvent('tengu_legacy_opus_migration', {
-    from_model:
-      model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    from_model: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 }

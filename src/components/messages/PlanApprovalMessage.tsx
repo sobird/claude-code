@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Markdown } from '../../components/Markdown.js'
 import { Box, Text } from '../../ink.js'
 import { jsonParse } from '../../utils/slowOperations.js'
@@ -21,17 +22,10 @@ type PlanApprovalRequestProps = {
  * Renders a plan approval request with a planMode-colored border,
  * showing the plan content and instructions for approving/rejecting.
  */
-export function PlanApprovalRequestDisplay({
-  request,
-}: PlanApprovalRequestProps): React.ReactNode {
+export function PlanApprovalRequestDisplay({ request }: PlanApprovalRequestProps): React.ReactNode {
   return (
     <Box flexDirection="column" marginY={1}>
-      <Box
-        borderStyle="round"
-        borderColor="planMode"
-        flexDirection="column"
-        paddingX={1}
-      >
+      <Box borderStyle="round" borderColor="planMode" flexDirection="column" paddingX={1}>
         <Box marginBottom={1}>
           <Text color="planMode" bold>
             Plan Approval Request from {request.from}
@@ -62,30 +56,18 @@ type PlanApprovalResponseProps = {
 /**
  * Renders a plan approval response with a success (green) or error (red) border.
  */
-export function PlanApprovalResponseDisplay({
-  response,
-  senderName,
-}: PlanApprovalResponseProps): React.ReactNode {
+export function PlanApprovalResponseDisplay({ response, senderName }: PlanApprovalResponseProps): React.ReactNode {
   if (response.approved) {
     return (
       <Box flexDirection="column" marginY={1}>
-        <Box
-          borderStyle="round"
-          borderColor="success"
-          flexDirection="column"
-          paddingX={1}
-          paddingY={1}
-        >
+        <Box borderStyle="round" borderColor="success" flexDirection="column" paddingX={1} paddingY={1}>
           <Box>
             <Text color="success" bold>
               ✓ Plan Approved by {senderName}
             </Text>
           </Box>
           <Box marginTop={1}>
-            <Text>
-              You can now proceed with implementation. Your plan mode
-              restrictions have been lifted.
-            </Text>
+            <Text>You can now proceed with implementation. Your plan mode restrictions have been lifted.</Text>
           </Box>
         </Box>
       </Box>
@@ -94,13 +76,7 @@ export function PlanApprovalResponseDisplay({
 
   return (
     <Box flexDirection="column" marginY={1}>
-      <Box
-        borderStyle="round"
-        borderColor="error"
-        flexDirection="column"
-        paddingX={1}
-        paddingY={1}
-      >
+      <Box borderStyle="round" borderColor="error" flexDirection="column" paddingX={1} paddingY={1}>
         <Box>
           <Text color="error" bold>
             ✗ Plan Rejected by {senderName}
@@ -119,10 +95,7 @@ export function PlanApprovalResponseDisplay({
           </Box>
         )}
         <Box marginTop={1}>
-          <Text dimColor>
-            Please revise your plan based on the feedback and call ExitPlanMode
-            again.
-          </Text>
+          <Text dimColor>Please revise your plan based on the feedback and call ExitPlanMode again.</Text>
         </Box>
       </Box>
     </Box>
@@ -133,10 +106,7 @@ export function PlanApprovalResponseDisplay({
  * Try to parse and render a plan approval message from raw content.
  * Returns the rendered component if it's a plan approval message, null otherwise.
  */
-export function tryRenderPlanApprovalMessage(
-  content: string,
-  senderName: string,
-): React.ReactNode | null {
+export function tryRenderPlanApprovalMessage(content: string, senderName: string): React.ReactNode | null {
   const request = isPlanApprovalRequest(content)
   if (request) {
     return <PlanApprovalRequestDisplay request={request} />
@@ -144,12 +114,7 @@ export function tryRenderPlanApprovalMessage(
 
   const response = isPlanApprovalResponse(content)
   if (response) {
-    return (
-      <PlanApprovalResponseDisplay
-        response={response}
-        senderName={senderName}
-      />
-    )
+    return <PlanApprovalResponseDisplay response={response} senderName={senderName} />
   }
 
   return null

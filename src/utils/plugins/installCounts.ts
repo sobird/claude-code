@@ -8,10 +8,12 @@
  * Cache location: ~/.claude/plugins/install-counts-cache.json
  */
 
-import axios from 'axios'
 import { randomBytes } from 'crypto'
 import { readFile, rename, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
+
+import axios from 'axios'
+
 import { logForDebugging } from '../debug.js'
 import { errorMessage, getErrnoCode } from '../errors.js'
 import { getFsImplementation } from '../fsOperations.js'
@@ -134,9 +136,7 @@ async function loadInstallCountsCache(): Promise<InstallCountsCache | null> {
   } catch (error) {
     const code = getErrnoCode(error)
     if (code !== 'ENOENT') {
-      logForDebugging(
-        `Failed to load install counts cache: ${errorMessage(error)}`,
-      )
+      logForDebugging(`Failed to load install counts cache: ${errorMessage(error)}`)
     }
     return null
   }
@@ -146,9 +146,7 @@ async function loadInstallCountsCache(): Promise<InstallCountsCache | null> {
  * Save the install counts cache to disk atomically.
  * Uses a temp file + rename pattern to prevent corruption.
  */
-async function saveInstallCountsCache(
-  cache: InstallCountsCache,
-): Promise<void> {
+async function saveInstallCountsCache(cache: InstallCountsCache): Promise<void> {
   const cachePath = getInstallCountsCachePath()
   const tempPath = `${cachePath}.${randomBytes(8).toString('hex')}.tmp`
 
@@ -181,9 +179,7 @@ async function saveInstallCountsCache(
 /**
  * Fetch install counts from GitHub stats repository
  */
-async function fetchInstallCountsFromGitHub(): Promise<
-  Array<{ plugin: string; unique_installs: number }>
-> {
+async function fetchInstallCountsFromGitHub(): Promise<Array<{ plugin: string; unique_installs: number }>> {
   logForDebugging(`Fetching install counts from ${INSTALL_COUNTS_URL}`)
 
   const started = performance.now()
@@ -196,12 +192,7 @@ async function fetchInstallCountsFromGitHub(): Promise<
       throw new Error('Invalid response format from install counts API')
     }
 
-    logPluginFetch(
-      'install_counts',
-      INSTALL_COUNTS_URL,
-      'success',
-      performance.now() - started,
-    )
+    logPluginFetch('install_counts', INSTALL_COUNTS_URL, 'success', performance.now() - started)
     return response.data.plugins
   } catch (error) {
     logPluginFetch(
@@ -279,14 +270,10 @@ export function formatInstallCount(count: number): string {
     const k = count / 1000
     // Use toFixed(1) but remove trailing .0
     const formatted = k.toFixed(1)
-    return formatted.endsWith('.0')
-      ? `${formatted.slice(0, -2)}K`
-      : `${formatted}K`
+    return formatted.endsWith('.0') ? `${formatted.slice(0, -2)}K` : `${formatted}K`
   }
 
   const m = count / 1000000
   const formatted = m.toFixed(1)
-  return formatted.endsWith('.0')
-    ? `${formatted.slice(0, -2)}M`
-    : `${formatted}M`
+  return formatted.endsWith('.0') ? `${formatted.slice(0, -2)}M` : `${formatted}M`
 }

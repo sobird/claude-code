@@ -1,5 +1,6 @@
-import { LRUCache } from 'lru-cache'
 import { normalize } from 'path'
+
+import { LRUCache } from 'lru-cache'
 
 export type FileState = {
   content: string
@@ -34,7 +35,7 @@ export class FileStateCache {
     this.cache = new LRUCache<string, FileState>({
       max: maxEntries,
       maxSize: maxSizeBytes,
-      sizeCalculation: value => Math.max(1, Buffer.byteLength(value.content)),
+      sizeCalculation: (value) => Math.max(1, Buffer.byteLength(value.content)),
     })
   }
 
@@ -106,9 +107,7 @@ export function createFileStateCacheWithSizeLimit(
 }
 
 // Helper function to convert cache to object (used by compact.ts)
-export function cacheToObject(
-  cache: FileStateCache,
-): Record<string, FileState> {
+export function cacheToObject(cache: FileStateCache): Record<string, FileState> {
   return Object.fromEntries(cache.entries())
 }
 
@@ -126,10 +125,7 @@ export function cloneFileStateCache(cache: FileStateCache): FileStateCache {
 }
 
 // Merge two file state caches, with more recent entries (by timestamp) overriding older ones
-export function mergeFileStateCaches(
-  first: FileStateCache,
-  second: FileStateCache,
-): FileStateCache {
+export function mergeFileStateCaches(first: FileStateCache, second: FileStateCache): FileStateCache {
   const merged = cloneFileStateCache(first)
   for (const [filePath, fileState] of second.entries()) {
     const existing = merged.get(filePath)

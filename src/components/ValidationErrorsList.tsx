@@ -1,5 +1,6 @@
 import setWith from 'lodash-es/setWith.js'
 import * as React from 'react'
+
 import { Box, Text, useTheme } from '../ink.js'
 import type { ValidationError } from '../utils/settings/validation.js'
 import { type TreeNode, treeify } from '../utils/treeify.js'
@@ -11,7 +12,7 @@ import { type TreeNode, treeify } from '../utils/treeify.js'
 function buildNestedTree(errors: ValidationError[]): TreeNode {
   const tree: TreeNode = {}
 
-  errors.forEach(error => {
+  errors.forEach((error) => {
     if (!error.path) {
       // Root level error - use empty string as key
       tree[''] = error.message
@@ -23,11 +24,7 @@ function buildNestedTree(errors: ValidationError[]): TreeNode {
     let modifiedPath = error.path
 
     // If we have an invalid value, try to make the path more readable
-    if (
-      error.invalidValue !== null &&
-      error.invalidValue !== undefined &&
-      pathParts.length > 0
-    ) {
+    if (error.invalidValue !== null && error.invalidValue !== undefined && pathParts.length > 0) {
       const newPathParts: string[] = []
 
       for (let i = 0; i < pathParts.length; i++) {
@@ -69,11 +66,7 @@ function buildNestedTree(errors: ValidationError[]): TreeNode {
 /**
  * Groups and displays validation errors using treeify with deduplication
  */
-export function ValidationErrorsList({
-  errors,
-}: {
-  errors: ValidationError[]
-}): React.ReactNode {
+export function ValidationErrorsList({ errors }: { errors: ValidationError[] }): React.ReactNode {
   const [themeName] = useTheme()
 
   if (errors.length === 0) {
@@ -81,24 +74,21 @@ export function ValidationErrorsList({
   }
 
   // Group errors by file
-  const errorsByFile = errors.reduce<Record<string, ValidationError[]>>(
-    (acc, error) => {
-      const file = error.file || '(file not specified)'
-      if (!acc[file]) {
-        acc[file] = []
-      }
-      acc[file]!.push(error)
-      return acc
-    },
-    {},
-  )
+  const errorsByFile = errors.reduce<Record<string, ValidationError[]>>((acc, error) => {
+    const file = error.file || '(file not specified)'
+    if (!acc[file]) {
+      acc[file] = []
+    }
+    acc[file]!.push(error)
+    return acc
+  }, {})
 
   // Sort files alphabetically
   const sortedFiles = Object.keys(errorsByFile).sort()
 
   return (
     <Box flexDirection="column">
-      {sortedFiles.map(file => {
+      {sortedFiles.map((file) => {
         const fileErrors = errorsByFile[file] || []
 
         // Sort errors by path
@@ -112,12 +102,9 @@ export function ValidationErrorsList({
         const errorTree = buildNestedTree(fileErrors)
 
         // Collect unique suggestion+docLink pairs
-        const suggestionPairs = new Map<
-          string,
-          { suggestion?: string; docLink?: string }
-        >()
+        const suggestionPairs = new Map<string, { suggestion?: string; docLink?: string }>()
 
-        fileErrors.forEach(error => {
+        fileErrors.forEach((error) => {
           if (error.suggestion || error.docLink) {
             // Create a key from suggestion+docLink combination
             const key = `${error.suggestion || ''}|${error.docLink || ''}`
@@ -151,11 +138,7 @@ export function ValidationErrorsList({
             {suggestionPairs.size > 0 && (
               <Box flexDirection="column" marginTop={1}>
                 {Array.from(suggestionPairs.values()).map((pair, index) => (
-                  <Box
-                    key={`suggestion-pair-${index}`}
-                    flexDirection="column"
-                    marginBottom={1}
-                  >
+                  <Box key={`suggestion-pair-${index}`} flexDirection="column" marginBottom={1}>
                     {pair.suggestion && (
                       <Text dimColor wrap="wrap">
                         {pair.suggestion}

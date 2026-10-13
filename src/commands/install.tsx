@@ -1,8 +1,10 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+
 import React, { useEffect, useState } from 'react'
 import type { CommandResultDisplay } from 'src/commands.js'
 import { logEvent } from 'src/services/analytics/index.js'
+
 import { StatusIcon } from '../components/design-system/StatusIcon.js'
 import { Box, render, Text } from '../ink.js'
 import { logForDebugging } from '../utils/debug.js'
@@ -14,10 +16,7 @@ import {
   cleanupShellAliases,
   installLatest,
 } from '../utils/nativeInstaller/index.js'
-import {
-  getInitialSettings,
-  updateSettingsForSource,
-} from '../utils/settings/settings.js'
+import { getInitialSettings, updateSettingsForSource } from '../utils/settings/settings.js'
 
 interface InstallProps {
   onDone: (result: string, options?: { display?: CommandResultDisplay }) => void
@@ -74,19 +73,14 @@ function Install({ onDone, force, target }: InstallProps): React.ReactNode {
   useEffect(() => {
     async function run() {
       try {
-        logForDebugging(
-          `Install: Starting installation process (force=${force}, target=${target})`,
-        )
+        logForDebugging(`Install: Starting installation process (force=${force}, target=${target})`)
 
         // Install native build first
-        const channelOrVersion =
-          target || getInitialSettings()?.autoUpdatesChannel || 'latest'
+        const channelOrVersion = target || getInitialSettings()?.autoUpdatesChannel || 'latest'
         setState({ type: 'installing', version: channelOrVersion })
 
         // Pass force flag to trigger reinstall even if up to date
-        logForDebugging(
-          `Install: Calling installLatest(channelOrVersion=${channelOrVersion}, forceReinstall=${force})`,
-        )
+        logForDebugging(`Install: Calling installLatest(channelOrVersion=${channelOrVersion}, forceReinstall=${force})`)
         const result = await installLatest(channelOrVersion, force)
         logForDebugging(
           `Install: installLatest returned version=${result.latestVersion}, wasUpdated=${result.wasUpdated}, lockFailed=${result.lockFailed}`,
@@ -101,10 +95,7 @@ function Install({ onDone, force, target }: InstallProps): React.ReactNode {
 
         // If we couldn't get the version, there might be an issue
         if (!result.latestVersion) {
-          logForDebugging(
-            'Install: Failed to retrieve version information during install',
-            { level: 'error' },
-          )
+          logForDebugging('Install: Failed to retrieve version information during install', { level: 'error' })
         }
 
         if (!result.wasUpdated) {
@@ -115,19 +106,13 @@ function Install({ onDone, force, target }: InstallProps): React.ReactNode {
         setState({ type: 'setting-up' })
         const setupMessages = await checkInstall(true)
 
-        logForDebugging(
-          `Install: Setup launcher completed with ${setupMessages.length} messages`,
-        )
+        logForDebugging(`Install: Setup launcher completed with ${setupMessages.length} messages`)
         if (setupMessages.length > 0) {
-          setupMessages.forEach(msg =>
-            logForDebugging(`Install: Setup message: ${msg.message}`),
-          )
+          setupMessages.forEach((msg) => logForDebugging(`Install: Setup message: ${msg.message}`))
         }
 
         // Now that native installation succeeded, clean up old npm installations
-        logForDebugging(
-          'Install: Cleaning up npm installations after successful install',
-        )
+        logForDebugging('Install: Cleaning up npm installations after successful install')
         const { removed, errors, warnings } = await cleanupNpmInstallations()
 
         if (removed > 0) {
@@ -142,9 +127,7 @@ function Install({ onDone, force, target }: InstallProps): React.ReactNode {
         // Clean up old shell aliases
         const aliasMessages = await cleanupShellAliases()
         if (aliasMessages.length > 0) {
-          logForDebugging(
-            `Shell alias cleanup: ${aliasMessages.map(m => m.message).join('; ')}`,
-          )
+          logForDebugging(`Shell alias cleanup: ${aliasMessages.map((m) => m.message).join('; ')}`)
         }
 
         // Log success event
@@ -158,28 +141,23 @@ function Install({ onDone, force, target }: InstallProps): React.ReactNode {
           updateSettingsForSource('userSettings', {
             autoUpdatesChannel: target,
           })
-          logForDebugging(
-            `Install: Saved autoUpdatesChannel=${target} to user settings`,
-          )
+          logForDebugging(`Install: Saved autoUpdatesChannel=${target} to user settings`)
         }
 
         // Combine all warning/info messages (convert SetupMessage to string)
-        const allWarnings = [...warnings, ...aliasMessages.map(m => m.message)]
+        const allWarnings = [...warnings, ...aliasMessages.map((m) => m.message)]
 
         // Check if there were any setup errors or notes
         if (setupMessages.length > 0) {
           setState({
             type: 'set-up',
-            messages: setupMessages.map(m => m.message),
+            messages: setupMessages.map((m) => m.message),
           })
           // Still mark as success but show both setup messages and cleanup warnings
           setTimeout(setState, 2000, {
             type: 'success' as const,
             version: result.latestVersion || 'current',
-            setupMessages: [
-              ...setupMessages.map(m => m.message),
-              ...allWarnings,
-            ],
+            setupMessages: [...setupMessages.map((m) => m.message), ...allWarnings],
           })
         } else {
           // No setup messages, go straight to success (but still show cleanup warnings if any)
@@ -207,14 +185,9 @@ function Install({ onDone, force, target }: InstallProps): React.ReactNode {
   useEffect(() => {
     if (state.type === 'success') {
       // Give success message time to render before exiting
-      setTimeout(
-        onDone,
-        2000,
-        'Claude Code installation completed successfully',
-        {
-          display: 'system' as const,
-        },
-      )
+      setTimeout(onDone, 2000, 'Claude Code installation completed successfully', {
+        display: 'system' as const,
+      })
     } else if (state.type === 'error') {
       // Give error message time to render before exiting
       setTimeout(onDone, 3000, 'Claude Code installation failed', {
@@ -225,23 +198,15 @@ function Install({ onDone, force, target }: InstallProps): React.ReactNode {
 
   return (
     <Box flexDirection="column" marginTop={1}>
-      {state.type === 'checking' && (
-        <Text color="claude">Checking installation status...</Text>
-      )}
+      {state.type === 'checking' && <Text color="claude">Checking installation status...</Text>}
 
-      {state.type === 'cleaning-npm' && (
-        <Text color="warning">Cleaning up old npm installations...</Text>
-      )}
+      {state.type === 'cleaning-npm' && <Text color="warning">Cleaning up old npm installations...</Text>}
 
       {state.type === 'installing' && (
-        <Text color="claude">
-          Installing Claude Code native build {state.version}...
-        </Text>
+        <Text color="claude">Installing Claude Code native build {state.version}...</Text>
       )}
 
-      {state.type === 'setting-up' && (
-        <Text color="claude">Setting up launcher and shell integration...</Text>
-      )}
+      {state.type === 'setting-up' && <Text color="claude">Setting up launcher and shell integration...</Text>}
 
       {state.type === 'set-up' && <SetupNotes messages={state.messages} />}
 
@@ -301,16 +266,13 @@ export const install = {
   description: 'Install Claude Code native build',
   argumentHint: '[options]',
   async call(
-    onDone: (
-      result: string,
-      options?: { display?: CommandResultDisplay },
-    ) => void,
+    onDone: (result: string, options?: { display?: CommandResultDisplay }) => void,
     _context: unknown,
     args: string[],
   ) {
     // Parse arguments
     const force = args.includes('--force')
-    const nonFlagArgs = args.filter(arg => !arg.startsWith('--'))
+    const nonFlagArgs = args.filter((arg) => !arg.startsWith('--'))
     const target = nonFlagArgs[0] // 'latest', 'stable', or version like '1.0.34'
 
     const { unmount } = await render(

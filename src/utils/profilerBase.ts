@@ -5,6 +5,7 @@
  */
 
 import type { performance as PerformanceType } from 'perf_hooks'
+
 import { formatFileSize } from './format.js'
 
 // Lazy-load performance API only when profiling is enabled.
@@ -39,8 +40,6 @@ export function formatTimelineLine(
   deltaPad: number,
   extra = '',
 ): string {
-  const memInfo = memory
-    ? ` | RSS: ${formatFileSize(memory.rss)}, Heap: ${formatFileSize(memory.heapUsed)}`
-    : ''
+  const memInfo = memory ? ` | RSS: ${formatFileSize(memory.rss)}, Heap: ${formatFileSize(memory.heapUsed)}` : ''
   return `[+${formatMs(totalMs).padStart(totalPad)}ms] (+${formatMs(deltaMs).padStart(deltaPad)}ms) ${name}${extra}${memInfo}`
 }

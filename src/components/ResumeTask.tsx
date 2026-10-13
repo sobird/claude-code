@@ -1,9 +1,7 @@
 import React, { useCallback, useState } from 'react'
 import { useTerminalSize } from 'src/hooks/useTerminalSize.js'
-import {
-  type CodeSession,
-  fetchCodeSessionsFromSessionsAPI,
-} from 'src/utils/teleport/api.js'
+import { type CodeSession, fetchCodeSessionsFromSessionsAPI } from 'src/utils/teleport/api.js'
+
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- raw j/k/arrow list navigation
 import { Box, Text, useInput } from '../ink.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
@@ -29,11 +27,7 @@ type LoadErrorType = 'network' | 'auth' | 'api' | 'other'
 const UPDATED_STRING = 'Updated'
 const SPACE_BETWEEN_TABLE_COLUMNS = '  '
 
-export function ResumeTask({
-  onSelect,
-  onCancel,
-  isEmbedded = false,
-}: Props): React.ReactNode {
+export function ResumeTask({ onSelect, onCancel, isEmbedded = false }: Props): React.ReactNode {
   const { rows } = useTerminalSize()
   const [sessions, setSessions] = useState<CodeSession[]>([])
   const [currentRepo, setCurrentRepo] = useState<string | null>(null)
@@ -42,8 +36,7 @@ export function ResumeTask({
   const [loadErrorType, setLoadErrorType] = useState<LoadErrorType | null>(null)
   const [retrying, setRetrying] = useState(false)
 
-  const [hasCompletedTeleportErrorFlow, setHasCompletedTeleportErrorFlow] =
-    useState(false)
+  const [hasCompletedTeleportErrorFlow, setHasCompletedTeleportErrorFlow] = useState(false)
 
   // Track focused index for scroll position display in title
   const [focusedIndex, setFocusedIndex] = useState(1)
@@ -65,7 +58,7 @@ export function ResumeTask({
       // Filter sessions by current repository if detected
       let filteredSessions = codeSessions
       if (detectedRepo) {
-        filteredSessions = codeSessions.filter(session => {
+        filteredSessions = codeSessions.filter((session) => {
           if (!session.repo) return false
           const sessionRepo = `${session.repo.owner.login}/${session.repo.name}`
           return sessionRepo === detectedRepo
@@ -138,9 +131,7 @@ export function ResumeTask({
           <Spinner />
           <Text bold>Loading Claude Code sessions…</Text>
         </Box>
-        <Text dimColor>
-          {retrying ? 'Retrying…' : 'Fetching your Claude Code sessions…'}
-        </Text>
+        <Text dimColor>{retrying ? 'Retrying…' : 'Fetching your Claude Code sessions…'}</Text>
       </Box>
     )
   }
@@ -155,8 +146,7 @@ export function ResumeTask({
         {renderErrorSpecificGuidance(loadErrorType)}
 
         <Text dimColor>
-          Press <Text bold>Ctrl+R</Text> to retry · Press{' '}
-          <Text bold>{escKey}</Text> to cancel
+          Press <Text bold>Ctrl+R</Text> to retry · Press <Text bold>{escKey}</Text> to cancel
         </Text>
       </Box>
     )
@@ -178,14 +168,11 @@ export function ResumeTask({
     )
   }
 
-  const sessionMetadata = sessions.map(session => ({
+  const sessionMetadata = sessions.map((session) => ({
     ...session,
     timeString: formatRelativeTime(new Date(session.updated_at)),
   }))
-  const maxTimeStringLength = Math.max(
-    UPDATED_STRING.length,
-    ...sessionMetadata.map(meta => meta.timeString.length),
-  )
+  const maxTimeStringLength = Math.max(UPDATED_STRING.length, ...sessionMetadata.map((meta) => meta.timeString.length))
 
   const options = sessionMetadata.map(({ timeString, title, id }) => {
     const paddedTime = timeString.padEnd(maxTimeStringLength, ' ')
@@ -234,14 +221,14 @@ export function ResumeTask({
         <Select
           visibleOptionCount={maxVisibleOptions}
           options={options}
-          onChange={value => {
-            const session = sessions.find(s => s.id === value)
+          onChange={(value) => {
+            const session = sessions.find((s) => s.id === value)
             if (session) {
               onSelect(session)
             }
           }}
-          onFocus={value => {
-            const index = options.findIndex(o => o.value === value)
+          onFocus={(value) => {
+            const index = options.findIndex((o) => o.value === value)
             if (index >= 0) {
               setFocusedIndex(index + 1)
             }
@@ -253,12 +240,7 @@ export function ResumeTask({
           <Byline>
             <KeyboardShortcutHint shortcut="↑/↓" action="select" />
             <KeyboardShortcutHint shortcut="Enter" action="confirm" />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline>
         </Text>
       </Box>
@@ -272,11 +254,7 @@ export function ResumeTask({
 function determineErrorType(errorMessage: string): LoadErrorType {
   const message = errorMessage.toLowerCase()
 
-  if (
-    message.includes('fetch') ||
-    message.includes('network') ||
-    message.includes('timeout')
-  ) {
+  if (message.includes('fetch') || message.includes('network') || message.includes('timeout')) {
     return 'network'
   }
 
@@ -293,12 +271,7 @@ function determineErrorType(errorMessage: string): LoadErrorType {
     return 'auth'
   }
 
-  if (
-    message.includes('api') ||
-    message.includes('rate limit') ||
-    message.includes('500') ||
-    message.includes('529')
-  ) {
+  if (message.includes('api') || message.includes('rate limit') || message.includes('500') || message.includes('529')) {
     return 'api'
   }
 
@@ -308,9 +281,7 @@ function determineErrorType(errorMessage: string): LoadErrorType {
 /**
  * Renders error-specific troubleshooting guidance
  */
-function renderErrorSpecificGuidance(
-  errorType: LoadErrorType,
-): React.ReactNode {
+function renderErrorSpecificGuidance(errorType: LoadErrorType): React.ReactNode {
   switch (errorType) {
     case 'network':
       return (
@@ -324,8 +295,7 @@ function renderErrorSpecificGuidance(
         <Box marginY={1} flexDirection="column">
           <Text dimColor>Teleport requires a Claude account</Text>
           <Text dimColor>
-            Run <Text bold>/login</Text> and select &quot;Claude account with
-            subscription&quot;
+            Run <Text bold>/login</Text> and select &quot;Claude account with subscription&quot;
           </Text>
         </Box>
       )

@@ -1,8 +1,9 @@
 import * as React from 'react'
 import { memo, type ReactNode } from 'react'
+
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
-import { stringWidth } from '../../ink/stringWidth.js'
 import { Box, Text } from '../../ink.js'
+import { stringWidth } from '../../ink/stringWidth.js'
 import { truncatePathMiddle, truncateToWidth } from '../../utils/format.js'
 import type { Theme } from '../../utils/theme.js'
 
@@ -42,11 +43,7 @@ function getIcon(itemId: string): string {
  * Check if an item is a unified suggestion type (file, mcp-resource, or agent)
  */
 function isUnifiedSuggestion(itemId: string): boolean {
-  return (
-    itemId.startsWith('file-') ||
-    itemId.startsWith('mcp-resource-') ||
-    itemId.startsWith('agent-')
-  )
+  return itemId.startsWith('file-') || itemId.startsWith('mcp-resource-') || itemId.startsWith('agent-')
 }
 
 const SuggestionItemRow = memo(function SuggestionItemRow({
@@ -64,9 +61,7 @@ const SuggestionItemRow = memo(function SuggestionItemRow({
   // For unified suggestions (file, mcp-resource, agent), use single-line layout with icon
   if (isUnified) {
     const icon = getIcon(item.id)
-    const textColor: keyof Theme | undefined = isSelected
-      ? 'suggestion'
-      : undefined
+    const textColor: keyof Theme | undefined = isSelected ? 'suggestion' : undefined
     const dimColor = !isSelected
 
     const isFile = item.id.startsWith('file-')
@@ -84,11 +79,8 @@ const SuggestionItemRow = memo(function SuggestionItemRow({
     let displayText: string
     if (isFile) {
       // Reserve space for description if present, otherwise use all available space
-      const descReserve = item.description
-        ? Math.min(20, stringWidth(item.description))
-        : 0
-      const maxPathLength =
-        columns - iconWidth - paddingWidth - separatorWidth - descReserve
+      const descReserve = item.description ? Math.min(20, stringWidth(item.description)) : 0
+      const maxPathLength = columns - iconWidth - paddingWidth - separatorWidth - descReserve
       displayText = truncatePathMiddle(item.displayText, maxPathLength)
     } else if (isMcpResource) {
       const maxDisplayTextLength = 30
@@ -97,21 +89,13 @@ const SuggestionItemRow = memo(function SuggestionItemRow({
       displayText = item.displayText
     }
 
-    const availableWidth =
-      columns -
-      iconWidth -
-      stringWidth(displayText) -
-      separatorWidth -
-      paddingWidth
+    const availableWidth = columns - iconWidth - stringWidth(displayText) - separatorWidth - paddingWidth
 
     // Build the full line as a single string to prevent wrapping
     let lineContent: string
     if (item.description) {
       const maxDescLength = Math.max(0, availableWidth)
-      const truncatedDesc = truncateToWidth(
-        item.description.replace(/\s+/g, ' '),
-        maxDescLength,
-      )
+      const truncatedDesc = truncateToWidth(item.description.replace(/\s+/g, ' '), maxDescLength)
       lineContent = `${icon} ${displayText} – ${truncatedDesc}`
     } else {
       lineContent = `${icon} ${displayText}`
@@ -127,10 +111,7 @@ const SuggestionItemRow = memo(function SuggestionItemRow({
   // For non-unified suggestions (commands, shell, etc.), use improved layout from main
   // Cap the command name column at 40% of terminal width to ensure description has space
   const maxNameWidth = Math.floor(columns * 0.4)
-  const displayTextWidth = Math.min(
-    maxColumnWidth ?? stringWidth(item.displayText) + 5,
-    maxNameWidth,
-  )
+  const displayTextWidth = Math.min(maxColumnWidth ?? stringWidth(item.displayText) + 5, maxNameWidth)
 
   const textColor = item.color || (isSelected ? 'suggestion' : undefined)
   const shouldDim = !isSelected
@@ -140,16 +121,11 @@ const SuggestionItemRow = memo(function SuggestionItemRow({
   if (stringWidth(displayText) > displayTextWidth - 2) {
     displayText = truncateToWidth(displayText, displayTextWidth - 2)
   }
-  const paddedDisplayText =
-    displayText +
-    ' '.repeat(Math.max(0, displayTextWidth - stringWidth(displayText)))
+  const paddedDisplayText = displayText + ' '.repeat(Math.max(0, displayTextWidth - stringWidth(displayText)))
 
   const tagText = item.tag ? `[${item.tag}] ` : ''
   const tagWidth = stringWidth(tagText)
-  const descriptionWidth = Math.max(
-    0,
-    columns - displayTextWidth - tagWidth - 4,
-  )
+  const descriptionWidth = Math.max(0, columns - displayTextWidth - tagWidth - 4)
   // Skill descriptions can contain newlines (e.g. /claude-api's "TRIGGER
   // when:" block). A multi-line row grows the overlay past minHeight; when
   // the filter narrows past that skill, the overlay shrinks and leaves
@@ -164,10 +140,7 @@ const SuggestionItemRow = memo(function SuggestionItemRow({
         {paddedDisplayText}
       </Text>
       {tagText ? <Text dimColor>{tagText}</Text> : null}
-      <Text
-        color={isSelected ? 'suggestion' : undefined}
-        dimColor={!isSelected}
-      >
+      <Text color={isSelected ? 'suggestion' : undefined} dimColor={!isSelected}>
         {truncatedDescription}
       </Text>
     </Text>
@@ -196,9 +169,7 @@ export function PromptInputFooterSuggestions({
   // Maximum number of suggestions to show at once (leaving space for prompt).
   // Overlay mode (fullscreen) uses a fixed 5 — the floating box sits over
   // the ScrollBox, so terminal height isn't the constraint.
-  const maxVisibleItems = overlay
-    ? OVERLAY_MAX_ITEMS
-    : Math.min(6, Math.max(1, rows - 3))
+  const maxVisibleItems = overlay ? OVERLAY_MAX_ITEMS : Math.min(6, Math.max(1, rows - 3))
 
   // No suggestions to display
   if (suggestions.length === 0) {
@@ -206,17 +177,12 @@ export function PromptInputFooterSuggestions({
   }
 
   // Use prop if provided (stable width from all commands), otherwise calculate from visible
-  const maxColumnWidth =
-    maxColumnWidthProp ??
-    Math.max(...suggestions.map(item => stringWidth(item.displayText))) + 5
+  const maxColumnWidth = maxColumnWidthProp ?? Math.max(...suggestions.map((item) => stringWidth(item.displayText))) + 5
 
   // Calculate visible items range based on selected index
   const startIndex = Math.max(
     0,
-    Math.min(
-      selectedSuggestion - Math.floor(maxVisibleItems / 2),
-      suggestions.length - maxVisibleItems,
-    ),
+    Math.min(selectedSuggestion - Math.floor(maxVisibleItems / 2), suggestions.length - maxVisibleItems),
   )
   const endIndex = Math.min(startIndex + maxVisibleItems, suggestions.length)
   const visibleItems = suggestions.slice(startIndex, endIndex)
@@ -229,11 +195,8 @@ export function PromptInputFooterSuggestions({
   // padding rows that shift the visible items down into the prompt area
   // when the list has fewer items than maxVisibleItems.
   return (
-    <Box
-      flexDirection="column"
-      justifyContent={overlay ? undefined : 'flex-end'}
-    >
-      {visibleItems.map(item => (
+    <Box flexDirection="column" justifyContent={overlay ? undefined : 'flex-end'}>
+      {visibleItems.map((item) => (
         <SuggestionItemRow
           key={item.id}
           item={item}

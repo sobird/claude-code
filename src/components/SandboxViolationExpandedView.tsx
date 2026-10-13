@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { type ReactNode, useEffect, useState } from 'react'
+
 import { Box, Text } from '../ink.js'
 import type { SandboxViolationEvent } from '../utils/sandbox/sandbox-adapter.js'
 import { SandboxManager } from '../utils/sandbox/sandbox-adapter.js'
@@ -25,12 +26,10 @@ export function SandboxViolationExpandedView(): ReactNode {
   useEffect(() => {
     // This is harmless if sandboxing is not enabled
     const store = SandboxManager.getSandboxViolationStore()
-    const unsubscribe = store.subscribe(
-      (allViolations: SandboxViolationEvent[]) => {
-        setViolations(allViolations.slice(-10))
-        setTotalCount(store.getTotalCount())
-      },
-    )
+    const unsubscribe = store.subscribe((allViolations: SandboxViolationEvent[]) => {
+      setViolations(allViolations.slice(-10))
+      setTotalCount(store.getTotalCount())
+    })
     return unsubscribe
   }, [])
 
@@ -46,8 +45,7 @@ export function SandboxViolationExpandedView(): ReactNode {
     <Box flexDirection="column" marginTop={1}>
       <Box marginLeft={0}>
         <Text color="permission">
-          ⧈ Sandbox blocked {totalCount} total{' '}
-          {totalCount === 1 ? 'operation' : 'operations'}
+          ⧈ Sandbox blocked {totalCount} total {totalCount === 1 ? 'operation' : 'operations'}
         </Text>
       </Box>
       {violations.map((v, i) => (

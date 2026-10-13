@@ -1,9 +1,7 @@
 import { open, readFile, stat } from 'fs/promises'
-import {
-  applyEdits,
-  modify,
-  parse as parseJsonc,
-} from 'jsonc-parser/lib/esm/main.js'
+
+import { applyEdits, modify, parse as parseJsonc } from 'jsonc-parser/lib/esm/main.js'
+
 import { stripBOM } from './jsonRead.js'
 import { logError } from './log.js'
 import { memoizeWithLRU } from './memoize.js'
@@ -39,14 +37,11 @@ function parseJSONUncached(json: string, shouldLogError: boolean): CachedParse {
   }
 }
 
-const parseJSONCached = memoizeWithLRU(parseJSONUncached, json => json, 50)
+const parseJSONCached = memoizeWithLRU(parseJSONUncached, (json) => json, 50)
 
 // Important: memoized for performance (LRU-bounded to 50 entries, small inputs only).
 export const safeParseJSON = Object.assign(
-  function safeParseJSON(
-    json: string | null | undefined,
-    shouldLogError: boolean = true,
-  ): unknown {
+  function safeParseJSON(json: string | null | undefined, shouldLogError: boolean = true): unknown {
     if (!json) return null
     const result =
       json.length > PARSE_CACHE_MAX_KEY_BYTES
@@ -110,10 +105,7 @@ function parseJSONLBun<T>(data: string | Buffer): T[] {
   let values = result.values as T[]
   let offset = result.read
   while (offset < len) {
-    const newlineIndex =
-      typeof data === 'string'
-        ? data.indexOf('\n', offset)
-        : data.indexOf(0x0a, offset)
+    const newlineIndex = typeof data === 'string' ? data.indexOf('\n', offset) : data.indexOf(0x0a, offset)
     if (newlineIndex === -1) break
     offset = newlineIndex + 1
     const next = parse(data, offset)
@@ -208,12 +200,7 @@ export async function readJSONLFile<T>(filePath: string): Promise<T[]> {
   let totalRead = 0
   const fileOffset = size - MAX_JSONL_READ_BYTES
   while (totalRead < MAX_JSONL_READ_BYTES) {
-    const { bytesRead } = await fd.read(
-      buf,
-      totalRead,
-      MAX_JSONL_READ_BYTES - totalRead,
-      fileOffset + totalRead,
-    )
+    const { bytesRead } = await fd.read(buf, totalRead, MAX_JSONL_READ_BYTES - totalRead, fileOffset + totalRead)
     if (bytesRead === 0) break
     totalRead += bytesRead
   }

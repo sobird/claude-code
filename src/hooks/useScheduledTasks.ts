@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+
 import { useAppStateStore, useSetAppState } from '../state/AppState.js'
 import { isTerminalTaskStatus } from '../Task.js'
 import {
@@ -37,11 +38,7 @@ type Props = {
  * Scheduler core (timer, file watcher, fire logic) lives in cronScheduler.ts
  * so SDK/-p mode can share it — see print.ts for the headless wiring.
  */
-export function useScheduledTasks({
-  isLoading,
-  assistantMode = false,
-  setMessages,
-}: Props): void {
+export function useScheduledTasks({ isLoading, assistantMode = false, setMessages }: Props): void {
   // Latest-value ref so the scheduler's isLoading() getter doesn't capture
   // a stale closure. The effect mounts once; isLoading changes every turn.
   const isLoadingRef = useRef(isLoading)
@@ -88,12 +85,9 @@ export function useScheduledTasks({
       // handles team-lead durable crons.
       onFire: enqueueForLead,
       // Normal fires receive the full CronTask so we can route by agentId.
-      onFireTask: task => {
+      onFireTask: (task) => {
         if (task.agentId) {
-          const teammate = findTeammateTaskByAgentId(
-            task.agentId,
-            store.getState().tasks,
-          )
+          const teammate = findTeammateTaskByAgentId(task.agentId, store.getState().tasks)
           if (teammate && !isTerminalTaskStatus(teammate.status)) {
             injectUserMessageToTeammate(teammate.id, task.prompt, setAppState)
             return
@@ -101,16 +95,12 @@ export function useScheduledTasks({
           // Teammate is gone — clean up the orphaned cron so it doesn't keep
           // firing into nowhere every tick. One-shots would auto-delete on
           // fire anyway, but recurring crons would loop until auto-expiry.
-          logForDebugging(
-            `[ScheduledTasks] teammate ${task.agentId} gone, removing orphaned cron ${task.id}`,
-          )
+          logForDebugging(`[ScheduledTasks] teammate ${task.agentId} gone, removing orphaned cron ${task.id}`)
           void removeCronTasks([task.id])
           return
         }
-        const msg = createScheduledTaskFireMessage(
-          `Running scheduled task (${formatCronFireTime(new Date())})`,
-        )
-        setMessages(prev => [...prev, msg])
+        const msg = createScheduledTaskFireMessage(`Running scheduled task (${formatCronFireTime(new Date())})`)
+        setMessages((prev) => [...prev, msg])
         enqueueForLead(task.prompt)
       },
       isLoading: () => isLoadingRef.current,

@@ -1,18 +1,17 @@
 import { feature } from 'bun:bundle'
+
 import chalk from 'chalk'
 import figures from 'figures'
 import React, { useMemo } from 'react'
+
 import { Ansi, Box, color, Text, useTheme } from '../../ink.js'
 import { useAppState } from '../../state/AppState.js'
 import type { PermissionMode } from '../../utils/permissions/PermissionMode.js'
 import { permissionModeTitle } from '../../utils/permissions/PermissionMode.js'
-import type {
-  PermissionDecision,
-  PermissionDecisionReason,
-} from '../../utils/permissions/PermissionResult.js'
+import type { PermissionDecision, PermissionDecisionReason } from '../../utils/permissions/PermissionResult.js'
+import { permissionRuleValueToString } from '../../utils/permissions/permissionRuleParser.js'
 import { extractRules } from '../../utils/permissions/PermissionUpdate.js'
 import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js'
-import { permissionRuleValueToString } from '../../utils/permissions/permissionRuleParser.js'
 import { detectUnreachableRules } from '../../utils/permissions/shadowedRuleDetection.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
 import { getSettingSourceDisplayNameLowercase } from '../../utils/settings/constants.js'
@@ -27,10 +26,7 @@ function decisionReasonDisplayString(
     type: Exclude<PermissionDecisionReason['type'], 'subcommandResults'>
   },
 ): string {
-  if (
-    (feature('BASH_CLASSIFIER') || feature('TRANSCRIPT_CLASSIFIER')) &&
-    decisionReason.type === 'classifier'
-  ) {
+  if ((feature('BASH_CLASSIFIER') || feature('TRANSCRIPT_CLASSIFIER')) && decisionReason.type === 'classifier') {
     return `${chalk.bold(decisionReason.classifier)} classifier: ${decisionReason.reason}`
   }
   switch (decisionReason.type) {
@@ -58,10 +54,7 @@ function decisionReasonDisplayString(
   }
 }
 
-function PermissionDecisionInfoItem({
-  title,
-  decisionReason,
-}: PermissionDecisionInfoItemProps): React.ReactNode {
+function PermissionDecisionInfoItem({ title, decisionReason }: PermissionDecisionInfoItemProps): React.ReactNode {
   const [theme] = useTheme()
 
   function formatDecisionReason(): React.ReactNode {
@@ -69,35 +62,28 @@ function PermissionDecisionInfoItem({
       case 'subcommandResults':
         return (
           <Box flexDirection="column">
-            {Array.from(decisionReason.reasons.entries()).map(
-              ([subcommand, result]) => {
-                const icon =
-                  result.behavior === 'allow'
-                    ? color('success', theme)(figures.tick)
-                    : color('error', theme)(figures.cross)
-                return (
-                  <Box flexDirection="column" key={subcommand}>
+            {Array.from(decisionReason.reasons.entries()).map(([subcommand, result]) => {
+              const icon =
+                result.behavior === 'allow'
+                  ? color('success', theme)(figures.tick)
+                  : color('error', theme)(figures.cross)
+              return (
+                <Box flexDirection="column" key={subcommand}>
+                  <Text>
+                    {icon} {subcommand}
+                  </Text>
+                  {result.decisionReason !== undefined && result.decisionReason.type !== 'subcommandResults' && (
                     <Text>
-                      {icon} {subcommand}
+                      <Text dimColor>
+                        {'  '}⎿{'  '}
+                      </Text>
+                      <Ansi>{decisionReasonDisplayString(result.decisionReason)}</Ansi>
                     </Text>
-                    {result.decisionReason !== undefined &&
-                      result.decisionReason.type !== 'subcommandResults' && (
-                        <Text>
-                          <Text dimColor>
-                            {'  '}⎿{'  '}
-                          </Text>
-                          <Ansi>
-                            {decisionReasonDisplayString(result.decisionReason)}
-                          </Ansi>
-                        </Text>
-                      )}
-                    {result.behavior === 'ask' && (
-                      <SuggestedRules suggestions={result.suggestions} />
-                    )}
-                  </Box>
-                )
-              },
-            )}
+                  )}
+                  {result.behavior === 'ask' && <SuggestedRules suggestions={result.suggestions} />}
+                </Box>
+              )
+            })}
           </Box>
         )
       default:
@@ -117,11 +103,7 @@ function PermissionDecisionInfoItem({
   )
 }
 
-function SuggestedRules({
-  suggestions,
-}: {
-  suggestions: PermissionUpdate[] | undefined
-}): React.ReactNode {
+function SuggestedRules({ suggestions }: { suggestions: PermissionUpdate[] | undefined }): React.ReactNode {
   const rules = extractRules(suggestions)
   if (rules.length === 0) return null
   return (
@@ -129,12 +111,7 @@ function SuggestedRules({
       <Text dimColor>
         {'  '}⎿{'  '}
       </Text>
-      Suggested rules:{' '}
-      <Ansi>
-        {rules
-          .map(rule => chalk.bold(permissionRuleValueToString(rule)))
-          .join(', ')}
-      </Ansi>
+      Suggested rules: <Ansi>{rules.map((rule) => chalk.bold(permissionRuleValueToString(rule))).join(', ')}</Ansi>
     </Text>
   )
 }
@@ -148,7 +125,7 @@ type Props = {
 function extractDirectories(updates: PermissionUpdate[] | undefined): string[] {
   if (!updates) return []
 
-  return updates.flatMap(update => {
+  return updates.flatMap((update) => {
     switch (update.type) {
       case 'addDirectories':
         return update.directories
@@ -159,11 +136,9 @@ function extractDirectories(updates: PermissionUpdate[] | undefined): string[] {
 }
 
 // Helper function to extract mode from permission updates
-function extractMode(
-  updates: PermissionUpdate[] | undefined,
-): PermissionMode | undefined {
+function extractMode(updates: PermissionUpdate[] | undefined): PermissionMode | undefined {
   if (!updates) return undefined
-  const update = updates.findLast(u => u.type === 'setMode')
+  const update = updates.findLast((u) => u.type === 'setMode')
   return update?.type === 'setMode' ? update.mode : undefined
 }
 
@@ -255,19 +230,14 @@ function SuggestionDisplay({
   )
 }
 
-export function PermissionDecisionDebugInfo({
-  permissionResult,
-  toolName,
-}: Props): React.ReactNode {
-  const toolPermissionContext = useAppState(s => s.toolPermissionContext)
+export function PermissionDecisionDebugInfo({ permissionResult, toolName }: Props): React.ReactNode {
+  const toolPermissionContext = useAppState((s) => s.toolPermissionContext)
   const decisionReason = permissionResult.decisionReason
-  const suggestions =
-    'suggestions' in permissionResult ? permissionResult.suggestions : undefined
+  const suggestions = 'suggestions' in permissionResult ? permissionResult.suggestions : undefined
 
   const unreachableRules = useMemo(() => {
     const sandboxAutoAllowEnabled =
-      SandboxManager.isSandboxingEnabled() &&
-      SandboxManager.isAutoAllowBashIfSandboxedEnabled()
+      SandboxManager.isSandboxingEnabled() && SandboxManager.isAutoAllowBashIfSandboxedEnabled()
     const all = detectUnreachableRules(toolPermissionContext, {
       sandboxAutoAllowEnabled,
     })
@@ -278,18 +248,17 @@ export function PermissionDecisionDebugInfo({
     // Filter to rules that match any of the suggested rules
     // A rule matches if it has the same toolName and ruleContent
     if (suggestedRules.length > 0) {
-      return all.filter(u =>
+      return all.filter((u) =>
         suggestedRules.some(
-          suggested =>
-            suggested.toolName === u.rule.ruleValue.toolName &&
-            suggested.ruleContent === u.rule.ruleValue.ruleContent,
+          (suggested) =>
+            suggested.toolName === u.rule.ruleValue.toolName && suggested.ruleContent === u.rule.ruleValue.ruleContent,
         ),
       )
     }
 
     // Fallback: filter by tool name if specified
     if (toolName) {
-      return all.filter(u => u.rule.ruleValue.toolName === toolName)
+      return all.filter((u) => u.rule.ruleValue.toolName === toolName)
     }
 
     return all
@@ -331,9 +300,7 @@ export function PermissionDecisionDebugInfo({
           </Text>
           {unreachableRules.map((u, i) => (
             <Box key={i} flexDirection="column" marginLeft={2}>
-              <Text color="warning">
-                {permissionRuleValueToString(u.rule.ruleValue)}
-              </Text>
+              <Text color="warning">{permissionRuleValueToString(u.rule.ruleValue)}</Text>
               <Text dimColor>
                 {'  '}
                 {u.reason}

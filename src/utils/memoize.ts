@@ -1,4 +1,5 @@
 import { LRUCache } from 'lru-cache'
+
 import { logError } from './log.js'
 import { jsonStringify } from './slowOperations.js'
 
@@ -60,11 +61,7 @@ export function memoizeWithTTL<Args extends unknown[], Result>(
     }
 
     // If we have a stale cache entry and it's not already refreshing
-    if (
-      cached &&
-      now - cached.timestamp > cacheLifetimeMs &&
-      !cached.refreshing
-    ) {
+    if (cached && now - cached.timestamp > cacheLifetimeMs && !cached.refreshing) {
       // Mark as refreshing to prevent multiple parallel refreshes
       cached.refreshing = true
 
@@ -84,7 +81,7 @@ export function memoizeWithTTL<Args extends unknown[], Result>(
             })
           }
         })
-        .catch(e => {
+        .catch((e) => {
           logError(e)
           if (cache.get(key) === cached) {
             cache.delete(key)
@@ -163,11 +160,7 @@ export function memoizeWithTTLAsync<Args extends unknown[], Result>(
     }
 
     // If we have a stale cache entry and it's not already refreshing
-    if (
-      cached &&
-      now - cached.timestamp > cacheLifetimeMs &&
-      !cached.refreshing
-    ) {
+    if (cached && now - cached.timestamp > cacheLifetimeMs && !cached.refreshing) {
       // Mark as refreshing to prevent multiple parallel refreshes
       cached.refreshing = true
 
@@ -179,7 +172,7 @@ export function memoizeWithTTLAsync<Args extends unknown[], Result>(
       // the old awsAuthRefresh command after a settings change).
       const staleEntry = cached
       f(...args)
-        .then(newValue => {
+        .then((newValue) => {
           if (cache.get(key) === staleEntry) {
             cache.set(key, {
               value: newValue,
@@ -188,7 +181,7 @@ export function memoizeWithTTLAsync<Args extends unknown[], Result>(
             })
           }
         })
-        .catch(e => {
+        .catch((e) => {
           logError(e)
           if (cache.get(key) === staleEntry) {
             cache.delete(key)
@@ -231,10 +224,7 @@ export function memoizeWithTTLAsync<Args extends unknown[], Result>(
  * @param f The function to memoize
  * @returns A memoized version of the function with cache management methods
  */
-export function memoizeWithLRU<
-  Args extends unknown[],
-  Result extends NonNullable<unknown>,
->(
+export function memoizeWithLRU<Args extends unknown[], Result extends NonNullable<unknown>>(
   f: (...args: Args) => Result,
   cacheFn: (...args: Args) => string,
   maxCacheSize: number = 100,

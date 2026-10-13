@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+
 import { BLACK_CIRCLE, BULLET_OPERATOR } from '../constants/figures.js'
 import { Box, Text } from '../ink.js'
 import type { SkillUpdate } from '../utils/hooks/skillImprovement.js'
@@ -82,9 +83,7 @@ function SkillImprovementSurveyView({
     <Box flexDirection="column" marginTop={1}>
       <Box>
         <Text color="ansi:cyan">{BLACK_CIRCLE} </Text>
-        <Text bold>
-          Skill improvement suggested for &quot;{skillName}&quot;
-        </Text>
+        <Text bold>Skill improvement suggested for &quot;{skillName}&quot;</Text>
       </Box>
 
       <Box flexDirection="column" marginLeft={2}>

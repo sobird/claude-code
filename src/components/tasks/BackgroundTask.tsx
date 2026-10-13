@@ -5,6 +5,7 @@ import type { DeepImmutable } from 'src/types/utils.js'
 import { truncate } from 'src/utils/format.js'
 import { toInkColor } from 'src/utils/ink.js'
 import { plural } from 'src/utils/stringUtils.js'
+
 import { DIAMOND_FILLED, DIAMOND_OPEN } from '../../constants/figures.js'
 import { RemoteSessionProgress } from './RemoteSessionProgress.js'
 import { ShellProgress, TaskStatusText } from './ShellProgress.js'
@@ -15,20 +16,13 @@ type Props = {
   maxActivityWidth?: number
 }
 
-export function BackgroundTask({
-  task,
-  maxActivityWidth,
-}: Props): React.ReactNode {
+export function BackgroundTask({ task, maxActivityWidth }: Props): React.ReactNode {
   const activityLimit = maxActivityWidth ?? 40
   switch (task.type) {
     case 'local_bash':
       return (
         <Text>
-          {truncate(
-            task.kind === 'monitor' ? task.description : task.command,
-            activityLimit,
-            true,
-          )}{' '}
+          {truncate(task.kind === 'monitor' ? task.description : task.command, activityLimit, true)}{' '}
           <ShellProgress shell={task} />
         </Text>
       )
@@ -59,11 +53,7 @@ export function BackgroundTask({
           <TaskStatusText
             status={task.status}
             label={task.status === 'completed' ? 'done' : undefined}
-            suffix={
-              task.status === 'completed' && !task.notified
-                ? ', unread'
-                : undefined
-            }
+            suffix={task.status === 'completed' && !task.notified ? ', unread' : undefined}
           />
         </Text>
       )
@@ -71,9 +61,7 @@ export function BackgroundTask({
       const activity = describeTeammateActivity(task)
       return (
         <Text>
-          <Text color={toInkColor(task.identity.color)}>
-            @{task.identity.agentName}
-          </Text>
+          <Text color={toInkColor(task.identity.color)}>@{task.identity.agentName}</Text>
           <Text dimColor>: {truncate(activity, activityLimit, true)}</Text>
         </Text>
       )
@@ -81,11 +69,7 @@ export function BackgroundTask({
     case 'local_workflow':
       return (
         <Text>
-          {truncate(
-            task.workflowName ?? task.summary ?? task.description,
-            activityLimit,
-            true,
-          )}{' '}
+          {truncate(task.workflowName ?? task.summary ?? task.description, activityLimit, true)}{' '}
           <TaskStatusText
             status={task.status}
             label={
@@ -95,11 +79,7 @@ export function BackgroundTask({
                   ? 'done'
                   : undefined
             }
-            suffix={
-              task.status === 'completed' && !task.notified
-                ? ', unread'
-                : undefined
-            }
+            suffix={task.status === 'completed' && !task.notified ? ', unread' : undefined}
           />
         </Text>
       )
@@ -110,11 +90,7 @@ export function BackgroundTask({
           <TaskStatusText
             status={task.status}
             label={task.status === 'completed' ? 'done' : undefined}
-            suffix={
-              task.status === 'completed' && !task.notified
-                ? ', unread'
-                : undefined
-            }
+            suffix={task.status === 'completed' && !task.notified ? ', unread' : undefined}
           />
         </Text>
       )
@@ -133,11 +109,7 @@ export function BackgroundTask({
           <TaskStatusText
             status={task.status}
             label={task.status === 'completed' ? 'done' : undefined}
-            suffix={
-              task.status === 'completed' && !task.notified
-                ? ', unread'
-                : undefined
-            }
+            suffix={task.status === 'completed' && !task.notified ? ', unread' : undefined}
           />
         </Text>
       )

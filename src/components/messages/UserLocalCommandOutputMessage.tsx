@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { DIAMOND_FILLED, DIAMOND_OPEN } from '../../constants/figures.js'
 import { NO_CONTENT_MESSAGE } from '../../constants/messages.js'
 import { Box, Text } from '../../ink.js'
@@ -10,9 +11,7 @@ type Props = {
   content: string
 }
 
-export function UserLocalCommandOutputMessage({
-  content,
-}: Props): React.ReactNode {
+export function UserLocalCommandOutputMessage({ content }: Props): React.ReactNode {
   const stdout = extractTag(content, 'local-command-stdout')
   const stderr = extractTag(content, 'local-command-stderr')
   if (!stdout && !stderr) {
@@ -34,10 +33,7 @@ export function UserLocalCommandOutputMessage({
 }
 
 function IndentedContent({ children }: { children: string }): React.ReactNode {
-  if (
-    children.startsWith(`${DIAMOND_OPEN} `) ||
-    children.startsWith(`${DIAMOND_FILLED} `)
-  ) {
+  if (children.startsWith(`${DIAMOND_OPEN} `) || children.startsWith(`${DIAMOND_FILLED} `)) {
     return <CloudLaunchContent>{children}</CloudLaunchContent>
   }
   return (
@@ -50,11 +46,7 @@ function IndentedContent({ children }: { children: string }): React.ReactNode {
   )
 }
 
-function CloudLaunchContent({
-  children,
-}: {
-  children: string
-}): React.ReactNode {
+function CloudLaunchContent({ children }: { children: string }): React.ReactNode {
   const diamond = children[0]!
   const nl = children.indexOf('\n')
   const header = nl === -1 ? children.slice(2) : children.slice(2, nl)

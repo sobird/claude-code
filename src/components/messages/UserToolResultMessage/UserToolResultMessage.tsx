@@ -1,10 +1,8 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
+
 import type { Tools } from '../../../Tool.js'
-import type {
-  NormalizedUserMessage,
-  ProgressMessage,
-} from '../../../types/message.js'
+import type { NormalizedUserMessage, ProgressMessage } from '../../../types/message.js'
 import {
   type buildMessageLookups,
   CANCEL_MESSAGE,
@@ -45,16 +43,12 @@ export function UserToolResultMessage({
     return null
   }
 
-  if (
-    typeof param.content === 'string' &&
-    param.content.startsWith(CANCEL_MESSAGE)
-  ) {
+  if (typeof param.content === 'string' && param.content.startsWith(CANCEL_MESSAGE)) {
     return <UserToolCanceledMessage />
   }
 
   if (
-    (typeof param.content === 'string' &&
-      param.content.startsWith(REJECT_MESSAGE)) ||
+    (typeof param.content === 'string' && param.content.startsWith(REJECT_MESSAGE)) ||
     param.content === INTERRUPT_MESSAGE_FOR_TOOL_USE
   ) {
     return (

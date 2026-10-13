@@ -9,7 +9,12 @@ export type InferShape<T extends AnyZodRawShape> = { [K in keyof T]: unknown }
 export type ForkSessionOptions = { dir?: string; upToMessageId?: string; title?: string }
 export type ForkSessionResult = { sessionId: string }
 export type GetSessionInfoOptions = { dir?: string }
-export type GetSessionMessagesOptions = { dir?: string; limit?: number; offset?: number; includeSystemMessages?: boolean }
+export type GetSessionMessagesOptions = {
+  dir?: string
+  limit?: number
+  offset?: number
+  includeSystemMessages?: boolean
+}
 export type ListSessionsOptions = { dir?: string; limit?: number; offset?: number }
 export type SessionMutationOptions = { dir?: string }
 export type SessionMessage = { role: string; content: unknown; [key: string]: unknown }
@@ -60,4 +65,4 @@ export interface Query {
 export interface InternalQuery extends Query {
   [key: string]: unknown
 }
-export type EffortLevel = 'low' | 'medium' | 'high' | 'max';
+export type EffortLevel = 'low' | 'medium' | 'high' | 'max'

@@ -1,10 +1,7 @@
 import chalk from 'chalk'
 import { toString as qrToString } from 'qrcode'
-import {
-  BRIDGE_FAILED_INDICATOR,
-  BRIDGE_READY_INDICATOR,
-  BRIDGE_SPINNER_FRAMES,
-} from '../constants/figures.js'
+
+import { BRIDGE_FAILED_INDICATOR, BRIDGE_READY_INDICATOR, BRIDGE_SPINNER_FRAMES } from '../constants/figures.js'
 import { stringWidth } from '../ink/stringWidth.js'
 import { logForDebugging } from '../utils/debug.js'
 import {
@@ -20,12 +17,7 @@ import {
   truncatePrompt,
   wrapWithOsc8Link,
 } from './bridgeStatusUtil.js'
-import type {
-  BridgeConfig,
-  BridgeLogger,
-  SessionActivity,
-  SpawnMode,
-} from './types.js'
+import type { BridgeConfig, BridgeLogger, SessionActivity, SpawnMode } from './types.js'
 
 const QR_OPTIONS = {
   type: 'utf8' as const,
@@ -39,10 +31,7 @@ async function generateQr(url: string): Promise<string[]> {
   return qr.split('\n').filter((line: string) => line.length > 0)
 }
 
-export function createBridgeLogger(options: {
-  verbose: boolean
-  write?: (s: string) => void
-}): BridgeLogger {
+export function createBridgeLogger(options: { verbose: boolean; write?: (s: string) => void }): BridgeLogger {
   const write = options.write ?? ((s: string) => process.stdout.write(s))
   const verbose = options.verbose
 
@@ -78,10 +67,7 @@ export function createBridgeLogger(options: {
   let spawnMode: SpawnMode = 'single-session'
 
   // Per-session display info for the multi-session bullet list (keyed by compat sessionId)
-  const sessionDisplayInfo = new Map<
-    string,
-    { title?: string; url: string; activity?: SessionActivity }
-  >()
+  const sessionDisplayInfo = new Map<string, { title?: string; url: string; activity?: SessionActivity }>()
 
   // Connecting spinner state
   let connectingTimer: ReturnType<typeof setInterval> | null = null
@@ -139,11 +125,11 @@ export function createBridgeLogger(options: {
   /** Regenerate the QR code with the given URL. */
   function regenerateQr(url: string): void {
     generateQr(url)
-      .then(lines => {
+      .then((lines) => {
         qrLines = lines
         renderStatusLine()
       })
-      .catch(e => {
+      .catch((e) => {
         logForDebugging(`QR code generation failed: ${e}`, { level: 'error' })
       })
   }
@@ -152,8 +138,7 @@ export function createBridgeLogger(options: {
   function renderConnectingLine(): void {
     clearStatusLines()
 
-    const frame =
-      BRIDGE_SPINNER_FRAMES[connectingTick % BRIDGE_SPINNER_FRAMES.length]!
+    const frame = BRIDGE_SPINNER_FRAMES[connectingTick % BRIDGE_SPINNER_FRAMES.length]!
     let suffix = ''
     if (repoName) {
       suffix += chalk.dim(' \u00b7 ') + chalk.dim(repoName)
@@ -161,9 +146,7 @@ export function createBridgeLogger(options: {
     if (branch) {
       suffix += chalk.dim(' \u00b7 ') + chalk.dim(branch)
     }
-    writeStatus(
-      `${chalk.yellow(frame)} ${chalk.yellow('Connecting')}${suffix}\n`,
-    )
+    writeStatus(`${chalk.yellow(frame)} ${chalk.yellow('Connecting')}${suffix}\n`)
   }
 
   /** Start the connecting spinner. Stopped by first updateIdleStatus(). */
@@ -222,9 +205,7 @@ export function createBridgeLogger(options: {
     }
 
     if (process.env.USER_TYPE === 'ant' && debugLogPath) {
-      writeStatus(
-        `${chalk.yellow('[ANT-ONLY] Logs:')} ${chalk.dim(debugLogPath)}\n`,
-      )
+      writeStatus(`${chalk.yellow('[ANT-ONLY] Logs:')} ${chalk.dim(debugLogPath)}\n`)
     }
     writeStatus(`${indicatorColor(indicator)} ${stateText}${suffix}\n`)
 
@@ -234,19 +215,13 @@ export function createBridgeLogger(options: {
         spawnMode === 'worktree'
           ? 'New sessions will be created in an isolated worktree'
           : 'New sessions will be created in the current directory'
-      writeStatus(
-        `    ${chalk.dim(`Capacity: ${sessionActive}/${sessionMax} \u00b7 ${modeHint}`)}\n`,
-      )
+      writeStatus(`    ${chalk.dim(`Capacity: ${sessionActive}/${sessionMax} \u00b7 ${modeHint}`)}\n`)
       for (const [, info] of sessionDisplayInfo) {
-        const titleText = info.title
-          ? truncatePrompt(info.title, 35)
-          : chalk.dim('Attached')
+        const titleText = info.title ? truncatePrompt(info.title, 35) : chalk.dim('Attached')
         const titleLinked = wrapWithOsc8Link(titleText, info.url)
         const act = info.activity
         const showAct = act && act.type !== 'result' && act.type !== 'error'
-        const actText = showAct
-          ? chalk.dim(` ${truncatePrompt(act.summary, 40)}`)
-          : ''
+        const actText = showAct ? chalk.dim(` ${truncatePrompt(act.summary, 40)}`) : ''
         writeStatus(`    ${titleLinked}${actText}
 `)
       }
@@ -264,12 +239,7 @@ export function createBridgeLogger(options: {
     }
 
     // Tool activity line for single-session mode
-    if (
-      sessionMax === 1 &&
-      !isIdle &&
-      lastToolSummary &&
-      Date.now() - lastToolTime < TOOL_DISPLAY_EXPIRY_MS
-    ) {
+    if (sessionMax === 1 && !isIdle && lastToolSummary && Date.now() - lastToolTime < TOOL_DISPLAY_EXPIRY_MS) {
       writeStatus(`  ${chalk.dim(truncatePrompt(lastToolSummary, 60))}\n`)
     }
 
@@ -277,15 +247,9 @@ export function createBridgeLogger(options: {
     const url = activeSessionUrl ?? connectUrl
     if (url) {
       writeStatus('\n')
-      const footerText = isIdle
-        ? buildIdleFooterText(url)
-        : buildActiveFooterText(url)
-      const qrHint = qrVisible
-        ? chalk.dim.italic('space to hide QR code')
-        : chalk.dim.italic('space to show QR code')
-      const toggleHint = spawnModeDisplay
-        ? chalk.dim.italic(' \u00b7 w to toggle spawn mode')
-        : ''
+      const footerText = isIdle ? buildIdleFooterText(url) : buildActiveFooterText(url)
+      const qrHint = qrVisible ? chalk.dim.italic('space to hide QR code') : chalk.dim.italic('space to show QR code')
+      const toggleHint = spawnModeDisplay ? chalk.dim.italic(' \u00b7 w to toggle spawn mode') : ''
       writeStatus(`${chalk.dim(footerText)}\n`)
       writeStatus(`${qrHint}${toggleHint}\n`)
     }
@@ -304,9 +268,7 @@ export function createBridgeLogger(options: {
       if (verbose) {
         if (config.spawnMode !== 'single-session') {
           write(chalk.dim(`Spawn mode: `) + `${config.spawnMode}\n`)
-          write(
-            chalk.dim(`Max concurrent sessions: `) + `${config.maxSessions}\n`,
-          )
+          write(chalk.dim(`Max concurrent sessions: `) + `${config.maxSessions}\n`)
         }
         write(chalk.dim(`Environment ID: `) + `${environmentId}\n`)
       }
@@ -323,8 +285,7 @@ export function createBridgeLogger(options: {
       if (verbose) {
         const short = truncatePrompt(prompt, 80)
         printLog(
-          chalk.dim(`[${timestamp()}]`) +
-            ` Session started: ${chalk.white(`"${short}"`)} (${chalk.dim(sessionId)})\n`,
+          chalk.dim(`[${timestamp()}]`) + ` Session started: ${chalk.white(`"${short}"`)} (${chalk.dim(sessionId)})\n`,
         )
       }
     },
@@ -337,10 +298,7 @@ export function createBridgeLogger(options: {
     },
 
     logSessionFailed(sessionId: string, error: string): void {
-      printLog(
-        chalk.dim(`[${timestamp()}]`) +
-          ` Session ${chalk.red('failed')}: ${error} ${chalk.dim(sessionId)}\n`,
-      )
+      printLog(chalk.dim(`[${timestamp()}]`) + ` Session ${chalk.red('failed')}: ${error} ${chalk.dim(sessionId)}\n`)
     },
 
     logStatus(message: string): void {
@@ -359,8 +317,7 @@ export function createBridgeLogger(options: {
 
     logReconnected(disconnectedMs: number): void {
       printLog(
-        chalk.dim(`[${timestamp()}]`) +
-          ` ${chalk.green('Reconnected')} after ${formatDuration(disconnectedMs)}\n`,
+        chalk.dim(`[${timestamp()}]`) + ` ${chalk.green('Reconnected')} after ${formatDuration(disconnectedMs)}\n`,
       )
     },
 
@@ -394,11 +351,7 @@ export function createBridgeLogger(options: {
       // Multi-session: keep footer/QR on the environment connect URL so users
       // can spawn more sessions. Per-session links are in the bullet list.
       if (sessionMax <= 1) {
-        activeSessionUrl = buildBridgeSessionUrl(
-          sessionId,
-          cachedEnvironmentId,
-          cachedIngressUrl,
-        )
+        activeSessionUrl = buildBridgeSessionUrl(sessionId, cachedEnvironmentId, cachedIngressUrl)
         regenerateQr(activeSessionUrl)
       }
       renderStatusLine()
@@ -416,8 +369,7 @@ export function createBridgeLogger(options: {
         }
       }
 
-      const frame =
-        BRIDGE_SPINNER_FRAMES[connectingTick % BRIDGE_SPINNER_FRAMES.length]!
+      const frame = BRIDGE_SPINNER_FRAMES[connectingTick % BRIDGE_SPINNER_FRAMES.length]!
       connectingTick++
       writeStatus(
         `${chalk.yellow(frame)} ${chalk.yellow('Reconnecting')} ${chalk.dim('\u00b7')} ${chalk.dim(`retrying in ${delayStr}`)} ${chalk.dim('\u00b7')} ${chalk.dim(`disconnected ${elapsedStr}`)}\n`,
@@ -437,9 +389,7 @@ export function createBridgeLogger(options: {
         suffix += chalk.dim(' \u00b7 ') + chalk.dim(branch)
       }
 
-      writeStatus(
-        `${chalk.red(BRIDGE_FAILED_INDICATOR)} ${chalk.red('Remote Control Failed')}${suffix}\n`,
-      )
+      writeStatus(`${chalk.red(BRIDGE_FAILED_INDICATOR)} ${chalk.red('Remote Control Failed')}${suffix}\n`)
       writeStatus(`${chalk.dim(FAILED_FOOTER_TEXT)}\n`)
 
       if (error) {
@@ -447,12 +397,7 @@ export function createBridgeLogger(options: {
       }
     },
 
-    updateSessionStatus(
-      _sessionId: string,
-      _elapsed: string,
-      activity: SessionActivity,
-      _trail: string[],
-    ): void {
+    updateSessionStatus(_sessionId: string, _elapsed: string, activity: SessionActivity, _trail: string[]): void {
       // Cache tool activity for the second status line
       if (activity.type === 'tool_start') {
         lastToolSummary = activity.summary
@@ -472,8 +417,7 @@ export function createBridgeLogger(options: {
     },
 
     updateSessionCount(active: number, max: number, mode: SpawnMode): void {
-      if (sessionActive === active && sessionMax === max && spawnMode === mode)
-        return
+      if (sessionActive === active && sessionMax === max && spawnMode === mode) return
       sessionActive = active
       sessionMax = max
       spawnMode = mode

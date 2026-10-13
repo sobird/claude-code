@@ -1,4 +1,5 @@
 import { EventEmitter as NodeEventEmitter } from 'events'
+
 import { Event } from './event.js'
 
 // Similar to node's builtin EventEmitter, but is also aware of our `Event`

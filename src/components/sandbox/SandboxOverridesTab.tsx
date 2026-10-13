@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Box, color, Link, Text, useTheme } from '../../ink.js'
 import type { CommandResultDisplay } from '../../types/command.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
@@ -6,10 +7,7 @@ import { Select } from '../CustomSelect/select.js'
 import { useTabHeaderFocus } from '../design-system/Tabs.js'
 
 type Props = {
-  onComplete: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onComplete: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
 type OverrideMode = 'open' | 'closed'
@@ -22,9 +20,7 @@ export function SandboxOverridesTab({ onComplete }: Props): React.ReactNode {
   if (!isEnabled) {
     return (
       <Box flexDirection="column" paddingY={1}>
-        <Text color="subtle">
-          Sandbox is not enabled. Enable sandbox to configure override settings.
-        </Text>
+        <Text color="subtle">Sandbox is not enabled. Enable sandbox to configure override settings.</Text>
       </Box>
     )
   }
@@ -33,53 +29,35 @@ export function SandboxOverridesTab({ onComplete }: Props): React.ReactNode {
     return (
       <Box flexDirection="column" paddingY={1}>
         <Text color="subtle">
-          Override settings are managed by a higher-priority configuration and
-          cannot be changed locally.
+          Override settings are managed by a higher-priority configuration and cannot be changed locally.
         </Text>
         <Box marginTop={1}>
           <Text dimColor>
-            Current setting:{' '}
-            {currentAllowUnsandboxed
-              ? 'Allow unsandboxed fallback'
-              : 'Strict sandbox mode'}
+            Current setting: {currentAllowUnsandboxed ? 'Allow unsandboxed fallback' : 'Strict sandbox mode'}
           </Text>
         </Box>
       </Box>
     )
   }
 
-  return (
-    <OverridesSelect
-      onComplete={onComplete}
-      currentMode={currentAllowUnsandboxed ? 'open' : 'closed'}
-    />
-  )
+  return <OverridesSelect onComplete={onComplete} currentMode={currentAllowUnsandboxed ? 'open' : 'closed'} />
 }
 
 // Split so useTabHeaderFocus() only runs when the Select renders. Calling it
 // above the early returns registers a down-arrow opt-in even when we return
 // static text — pressing ↓ then blurs the header with no way back.
-function OverridesSelect({
-  onComplete,
-  currentMode,
-}: Props & { currentMode: OverrideMode }): React.ReactNode {
+function OverridesSelect({ onComplete, currentMode }: Props & { currentMode: OverrideMode }): React.ReactNode {
   const [theme] = useTheme()
   const { headerFocused, focusHeader } = useTabHeaderFocus()
   const currentIndicator = color('success', theme)(`(current)`)
 
   const options = [
     {
-      label:
-        currentMode === 'open'
-          ? `Allow unsandboxed fallback ${currentIndicator}`
-          : 'Allow unsandboxed fallback',
+      label: currentMode === 'open' ? `Allow unsandboxed fallback ${currentIndicator}` : 'Allow unsandboxed fallback',
       value: 'open',
     },
     {
-      label:
-        currentMode === 'closed'
-          ? `Strict sandbox mode ${currentIndicator}`
-          : 'Strict sandbox mode',
+      label: currentMode === 'closed' ? `Strict sandbox mode ${currentIndicator}` : 'Strict sandbox mode',
       value: 'closed',
     },
   ]
@@ -116,16 +94,15 @@ function OverridesSelect({
           <Text bold dimColor>
             Allow unsandboxed fallback:
           </Text>{' '}
-          When a command fails due to sandbox restrictions, Claude can retry
-          with dangerouslyDisableSandbox to run outside the sandbox (falling
-          back to default permissions).
+          When a command fails due to sandbox restrictions, Claude can retry with dangerouslyDisableSandbox to run
+          outside the sandbox (falling back to default permissions).
         </Text>
         <Text dimColor>
           <Text bold dimColor>
             Strict sandbox mode:
           </Text>{' '}
-          All bash commands invoked by the model must run in the sandbox unless
-          they are explicitly listed in excludedCommands.
+          All bash commands invoked by the model must run in the sandbox unless they are explicitly listed in
+          excludedCommands.
         </Text>
         <Text dimColor>
           Learn more:{' '}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
-import type { InputEvent } from '../ink/events/input-event.js'
+
 import { type Key, useInput } from '../ink.js'
+import type { InputEvent } from '../ink/events/input-event.js'
 import { useOptionalKeybindingContext } from './KeybindingContext.js'
 import type { KeybindingContextName } from './types.js'
 
@@ -51,11 +52,7 @@ export function useKeybinding(
 
       // Build context list: registered active contexts + this context + Global
       // More specific contexts (registered ones) take precedence over Global
-      const contextsToCheck: KeybindingContextName[] = [
-        ...keybindingContext.activeContexts,
-        context,
-        'Global',
-      ]
+      const contextsToCheck: KeybindingContextName[] = [...keybindingContext.activeContexts, context, 'Global']
       // Deduplicate while preserving order (first occurrence wins for priority)
       const uniqueContexts = [...new Set(contextsToCheck)]
 
@@ -130,9 +127,7 @@ export function useKeybindings(
 
     const unregisterFns: Array<() => void> = []
     for (const [action, handler] of Object.entries(handlers)) {
-      unregisterFns.push(
-        keybindingContext.registerHandler({ action, context, handler }),
-      )
+      unregisterFns.push(keybindingContext.registerHandler({ action, context, handler }))
     }
 
     return () => {
@@ -149,11 +144,7 @@ export function useKeybindings(
 
       // Build context list: registered active contexts + this context + Global
       // More specific contexts (registered ones) take precedence over Global
-      const contextsToCheck: KeybindingContextName[] = [
-        ...keybindingContext.activeContexts,
-        context,
-        'Global',
-      ]
+      const contextsToCheck: KeybindingContextName[] = [...keybindingContext.activeContexts, context, 'Global']
       // Deduplicate while preserving order (first occurrence wins for priority)
       const uniqueContexts = [...new Set(contextsToCheck)]
 

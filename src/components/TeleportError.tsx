@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import {
-  checkIsGitClean,
-  checkNeedsClaudeAiLogin,
-} from 'src/utils/background/remote/preconditions.js'
+import { checkIsGitClean, checkNeedsClaudeAiLogin } from 'src/utils/background/remote/preconditions.js'
 import { gracefulShutdownSync } from 'src/utils/gracefulShutdown.js'
+
 import { Box, Text } from '../ink.js'
 import { ConsoleOAuthFlow } from './ConsoleOAuthFlow.js'
 import { Select } from './CustomSelect/index.js'
@@ -27,17 +25,14 @@ export function TeleportError({
   onComplete,
   errorsToIgnore = EMPTY_ERRORS_TO_IGNORE,
 }: TeleportErrorProps): React.ReactNode {
-  const [currentError, setCurrentError] =
-    useState<TeleportLocalErrorType | null>(null)
+  const [currentError, setCurrentError] = useState<TeleportLocalErrorType | null>(null)
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false)
 
   // Check for errors on mount and when error resolution occurs
   const checkErrors = useCallback(async () => {
     const currentErrors = await getTeleportErrors()
     const filteredErrors = new Set(
-      Array.from(currentErrors).filter(
-        (error: TeleportLocalErrorType) => !errorsToIgnore.has(error),
-      ),
+      Array.from(currentErrors).filter((error: TeleportLocalErrorType) => !errorsToIgnore.has(error)),
     )
 
     // If no errors remain, call onComplete
@@ -95,31 +90,18 @@ export function TeleportError({
 
   switch (currentError) {
     case 'needsGitStash':
-      return (
-        <TeleportStash
-          onStashAndContinue={handleStashComplete}
-          onCancel={onCancel}
-        />
-      )
+      return <TeleportStash onStashAndContinue={handleStashComplete} onCancel={onCancel} />
 
     case 'needsLogin': {
       if (isLoggingIn) {
-        return (
-          <ConsoleOAuthFlow
-            onDone={handleLoginComplete}
-            mode="login"
-            forceLoginMethod="claudeai"
-          />
-        )
+        return <ConsoleOAuthFlow onDone={handleLoginComplete} mode="login" forceLoginMethod="claudeai" />
       }
 
       return (
         <Dialog title="Log in to Claude" onCancel={onCancel}>
           <Box flexDirection="column">
             <Text dimColor>Teleport requires a Claude.ai account.</Text>
-            <Text dimColor>
-              Your Claude Pro/Max subscription will be used by Claude Code.
-            </Text>
+            <Text dimColor>Your Claude Pro/Max subscription will be used by Claude Code.</Text>
           </Box>
           <Select
             options={[
@@ -138,15 +120,10 @@ export function TeleportError({
  * Gets current teleport errors that need to be resolved
  * @returns Set of teleport error types that need to be handled
  */
-export async function getTeleportErrors(): Promise<
-  Set<TeleportLocalErrorType>
-> {
+export async function getTeleportErrors(): Promise<Set<TeleportLocalErrorType>> {
   const errors = new Set<TeleportLocalErrorType>()
 
-  const [needsLogin, isGitClean] = await Promise.all([
-    checkNeedsClaudeAiLogin(),
-    checkIsGitClean(),
-  ])
+  const [needsLogin, isGitClean] = await Promise.all([checkNeedsClaudeAiLogin(), checkIsGitClean()])
 
   if (needsLogin) {
     errors.add('needsLogin')

@@ -1,12 +1,10 @@
 import React from 'react'
+
 import { Box, Text, useTheme } from '../../../ink.js'
 import { FallbackPermissionRequest } from '../FallbackPermissionRequest.js'
 import { FilePermissionDialog } from '../FilePermissionDialog/FilePermissionDialog.js'
 import type { ToolInput } from '../FilePermissionDialog/useFilePermissionDialog.js'
-import type {
-  PermissionRequestProps,
-  ToolUseConfirm,
-} from '../PermissionRequest.js'
+import type { PermissionRequestProps, ToolUseConfirm } from '../PermissionRequest.js'
 
 function pathFromToolUse(toolUseConfirm: ToolUseConfirm): string | null {
   const tool = toolUseConfirm.tool
@@ -30,9 +28,7 @@ export function FilesystemPermissionRequest({
 }: PermissionRequestProps): React.ReactNode {
   const [theme] = useTheme()
   const path = pathFromToolUse(toolUseConfirm)
-  const userFacingName = toolUseConfirm.tool.userFacingName(
-    toolUseConfirm.input as never,
-  )
+  const userFacingName = toolUseConfirm.tool.userFacingName(toolUseConfirm.input as never)
 
   const isReadOnly = toolUseConfirm.tool.isReadOnly(toolUseConfirm.input)
   const userFacingReadOrEdit = isReadOnly ? 'Read' : 'Edit'
@@ -61,12 +57,7 @@ export function FilesystemPermissionRequest({
   const content = (
     <Box flexDirection="column" paddingX={2} paddingY={1}>
       <Text>
-        {userFacingName}(
-        {toolUseConfirm.tool.renderToolUseMessage(
-          toolUseConfirm.input as never,
-          { theme, verbose },
-        )}
-        )
+        {userFacingName}({toolUseConfirm.tool.renderToolUseMessage(toolUseConfirm.input as never, { theme, verbose })})
       </Text>
     </Box>
   )

@@ -97,10 +97,7 @@ function quoteProblematicValues(frontmatterText: string): string {
       }
 
       // Skip if already quoted
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
         result.push(line)
         continue
       }
@@ -127,10 +124,7 @@ export const FRONTMATTER_REGEX = /^---\s*\n([\s\S]*?)---\s*\n?/
  * @param markdown The raw markdown content
  * @returns Object containing parsed frontmatter and content without frontmatter
  */
-export function parseFrontmatter(
-  markdown: string,
-  sourcePath?: string,
-): ParsedMarkdown {
+export function parseFrontmatter(markdown: string, sourcePath?: string): ParsedMarkdown {
   const match = markdown.match(FRONTMATTER_REGEX)
 
   if (!match) {
@@ -226,9 +220,7 @@ export function splitPathInFrontmatter(input: string | string[]): string[] {
   }
 
   // Expand brace patterns in each part
-  return parts
-    .filter(p => p.length > 0)
-    .flatMap(pattern => expandBraces(pattern))
+  return parts.filter((p) => p.length > 0).flatMap((pattern) => expandBraces(pattern))
 }
 
 /**
@@ -251,7 +243,7 @@ function expandBraces(pattern: string): string[] {
   const suffix = braceMatch[3] || ''
 
   // Split alternatives by comma and expand each one
-  const parts = alternatives.split(',').map(alt => alt.trim())
+  const parts = alternatives.split(',').map((alt) => alt.trim())
 
   // Recursively expand remaining braces in suffix
   const expanded: string[] = []
@@ -272,9 +264,7 @@ function expandBraces(pattern: string): string[] {
  * @param value The raw value from frontmatter (could be number, string, or undefined)
  * @returns The parsed positive integer, or undefined if invalid or not provided
  */
-export function parsePositiveIntFromFrontmatter(
-  value: unknown,
-): number | undefined {
+export function parsePositiveIntFromFrontmatter(value: unknown): number | undefined {
   if (value === undefined || value === null) {
     return undefined
   }
@@ -301,11 +291,7 @@ export function parsePositiveIntFromFrontmatter(
  * @param componentName - The skill/command/agent/style name for log messages
  * @param pluginName - The plugin name, if this came from a plugin
  */
-export function coerceDescriptionToString(
-  value: unknown,
-  componentName?: string,
-  pluginName?: string,
-): string | null {
+export function coerceDescriptionToString(value: unknown, componentName?: string, pluginName?: string): string | null {
   if (value == null) {
     return null
   }
@@ -316,9 +302,7 @@ export function coerceDescriptionToString(
     return String(value)
   }
   // Non-scalar descriptions (arrays, objects) are invalid — log and omit
-  const source = pluginName
-    ? `${pluginName}:${componentName}`
-    : (componentName ?? 'unknown')
+  const source = pluginName ? `${pluginName}:${componentName}` : (componentName ?? 'unknown')
   logForDebugging(`Description invalid for ${source} - omitting`, {
     level: 'warn',
   })
@@ -348,10 +332,7 @@ const FRONTMATTER_SHELLS: readonly FrontmatterShell[] = ['bash', 'powershell']
  * back to bash rather than failing the skill load, matching how `effort`
  * and other fields degrade.
  */
-export function parseShellFrontmatter(
-  value: unknown,
-  source: string,
-): FrontmatterShell | undefined {
+export function parseShellFrontmatter(value: unknown, source: string): FrontmatterShell | undefined {
   if (value == null) {
     return undefined
   }

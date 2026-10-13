@@ -21,11 +21,7 @@ import {
   isInstallationRelevantToCurrentProject,
   loadInstalledPluginsFromDisk,
 } from './installedPluginsManager.js'
-import {
-  getDeclaredMarketplaces,
-  loadKnownMarketplacesConfig,
-  refreshMarketplace,
-} from './marketplaceManager.js'
+import { getDeclaredMarketplaces, loadKnownMarketplacesConfig, refreshMarketplace } from './marketplaceManager.js'
 import { parsePluginIdentifier } from './pluginIdentifier.js'
 import { isMarketplaceAutoUpdate, type PluginScope } from './schemas.js'
 
@@ -48,9 +44,7 @@ let pendingNotification: string[] | null = null
  * If plugins were already updated before the callback was registered,
  * the callback will be invoked immediately with the pending updates.
  */
-export function onPluginsAutoUpdated(
-  callback: PluginAutoUpdateCallback,
-): () => void {
+export function onPluginsAutoUpdated(callback: PluginAutoUpdateCallback): () => void {
   pluginUpdateCallback = callback
 
   // If there are pending updates that happened before registration, deliver them now
@@ -72,9 +66,7 @@ export function getAutoUpdatedPluginNames(): string[] {
   if (!hasPendingUpdates()) {
     return []
   }
-  return getPendingUpdatesDetails().map(
-    d => parsePluginIdentifier(d.pluginId).name,
-  )
+  return getPendingUpdatesDetails().map((d) => parsePluginIdentifier(d.pluginId).name)
 }
 
 /**
@@ -89,10 +81,7 @@ async function getAutoUpdateEnabledMarketplaces(): Promise<Set<string>> {
   for (const [name, entry] of Object.entries(config)) {
     // Settings-declared autoUpdate takes precedence over JSON state
     const declaredAutoUpdate = declared[name]?.autoUpdate
-    const autoUpdate =
-      declaredAutoUpdate !== undefined
-        ? declaredAutoUpdate
-        : isMarketplaceAutoUpdate(name, entry)
+    const autoUpdate = declaredAutoUpdate !== undefined ? declaredAutoUpdate : isMarketplaceAutoUpdate(name, entry)
     if (autoUpdate) {
       enabled.add(name.toLowerCase())
     }
@@ -117,20 +106,12 @@ async function updatePlugin(
 
       if (result.success && !result.alreadyUpToDate) {
         wasUpdated = true
-        logForDebugging(
-          `Plugin autoupdate: updated ${pluginId} from ${result.oldVersion} to ${result.newVersion}`,
-        )
+        logForDebugging(`Plugin autoupdate: updated ${pluginId} from ${result.oldVersion} to ${result.newVersion}`)
       } else if (!result.alreadyUpToDate) {
-        logForDebugging(
-          `Plugin autoupdate: failed to update ${pluginId}: ${result.message}`,
-          { level: 'warn' },
-        )
+        logForDebugging(`Plugin autoupdate: failed to update ${pluginId}: ${result.message}`, { level: 'warn' })
       }
     } catch (error) {
-      logForDebugging(
-        `Plugin autoupdate: error updating ${pluginId}: ${errorMessage(error)}`,
-        { level: 'warn' },
-      )
+      logForDebugging(`Plugin autoupdate: error updating ${pluginId}: ${errorMessage(error)}`, { level: 'warn' })
     }
   }
 
@@ -158,9 +139,7 @@ async function updatePlugin(
  * @param marketplaceNames - lowercase marketplace names to update plugins from
  * @returns plugin IDs that were actually updated (not already up-to-date)
  */
-export async function updatePluginsForMarketplaces(
-  marketplaceNames: Set<string>,
-): Promise<string[]> {
+export async function updatePluginsForMarketplaces(marketplaceNames: Set<string>): Promise<string[]> {
   const installedPlugins = loadInstalledPluginsFromDisk()
   const pluginIds = Object.keys(installedPlugins.plugins)
 
@@ -169,7 +148,7 @@ export async function updatePluginsForMarketplaces(
   }
 
   const results = await Promise.allSettled(
-    pluginIds.map(async pluginId => {
+    pluginIds.map(async (pluginId) => {
       const { marketplace } = parsePluginIdentifier(pluginId)
       if (!marketplace || !marketplaceNames.has(marketplace.toLowerCase())) {
         return null
@@ -180,9 +159,7 @@ export async function updatePluginsForMarketplaces(
         return null
       }
 
-      const relevantInstallations = allInstallations.filter(
-        isInstallationRelevantToCurrentProject,
-      )
+      const relevantInstallations = allInstallations.filter(isInstallationRelevantToCurrentProject)
       if (relevantInstallations.length === 0) {
         return null
       }
@@ -192,20 +169,15 @@ export async function updatePluginsForMarketplaces(
   )
 
   return results
-    .filter(
-      (r): r is PromiseFulfilledResult<string> =>
-        r.status === 'fulfilled' && r.value !== null,
-    )
-    .map(r => r.value)
+    .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled' && r.value !== null)
+    .map((r) => r.value)
 }
 
 /**
  * Update plugins from marketplaces that have autoUpdate enabled.
  * Returns the list of plugin IDs that were updated.
  */
-async function updatePlugins(
-  autoUpdateEnabledMarketplaces: Set<string>,
-): Promise<string[]> {
+async function updatePlugins(autoUpdateEnabledMarketplaces: Set<string>): Promise<string[]> {
   return updatePluginsForMarketplaces(autoUpdateEnabledMarketplaces)
 }
 
@@ -233,8 +205,7 @@ export function autoUpdateMarketplacesAndPluginsInBackground(): void {
 
     try {
       // Get marketplaces with autoUpdate enabled
-      const autoUpdateEnabledMarketplaces =
-        await getAutoUpdateEnabledMarketplaces()
+      const autoUpdateEnabledMarketplaces = await getAutoUpdateEnabledMarketplaces()
 
       if (autoUpdateEnabledMarketplaces.size === 0) {
         return
@@ -242,27 +213,23 @@ export function autoUpdateMarketplacesAndPluginsInBackground(): void {
 
       // Refresh only marketplaces with autoUpdate enabled
       const refreshResults = await Promise.allSettled(
-        Array.from(autoUpdateEnabledMarketplaces).map(async name => {
+        Array.from(autoUpdateEnabledMarketplaces).map(async (name) => {
           try {
             await refreshMarketplace(name, undefined, {
               disableCredentialHelper: true,
             })
           } catch (error) {
-            logForDebugging(
-              `Plugin autoupdate: failed to refresh marketplace ${name}: ${errorMessage(error)}`,
-              { level: 'warn' },
-            )
+            logForDebugging(`Plugin autoupdate: failed to refresh marketplace ${name}: ${errorMessage(error)}`, {
+              level: 'warn',
+            })
           }
         }),
       )
 
       // Log any refresh failures
-      const failures = refreshResults.filter(r => r.status === 'rejected')
+      const failures = refreshResults.filter((r) => r.status === 'rejected')
       if (failures.length > 0) {
-        logForDebugging(
-          `Plugin autoupdate: ${failures.length} marketplace refresh(es) failed`,
-          { level: 'warn' },
-        )
+        logForDebugging(`Plugin autoupdate: ${failures.length} marketplace refresh(es) failed`, { level: 'warn' })
       }
 
       logForDebugging('Plugin autoupdate: checking installed plugins')

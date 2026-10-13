@@ -1,4 +1,5 @@
 import { realpath, stat } from 'fs/promises'
+
 import { getPlatform } from '../platform.js'
 import { which } from '../which.js'
 
@@ -31,15 +32,10 @@ export async function findPowerShell(): Promise<string | null> {
     if (getPlatform() === 'linux') {
       const resolved = await realpath(pwshPath).catch(() => pwshPath)
       if (pwshPath.startsWith('/snap/') || resolved.startsWith('/snap/')) {
-        const direct =
-          (await probePath('/opt/microsoft/powershell/7/pwsh')) ??
-          (await probePath('/usr/bin/pwsh'))
+        const direct = (await probePath('/opt/microsoft/powershell/7/pwsh')) ?? (await probePath('/usr/bin/pwsh'))
         if (direct) {
           const directResolved = await realpath(direct).catch(() => direct)
-          if (
-            !direct.startsWith('/snap/') &&
-            !directResolved.startsWith('/snap/')
-          ) {
+          if (!direct.startsWith('/snap/') && !directResolved.startsWith('/snap/')) {
             return direct
           }
         }

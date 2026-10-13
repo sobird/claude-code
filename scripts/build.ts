@@ -1,5 +1,6 @@
 import { rm } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
+
 import pkg from '../package.json'
 import { banner, define, external, features, type BuildTarget } from './config'
 

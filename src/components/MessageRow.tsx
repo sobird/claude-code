@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import type { Command } from '../commands.js'
 import { Box } from '../ink.js'
 import type { Screen } from '../screens/REPL.js'
@@ -68,17 +69,11 @@ export function hasContentAfterIndex(
     const msg = messages[i]
     if (msg?.type === 'assistant') {
       const content = msg.message.content[0]
-      if (
-        content?.type === 'thinking' ||
-        content?.type === 'redacted_thinking'
-      ) {
+      if (content?.type === 'thinking' || content?.type === 'redacted_thinking') {
         continue
       }
       if (content?.type === 'tool_use') {
-        if (
-          getToolSearchOrReadInfo(content.name, content.input, tools)
-            .isCollapsible
-        ) {
+        if (getToolSearchOrReadInfo(content.name, content.input, tools).isCollapsible) {
           continue
         }
         // Non-collapsible tool uses appear in syntheticStreamingToolUseMessages
@@ -104,9 +99,7 @@ export function hasContentAfterIndex(
     // merged into the current collapsed group on the next render cycle
     if (msg?.type === 'grouped_tool_use') {
       const firstInput = msg.messages[0]?.message.content[0]?.input
-      if (
-        getToolSearchOrReadInfo(msg.toolName, firstInput, tools).isCollapsible
-      ) {
+      if (getToolSearchOrReadInfo(msg.toolName, firstInput, tools).isCollapsible) {
         continue
       }
     }
@@ -142,23 +135,13 @@ function MessageRowImpl({
   // hasAnyToolInProgress takes priority: if tools are running, always show active regardless
   // of what else is in the message list (avoids false finalization during parallel execution).
   const isActiveCollapsedGroup =
-    isCollapsed &&
-    (hasAnyToolInProgress(msg, inProgressToolUseIDs) ||
-      (isLoading && !hasContentAfter))
+    isCollapsed && (hasAnyToolInProgress(msg, inProgressToolUseIDs) || (isLoading && !hasContentAfter))
 
-  const displayMsg = isGrouped
-    ? msg.displayMessage
-    : isCollapsed
-      ? getDisplayMessageFromCollapsed(msg)
-      : msg
+  const displayMsg = isGrouped ? msg.displayMessage : isCollapsed ? getDisplayMessageFromCollapsed(msg) : msg
 
-  const progressMessagesForMessage =
-    isGrouped || isCollapsed ? [] : getProgressMessagesFromLookup(msg, lookups)
+  const progressMessagesForMessage = isGrouped || isCollapsed ? [] : getProgressMessagesFromLookup(msg, lookups)
 
-  const siblingToolUseIDs =
-    isGrouped || isCollapsed
-      ? EMPTY_STRING_SET
-      : getSiblingToolUseIDsFromLookup(msg, lookups)
+  const siblingToolUseIDs = isGrouped || isCollapsed ? EMPTY_STRING_SET : getSiblingToolUseIDsFromLookup(msg, lookups)
 
   const isStatic = shouldRenderStatically(
     msg,
@@ -172,11 +155,9 @@ function MessageRowImpl({
   let shouldAnimate = false
   if (canAnimate) {
     if (isGrouped) {
-      shouldAnimate = msg.messages.some(m => {
+      shouldAnimate = msg.messages.some((m) => {
         const content = m.message.content[0]
-        return (
-          content?.type === 'tool_use' && inProgressToolUseIDs.has(content.id)
-        )
+        return content?.type === 'tool_use' && inProgressToolUseIDs.has(content.id)
       })
     } else if (isCollapsed) {
       shouldAnimate = hasAnyToolInProgress(msg, inProgressToolUseIDs)
@@ -189,7 +170,7 @@ function MessageRowImpl({
   const hasMetadata =
     isTranscriptMode &&
     displayMsg.type === 'assistant' &&
-    displayMsg.message.content.some(c => c.type === 'text') &&
+    displayMsg.message.content.some((c) => c.type === 'text') &&
     (displayMsg.timestamp || displayMsg.message.model)
 
   const messageEl = (
@@ -227,20 +208,9 @@ function MessageRowImpl({
   return (
     <OffscreenFreeze>
       <Box width={columns} flexDirection="column">
-        <Box
-          flexDirection="row"
-          justifyContent="flex-end"
-          gap={1}
-          marginTop={1}
-        >
-          <MessageTimestamp
-            message={displayMsg}
-            isTranscriptMode={isTranscriptMode}
-          />
-          <MessageModel
-            message={displayMsg}
-            isTranscriptMode={isTranscriptMode}
-          />
+        <Box flexDirection="row" justifyContent="flex-end" gap={1} marginTop={1}>
+          <MessageTimestamp message={displayMsg} isTranscriptMode={isTranscriptMode} />
+          <MessageModel message={displayMsg} isTranscriptMode={isTranscriptMode} />
         </Box>
         {messageEl}
       </Box>
@@ -252,19 +222,16 @@ function MessageRowImpl({
  * Checks if a message is "streaming" - i.e., its content may still be changing.
  * Exported for testing.
  */
-export function isMessageStreaming(
-  msg: RenderableMessage,
-  streamingToolUseIDs: Set<string>,
-): boolean {
+export function isMessageStreaming(msg: RenderableMessage, streamingToolUseIDs: Set<string>): boolean {
   if (msg.type === 'grouped_tool_use') {
-    return msg.messages.some(m => {
+    return msg.messages.some((m) => {
       const content = m.message.content[0]
       return content?.type === 'tool_use' && streamingToolUseIDs.has(content.id)
     })
   }
   if (msg.type === 'collapsed_read_search') {
     const toolIds = getToolUseIdsFromCollapsedGroup(msg)
-    return toolIds.some(id => streamingToolUseIDs.has(id))
+    return toolIds.some((id) => streamingToolUseIDs.has(id))
   }
   const toolUseID = getToolUseID(msg)
   return !!toolUseID && streamingToolUseIDs.has(toolUseID)
@@ -274,19 +241,16 @@ export function isMessageStreaming(
  * Checks if all tools in a message are resolved.
  * Exported for testing.
  */
-export function allToolsResolved(
-  msg: RenderableMessage,
-  resolvedToolUseIDs: Set<string>,
-): boolean {
+export function allToolsResolved(msg: RenderableMessage, resolvedToolUseIDs: Set<string>): boolean {
   if (msg.type === 'grouped_tool_use') {
-    return msg.messages.every(m => {
+    return msg.messages.every((m) => {
       const content = m.message.content[0]
       return content?.type === 'tool_use' && resolvedToolUseIDs.has(content.id)
     })
   }
   if (msg.type === 'collapsed_read_search') {
     const toolIds = getToolUseIdsFromCollapsedGroup(msg)
-    return toolIds.every(id => resolvedToolUseIDs.has(id))
+    return toolIds.every((id) => resolvedToolUseIDs.has(id))
   }
   if (msg.type === 'assistant') {
     const block = msg.message.content[0]
@@ -315,10 +279,7 @@ export function areMessageRowPropsEqual(prev: Props, next: Props): boolean {
   if (prev.verbose !== next.verbose) return false
 
   // collapsed_read_search is never static in prompt mode (matches shouldRenderStatically)
-  if (
-    prev.message.type === 'collapsed_read_search' &&
-    next.screen !== 'transcript'
-  ) {
+  if (prev.message.type === 'collapsed_read_search' && next.screen !== 'transcript') {
     return false
   }
 
@@ -333,19 +294,13 @@ export function areMessageRowPropsEqual(prev: Props, next: Props): boolean {
   // lastThinkingBlockId affects thinking block visibility — but only for
   // messages that HAVE thinking content. Checking unconditionally busts the
   // memo for every scrollback message whenever thinking starts/stops (CC-941).
-  if (
-    prev.lastThinkingBlockId !== next.lastThinkingBlockId &&
-    hasThinkingContent(next.message)
-  ) {
+  if (prev.lastThinkingBlockId !== next.lastThinkingBlockId && hasThinkingContent(next.message)) {
     return false
   }
 
   // Check if this message is still "in flight"
   const isStreaming = isMessageStreaming(prev.message, prev.streamingToolUseIDs)
-  const isResolved = allToolsResolved(
-    prev.message,
-    prev.lookups.resolvedToolUseIDs,
-  )
+  const isResolved = allToolsResolved(prev.message, prev.lookups.resolvedToolUseIDs)
 
   // Only bail out for truly static messages
   if (isStreaming || !isResolved) return false

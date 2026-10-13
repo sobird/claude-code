@@ -40,13 +40,7 @@ export type Color =
 // =============================================================================
 
 /** Underline style variants */
-export type UnderlineStyle =
-  | 'none'
-  | 'single'
-  | 'double'
-  | 'curly'
-  | 'dotted'
-  | 'dashed'
+export type UnderlineStyle = 'none' | 'single' | 'double' | 'curly' | 'dotted' | 'dashed'
 
 /** Text style attributes - represents current styling state */
 export type TextStyle = {
@@ -109,11 +103,7 @@ export function colorsEqual(a: Color, b: Color): boolean {
     case 'indexed':
       return a.index === (b as typeof a).index
     case 'rgb':
-      return (
-        a.r === (b as typeof a).r &&
-        a.g === (b as typeof a).g &&
-        a.b === (b as typeof a).b
-      )
+      return a.r === (b as typeof a).r && a.g === (b as typeof a).g && a.b === (b as typeof a).b
     case 'default':
       return true
   }
@@ -174,9 +164,7 @@ export type ModeAction =
 // Link Actions (OSC 8)
 // =============================================================================
 
-export type LinkAction =
-  | { type: 'start'; url: string; params?: Record<string, string> }
-  | { type: 'end' }
+export type LinkAction = { type: 'start'; url: string; params?: Record<string, string> } | { type: 'end' }
 
 // =============================================================================
 // Title Actions (OSC 0/1/2)

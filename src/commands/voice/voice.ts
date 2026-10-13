@@ -5,10 +5,7 @@ import type { LocalCommandCall } from '../../types/command.js'
 import { isAnthropicAuthEnabled } from '../../utils/auth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { settingsChangeDetector } from '../../utils/settings/changeDetector.js'
-import {
-  getInitialSettings,
-  updateSettingsForSource,
-} from '../../utils/settings/settings.js'
+import { getInitialSettings, updateSettingsForSource } from '../../utils/settings/settings.js'
 import { isVoiceModeEnabled } from '../../voice/voiceModeEnabled.js'
 
 const LANG_HINT_MAX_SHOWS = 2
@@ -21,8 +18,7 @@ export const call: LocalCommandCall = async () => {
     if (!isAnthropicAuthEnabled()) {
       return {
         type: 'text' as const,
-        value:
-          'Voice mode requires a Claude.ai account. Please run /login to sign in.',
+        value: 'Voice mode requires a Claude.ai account. Please run /login to sign in.',
       }
     }
     return {
@@ -42,8 +38,7 @@ export const call: LocalCommandCall = async () => {
     if (result.error) {
       return {
         type: 'text' as const,
-        value:
-          'Failed to update settings. Check your settings file for syntax errors.',
+        value: 'Failed to update settings. Check your settings file for syntax errors.',
       }
     }
     settingsChangeDetector.notifyChange('userSettings')
@@ -55,9 +50,7 @@ export const call: LocalCommandCall = async () => {
   }
 
   // Toggle ON — run pre-flight checks first
-  const { isVoiceStreamAvailable } = await import(
-    '../../services/voiceStreamSTT.js'
-  )
+  const { isVoiceStreamAvailable } = await import('../../services/voiceStreamSTT.js')
   const { checkRecordingAvailability } = await import('../../services/voice.js')
 
   // Check recording availability (microphone access)
@@ -65,8 +58,7 @@ export const call: LocalCommandCall = async () => {
   if (!recording.available) {
     return {
       type: 'text' as const,
-      value:
-        recording.reason ?? 'Voice mode is not available in this environment.',
+      value: recording.reason ?? 'Voice mode is not available in this environment.',
     }
   }
 
@@ -74,15 +66,12 @@ export const call: LocalCommandCall = async () => {
   if (!isVoiceStreamAvailable()) {
     return {
       type: 'text' as const,
-      value:
-        'Voice mode requires a Claude.ai account. Please run /login to sign in.',
+      value: 'Voice mode requires a Claude.ai account. Please run /login to sign in.',
     }
   }
 
   // Check for recording tools
-  const { checkVoiceDependencies, requestMicrophonePermission } = await import(
-    '../../services/voice.js'
-  )
+  const { checkVoiceDependencies, requestMicrophonePermission } = await import('../../services/voice.js')
   const deps = await checkVoiceDependencies()
   if (!deps.available) {
     const hint = deps.installCommand
@@ -116,8 +105,7 @@ export const call: LocalCommandCall = async () => {
   if (result.error) {
     return {
       type: 'text' as const,
-      value:
-        'Failed to update settings. Check your settings file for syntax errors.',
+      value: 'Failed to update settings. Check your settings file for syntax errors.',
     }
   }
   settingsChangeDetector.notifyChange('userSettings')
@@ -137,7 +125,7 @@ export const call: LocalCommandCall = async () => {
     langNote = ` Dictation language: ${stt.code} (/config to change).`
   }
   if (langChanged || showHint) {
-    saveGlobalConfig(prev => ({
+    saveGlobalConfig((prev) => ({
       ...prev,
       voiceLangHintShownCount: priorCount + (showHint ? 1 : 0),
       voiceLangHintLastLanguage: stt.code,

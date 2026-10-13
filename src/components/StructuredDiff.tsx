@@ -1,6 +1,7 @@
 import type { StructuredPatchHunk } from 'diff'
 import * as React from 'react'
 import { memo } from 'react'
+
 import { useSettings } from '../hooks/useSettings.js'
 import { Box, NoSelect, RawAnsi, useTheme } from '../ink.js'
 import { isFullscreenEnvEnabled } from '../utils/fullscreen.js'
@@ -38,20 +39,13 @@ type CachedRender = {
   gutters: string[] | null
   contents: string[] | null
 }
-const RENDER_CACHE = new WeakMap<
-  StructuredPatchHunk,
-  Map<string, CachedRender>
->()
+const RENDER_CACHE = new WeakMap<StructuredPatchHunk, Map<string, CachedRender>>()
 
 // Gutter width matches the Rust module's layout: marker (1) + space +
 // right-aligned line number (max_digits) + space. Depends only on patch
 // identity (the WeakMap key), so it's cacheable alongside the NAPI output.
 function computeGutterWidth(patch: StructuredPatchHunk): number {
-  const maxLineNumber = Math.max(
-    patch.oldStart + patch.oldLines - 1,
-    patch.newStart + patch.newLines - 1,
-    1,
-  )
+  const maxLineNumber = Math.max(patch.oldStart + patch.oldLines - 1, patch.newStart + patch.newLines - 1, 1)
   return maxLineNumber.toString().length + 3 // marker + 2 padding spaces
 }
 
@@ -74,8 +68,7 @@ function renderColorDiff(
   // this, sliceAnsi(line, gutterWidth) would return empty content and
   // RawAnsi(width<=0) is untested.
   const rawGutterWidth = splitGutter ? computeGutterWidth(patch) : 0
-  const gutterWidth =
-    rawGutterWidth > 0 && rawGutterWidth < width ? rawGutterWidth : 0
+  const gutterWidth = rawGutterWidth > 0 && rawGutterWidth < width ? rawGutterWidth : 0
 
   const key = `${theme}|${width}|${dim ? 1 : 0}|${gutterWidth}|${firstLine ?? ''}|${filePath}`
 
@@ -83,11 +76,7 @@ function renderColorDiff(
   const hit = perHunk?.get(key)
   if (hit) return hit
 
-  const lines = new ColorDiff(patch, firstLine, filePath, fileContent).render(
-    theme,
-    width,
-    dim,
-  )
+  const lines = new ColorDiff(patch, firstLine, filePath, fileContent).render(theme, width, dim)
   if (lines === null) return null
 
   // Pre-split the gutter column once (cold-cache). sliceAnsi preserves
@@ -96,8 +85,8 @@ function renderColorDiff(
   let gutters: string[] | null = null
   let contents: string[] | null = null
   if (gutterWidth > 0) {
-    gutters = lines.map(l => sliceAnsi(l, 0, gutterWidth))
-    contents = lines.map(l => sliceAnsi(l, gutterWidth))
+    gutters = lines.map((l) => sliceAnsi(l, 0, gutterWidth))
+    contents = lines.map((l) => sliceAnsi(l, gutterWidth))
   }
 
   const entry: CachedRender = { lines, gutterWidth, gutters, contents }
@@ -126,8 +115,7 @@ export const StructuredDiff = memo(function StructuredDiff({
 }: Props): React.ReactNode {
   const [theme] = useTheme()
   const settings = useSettings()
-  const syntaxHighlightingDisabled =
-    settings.syntaxHighlightingDisabled ?? false
+  const syntaxHighlightingDisabled = settings.syntaxHighlightingDisabled ?? false
 
   // Ensure width is at least 1 to prevent crashes in the Rust NAPI module
   // which expects u32 (can't handle negative numbers)
@@ -142,16 +130,7 @@ export const StructuredDiff = memo(function StructuredDiff({
   const cached =
     skipHighlighting || syntaxHighlightingDisabled
       ? null
-      : renderColorDiff(
-          patch,
-          firstLine,
-          filePath,
-          fileContent ?? null,
-          theme,
-          safeWidth,
-          dim,
-          splitGutter,
-        )
+      : renderColorDiff(patch, firstLine, filePath, fileContent ?? null, theme, safeWidth, dim, splitGutter)
 
   if (!cached) {
     return (

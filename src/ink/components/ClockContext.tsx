@@ -1,4 +1,5 @@
 import React, { createContext, useEffect, useState } from 'react'
+
 import { FRAME_INTERVAL_MS } from '../constants.js'
 import { useTerminalFocus } from '../hooks/use-terminal-focus.js'
 
@@ -81,18 +82,12 @@ const BLURRED_TICK_INTERVAL_MS = FRAME_INTERVAL_MS * 2
 // Own component so App.tsx doesn't re-render when the clock is created.
 // The clock value is stable (created once via useState), so the provider
 // never causes consumer re-renders on its own.
-export function ClockProvider({
-  children,
-}: {
-  children: React.ReactNode
-}): React.ReactNode {
+export function ClockProvider({ children }: { children: React.ReactNode }): React.ReactNode {
   const [clock] = useState(() => createClock(FRAME_INTERVAL_MS))
   const focused = useTerminalFocus()
 
   useEffect(() => {
-    clock.setTickInterval(
-      focused ? FRAME_INTERVAL_MS : BLURRED_TICK_INTERVAL_MS,
-    )
+    clock.setTickInterval(focused ? FRAME_INTERVAL_MS : BLURRED_TICK_INTERVAL_MS)
   }, [clock, focused])
 
   return <ClockContext.Provider value={clock}>{children}</ClockContext.Provider>

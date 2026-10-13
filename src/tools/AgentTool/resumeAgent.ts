@@ -1,10 +1,11 @@
 import { promises as fsp } from 'fs'
+
 import { getSdkAgentProgressSummariesEnabled } from '../../bootstrap/state.js'
 import { getSystemPrompt } from '../../constants/prompts.js'
 import { isCoordinatorMode } from '../../coordinator/coordinatorMode.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
-import type { ToolUseContext } from '../../Tool.js'
 import { registerAsyncAgent } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
+import type { ToolUseContext } from '../../Tool.js'
 import { assembleToolPool } from '../../tools.js'
 import { asAgentId } from '../../types/ids.js'
 import { runWithAgentContext } from '../../utils/agentContext.js'
@@ -18,10 +19,7 @@ import {
 } from '../../utils/messages.js'
 import { getAgentModel } from '../../utils/model/agent.js'
 import { getQuerySourceForAgent } from '../../utils/promptCategory.js'
-import {
-  getAgentTranscript,
-  readAgentMetadata,
-} from '../../utils/sessionStorage.js'
+import { getAgentTranscript, readAgentMetadata } from '../../utils/sessionStorage.js'
 import { buildEffectiveSystemPrompt } from '../../utils/systemPrompt.js'
 import type { SystemPrompt } from '../../utils/systemPromptType.js'
 import { getTaskOutputPath } from '../../utils/task/diskOutput.js'
@@ -56,8 +54,7 @@ export async function resumeAgentBackground({
   const appState = toolUseContext.getAppState()
   // In-process teammates get a no-op setAppState; setAppStateForTasks
   // reaches the root store so task registration/progress/kill stay visible.
-  const rootSetAppState =
-    toolUseContext.setAppStateForTasks ?? toolUseContext.setAppState
+  const rootSetAppState = toolUseContext.setAppStateForTasks ?? toolUseContext.setAppState
   const permissionMode = appState.toolPermissionContext.mode
 
   const [transcript, meta] = await Promise.all([
@@ -68,9 +65,7 @@ export async function resumeAgentBackground({
     throw new Error(`No transcript found for agent ID: ${agentId}`)
   }
   const resumedMessages = filterWhitespaceOnlyAssistantMessages(
-    filterOrphanedThinkingOnlyMessages(
-      filterUnresolvedToolUses(transcript.messages),
-    ),
+    filterOrphanedThinkingOnlyMessages(filterUnresolvedToolUses(transcript.messages)),
   )
   const resumedReplacementState = reconstructForSubagentResume(
     toolUseContext.contentReplacementState,
@@ -81,11 +76,9 @@ export async function resumeAgentBackground({
   // to parent cwd rather than crashing on chdir later.
   const resumedWorktreePath = meta?.worktreePath
     ? await fsp.stat(meta.worktreePath).then(
-        s => (s.isDirectory() ? meta.worktreePath : undefined),
+        (s) => (s.isDirectory() ? meta.worktreePath : undefined),
         () => {
-          logForDebugging(
-            `Resumed worktree ${meta.worktreePath} no longer exists; falling back to parent cwd`,
-          )
+          logForDebugging(`Resumed worktree ${meta.worktreePath} no longer exists; falling back to parent cwd`)
           return undefined
         },
       )
@@ -103,9 +96,7 @@ export async function resumeAgentBackground({
     selectedAgent = FORK_AGENT
     isResumedFork = true
   } else if (meta?.agentType) {
-    const found = toolUseContext.options.agentDefinitions.activeAgents.find(
-      a => a.agentType === meta.agentType,
-    )
+    const found = toolUseContext.options.agentDefinitions.activeAgents.find((a) => a.agentType === meta.agentType)
     selectedAgent = found ?? GENERAL_PURPOSE_AGENT
   } else {
     selectedAgent = GENERAL_PURPOSE_AGENT
@@ -119,9 +110,7 @@ export async function resumeAgentBackground({
       forkParentSystemPrompt = toolUseContext.renderedSystemPrompt
     } else {
       const mainThreadAgentDefinition = appState.agent
-        ? appState.agentDefinitions.activeAgents.find(
-            a => a.agentType === appState.agent,
-          )
+        ? appState.agentDefinitions.activeAgents.find((a) => a.agentType === appState.agent)
         : undefined
       const additionalWorkingDirectories = Array.from(
         appState.toolPermissionContext.additionalWorkingDirectories.keys(),
@@ -141,9 +130,7 @@ export async function resumeAgentBackground({
       })
     }
     if (!forkParentSystemPrompt) {
-      throw new Error(
-        'Cannot resume fork agent: unable to reconstruct parent system prompt',
-      )
+      throw new Error('Cannot resume fork agent: unable to reconstruct parent system prompt')
     }
   }
 
@@ -165,24 +152,16 @@ export async function resumeAgentBackground({
 
   const runAgentParams: Parameters<typeof runAgent>[0] = {
     agentDefinition: selectedAgent,
-    promptMessages: [
-      ...resumedMessages,
-      createUserMessage({ content: prompt }),
-    ],
+    promptMessages: [...resumedMessages, createUserMessage({ content: prompt })],
     toolUseContext,
     canUseTool,
     isAsync: true,
-    querySource: getQuerySourceForAgent(
-      selectedAgent.agentType,
-      isBuiltInAgent(selectedAgent),
-    ),
+    querySource: getQuerySourceForAgent(selectedAgent.agentType, isBuiltInAgent(selectedAgent)),
     model: undefined,
     // Fork resume: pass parent's system prompt (cache-identical prefix).
     // Non-fork: undefined → runAgent recomputes under wrapWithCwd so
     // getCwd() sees resumedWorktreePath.
-    override: isResumedFork
-      ? { systemPrompt: forkParentSystemPrompt }
-      : undefined,
+    override: isResumedFork ? { systemPrompt: forkParentSystemPrompt } : undefined,
     availableTools: workerTools,
     // Transcript already contains the parent context slice from the
     // original fork. Re-supplying it would cause duplicate tool_use IDs.
@@ -224,15 +203,14 @@ export async function resumeAgentBackground({
     invocationEmitted: false,
   }
 
-  const wrapWithCwd = <T>(fn: () => T): T =>
-    resumedWorktreePath ? runWithCwdOverride(resumedWorktreePath, fn) : fn()
+  const wrapWithCwd = <T>(fn: () => T): T => (resumedWorktreePath ? runWithCwdOverride(resumedWorktreePath, fn) : fn())
 
   void runWithAgentContext(asyncAgentContext, () =>
     wrapWithCwd(() =>
       runAsyncAgentLifecycle({
         taskId: agentBackgroundTask.agentId,
         abortController: agentBackgroundTask.abortController!,
-        makeStream: onCacheSafeParams =>
+        makeStream: (onCacheSafeParams) =>
           runAgent({
             ...runAgentParams,
             override: {
@@ -247,12 +225,8 @@ export async function resumeAgentBackground({
         toolUseContext,
         rootSetAppState,
         agentIdForCleanup: agentId,
-        enableSummarization:
-          isCoordinatorMode() ||
-          isForkSubagentEnabled() ||
-          getSdkAgentProgressSummariesEnabled(),
-        getWorktreeResult: async () =>
-          resumedWorktreePath ? { worktreePath: resumedWorktreePath } : {},
+        enableSummarization: isCoordinatorMode() || isForkSubagentEnabled() || getSdkAgentProgressSummariesEnabled(),
+        getWorktreeResult: async () => (resumedWorktreePath ? { worktreePath: resumedWorktreePath } : {}),
       }),
     ),
   )

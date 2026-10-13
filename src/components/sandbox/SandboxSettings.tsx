@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Box, color, Link, Text, useTheme } from '../../ink.js'
 import { useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { CommandResultDisplay } from '../../types/command.js'
@@ -13,19 +14,13 @@ import { SandboxDependenciesTab } from './SandboxDependenciesTab.js'
 import { SandboxOverridesTab } from './SandboxOverridesTab.js'
 
 type Props = {
-  onComplete: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onComplete: (result?: string, options?: { display?: CommandResultDisplay }) => void
   depCheck: SandboxDependencyCheck
 }
 
 type SandboxMode = 'auto-allow' | 'regular' | 'disabled'
 
-export function SandboxSettings({
-  onComplete,
-  depCheck,
-}: Props): React.ReactNode {
+export function SandboxSettings({ onComplete, depCheck }: Props): React.ReactNode {
   const [theme] = useTheme()
   const currentEnabled = SandboxManager.isSandboxingEnabled()
   const currentAutoAllow = SandboxManager.isAutoAllowBashIfSandboxedEnabled()
@@ -61,10 +56,7 @@ export function SandboxSettings({
       value: 'regular',
     },
     {
-      label:
-        currentMode === 'disabled'
-          ? `No Sandbox ${currentIndicator}`
-          : 'No Sandbox',
+      label: currentMode === 'disabled' ? `No Sandbox ${currentIndicator}` : 'No Sandbox',
       value: 'disabled',
     },
   ]
@@ -175,9 +167,7 @@ function SandboxModeTab({
     <Box flexDirection="column" paddingY={1}>
       {showSocketWarning && (
         <Box marginBottom={1}>
-          <Text color="warning">
-            Cannot block unix domain sockets (see Dependencies tab)
-          </Text>
+          <Text color="warning">Cannot block unix domain sockets (see Dependencies tab)</Text>
         </Box>
       )}
       <Box marginBottom={1}>
@@ -195,15 +185,11 @@ function SandboxModeTab({
           <Text bold dimColor>
             Auto-allow mode:
           </Text>{' '}
-          Commands will try to run in the sandbox automatically, and attempts to
-          run outside of the sandbox fallback to regular permissions. Explicit
-          ask/deny rules are always respected.
+          Commands will try to run in the sandbox automatically, and attempts to run outside of the sandbox fallback to
+          regular permissions. Explicit ask/deny rules are always respected.
         </Text>
         <Text dimColor>
-          Learn more:{' '}
-          <Link url="https://code.claude.com/docs/en/sandboxing">
-            code.claude.com/docs/en/sandboxing
-          </Link>
+          Learn more: <Link url="https://code.claude.com/docs/en/sandboxing">code.claude.com/docs/en/sandboxing</Link>
         </Text>
       </Box>
     </Box>

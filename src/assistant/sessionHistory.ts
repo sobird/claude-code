@@ -1,4 +1,5 @@
 import axios from 'axios'
+
 import { getOauthConfig } from '../constants/oauth.js'
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
 import { logForDebugging } from '../utils/debug.js'
@@ -28,9 +29,7 @@ export type HistoryAuthCtx = {
 }
 
 /** Prepare auth + headers + base URL once, reuse across pages. */
-export async function createHistoryAuthCtx(
-  sessionId: string,
-): Promise<HistoryAuthCtx> {
+export async function createHistoryAuthCtx(sessionId: string): Promise<HistoryAuthCtx> {
   const { accessToken, orgUUID } = await prepareApiRequest()
   return {
     baseUrl: `${getOauthConfig().BASE_API_URL}/v1/sessions/${sessionId}/events`,
@@ -70,10 +69,7 @@ async function fetchPage(
  * Newest page: last `limit` events, chronological, via anchor_to_latest.
  * has_more=true means older events exist.
  */
-export async function fetchLatestEvents(
-  ctx: HistoryAuthCtx,
-  limit = HISTORY_PAGE_SIZE,
-): Promise<HistoryPage | null> {
+export async function fetchLatestEvents(ctx: HistoryAuthCtx, limit = HISTORY_PAGE_SIZE): Promise<HistoryPage | null> {
   return fetchPage(ctx, { limit, anchor_to_latest: true }, 'fetchLatestEvents')
 }
 

@@ -1,12 +1,9 @@
 import memoize from 'lodash-es/memoize.js'
 import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
+
 import { getRegisteredHooks } from '../../bootstrap/state.js'
 import type { AppState } from '../../state/AppState.js'
-import {
-  getAllHooks,
-  type IndividualHookConfig,
-  sortMatchersByPriority,
-} from './hooksSettings.js'
+import { getAllHooks, type IndividualHookConfig, sortMatchersByPriority } from './hooksSettings.js'
 
 export type MatcherMetadata = {
   fieldToMatch: string
@@ -124,8 +121,7 @@ export const getHookEventMetadata = memoize(
         },
       },
       SubagentStop: {
-        summary:
-          'Right before a subagent (Agent tool call) concludes its response',
+        summary: 'Right before a subagent (Agent tool call) concludes its response',
         description:
           'Input to command is JSON with agent_id, agent_type, and agent_transcript_path.\nExit code 0 - stdout/stderr not shown\nExit code 2 - show stderr to subagent and continue having it run\nOther exit codes - show stderr to user only',
         matcherMetadata: {
@@ -217,13 +213,7 @@ export const getHookEventMetadata = memoize(
           'Input to command is JSON with source (user_settings, project_settings, local_settings, policy_settings, skills) and file_path.\nExit code 0 - allow the change\nExit code 2 - block the change from being applied to the session\nOther exit codes - show stderr to user only',
         matcherMetadata: {
           fieldToMatch: 'source',
-          values: [
-            'user_settings',
-            'project_settings',
-            'local_settings',
-            'policy_settings',
-            'skills',
-          ],
+          values: ['user_settings', 'project_settings', 'local_settings', 'policy_settings', 'skills'],
         },
       },
       InstructionsLoaded: {
@@ -232,13 +222,7 @@ export const getHookEventMetadata = memoize(
           'Input to command is JSON with file_path, memory_type (User, Project, Local, Managed), load_reason (session_start, nested_traversal, path_glob_match, include, compact), globs (optional — the paths: frontmatter patterns that matched), trigger_file_path (optional — the file Claude touched that caused the load), and parent_file_path (optional — the file that @-included this one).\nExit code 0 - command completes successfully\nOther exit codes - show stderr to user only\nThis hook is observability-only and does not support blocking.',
         matcherMetadata: {
           fieldToMatch: 'load_reason',
-          values: [
-            'session_start',
-            'nested_traversal',
-            'path_glob_match',
-            'include',
-            'compact',
-          ],
+          values: ['session_start', 'nested_traversal', 'path_glob_match', 'include', 'compact'],
         },
       },
       WorktreeCreate: {
@@ -263,7 +247,7 @@ export const getHookEventMetadata = memoize(
       },
     }
   },
-  toolNames => toolNames.slice().sort().join(','),
+  (toolNames) => toolNames.slice().sort().join(','),
 )
 
 // Group hooks by event and matcher
@@ -304,14 +288,11 @@ export function groupHooksByEventAndMatcher(
   const metadata = getHookEventMetadata(toolNames)
 
   // Include hooks from settings files
-  getAllHooks(appState).forEach(hook => {
+  getAllHooks(appState).forEach((hook) => {
     const eventGroup = grouped[hook.event]
     if (eventGroup) {
       // For events without matchers, use empty string as key
-      const matcherKey =
-        metadata[hook.event].matcherMetadata !== undefined
-          ? hook.matcher || ''
-          : ''
+      const matcherKey = metadata[hook.event].matcherMetadata !== undefined ? hook.matcher || '' : ''
       if (!eventGroup[matcherKey]) {
         eventGroup[matcherKey] = []
       }
@@ -366,10 +347,7 @@ export function groupHooksByEventAndMatcher(
 
 // Get sorted matchers for a specific event
 export function getSortedMatchersForEvent(
-  hooksByEventAndMatcher: Record<
-    HookEvent,
-    Record<string, IndividualHookConfig[]>
-  >,
+  hooksByEventAndMatcher: Record<HookEvent, Record<string, IndividualHookConfig[]>>,
   event: HookEvent,
 ): string[] {
   const matchers = Object.keys(hooksByEventAndMatcher[event] || {})
@@ -378,10 +356,7 @@ export function getSortedMatchersForEvent(
 
 // Get hooks for a specific event and matcher
 export function getHooksForMatcher(
-  hooksByEventAndMatcher: Record<
-    HookEvent,
-    Record<string, IndividualHookConfig[]>
-  >,
+  hooksByEventAndMatcher: Record<HookEvent, Record<string, IndividualHookConfig[]>>,
   event: HookEvent,
   matcher: string | null,
 ): IndividualHookConfig[] {
@@ -392,9 +367,6 @@ export function getHooksForMatcher(
 }
 
 // Get metadata for a specific event's matcher
-export function getMatcherMetadata(
-  event: HookEvent,
-  toolNames: string[],
-): MatcherMetadata | undefined {
+export function getMatcherMetadata(event: HookEvent, toolNames: string[]): MatcherMetadata | undefined {
   return getHookEventMetadata(toolNames)[event].matcherMetadata
 }

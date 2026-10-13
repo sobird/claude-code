@@ -1,12 +1,10 @@
 import React from 'react'
+
 import { renderPlaceholder } from '../hooks/renderPlaceholder.js'
 import { usePasteHandler } from '../hooks/usePasteHandler.js'
-import { useDeclaredCursor } from '../ink/hooks/use-declared-cursor.js'
 import { Ansi, Box, Text, useInput } from '../ink.js'
-import type {
-  BaseInputState,
-  BaseTextInputProps,
-} from '../types/textInputTypes.js'
+import { useDeclaredCursor } from '../ink/hooks/use-declared-cursor.js'
+import type { BaseInputState, BaseTextInputProps } from '../types/textInputTypes.js'
 import type { TextHighlight } from '../utils/textHighlighting.js'
 import { HighlightedInput } from './PromptInput/ShimmeredInput.js'
 
@@ -84,25 +82,16 @@ export function BaseTextInput({
   // 3. The command doesn't have arguments yet (no text after the space)
   // 4. We're actually typing a command (the value starts with /)
   const commandWithoutArgs =
-    (props.value && props.value.trim().indexOf(' ') === -1) ||
-    (props.value && props.value.endsWith(' '))
+    (props.value && props.value.trim().indexOf(' ') === -1) || (props.value && props.value.endsWith(' '))
 
   const showArgumentHint = Boolean(
-    props.argumentHint &&
-      props.value &&
-      commandWithoutArgs &&
-      props.value.startsWith('/'),
+    props.argumentHint && props.value && commandWithoutArgs && props.value.startsWith('/'),
   )
 
   // Filter out highlights that contain the cursor position
   const cursorFiltered =
     props.showCursor && props.highlights
-      ? props.highlights.filter(
-          h =>
-            h.dimColor ||
-            props.cursorOffset < h.start ||
-            props.cursorOffset >= h.end,
-        )
+      ? props.highlights.filter((h) => h.dimColor || props.cursorOffset < h.start || props.cursorOffset >= h.end)
       : props.highlights
 
   // Adjust highlights for viewport windowing: highlight positions reference the
@@ -111,8 +100,8 @@ export function BaseTextInput({
   const filteredHighlights =
     cursorFiltered && viewportCharOffset > 0
       ? cursorFiltered
-          .filter(h => h.end > viewportCharOffset && h.start < viewportCharEnd)
-          .map(h => ({
+          .filter((h) => h.end > viewportCharOffset && h.start < viewportCharEnd)
+          .map((h) => ({
             ...h,
             start: Math.max(0, h.start - viewportCharOffset),
             end: h.end - viewportCharOffset,
@@ -124,10 +113,7 @@ export function BaseTextInput({
   if (hasHighlights) {
     return (
       <Box ref={cursorRef}>
-        <HighlightedInput
-          text={renderedValue}
-          highlights={filteredHighlights}
-        />
+        <HighlightedInput text={renderedValue} highlights={filteredHighlights} />
         {showArgumentHint && (
           <Text dimColor>
             {props.value?.endsWith(' ') ? '' : ' '}

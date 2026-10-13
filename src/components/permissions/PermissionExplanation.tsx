@@ -1,4 +1,5 @@
 import React, { Suspense, use, useState } from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import { logEvent } from '../../services/analytics/index.js'
@@ -15,11 +16,7 @@ import { useShimmerAnimation } from '../Spinner/useShimmerAnimation.js'
 const LOADING_MESSAGE = 'Loading explanation…'
 
 function ShimmerLoadingText(): React.ReactNode {
-  const [ref, glimmerIndex] = useShimmerAnimation(
-    'responding',
-    LOADING_MESSAGE,
-    false,
-  )
+  const [ref, glimmerIndex] = useShimmerAnimation('responding', LOADING_MESSAGE, false)
 
   return (
     <Box ref={ref}>
@@ -78,9 +75,7 @@ type ExplainerState = {
  * Creates an explanation promise that never rejects.
  * Errors are caught and returned as null.
  */
-function createExplanationPromise(
-  props: PermissionExplanationProps,
-): Promise<PermissionExplanationType | null> {
+function createExplanationPromise(props: PermissionExplanationProps): Promise<PermissionExplanationType | null> {
   return generatePermissionExplanation({
     toolName: props.toolName,
     toolInput: props.toolInput,
@@ -95,13 +90,10 @@ function createExplanationPromise(
  * Creates the fetch promise lazily (only when user hits Ctrl+E)
  * to avoid consuming tokens for explanations users never view.
  */
-export function usePermissionExplainerUI(
-  props: PermissionExplanationProps,
-): ExplainerState {
+export function usePermissionExplainerUI(props: PermissionExplanationProps): ExplainerState {
   const enabled = isPermissionExplainerEnabled()
   const [visible, setVisible] = useState(false)
-  const [promise, setPromise] =
-    useState<Promise<PermissionExplanationType | null> | null>(null)
+  const [promise, setPromise] = useState<Promise<PermissionExplanationType | null> | null>(null)
 
   // Use keybinding for ctrl+e toggle (configurable via keybindings.json)
   useKeybinding(
@@ -114,7 +106,7 @@ export function usePermissionExplainerUI(
           setPromise(createExplanationPromise(props))
         }
       }
-      setVisible(v => !v)
+      setVisible((v) => !v)
     },
     { context: 'Confirmation', isActive: enabled },
   )
@@ -126,11 +118,7 @@ export function usePermissionExplainerUI(
  * Inner component that uses React 19's use() to read the promise.
  * Suspends while loading, returns null on error.
  */
-function ExplanationResult({
-  promise,
-}: {
-  promise: Promise<PermissionExplanationType | null>
-}): React.ReactNode {
+function ExplanationResult({ promise }: { promise: Promise<PermissionExplanationType | null> }): React.ReactNode {
   const explanation = use(promise)
 
   if (!explanation) {
@@ -149,9 +137,7 @@ function ExplanationResult({
       </Box>
       <Box marginTop={1}>
         <Text>
-          <Text color={getRiskColor(explanation.riskLevel)}>
-            {getRiskLabel(explanation.riskLevel)}:
-          </Text>
+          <Text color={getRiskColor(explanation.riskLevel)}>{getRiskLabel(explanation.riskLevel)}:</Text>
           <Text> {explanation.risk}</Text>
         </Text>
       </Box>

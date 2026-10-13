@@ -1,5 +1,6 @@
 import figures from 'figures'
 import React from 'react'
+
 import { Markdown } from '../../components/Markdown.js'
 import { BLACK_CIRCLE } from '../../constants/figures.js'
 import { Box, Text } from '../../ink.js'
@@ -82,15 +83,13 @@ type AttachmentListProps = {
   attachments: Output['attachments']
 }
 
-export function AttachmentList({
-  attachments,
-}: AttachmentListProps): React.ReactNode {
+export function AttachmentList({ attachments }: AttachmentListProps): React.ReactNode {
   if (!attachments || attachments.length === 0) {
     return null
   }
   return (
     <Box flexDirection="column" marginTop={1}>
-      {attachments.map(att => (
+      {attachments.map((att) => (
         <Box key={att.path} flexDirection="row">
           <Text dimColor>
             {figures.pointerSmall} {att.isImage ? '[image]' : '[file]'}{' '}

@@ -1,16 +1,14 @@
 import figures from 'figures'
 import * as React from 'react'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
+
 import { Box, Text } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import type { Tools } from '../../Tool.js'
 import { getAgentColor } from '../../tools/AgentTool/agentColorManager.js'
 import { getMemoryScopeDisplay } from '../../tools/AgentTool/agentMemory.js'
 import { resolveAgentTools } from '../../tools/AgentTool/agentToolUtils.js'
-import {
-  type AgentDefinition,
-  isBuiltInAgent,
-} from '../../tools/AgentTool/loadAgentsDir.js'
+import { type AgentDefinition, isBuiltInAgent } from '../../tools/AgentTool/loadAgentsDir.js'
 import { getAgentModelDisplay } from '../../utils/model/agent.js'
 import { Markdown } from '../Markdown.js'
 import { getActualRelativeAgentFilePath } from './agentFileUtils.js'
@@ -49,13 +47,10 @@ export function AgentDetail({ agent, tools, onBack }: Props): React.ReactNode {
 
     return (
       <>
-        {resolvedTools.validTools.length > 0 && (
-          <Text>{resolvedTools.validTools.join(', ')}</Text>
-        )}
+        {resolvedTools.validTools.length > 0 && <Text>{resolvedTools.validTools.join(', ')}</Text>}
         {resolvedTools.invalidTools.length > 0 && (
           <Text color="warning">
-            {figures.warning} Unrecognized:{' '}
-            {resolvedTools.invalidTools.join(', ')}
+            {figures.warning} Unrecognized: {resolvedTools.invalidTools.join(', ')}
           </Text>
         )}
       </>
@@ -63,13 +58,7 @@ export function AgentDetail({ agent, tools, onBack }: Props): React.ReactNode {
   }
 
   return (
-    <Box
-      flexDirection="column"
-      gap={1}
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" gap={1} tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       <Text dimColor>{filePath}</Text>
 
       <Box flexDirection="column">
@@ -113,9 +102,7 @@ export function AgentDetail({ agent, tools, onBack }: Props): React.ReactNode {
       {agent.skills && agent.skills.length > 0 && (
         <Text>
           <Text bold>Skills</Text>:{' '}
-          {agent.skills.length > 10
-            ? `${agent.skills.length} skills`
-            : agent.skills.join(', ')}
+          {agent.skills.length > 10 ? `${agent.skills.length} skills` : agent.skills.join(', ')}
         </Text>
       )}
 

@@ -7,7 +7,9 @@
 ## 相关文件
 
 ### 1. src/services/api/claude.ts
+
 **主要功能**：实现fake_tools反蒸馏机制
+
 - **位置**：第301-313行
 - **实现细节**：
   - 为第一方CLI客户端提供anti_distillation选项
@@ -15,7 +17,9 @@
   - 仅在满足特定条件时启用（ANTI_DISTILLATION_CC功能标志、CLI入口点、内部beta用户）
 
 ### 2. src/utils/streamlinedTransform.ts
+
 **主要功能**：抗蒸馏输出格式
+
 - **位置**：第4-9行（文档注释）
 - **设计目标**：
   - Streamlined mode被设计为"distillation-resistant"（抗蒸馏）输出格式
@@ -25,7 +29,9 @@
   - 从初始化消息中剥离工具列表和模型信息
 
 ### 3. src/utils/betas.ts
+
 **主要功能**：服务端反蒸馏POC
+
 - **位置**：第279-283行
 - **实现细节**：
   - 服务端连接器文本摘要原型（Proof of Concept）
@@ -37,16 +43,14 @@
 ## 技术实现
 
 ### fake_tools机制
+
 ```typescript
 // Anti-distillation: send fake_tools opt-in for 1P CLI only
 if (
   feature('ANTI_DISTILLATION_CC')
-    ? process.env.CLAUDE_CODE_ENTRYPOINT === 'cli'
-    && shouldIncludeFirstPartyOnlyBetas()
-    && getFeatureValue_CACHED_MAY_BE_STALE(
-      'tengu_anti_distill_fake_tool_injection',
-      false,
-    )
+    ? process.env.CLAUDE_CODE_ENTRYPOINT === 'cli' &&
+      shouldIncludeFirstPartyOnlyBetas() &&
+      getFeatureValue_CACHED_MAY_BE_STALE('tengu_anti_distill_fake_tool_injection', false)
     : false
 ) {
   result.anti_distillation = ['fake_tools']
@@ -54,6 +58,7 @@ if (
 ```
 
 ### 服务端摘要机制
+
 - 缓冲assistant文本片段
 - 生成摘要并附加签名
 - 保持TTFT/TTLT/capacity指标的同时提供反蒸馏保护

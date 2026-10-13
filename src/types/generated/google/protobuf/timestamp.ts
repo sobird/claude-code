@@ -139,9 +139,7 @@ export const Timestamp: MessageFns<Timestamp> = {
   create<I extends Exact<DeepPartial<Timestamp>, I>>(base?: I): Timestamp {
     return Timestamp.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<Timestamp>, I>>(
-    object: I,
-  ): Timestamp {
+  fromPartial<I extends Exact<DeepPartial<Timestamp>, I>>(object: I): Timestamp {
     const message = createBaseTimestamp()
     message.seconds = object.seconds ?? 0
     message.nanos = object.nanos ?? 0
@@ -149,14 +147,7 @@ export const Timestamp: MessageFns<Timestamp> = {
   },
 }
 
-type Builtin =
-  | Date
-  | Function
-  | Uint8Array
-  | string
-  | number
-  | boolean
-  | undefined
+type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined
 
 type DeepPartial<T> = T extends Builtin
   ? T

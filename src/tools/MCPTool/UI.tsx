@@ -1,24 +1,20 @@
 import { feature } from 'bun:bundle'
+
 import figures from 'figures'
 import * as React from 'react'
 import type { z } from 'zod/v4'
+
 import { ProgressBar } from '../../components/design-system/ProgressBar.js'
 import { MessageResponse } from '../../components/MessageResponse.js'
-import {
-  linkifyUrlsInText,
-  OutputLine,
-} from '../../components/shell/OutputLine.js'
-import { stringWidth } from '../../ink/stringWidth.js'
+import { linkifyUrlsInText, OutputLine } from '../../components/shell/OutputLine.js'
 import { Ansi, Box, Text } from '../../ink.js'
+import { stringWidth } from '../../ink/stringWidth.js'
 import type { ToolProgressData } from '../../Tool.js'
 import type { ProgressMessage } from '../../types/message.js'
 import type { MCPProgress } from '../../types/tools.js'
 import { formatNumber } from '../../utils/format.js'
 import { createHyperlink } from '../../utils/hyperlink.js'
-import {
-  getContentSizeEstimate,
-  type MCPToolResult,
-} from '../../utils/mcpValidation.js'
+import { getContentSizeEstimate, type MCPToolResult } from '../../utils/mcpValidation.js'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import type { inputSchema } from './MCPTool.js'
 
@@ -54,11 +50,7 @@ export function renderToolUseMessage(
   return Object.entries(input)
     .map(([key, value]) => {
       let rendered = jsonStringify(value)
-      if (
-        feature('MCP_RICH_OUTPUT') &&
-        !verbose &&
-        rendered.length > MAX_INPUT_VALUE_CHARS
-      ) {
+      if (feature('MCP_RICH_OUTPUT') && !verbose && rendered.length > MAX_INPUT_VALUE_CHARS) {
         rendered = rendered.slice(0, MAX_INPUT_VALUE_CHARS).trimEnd() + '…'
       }
       return `${key}: ${rendered}`
@@ -125,8 +117,7 @@ export function renderToolResultMessage(
       return (
         <MessageResponse height={1}>
           <Text>
-            Sent a message to{' '}
-            <Ansi>{createHyperlink(slackSend.url, slackSend.channel)}</Ansi>
+            Sent a message to <Ansi>{createHyperlink(slackSend.url, slackSend.channel)}</Ansi>
           </Text>
         </MessageResponse>
       )
@@ -144,12 +135,7 @@ export function renderToolResultMessage(
     const contentBlocks = mcpOutput.map((item, i) => {
       if (item.type === 'image') {
         return (
-          <Box
-            key={i}
-            justifyContent="space-between"
-            overflowX="hidden"
-            width="100%"
-          >
+          <Box key={i} justifyContent="space-between" overflowX="hidden" width="100%">
             <MessageResponse height={1}>
               <Text>[Image]</Text>
             </MessageResponse>
@@ -158,12 +144,7 @@ export function renderToolResultMessage(
       }
       // For text blocks and any other block types, extract text if available
       const textContent =
-        item.type === 'text' &&
-        'text' in item &&
-        item.text !== null &&
-        item.text !== undefined
-          ? String(item.text)
-          : ''
+        item.type === 'text' && 'text' in item && item.text !== null && item.text !== undefined ? String(item.text) : ''
       return feature('MCP_RICH_OUTPUT') ? (
         <MCPTextOutput key={i} content={textContent} verbose={verbose} />
       ) : (
@@ -214,22 +195,14 @@ export function renderToolResultMessage(
  * 2. If JSON is a small flat-ish object, render as aligned key: value.
  * 3. Otherwise fall through to OutputLine (pretty-print + truncate).
  */
-function MCPTextOutput({
-  content,
-  verbose,
-}: {
-  content: string
-  verbose: boolean
-}): React.ReactNode {
+function MCPTextOutput({ content, verbose }: { content: string; verbose: boolean }): React.ReactNode {
   const unwrapped = tryUnwrapTextPayload(content)
   if (unwrapped !== null) {
     return (
       <MessageResponse>
         <Box flexDirection="column">
           {unwrapped.extras.length > 0 && (
-            <Text dimColor>
-              {unwrapped.extras.map(([k, v]) => `${k}: ${v}`).join(' · ')}
-            </Text>
+            <Text dimColor>{unwrapped.extras.map(([k, v]) => `${k}: ${v}`).join(' · ')}</Text>
           )}
           <OutputLine content={unwrapped.body} verbose={verbose} linkifyUrls />
         </Box>
@@ -298,11 +271,7 @@ export function tryFlattenJson(content: string): [string, string][] | null {
   for (const [key, value] of entries) {
     if (typeof value === 'string') {
       result.push([key, value])
-    } else if (
-      value === null ||
-      typeof value === 'number' ||
-      typeof value === 'boolean'
-    ) {
+    } else if (value === null || typeof value === 'number' || typeof value === 'boolean') {
       result.push([key, String(value)])
     } else if (typeof value === 'object') {
       const compact = jsonStringify(value)
@@ -321,9 +290,7 @@ export function tryFlattenJson(content: string): [string, string][] | null {
  * handles the common MCP pattern of {"messages":"line1\nline2..."} where
  * pretty-printing keeps \n escaped but we want real line breaks + truncation.
  */
-export function tryUnwrapTextPayload(
-  content: string,
-): { body: string; extras: [string, string][] } | null {
+export function tryUnwrapTextPayload(content: string): { body: string; extras: [string, string][] } | null {
   const entries = parseJsonEntries(content, {
     maxChars: MAX_JSON_PARSE_CHARS,
     maxKeys: 4,
@@ -336,8 +303,7 @@ export function tryUnwrapTextPayload(
   for (const [key, value] of entries) {
     if (typeof value === 'string') {
       const t = value.trimEnd()
-      const isDominant =
-        t.length > UNWRAP_MIN_STRING_LEN || (t.includes('\n') && t.length > 50)
+      const isDominant = t.length > UNWRAP_MIN_STRING_LEN || (t.includes('\n') && t.length > 50)
       if (isDominant) {
         if (body !== null) return null // two big strings — ambiguous
         body = t
@@ -345,11 +311,7 @@ export function tryUnwrapTextPayload(
       }
       if (t.length > 150) return null
       extras.push([key, t.replace(/\s+/g, ' ')])
-    } else if (
-      value === null ||
-      typeof value === 'number' ||
-      typeof value === 'boolean'
-    ) {
+    } else if (value === null || typeof value === 'number' || typeof value === 'boolean') {
       extras.push([key, String(value)])
     } else {
       return null // nested object/array — use flat or pretty-print path
@@ -359,8 +321,7 @@ export function tryUnwrapTextPayload(
   return { body, extras }
 }
 
-const SLACK_ARCHIVES_RE =
-  /^https:\/\/[a-z0-9-]+\.slack\.com\/archives\/([A-Z0-9]+)\/p\d+$/
+const SLACK_ARCHIVES_RE = /^https:\/\/[a-z0-9-]+\.slack\.com\/archives\/([A-Z0-9]+)\/p\d+$/
 
 /**
  * Detect a Slack send-message result and return a compact {channel, url} pair.
@@ -375,7 +336,7 @@ export function trySlackSendCompact(
 ): { channel: string; url: string } | null {
   let text: unknown = output
   if (Array.isArray(output)) {
-    const block = output.find(b => b.type === 'text')
+    const block = output.find((b) => b.type === 'text')
     text = block && 'text' in block ? block.text : undefined
   }
   if (typeof text !== 'string' || !text.includes('"message_link"')) {

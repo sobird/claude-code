@@ -1,5 +1,6 @@
 import figures from 'figures'
 import React from 'react'
+
 import { Text } from '../../ink.js'
 
 type Status = 'success' | 'error' | 'warning' | 'info' | 'pending' | 'loading'
@@ -56,10 +57,7 @@ const STATUS_CONFIG: Record<
  *   Waiting for response
  * </Text>
  */
-export function StatusIcon({
-  status,
-  withSpace = false,
-}: Props): React.ReactNode {
+export function StatusIcon({ status, withSpace = false }: Props): React.ReactNode {
   const config = STATUS_CONFIG[status]
 
   return (

@@ -1,13 +1,11 @@
 import React from 'react'
+
 import { Box, render, Text } from '../ink.js'
 import { KeybindingSetup } from '../keybindings/KeybindingProviderSetup.js'
 import { AppStateProvider } from '../state/AppState.js'
 import type { ConfigParseError } from '../utils/errors.js'
 import { getBaseRenderOptions } from '../utils/renderOptions.js'
-import {
-  jsonStringify,
-  writeFileSync_DEPRECATED,
-} from '../utils/slowOperations.js'
+import { jsonStringify, writeFileSync_DEPRECATED } from '../utils/slowOperations.js'
 import type { ThemeName } from '../utils/theme.js'
 import { Select } from './CustomSelect/index.js'
 import { Dialog } from './design-system/Dialog.js'
@@ -45,8 +43,7 @@ function InvalidConfigDialog({
     <Dialog title="Configuration Error" color="error" onCancel={onExit}>
       <Box flexDirection="column" gap={1}>
         <Text>
-          The configuration file at <Text bold>{filePath}</Text> contains
-          invalid JSON.
+          The configuration file at <Text bold>{filePath}</Text> contains invalid JSON.
         </Text>
         <Text>{errorDescription}</Text>
       </Box>
@@ -71,9 +68,7 @@ function InvalidConfigDialog({
  */
 const SAFE_ERROR_THEME_NAME: ThemeName = 'dark'
 
-export async function showInvalidConfigDialog({
-  error,
-}: InvalidConfigHandlerProps): Promise<void> {
+export async function showInvalidConfigDialog({ error }: InvalidConfigHandlerProps): Promise<void> {
   // Extend RenderOptions with theme property for this specific usage
   type SafeRenderOptions = Parameters<typeof render>[1] & { theme?: ThemeName }
 
@@ -84,7 +79,7 @@ export async function showInvalidConfigDialog({
     theme: SAFE_ERROR_THEME_NAME,
   }
 
-  await new Promise<void>(async resolve => {
+  await new Promise<void>(async (resolve) => {
     const { unmount } = await render(
       <AppStateProvider>
         <KeybindingSetup>
@@ -97,11 +92,10 @@ export async function showInvalidConfigDialog({
               process.exit(1)
             }}
             onReset={() => {
-              writeFileSync_DEPRECATED(
-                error.filePath,
-                jsonStringify(error.defaultConfig, null, 2),
-                { flush: false, encoding: 'utf8' },
-              )
+              writeFileSync_DEPRECATED(error.filePath, jsonStringify(error.defaultConfig, null, 2), {
+                flush: false,
+                encoding: 'utf8',
+              })
               unmount()
               void resolve()
               process.exit(0)

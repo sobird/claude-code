@@ -1,28 +1,28 @@
-import React, { useCallback } from 'react'
-import { join } from 'path'
+import type { UUID } from 'crypto'
 import { stat, writeFile } from 'fs/promises'
+import { join } from 'path'
+
 import figures from 'figures'
-import {
-  Box, Text, useInput, wrapText,
-} from '../ink.js'
-import { Select } from './CustomSelect/index.js'
-import { Dialog } from './design-system/Dialog.js'
+import React, { useCallback } from 'react'
+import { getSessionId } from 'src/bootstrap/state.js'
+import { clearConversation } from 'src/commands/clear/conversation.js'
+import { useRegisterOverlay } from 'src/context/overlayContext.js'
+import { useSetAppState } from 'src/state/AppState.js'
+import { getCwd } from 'src/utils/cwd.js'
+import { enqueuePendingNotification } from 'src/utils/messageQueueManager.js'
+import { createSystemMessage } from 'src/utils/messages.js'
+import { toRelativePath } from 'src/utils/path.js'
+import { getTranscriptPath } from 'src/utils/sessionStorage.js'
+import { updateTaskState } from 'src/utils/task/framework.js'
+import { archiveRemoteSession } from 'src/utils/teleport.js'
+
+import { useTerminalSize } from '../hooks/useTerminalSize.js'
+import { Box, Text, useInput, wrapText } from '../ink.js'
 import type { AppState } from '../state/AppStateStore.js'
 import type { Message } from '../types/message.js'
 import type { FileStateCache } from '../utils/fileStateCache.js'
-import { useSetAppState } from 'src/state/AppState.js'
-import { useTerminalSize } from '../hooks/useTerminalSize.js'
-import { archiveRemoteSession } from 'src/utils/teleport.js'
-import { enqueuePendingNotification } from 'src/utils/messageQueueManager.js'
-import { updateTaskState } from 'src/utils/task/framework.js'
-import { getSessionId } from 'src/bootstrap/state.js'
-import { clearConversation } from 'src/commands/clear/conversation.js'
-import { createSystemMessage } from 'src/utils/messages.js'
-import { getCwd } from 'src/utils/cwd.js'
-import { toRelativePath } from 'src/utils/path.js'
-import type { UUID } from 'crypto'
-import { getTranscriptPath } from 'src/utils/sessionStorage.js'
-import { useRegisterOverlay } from 'src/context/overlayContext.js'
+import { Select } from './CustomSelect/index.js'
+import { Dialog } from './design-system/Dialog.js'
 
 type ChoiceValue = 'here' | 'fresh' | 'cancel'
 
@@ -79,7 +79,7 @@ export function UltraplanChoiceDialog({
 
   // Clamp scroll when maxOffset shrinks (e.g. terminal resize).
   React.useEffect(() => {
-    setScrollOffset(prev => Math.min(prev, maxOffset))
+    setScrollOffset((prev) => Math.min(prev, maxOffset))
   }, [maxOffset])
 
   const isScrollable = wrappedLines.length > visibleHeight
@@ -93,10 +93,10 @@ export function UltraplanChoiceDialog({
 
     if ((key.ctrl && input === 'd') || key.wheelDown) {
       const step = key.wheelDown ? 3 : halfPage
-      setScrollOffset(prev => Math.min(prev + step, maxOffset))
+      setScrollOffset((prev) => Math.min(prev + step, maxOffset))
     } else if ((key.ctrl && input === 'u') || key.wheelUp) {
       const step = key.wheelUp ? 3 : halfPage
-      setScrollOffset(prev => Math.max(prev - step, 0))
+      setScrollOffset((prev) => Math.max(prev - step, 0))
     }
   })
 
@@ -106,69 +106,82 @@ export function UltraplanChoiceDialog({
   const canScrollUp = scrollOffset > 0
   const canScrollDown = scrollOffset < maxOffset
 
-  const handleChoice = useCallback(async (choice: ChoiceValue) => {
-    const savePath = join(getCwd(), `${getDateStamp()}-ultraplan.md`)
-    const previousSessionId = getSessionId()
-    const transcriptSaved = await stat(getTranscriptPath()).then(() => true, () => false)
+  const handleChoice = useCallback(
+    async (choice: ChoiceValue) => {
+      const savePath = join(getCwd(), `${getDateStamp()}-ultraplan.md`)
+      const previousSessionId = getSessionId()
+      const transcriptSaved = await stat(getTranscriptPath()).then(
+        () => true,
+        () => false,
+      )
 
-    switch (choice) {
-      case 'here':
-        enqueuePendingNotification({
-          value: [
-            'Ultraplan approved in browser. Here is the plan:',
-            '',
-            '<ultraplan>',
-            plan,
-            '</ultraplan>',
-            '',
-            'The user approved this plan in the remote session. Give them a brief summary, then start implementing.',
-          ].join('\n'),
-          mode: 'task-notification',
-        })
-        break
-      case 'fresh':
-        await clearConversation({
-          setMessages,
-          readFileState,
-          getAppState,
-          setAppState,
-          setConversationId,
-        })
+      switch (choice) {
+        case 'here':
+          enqueuePendingNotification({
+            value: [
+              'Ultraplan approved in browser. Here is the plan:',
+              '',
+              '<ultraplan>',
+              plan,
+              '</ultraplan>',
+              '',
+              'The user approved this plan in the remote session. Give them a brief summary, then start implementing.',
+            ].join('\n'),
+            mode: 'task-notification',
+          })
+          break
+        case 'fresh':
+          await clearConversation({
+            setMessages,
+            readFileState,
+            getAppState,
+            setAppState,
+            setConversationId,
+          })
 
-        if (transcriptSaved) {
-          setMessages(prev => [
+          if (transcriptSaved) {
+            setMessages((prev) => [
+              ...prev,
+              createSystemMessage(
+                `Previous session saved · resume with: claude --resume ${previousSessionId}`,
+                'suggestion',
+              ),
+            ])
+          }
+
+          enqueuePendingNotification({
+            value: `Here is the approved implementation plan:\n\n${plan}\n\nImplement this plan.`,
+            mode: 'prompt',
+          })
+          break
+        case 'cancel':
+          await writeFile(savePath, plan, { encoding: 'utf-8' })
+          setMessages((prev) => [
             ...prev,
-            createSystemMessage(`Previous session saved · resume with: claude --resume ${previousSessionId}`, 'suggestion'),
+            createSystemMessage(`Ultraplan rejected · Plan saved to ${toRelativePath(savePath)}`, 'suggestion'),
           ])
-        }
+          break
+        default:
+          break
+      }
 
-        enqueuePendingNotification({
-          value: `Here is the approved implementation plan:\n\n${plan}\n\nImplement this plan.`,
-          mode: 'prompt',
-        })
-        break
-      case 'cancel':
-        await writeFile(savePath, plan, { encoding: 'utf-8' })
-        setMessages(prev => [
-          ...prev,
-          createSystemMessage(`Ultraplan rejected · Plan saved to ${toRelativePath(savePath)}`, 'suggestion'),
-        ])
-        break
-      default:
-        break
-    }
+      // Mark the remote task as completed.
+      updateTaskState(taskId, setAppState, (task) =>
+        task.status === 'running' ? { ...task, status: 'completed', endTime: Date.now() } : task,
+      )
 
-    // Mark the remote task as completed.
-    updateTaskState(taskId, setAppState, task => (task.status === 'running' ? { ...task, status: 'completed', endTime: Date.now() } : task))
+      // Clear the pending-choice state so the dialog unmounts.
+      setAppState((prev) =>
+        prev.ultraplanPendingChoice
+          ? { ...prev, ultraplanPendingChoice: undefined, ultraplanSessionUrl: undefined }
+          : prev,
+      )
 
-    // Clear the pending-choice state so the dialog unmounts.
-    setAppState(prev => (prev.ultraplanPendingChoice
-      ? { ...prev, ultraplanPendingChoice: undefined, ultraplanSessionUrl: undefined }
-      : prev))
-
-    // Archive the remote CCR session.
-    await archiveRemoteSession(sessionId)
-  }, [plan, sessionId, taskId, setMessages, getAppState, setAppState, readFileState, setConversationId])
+      // Archive the remote CCR session.
+      await archiveRemoteSession(sessionId)
+    },
+    [plan, sessionId, taskId, setMessages, getAppState, setAppState, readFileState, setConversationId],
+  )
 
   return (
     <Dialog
@@ -180,20 +193,16 @@ export function UltraplanChoiceDialog({
       <Box flexDirection="column" marginBottom={1}>
         <Box flexDirection="column">
           <Text>{visibleText}</Text>
-          {isScrollable
-            ? (
-              <Text dimColor>
+          {isScrollable ? (
+            <Text dimColor>
               {canScrollUp ? figures.arrowUp : ' '}
               {canScrollDown ? figures.arrowDown : ' '}
-              {scrollOffset + 1}
-              –
-              {Math.min(scrollOffset + visibleHeight, wrappedLines.length)}
+              {scrollOffset + 1}–{Math.min(scrollOffset + visibleHeight, wrappedLines.length)}
               {' of '}
               {wrappedLines.length}
               {' · ctrl+u/ctrl+d to scroll'}
-              </Text>
-              )
-            : null}
+            </Text>
+          ) : null}
         </Box>
 
         <Select
@@ -211,10 +220,10 @@ export function UltraplanChoiceDialog({
             {
               label: 'Cancel',
               value: 'cancel' as const,
-              description: 'Don\'t implement — save plan and return',
+              description: "Don't implement — save plan and return",
             },
           ]}
-          onChange={async value => handleChoice(value)}
+          onChange={async (value) => handleChoice(value)}
         />
       </Box>
     </Dialog>

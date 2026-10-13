@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import type { Workflow } from './types.js'
 
@@ -22,19 +23,13 @@ export function CreatingStep({
   const progressSteps = skipWorkflow
     ? [
         'Getting repository information',
-        secretExists && useExistingSecret
-          ? 'Using existing API key secret'
-          : `Setting up ${secretName} secret`,
+        secretExists && useExistingSecret ? 'Using existing API key secret' : `Setting up ${secretName} secret`,
       ]
     : [
         'Getting repository information',
         'Creating branch',
-        selectedWorkflows.length > 1
-          ? 'Creating workflow files'
-          : 'Creating workflow file',
-        secretExists && useExistingSecret
-          ? 'Using existing API key secret'
-          : `Setting up ${secretName} secret`,
+        selectedWorkflows.length > 1 ? 'Creating workflow files' : 'Creating workflow file',
+        secretExists && useExistingSecret ? 'Using existing API key secret' : `Setting up ${secretName} secret`,
         'Opening pull request page',
       ]
 
@@ -56,15 +51,7 @@ export function CreatingStep({
 
           return (
             <Box key={index}>
-              <Text
-                color={
-                  status === 'completed'
-                    ? 'success'
-                    : status === 'in-progress'
-                      ? 'warning'
-                      : undefined
-                }
-              >
+              <Text color={status === 'completed' ? 'success' : status === 'in-progress' ? 'warning' : undefined}>
                 {status === 'completed' ? '✓ ' : ''}
                 {stepText}
                 {status === 'in-progress' ? '…' : ''}

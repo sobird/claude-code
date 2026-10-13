@@ -1,5 +1,6 @@
 import type { UUID } from 'crypto'
 import { randomUUID } from 'crypto'
+
 import { getIsNonInteractiveSession, getSessionId } from '../bootstrap/state.js'
 import type { SdkWorkflowProgress } from '../types/tools.js'
 
@@ -65,11 +66,7 @@ type SessionStateChangedEvent = {
   state: 'idle' | 'running' | 'requires_action'
 }
 
-export type SdkEvent =
-  | TaskStartedEvent
-  | TaskProgressEvent
-  | TaskNotificationSdkEvent
-  | SessionStateChangedEvent
+export type SdkEvent = TaskStartedEvent | TaskProgressEvent | TaskNotificationSdkEvent | SessionStateChangedEvent
 
 const MAX_QUEUE_SIZE = 1000
 const queue: SdkEvent[] = []
@@ -86,14 +83,12 @@ export function enqueueSdkEvent(event: SdkEvent): void {
   queue.push(event)
 }
 
-export function drainSdkEvents(): Array<
-  SdkEvent & { uuid: UUID; session_id: string }
-> {
+export function drainSdkEvents(): Array<SdkEvent & { uuid: UUID; session_id: string }> {
   if (queue.length === 0) {
     return []
   }
   const events = queue.splice(0)
-  return events.map(e => ({
+  return events.map((e) => ({
     ...e,
     uuid: randomUUID(),
     session_id: getSessionId(),

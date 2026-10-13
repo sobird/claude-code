@@ -8,6 +8,7 @@
  */
 
 import { z } from 'zod/v4'
+
 import { lazySchema } from '../../utils/lazySchema.js'
 import {
   AccountInfoSchema,
@@ -58,9 +59,7 @@ export const SDKControlInitializeRequestSchema = lazySchema(() =>
   z
     .object({
       subtype: z.literal('initialize'),
-      hooks: z
-        .record(HookEventSchema(), z.array(SDKHookCallbackMatcherSchema()))
-        .optional(),
+      hooks: z.record(HookEventSchema(), z.array(SDKHookCallbackMatcherSchema())).optional(),
       sdkMcpServers: z.array(z.string()).optional(),
       jsonSchema: z.record(z.string(), z.unknown()).optional(),
       systemPrompt: z.string().optional(),
@@ -69,9 +68,7 @@ export const SDKControlInitializeRequestSchema = lazySchema(() =>
       promptSuggestions: z.boolean().optional(),
       agentProgressSummaries: z.boolean().optional(),
     })
-    .describe(
-      'Initializes the SDK session with hooks, MCP servers, and agent configuration.',
-    ),
+    .describe('Initializes the SDK session with hooks, MCP servers, and agent configuration.'),
 )
 
 export const SDKControlInitializeResponseSchema = lazySchema(() =>
@@ -83,15 +80,10 @@ export const SDKControlInitializeResponseSchema = lazySchema(() =>
       available_output_styles: z.array(z.string()),
       models: z.array(ModelInfoSchema()),
       account: AccountInfoSchema(),
-      pid: z
-        .number()
-        .optional()
-        .describe('@internal CLI process PID for tmux socket isolation'),
+      pid: z.number().optional().describe('@internal CLI process PID for tmux socket isolation'),
       fast_mode_state: FastModeStateSchema().optional(),
     })
-    .describe(
-      'Response from session initialization with available commands, models, and account info.',
-    ),
+    .describe('Response from session initialization with available commands, models, and account info.'),
 )
 
 export const SDKControlInterruptRequestSchema = lazySchema(() =>
@@ -101,7 +93,6 @@ export const SDKControlInterruptRequestSchema = lazySchema(() =>
     })
     .describe('Interrupts the currently running conversation turn.'),
 )
-
 
 export const SDKControlPermissionRequestSchema = lazySchema(() =>
   z
@@ -126,10 +117,7 @@ export const SDKControlSetPermissionModeRequestSchema = lazySchema(() =>
     .object({
       subtype: z.literal('set_permission_mode'),
       mode: PermissionModeSchema(),
-      ultraplan: z
-        .boolean()
-        .optional()
-        .describe('@internal CCR ultraplan session marker.'),
+      ultraplan: z.boolean().optional().describe('@internal CCR ultraplan session marker.'),
     })
     .describe('Sets the permission mode for tool execution handling.'),
 )
@@ -149,9 +137,7 @@ export const SDKControlSetMaxThinkingTokensRequestSchema = lazySchema(() =>
       subtype: z.literal('set_max_thinking_tokens'),
       max_thinking_tokens: z.number().nullable(),
     })
-    .describe(
-      'Sets the maximum number of thinking tokens for extended thinking.',
-    ),
+    .describe('Sets the maximum number of thinking tokens for extended thinking.'),
 )
 
 export const SDKControlMcpStatusRequestSchema = lazySchema(() =>
@@ -167,9 +153,7 @@ export const SDKControlMcpStatusResponseSchema = lazySchema(() =>
     .object({
       mcpServers: z.array(McpServerStatusSchema()),
     })
-    .describe(
-      'Response containing the current status of all MCP server connections.',
-    ),
+    .describe('Response containing the current status of all MCP server connections.'),
 )
 
 export const SDKControlGetContextUsageRequestSchema = lazySchema(() =>
@@ -177,9 +161,7 @@ export const SDKControlGetContextUsageRequestSchema = lazySchema(() =>
     .object({
       subtype: z.literal('get_context_usage'),
     })
-    .describe(
-      'Requests a breakdown of current context window usage by category.',
-    ),
+    .describe('Requests a breakdown of current context window usage by category.'),
 )
 
 const ContextCategorySchema = lazySchema(() =>
@@ -236,12 +218,8 @@ export const SDKControlGetContextUsageResponseSchema = lazySchema(() =>
           }),
         )
         .optional(),
-      systemTools: z
-        .array(z.object({ name: z.string(), tokens: z.number() }))
-        .optional(),
-      systemPromptSections: z
-        .array(z.object({ name: z.string(), tokens: z.number() }))
-        .optional(),
+      systemTools: z.array(z.object({ name: z.string(), tokens: z.number() })).optional(),
+      systemPromptSections: z.array(z.object({ name: z.string(), tokens: z.number() })).optional(),
       agents: z.array(
         z.object({
           agentType: z.string(),
@@ -286,9 +264,7 @@ export const SDKControlGetContextUsageResponseSchema = lazySchema(() =>
               resultTokens: z.number(),
             }),
           ),
-          attachmentsByType: z.array(
-            z.object({ name: z.string(), tokens: z.number() }),
-          ),
+          attachmentsByType: z.array(z.object({ name: z.string(), tokens: z.number() })),
         })
         .optional(),
       apiUsage: z
@@ -300,9 +276,7 @@ export const SDKControlGetContextUsageResponseSchema = lazySchema(() =>
         })
         .nullable(),
     })
-    .describe(
-      'Breakdown of current context window usage by category (system prompt, tools, messages, etc.).',
-    ),
+    .describe('Breakdown of current context window usage by category (system prompt, tools, messages, etc.).'),
 )
 
 export const SDKControlRewindFilesRequestSchema = lazySchema(() =>
@@ -397,9 +371,7 @@ export const SDKControlMcpSetServersResponseSchema = lazySchema(() =>
       removed: z.array(z.string()),
       errors: z.record(z.string(), z.string()),
     })
-    .describe(
-      'Result of replacing the set of dynamically managed MCP servers.',
-    ),
+    .describe('Result of replacing the set of dynamically managed MCP servers.'),
 )
 
 export const SDKControlReloadPluginsRequestSchema = lazySchema(() =>
@@ -407,9 +379,7 @@ export const SDKControlReloadPluginsRequestSchema = lazySchema(() =>
     .object({
       subtype: z.literal('reload_plugins'),
     })
-    .describe(
-      'Reloads plugins from disk and returns the refreshed session components.',
-    ),
+    .describe('Reloads plugins from disk and returns the refreshed session components.'),
 )
 
 export const SDKControlReloadPluginsResponseSchema = lazySchema(() =>
@@ -427,9 +397,7 @@ export const SDKControlReloadPluginsResponseSchema = lazySchema(() =>
       mcpServers: z.array(McpServerStatusSchema()),
       error_count: z.number(),
     })
-    .describe(
-      'Refreshed commands, agents, plugins, and MCP server status after reload.',
-    ),
+    .describe('Refreshed commands, agents, plugins, and MCP server status after reload.'),
 )
 
 export const SDKControlMcpReconnectRequestSchema = lazySchema(() =>
@@ -451,7 +419,6 @@ export const SDKControlMcpToggleRequestSchema = lazySchema(() =>
     .describe('Enables or disables an MCP server.'),
 )
 
-
 export const SDKControlStopTaskRequestSchema = lazySchema(() =>
   z
     .object({
@@ -467,9 +434,7 @@ export const SDKControlApplyFlagSettingsRequestSchema = lazySchema(() =>
       subtype: z.literal('apply_flag_settings'),
       settings: z.record(z.string(), z.unknown()),
     })
-    .describe(
-      'Merges the provided settings into the flag settings layer, updating the active configuration.',
-    ),
+    .describe('Merges the provided settings into the flag settings layer, updating the active configuration.'),
 )
 
 export const SDKControlGetSettingsRequestSchema = lazySchema(() =>
@@ -477,9 +442,7 @@ export const SDKControlGetSettingsRequestSchema = lazySchema(() =>
     .object({
       subtype: z.literal('get_settings'),
     })
-    .describe(
-      'Returns the effective merged settings and the raw per-source settings.',
-    ),
+    .describe('Returns the effective merged settings and the raw per-source settings.'),
 )
 
 export const SDKControlGetSettingsResponseSchema = lazySchema(() =>
@@ -489,19 +452,11 @@ export const SDKControlGetSettingsResponseSchema = lazySchema(() =>
       sources: z
         .array(
           z.object({
-            source: z.enum([
-              'userSettings',
-              'projectSettings',
-              'localSettings',
-              'flagSettings',
-              'policySettings',
-            ]),
+            source: z.enum(['userSettings', 'projectSettings', 'localSettings', 'flagSettings', 'policySettings']),
             settings: z.record(z.string(), z.unknown()),
           }),
         )
-        .describe(
-          'Ordered low-to-high priority — later entries override earlier ones.',
-        ),
+        .describe('Ordered low-to-high priority — later entries override earlier ones.'),
       applied: z
         .object({
           model: z.string(),
@@ -514,9 +469,7 @@ export const SDKControlGetSettingsResponseSchema = lazySchema(() =>
           'Runtime-resolved values after env overrides, session state, and model-specific defaults are applied. Unlike `effective` (disk merge), these reflect what will actually be sent to the API.',
         ),
     })
-    .describe(
-      'Effective merged settings plus raw per-source settings in merge order.',
-    ),
+    .describe('Effective merged settings plus raw per-source settings in merge order.'),
 )
 
 export const SDKControlElicitationRequestSchema = lazySchema(() =>
@@ -530,9 +483,7 @@ export const SDKControlElicitationRequestSchema = lazySchema(() =>
       elicitation_id: z.string().optional(),
       requested_schema: z.record(z.string(), z.unknown()).optional(),
     })
-    .describe(
-      'Requests the SDK consumer to handle an MCP elicitation (user input request).',
-    ),
+    .describe('Requests the SDK consumer to handle an MCP elicitation (user input request).'),
 )
 
 export const SDKControlElicitationResponseSchema = lazySchema(() =>
@@ -543,7 +494,6 @@ export const SDKControlElicitationResponseSchema = lazySchema(() =>
     })
     .describe('Response from the SDK consumer for an elicitation request.'),
 )
-
 
 // ============================================================================
 // Control Request/Response Wrappers
@@ -596,9 +546,7 @@ export const ControlErrorResponseSchema = lazySchema(() =>
     subtype: z.literal('error'),
     request_id: z.string(),
     error: z.string(),
-    pending_permission_requests: z
-      .array(z.lazy(() => SDKControlRequestSchema()))
-      .optional(),
+    pending_permission_requests: z.array(z.lazy(() => SDKControlRequestSchema())).optional(),
   }),
 )
 

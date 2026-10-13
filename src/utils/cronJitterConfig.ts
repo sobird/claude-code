@@ -9,11 +9,9 @@
 //   Daemon/SDK: omit getJitterConfig → DEFAULT_CRON_JITTER_CONFIG applies.
 
 import { z } from 'zod/v4'
+
 import { getFeatureValue_CACHED_WITH_REFRESH } from '../services/analytics/growthbook.js'
-import {
-  type CronJitterConfig,
-  DEFAULT_CRON_JITTER_CONFIG,
-} from './cronTasks.js'
+import { type CronJitterConfig, DEFAULT_CRON_JITTER_CONFIG } from './cronTasks.js'
 import { lazySchema } from './lazySchema.js'
 
 // How often to re-fetch tengu_kairos_cron_config from GrowthBook. Short because
@@ -49,7 +47,7 @@ const cronJitterConfigSchema = lazySchema(() =>
         .max(THIRTY_DAYS_MS)
         .default(DEFAULT_CRON_JITTER_CONFIG.recurringMaxAgeMs),
     })
-    .refine(c => c.oneShotFloorMs <= c.oneShotMaxMs),
+    .refine((c) => c.oneShotFloorMs <= c.oneShotMaxMs),
 )
 
 /**

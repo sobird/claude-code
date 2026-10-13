@@ -1,47 +1,25 @@
 import chalk from 'chalk'
 import figures from 'figures'
 import * as React from 'react'
+
 import { color, Text } from '../ink.js'
 import type { MCPServerConnection } from '../services/mcp/types.js'
 import { getAccountInformation, isClaudeAISubscriber } from './auth.js'
-import {
-  getLargeMemoryFiles,
-  getMemoryFiles,
-  MAX_MEMORY_CHARACTER_COUNT,
-} from './claudemd.js'
+import { getLargeMemoryFiles, getMemoryFiles, MAX_MEMORY_CHARACTER_COUNT } from './claudemd.js'
 import { getDoctorDiagnostic } from './doctorDiagnostic.js'
-import {
-  getAWSRegion,
-  getDefaultVertexRegion,
-  isEnvTruthy,
-} from './envUtils.js'
+import { getAWSRegion, getDefaultVertexRegion, isEnvTruthy } from './envUtils.js'
 import { getDisplayPath } from './file.js'
 import { formatNumber } from './format.js'
-import {
-  getIdeClientName,
-  type IDEExtensionInstallationStatus,
-  isJetBrainsIde,
-  toIDEDisplayName,
-} from './ide.js'
-import {
-  getClaudeAiUserDefaultModelDescription,
-  modelDisplayString,
-} from './model/model.js'
+import { getIdeClientName, type IDEExtensionInstallationStatus, isJetBrainsIde, toIDEDisplayName } from './ide.js'
+import { getClaudeAiUserDefaultModelDescription, modelDisplayString } from './model/model.js'
 import { getAPIProvider } from './model/providers.js'
 import { getMTLSConfig } from './mtls.js'
 import { checkInstall } from './nativeInstaller/index.js'
 import { getProxyUrl } from './proxy.js'
 import { SandboxManager } from './sandbox/sandbox-adapter.js'
 import { getSettingsWithAllErrors } from './settings/allErrors.js'
-import {
-  getEnabledSettingSources,
-  getSettingSourceDisplayNameCapitalized,
-} from './settings/constants.js'
-import {
-  getManagedFileSettingsPresence,
-  getPolicySettingsOrigin,
-  getSettingsForSource,
-} from './settings/settings.js'
+import { getEnabledSettingSources, getSettingSourceDisplayNameCapitalized } from './settings/constants.js'
+import { getManagedFileSettingsPresence, getPolicySettingsOrigin, getSettingsForSource } from './settings/settings.js'
 import type { ThemeName } from './theme.js'
 
 export type Property = {
@@ -71,13 +49,11 @@ export function buildIDEProperties(
   ideInstallationStatus: IDEExtensionInstallationStatus | null = null,
   theme: ThemeName,
 ): Property[] {
-  const ideClient = mcpClients?.find(client => client.name === 'ide')
+  const ideClient = mcpClients?.find((client) => client.name === 'ide')
 
   if (ideInstallationStatus) {
     const ideName = toIDEDisplayName(ideInstallationStatus.ideType)
-    const pluginOrExtension = isJetBrainsIde(ideInstallationStatus.ideType)
-      ? 'plugin'
-      : 'extension'
+    const pluginOrExtension = isJetBrainsIde(ideInstallationStatus.ideType) ? 'plugin' : 'extension'
 
     if (ideInstallationStatus.error) {
       return [
@@ -85,8 +61,8 @@ export function buildIDEProperties(
           label: 'IDE',
           value: (
             <Text>
-              {color('error', theme)(figures.cross)} Error installing {ideName}{' '}
-              {pluginOrExtension}: {ideInstallationStatus.error}
+              {color('error', theme)(figures.cross)} Error installing {ideName} {pluginOrExtension}:{' '}
+              {ideInstallationStatus.error}
               {'\n'}Please restart your IDE and try again.
             </Text>
           ),
@@ -96,10 +72,7 @@ export function buildIDEProperties(
 
     if (ideInstallationStatus.installed) {
       if (ideClient && ideClient.type === 'connected') {
-        if (
-          ideInstallationStatus.installedVersion !==
-          ideClient.serverInfo?.version
-        ) {
+        if (ideInstallationStatus.installedVersion !== ideClient.serverInfo?.version) {
           return [
             {
               label: 'IDE',
@@ -145,11 +118,8 @@ export function buildIDEProperties(
   return []
 }
 
-export function buildMcpProperties(
-  clients: MCPServerConnection[] = [],
-  theme: ThemeName,
-): Property[] {
-  const servers = clients.filter(client => client.name !== 'ide')
+export function buildMcpProperties(clients: MCPServerConnection[] = [], theme: ThemeName): Property[] {
+  const servers = clients.filter((client) => client.name !== 'ide')
   if (!servers.length) {
     return []
   }
@@ -164,14 +134,10 @@ export function buildMcpProperties(
     else byState.failed++
   }
   const parts: string[] = []
-  if (byState.connected)
-    parts.push(color('success', theme)(`${byState.connected} connected`))
-  if (byState.needsAuth)
-    parts.push(color('warning', theme)(`${byState.needsAuth} need auth`))
-  if (byState.pending)
-    parts.push(color('inactive', theme)(`${byState.pending} pending`))
-  if (byState.failed)
-    parts.push(color('error', theme)(`${byState.failed} failed`))
+  if (byState.connected) parts.push(color('success', theme)(`${byState.connected} connected`))
+  if (byState.needsAuth) parts.push(color('warning', theme)(`${byState.needsAuth} need auth`))
+  if (byState.pending) parts.push(color('inactive', theme)(`${byState.pending} pending`))
+  if (byState.failed) parts.push(color('error', theme)(`${byState.failed} failed`))
 
   return [
     {
@@ -187,7 +153,7 @@ export async function buildMemoryDiagnostics(): Promise<Diagnostic[]> {
 
   const diagnostics: Diagnostic[] = []
 
-  largeFiles.forEach(file => {
+  largeFiles.forEach((file) => {
     const displayPath = getDisplayPath(file.path)
     diagnostics.push(
       `Large ${displayPath} will impact performance (${formatNumber(file.content.length)} chars > ${formatNumber(MAX_MEMORY_CHARACTER_COUNT)})`,
@@ -201,7 +167,7 @@ export function buildSettingSourcesProperties(): Property[] {
   const enabledSources = getEnabledSettingSources()
 
   // Filter to only sources that actually have settings loaded
-  const sourcesWithSettings = enabledSources.filter(source => {
+  const sourcesWithSettings = enabledSources.filter((source) => {
     const settings = getSettingsForSource(source)
     return settings !== null && Object.keys(settings).length > 0
   })
@@ -209,7 +175,7 @@ export function buildSettingSourcesProperties(): Property[] {
   // Map internal names to user-friendly names
   // For policySettings, distinguish between remote and local (or skip if neither exists)
   const sourceNames = sourcesWithSettings
-    .map(source => {
+    .map((source) => {
       if (source === 'policySettings') {
         const origin = getPolicySettingsOrigin()
         if (origin === null) {
@@ -250,29 +216,23 @@ export function buildSettingSourcesProperties(): Property[] {
 
 export async function buildInstallationDiagnostics(): Promise<Diagnostic[]> {
   const installWarnings = await checkInstall()
-  return installWarnings.map(warning => warning.message)
+  return installWarnings.map((warning) => warning.message)
 }
 
-export async function buildInstallationHealthDiagnostics(): Promise<
-  Diagnostic[]
-> {
+export async function buildInstallationHealthDiagnostics(): Promise<Diagnostic[]> {
   const diagnostic = await getDoctorDiagnostic()
   const items: Diagnostic[] = []
 
   const { errors: validationErrors } = getSettingsWithAllErrors()
   if (validationErrors.length > 0) {
-    const invalidFiles = Array.from(
-      new Set(validationErrors.map(error => error.file)),
-    )
+    const invalidFiles = Array.from(new Set(validationErrors.map((error) => error.file)))
     const fileList = invalidFiles.join(', ')
 
-    items.push(
-      `Found invalid settings files: ${fileList}. They will be ignored.`,
-    )
+    items.push(`Found invalid settings files: ${fileList}. They will be ignored.`)
   }
 
   // Add warnings from doctor diagnostic (includes leftover installations, config mismatches, etc.)
-  diagnostic.warnings.forEach(warning => {
+  diagnostic.warnings.forEach((warning) => {
     items.push(warning.issue)
   })
 

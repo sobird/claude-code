@@ -1,5 +1,6 @@
 import React from 'react'
 import { removeSandboxViolationTags } from 'src/utils/sandbox/sandbox-ui-utils.js'
+
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint.js'
 import { MessageResponse } from '../../components/MessageResponse.js'
 import { OutputLine } from '../../components/shell/OutputLine.js'
@@ -24,9 +25,7 @@ const SHELL_CWD_RESET_PATTERN = /(?:^|\n)(Shell cwd was reset to .+)$/
 function extractSandboxViolations(stderr: string): {
   cleanedStderr: string
 } {
-  const violationsMatch = stderr.match(
-    /<sandbox_violations>([\s\S]*?)<\/sandbox_violations>/,
-  )
+  const violationsMatch = stderr.match(/<sandbox_violations>([\s\S]*?)<\/sandbox_violations>/)
 
   if (!violationsMatch) {
     return { cleanedStderr: stderr }
@@ -76,13 +75,10 @@ export default function BashToolResultMessage({
   // Extract sandbox violations from stderr as it feels cleaner on the UI
   // We want the model to see the violations, so it can explain what went wrong, and the
   // user can access them in the violation logs
-  const { cleanedStderr: stderrWithoutViolations } =
-    extractSandboxViolations(stdErrWithViolations)
+  const { cleanedStderr: stderrWithoutViolations } = extractSandboxViolations(stdErrWithViolations)
 
   // Extract "Shell cwd was reset" warning to render it with warning color instead of error
-  const { cleanedStderr: stderr, cwdResetWarning } = extractCwdResetWarning(
-    stderrWithoutViolations,
-  )
+  const { cleanedStderr: stderr, cwdResetWarning } = extractCwdResetWarning(stderrWithoutViolations)
 
   // If this is an image, we don't want to truncate it in the UI
   if (isImage) {
@@ -96,9 +92,7 @@ export default function BashToolResultMessage({
   return (
     <Box flexDirection="column">
       {stdout !== '' ? <OutputLine content={stdout} verbose={verbose} /> : null}
-      {stderr.trim() !== '' ? (
-        <OutputLine content={stderr} verbose={verbose} isError />
-      ) : null}
+      {stderr.trim() !== '' ? <OutputLine content={stderr} verbose={verbose} isError /> : null}
       {cwdResetWarning ? (
         <MessageResponse>
           <Text dimColor>{cwdResetWarning}</Text>
@@ -109,12 +103,10 @@ export default function BashToolResultMessage({
           <Text dimColor>
             {backgroundTaskId ? (
               <>
-                Running in the background{' '}
-                <KeyboardShortcutHint shortcut="↓" action="manage" parens />
+                Running in the background <KeyboardShortcutHint shortcut="↓" action="manage" parens />
               </>
             ) : (
-              returnCodeInterpretation ||
-              (noOutputExpected ? 'Done' : '(No output)')
+              returnCodeInterpretation || (noOutputExpected ? 'Done' : '(No output)')
             )}
           </Text>
         </MessageResponse>

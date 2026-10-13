@@ -1,4 +1,5 @@
 import type { McpbManifest } from '@anthropic-ai/mcpb'
+
 import { errorMessage } from '../errors.js'
 import { jsonParse } from '../slowOperations.js'
 
@@ -10,18 +11,14 @@ import { jsonParse } from '../slowOperations.js'
  * schemas.js and schemas-loose.js). Deferring the import keeps ~700KB of bound
  * closures out of the startup heap for sessions that never touch .dxt/.mcpb.
  */
-export async function validateManifest(
-  manifestJson: unknown,
-): Promise<McpbManifest> {
+export async function validateManifest(manifestJson: unknown): Promise<McpbManifest> {
   const { McpbManifestSchema } = await import('@anthropic-ai/mcpb')
   const parseResult = McpbManifestSchema.safeParse(manifestJson)
 
   if (!parseResult.success) {
     const errors = parseResult.error.flatten()
     const errorMessages = [
-      ...Object.entries(errors.fieldErrors).map(
-        ([field, errs]) => `${field}: ${errs?.join(', ')}`,
-      ),
+      ...Object.entries(errors.fieldErrors).map(([field, errs]) => `${field}: ${errs?.join(', ')}`),
       ...(errors.formErrors || []),
     ]
       .filter(Boolean)
@@ -36,9 +33,7 @@ export async function validateManifest(
 /**
  * Parses and validates a DXT manifest from raw text data.
  */
-export async function parseAndValidateManifestFromText(
-  manifestText: string,
-): Promise<McpbManifest> {
+export async function parseAndValidateManifestFromText(manifestText: string): Promise<McpbManifest> {
   let manifestJson: unknown
 
   try {
@@ -53,9 +48,7 @@ export async function parseAndValidateManifestFromText(
 /**
  * Parses and validates a DXT manifest from raw binary data.
  */
-export async function parseAndValidateManifestFromBytes(
-  manifestData: Uint8Array,
-): Promise<McpbManifest> {
+export async function parseAndValidateManifestFromBytes(manifestData: Uint8Array): Promise<McpbManifest> {
   const manifestText = new TextDecoder().decode(manifestData)
   return parseAndValidateManifestFromText(manifestText)
 }
@@ -64,10 +57,7 @@ export async function parseAndValidateManifestFromBytes(
  * Generates an extension ID from author name and extension name.
  * Uses the same algorithm as the directory backend for consistency.
  */
-export function generateExtensionId(
-  manifest: McpbManifest,
-  prefix?: 'local.unpacked' | 'local.dxt',
-): string {
+export function generateExtensionId(manifest: McpbManifest, prefix?: 'local.unpacked' | 'local.dxt'): string {
   const sanitize = (str: string) =>
     str
       .toLowerCase()
@@ -82,7 +72,5 @@ export function generateExtensionId(
   const sanitizedAuthor = sanitize(authorName)
   const sanitizedName = sanitize(extensionName)
 
-  return prefix
-    ? `${prefix}.${sanitizedAuthor}.${sanitizedName}`
-    : `${sanitizedAuthor}.${sanitizedName}`
+  return prefix ? `${prefix}.${sanitizedAuthor}.${sanitizedName}` : `${sanitizedAuthor}.${sanitizedName}`
 }

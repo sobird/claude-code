@@ -1,14 +1,16 @@
-import { execa } from 'execa'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
+
+import { execa } from 'execa'
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { Select } from '../../components/CustomSelect/select.js'
 import { Dialog } from '../../components/design-system/Dialog.js'
 import { Spinner } from '../../components/Spinner.js'
-import instances from '../../ink/instances.js'
 import { Box, Text } from '../../ink.js'
+import instances from '../../ink/instances.js'
 import { enablePluginOp } from '../../services/plugins/pluginOperations.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { isENOENT, toError } from '../../utils/errors.js'
@@ -34,15 +36,11 @@ const INTERNAL_MARKETPLACE_REPO = 'anthropics/claude-code-marketplace'
 const OFFICIAL_MARKETPLACE_REPO = 'anthropics/claude-plugins-official'
 
 function getMarketplaceName(): string {
-  return process.env.USER_TYPE === 'ant'
-    ? INTERNAL_MARKETPLACE_NAME
-    : OFFICIAL_MARKETPLACE_NAME
+  return process.env.USER_TYPE === 'ant' ? INTERNAL_MARKETPLACE_NAME : OFFICIAL_MARKETPLACE_NAME
 }
 
 function getMarketplaceRepo(): string {
-  return process.env.USER_TYPE === 'ant'
-    ? INTERNAL_MARKETPLACE_REPO
-    : OFFICIAL_MARKETPLACE_REPO
+  return process.env.USER_TYPE === 'ant' ? INTERNAL_MARKETPLACE_REPO : OFFICIAL_MARKETPLACE_REPO
 }
 
 function getPluginId(): string {
@@ -56,10 +54,7 @@ const SKILL_NAME = 'thinkback'
  */
 async function getThinkbackSkillDir(): Promise<string | null> {
   const { enabled } = await loadAllPlugins()
-  const thinkbackPlugin = enabled.find(
-    p =>
-      p.name === 'thinkback' || (p.source && p.source.includes(getPluginId())),
-  )
+  const thinkbackPlugin = enabled.find((p) => p.name === 'thinkback' || (p.source && p.source.includes(getPluginId())))
 
   if (!thinkbackPlugin) {
     return null
@@ -110,8 +105,7 @@ export async function playAnimation(skillDir: string): Promise<{
     if (isENOENT(e)) {
       return {
         success: false,
-        message:
-          'Player script not found. The player.js file is missing from the thinkback skill.',
+        message: 'Player script not found. The player.js file is missing from the thinkback skill.',
       }
     }
     logError(e)
@@ -144,12 +138,7 @@ export async function playAnimation(skillDir: string): Promise<{
   const htmlPath = join(skillDir, 'year_in_review.html')
   if (await pathExists(htmlPath)) {
     const platform = getPlatform()
-    const openCmd =
-      platform === 'macos'
-        ? 'open'
-        : platform === 'windows'
-          ? 'start'
-          : 'xdg-open'
+    const openCmd = platform === 'macos' ? 'open' : platform === 'windows' ? 'start' : 'xdg-open'
     void execFileNoThrow(openCmd, [htmlPath])
   }
 
@@ -192,12 +181,9 @@ function ThinkbackInstaller({
           setState({ phase: 'installing-marketplace' })
           logForDebugging(`Installing marketplace ${marketplaceRepo}`)
 
-          await addMarketplaceSource(
-            { source: 'github', repo: marketplaceRepo },
-            message => {
-              setProgressMessage(message)
-            },
-          )
+          await addMarketplaceSource({ source: 'github', repo: marketplaceRepo }, (message) => {
+            setProgressMessage(message)
+          })
           clearAllCaches()
           logForDebugging(`Marketplace ${marketplaceName} installed`)
         } else if (!pluginAlreadyInstalled) {
@@ -207,7 +193,7 @@ function ThinkbackInstaller({
           setProgressMessage('Updating marketplace…')
           logForDebugging(`Refreshing marketplace ${marketplaceName}`)
 
-          await refreshMarketplace(marketplaceName, message => {
+          await refreshMarketplace(marketplaceName, (message) => {
             setProgressMessage(message)
           })
           clearMarketplacesCache()
@@ -223,9 +209,7 @@ function ThinkbackInstaller({
           const result = await installSelectedPlugins([pluginId])
 
           if (result.failed.length > 0) {
-            const errorMsg = result.failed
-              .map(f => `${f.name}: ${f.error}`)
-              .join(', ')
+            const errorMsg = result.failed.map((f) => `${f.name}: ${f.error}`).join(', ')
             throw new Error(`Failed to install plugin: ${errorMsg}`)
           }
 
@@ -234,9 +218,7 @@ function ThinkbackInstaller({
         } else {
           // Plugin is installed, check if it's enabled
           const { disabled } = await loadAllPlugins()
-          const isDisabled = disabled.some(
-            p => p.name === 'thinkback' || p.source?.includes(pluginId),
-          )
+          const isDisabled = disabled.some((p) => p.name === 'thinkback' || p.source?.includes(pluginId))
 
           if (isDisabled) {
             // Enable the plugin
@@ -245,9 +227,7 @@ function ThinkbackInstaller({
 
             const enableResult = await enablePluginOp(pluginId)
             if (!enableResult.success) {
-              throw new Error(
-                `Failed to enable plugin: ${enableResult.message}`,
-              )
+              throw new Error(`Failed to enable plugin: ${enableResult.message}`)
             }
 
             clearAllCaches()
@@ -308,10 +288,7 @@ function ThinkbackMenu({
   skillDir,
   hasGenerated,
 }: {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay; shouldQuery?: boolean },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay; shouldQuery?: boolean }) => void
   onAction: (action: GenerativeAction) => void
   skillDir: string
   hasGenerated: boolean
@@ -381,20 +358,12 @@ function ThinkbackMenu({
         {!hasGenerated && (
           <Box flexDirection="column">
             <Text>Relive your year of coding with Claude.</Text>
-            <Text dimColor>
-              {
-                "We'll create a personalized ASCII animation celebrating your journey."
-              }
-            </Text>
+            <Text dimColor>{"We'll create a personalized ASCII animation celebrating your journey."}</Text>
           </Box>
         )}
 
         {/* Menu */}
-        <Select
-          options={options}
-          onChange={handleSelect}
-          visibleOptionCount={5}
-        />
+        <Select options={options} onChange={handleSelect} visibleOptionCount={5} />
       </Box>
     </Dialog>
   )
@@ -412,10 +381,7 @@ const REGENERATE_PROMPT =
 function ThinkbackFlow({
   onDone,
 }: {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay; shouldQuery?: boolean },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay; shouldQuery?: boolean }) => void
 }): React.ReactNode {
   const [installComplete, setInstallComplete] = useState(false)
   const [installError, setInstallError] = useState<string | null>(null)
@@ -430,10 +396,9 @@ function ThinkbackFlow({
     (message: string): void => {
       setInstallError(message)
       // Call onDone with the error message so the model can continue
-      onDone(
-        `Error with thinkback: ${message}. Try running /plugin to manually install the think-back plugin.`,
-        { display: 'system' },
-      )
+      onDone(`Error with thinkback: ${message}. Try running /plugin to manually install the think-back plugin.`, {
+        display: 'system',
+      })
     },
     [onDone],
   )
@@ -441,7 +406,7 @@ function ThinkbackFlow({
   useEffect(() => {
     if (installComplete && !skillDir && !installError) {
       // Get the skill directory after installation
-      void getThinkbackSkillDir().then(dir => {
+      void getThinkbackSkillDir().then((dir) => {
         if (dir) {
           logForDebugging(`Thinkback skill directory: ${dir}`)
           setSkillDir(dir)
@@ -459,10 +424,8 @@ function ThinkbackFlow({
     }
 
     const dataPath = join(skillDir, 'year_in_review.js')
-    void pathExists(dataPath).then(exists => {
-      logForDebugging(
-        `Checking for ${dataPath}: ${exists ? 'found' : 'not found'}`,
-      )
+    void pathExists(dataPath).then((exists) => {
+      logForDebugging(`Checking for ${dataPath}: ${exists ? 'found' : 'not found'}`)
       setHasGenerated(exists)
     })
   }, [skillDir])
@@ -481,9 +444,7 @@ function ThinkbackFlow({
     return (
       <Box flexDirection="column">
         <Text color="error">Error: {installError}</Text>
-        <Text dimColor>
-          Try running /plugin to manually install the think-back plugin.
-        </Text>
+        <Text dimColor>Try running /plugin to manually install the think-back plugin.</Text>
       </Box>
     )
   }
@@ -501,21 +462,11 @@ function ThinkbackFlow({
     )
   }
 
-  return (
-    <ThinkbackMenu
-      onDone={onDone}
-      onAction={handleAction}
-      skillDir={skillDir}
-      hasGenerated={hasGenerated}
-    />
-  )
+  return <ThinkbackMenu onDone={onDone} onAction={handleAction} skillDir={skillDir} hasGenerated={hasGenerated} />
 }
 
 export async function call(
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay; shouldQuery?: boolean },
-  ) => void,
+  onDone: (result?: string, options?: { display?: CommandResultDisplay; shouldQuery?: boolean }) => void,
 ): Promise<React.ReactNode> {
   return <ThinkbackFlow onDone={onDone} />
 }

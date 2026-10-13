@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useEffect, useRef } from 'react'
+
 import { KeyboardShortcutHint } from '../components/design-system/KeyboardShortcutHint.js'
 import { Box, Text } from '../ink.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
@@ -14,11 +15,7 @@ type Props = {
  * Component that shows a notification about running /issue command
  * with the ability to cancel via ESC key
  */
-export function AutoRunIssueNotification({
-  onRun,
-  onCancel,
-  reason,
-}: Props): React.ReactNode {
+export function AutoRunIssueNotification({ onRun, onCancel, reason }: Props): React.ReactNode {
   const hasRunRef = useRef(false)
 
   // Handle ESC key to cancel

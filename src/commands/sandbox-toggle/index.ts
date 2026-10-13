@@ -1,4 +1,5 @@
 import figures from 'figures'
+
 import type { Command } from '../../commands.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
 
@@ -21,9 +22,7 @@ const command = {
 
     let statusText = 'sandbox disabled'
     if (currentlyEnabled) {
-      statusText = autoAllow
-        ? 'sandbox enabled (auto-allow)'
-        : 'sandbox enabled'
+      statusText = autoAllow ? 'sandbox enabled (auto-allow)' : 'sandbox enabled'
 
       // Add unsandboxed fallback status
       statusText += allowUnsandboxed ? ', fallback allowed' : ''
@@ -37,10 +36,7 @@ const command = {
   },
   argumentHint: 'exclude "command pattern"',
   get isHidden() {
-    return (
-      !SandboxManager.isSupportedPlatform() ||
-      !SandboxManager.isPlatformInEnabledList()
-    )
+    return !SandboxManager.isSupportedPlatform() || !SandboxManager.isPlatformInEnabledList()
   },
   immediate: true,
   type: 'local-jsx',

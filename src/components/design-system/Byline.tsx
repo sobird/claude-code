@@ -1,4 +1,5 @@
 import React, { Children, isValidElement } from 'react'
+
 import { Text } from '../../ink.js'
 
 type Props = {
@@ -45,9 +46,7 @@ export function Byline({ children }: Props): React.ReactNode {
   return (
     <>
       {validChildren.map((child, index) => (
-        <React.Fragment
-          key={isValidElement(child) ? (child.key ?? index) : index}
-        >
+        <React.Fragment key={isValidElement(child) ? (child.key ?? index) : index}>
           {index > 0 && <Text dimColor> · </Text>}
           {child}
         </React.Fragment>

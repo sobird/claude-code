@@ -4,6 +4,7 @@
 
 import { access, chmod, writeFile } from 'fs/promises'
 import { join } from 'path'
+
 import { type ReleaseChannel, saveGlobalConfig } from './config.js'
 import { getClaudeConfigHomeDir } from './envUtils.js'
 import { getErrnoCode } from './errors.js'
@@ -35,11 +36,7 @@ export function isRunningFromLocalInstallation(): boolean {
  * Write `content` to `path` only if the file does not already exist.
  * Uses O_EXCL ('wx') for atomic create-if-missing.
  */
-async function writeIfMissing(
-  path: string,
-  content: string,
-  mode?: number,
-): Promise<boolean> {
+async function writeIfMissing(path: string, content: string, mode?: number): Promise<boolean> {
   try {
     await writeFile(path, content, { encoding: 'utf8', flag: 'wx', mode })
     return true
@@ -63,11 +60,7 @@ export async function ensureLocalPackageEnvironment(): Promise<boolean> {
     // Create package.json if it doesn't exist
     await writeIfMissing(
       join(localInstallDir, 'package.json'),
-      jsonStringify(
-        { name: 'claude-local', version: '0.0.1', private: true },
-        null,
-        2,
-      ),
+      jsonStringify({ name: 'claude-local', version: '0.0.1', private: true }, null, 2),
     )
 
     // Create the wrapper script if it doesn't exist
@@ -105,27 +98,20 @@ export async function installOrUpdateClaudePackage(
     }
 
     // Use specific version if provided, otherwise use channel tag
-    const versionSpec = specificVersion
-      ? specificVersion
-      : channel === 'stable'
-        ? 'stable'
-        : 'latest'
-    const result = await execFileNoThrowWithCwd(
-      'npm',
-      ['install', `${MACRO.PACKAGE_URL}@${versionSpec}`],
-      { cwd: getLocalInstallDir(), maxBuffer: 1000000 },
-    )
+    const versionSpec = specificVersion ? specificVersion : channel === 'stable' ? 'stable' : 'latest'
+    const result = await execFileNoThrowWithCwd('npm', ['install', `${MACRO.PACKAGE_URL}@${versionSpec}`], {
+      cwd: getLocalInstallDir(),
+      maxBuffer: 1000000,
+    })
 
     if (result.code !== 0) {
-      const error = new Error(
-        `Failed to install Claude CLI package: ${result.stderr}`,
-      )
+      const error = new Error(`Failed to install Claude CLI package: ${result.stderr}`)
       logError(error)
       return result.code === 190 ? 'in_progress' : 'install_failed'
     }
 
     // Set installMethod to 'local' to prevent npm permission warnings
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       installMethod: 'local',
     }))

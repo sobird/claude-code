@@ -1,18 +1,13 @@
 import * as React from 'react'
-import type {
-  CommandResultDisplay,
-  LocalJSXCommandContext,
-} from '../../commands.js'
+
+import type { CommandResultDisplay, LocalJSXCommandContext } from '../../commands.js'
 import { Feedback } from '../../components/Feedback.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
 import type { Message } from '../../types/message.js'
 
 // Shared function to render the Feedback component
 export function renderFeedbackComponent(
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void,
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void,
   abortSignal: AbortSignal,
   messages: Message[],
   initialDescription: string = '',
@@ -41,10 +36,5 @@ export async function call(
   args?: string,
 ): Promise<React.ReactNode> {
   const initialDescription = args || ''
-  return renderFeedbackComponent(
-    onDone,
-    context.abortController.signal,
-    context.messages,
-    initialDescription,
-  )
+  return renderFeedbackComponent(onDone, context.abortController.signal, context.messages, initialDescription)
 }

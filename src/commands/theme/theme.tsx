@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { Pane } from '../../components/design-system/Pane.js'
 import { ThemePicker } from '../../components/ThemePicker.js'
@@ -6,10 +7,7 @@ import { useTheme } from '../../ink.js'
 import type { LocalJSXCommandCall } from '../../types/command.js'
 
 type Props = {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
 function ThemePickerCommand({ onDone }: Props): React.ReactNode {
@@ -18,7 +16,7 @@ function ThemePickerCommand({ onDone }: Props): React.ReactNode {
   return (
     <Pane color="permission">
       <ThemePicker
-        onThemeSelect={setting => {
+        onThemeSelect={(setting) => {
           setTheme(setting)
           onDone(`Theme set to ${setting}`)
         }}

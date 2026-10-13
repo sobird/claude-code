@@ -76,13 +76,7 @@ type Token = {
 
 const SPECIAL_VARS = new Set(['?', '$', '@', '*', '#', '-', '!', '_'])
 
-const DECL_KEYWORDS = new Set([
-  'export',
-  'declare',
-  'typeset',
-  'readonly',
-  'local',
-])
+const DECL_KEYWORDS = new Set(['export', 'declare', 'typeset', 'readonly', 'local'])
 
 export const SHELL_KEYWORDS = new Set([
   'if',
@@ -657,13 +651,7 @@ function checkBudget(P: ParseState): void {
 }
 
 /** Build a node. Slices text from source by byte range via char-index lookup. */
-function mk(
-  P: ParseState,
-  type: string,
-  start: number,
-  end: number,
-  children: TsNode[],
-): TsNode {
+function mk(P: ParseState, type: string, start: number, end: number, children: TsNode[]): TsNode {
   checkBudget(P)
   return {
     type,
@@ -736,11 +724,7 @@ function parseProgram(P: ParseState): TsNode {
       if (errTok.type === 'EOF') break
       // Stray `;;` at program level (e.g., `var=;;` outside case) — tree-sitter
       // silently elides. Keep leading `;` as ERROR (security: paste artifact).
-      if (
-        errTok.type === 'OP' &&
-        errTok.value === ';;' &&
-        children.length > 0
-      ) {
+      if (errTok.type === 'OP' && errTok.value === ';;' && children.length > 0) {
         continue
       }
       children.push(mk(P, 'ERROR', errTok.start, errTok.end, []))
@@ -894,19 +878,9 @@ function parseAndOr(P: ParseState): TsNode | null {
       if (right.type === 'redirected_statement' && right.children.length >= 2) {
         const inner = right.children[0]!
         const redirs = right.children.slice(1)
-        const listNode = mk(P, 'list', left.startIndex, inner.endIndex, [
-          left,
-          op,
-          inner,
-        ])
+        const listNode = mk(P, 'list', left.startIndex, inner.endIndex, [left, op, inner])
         const lastR = redirs[redirs.length - 1]!
-        left = mk(
-          P,
-          'redirected_statement',
-          listNode.startIndex,
-          lastR.endIndex,
-          [listNode, ...redirs],
-        )
+        left = mk(P, 'redirected_statement', listNode.startIndex, lastR.endIndex, [listNode, ...redirs])
       } else {
         left = mk(P, 'list', left.startIndex, right.endIndex, [left, op, right])
       }
@@ -951,30 +925,14 @@ function parsePipeline(P: ParseState): TsNode | null {
         break
       }
       // Hoist trailing redirect on `next` to wrap current pipeline fragment
-      if (
-        next.type === 'redirected_statement' &&
-        next.children.length >= 2 &&
-        parts.length >= 1
-      ) {
+      if (next.type === 'redirected_statement' && next.children.length >= 2 && parts.length >= 1) {
         const inner = next.children[0]!
         const redirs = next.children.slice(1)
         // Wrap existing parts + op + inner as a pipeline
         const pipeKids = [...parts, op, inner]
-        const pipeNode = mk(
-          P,
-          'pipeline',
-          pipeKids[0]!.startIndex,
-          inner.endIndex,
-          pipeKids,
-        )
+        const pipeNode = mk(P, 'pipeline', pipeKids[0]!.startIndex, inner.endIndex, pipeKids)
         const lastR = redirs[redirs.length - 1]!
-        const wrapped = mk(
-          P,
-          'redirected_statement',
-          pipeNode.startIndex,
-          lastR.endIndex,
-          [pipeNode, ...redirs],
-        )
+        const wrapped = mk(P, 'redirected_statement', pipeNode.startIndex, lastR.endIndex, [pipeNode, ...redirs])
         parts.length = 0
         parts.push(wrapped)
         first = wrapped
@@ -1015,20 +973,11 @@ function parseCommand(P: ParseState): TsNode | null {
     if (inner.type === 'redirected_statement' && inner.children.length >= 2) {
       const cmd = inner.children[0]!
       const redirs = inner.children.slice(1)
-      const neg = mk(P, 'negated_command', bang.startIndex, cmd.endIndex, [
-        bang,
-        cmd,
-      ])
+      const neg = mk(P, 'negated_command', bang.startIndex, cmd.endIndex, [bang, cmd])
       const lastR = redirs[redirs.length - 1]!
-      return mk(P, 'redirected_statement', neg.startIndex, lastR.endIndex, [
-        neg,
-        ...redirs,
-      ])
+      return mk(P, 'redirected_statement', neg.startIndex, lastR.endIndex, [neg, ...redirs])
     }
-    return mk(P, 'negated_command', bang.startIndex, inner.endIndex, [
-      bang,
-      inner,
-    ])
+    return mk(P, 'negated_command', bang.startIndex, inner.endIndex, [bang, inner])
   }
 
   if (t.type === 'OP' && t.value === '(') {
@@ -1039,11 +988,7 @@ function parseCommand(P: ParseState): TsNode | null {
       closeTok.type === 'OP' && closeTok.value === ')'
         ? leaf(P, ')', closeTok)
         : mk(P, ')', open.endIndex, open.endIndex, [])
-    const node = mk(P, 'subshell', open.startIndex, close.endIndex, [
-      open,
-      ...body,
-      close,
-    ])
+    const node = mk(P, 'subshell', open.startIndex, close.endIndex, [open, ...body, close])
     return maybeRedirect(P, node)
   }
 
@@ -1051,15 +996,8 @@ function parseCommand(P: ParseState): TsNode | null {
     const open = leaf(P, '((', t)
     const exprs = parseArithCommaList(P, '))', 'var')
     const closeTok = nextToken(P.L, 'cmd')
-    const close =
-      closeTok.value === '))'
-        ? leaf(P, '))', closeTok)
-        : mk(P, '))', open.endIndex, open.endIndex, [])
-    return mk(P, 'compound_statement', open.startIndex, close.endIndex, [
-      open,
-      ...exprs,
-      close,
-    ])
+    const close = closeTok.value === '))' ? leaf(P, '))', closeTok) : mk(P, '))', open.endIndex, open.endIndex, [])
+    return mk(P, 'compound_statement', open.startIndex, close.endIndex, [open, ...exprs, close])
   }
 
   if (t.type === 'OP' && t.value === '{') {
@@ -1070,11 +1008,7 @@ function parseCommand(P: ParseState): TsNode | null {
       closeTok.type === 'OP' && closeTok.value === '}'
         ? leaf(P, '}', closeTok)
         : mk(P, '}', open.endIndex, open.endIndex, [])
-    const node = mk(P, 'compound_statement', open.startIndex, close.endIndex, [
-      open,
-      ...body,
-      close,
-    ])
+    const node = mk(P, 'compound_statement', open.startIndex, close.endIndex, [open, ...body, close])
     return maybeRedirect(P, node)
   }
 
@@ -1117,14 +1051,12 @@ function parseCommand(P: ParseState): TsNode | null {
 
   if (t.type === 'WORD') {
     if (t.value === 'if') return maybeRedirect(P, parseIf(P, t), true)
-    if (t.value === 'while' || t.value === 'until')
-      return maybeRedirect(P, parseWhile(P, t), true)
+    if (t.value === 'while' || t.value === 'until') return maybeRedirect(P, parseWhile(P, t), true)
     if (t.value === 'for') return maybeRedirect(P, parseFor(P, t), true)
     if (t.value === 'select') return maybeRedirect(P, parseFor(P, t), true)
     if (t.value === 'case') return maybeRedirect(P, parseCase(P, t), true)
     if (t.value === 'function') return parseFunction(P, t)
-    if (DECL_KEYWORDS.has(t.value))
-      return maybeRedirect(P, parseDeclaration(P, t))
+    if (DECL_KEYWORDS.has(t.value)) return maybeRedirect(P, parseDeclaration(P, t))
     if (t.value === 'unset' || t.value === 'unsetenv') {
       return maybeRedirect(P, parseUnset(P, t))
     }
@@ -1165,13 +1097,8 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
     nameTok.type === 'EOF' ||
     nameTok.type === 'NEWLINE' ||
     nameTok.type === 'COMMENT' ||
-    (nameTok.type === 'OP' &&
-      nameTok.value !== '{' &&
-      nameTok.value !== '[' &&
-      nameTok.value !== '[[') ||
-    (nameTok.type === 'WORD' &&
-      SHELL_KEYWORDS.has(nameTok.value) &&
-      nameTok.value !== 'in')
+    (nameTok.type === 'OP' && nameTok.value !== '{' && nameTok.value !== '[' && nameTok.value !== '[[') ||
+    (nameTok.type === 'WORD' && SHELL_KEYWORDS.has(nameTok.value) && nameTok.value !== 'in')
   ) {
     restoreLex(P.L, save)
     // No command — standalone assignment(s) or redirect
@@ -1181,24 +1108,12 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
     if (preRedirects.length > 0 && assignments.length === 0) {
       // Bare redirect → redirected_statement with just file_redirect children
       const last = preRedirects[preRedirects.length - 1]!
-      return mk(
-        P,
-        'redirected_statement',
-        preRedirects[0]!.startIndex,
-        last.endIndex,
-        preRedirects,
-      )
+      return mk(P, 'redirected_statement', preRedirects[0]!.startIndex, last.endIndex, preRedirects)
     }
     if (assignments.length > 1 && preRedirects.length === 0) {
       // `A=1 B=2` with no command → variable_assignments (plural)
       const last = assignments[assignments.length - 1]!
-      return mk(
-        P,
-        'variable_assignments',
-        assignments[0]!.startIndex,
-        last.endIndex,
-        assignments,
-      )
+      return mk(P, 'variable_assignments', assignments[0]!.startIndex, last.endIndex, assignments)
     }
     if (assignments.length > 0 || preRedirects.length > 0) {
       const all = [...assignments, ...preRedirects]
@@ -1234,12 +1149,7 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
           bodyKids = body.children
         }
         const last = bodyKids[bodyKids.length - 1]!
-        return mk(P, 'function_definition', nm.startIndex, last.endIndex, [
-          nm,
-          oParen,
-          cParen,
-          ...bodyKids,
-        ])
+        return mk(P, 'function_definition', nm.startIndex, last.endIndex, [nm, oParen, cParen, ...bodyKids])
       }
     }
   }
@@ -1251,9 +1161,7 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
     return null
   }
 
-  const cmdName = mk(P, 'command_name', nameArg.startIndex, nameArg.endIndex, [
-    nameArg,
-  ])
+  const cmdName = mk(P, 'command_name', nameArg.startIndex, nameArg.endIndex, [nameArg])
 
   const args: TsNode[] = []
   const redirects: TsNode[] = []
@@ -1316,16 +1224,8 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
         const body = parseStatements(P, ')')
         const cTok = nextToken(P.L, 'cmd')
         const close =
-          cTok.type === 'OP' && cTok.value === ')'
-            ? leaf(P, ')', cTok)
-            : mk(P, ')', open.endIndex, open.endIndex, [])
-        args.push(
-          mk(P, 'subshell', open.startIndex, close.endIndex, [
-            open,
-            ...body,
-            close,
-          ]),
-        )
+          cTok.type === 'OP' && cTok.value === ')' ? leaf(P, ')', cTok) : mk(P, ')', open.endIndex, open.endIndex, [])
+        args.push(mk(P, 'subshell', open.startIndex, close.endIndex, [open, ...body, close]))
         continue
       }
       break
@@ -1339,11 +1239,7 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
     // Word immediately followed by `(` (no whitespace) is a parse error —
     // bash doesn't allow glob-then-subshell adjacency. tree-sitter wraps the
     // word in ERROR. Catches zsh glob qualifiers like `*.(e:'cmd':)`.
-    if (
-      (arg.type === 'word' || arg.type === 'concatenation') &&
-      peek(P.L) === '(' &&
-      P.L.b === arg.endIndex
-    ) {
+    if ((arg.type === 'word' || arg.type === 'concatenation') && peek(P.L) === '(' && P.L.b === arg.endIndex) {
       args.push(mk(P, 'ERROR', arg.startIndex, arg.endIndex, [arg]))
       continue
     }
@@ -1353,10 +1249,7 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
   // preRedirects (e.g., `2>&1 cat`, `<<<str cmd`) go INSIDE the command node
   // before command_name per tree-sitter grammar, not in redirected_statement
   const cmdChildren = [...assignments, ...preRedirects, cmdName, ...args]
-  const cmdEnd =
-    cmdChildren.length > 0
-      ? cmdChildren[cmdChildren.length - 1]!.endIndex
-      : cmdName.endIndex
+  const cmdEnd = cmdChildren.length > 0 ? cmdChildren[cmdChildren.length - 1]!.endIndex : cmdName.endIndex
   const cmdStart = cmdChildren[0]!.startIndex
   const cmd = mk(P, 'command', cmdStart, cmdEnd, cmdChildren)
 
@@ -1375,39 +1268,22 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
       const endNode = mk(P, 'heredoc_end', hd.endStart, hd.endEnd, [])
       heredocRedirect.children.push(bodyNode, endNode)
       heredocRedirect.endIndex = hd.endEnd
-      heredocRedirect.text = sliceBytes(
-        P,
-        heredocRedirect.startIndex,
-        hd.endEnd,
-      )
+      heredocRedirect.text = sliceBytes(P, heredocRedirect.startIndex, hd.endEnd)
     }
     const allR = [...preRedirects, heredocRedirect, ...redirects]
-    const rStart =
-      preRedirects.length > 0
-        ? Math.min(cmd.startIndex, preRedirects[0]!.startIndex)
-        : cmd.startIndex
-    return mk(P, 'redirected_statement', rStart, heredocRedirect.endIndex, [
-      cmd,
-      ...allR,
-    ])
+    const rStart = preRedirects.length > 0 ? Math.min(cmd.startIndex, preRedirects[0]!.startIndex) : cmd.startIndex
+    return mk(P, 'redirected_statement', rStart, heredocRedirect.endIndex, [cmd, ...allR])
   }
 
   if (redirects.length > 0) {
     const last = redirects[redirects.length - 1]!
-    return mk(P, 'redirected_statement', cmd.startIndex, last.endIndex, [
-      cmd,
-      ...redirects,
-    ])
+    return mk(P, 'redirected_statement', cmd.startIndex, last.endIndex, [cmd, ...redirects])
   }
 
   return cmd
 }
 
-function maybeRedirect(
-  P: ParseState,
-  node: TsNode,
-  allowHerestring = false,
-): TsNode {
+function maybeRedirect(P: ParseState, node: TsNode, allowHerestring = false): TsNode {
   const redirects: TsNode[] = []
   while (true) {
     skipBlanks(P.L)
@@ -1422,10 +1298,7 @@ function maybeRedirect(
   }
   if (redirects.length === 0) return node
   const last = redirects[redirects.length - 1]!
-  return mk(P, 'redirected_statement', node.startIndex, last.endIndex, [
-    node,
-    ...redirects,
-  ])
+  return mk(P, 'redirected_statement', node.startIndex, last.endIndex, [node, ...redirects])
 }
 
 function tryParseAssignment(P: ParseState): TsNode | null {
@@ -1491,10 +1364,7 @@ function tryParseAssignment(P: ParseState): TsNode | null {
       elems.push(e)
     }
     const acTok = nextToken(P.L, 'cmd')
-    const aClose =
-      acTok.value === ')'
-        ? leaf(P, ')', acTok)
-        : mk(P, ')', aOpen.endIndex, aOpen.endIndex, [])
+    const aClose = acTok.value === ')' ? leaf(P, ')', acTok) : mk(P, ')', aOpen.endIndex, aOpen.endIndex, [])
     elems.push(aClose)
     val = mk(P, 'array', aOpen.startIndex, aClose.endIndex, elems)
   } else {
@@ -1559,11 +1429,7 @@ function parseSubscriptIndexInline(P: ParseState): TsNode | null {
 }
 
 /** Legacy byte-range subscript index parser — kept for callers that pre-scan. */
-function parseSubscriptIndex(
-  P: ParseState,
-  startB: number,
-  endB: number,
-): TsNode {
+function parseSubscriptIndex(P: ParseState, startB: number, endB: number): TsNode {
   const text = sliceBytes(P, startB, endB)
   if (/^\d+$/.test(text)) return mk(P, 'number', startB, endB, [])
   const m = /^\$([a-zA-Z_]\w*)$/.exec(text)
@@ -1589,8 +1455,7 @@ function isRedirectLiteralStart(P: ParseState): boolean {
   const c = peek(P.L)
   if (c === '' || c === '\n') return false
   // Shell terminators and operators
-  if (c === '|' || c === '&' || c === ';' || c === '(' || c === ')')
-    return false
+  if (c === '|' || c === '&' || c === ';' || c === '(' || c === ')') return false
   // Redirect operators (< > with any suffix; <( >( handled by caller)
   if (c === '<' || c === '>') {
     // <( >( are process substitutions — those ARE literals
@@ -1647,13 +1512,7 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
     const target = parseWord(P, 'arg')
     const end = target ? target.endIndex : op.endIndex
     const kids = target ? [op, target] : [op]
-    return mk(
-      P,
-      'herestring_redirect',
-      fd ? fd.startIndex : op.startIndex,
-      end,
-      fd ? [fd, ...kids] : kids,
-    )
+    return mk(P, 'herestring_redirect', fd ? fd.startIndex : op.startIndex, end, fd ? [fd, ...kids] : kids)
   }
   if (v === '<<' || v === '<<-') {
     const op = leaf(P, v, t)
@@ -1752,18 +1611,13 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
         if (pipeCmds.length > 0) {
           const pl = pipeCmds[pipeCmds.length - 1]!
           // tree-sitter always wraps in pipeline after `|`, even single command
-          kids.push(
-            mk(P, 'pipeline', pipeCmds[0]!.startIndex, pl.endIndex, pipeCmds),
-          )
+          kids.push(mk(P, 'pipeline', pipeCmds[0]!.startIndex, pl.endIndex, pipeCmds))
         }
         continue
       }
       // && / || after heredoc_start: `cat <<-EOF || die "..."` — tree-sitter
       // nests just the RHS command (not a list) as a child of heredoc_redirect.
-      if (
-        (tc === '&' && peek(P.L, 1) === '&') ||
-        (tc === '|' && peek(P.L, 1) === '|')
-      ) {
+      if ((tc === '&' && peek(P.L, 1) === '&') || (tc === '|' && peek(P.L, 1) === '|')) {
         advance(P.L)
         advance(P.L)
         skipBlanks(P.L)
@@ -1812,16 +1666,7 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
     const end = dest ? dest.endIndex : op.endIndex
     return mk(P, 'file_redirect', startIdx, end, kids)
   }
-  if (
-    v === '>' ||
-    v === '>>' ||
-    v === '>&' ||
-    v === '>|' ||
-    v === '&>' ||
-    v === '&>>' ||
-    v === '<' ||
-    v === '<&'
-  ) {
+  if (v === '>' || v === '>>' || v === '>&' || v === '>|' || v === '&>' || v === '&>>' || v === '<' || v === '<&') {
     const op = leaf(P, v, t)
     const kids: TsNode[] = []
     if (fd) kids.push(fd)
@@ -1875,11 +1720,7 @@ function parseProcessSub(P: ParseState): TsNode | null {
   } else {
     close = mk(P, ')', P.L.b, P.L.b, [])
   }
-  return mk(P, 'process_substitution', start, close.endIndex, [
-    open,
-    ...body,
-    close,
-  ])
+  return mk(P, 'process_substitution', start, close.endIndex, [open, ...body, close])
 }
 
 function scanHeredocBodies(P: ParseState): void {
@@ -1900,9 +1741,7 @@ function scanHeredocBodies(P: ParseState): void {
       // Check if this line is the delimiter
       if (
         P.L.src.startsWith(hd.delim, checkI) &&
-        (checkI + delimLen >= P.L.len ||
-          P.L.src[checkI + delimLen] === '\n' ||
-          P.L.src[checkI + delimLen] === '\r')
+        (checkI + delimLen >= P.L.len || P.L.src[checkI + delimLen] === '\n' || P.L.src[checkI + delimLen] === '\r')
       ) {
         hd.bodyEnd = lineStartB
         // Advance past tabs
@@ -1926,11 +1765,7 @@ function scanHeredocBodies(P: ParseState): void {
   }
 }
 
-function parseHeredocBodyContent(
-  P: ParseState,
-  start: number,
-  end: number,
-): TsNode[] {
+function parseHeredocBodyContent(P: ParseState, start: number, end: number): TsNode[] {
   // Parse expansions inside an unquoted heredoc body.
   const saved = saveLex(P.L)
   // Position lexer at body start
@@ -2376,13 +2211,7 @@ function parseDoubleQuoted(P: ParseState): TsNode {
     }
     if (c === '$') {
       const c1 = peek(P.L, 1)
-      if (
-        c1 === '(' ||
-        c1 === '{' ||
-        isIdentStart(c1) ||
-        SPECIAL_VARS.has(c1) ||
-        isDigit(c1)
-      ) {
+      if (c1 === '(' || c1 === '{' || isIdentStart(c1) || SPECIAL_VARS.has(c1) || isDigit(c1)) {
         flushContent()
         const exp = parseDollarLike(P)
         if (exp) parts.push(exp)
@@ -2446,11 +2275,7 @@ function parseDollarLike(P: ParseState): TsNode | null {
     } else {
       close = mk(P, '))', P.L.b, P.L.b, [])
     }
-    return mk(P, 'arithmetic_expansion', dStart, close.endIndex, [
-      open,
-      ...exprs,
-      close,
-    ])
+    return mk(P, 'arithmetic_expansion', dStart, close.endIndex, [open, ...exprs, close])
   }
   if (c1 === '[') {
     // $[ arithmetic ] — legacy bash syntax, same as $((...))
@@ -2467,11 +2292,7 @@ function parseDollarLike(P: ParseState): TsNode | null {
     } else {
       close = mk(P, ']', P.L.b, P.L.b, [])
     }
-    return mk(P, 'arithmetic_expansion', dStart, close.endIndex, [
-      open,
-      ...exprs,
-      close,
-    ])
+    return mk(P, 'arithmetic_expansion', dStart, close.endIndex, [open, ...exprs, close])
   }
   if (c1 === '(') {
     advance(P.L)
@@ -2497,11 +2318,7 @@ function parseDollarLike(P: ParseState): TsNode | null {
     ) {
       body = body[0]!.children
     }
-    return mk(P, 'command_substitution', dStart, close.endIndex, [
-      open,
-      ...body,
-      close,
-    ])
+    return mk(P, 'command_substitution', dStart, close.endIndex, [open, ...body, close])
   }
   if (c1 === '{') {
     advance(P.L)
@@ -2588,10 +2405,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
   // Only when followed by an identifier — ${!} alone is special var $!
   // Also = ~ prefixes (zsh-style ${=var} ${~var})
   const pc = peek(P.L)
-  if (
-    (pc === '!' || pc === '=' || pc === '~') &&
-    (isIdentStart(peek(P.L, 1)) || isDigit(peek(P.L, 1)))
-  ) {
+  if ((pc === '!' || pc === '=' || pc === '~') && (isIdentStart(peek(P.L, 1)) || isDigit(peek(P.L, 1)))) {
     const s = P.L.b
     advance(P.L)
     out.push(mk(P, pc, s, P.L.b, []))
@@ -2623,9 +2437,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
     if (peek(P.L) === ']') advance(P.L)
     const brCloseNode = mk(P, ']', brClose, P.L.b, [])
     if (varNode) {
-      const kids = idx
-        ? [varNode, brOpenNode, idx, brCloseNode]
-        : [varNode, brOpenNode, brCloseNode]
+      const kids = idx ? [varNode, brOpenNode, idx, brCloseNode] : [varNode, brOpenNode, brCloseNode]
       out[out.length - 1] = mk(P, 'subscript', varNode.startIndex, P.L.b, kids)
     }
   }
@@ -2716,10 +2528,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
       advance(P.L)
       advance(P.L)
       op = c + c1
-    } else if (
-      (c === '#' || c === '%' || c === '/' || c === '^' || c === ',') &&
-      c1 === c
-    ) {
+    } else if ((c === '#' || c === '%' || c === '/' || c === '^' || c === ',') && c1 === c) {
       // Doubled operators: ## %% // ^^ ,,
       advance(P.L)
       advance(P.L)
@@ -2804,11 +2613,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
   return out
 }
 
-function parseExpansionRest(
-  P: ParseState,
-  nodeType: string,
-  stopAtSlash: boolean,
-): TsNode | null {
+function parseExpansionRest(P: ParseState, nodeType: string, stopAtSlash: boolean): TsNode | null {
   // Don't skipBlanks — `${var:- }` space IS the word. Stop at } or newline
   // (`${var:\n}` emits no word). stopAtSlash=true stops at `/` for pat/repl
   // split in ${var/pat/repl}. nodeType 'replword' is word-mode for the
@@ -2829,14 +2634,7 @@ function parseExpansionRest(
       const wStart = P.L.b
       while (P.L.i < P.L.len) {
         const wc = peek(P.L)
-        if (
-          wc === ')' ||
-          wc === '}' ||
-          wc === ' ' ||
-          wc === '\t' ||
-          wc === '\n' ||
-          wc === ''
-        ) {
+        if (wc === ')' || wc === '}' || wc === ' ' || wc === '\t' || wc === '\n' || wc === '') {
           break
         }
         advance(P.L)
@@ -3015,11 +2813,7 @@ function parseExpansionRest(
   // there's content after: `${2+ ${2}}` → just (expansion). But `${v:- }`
   // (space-only RHS) keeps the space as (word). So drop leading whitespace-
   // only word segment if it's NOT the only part.
-  if (
-    parts.length > 1 &&
-    parts[0]!.type === 'word' &&
-    /^[ \t]+$/.test(parts[0]!.text)
-  ) {
+  if (parts.length > 1 && parts[0]!.type === 'word' && /^[ \t]+$/.test(parts[0]!.text)) {
     parts.shift()
   }
   if (parts.length === 0) return null
@@ -3142,11 +2936,7 @@ function parseBacktick(P: ParseState): TsNode | null {
   // tree-sitter — used as a line-continuation hack: "foo"`<newline>`"bar"
   // → (concatenation (string) (string)) with no command_substitution.
   if (body.length === 0) return null
-  return mk(P, 'command_substitution', start, close.endIndex, [
-    open,
-    ...body,
-    close,
-  ])
+  return mk(P, 'command_substitution', start, close.endIndex, [open, ...body, close])
 }
 
 function parseIf(P: ParseState, ifTok: Token): TsNode {
@@ -3173,9 +2963,7 @@ function parseIf(P: ParseState, ifTok: Token): TsNode {
       const elKw = leaf(P, 'else', t)
       const elBody = parseStatements(P, null)
       const last = elBody.length > 0 ? elBody[elBody.length - 1]! : elKw
-      kids.push(
-        mk(P, 'else_clause', elKw.startIndex, last.endIndex, [elKw, ...elBody]),
-      )
+      kids.push(mk(P, 'else_clause', elKw.startIndex, last.endIndex, [elKw, ...elBody]))
     } else {
       restoreLex(P.L, save)
       break
@@ -3257,13 +3045,7 @@ function parseFor(P: ParseState, forTok: Token): TsNode {
         } else {
           bClose = mk(P, '}', P.L.b, P.L.b, [])
         }
-        kids.push(
-          mk(P, 'compound_statement', brace.startIndex, bClose.endIndex, [
-            brace,
-            ...body,
-            bClose,
-          ]),
-        )
+        kids.push(mk(P, 'compound_statement', brace.startIndex, bClose.endIndex, [brace, ...body, bClose]))
       }
     }
     const last = kids[kids.length - 1]!
@@ -3369,16 +3151,12 @@ function parseCaseItem(P: ParseState): TsNode | null {
     // siblings; subsequent alternatives are wrapped in (concatenation) with
     // `word` instead of `extglob_pattern` for bare segments.
     if (!isFirstAlt && pats.length > 1) {
-      const rewritten = pats.map(p =>
-        p.type === 'extglob_pattern'
-          ? mk(P, 'word', p.startIndex, p.endIndex, [])
-          : p,
+      const rewritten = pats.map((p) =>
+        p.type === 'extglob_pattern' ? mk(P, 'word', p.startIndex, p.endIndex, []) : p,
       )
       const first = rewritten[0]!
       const last = rewritten[rewritten.length - 1]!
-      kids.push(
-        mk(P, 'concatenation', first.startIndex, last.endIndex, rewritten),
-      )
+      kids.push(mk(P, 'concatenation', first.startIndex, last.endIndex, rewritten))
     } else {
       kids.push(...pats)
     }
@@ -3412,10 +3190,7 @@ function parseCaseItem(P: ParseState): TsNode | null {
   kids.push(...body)
   const save = saveLex(P.L)
   const term = nextToken(P.L, 'cmd')
-  if (
-    term.type === 'OP' &&
-    (term.value === ';;' || term.value === ';&' || term.value === ';;&')
-  ) {
+  if (term.type === 'OP' && (term.value === ';;' || term.value === ';&' || term.value === ';;&')) {
     kids.push(leaf(P, term.value, term))
   } else {
     restoreLex(P.L, save)
@@ -3512,10 +3287,7 @@ function parseCasePattern(P: ParseState): TsNode[] {
   // Patterns starting with extglob operator chars (+ - ? * @ !) followed by
   // identifier chars are extglob_pattern per tree-sitter, even without parens
   // or glob metachars. `-o)` → extglob_pattern; plain `foo)` → word.
-  const type =
-    hasExtglobParen || /[*?]/.test(text) || /^[-+?*@!][a-zA-Z]/.test(text)
-      ? 'extglob_pattern'
-      : 'word'
+  const type = hasExtglobParen || /[*?]/.test(text) || /^[-+?*@!][a-zA-Z]/.test(text) ? 'extglob_pattern' : 'word'
   return [mk(P, type, start, P.L.b, [])]
 }
 
@@ -3601,16 +3373,7 @@ function parseDeclaration(P: ParseState, kwTok: Token): TsNode {
   while (true) {
     skipBlanks(P.L)
     const c = peek(P.L)
-    if (
-      c === '' ||
-      c === '\n' ||
-      c === ';' ||
-      c === '&' ||
-      c === '|' ||
-      c === ')' ||
-      c === '<' ||
-      c === '>'
-    ) {
+    if (c === '' || c === '\n' || c === ';' || c === '&' || c === '|' || c === ')' || c === '<' || c === '>') {
       break
     }
     const a = tryParseAssignment(P)
@@ -3653,16 +3416,7 @@ function parseUnset(P: ParseState, kwTok: Token): TsNode {
   while (true) {
     skipBlanks(P.L)
     const c = peek(P.L)
-    if (
-      c === '' ||
-      c === '\n' ||
-      c === ';' ||
-      c === '&' ||
-      c === '|' ||
-      c === ')' ||
-      c === '<' ||
-      c === '>'
-    ) {
+    if (c === '' || c === '\n' || c === ';' || c === '&' || c === '|' || c === ')' || c === '<' || c === '>') {
       break
     }
     // SECURITY: use parseWord (not raw nextToken) so quoted strings like
@@ -3718,11 +3472,7 @@ function parseTestOr(P: ParseState, closer: string): TsNode | null {
         restoreLex(P.L, save)
         break
       }
-      left = mk(P, 'binary_expression', left.startIndex, right.endIndex, [
-        left,
-        op,
-        right,
-      ])
+      left = mk(P, 'binary_expression', left.startIndex, right.endIndex, [left, op, right])
     } else {
       break
     }
@@ -3742,11 +3492,7 @@ function parseTestAnd(P: ParseState, closer: string): TsNode | null {
       const op = mk(P, '&&', s, P.L.b, [])
       const right = parseTestUnary(P, closer)
       if (!right) break
-      left = mk(P, 'binary_expression', left.startIndex, right.endIndex, [
-        left,
-        op,
-        right,
-      ])
+      left = mk(P, 'binary_expression', left.startIndex, right.endIndex, [left, op, right])
     } else {
       break
     }
@@ -3772,13 +3518,7 @@ function parseTestUnary(P: ParseState, closer: string): TsNode | null {
       close = mk(P, ')', P.L.b, P.L.b, [])
     }
     const kids = inner ? [open, inner, close] : [open, close]
-    return mk(
-      P,
-      'parenthesized_expression',
-      open.startIndex,
-      close.endIndex,
-      kids,
-    )
+    return mk(P, 'parenthesized_expression', open.startIndex, close.endIndex, kids)
   }
   return parseTestBinary(P, closer)
 }
@@ -3788,10 +3528,7 @@ function parseTestUnary(P: ParseState, closer: string): TsNode | null {
  * a binary comparison. Used as LHS of binary_expression so `! x =~ y` binds
  * `!` to `x` only, not the whole `x =~ y`.
  */
-function parseTestNegatablePrimary(
-  P: ParseState,
-  closer: string,
-): TsNode | null {
+function parseTestNegatablePrimary(P: ParseState, closer: string): TsNode | null {
   skipBlanks(P.L)
   const c = peek(P.L)
   if (c === '!') {
@@ -3800,10 +3537,7 @@ function parseTestNegatablePrimary(
     const bang = mk(P, '!', s, P.L.b, [])
     const inner = parseTestNegatablePrimary(P, closer)
     if (!inner) return bang
-    return mk(P, 'unary_expression', bang.startIndex, inner.endIndex, [
-      bang,
-      inner,
-    ])
+    return mk(P, 'unary_expression', bang.startIndex, inner.endIndex, [bang, inner])
   }
   if (c === '-' && isIdentStart(peek(P.L, 1))) {
     const s = P.L.b
@@ -3873,10 +3607,7 @@ function parseTestBinary(P: ParseState, closer: string): TsNode | null {
       let rhs: TsNode | null = null
       if (rc === '"' || rc === "'") {
         const save = saveLex(P.L)
-        const quoted =
-          rc === '"'
-            ? parseDoubleQuoted(P)
-            : leaf(P, 'raw_string', nextToken(P.L, 'arg'))
+        const quoted = rc === '"' ? parseDoubleQuoted(P) : leaf(P, 'raw_string', nextToken(P.L, 'arg'))
         // Check if RHS ends here: only whitespace then ]] or &&/|| or newline
         let j = P.L.i
         while (j < P.L.len && (P.src[j] === ' ' || P.src[j] === '\t')) j++
@@ -3896,40 +3627,24 @@ function parseTestBinary(P: ParseState, closer: string): TsNode | null {
       }
       if (!rhs) rhs = parseTestRegexRhs(P)
       if (!rhs) return left
-      return mk(P, 'binary_expression', left.startIndex, rhs.endIndex, [
-        left,
-        op,
-        rhs,
-      ])
+      return mk(P, 'binary_expression', left.startIndex, rhs.endIndex, [left, op, rhs])
     }
     // Single `=` emits (regex) per tree-sitter; `==` and `!=` emit extglob_pattern
     if (opText === '=') {
       const rhs = parseTestRegexRhs(P)
       if (!rhs) return left
-      return mk(P, 'binary_expression', left.startIndex, rhs.endIndex, [
-        left,
-        op,
-        rhs,
-      ])
+      return mk(P, 'binary_expression', left.startIndex, rhs.endIndex, [left, op, rhs])
     }
     if (opText === '==' || opText === '!=') {
       const parts = parseTestExtglobRhs(P)
       if (parts.length === 0) return left
       const last = parts[parts.length - 1]!
-      return mk(P, 'binary_expression', left.startIndex, last.endIndex, [
-        left,
-        op,
-        ...parts,
-      ])
+      return mk(P, 'binary_expression', left.startIndex, last.endIndex, [left, op, ...parts])
     }
   }
   const right = parseTestPrimary(P, closer)
   if (!right) return left
-  return mk(P, 'binary_expression', left.startIndex, right.endIndex, [
-    left,
-    op,
-    right,
-  ])
+  return mk(P, 'binary_expression', left.startIndex, right.endIndex, [left, op, right])
 }
 
 // RHS of =~ in [[ ]] — scan as single (regex) node with paren/bracket counting
@@ -3955,11 +3670,7 @@ function parseTestRegexRhs(P: ParseState): TsNode | null {
         while (j < P.L.len && (P.L.src[j] === ' ' || P.L.src[j] === '\t')) j++
         const nc = P.L.src[j] ?? ''
         const nc1 = P.L.src[j + 1] ?? ''
-        if (
-          (nc === ']' && nc1 === ']') ||
-          (nc === '&' && nc1 === '&') ||
-          (nc === '|' && nc1 === '|')
-        ) {
+        if ((nc === ']' && nc1 === ']') || (nc === '&' && nc1 === '&') || (nc === '|' && nc1 === '|')) {
           break
         }
         advance(P.L)
@@ -4008,11 +3719,7 @@ function parseTestExtglobRhs(P: ParseState): TsNode[] {
         while (j < P.L.len && (P.L.src[j] === ' ' || P.L.src[j] === '\t')) j++
         const nc = P.L.src[j] ?? ''
         const nc1 = P.L.src[j + 1] ?? ''
-        if (
-          (nc === ']' && nc1 === ']') ||
-          (nc === '&' && nc1 === '&') ||
-          (nc === '|' && nc1 === '|')
-        ) {
+        if ((nc === ']' && nc1 === ']') || (nc === '&' && nc1 === '&') || (nc === '|' && nc1 === '|')) {
           break
         }
         advance(P.L)
@@ -4023,12 +3730,7 @@ function parseTestExtglobRhs(P: ParseState): TsNode[] {
     // consumes matching ) so parenDepth stays consistent.
     if (c === '$') {
       const c1 = peek(P.L, 1)
-      if (
-        c1 === '(' ||
-        c1 === '{' ||
-        isIdentStart(c1) ||
-        SPECIAL_VARS.has(c1)
-      ) {
+      if (c1 === '(' || c1 === '{' || isIdentStart(c1) || SPECIAL_VARS.has(c1)) {
         flushSeg()
         const exp = parseDollarLike(P)
         if (exp) parts.push(exp)
@@ -4111,35 +3813,14 @@ const ARITH_PREC: Record<string, number> = {
 }
 
 /** Right-associative operators (assignment and exponent). */
-const ARITH_RIGHT_ASSOC = new Set([
-  '=',
-  '+=',
-  '-=',
-  '*=',
-  '/=',
-  '%=',
-  '<<=',
-  '>>=',
-  '&=',
-  '^=',
-  '|=',
-  '**',
-])
+const ARITH_RIGHT_ASSOC = new Set(['=', '+=', '-=', '*=', '/=', '%=', '<<=', '>>=', '&=', '^=', '|=', '**'])
 
-function parseArithExpr(
-  P: ParseState,
-  stop: string,
-  mode: ArithMode = 'var',
-): TsNode | null {
+function parseArithExpr(P: ParseState, stop: string, mode: ArithMode = 'var'): TsNode | null {
   return parseArithTernary(P, stop, mode)
 }
 
 /** Top-level: comma-separated list. arithmetic_expansion emits multiple children. */
-function parseArithCommaList(
-  P: ParseState,
-  stop: string,
-  mode: ArithMode = 'var',
-): TsNode[] {
+function parseArithCommaList(P: ParseState, stop: string, mode: ArithMode = 'var'): TsNode[] {
   const out: TsNode[] = []
   while (true) {
     const e = parseArithTernary(P, stop, mode)
@@ -4154,11 +3835,7 @@ function parseArithCommaList(
   return out
 }
 
-function parseArithTernary(
-  P: ParseState,
-  stop: string,
-  mode: ArithMode,
-): TsNode | null {
+function parseArithTernary(P: ParseState, stop: string, mode: ArithMode): TsNode | null {
   const cond = parseArithBinary(P, stop, 0, mode)
   if (!cond) return null
   skipBlanks(P.L)
@@ -4229,12 +3906,7 @@ function scanArithOp(P: ParseState): [string, number] | null {
 }
 
 /** Precedence-climbing binary expression parser. */
-function parseArithBinary(
-  P: ParseState,
-  stop: string,
-  minPrec: number,
-  mode: ArithMode,
-): TsNode | null {
+function parseArithBinary(P: ParseState, stop: string, minPrec: number, mode: ArithMode): TsNode | null {
   let left = parseArithUnary(P, stop, mode)
   if (!left) return null
   while (true) {
@@ -4252,20 +3924,12 @@ function parseArithBinary(
     const nextMin = ARITH_RIGHT_ASSOC.has(opText) ? prec : prec + 1
     const right = parseArithBinary(P, stop, nextMin, mode)
     if (!right) break
-    left = mk(P, 'binary_expression', left.startIndex, right.endIndex, [
-      left,
-      op,
-      right,
-    ])
+    left = mk(P, 'binary_expression', left.startIndex, right.endIndex, [left, op, right])
   }
   return left
 }
 
-function parseArithUnary(
-  P: ParseState,
-  stop: string,
-  mode: ArithMode,
-): TsNode | null {
+function parseArithUnary(P: ParseState, stop: string, mode: ArithMode): TsNode | null {
   skipBlanks(P.L)
   if (isArithStop(P, stop)) return null
   const c = peek(P.L)
@@ -4299,11 +3963,7 @@ function parseArithUnary(
   return parseArithPostfix(P, stop, mode)
 }
 
-function parseArithPostfix(
-  P: ParseState,
-  stop: string,
-  mode: ArithMode,
-): TsNode | null {
+function parseArithPostfix(P: ParseState, stop: string, mode: ArithMode): TsNode | null {
   const prim = parseArithPrimary(P, stop, mode)
   if (!prim) return null
   const c = peek(P.L)
@@ -4318,11 +3978,7 @@ function parseArithPostfix(
   return prim
 }
 
-function parseArithPrimary(
-  P: ParseState,
-  stop: string,
-  mode: ArithMode,
-): TsNode | null {
+function parseArithPrimary(P: ParseState, stop: string, mode: ArithMode): TsNode | null {
   skipBlanks(P.L)
   if (isArithStop(P, stop)) return null
   const c = peek(P.L)
@@ -4341,11 +3997,7 @@ function parseArithPrimary(
     } else {
       close = mk(P, ')', P.L.b, P.L.b, [])
     }
-    return mk(P, 'parenthesized_expression', open.startIndex, close.endIndex, [
-      open,
-      ...inners,
-      close,
-    ])
+    return mk(P, 'parenthesized_expression', open.startIndex, close.endIndex, [open, ...inners, close])
   }
   if (c === '"') {
     return parseDoubleQuoted(P)
@@ -4357,11 +4009,7 @@ function parseArithPrimary(
     const s = P.L.b
     while (isDigit(peek(P.L))) advance(P.L)
     // Hex: 0x1f
-    if (
-      P.L.b - s === 1 &&
-      c === '0' &&
-      (peek(P.L) === 'x' || peek(P.L) === 'X')
-    ) {
+    if (P.L.b - s === 1 && c === '0' && (peek(P.L) === 'x' || peek(P.L) === 'X')) {
       advance(P.L)
       while (isHexDigit(peek(P.L))) advance(P.L)
     }

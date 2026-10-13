@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
 
@@ -20,9 +21,7 @@ export function SandboxDoctorSection(): React.ReactNode {
   }
 
   const statusColor = hasErrors ? ('error' as const) : ('warning' as const)
-  const statusText = hasErrors
-    ? 'Missing dependencies'
-    : 'Available (with warnings)'
+  const statusText = hasErrors ? 'Missing dependencies' : 'Available (with warnings)'
 
   return (
     <Box flexDirection="column">
@@ -40,9 +39,7 @@ export function SandboxDoctorSection(): React.ReactNode {
           └ {w}
         </Text>
       ))}
-      {hasErrors && (
-        <Text dimColor>└ Run /sandbox for install instructions</Text>
-      )}
+      {hasErrors && <Text dimColor>└ Run /sandbox for install instructions</Text>}
     </Box>
   )
 }

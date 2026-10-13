@@ -1,14 +1,11 @@
 import figures from 'figures'
 import * as React from 'react'
 import { useContext } from 'react'
+
 import { useQueuedMessage } from '../../context/QueuedMessageContext.js'
 import { Box, Text } from '../../ink.js'
 import { formatBriefTimestamp } from '../../utils/formatBriefTimestamp.js'
-import {
-  findThinkingTriggerPositions,
-  getRainbowColor,
-  isUltrathinkEnabled,
-} from '../../utils/thinking.js'
+import { findThinkingTriggerPositions, getRainbowColor, isUltrathinkEnabled } from '../../utils/thinking.js'
 import { MessageActionsSelectedContext } from '../messageActions.js'
 
 type Props = {
@@ -17,11 +14,7 @@ type Props = {
   timestamp?: string
 }
 
-export function HighlightedThinkingText({
-  text,
-  useBriefLayout,
-  timestamp,
-}: Props): React.ReactNode {
+export function HighlightedThinkingText({ text, useBriefLayout, timestamp }: Props): React.ReactNode {
   // Brief/assistant mode: chat-style "You" label instead of the ❯ highlight.
   // Parent drops its backgroundColor when this is true, so no grey shows
   // through. No manual wrap needed — Ink wraps inside the parent Box.
@@ -41,9 +34,7 @@ export function HighlightedThinkingText({
     )
   }
 
-  const triggers = isUltrathinkEnabled()
-    ? findThinkingTriggerPositions(text)
-    : []
+  const triggers = isUltrathinkEnabled() ? findThinkingTriggerPositions(text) : []
 
   if (triggers.length === 0) {
     return (

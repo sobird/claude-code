@@ -1,15 +1,14 @@
 import { homedir } from 'os'
 import { basename, join, sep } from 'path'
+
 import React, { type ReactNode } from 'react'
+
 import { getOriginalCwd } from '../../../bootstrap/state.js'
 import { Text } from '../../../ink.js'
 import { getShortcutDisplay } from '../../../keybindings/shortcutFormat.js'
 import type { ToolPermissionContext } from '../../../Tool.js'
 import { expandPath, getDirectoryForPath } from '../../../utils/path.js'
-import {
-  normalizeCaseForComparison,
-  pathInAllowedWorkingPath,
-} from '../../../utils/permissions/filesystem.js'
+import { normalizeCaseForComparison, pathInAllowedWorkingPath } from '../../../utils/permissions/filesystem.js'
 import type { OptionWithDescription } from '../../CustomSelect/select.js'
 /**
  * Check if a path is within the project's .claude/ folder.
@@ -21,14 +20,11 @@ export function isInClaudeFolder(filePath: string): boolean {
 
   // Check if the path is within the project's .claude folder
   const normalizedAbsolutePath = normalizeCaseForComparison(absolutePath)
-  const normalizedClaudeFolderPath =
-    normalizeCaseForComparison(claudeFolderPath)
+  const normalizedClaudeFolderPath = normalizeCaseForComparison(claudeFolderPath)
 
   // Path must start with the .claude folder path (and be inside it, not just the folder itself)
   return (
-    normalizedAbsolutePath.startsWith(
-      normalizedClaudeFolderPath + sep.toLowerCase(),
-    ) ||
+    normalizedAbsolutePath.startsWith(normalizedClaudeFolderPath + sep.toLowerCase()) ||
     // Also match case where sep is / on posix systems
     normalizedAbsolutePath.startsWith(normalizedClaudeFolderPath + '/')
   )
@@ -44,14 +40,10 @@ export function isInGlobalClaudeFolder(filePath: string): boolean {
   const globalClaudeFolderPath = join(homedir(), '.claude')
 
   const normalizedAbsolutePath = normalizeCaseForComparison(absolutePath)
-  const normalizedGlobalClaudeFolderPath = normalizeCaseForComparison(
-    globalClaudeFolderPath,
-  )
+  const normalizedGlobalClaudeFolderPath = normalizeCaseForComparison(globalClaudeFolderPath)
 
   return (
-    normalizedAbsolutePath.startsWith(
-      normalizedGlobalClaudeFolderPath + sep.toLowerCase(),
-    ) ||
+    normalizedAbsolutePath.startsWith(normalizedGlobalClaudeFolderPath + sep.toLowerCase()) ||
     normalizedAbsolutePath.startsWith(normalizedGlobalClaudeFolderPath + '/')
   )
 }
@@ -85,11 +77,7 @@ export function getFilePermissionOptions({
   noInputMode?: boolean
 }): PermissionOptionWithLabel[] {
   const options: PermissionOptionWithLabel[] = []
-  const modeCycleShortcut = getShortcutDisplay(
-    'chat:cycleMode',
-    'Chat',
-    'shift+tab',
-  )
+  const modeCycleShortcut = getShortcutDisplay('chat:cycleMode', 'Chat', 'shift+tab')
 
   // When in input mode, show input field
   if (yesInputMode && onAcceptFeedbackChange) {
@@ -110,10 +98,7 @@ export function getFilePermissionOptions({
     })
   }
 
-  const inAllowedPath = pathInAllowedWorkingPath(
-    filePath,
-    toolPermissionContext,
-  )
+  const inAllowedPath = pathInAllowedWorkingPath(filePath, toolPermissionContext)
 
   // Check if this is a .claude/ folder path (project or global)
   const inClaudeFolder = isInClaudeFolder(filePath)
@@ -143,8 +128,7 @@ export function getFilePermissionOptions({
       } else {
         sessionLabel = (
           <Text>
-            Yes, allow all edits during this session{' '}
-            <Text bold>({modeCycleShortcut})</Text>
+            Yes, allow all edits during this session <Text bold>({modeCycleShortcut})</Text>
           </Text>
         )
       }
@@ -156,15 +140,14 @@ export function getFilePermissionOptions({
       if (operationType === 'read') {
         sessionLabel = (
           <Text>
-            Yes, allow reading from <Text bold>{dirName}/</Text> during this
-            session
+            Yes, allow reading from <Text bold>{dirName}/</Text> during this session
           </Text>
         )
       } else {
         sessionLabel = (
           <Text>
-            Yes, allow all edits in <Text bold>{dirName}/</Text> during this
-            session <Text bold>({modeCycleShortcut})</Text>
+            Yes, allow all edits in <Text bold>{dirName}/</Text> during this session{' '}
+            <Text bold>({modeCycleShortcut})</Text>
           </Text>
         )
       }

@@ -1,10 +1,8 @@
 import { execa } from 'execa'
+
 import { which } from '../which.js'
 
-export type GhAuthStatus =
-  | 'authenticated'
-  | 'not_authenticated'
-  | 'not_installed'
+export type GhAuthStatus = 'authenticated' | 'not_authenticated' | 'not_installed'
 
 /**
  * Returns gh CLI install + auth status for telemetry.

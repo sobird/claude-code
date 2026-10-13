@@ -13,12 +13,8 @@ import { randomUUID } from 'crypto'
 import { readFileSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
-import {
-  addSessionCronTask,
-  getProjectRoot,
-  getSessionCronTasks,
-  removeSessionCronTasks,
-} from '../bootstrap/state.js'
+
+import { addSessionCronTask, getProjectRoot, getSessionCronTasks, removeSessionCronTasks } from '../bootstrap/state.js'
 import { computeNextCronRun, parseCronExpression } from './cron.js'
 import { logForDebugging } from './debug.js'
 import { isFsInaccessible } from './errors.js'
@@ -113,15 +109,11 @@ export async function readCronTasks(dir?: string): Promise<CronTask[]> {
       typeof t.prompt !== 'string' ||
       typeof t.createdAt !== 'number'
     ) {
-      logForDebugging(
-        `[ScheduledTasks] skipping malformed task: ${jsonStringify(t)}`,
-      )
+      logForDebugging(`[ScheduledTasks] skipping malformed task: ${jsonStringify(t)}`)
       continue
     }
     if (!parseCronExpression(t.cron)) {
-      logForDebugging(
-        `[ScheduledTasks] skipping task ${t.id} with invalid cron '${t.cron}'`,
-      )
+      logForDebugging(`[ScheduledTasks] skipping task ${t.id} with invalid cron '${t.cron}'`)
       continue
     }
     out.push({
@@ -129,9 +121,7 @@ export async function readCronTasks(dir?: string): Promise<CronTask[]> {
       cron: t.cron,
       prompt: t.prompt,
       createdAt: t.createdAt,
-      ...(typeof t.lastFiredAt === 'number'
-        ? { lastFiredAt: t.lastFiredAt }
-        : {}),
+      ...(typeof t.lastFiredAt === 'number' ? { lastFiredAt: t.lastFiredAt } : {}),
       ...(t.recurring ? { recurring: true } : {}),
       ...(t.permanent ? { permanent: true } : {}),
     })
@@ -162,10 +152,7 @@ export function hasCronTasksSync(dir?: string): boolean {
  * missing. Empty task list writes an empty file (rather than deleting) so
  * the file watcher sees a change event on last-task-removed.
  */
-export async function writeCronTasks(
-  tasks: CronTask[],
-  dir?: string,
-): Promise<void> {
+export async function writeCronTasks(tasks: CronTask[], dir?: string): Promise<void> {
   const root = dir ?? getProjectRoot()
   await mkdir(join(root, '.claude'), { recursive: true })
   // Strip the runtime-only `durable` flag — everything on disk is durable
@@ -174,11 +161,7 @@ export async function writeCronTasks(
   const body: CronFile = {
     tasks: tasks.map(({ durable: _durable, ...rest }) => rest),
   }
-  await writeFile(
-    getCronFilePath(root),
-    jsonStringify(body, null, 2) + '\n',
-    'utf-8',
-  )
+  await writeFile(getCronFilePath(root), jsonStringify(body, null, 2) + '\n', 'utf-8')
 }
 
 /**
@@ -228,10 +211,7 @@ export async function addCronTask(
  * `dir !== undefined` guard keeps this function from touching bootstrap
  * state on that path (tests enforce this).
  */
-export async function removeCronTasks(
-  ids: string[],
-  dir?: string,
-): Promise<void> {
+export async function removeCronTasks(ids: string[], dir?: string): Promise<void> {
   if (ids.length === 0) return
   // Sweep session store first. If every id was accounted for there, we're
   // done — skip the file read entirely. removeSessionCronTasks is a no-op
@@ -242,7 +222,7 @@ export async function removeCronTasks(
   }
   const idSet = new Set(ids)
   const tasks = await readCronTasks(dir)
-  const remaining = tasks.filter(t => !idSet.has(t.id))
+  const remaining = tasks.filter((t) => !idSet.has(t.id))
   if (remaining.length === tasks.length) return
   await writeCronTasks(remaining, dir)
 }
@@ -258,11 +238,7 @@ export async function removeCronTasks(
  * the write and triggers a reload which re-seeds `nextFireAt` from the
  * just-written `lastFiredAt` — idempotent (same computation, same answer).
  */
-export async function markCronTasksFired(
-  ids: string[],
-  firedAt: number,
-  dir?: string,
-): Promise<void> {
+export async function markCronTasksFired(ids: string[], firedAt: number, dir?: string): Promise<void> {
   if (ids.length === 0) return
   const idSet = new Set(ids)
   const tasks = await readCronTasks(dir)
@@ -288,7 +264,7 @@ export async function markCronTasksFired(
 export async function listAllCronTasks(dir?: string): Promise<CronTask[]> {
   const fileTasks = await readCronTasks(dir)
   if (dir !== undefined) return fileTasks
-  const sessionTasks = getSessionCronTasks().map(t => ({
+  const sessionTasks = getSessionCronTasks().map((t) => ({
     ...t,
     durable: false as const,
   }))
@@ -390,10 +366,7 @@ export function jitteredNextCronRunMs(
   // No second match in the next year (e.g. pinned date) → nothing to
   // proportion against, and near-certainly not a herd risk. Fire on t1.
   if (t2 === null) return t1
-  const jitter = Math.min(
-    jitterFrac(taskId) * cfg.recurringFrac * (t2 - t1),
-    cfg.recurringCapMs,
-  )
+  const jitter = Math.min(jitterFrac(taskId) * cfg.recurringFrac * (t2 - t1), cfg.recurringCapMs)
   return t1 + jitter
 }
 
@@ -436,9 +409,7 @@ export function oneShotJitteredNextCronRunMs(
   // floor + frac * (max - floor) → uniform over [floor, max). With floor=0
   // this reduces to the original frac * max. With floor>0, even a taskId
   // hashing to 0 gets `floor` ms of lead — nobody fires on the exact mark.
-  const lead =
-    cfg.oneShotFloorMs +
-    jitterFrac(taskId) * (cfg.oneShotMaxMs - cfg.oneShotFloorMs)
+  const lead = cfg.oneShotFloorMs + jitterFrac(taskId) * (cfg.oneShotMaxMs - cfg.oneShotFloorMs)
   // t1 > fromMs is guaranteed by nextCronRunMs (strictly after), so the
   // max() only bites when the task was created inside its own lead window.
   return Math.max(t1 - lead, fromMs)
@@ -451,7 +422,7 @@ export function oneShotJitteredNextCronRunMs(
  * was down is still "missed".
  */
 export function findMissedTasks(tasks: CronTask[], nowMs: number): CronTask[] {
-  return tasks.filter(t => {
+  return tasks.filter((t) => {
     const next = nextCronRunMs(t.cron, t.createdAt)
     return next !== null && next < nowMs
   })

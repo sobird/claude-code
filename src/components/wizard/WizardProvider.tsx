@@ -1,11 +1,5 @@
-import React, {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import React, { createContext, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import type { WizardContextValue, WizardProviderProps } from './types.js'
 
@@ -41,10 +35,10 @@ export function WizardProvider<T extends Record<string, unknown>>({
     if (currentStepIndex < steps.length - 1) {
       // If we have history (non-linear flow), add current step to it
       if (navigationHistory.length > 0) {
-        setNavigationHistory(prev => [...prev, currentStepIndex])
+        setNavigationHistory((prev) => [...prev, currentStepIndex])
       }
 
-      setCurrentStepIndex(prev => prev + 1)
+      setCurrentStepIndex((prev) => prev + 1)
     } else {
       // Mark as completed, which will trigger useEffect
       setIsCompleted(true)
@@ -56,12 +50,12 @@ export function WizardProvider<T extends Record<string, unknown>>({
     if (navigationHistory.length > 0) {
       const previousStep = navigationHistory[navigationHistory.length - 1]
       if (previousStep !== undefined) {
-        setNavigationHistory(prev => prev.slice(0, -1))
+        setNavigationHistory((prev) => prev.slice(0, -1))
         setCurrentStepIndex(previousStep)
       }
     } else if (currentStepIndex > 0) {
       // Fallback to simple decrement if no history
-      setCurrentStepIndex(prev => prev - 1)
+      setCurrentStepIndex((prev) => prev - 1)
     } else if (onCancel) {
       onCancel()
     }
@@ -71,7 +65,7 @@ export function WizardProvider<T extends Record<string, unknown>>({
     (index: number) => {
       if (index >= 0 && index < steps.length) {
         // Push current step to history before jumping
-        setNavigationHistory(prev => [...prev, currentStepIndex])
+        setNavigationHistory((prev) => [...prev, currentStepIndex])
         setCurrentStepIndex(index)
       }
     },
@@ -86,7 +80,7 @@ export function WizardProvider<T extends Record<string, unknown>>({
   }, [onCancel])
 
   const updateWizardData = useCallback((updates: Partial<T>) => {
-    setWizardData(prev => ({ ...prev, ...updates }))
+    setWizardData((prev) => ({ ...prev, ...updates }))
   }, [])
 
   const contextValue = useMemo<WizardContextValue<T>>(
@@ -123,9 +117,5 @@ export function WizardProvider<T extends Record<string, unknown>>({
     return null
   }
 
-  return (
-    <WizardContext.Provider value={contextValue}>
-      {children || <CurrentStepComponent />}
-    </WizardContext.Provider>
-  )
+  return <WizardContext.Provider value={contextValue}>{children || <CurrentStepComponent />}</WizardContext.Provider>
 }

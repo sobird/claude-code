@@ -51,11 +51,8 @@ function reducer(state: State, action: Action): State {
       const existing = state.questionStates[action.questionText]
       const newState: QuestionState = {
         selectedValue:
-          action.updates.selectedValue ??
-          existing?.selectedValue ??
-          (action.isMultiSelect ? [] : undefined),
-        textInputValue:
-          action.updates.textInputValue ?? existing?.textInputValue ?? '',
+          action.updates.selectedValue ?? existing?.selectedValue ?? (action.isMultiSelect ? [] : undefined),
+        textInputValue: action.updates.textInputValue ?? existing?.textInputValue ?? '',
       }
 
       return {
@@ -109,16 +106,8 @@ export type MultipleChoiceState = {
   isInTextInput: boolean
   nextQuestion: () => void
   prevQuestion: () => void
-  updateQuestionState: (
-    questionText: string,
-    updates: Partial<QuestionState>,
-    isMultiSelect: boolean,
-  ) => void
-  setAnswer: (
-    questionText: string,
-    answer: string,
-    shouldAdvance?: boolean,
-  ) => void
+  updateQuestionState: (questionText: string, updates: Partial<QuestionState>, isMultiSelect: boolean) => void
+  setAnswer: (questionText: string, answer: string, shouldAdvance?: boolean) => void
   setTextInputMode: (isInInput: boolean) => void
 }
 
@@ -134,11 +123,7 @@ export function useMultipleChoiceState(): MultipleChoiceState {
   }, [])
 
   const updateQuestionState = useCallback(
-    (
-      questionText: string,
-      updates: Partial<QuestionState>,
-      isMultiSelect: boolean,
-    ) => {
+    (questionText: string, updates: Partial<QuestionState>, isMultiSelect: boolean) => {
       dispatch({
         type: 'update-question-state',
         questionText,
@@ -149,17 +134,14 @@ export function useMultipleChoiceState(): MultipleChoiceState {
     [],
   )
 
-  const setAnswer = useCallback(
-    (questionText: string, answer: string, shouldAdvance: boolean = true) => {
-      dispatch({
-        type: 'set-answer',
-        questionText,
-        answer,
-        shouldAdvance,
-      })
-    },
-    [],
-  )
+  const setAnswer = useCallback((questionText: string, answer: string, shouldAdvance: boolean = true) => {
+    dispatch({
+      type: 'set-answer',
+      questionText,
+      answer,
+      shouldAdvance,
+    })
+  }, [])
 
   const setTextInputMode = useCallback((isInInput: boolean) => {
     dispatch({ type: 'set-text-input-mode', isInInput })

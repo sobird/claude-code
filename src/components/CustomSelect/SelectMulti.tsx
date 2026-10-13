@@ -1,11 +1,12 @@
 import figures from 'figures'
 import React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import type { PastedContent } from '../../utils/config.js'
 import type { ImageDimensions } from '../../utils/imageResizer.js'
-import type { OptionWithDescription } from './select.js'
 import { SelectInputOption } from './select-input-option.js'
 import { SelectOption } from './select-option.js'
+import type { OptionWithDescription } from './select.js'
 import { useMultiSelectState } from './use-multi-select-state.js'
 
 export type SelectMultiProps<T> = {
@@ -50,10 +51,7 @@ export type SelectMultiProps<T> = {
    * When provided, ctrl+g will trigger this callback in input options
    * with the current value and a setter function to update the internal state.
    */
-  readonly onOpenEditor?: (
-    currentValue: string,
-    setValue: (value: string) => void,
-  ) => void
+  readonly onOpenEditor?: (currentValue: string, setValue: (value: string) => void) => void
   readonly onImagePaste?: (
     base64Image: string,
     mediaType?: string,
@@ -108,10 +106,7 @@ export function SelectMulti<T>({
     <Box flexDirection="column">
       <Box flexDirection="column">
         {state.visibleOptions.map((option, index) => {
-          const isOptionFocused =
-            !isDisabled &&
-            state.focusedValue === option.value &&
-            !state.isSubmitFocused
+          const isOptionFocused = !isDisabled && state.focusedValue === option.value && !state.isSubmitFocused
           const isSelected = state.selectedValues.includes(option.value)
 
           const isFirstVisibleOption = option.index === state.visibleFromIndex
@@ -129,19 +124,13 @@ export function SelectMulti<T>({
                 <SelectInputOption
                   option={option}
                   isFocused={isOptionFocused}
-                  isSelected={
-                    false /* We show selection state differently for multi-select */
-                  }
-                  shouldShowDownArrow={
-                    areMoreOptionsBelow && isLastVisibleOption
-                  }
-                  shouldShowUpArrow={
-                    areMoreOptionsAbove && isFirstVisibleOption
-                  }
+                  isSelected={false /* We show selection state differently for multi-select */}
+                  shouldShowDownArrow={areMoreOptionsBelow && isLastVisibleOption}
+                  shouldShowUpArrow={areMoreOptionsAbove && isFirstVisibleOption}
                   maxIndexWidth={maxIndexWidth}
                   index={i}
                   inputValue={inputValue}
-                  onInputChange={value => {
+                  onInputChange={(value) => {
                     state.updateInputValue(option.value, value)
                   }}
                   onSubmit={() => {}} /* We handle submit higher up */
@@ -154,9 +143,7 @@ export function SelectMulti<T>({
                   pastedContents={pastedContents}
                   onRemoveImage={onRemoveImage}
                 >
-                  <Text color={isSelected ? 'success' : undefined}>
-                    [{isSelected ? figures.tick : ' '}]{' '}
-                  </Text>
+                  <Text color={isSelected ? 'success' : undefined}>[{isSelected ? figures.tick : ' '}] </Text>
                 </SelectInputOption>
               </Box>
             )
@@ -166,22 +153,14 @@ export function SelectMulti<T>({
             <Box key={String(option.value)} gap={1}>
               <SelectOption
                 isFocused={isOptionFocused}
-                isSelected={
-                  false /* We show selection state differently for multi-select */
-                }
+                isSelected={false /* We show selection state differently for multi-select */}
                 shouldShowDownArrow={areMoreOptionsBelow && isLastVisibleOption}
                 shouldShowUpArrow={areMoreOptionsAbove && isFirstVisibleOption}
                 description={option.description}
               >
-                {!hideIndexes && (
-                  <Text dimColor>{`${i}.`.padEnd(maxIndexWidth)}</Text>
-                )}
-                <Text color={isSelected ? 'success' : undefined}>
-                  [{isSelected ? figures.tick : ' '}]
-                </Text>
-                <Text color={isOptionFocused ? 'suggestion' : undefined}>
-                  {option.label}
-                </Text>
+                {!hideIndexes && <Text dimColor>{`${i}.`.padEnd(maxIndexWidth)}</Text>}
+                <Text color={isSelected ? 'success' : undefined}>[{isSelected ? figures.tick : ' '}]</Text>
+                <Text color={isOptionFocused ? 'suggestion' : undefined}>{option.label}</Text>
               </SelectOption>
             </Box>
           )
@@ -189,16 +168,9 @@ export function SelectMulti<T>({
       </Box>
       {submitButtonText && onSubmit && (
         <Box marginTop={0} gap={1}>
-          {state.isSubmitFocused ? (
-            <Text color="suggestion">{figures.pointer}</Text>
-          ) : (
-            <Text> </Text>
-          )}
+          {state.isSubmitFocused ? <Text color="suggestion">{figures.pointer}</Text> : <Text> </Text>}
           <Box marginLeft={3}>
-            <Text
-              color={state.isSubmitFocused ? 'suggestion' : undefined}
-              bold={true}
-            >
+            <Text color={state.isSubmitFocused ? 'suggestion' : undefined} bold={true}>
               {submitButtonText}
             </Text>
           </Box>

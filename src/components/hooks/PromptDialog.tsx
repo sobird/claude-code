@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import type { PromptRequest } from '../../types/hooks.js'
@@ -13,16 +14,10 @@ type Props = {
   onAbort: () => void
 }
 
-export function PromptDialog({
-  title,
-  toolInputSummary,
-  request,
-  onRespond,
-  onAbort,
-}: Props): React.ReactNode {
+export function PromptDialog({ title, toolInputSummary, request, onRespond, onAbort }: Props): React.ReactNode {
   useKeybinding('app:interrupt', onAbort, { isActive: true })
 
-  const options = request.options.map(opt => ({
+  const options = request.options.map((opt) => ({
     label: opt.label,
     value: opt.key,
     description: opt.description,
@@ -32,14 +27,12 @@ export function PromptDialog({
     <PermissionDialog
       title={title}
       subtitle={request.message}
-      titleRight={
-        toolInputSummary ? <Text dimColor>{toolInputSummary}</Text> : undefined
-      }
+      titleRight={toolInputSummary ? <Text dimColor>{toolInputSummary}</Text> : undefined}
     >
       <Box flexDirection="column" paddingY={1}>
         <Select
           options={options}
-          onChange={value => {
+          onChange={(value) => {
             onRespond(value)
           }}
         />

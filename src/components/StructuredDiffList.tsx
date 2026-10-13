@@ -1,5 +1,6 @@
 import type { StructuredPatchHunk } from 'diff'
 import * as React from 'react'
+
 import { Box, NoSelect, Text } from '../ink.js'
 import { intersperse } from '../utils/array.js'
 import { StructuredDiff } from './StructuredDiff.js'
@@ -14,16 +15,9 @@ type Props = {
 }
 
 /** Renders a list of diff hunks with ellipsis separators between them. */
-export function StructuredDiffList({
-  hunks,
-  dim,
-  width,
-  filePath,
-  firstLine,
-  fileContent,
-}: Props): React.ReactNode {
+export function StructuredDiffList({ hunks, dim, width, filePath, firstLine, fileContent }: Props): React.ReactNode {
   return intersperse(
-    hunks.map(hunk => (
+    hunks.map((hunk) => (
       <Box flexDirection="column" key={hunk.newStart}>
         <StructuredDiff
           patch={hunk}
@@ -35,7 +29,7 @@ export function StructuredDiffList({
         />
       </Box>
     )),
-    i => (
+    (i) => (
       <NoSelect fromLeftEdge key={`ellipsis-${i}`}>
         <Text dimColor>...</Text>
       </NoSelect>

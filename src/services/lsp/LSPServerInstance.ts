@@ -1,6 +1,8 @@
 import * as path from 'path'
 import { pathToFileURL } from 'url'
+
 import type { InitializeParams } from 'vscode-languageserver-protocol'
+
 import { getCwd } from '../../utils/cwd.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
@@ -58,10 +60,7 @@ export type LSPServerInstance = {
   /** Register a handler for LSP notifications */
   onNotification(method: string, handler: (params: unknown) => void): void
   /** Register a handler for LSP requests from the server */
-  onRequest<TParams, TResult>(
-    method: string,
-    handler: (params: TParams) => TResult | Promise<TResult>,
-  ): void
+  onRequest<TParams, TResult>(method: string, handler: (params: TParams) => TResult | Promise<TResult>): void
 }
 
 /**
@@ -87,10 +86,7 @@ export type LSPServerInstance = {
  * const result = await instance.sendRequest('textDocument/definition', params)
  * await instance.stop()
  */
-export function createLSPServerInstance(
-  name: string,
-  config: ScopedLspServerConfig,
-): LSPServerInstance {
+export function createLSPServerInstance(name: string, config: ScopedLspServerConfig): LSPServerInstance {
   // Validate that unimplemented fields are not set
   if (config.restartOnCrash !== undefined) {
     throw new Error(
@@ -118,7 +114,7 @@ export function createLSPServerInstance(
   // Propagate crash state so ensureServerStarted can restart on next use.
   // Without this, state stays 'running' after crash and the server is never
   // restarted (zombie state).
-  const client = createLSPClient(name, error => {
+  const client = createLSPClient(name, (error) => {
     state = 'error'
     lastError = error
     crashRecoveryCount++
@@ -141,9 +137,7 @@ export function createLSPServerInstance(
     // spawn unbounded child processes on every incoming request.
     const maxRestarts = config.maxRestarts ?? 3
     if (state === 'error' && crashRecoveryCount > maxRestarts) {
-      const error = new Error(
-        `LSP server '${name}' exceeded max crash recovery attempts (${maxRestarts})`,
-      )
+      const error = new Error(`LSP server '${name}' exceeded max crash recovery attempts (${maxRestarts})`)
       lastError = error
       logError(error)
       throw error
@@ -301,9 +295,7 @@ export function createLSPServerInstance(
     try {
       await stop()
     } catch (error) {
-      const stopError = new Error(
-        `Failed to stop LSP server '${name}' during restart: ${errorMessage(error)}`,
-      )
+      const stopError = new Error(`Failed to stop LSP server '${name}' during restart: ${errorMessage(error)}`)
       logError(stopError)
       throw stopError
     }
@@ -312,9 +304,7 @@ export function createLSPServerInstance(
 
     const maxRestarts = config.maxRestarts ?? 3
     if (restartCount > maxRestarts) {
-      const error = new Error(
-        `Max restart attempts (${maxRestarts}) exceeded for server '${name}'`,
-      )
+      const error = new Error(`Max restart attempts (${maxRestarts}) exceeded for server '${name}'`)
       logError(error)
       throw error
     }
@@ -364,11 +354,7 @@ export function createLSPServerInstance(
 
     let lastAttemptError: Error | undefined
 
-    for (
-      let attempt = 0;
-      attempt <= MAX_RETRIES_FOR_TRANSIENT_ERRORS;
-      attempt++
-    ) {
+    for (let attempt = 0; attempt <= MAX_RETRIES_FOR_TRANSIENT_ERRORS; attempt++) {
       try {
         return await client.sendRequest(method, params)
       } catch (error) {
@@ -379,14 +365,9 @@ export function createLSPServerInstance(
         // We use duck typing instead of instanceof because there may be multiple
         // versions of vscode-jsonrpc in the dependency tree (8.2.0 vs 8.2.1).
         const errorCode = (error as { code?: number }).code
-        const isContentModifiedError =
-          typeof errorCode === 'number' &&
-          errorCode === LSP_ERROR_CONTENT_MODIFIED
+        const isContentModifiedError = typeof errorCode === 'number' && errorCode === LSP_ERROR_CONTENT_MODIFIED
 
-        if (
-          isContentModifiedError &&
-          attempt < MAX_RETRIES_FOR_TRANSIENT_ERRORS
-        ) {
+        if (isContentModifiedError && attempt < MAX_RETRIES_FOR_TRANSIENT_ERRORS) {
           const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt)
           logForDebugging(
             `LSP request '${method}' to '${name}' got ContentModified error, ` +
@@ -413,14 +394,9 @@ export function createLSPServerInstance(
    * Send a notification to the LSP server (fire-and-forget).
    * Used for file synchronization (didOpen, didChange, didClose).
    */
-  async function sendNotification(
-    method: string,
-    params: unknown,
-  ): Promise<void> {
+  async function sendNotification(method: string, params: unknown): Promise<void> {
     if (!isHealthy()) {
-      const error = new Error(
-        `Cannot send notification to LSP server '${name}': server is ${state}`,
-      )
+      const error = new Error(`Cannot send notification to LSP server '${name}': server is ${state}`)
       logError(error)
       throw error
     }
@@ -442,10 +418,7 @@ export function createLSPServerInstance(
    * @param method - LSP notification method (e.g., 'window/logMessage')
    * @param handler - Callback function to handle the notification
    */
-  function onNotification(
-    method: string,
-    handler: (params: unknown) => void,
-  ): void {
+  function onNotification(method: string, handler: (params: unknown) => void): void {
     client.onNotification(method, handler)
   }
 
@@ -458,10 +431,7 @@ export function createLSPServerInstance(
    * @param method - LSP request method (e.g., 'workspace/configuration')
    * @param handler - Callback function to handle the request and return a response
    */
-  function onRequest<TParams, TResult>(
-    method: string,
-    handler: (params: TParams) => TResult | Promise<TResult>,
-  ): void {
+  function onRequest<TParams, TResult>(method: string, handler: (params: TParams) => TResult | Promise<TResult>): void {
     client.onRequest(method, handler)
   }
 
@@ -496,16 +466,10 @@ export function createLSPServerInstance(
  * Race a promise against a timeout. Cleans up the timer regardless of outcome
  * to avoid unhandled rejections from orphaned setTimeout callbacks.
  */
-function withTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-  message: string,
-): Promise<T> {
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout>
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout((rej, msg) => rej(new Error(msg)), ms, reject, message)
   })
-  return Promise.race([promise, timeoutPromise]).finally(() =>
-    clearTimeout(timer!),
-  )
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer!))
 }

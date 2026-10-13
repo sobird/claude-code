@@ -1,12 +1,11 @@
 import { feature } from 'bun:bundle'
 import { join } from 'path'
+
 import { getFsImplementation } from '../utils/fsOperations.js'
 import { getAutoMemPath, isAutoMemoryEnabled } from './paths.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const teamMemPaths = feature('TEAMMEM')
-  ? (require('./teamMemPaths.js') as typeof import('./teamMemPaths.js'))
-  : null
+const teamMemPaths = feature('TEAMMEM') ? (require('./teamMemPaths.js') as typeof import('./teamMemPaths.js')) : null
 
 import { getKairosActive, getOriginalCwd } from '../bootstrap/state.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
@@ -75,9 +74,7 @@ export function truncateEntrypointContent(raw: string): EntrypointTruncation {
     }
   }
 
-  let truncated = wasLineTruncated
-    ? contentLines.slice(0, MAX_ENTRYPOINT_LINES).join('\n')
-    : trimmed
+  let truncated = wasLineTruncated ? contentLines.slice(0, MAX_ENTRYPOINT_LINES).join('\n') : trimmed
 
   if (truncated.length > MAX_ENTRYPOINT_BYTES) {
     const cutAt = truncated.lastIndexOf('\n', MAX_ENTRYPOINT_BYTES)
@@ -135,14 +132,8 @@ export async function ensureMemoryDirExists(memoryDir: string): Promise<void> {
     // a real problem (EACCES/EPERM/EROFS) — log so --debug shows why. Prompt
     // building continues either way; the model's Write will surface the
     // real perm error (and FileWriteTool does its own mkdir of the parent).
-    const code =
-      e instanceof Error && 'code' in e && typeof e.code === 'string'
-        ? e.code
-        : undefined
-    logForDebugging(
-      `ensureMemoryDirExists failed for ${memoryDir}: ${code ?? String(e)}`,
-      { level: 'debug' },
-    )
+    const code = e instanceof Error && 'code' in e && typeof e.code === 'string' ? e.code : undefined
+    logForDebugging(`ensureMemoryDirExists failed for ${memoryDir}: ${code ?? String(e)}`, { level: 'debug' })
   }
 }
 
@@ -152,16 +143,11 @@ export async function ensureMemoryDirExists(memoryDir: string): Promise<void> {
  */
 function logMemoryDirCounts(
   memoryDir: string,
-  baseMetadata: Record<
-    string,
-    | number
-    | boolean
-    | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-  >,
+  baseMetadata: Record<string, number | boolean | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS>,
 ): void {
   const fs = getFsImplementation()
   void fs.readdir(memoryDir).then(
-    dirents => {
+    (dirents) => {
       let fileCount = 0
       let subdirCount = 0
       for (const d of dirents) {
@@ -300,8 +286,7 @@ export function buildMemoryPrompt(params: {
       line_count: t.lineCount,
       was_truncated: t.wasLineTruncated,
       was_byte_truncated: t.wasByteTruncated,
-      memory_type:
-        memoryType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      memory_type: memoryType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     lines.push(`## ${ENTRYPOINT_NAME}`, '', t.content)
   } else {
@@ -419,10 +404,7 @@ export function buildSearchingPastContextSection(autoMemDir: string): string[] {
 export async function loadMemoryPrompt(): Promise<string | null> {
   const autoEnabled = isAutoMemoryEnabled()
 
-  const skipIndex = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_moth_copse',
-    false,
-  )
+  const skipIndex = getFeatureValue_CACHED_MAY_BE_STALE('tengu_moth_copse', false)
 
   // KAIROS daily-log mode takes precedence over TEAMMEM: the append-only
   // log paradigm does not compose with team sync (which expects a shared
@@ -431,19 +413,15 @@ export async function loadMemoryPrompt(): Promise<string | null> {
   // telemetry block below, matching the non-KAIROS path.
   if (feature('KAIROS') && autoEnabled && getKairosActive()) {
     logMemoryDirCounts(getAutoMemPath(), {
-      memory_type:
-        'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      memory_type: 'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     return buildAssistantDailyLogPrompt(skipIndex)
   }
 
   // Cowork injects memory-policy text via env var; thread into all builders.
-  const coworkExtraGuidelines =
-    process.env.CLAUDE_COWORK_MEMORY_EXTRA_GUIDELINES
+  const coworkExtraGuidelines = process.env.CLAUDE_COWORK_MEMORY_EXTRA_GUIDELINES
   const extraGuidelines =
-    coworkExtraGuidelines && coworkExtraGuidelines.trim().length > 0
-      ? [coworkExtraGuidelines]
-      : undefined
+    coworkExtraGuidelines && coworkExtraGuidelines.trim().length > 0 ? [coworkExtraGuidelines] : undefined
 
   if (feature('TEAMMEM')) {
     if (teamMemPaths!.isTeamMemoryEnabled()) {
@@ -458,17 +436,12 @@ export async function loadMemoryPrompt(): Promise<string | null> {
       // for autoDir here.
       await ensureMemoryDirExists(teamDir)
       logMemoryDirCounts(autoDir, {
-        memory_type:
-          'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        memory_type: 'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
       logMemoryDirCounts(teamDir, {
-        memory_type:
-          'team' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        memory_type: 'team' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
-      return teamMemPrompts!.buildCombinedMemoryPrompt(
-        extraGuidelines,
-        skipIndex,
-      )
+      return teamMemPrompts!.buildCombinedMemoryPrompt(extraGuidelines, skipIndex)
     }
   }
 
@@ -478,24 +451,15 @@ export async function loadMemoryPrompt(): Promise<string | null> {
     // checking. The prompt text reflects this ("already exists").
     await ensureMemoryDirExists(autoDir)
     logMemoryDirCounts(autoDir, {
-      memory_type:
-        'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      memory_type: 'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
-    return buildMemoryLines(
-      'auto memory',
-      autoDir,
-      extraGuidelines,
-      skipIndex,
-    ).join('\n')
+    return buildMemoryLines('auto memory', autoDir, extraGuidelines, skipIndex).join('\n')
   }
 
   logEvent('tengu_memdir_disabled', {
-    disabled_by_env_var: isEnvTruthy(
-      process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY,
-    ),
+    disabled_by_env_var: isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY),
     disabled_by_setting:
-      !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY) &&
-      getInitialSettings().autoMemoryEnabled === false,
+      !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY) && getInitialSettings().autoMemoryEnabled === false,
   })
   // Gate on the GB flag directly, not isTeamMemoryEnabled() — that function
   // checks isAutoMemoryEnabled() first, which is definitionally false in this

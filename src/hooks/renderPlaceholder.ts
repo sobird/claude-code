@@ -27,17 +27,14 @@ export function renderPlaceholder({
   if (placeholder) {
     if (hidePlaceholderText) {
       // Voice recording: show only the cursor, no placeholder text
-      renderedPlaceholder =
-        showCursor && focus && terminalFocus ? invert(' ') : ''
+      renderedPlaceholder = showCursor && focus && terminalFocus ? invert(' ') : ''
     } else {
       renderedPlaceholder = chalk.dim(placeholder)
 
       // Show inverse cursor only when both input and terminal are focused
       if (showCursor && focus && terminalFocus) {
         renderedPlaceholder =
-          placeholder.length > 0
-            ? invert(placeholder[0]!) + chalk.dim(placeholder.slice(1))
-            : invert(' ')
+          placeholder.length > 0 ? invert(placeholder[0]!) + chalk.dim(placeholder.slice(1)) : invert(' ')
       }
     }
   }

@@ -1,5 +1,6 @@
 import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
+
 import { getSessionId } from '../../bootstrap/state.js'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { logForDebugging } from '../../utils/debug.js'
@@ -33,12 +34,7 @@ const REENTRANT: AcquireResult = { kind: 'acquired', fresh: false }
 
 function isComputerUseLock(value: unknown): value is ComputerUseLock {
   if (typeof value !== 'object' || value === null) return false
-  return (
-    'sessionId' in value &&
-    typeof value.sessionId === 'string' &&
-    'pid' in value &&
-    typeof value.pid === 'number'
-  )
+  return 'sessionId' in value && typeof value.sessionId === 'string' && 'pid' in value && typeof value.pid === 'number'
 }
 
 function getLockPath(): string {
@@ -114,9 +110,7 @@ export async function checkComputerUseLock(): Promise<CheckResult> {
   if (isProcessRunning(existing.pid)) {
     return { kind: 'blocked', by: existing.sessionId }
   }
-  logForDebugging(
-    `Recovering stale computer-use lock from session ${existing.sessionId} (PID ${existing.pid})`,
-  )
+  logForDebugging(`Recovering stale computer-use lock from session ${existing.sessionId} (PID ${existing.pid})`)
   await unlink(getLockPath()).catch(() => {})
   return { kind: 'free' }
 }
@@ -183,9 +177,7 @@ export async function tryAcquireComputerUseLock(): Promise<AcquireResult> {
 
   // Stale lock — recover. Unlink then retry the exclusive create.
   // If another session is also recovering, one EEXISTs and reads the winner.
-  logForDebugging(
-    `Recovering stale computer-use lock from session ${existing.sessionId} (PID ${existing.pid})`,
-  )
+  logForDebugging(`Recovering stale computer-use lock from session ${existing.sessionId} (PID ${existing.pid})`)
   await unlink(getLockPath()).catch(() => {})
   if (await tryCreateExclusive(lock)) {
     registerLockCleanup()

@@ -8,9 +8,11 @@
  * when there's a new SHA. Callers decide fallback behavior on failure.
  */
 
-import axios from 'axios'
 import { chmod, mkdir, readFile, rename, rm, writeFile } from 'fs/promises'
 import { dirname, join, resolve, sep } from 'path'
+
+import axios from 'axios'
+
 import { waitForScrollIdle } from '../../bootstrap/state.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/index.js'
 import { logEvent } from '../../services/analytics/index.js'
@@ -25,8 +27,7 @@ type SafeString = AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
 // `{sha}.zip` is content-addressed so CDN can cache it indefinitely;
 // `latest` has Cache-Control: max-age=300 so CDN staleness is bounded.
 // Backend (anthropic#317037) populates this prefix.
-const GCS_BASE =
-  'https://downloads.claude.ai/claude-code-releases/plugins/claude-plugins-official'
+const GCS_BASE = 'https://downloads.claude.ai/claude-code-releases/plugins/claude-plugins-official'
 
 // Zip arc paths are seed-dir-relative (marketplaces/claude-plugins-official/…)
 // so the titanium seed machinery can use the same zip. Strip this prefix when
@@ -57,10 +58,9 @@ export async function fetchOfficialMarketplaceFromGcs(
   const cacheDir = resolve(marketplacesCacheDir)
   const resolvedLoc = resolve(installLocation)
   if (resolvedLoc !== cacheDir && !resolvedLoc.startsWith(cacheDir + sep)) {
-    logForDebugging(
-      `fetchOfficialMarketplaceFromGcs: refusing path outside cache dir: ${installLocation}`,
-      { level: 'error' },
-    )
+    logForDebugging(`fetchOfficialMarketplaceFromGcs: refusing path outside cache dir: ${installLocation}`, {
+      level: 'error',
+    })
     return null
   }
 
@@ -93,7 +93,7 @@ export async function fetchOfficialMarketplaceFromGcs(
     //    extracted SHA. Matching means we already have this content.
     const sentinelPath = join(installLocation, '.gcs-sha')
     const currentSha = await readFile(sentinelPath, 'utf8').then(
-      s => s.trim(),
+      (s) => s.trim(),
       () => null, // ENOENT — first fetch, proceed to download
     )
     if (currentSha === sha) {
@@ -147,10 +147,7 @@ export async function fetchOfficialMarketplaceFromGcs(
     return sha
   } catch (e) {
     errKind = classifyGcsError(e)
-    logForDebugging(
-      `Official marketplace GCS fetch failed: ${errorMessage(e)}`,
-      { level: 'warn' },
-    )
+    logForDebugging(`Official marketplace GCS fetch failed: ${errorMessage(e)}`, { level: 'warn' })
     return null
   } finally {
     // tengu_plugin_remote_fetch schema shared with the telemetry PR

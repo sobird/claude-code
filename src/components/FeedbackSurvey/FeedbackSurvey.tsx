@@ -3,24 +3,16 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
+
 import { Box, Text } from '../../ink.js'
-import {
-  FeedbackSurveyView,
-  isValidResponseInput,
-} from './FeedbackSurveyView.js'
+import { FeedbackSurveyView, isValidResponseInput } from './FeedbackSurveyView.js'
 import type { TranscriptShareResponse } from './TranscriptSharePrompt.js'
 import { TranscriptSharePrompt } from './TranscriptSharePrompt.js'
 import { useDebouncedDigitInput } from './useDebouncedDigitInput.js'
 import type { FeedbackSurveyResponse } from './utils.js'
 
 type Props = {
-  state:
-    | 'closed'
-    | 'open'
-    | 'thanks'
-    | 'transcript_prompt'
-    | 'submitting'
-    | 'submitted'
+  state: 'closed' | 'open' | 'thanks' | 'transcript_prompt' | 'submitting' | 'submitted'
   lastResponse: FeedbackSurveyResponse | null
   handleSelect: (selected: FeedbackSurveyResponse) => void
   handleTranscriptSelect?: (selected: TranscriptShareResponse) => void
@@ -58,9 +50,7 @@ export function FeedbackSurvey({
   if (state === 'submitted') {
     return (
       <Box marginTop={1}>
-        <Text color="success">
-          {'\u2713'} Thanks for sharing your transcript!
-        </Text>
+        <Text color="success">{'\u2713'} Thanks for sharing your transcript!</Text>
       </Box>
     )
   }
@@ -82,11 +72,7 @@ export function FeedbackSurvey({
       return null
     }
     return (
-      <TranscriptSharePrompt
-        onSelect={handleTranscriptSelect}
-        inputValue={inputValue}
-        setInputValue={setInputValue}
-      />
+      <TranscriptSharePrompt onSelect={handleTranscriptSelect} inputValue={inputValue} setInputValue={setInputValue} />
     )
   }
 
@@ -134,33 +120,27 @@ function FeedbackSurveyThanks({
     once: true,
     onDigit: () => {
       logEvent('tengu_feedback_survey_event', {
-        event_type:
-          'followup_accepted' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        response:
-          lastResponse as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        event_type: 'followup_accepted' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        response: lastResponse as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
       onRequestFeedback?.()
     },
   })
 
-  const feedbackCommand =
-    process.env.USER_TYPE === 'ant' ? '/issue' : '/feedback'
+  const feedbackCommand = process.env.USER_TYPE === 'ant' ? '/issue' : '/feedback'
 
   return (
     <Box marginTop={1} flexDirection="column">
       <Text color="success">Thanks for the feedback!</Text>
       {showFollowUp ? (
         <Text dimColor>
-          (Optional) Press [<Text color="ansi:cyan">1</Text>] to tell us what
-          went well {' \u00b7 '}
+          (Optional) Press [<Text color="ansi:cyan">1</Text>] to tell us what went well {' \u00b7 '}
           {feedbackCommand}
         </Text>
       ) : lastResponse === 'bad' ? (
         <Text dimColor>Use /issue to report model behavior issues.</Text>
       ) : (
-        <Text dimColor>
-          Use {feedbackCommand} to share detailed feedback anytime.
-        </Text>
+        <Text dimColor>Use {feedbackCommand} to share detailed feedback anytime.</Text>
       )}
     </Box>
   )

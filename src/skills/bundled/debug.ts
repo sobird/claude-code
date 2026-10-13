@@ -1,6 +1,8 @@
 import { open, stat } from 'fs/promises'
+
 import { CLAUDE_CODE_GUIDE_AGENT_TYPE } from 'src/tools/AgentTool/built-in/claudeCodeGuideAgent.js'
 import { getSettingsFilePathForSource } from 'src/utils/settings/settings.js'
+
 import { enableDebugLogging, getDebugLogPath } from '../../utils/debug.js'
 import { errorMessage, isENOENT } from '../../utils/errors.js'
 import { formatFileSize } from '../../utils/format.js'
@@ -41,11 +43,7 @@ export function registerDebugSkill(): void {
             buffer: Buffer.alloc(readSize),
             position: startOffset,
           })
-          const tail = buffer
-            .toString('utf-8', 0, bytesRead)
-            .split('\n')
-            .slice(-DEFAULT_DEBUG_LINES_READ)
-            .join('\n')
+          const tail = buffer.toString('utf-8', 0, bytesRead).split('\n').slice(-DEFAULT_DEBUG_LINES_READ).join('\n')
           logInfo = `Log size: ${formatFileSize(stats.size)}\n\n### Last ${DEFAULT_DEBUG_LINES_READ} lines\n\n\`\`\`\n${tail}\n\`\`\``
         } finally {
           await fd.close()

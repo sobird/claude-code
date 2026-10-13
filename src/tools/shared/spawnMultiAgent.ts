@@ -4,6 +4,7 @@
  */
 
 import React from 'react'
+
 import {
   getChromeFlagOverride,
   getFlagSettingsPath,
@@ -14,8 +15,8 @@ import {
 } from '../../bootstrap/state.js'
 import type { AppState } from '../../state/AppState.js'
 import { createTaskStateBase, generateTaskId } from '../../Task.js'
-import type { ToolUseContext } from '../../Tool.js'
 import type { InProcessTeammateTaskState } from '../../tasks/InProcessTeammateTask/types.js'
+import type { ToolUseContext } from '../../Tool.js'
 import { formatAgentId } from '../../utils/agentId.js'
 import { quote } from '../../utils/bash/shellQuote.js'
 import { isInBundledMode } from '../../utils/bundledMode.js'
@@ -43,12 +44,9 @@ import {
   TEAMMATE_COMMAND_ENV_VAR,
   TMUX_COMMAND,
 } from '../../utils/swarm/constants.js'
-import { It2SetupPrompt } from '../../utils/swarm/It2SetupPrompt.js'
 import { startInProcessTeammate } from '../../utils/swarm/inProcessRunner.js'
-import {
-  type InProcessSpawnConfig,
-  spawnInProcessTeammate,
-} from '../../utils/swarm/spawnInProcess.js'
+import { It2SetupPrompt } from '../../utils/swarm/It2SetupPrompt.js'
+import { type InProcessSpawnConfig, spawnInProcessTeammate } from '../../utils/swarm/spawnInProcess.js'
 import { buildInheritedEnvVars } from '../../utils/swarm/spawnUtils.js'
 import {
   readTeamFileAsync,
@@ -90,10 +88,7 @@ function getDefaultTeammateModel(leaderModel: string | null): string {
  *
  * Exported for testing.
  */
-export function resolveTeammateModel(
-  inputModel: string | undefined,
-  leaderModel: string | null,
-): string {
+export function resolveTeammateModel(inputModel: string | undefined, leaderModel: string | null): string {
   if (inputModel === 'inherit') {
     return leaderModel ?? getDefaultTeammateModel(leaderModel)
   }
@@ -157,11 +152,7 @@ type SpawnInput = {
  * Checks if a tmux session exists
  */
 async function hasSession(sessionName: string): Promise<boolean> {
-  const result = await execFileNoThrow(TMUX_COMMAND, [
-    'has-session',
-    '-t',
-    sessionName,
-  ])
+  const result = await execFileNoThrow(TMUX_COMMAND, ['has-session', '-t', sessionName])
   return result.code === 0
 }
 
@@ -171,16 +162,9 @@ async function hasSession(sessionName: string): Promise<boolean> {
 async function ensureSession(sessionName: string): Promise<void> {
   const exists = await hasSession(sessionName)
   if (!exists) {
-    const result = await execFileNoThrow(TMUX_COMMAND, [
-      'new-session',
-      '-d',
-      '-s',
-      sessionName,
-    ])
+    const result = await execFileNoThrow(TMUX_COMMAND, ['new-session', '-d', '-s', sessionName])
     if (result.code !== 0) {
-      throw new Error(
-        `Failed to create tmux session '${sessionName}': ${result.stderr || 'Unknown error'}`,
-      )
+      throw new Error(`Failed to create tmux session '${sessionName}': ${result.stderr || 'Unknown error'}`)
     }
   }
 }
@@ -205,10 +189,7 @@ function getTeammateCommand(): string {
  * @param options.planModeRequired - If true, don't inherit bypass permissions (plan mode takes precedence)
  * @param options.permissionMode - Permission mode to propagate
  */
-function buildInheritedCliFlags(options?: {
-  planModeRequired?: boolean
-  permissionMode?: PermissionMode
-}): string {
+function buildInheritedCliFlags(options?: { planModeRequired?: boolean; permissionMode?: PermissionMode }): string {
   const flags: string[] = []
   const { planModeRequired, permissionMode } = options || {}
 
@@ -216,10 +197,7 @@ function buildInheritedCliFlags(options?: {
   // Plan mode takes precedence over bypass permissions for safety
   if (planModeRequired) {
     // Don't inherit bypass permissions when plan mode is required
-  } else if (
-    permissionMode === 'bypassPermissions' ||
-    getSessionBypassPermissionsMode()
-  ) {
+  } else if (permissionMode === 'bypassPermissions' || getSessionBypassPermissionsMode()) {
     flags.push('--dangerously-skip-permissions')
   } else if (permissionMode === 'acceptEdits') {
     flags.push('--permission-mode acceptEdits')
@@ -264,10 +242,7 @@ function buildInheritedCliFlags(options?: {
  * If the name already exists, appends a numeric suffix (e.g., tester-2, tester-3).
  * @internal Exported for testing
  */
-export async function generateUniqueTeammateName(
-  baseName: string,
-  teamName: string | undefined,
-): Promise<string> {
+export async function generateUniqueTeammateName(baseName: string, teamName: string | undefined): Promise<string> {
   if (!teamName) {
     return baseName
   }
@@ -277,7 +252,7 @@ export async function generateUniqueTeammateName(
     return baseName
   }
 
-  const existingNames = new Set(teamFile.members.map(m => m.name.toLowerCase()))
+  const existingNames = new Set(teamFile.members.map((m) => m.name.toLowerCase()))
 
   // If the base name doesn't exist, use it as-is
   if (!existingNames.has(baseName.toLowerCase())) {
@@ -302,10 +277,7 @@ export async function generateUniqueTeammateName(
  * When inside tmux: Creates teammates in a shared window with leader on left, teammates on right.
  * When outside tmux: Creates a claude-swarm session with all teammates in a tiled layout.
  */
-async function handleSpawnSplitPane(
-  input: SpawnInput,
-  context: ToolUseContext,
-): Promise<{ data: SpawnOutput }> {
+async function handleSpawnSplitPane(input: SpawnInput, context: ToolUseContext): Promise<{ data: SpawnOutput }> {
   const { setAppState, getAppState } = context
   const { name, prompt, agent_type, cwd, plan_mode_required } = input
 
@@ -344,9 +316,7 @@ async function handleSpawnSplitPane(
     const tmuxAvailable = await isTmuxAvailable()
 
     // Show the setup prompt and wait for user decision
-    const setupResult = await new Promise<
-      'installed' | 'use-tmux' | 'cancelled'
-    >(resolve => {
+    const setupResult = await new Promise<'installed' | 'use-tmux' | 'cancelled'>((resolve) => {
       context.setToolJSX!({
         jsx: React.createElement(It2SetupPrompt, {
           onDone: resolve,
@@ -385,10 +355,7 @@ async function handleSpawnSplitPane(
   // - Inside tmux: splits current window (leader on left, teammates on right)
   // - In iTerm2 with it2: uses native iTerm2 split panes
   // - Outside both: creates claude-swarm session with tiled teammates
-  const { paneId, isFirstTeammate } = await createTeammatePaneInSwarmView(
-    sanitizedName,
-    teammateColor,
-  )
+  const { paneId, isFirstTeammate } = await createTeammatePaneInSwarmView(sanitizedName, teammateColor)
 
   // Enable pane border status on first teammate when inside tmux
   // (outside tmux, this is handled in createTeammatePaneInSwarmView)
@@ -428,9 +395,7 @@ async function handleSpawnSplitPane(
       .filter((flag, i, arr) => flag !== '--model' && arr[i - 1] !== '--model')
       .join(' ')
     // Add the teammate's model
-    inheritedFlags = inheritedFlags
-      ? `${inheritedFlags} --model ${quote([model])}`
-      : `--model ${quote([model])}`
+    inheritedFlags = inheritedFlags ? `${inheritedFlags} --model ${quote([model])}` : `--model ${quote([model])}`
   }
 
   const flagsStr = inheritedFlags ? ` ${inheritedFlags}` : ''
@@ -449,7 +414,7 @@ async function handleSpawnSplitPane(
 
   // Track the teammate in AppState's teamContext with color
   // If spawning without spawnTeam, set up the leader as team lead
-  setAppState(prev => ({
+  setAppState((prev) => ({
     ...prev,
     teamContext: {
       ...prev.teamContext,
@@ -488,9 +453,7 @@ async function handleSpawnSplitPane(
   // Register agent in the team file
   const teamFile = await readTeamFileAsync(teamName)
   if (!teamFile) {
-    throw new Error(
-      `Team "${teamName}" does not exist. Call spawnTeam first to create the team.`,
-    )
+    throw new Error(`Team "${teamName}" does not exist. Call spawnTeam first to create the team.`)
   }
   teamFile.members.push({
     agentId: teammateId,
@@ -542,10 +505,7 @@ async function handleSpawnSplitPane(
  * Handle spawn operation using separate windows (legacy behavior).
  * Creates each teammate in its own tmux window.
  */
-async function handleSpawnSeparateWindow(
-  input: SpawnInput,
-  context: ToolUseContext,
-): Promise<{ data: SpawnOutput }> {
+async function handleSpawnSeparateWindow(input: SpawnInput, context: ToolUseContext): Promise<{ data: SpawnOutput }> {
   const { setAppState, getAppState } = context
   const { name, prompt, agent_type, cwd, plan_mode_required } = input
 
@@ -596,9 +556,7 @@ async function handleSpawnSeparateWindow(
   ])
 
   if (createWindowResult.code !== 0) {
-    throw new Error(
-      `Failed to create tmux window: ${createWindowResult.stderr}`,
-    )
+    throw new Error(`Failed to create tmux window: ${createWindowResult.stderr}`)
   }
 
   const paneId = createWindowResult.stdout.trim()
@@ -635,9 +593,7 @@ async function handleSpawnSeparateWindow(
       .filter((flag, i, arr) => flag !== '--model' && arr[i - 1] !== '--model')
       .join(' ')
     // Add the teammate's model
-    inheritedFlags = inheritedFlags
-      ? `${inheritedFlags} --model ${quote([model])}`
-      : `--model ${quote([model])}`
+    inheritedFlags = inheritedFlags ? `${inheritedFlags} --model ${quote([model])}` : `--model ${quote([model])}`
   }
 
   const flagsStr = inheritedFlags ? ` ${inheritedFlags}` : ''
@@ -656,13 +612,11 @@ async function handleSpawnSeparateWindow(
   ])
 
   if (sendKeysResult.code !== 0) {
-    throw new Error(
-      `Failed to send command to tmux window: ${sendKeysResult.stderr}`,
-    )
+    throw new Error(`Failed to send command to tmux window: ${sendKeysResult.stderr}`)
   }
 
   // Track the teammate in AppState's teamContext
-  setAppState(prev => ({
+  setAppState((prev) => ({
     ...prev,
     teamContext: {
       ...prev.teamContext,
@@ -702,9 +656,7 @@ async function handleSpawnSeparateWindow(
   // Register agent in the team file
   const teamFile = await readTeamFileAsync(teamName)
   if (!teamFile) {
-    throw new Error(
-      `Team "${teamName}" does not exist. Call spawnTeam first to create the team.`,
-    )
+    throw new Error(`Team "${teamName}" does not exist. Call spawnTeam first to create the team.`)
   }
   teamFile.members.push({
     agentId: teammateId,
@@ -789,12 +741,7 @@ function registerOutOfProcessTeammateTask(
   const abortController = new AbortController()
 
   const taskState: InProcessTeammateTaskState = {
-    ...createTaskStateBase(
-      taskId,
-      'in_process_teammate',
-      description,
-      toolUseId,
-    ),
+    ...createTaskStateBase(taskId, 'in_process_teammate', description, toolUseId),
     type: 'in_process_teammate',
     status: 'running',
     identity: {
@@ -837,10 +784,7 @@ function registerOutOfProcessTeammateTask(
  * Handle spawn operation for in-process teammates.
  * In-process teammates run in the same Node.js process using AsyncLocalStorage.
  */
-async function handleSpawnInProcess(
-  input: SpawnInput,
-  context: ToolUseContext,
-): Promise<{ data: SpawnOutput }> {
+async function handleSpawnInProcess(input: SpawnInput, context: ToolUseContext): Promise<{ data: SpawnOutput }> {
   const { setAppState, getAppState } = context
   const { name, prompt, agent_type, plan_mode_required } = input
 
@@ -877,13 +821,11 @@ async function handleSpawnInProcess(
   let agentDefinition: CustomAgentDefinition | undefined
   if (agent_type) {
     const allAgents = context.options.agentDefinitions.activeAgents
-    const foundAgent = allAgents.find(a => a.agentType === agent_type)
+    const foundAgent = allAgents.find((a) => a.agentType === agent_type)
     if (foundAgent && isCustomAgent(foundAgent)) {
       agentDefinition = foundAgent
     }
-    logForDebugging(
-      `[handleSpawnInProcess] agent_type=${agent_type}, found=${!!agentDefinition}`,
-    )
+    logForDebugging(`[handleSpawnInProcess] agent_type=${agent_type}, found=${!!agentDefinition}`)
   }
 
   // Spawn in-process teammate
@@ -932,18 +874,14 @@ async function handleSpawnInProcess(
       abortController: result.abortController,
       invokingRequestId: input.invokingRequestId,
     })
-    logForDebugging(
-      `[handleSpawnInProcess] Started agent execution for ${teammateId}`,
-    )
+    logForDebugging(`[handleSpawnInProcess] Started agent execution for ${teammateId}`)
   }
 
   // Track the teammate in AppState's teamContext
   // Auto-register leader if spawning without prior spawnTeam call
-  setAppState(prev => {
+  setAppState((prev) => {
     const needsLeaderSetup = !prev.teamContext?.leadAgentId
-    const leadAgentId = needsLeaderSetup
-      ? formatAgentId(TEAM_LEAD_NAME, teamName)
-      : prev.teamContext!.leadAgentId
+    const leadAgentId = needsLeaderSetup ? formatAgentId(TEAM_LEAD_NAME, teamName) : prev.teamContext!.leadAgentId
 
     // Build teammates map, including leader if needed for inbox polling
     const existingTeammates = prev.teamContext?.teammates || {}
@@ -988,9 +926,7 @@ async function handleSpawnInProcess(
   // Register agent in the team file
   const teamFile = await readTeamFileAsync(teamName)
   if (!teamFile) {
-    throw new Error(
-      `Team "${teamName}" does not exist. Call spawnTeam first to create the team.`,
-    )
+    throw new Error(`Team "${teamName}" does not exist. Call spawnTeam first to create the team.`)
   }
   teamFile.members.push({
     agentId: teammateId,
@@ -1037,10 +973,7 @@ async function handleSpawnInProcess(
  * Falls back to in-process if pane backend detection fails (e.g., iTerm2 without
  * it2 CLI or tmux installed).
  */
-async function handleSpawn(
-  input: SpawnInput,
-  context: ToolUseContext,
-): Promise<{ data: SpawnOutput }> {
+async function handleSpawn(input: SpawnInput, context: ToolUseContext): Promise<{ data: SpawnOutput }> {
   // Check if in-process mode is enabled via feature flag
   if (isInProcessEnabled()) {
     return handleSpawnInProcess(input, context)
@@ -1059,9 +992,7 @@ async function handleSpawn(
     if (getTeammateModeFromSnapshot() !== 'auto') {
       throw error
     }
-    logForDebugging(
-      `[handleSpawn] No pane backend available, falling back to in-process: ${errorMessage(error)}`,
-    )
+    logForDebugging(`[handleSpawn] No pane backend available, falling back to in-process: ${errorMessage(error)}`)
     // Record the fallback so isInProcessEnabled() reflects the actual mode
     // (fixes banner and other UI that would otherwise show tmux attach commands).
     markInProcessFallback()

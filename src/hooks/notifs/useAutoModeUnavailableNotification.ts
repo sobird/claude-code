@@ -1,6 +1,8 @@
 import { feature } from 'bun:bundle'
+
 import { useEffect, useRef } from 'react'
 import { useNotifications } from 'src/context/notifications.js'
+
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 import { useAppState } from '../../state/AppState.js'
 import type { PermissionMode } from '../../utils/permissions/PermissionMode.js'
@@ -18,10 +20,8 @@ import { hasAutoModeOptIn } from '../../utils/settings/settings.js'
  */
 export function useAutoModeUnavailableNotification(): void {
   const { addNotification } = useNotifications()
-  const mode = useAppState(s => s.toolPermissionContext.mode)
-  const isAutoModeAvailable = useAppState(
-    s => s.toolPermissionContext.isAutoModeAvailable,
-  )
+  const mode = useAppState((s) => s.toolPermissionContext.mode)
+  const isAutoModeAvailable = useAppState((s) => s.toolPermissionContext.isAutoModeAvailable)
   const shownRef = useRef(false)
   const prevModeRef = useRef<PermissionMode>(mode)
 
@@ -34,11 +34,7 @@ export function useAutoModeUnavailableNotification(): void {
     if (shownRef.current) return
 
     const wrappedPastAutoSlot =
-      mode === 'default' &&
-      prevMode !== 'default' &&
-      prevMode !== 'auto' &&
-      !isAutoModeAvailable &&
-      hasAutoModeOptIn()
+      mode === 'default' && prevMode !== 'default' && prevMode !== 'auto' && !isAutoModeAvailable && hasAutoModeOptIn()
 
     if (!wrappedPastAutoSlot) return
 

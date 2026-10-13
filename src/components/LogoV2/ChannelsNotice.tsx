@@ -6,19 +6,13 @@
 
 import * as React from 'react'
 import { useState } from 'react'
-import {
-  type ChannelEntry,
-  getAllowedChannels,
-  getHasDevChannels,
-} from '../../bootstrap/state.js'
+
+import { type ChannelEntry, getAllowedChannels, getHasDevChannels } from '../../bootstrap/state.js'
 import { Box, Text } from '../../ink.js'
 import { isChannelsEnabled } from '../../services/mcp/channelAllowlist.js'
 import { getEffectiveChannelAllowlist } from '../../services/mcp/channelNotification.js'
 import { getMcpConfigsByScope } from '../../services/mcp/config.js'
-import {
-  getClaudeAIOAuthTokens,
-  getSubscriptionType,
-} from '../../utils/auth.js'
+import { getClaudeAIOAuthTokens, getSubscriptionType } from '../../utils/auth.js'
 import { loadInstalledPluginsV2 } from '../../utils/plugins/installedPluginsManager.js'
 import { getSettingsForSource } from '../../utils/settings/settings.js'
 
@@ -29,40 +23,36 @@ export function ChannelsNotice(): React.ReactNode {
   // (session cache updated by background polling / /login), and
   // isChannelsEnabled (GrowthBook 5-min refresh) must be captured once
   // so a later re-render cannot flip branches.
-  const [{ channels, disabled, noAuth, policyBlocked, list, unmatched }] =
-    useState(() => {
-      const ch = getAllowedChannels()
-      if (ch.length === 0)
-        return {
-          channels: ch,
-          disabled: false,
-          noAuth: false,
-          policyBlocked: false,
-          list: '',
-          unmatched: [] as Unmatched[],
-        }
-      const l = ch.map(formatEntry).join(', ')
-      const sub = getSubscriptionType()
-      const managed = sub === 'team' || sub === 'enterprise'
-      const policy = getSettingsForSource('policySettings')
-      const allowlist = getEffectiveChannelAllowlist(
-        sub,
-        policy?.allowedChannelPlugins,
-      )
+  const [{ channels, disabled, noAuth, policyBlocked, list, unmatched }] = useState(() => {
+    const ch = getAllowedChannels()
+    if (ch.length === 0)
       return {
         channels: ch,
-        disabled: !isChannelsEnabled(),
-        noAuth: !getClaudeAIOAuthTokens()?.accessToken,
-        policyBlocked: managed && policy?.channelsEnabled !== true,
-        list: l,
-        unmatched: findUnmatched(ch, allowlist),
+        disabled: false,
+        noAuth: false,
+        policyBlocked: false,
+        list: '',
+        unmatched: [] as Unmatched[],
       }
-    })
+    const l = ch.map(formatEntry).join(', ')
+    const sub = getSubscriptionType()
+    const managed = sub === 'team' || sub === 'enterprise'
+    const policy = getSettingsForSource('policySettings')
+    const allowlist = getEffectiveChannelAllowlist(sub, policy?.allowedChannelPlugins)
+    return {
+      channels: ch,
+      disabled: !isChannelsEnabled(),
+      noAuth: !getClaudeAIOAuthTokens()?.accessToken,
+      policyBlocked: managed && policy?.channelsEnabled !== true,
+      list: l,
+      unmatched: findUnmatched(ch, allowlist),
+    }
+  })
   if (channels.length === 0) return null
 
   // When both flags are passed, the list mixes entries and a single flag
   // name would be wrong for half of it. entry.dev distinguishes origin.
-  const hasNonDev = channels.some(c => !c.dev)
+  const hasNonDev = channels.some((c) => !c.dev)
   const flag =
     getHasDevChannels() && hasNonDev
       ? 'Channels'
@@ -87,9 +77,7 @@ export function ChannelsNotice(): React.ReactNode {
         <Text color="error">
           {flag} ignored ({list})
         </Text>
-        <Text dimColor>
-          Channels require claude.ai authentication · run /login, then restart
-        </Text>
+        <Text dimColor>Channels require claude.ai authentication · run /login, then restart</Text>
       </Box>
     )
   }
@@ -101,11 +89,8 @@ export function ChannelsNotice(): React.ReactNode {
           {flag} blocked by org policy ({list})
         </Text>
         <Text dimColor>Inbound messages will be silently dropped</Text>
-        <Text dimColor>
-          Have an administrator set channelsEnabled: true in managed settings to
-          enable
-        </Text>
-        {unmatched.map(u => (
+        <Text dimColor>Have an administrator set channelsEnabled: true in managed settings to enable</Text>
+        {unmatched.map((u) => (
           <Text key={`${formatEntry(u.entry)}:${u.why}`} color="warning">
             {formatEntry(u.entry)} · {u.why}
           </Text>
@@ -121,11 +106,10 @@ export function ChannelsNotice(): React.ReactNode {
     <Box paddingLeft={2} flexDirection="column">
       <Text color="error">Listening for channel messages from: {list}</Text>
       <Text dimColor>
-        Experimental · inbound messages will be pushed into this session, this
-        carries prompt injection risks. Restart Claude Code without {flag} to
-        disable.
+        Experimental · inbound messages will be pushed into this session, this carries prompt injection risks. Restart
+        Claude Code without {flag} to disable.
       </Text>
-      {unmatched.map(u => (
+      {unmatched.map((u) => (
         <Text key={`${formatEntry(u.entry)}:${u.why}`} color="warning">
           {formatEntry(u.entry)} · {u.why}
         </Text>
@@ -135,9 +119,7 @@ export function ChannelsNotice(): React.ReactNode {
 }
 
 function formatEntry(c: ChannelEntry): string {
-  return c.kind === 'plugin'
-    ? `plugin:${c.name}@${c.marketplace}`
-    : `server:${c.name}`
+  return c.kind === 'plugin' ? `plugin:${c.name}@${c.marketplace}` : `server:${c.name}`
 }
 
 type Unmatched = { entry: ChannelEntry; why: string }
@@ -159,9 +141,7 @@ function findUnmatched(
 
   // Plugin-kind installed check: installed_plugins.json keys are
   // `name@marketplace`. loadInstalledPluginsV2 is cached.
-  const installedPluginIds = new Set(
-    Object.keys(loadInstalledPluginsV2().plugins),
-  )
+  const installedPluginIds = new Set(Object.keys(loadInstalledPluginsV2().plugins))
 
   // Plugin-kind allowlist check: same {marketplace, plugin} test as the
   // gate at channelNotification.ts. entry.dev bypasses (dev flag opts out
@@ -189,18 +169,10 @@ function findUnmatched(
     if (!installedPluginIds.has(`${entry.name}@${entry.marketplace}`)) {
       out.push({ entry, why: 'plugin not installed' })
     }
-    if (
-      !entry.dev &&
-      !allowed.some(
-        e => e.plugin === entry.name && e.marketplace === entry.marketplace,
-      )
-    ) {
+    if (!entry.dev && !allowed.some((e) => e.plugin === entry.name && e.marketplace === entry.marketplace)) {
       out.push({
         entry,
-        why:
-          source === 'org'
-            ? "not on your org's approved channels list"
-            : 'not on the approved channels allowlist',
+        why: source === 'org' ? "not on your org's approved channels list" : 'not on the approved channels allowlist',
       })
     }
   }

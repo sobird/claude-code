@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { useShortcutDisplay } from '../../keybindings/useShortcutDisplay.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
@@ -7,11 +8,7 @@ import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
 export function SandboxPromptFooterHint(): ReactNode {
   const [recentViolationCount, setRecentViolationCount] = useState(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
-  const detailsShortcut = useShortcutDisplay(
-    'app:toggleTranscript',
-    'Global',
-    'ctrl+o',
-  )
+  const detailsShortcut = useShortcutDisplay('app:toggleTranscript', 'Global', 'ctrl+o')
 
   useEffect(() => {
     if (!SandboxManager.isSandboxingEnabled()) {
@@ -52,8 +49,7 @@ export function SandboxPromptFooterHint(): ReactNode {
   return (
     <Box paddingX={0} paddingY={0}>
       <Text color="inactive" wrap="truncate">
-        ⧈ Sandbox blocked {recentViolationCount}{' '}
-        {recentViolationCount === 1 ? 'operation' : 'operations'} ·{' '}
+        ⧈ Sandbox blocked {recentViolationCount} {recentViolationCount === 1 ? 'operation' : 'operations'} ·{' '}
         {detailsShortcut} for details · /sandbox to disable
       </Text>
     </Box>

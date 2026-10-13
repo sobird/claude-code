@@ -1,6 +1,8 @@
-import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
 import { PassThrough } from 'stream'
 import { URL } from 'url'
+
+import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
+
 import { getSessionId } from '../bootstrap/state.js'
 import { getPollIntervalConfig } from '../bridge/pollConfig.js'
 import { registerCleanup } from '../utils/cleanupRegistry.js'
@@ -13,14 +15,8 @@ import { gracefulShutdown } from '../utils/gracefulShutdown.js'
 import { logError } from '../utils/log.js'
 import { writeToStdout } from '../utils/process.js'
 import { getSessionIngressAuthToken } from '../utils/sessionIngressAuth.js'
-import {
-  setSessionMetadataChangedListener,
-  setSessionStateChangedListener,
-} from '../utils/sessionState.js'
-import {
-  setInternalEventReader,
-  setInternalEventWriter,
-} from '../utils/sessionStorage.js'
+import { setSessionMetadataChangedListener, setSessionStateChangedListener } from '../utils/sessionState.js'
+import { setInternalEventReader, setInternalEventWriter } from '../utils/sessionStorage.js'
 import { ndjsonSafeStringify } from './ndjsonSafeStringify.js'
 import { StructuredIO } from './structuredIO.js'
 import { CCRClient, CCRInitError } from './transports/ccrClient.js'
@@ -41,11 +37,7 @@ export class RemoteIO extends StructuredIO {
   private ccrClient: CCRClient | null = null
   private keepAliveTimer: ReturnType<typeof setInterval> | null = null
 
-  constructor(
-    streamUrl: string,
-    initialPrompt?: AsyncIterable<string>,
-    replayUserMessages?: boolean,
-  ) {
+  constructor(streamUrl: string, initialPrompt?: AsyncIterable<string>, replayUserMessages?: boolean) {
     const inputStream = new PassThrough({ encoding: 'utf8' })
     super(inputStream, replayUserMessages)
     this.inputStream = inputStream
@@ -85,12 +77,7 @@ export class RemoteIO extends StructuredIO {
     }
 
     // Get appropriate transport based on URL protocol
-    this.transport = getTransportForUrl(
-      this.url,
-      headers,
-      getSessionId(),
-      refreshHeaders,
-    )
+    this.transport = getTransportForUrl(this.url, headers, getSessionId(), refreshHeaders)
 
     // Set up data callback
     this.isBridge = process.env.CLAUDE_CODE_ENVIRONMENT_KIND === 'bridge'
@@ -119,9 +106,7 @@ export class RemoteIO extends StructuredIO {
       // different files — assert the invariant so a future decoupling
       // fails loudly here instead of confusingly inside CCRClient.
       if (!(this.transport instanceof SSETransport)) {
-        throw new Error(
-          'CCR v2 requires SSETransport; check getTransportForUrl',
-        )
+        throw new Error('CCR v2 requires SSETransport; check getTransportForUrl')
       }
       this.ccrClient = new CCRClient(this.transport, this.url)
       const init = this.ccrClient.initialize()
@@ -130,9 +115,7 @@ export class RemoteIO extends StructuredIO {
         logForDiagnosticsNoPII('error', 'cli_worker_lifecycle_init_failed', {
           reason: error instanceof CCRInitError ? error.reason : 'unknown',
         })
-        logError(
-          new Error(`CCRClient initialization failed: ${errorMessage(error)}`),
-        )
+        logError(new Error(`CCRClient initialization failed: ${errorMessage(error)}`))
         void gracefulShutdown(1, 'other')
       })
       registerCleanup(async () => this.ccrClient?.close())
@@ -162,7 +145,7 @@ export class RemoteIO extends StructuredIO {
       setSessionStateChangedListener((state, details) => {
         this.ccrClient?.reportState(state, details)
       })
-      setSessionMetadataChangedListener(metadata => {
+      setSessionMetadataChangedListener((metadata) => {
         this.ccrClient?.reportMetadata(metadata)
       })
     }
@@ -181,15 +164,12 @@ export class RemoteIO extends StructuredIO {
     // Bridge-only: fixes Envoy idle timeout on bridge-topology sessions
     // (#21931). byoc workers ran without this before #21931 and do not
     // need it — different network path.
-    const keepAliveIntervalMs =
-      getPollIntervalConfig().session_keepalive_interval_v2_ms
+    const keepAliveIntervalMs = getPollIntervalConfig().session_keepalive_interval_v2_ms
     if (this.isBridge && keepAliveIntervalMs > 0) {
       this.keepAliveTimer = setInterval(() => {
         logForDebugging('[remote-io] keep_alive sent')
-        void this.write({ type: 'keep_alive' }).catch(err => {
-          logForDebugging(
-            `[remote-io] keep_alive write failed: ${errorMessage(err)}`,
-          )
+        void this.write({ type: 'keep_alive' }).catch((err) => {
+          logForDebugging(`[remote-io] keep_alive write failed: ${errorMessage(err)}`)
         })
       }, keepAliveIntervalMs)
       this.keepAliveTimer.unref?.()

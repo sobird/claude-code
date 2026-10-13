@@ -12,6 +12,7 @@
 
 import { readFile } from 'fs/promises'
 import { join } from 'path'
+
 import { logForDebugging } from '../debug.js'
 import { jsonParse, jsonStringify } from '../slowOperations.js'
 import { loadKnownMarketplacesConfigSafe } from './marketplaceManager.js'
@@ -40,10 +41,7 @@ export async function readZipCacheKnownMarketplaces(): Promise<KnownMarketplaces
     const content = await readFile(getZipCacheKnownMarketplacesPath(), 'utf-8')
     const parsed = KnownMarketplacesFileSchema().safeParse(jsonParse(content))
     if (!parsed.success) {
-      logForDebugging(
-        `Invalid known_marketplaces.json in zip cache: ${parsed.error.message}`,
-        { level: 'error' },
-      )
+      logForDebugging(`Invalid known_marketplaces.json in zip cache: ${parsed.error.message}`, { level: 'error' })
       return {}
     }
     return parsed.data
@@ -55,13 +53,8 @@ export async function readZipCacheKnownMarketplaces(): Promise<KnownMarketplaces
 /**
  * Write known_marketplaces.json to the zip cache atomically.
  */
-export async function writeZipCacheKnownMarketplaces(
-  data: KnownMarketplacesFile,
-): Promise<void> {
-  await atomicWriteToZipCache(
-    getZipCacheKnownMarketplacesPath(),
-    jsonStringify(data, null, 2),
-  )
+export async function writeZipCacheKnownMarketplaces(data: KnownMarketplacesFile): Promise<void> {
+  await atomicWriteToZipCache(getZipCacheKnownMarketplacesPath(), jsonStringify(data, null, 2))
 }
 
 // ── Marketplace JSON ──
@@ -69,9 +62,7 @@ export async function writeZipCacheKnownMarketplaces(
 /**
  * Read a marketplace JSON file from the zip cache.
  */
-export async function readMarketplaceJson(
-  marketplaceName: string,
-): Promise<PluginMarketplace | null> {
+export async function readMarketplaceJson(marketplaceName: string): Promise<PluginMarketplace | null> {
   const zipCachePath = getPluginZipCachePath()
   if (!zipCachePath) {
     return null
@@ -85,9 +76,7 @@ export async function readMarketplaceJson(
     if (result.success) {
       return result.data
     }
-    logForDebugging(
-      `Invalid marketplace JSON for ${marketplaceName}: ${result.error}`,
-    )
+    logForDebugging(`Invalid marketplace JSON for ${marketplaceName}: ${result.error}`)
     return null
   } catch {
     return null
@@ -97,10 +86,7 @@ export async function readMarketplaceJson(
 /**
  * Save a marketplace JSON to the zip cache from its install location.
  */
-export async function saveMarketplaceJsonToZipCache(
-  marketplaceName: string,
-  installLocation: string,
-): Promise<void> {
+export async function saveMarketplaceJsonToZipCache(marketplaceName: string, installLocation: string): Promise<void> {
   const zipCachePath = getPluginZipCachePath()
   if (!zipCachePath) {
     return

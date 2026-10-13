@@ -1,4 +1,5 @@
 import { logEvent } from 'src/services/analytics/index.js'
+
 import { openBrowser } from '../../utils/browser.js'
 import { AuthCodeListener } from './auth-code-listener.js'
 import * as client from './client.js'
@@ -22,8 +23,7 @@ export class OAuthService {
   private codeVerifier: string
   private authCodeListener: AuthCodeListener | null = null
   private port: number | null = null
-  private manualAuthCodeResolver: ((authorizationCode: string) => void) | null =
-    null
+  private manualAuthCodeResolver: ((authorizationCode: string) => void) | null = null
 
   constructor() {
     this.codeVerifier = crypto.generateCodeVerifier()
@@ -70,20 +70,17 @@ export class OAuthService {
     const automaticFlowUrl = client.buildAuthUrl({ ...opts, isManual: false })
 
     // Wait for either automatic or manual auth code
-    const authorizationCode = await this.waitForAuthorizationCode(
-      state,
-      async () => {
-        if (options?.skipBrowserOpen) {
-          // Hand both URLs to the caller. The automatic one still works
-          // if the caller opens it on the same host (localhost listener
-          // is running); the manual one works from anywhere.
-          await authURLHandler(manualFlowUrl, automaticFlowUrl)
-        } else {
-          await authURLHandler(manualFlowUrl) // Show manual option to user
-          await openBrowser(automaticFlowUrl) // Try automatic flow
-        }
-      },
-    )
+    const authorizationCode = await this.waitForAuthorizationCode(state, async () => {
+      if (options?.skipBrowserOpen) {
+        // Hand both URLs to the caller. The automatic one still works
+        // if the caller opens it on the same host (localhost listener
+        // is running); the manual one works from anywhere.
+        await authURLHandler(manualFlowUrl, automaticFlowUrl)
+      } else {
+        await authURLHandler(manualFlowUrl) // Show manual option to user
+        await openBrowser(automaticFlowUrl) // Try automatic flow
+      }
+    })
 
     // Check if the automatic flow is still active (has a pending response)
     const isAutomaticFlow = this.authCodeListener?.hasPendingResponse() ?? false
@@ -103,9 +100,7 @@ export class OAuthService {
       // Fetch profile info (subscription type and rate limit tier) for the
       // returned OAuthTokens. Logout and account storage are handled by the
       // caller (installOAuthTokens in auth.ts).
-      const profileInfo = await client.fetchProfileInfo(
-        tokenResponse.access_token,
-      )
+      const profileInfo = await client.fetchProfileInfo(tokenResponse.access_token)
 
       // Handle success redirect for automatic flow
       if (isAutomaticFlow) {
@@ -131,10 +126,7 @@ export class OAuthService {
     }
   }
 
-  private async waitForAuthorizationCode(
-    state: string,
-    onReady: () => Promise<void>,
-  ): Promise<string> {
+  private async waitForAuthorizationCode(state: string, onReady: () => Promise<void>): Promise<string> {
     return new Promise((resolve, reject) => {
       // Set up manual auth code resolver
       this.manualAuthCodeResolver = resolve
@@ -142,11 +134,11 @@ export class OAuthService {
       // Start automatic flow
       this.authCodeListener
         ?.waitForAuthorization(state, onReady)
-        .then(authorizationCode => {
+        .then((authorizationCode) => {
           this.manualAuthCodeResolver = null
           resolve(authorizationCode)
         })
-        .catch(error => {
+        .catch((error) => {
           this.manualAuthCodeResolver = null
           reject(error)
         })
@@ -154,10 +146,7 @@ export class OAuthService {
   }
 
   // Handle manual flow callback when user pastes the auth code
-  handleManualAuthCodeInput(params: {
-    authorizationCode: string
-    state: string
-  }): void {
+  handleManualAuthCodeInput(params: { authorizationCode: string; state: string }): void {
     if (this.manualAuthCodeResolver) {
       this.manualAuthCodeResolver(params.authorizationCode)
       this.manualAuthCodeResolver = null

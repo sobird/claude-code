@@ -185,19 +185,12 @@ function getQueryProfileReport(): string {
   if (firstChunkTime > 0) {
     const preRequestOverhead = apiRequestSentTime
     const networkLatency = firstChunkTime - apiRequestSentTime
-    const preRequestPercent = (
-      (preRequestOverhead / firstChunkTime) *
-      100
-    ).toFixed(1)
+    const preRequestPercent = ((preRequestOverhead / firstChunkTime) * 100).toFixed(1)
     const networkPercent = ((networkLatency / firstChunkTime) * 100).toFixed(1)
 
     lines.push(`Total TTFT: ${formatMs(firstChunkTime)}ms`)
-    lines.push(
-      `  - Pre-request overhead: ${formatMs(preRequestOverhead)}ms (${preRequestPercent}%)`,
-    )
-    lines.push(
-      `  - Network latency: ${formatMs(networkLatency)}ms (${networkPercent}%)`,
-    )
+    lines.push(`  - Pre-request overhead: ${formatMs(preRequestOverhead)}ms (${preRequestPercent}%)`)
+    lines.push(`  - Network latency: ${formatMs(networkLatency)}ms (${networkPercent}%)`)
   } else {
     lines.push(`Total time: ${formatMs(totalTime)}ms`)
   }
@@ -213,10 +206,7 @@ function getQueryProfileReport(): string {
 /**
  * Get phase-based summary showing time spent in each major phase
  */
-function getPhaseSummary(
-  marks: Array<{ name: string; startTime: number }>,
-  baselineTime: number,
-): string {
+function getPhaseSummary(marks: Array<{ name: string; startTime: number }>, baselineTime: number): string {
   const phases: Array<{ name: string; start: string; end: string }> = [
     {
       name: 'Context loading',
@@ -261,7 +251,7 @@ function getPhaseSummary(
     },
   ]
 
-  const markMap = new Map(marks.map(m => [m.name, m.startTime - baselineTime]))
+  const markMap = new Map(marks.map((m) => [m.name, m.startTime - baselineTime]))
 
   const lines: string[] = []
   lines.push('')
@@ -274,9 +264,7 @@ function getPhaseSummary(
     if (startTime !== undefined && endTime !== undefined) {
       const duration = endTime - startTime
       const bar = '█'.repeat(Math.min(Math.ceil(duration / 10), 50)) // 1 block per 10ms, max 50
-      lines.push(
-        `  ${phase.name.padEnd(22)} ${formatMs(duration).padStart(10)}ms ${bar}`,
-      )
+      lines.push(`  ${phase.name.padEnd(22)} ${formatMs(duration).padStart(10)}ms ${bar}`)
     }
   }
 
@@ -284,9 +272,7 @@ function getPhaseSummary(
   const apiRequestSent = markMap.get('query_api_request_sent')
   if (apiRequestSent !== undefined) {
     lines.push('')
-    lines.push(
-      `  ${'Total pre-API overhead'.padEnd(22)} ${formatMs(apiRequestSent).padStart(10)}ms`,
-    )
+    lines.push(`  ${'Total pre-API overhead'.padEnd(22)} ${formatMs(apiRequestSent).padStart(10)}ms`)
   }
 
   return lines.join('\n')

@@ -1,8 +1,9 @@
 import figures from 'figures'
 import * as React from 'react'
 import type { SettingSource } from 'src/utils/settings/constants.js'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
+
 import { Box, Text } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import type { ResolvedAgent } from '../../tools/AgentTool/agentDisplay.js'
 import {
   AGENT_SOURCE_GROUPS,
@@ -25,23 +26,12 @@ type Props = {
   changes?: string[]
 }
 
-export function AgentsList({
-  source,
-  agents,
-  onBack,
-  onSelect,
-  onCreateNew,
-  changes,
-}: Props): React.ReactNode {
-  const [selectedAgent, setSelectedAgent] =
-    React.useState<ResolvedAgent | null>(null)
+export function AgentsList({ source, agents, onBack, onSelect, onCreateNew, changes }: Props): React.ReactNode {
+  const [selectedAgent, setSelectedAgent] = React.useState<ResolvedAgent | null>(null)
   const [isCreateNewSelected, setIsCreateNewSelected] = React.useState(true)
 
   // Sort agents alphabetically by name within each source group
-  const sortedAgents = React.useMemo(
-    () => [...agents].sort(compareAgentsByName),
-    [agents],
-  )
+  const sortedAgents = React.useMemo(() => [...agents].sort(compareAgentsByName), [agents])
 
   const getOverrideInfo = (agent: ResolvedAgent) => {
     return {
@@ -56,9 +46,7 @@ export function AgentsList({
         <Text color={isCreateNewSelected ? 'suggestion' : undefined}>
           {isCreateNewSelected ? `${figures.pointer} ` : '  '}
         </Text>
-        <Text color={isCreateNewSelected ? 'suggestion' : undefined}>
-          Create new agent
-        </Text>
+        <Text color={isCreateNewSelected ? 'suggestion' : undefined}>Create new agent</Text>
       </Box>
     )
   }
@@ -98,10 +86,7 @@ export function AgentsList({
           </Text>
         )}
         {overriddenBy && (
-          <Text
-            dimColor={!isSelected}
-            color={isSelected ? 'warning' : undefined}
-          >
+          <Text dimColor={!isSelected} color={isSelected ? 'warning' : undefined}>
             {' '}
             {figures.warning} shadowed by {getOverrideSourceLabel(overriddenBy)}
           </Text>
@@ -111,11 +96,10 @@ export function AgentsList({
   }
 
   const selectableAgentsInOrder = React.useMemo(() => {
-    const nonBuiltIn = sortedAgents.filter(a => a.source !== 'built-in')
+    const nonBuiltIn = sortedAgents.filter((a) => a.source !== 'built-in')
     if (source === 'all') {
-      return AGENT_SOURCE_GROUPS.filter(g => g.source !== 'built-in').flatMap(
-        ({ source: groupSource }) =>
-          nonBuiltIn.filter(a => a.source === groupSource),
+      return AGENT_SOURCE_GROUPS.filter((g) => g.source !== 'built-in').flatMap(({ source: groupSource }) =>
+        nonBuiltIn.filter((a) => a.source === groupSource),
       )
     }
     return nonBuiltIn
@@ -123,11 +107,7 @@ export function AgentsList({
 
   // Set initial selection
   React.useEffect(() => {
-    if (
-      !selectedAgent &&
-      !isCreateNewSelected &&
-      selectableAgentsInOrder.length > 0
-    ) {
+    if (!selectedAgent && !isCreateNewSelected && selectableAgentsInOrder.length > 0) {
       if (onCreateNew) {
         setIsCreateNewSelected(true)
       } else {
@@ -152,8 +132,7 @@ export function AgentsList({
 
     // Handle navigation with "Create New Agent" option
     const hasCreateOption = !!onCreateNew
-    const totalItems =
-      selectableAgentsInOrder.length + (hasCreateOption ? 1 : 0)
+    const totalItems = selectableAgentsInOrder.length + (hasCreateOption ? 1 : 0)
 
     if (totalItems === 0) return
 
@@ -161,9 +140,7 @@ export function AgentsList({
     let currentPosition = 0
     if (!isCreateNewSelected && selectedAgent) {
       const agentIndex = selectableAgentsInOrder.findIndex(
-        a =>
-          a.agentType === selectedAgent.agentType &&
-          a.source === selectedAgent.source,
+        (a) => a.agentType === selectedAgent.agentType && a.source === selectedAgent.source,
       )
       if (agentIndex >= 0) {
         currentPosition = hasCreateOption ? agentIndex + 1 : agentIndex
@@ -194,10 +171,8 @@ export function AgentsList({
     }
   }
 
-  const renderBuiltInAgentsSection = (
-    title = 'Built-in (always available):',
-  ) => {
-    const builtInAgents = sortedAgents.filter(a => a.source === 'built-in')
+  const renderBuiltInAgentsSection = (title = 'Built-in (always available):') => {
+    const builtInAgents = sortedAgents.filter((a) => a.source === 'built-in')
     return (
       <Box flexDirection="column" marginBottom={1} paddingLeft={2}>
         <Text bold dimColor>
@@ -221,54 +196,34 @@ export function AgentsList({
           </Text>
           {folderPath && <Text dimColor> ({folderPath})</Text>}
         </Box>
-        {groupAgents.map(agent => renderAgent(agent))}
+        {groupAgents.map((agent) => renderAgent(agent))}
       </Box>
     )
   }
 
   const sourceTitle = getAgentSourceDisplayName(source)
 
-  const builtInAgents = sortedAgents.filter(a => a.source === 'built-in')
+  const builtInAgents = sortedAgents.filter((a) => a.source === 'built-in')
 
   const hasNoAgents =
-    !sortedAgents.length ||
-    (source !== 'built-in' && !sortedAgents.some(a => a.source !== 'built-in'))
+    !sortedAgents.length || (source !== 'built-in' && !sortedAgents.some((a) => a.source !== 'built-in'))
 
   if (hasNoAgents) {
     return (
-      <Dialog
-        title={sourceTitle}
-        subtitle="No agents found"
-        onCancel={onBack}
-        hideInputGuide
-      >
-        <Box
-          flexDirection="column"
-          gap={1}
-          tabIndex={0}
-          autoFocus
-          onKeyDown={handleKeyDown}
-        >
+      <Dialog title={sourceTitle} subtitle="No agents found" onCancel={onBack} hideInputGuide>
+        <Box flexDirection="column" gap={1} tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
           {onCreateNew && <Box>{renderCreateNewOption()}</Box>}
+          <Text dimColor>No agents found. Create specialized subagents that Claude can delegate to.</Text>
+          <Text dimColor>Each subagent has its own context window, custom system prompt, and specific tools.</Text>
           <Text dimColor>
-            No agents found. Create specialized subagents that Claude can
-            delegate to.
+            Try creating: Code Reviewer, Code Simplifier, Security Reviewer, Tech Lead, or UX Reviewer.
           </Text>
-          <Text dimColor>
-            Each subagent has its own context window, custom system prompt, and
-            specific tools.
-          </Text>
-          <Text dimColor>
-            Try creating: Code Reviewer, Code Simplifier, Security Reviewer,
-            Tech Lead, or UX Reviewer.
-          </Text>
-          {source !== 'built-in' &&
-            sortedAgents.some(a => a.source === 'built-in') && (
-              <>
-                <Divider />
-                {renderBuiltInAgentsSection()}
-              </>
-            )}
+          {source !== 'built-in' && sortedAgents.some((a) => a.source === 'built-in') && (
+            <>
+              <Divider />
+              {renderBuiltInAgentsSection()}
+            </>
+          )}
         </Box>
       </Dialog>
     )
@@ -277,7 +232,7 @@ export function AgentsList({
   return (
     <Dialog
       title={sourceTitle}
-      subtitle={`${count(sortedAgents, a => !a.overriddenBy)} agents`}
+      subtitle={`${count(sortedAgents, (a) => !a.overriddenBy)} agents`}
       onCancel={onBack}
       hideInputGuide
     >
@@ -286,25 +241,18 @@ export function AgentsList({
           <Text dimColor>{changes[changes.length - 1]}</Text>
         </Box>
       )}
-      <Box
-        flexDirection="column"
-        tabIndex={0}
-        autoFocus
-        onKeyDown={handleKeyDown}
-      >
+      <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
         {onCreateNew && <Box marginBottom={1}>{renderCreateNewOption()}</Box>}
         {source === 'all' ? (
           <>
-            {AGENT_SOURCE_GROUPS.filter(g => g.source !== 'built-in').map(
-              ({ label, source: groupSource }) => (
-                <React.Fragment key={groupSource}>
-                  {renderAgentGroup(
-                    label,
-                    sortedAgents.filter(a => a.source === groupSource),
-                  )}
-                </React.Fragment>
-              ),
-            )}
+            {AGENT_SOURCE_GROUPS.filter((g) => g.source !== 'built-in').map(({ label, source: groupSource }) => (
+              <React.Fragment key={groupSource}>
+                {renderAgentGroup(
+                  label,
+                  sortedAgents.filter((a) => a.source === groupSource),
+                )}
+              </React.Fragment>
+            ))}
             {builtInAgents.length > 0 && (
               <Box flexDirection="column" marginBottom={1} paddingLeft={2}>
                 <Text dimColor>
@@ -320,15 +268,13 @@ export function AgentsList({
               Built-in agents are provided by default and cannot be modified.
             </Text>
             <Box marginTop={1} flexDirection="column">
-              {sortedAgents.map(agent => renderAgent(agent))}
+              {sortedAgents.map((agent) => renderAgent(agent))}
             </Box>
           </>
         ) : (
           <>
-            {sortedAgents
-              .filter(a => a.source !== 'built-in')
-              .map(agent => renderAgent(agent))}
-            {sortedAgents.some(a => a.source === 'built-in') && (
+            {sortedAgents.filter((a) => a.source !== 'built-in').map((agent) => renderAgent(agent))}
+            {sortedAgents.some((a) => a.source === 'built-in') && (
               <>
                 <Divider />
                 {renderBuiltInAgentsSection()}

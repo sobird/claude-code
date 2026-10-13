@@ -4,6 +4,7 @@ import { SubAgentProvider } from 'src/components/CtrlOToExpand.js'
 import { FallbackToolUseErrorMessage } from 'src/components/FallbackToolUseErrorMessage.js'
 import { FallbackToolUseRejectedMessage } from 'src/components/FallbackToolUseRejectedMessage.js'
 import type { z } from 'zod/v4'
+
 import type { Command } from '../../commands.js'
 import { Byline } from '../../components/design-system/Byline.js'
 import { Message as MessageComponent } from '../../components/Message.js'
@@ -35,11 +36,7 @@ export function renderToolResultMessage(output: Output): React.ReactNode {
   const parts: string[] = ['Successfully loaded skill']
 
   // Show tools count (only for inline skills)
-  if (
-    'allowedTools' in output &&
-    output.allowedTools &&
-    output.allowedTools.length > 0
-  ) {
+  if ('allowedTools' in output && output.allowedTools && output.allowedTools.length > 0) {
     const count = output.allowedTools.length
     parts.push(`${count} ${plural(count, 'tool')} allowed`)
   }
@@ -66,9 +63,8 @@ export function renderToolUseMessage(
     return null
   }
   // Look up the command to check if it came from the legacy /commands folder
-  const command = commands?.find(c => c.name === skill)
-  const displayName =
-    command?.loadedFrom === 'commands_DEPRECATED' ? `/${skill}` : skill
+  const command = commands?.find((c) => c.name === skill)
+  const displayName = command?.loadedFrom === 'commands_DEPRECATED' ? `/${skill}` : skill
   return displayName
 }
 
@@ -91,20 +87,16 @@ export function renderToolUseProgressMessage(
   }
 
   // Take only the last few messages for display in non-verbose mode
-  const displayedMessages = verbose
-    ? progressMessages
-    : progressMessages.slice(-MAX_PROGRESS_MESSAGES_TO_SHOW)
+  const displayedMessages = verbose ? progressMessages : progressMessages.slice(-MAX_PROGRESS_MESSAGES_TO_SHOW)
 
   const hiddenCount = progressMessages.length - displayedMessages.length
-  const { inProgressToolUseIDs } = buildSubagentLookups(
-    progressMessages.map(pm => pm.data),
-  )
+  const { inProgressToolUseIDs } = buildSubagentLookups(progressMessages.map((pm) => pm.data))
 
   return (
     <MessageResponse>
       <Box flexDirection="column">
         <SubAgentProvider>
-          {displayedMessages.map(progressMessage => (
+          {displayedMessages.map((progressMessage) => (
             <Box key={progressMessage.uuid} height={1} overflow="hidden">
               <MessageComponent
                 message={progressMessage.data.message}

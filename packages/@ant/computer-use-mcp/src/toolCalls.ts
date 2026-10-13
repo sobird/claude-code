@@ -35,7 +35,9 @@
  */
 
 import { randomUUID } from 'node:crypto'
+
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+
 import { getDefaultTierForApp, getDeniedCategoryForApp, isPolicyDenied } from './deniedApps.js'
 import type { ComputerExecutor, DisplayGeometry, InstalledApp, ScreenshotResult } from './executor.js'
 import { isSystemKeyCombo } from './keyBlocklist.js'

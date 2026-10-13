@@ -10,7 +10,9 @@
  */
 
 import { dirname, join } from 'path'
+
 import { getSessionId } from 'src/bootstrap/state.js'
+
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -29,8 +31,7 @@ const DETAILED_PROFILING = isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_STARTUP)
 // Decision made once at startup - non-sampled users pay no profiling cost
 const STATSIG_SAMPLE_RATE = 0.005
 // eslint-disable-next-line custom-rules/no-process-env-top-level
-const STATSIG_LOGGING_SAMPLED =
-  process.env.USER_TYPE === 'ant' || Math.random() < STATSIG_SAMPLE_RATE
+const STATSIG_LOGGING_SAMPLED = process.env.USER_TYPE === 'ant' || Math.random() < STATSIG_SAMPLE_RATE
 
 // Enable profiling if either detailed mode OR sampled for Statsig
 const SHOULD_PROFILE = DETAILED_PROFILING || STATSIG_LOGGING_SAMPLED
@@ -97,16 +98,7 @@ function getReport(): string {
 
   let prevTime = 0
   for (const [i, mark] of marks.entries()) {
-    lines.push(
-      formatTimelineLine(
-        mark.startTime,
-        mark.startTime - prevTime,
-        mark.name,
-        memorySnapshots[i],
-        8,
-        7,
-      ),
-    )
+    lines.push(formatTimelineLine(mark.startTime, mark.startTime - prevTime, mark.name, memorySnapshots[i], 8, 7))
     prevTime = mark.startTime
   }
 
@@ -173,9 +165,7 @@ export function logStartupPerf(): void {
   // Compute phase durations
   const metadata: Record<string, number | undefined> = {}
 
-  for (const [phaseName, [startCheckpoint, endCheckpoint]] of Object.entries(
-    PHASE_DEFINITIONS,
-  )) {
+  for (const [phaseName, [startCheckpoint, endCheckpoint]] of Object.entries(PHASE_DEFINITIONS)) {
     const startTime = checkpointTimes.get(startCheckpoint)
     const endTime = checkpointTimes.get(endCheckpoint)
 
@@ -187,8 +177,5 @@ export function logStartupPerf(): void {
   // Add checkpoint count for debugging
   metadata.checkpoint_count = marks.length
 
-  logEvent(
-    'tengu_startup_perf',
-    metadata as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  )
+  logEvent('tengu_startup_perf', metadata as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
 }

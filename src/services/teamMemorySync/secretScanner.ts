@@ -57,8 +57,7 @@ const SECRET_RULES: SecretRule[] = [
   },
   {
     id: 'azure-ad-client-secret',
-    source:
-      '(?:^|[\\\\\'"\\x60\\s>=:(,)])([a-zA-Z0-9_~.]{3}\\dQ~[a-zA-Z0-9_~.-]{31,34})(?:$|[\\\\\'"\\x60\\s<),])',
+    source: '(?:^|[\\\\\'"\\x60\\s>=:(,)])([a-zA-Z0-9_~.]{3}\\dQ~[a-zA-Z0-9_~.-]{31,34})(?:$|[\\\\\'"\\x60\\s<),])',
   },
   {
     id: 'digitalocean-pat',
@@ -76,8 +75,7 @@ const SECRET_RULES: SecretRule[] = [
   },
   {
     id: 'anthropic-admin-api-key',
-    source:
-      '\\b(sk-ant-admin01-[a-zA-Z0-9_\\-]{93}AA)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b(sk-ant-admin01-[a-zA-Z0-9_\\-]{93}AA)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
   {
     id: 'openai-api-key',
@@ -170,15 +168,13 @@ const SECRET_RULES: SecretRule[] = [
   {
     id: 'postman-api-token',
     // gitleaks: PMAK-(?i)[a-f0-9]{24}\-[a-f0-9]{34} → JS: use [a-fA-F0-9]
-    source:
-      '\\b(PMAK-[a-fA-F0-9]{24}-[a-fA-F0-9]{34})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b(PMAK-[a-fA-F0-9]{24}-[a-fA-F0-9]{34})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
 
   // — Observability —
   {
     id: 'grafana-api-key',
-    source:
-      '\\b(eyJrIjoi[A-Za-z0-9+/]{70,400}={0,3})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b(eyJrIjoi[A-Za-z0-9+/]{70,400}={0,3})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
   {
     id: 'grafana-cloud-api-token',
@@ -186,8 +182,7 @@ const SECRET_RULES: SecretRule[] = [
   },
   {
     id: 'grafana-service-account-token',
-    source:
-      '\\b(glsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b(glsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
   {
     id: 'sentry-user-token',
@@ -202,8 +197,7 @@ const SECRET_RULES: SecretRule[] = [
   // — Payment / commerce —
   {
     id: 'stripe-access-token',
-    source:
-      '\\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
   {
     id: 'shopify-access-token',
@@ -228,7 +222,7 @@ let compiledRules: Array<{ id: string; re: RegExp }> | null = null
 
 function getCompiledRules(): Array<{ id: string; re: RegExp }> {
   if (compiledRules === null) {
-    compiledRules = SECRET_RULES.map(r => ({
+    compiledRules = SECRET_RULES.map((r) => ({
       id: r.id,
       re: new RegExp(r.source, r.flags),
     }))
@@ -263,7 +257,7 @@ function ruleIdToLabel(ruleId: string): string {
   }
   return ruleId
     .split('-')
-    .map(part => specialCase[part] ?? capitalize(part))
+    .map((part) => specialCase[part] ?? capitalize(part))
     .join(' ')
 }
 
@@ -310,9 +304,7 @@ export function getSecretLabel(ruleId: string): string {
 let redactRules: RegExp[] | null = null
 
 export function redactSecrets(content: string): string {
-  redactRules ??= SECRET_RULES.map(
-    r => new RegExp(r.source, (r.flags ?? '').replace('g', '') + 'g'),
-  )
+  redactRules ??= SECRET_RULES.map((r) => new RegExp(r.source, (r.flags ?? '').replace('g', '') + 'g'))
   for (const re of redactRules) {
     // Replace only the captured group, not the full match — patterns include
     // boundary chars (space, quote, ;) outside the group that must survive.

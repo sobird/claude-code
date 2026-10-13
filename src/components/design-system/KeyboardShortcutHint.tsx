@@ -1,4 +1,5 @@
 import React from 'react'
+
 import Text from '../../ink/components/Text.js'
 
 type Props = {
@@ -35,12 +36,7 @@ type Props = {
  *   </Byline>
  * </Text>
  */
-export function KeyboardShortcutHint({
-  shortcut,
-  action,
-  parens = false,
-  bold = false,
-}: Props): React.ReactNode {
+export function KeyboardShortcutHint({ shortcut, action, parens = false, bold = false }: Props): React.ReactNode {
   const shortcutText = bold ? <Text bold>{shortcut}</Text> : shortcut
 
   if (parens) {

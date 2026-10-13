@@ -15,12 +15,14 @@ import {
   unlink,
   writeFile,
 } from 'fs/promises'
-import memoize from 'lodash-es/memoize.js'
 import { basename, dirname, join } from 'path'
+
+import memoize from 'lodash-es/memoize.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
+
 import {
   getOriginalCwd,
   getPlanSlugCache,
@@ -35,12 +37,7 @@ import { COMMAND_NAME_TAG, TICK_TAG } from '../constants/xml.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import * as sessionIngress from '../services/api/sessionIngress.js'
 import { REPL_TOOL_NAME } from '../tools/REPLTool/constants.js'
-import {
-  type AgentId,
-  asAgentId,
-  asSessionId,
-  type SessionId,
-} from '../types/ids.js'
+import { type AgentId, asAgentId, asSessionId, type SessionId } from '../types/ids.js'
 import type { AttributionSnapshotMessage } from '../types/logs.js'
 import {
   type ContentReplacementEntry,
@@ -98,12 +95,7 @@ import { validateUuid } from './uuid.js'
 // See: https://github.com/oven-sh/bun/issues/26168
 const VERSION = typeof MACRO !== 'undefined' ? MACRO.VERSION : 'unknown'
 
-type Transcript = (
-  | UserMessage
-  | AssistantMessage
-  | AttachmentMessage
-  | SystemMessage
-)[]
+type Transcript = (UserMessage | AssistantMessage | AttachmentMessage | SystemMessage)[]
 
 // Use getOriginalCwd() at each call site instead of capturing at module load
 // time. getCwd() at import time may run before bootstrap resolves symlinks via
@@ -122,8 +114,7 @@ type Transcript = (
 // entire session file. Session files can grow to multiple GB (inc-3930).
 const MAX_TOMBSTONE_REWRITE_BYTES = 50 * 1024 * 1024
 
-const SKIP_FIRST_PROMPT_PATTERN =
-  /^(?:\s*<[a-z][\w-]*[\s>]|\[Request interrupted by user[^\]]*\])/
+const SKIP_FIRST_PROMPT_PATTERN = /^(?:\s*<[a-z][\w-]*[\s>]|\[Request interrupted by user[^\]]*\])/
 
 /**
  * Type guard to check if an entry is a transcript message.
@@ -137,12 +128,7 @@ const SKIP_FIRST_PROMPT_PATTERN =
  * messages on resume (see #14373, #23537).
  */
 export function isTranscriptMessage(entry: Entry): entry is TranscriptMessage {
-  return (
-    entry.type === 'user' ||
-    entry.type === 'assistant' ||
-    entry.type === 'attachment' ||
-    entry.type === 'system'
-  )
+  return entry.type === 'user' || entry.type === 'assistant' || entry.type === 'attachment' || entry.type === 'system'
 }
 
 /**
@@ -187,9 +173,7 @@ const EPHEMERAL_PROGRESS_TYPES = new Set([
   'bash_progress',
   'powershell_progress',
   'mcp_progress',
-  ...(feature('PROACTIVE') || feature('KAIROS')
-    ? (['sleep_progress'] as const)
-    : []),
+  ...(feature('PROACTIVE') || feature('KAIROS') ? (['sleep_progress'] as const) : []),
 ])
 export function isEphemeralToolProgress(dataType: unknown): boolean {
   return typeof dataType === 'string' && EPHEMERAL_PROGRESS_TYPES.has(dataType)
@@ -233,10 +217,7 @@ export const MAX_TRANSCRIPT_READ_BYTES = 50 * 1024 * 1024
 // Populated before the agent runs; consulted by getAgentTranscriptPath.
 const agentTranscriptSubdirs = new Map<string, string>()
 
-export function setAgentTranscriptSubdir(
-  agentId: string,
-  subdir: string,
-): void {
+export function setAgentTranscriptSubdir(agentId: string, subdir: string): void {
   agentTranscriptSubdirs.set(agentId, subdir)
 }
 
@@ -251,9 +232,7 @@ export function getAgentTranscriptPath(agentId: AgentId): string {
   const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
   const sessionId = getSessionId()
   const subdir = agentTranscriptSubdirs.get(agentId)
-  const base = subdir
-    ? join(projectDir, sessionId, 'subagents', subdir)
-    : join(projectDir, sessionId, 'subagents')
+  const base = subdir ? join(projectDir, sessionId, 'subagents', subdir) : join(projectDir, sessionId, 'subagents')
   return join(base, `agent-${agentId}.jsonl`)
 }
 
@@ -280,18 +259,13 @@ export type AgentMetadata = {
  * Also stores the worktreePath when the agent was spawned with worktree
  * isolation, enabling resume to restore the correct cwd.
  */
-export async function writeAgentMetadata(
-  agentId: AgentId,
-  metadata: AgentMetadata,
-): Promise<void> {
+export async function writeAgentMetadata(agentId: AgentId, metadata: AgentMetadata): Promise<void> {
   const path = getAgentMetadataPath(agentId)
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, JSON.stringify(metadata))
 }
 
-export async function readAgentMetadata(
-  agentId: AgentId,
-): Promise<AgentMetadata | null> {
+export async function readAgentMetadata(agentId: AgentId): Promise<AgentMetadata | null> {
   const path = getAgentMetadataPath(agentId)
   try {
     const raw = await readFile(path, 'utf-8')
@@ -334,18 +308,13 @@ function getRemoteAgentMetadataPath(taskId: string): string {
  * hydrateSessionFromRemote's .jsonl wipe; status is always fetched fresh
  * from CCR on restore — only identity is persisted locally.
  */
-export async function writeRemoteAgentMetadata(
-  taskId: string,
-  metadata: RemoteAgentMetadata,
-): Promise<void> {
+export async function writeRemoteAgentMetadata(taskId: string, metadata: RemoteAgentMetadata): Promise<void> {
   const path = getRemoteAgentMetadataPath(taskId)
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, JSON.stringify(metadata))
 }
 
-export async function readRemoteAgentMetadata(
-  taskId: string,
-): Promise<RemoteAgentMetadata | null> {
+export async function readRemoteAgentMetadata(taskId: string): Promise<RemoteAgentMetadata | null> {
   const path = getRemoteAgentMetadataPath(taskId)
   try {
     const raw = await readFile(path, 'utf-8')
@@ -370,9 +339,7 @@ export async function deleteRemoteAgentMetadata(taskId: string): Promise<void> {
  * Scan the remote-agents/ directory for all persisted metadata files.
  * Used by restoreRemoteAgentTasks to reconnect to still-running CCR sessions.
  */
-export async function listRemoteAgentMetadata(): Promise<
-  RemoteAgentMetadata[]
-> {
+export async function listRemoteAgentMetadata(): Promise<RemoteAgentMetadata[]> {
   const dir = getRemoteAgentsDir()
   let entries: Dirent[]
   try {
@@ -390,9 +357,7 @@ export async function listRemoteAgentMetadata(): Promise<
     } catch (e) {
       // Skip unreadable or corrupt files — a partial write from a crashed
       // fire-and-forget persist shouldn't take down the whole restore.
-      logForDebugging(
-        `listRemoteAgentMetadata: skipping ${entry.name}: ${String(e)}`,
-      )
+      logForDebugging(`listRemoteAgentMetadata: skipping ${entry.name}: ${String(e)}`)
     }
   }
   return results
@@ -502,19 +467,14 @@ export function setInternalEventWriter(writer: InternalEventWriter): void {
   getProject().setInternalEventWriter(writer)
 }
 
-type InternalEventReader = () => Promise<
-  { payload: Record<string, unknown>; agent_id?: string }[] | null
->
+type InternalEventReader = () => Promise<{ payload: Record<string, unknown>; agent_id?: string }[] | null>
 
 /**
  * Register a CCR v2 internal event reader for session resume.
  * When set, hydrateFromCCRv2InternalEvents() can fetch foreground and
  * subagent internal events to reconstruct conversation state on reconnection.
  */
-export function setInternalEventReader(
-  reader: InternalEventReader,
-  subagentReader: InternalEventReader,
-): void {
+export function setInternalEventReader(reader: InternalEventReader, subagentReader: InternalEventReader): void {
   getProject().setInternalEventReader(reader)
   getProject().setInternalSubagentEventReader(subagentReader)
 }
@@ -558,10 +518,7 @@ class Project {
   private flushResolvers: Array<() => void> = []
   // Per-file write queues. Each entry carries a resolve callback so
   // callers of enqueueWrite can optionally await their specific write.
-  private writeQueues = new Map<
-    string,
-    Array<{ entry: Entry; resolve: () => void }>
-  >()
+  private writeQueues = new Map<string, Array<{ entry: Entry; resolve: () => void }>>()
   private flushTimer: ReturnType<typeof setTimeout> | null = null
   private activeDrain: Promise<void> | null = null
   private FLUSH_INTERVAL_MS = 100
@@ -604,7 +561,7 @@ class Project {
   }
 
   private enqueueWrite(filePath: string, entry: Entry): Promise<void> {
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve) => {
       let queue = this.writeQueues.get(filePath)
       if (!queue) {
         queue = []
@@ -738,9 +695,7 @@ class Project {
     // happens to be JSON-serialized into a message.
     const tailLines = tail.split('\n')
     if (!skipTitleRefresh) {
-      const titleLine = tailLines.findLast(l =>
-        l.startsWith('{"type":"custom-title"'),
-      )
+      const titleLine = tailLines.findLast((l) => l.startsWith('{"type":"custom-title"'))
       if (titleLine) {
         const tailTitle = extractLastJsonStringField(titleLine, 'customTitle')
         // `!== undefined` distinguishes no-match from empty-string match.
@@ -752,7 +707,7 @@ class Project {
         }
       }
     }
-    const tagLine = tailLines.findLast(l => l.startsWith('{"type":"tag"'))
+    const tagLine = tailLines.findLast((l) => l.startsWith('{"type":"tag"'))
     if (tagLine) {
       const tailTag = extractLastJsonStringField(tagLine, 'tag')
       // Same: tagSession(id, null) writes `tag:""` to clear.
@@ -822,11 +777,7 @@ class Project {
         sessionId,
       })
     }
-    if (
-      this.currentSessionPrNumber !== undefined &&
-      this.currentSessionPrUrl &&
-      this.currentSessionPrRepository
-    ) {
+    if (this.currentSessionPrNumber !== undefined && this.currentSessionPrUrl && this.currentSessionPrRepository) {
       appendEntryToFile(this.sessionFile, {
         type: 'pr-link',
         sessionId,
@@ -855,7 +806,7 @@ class Project {
     if (this.pendingWriteCount === 0) {
       return
     }
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve) => {
       this.flushResolvers.push(resolve)
     })
   }
@@ -925,10 +876,9 @@ class Project {
         // Slow path: target was not in the last 64KB. Rare - requires many
         // large entries to have landed between the write and the tombstone.
         if (fileSize > MAX_TOMBSTONE_REWRITE_BYTES) {
-          logForDebugging(
-            `Skipping tombstone removal: session file too large (${formatFileSize(fileSize)})`,
-            { level: 'warn' },
-          )
+          logForDebugging(`Skipping tombstone removal: session file too large (${formatFileSize(fileSize)})`, {
+            level: 'warn',
+          })
           return
         }
         const content = await readFile(this.sessionFile, { encoding: 'utf-8' })
@@ -958,9 +908,7 @@ class Project {
    * test sessions don't pollute the user's --resume list.
    */
   private shouldSkipPersistence(): boolean {
-    const allowTestPersistence = isEnvTruthy(
-      process.env.TEST_ENABLE_SESSION_PERSISTENCE,
-    )
+    const allowTestPersistence = isEnvTruthy(process.env.TEST_ENABLE_SESSION_PERSISTENCE)
     return (
       (getNodeEnv() === 'test' && !allowTestPersistence) ||
       getSettings_DEPRECATED()?.cleanupPeriodDays === 0 ||
@@ -1002,10 +950,7 @@ class Project {
 
       // First user/assistant message materializes the session file.
       // Hook progress/attachment messages alone stay buffered.
-      if (
-        this.sessionFile === null &&
-        messages.some(m => m.type === 'user' || m.type === 'assistant')
-      ) {
+      if (this.sessionFile === null && messages.some((m) => m.type === 'user' || m.type === 'assistant')) {
         await this.materializeSessionFile()
       }
 
@@ -1028,11 +973,7 @@ class Project {
         // For tool_result messages, use the assistant message UUID from the message
         // if available (set at creation time), otherwise fall back to sequential parent
         let effectiveParentUuid = parentUuid
-        if (
-          message.type === 'user' &&
-          'sourceToolAssistantUUID' in message &&
-          message.sourceToolAssistantUUID
-        ) {
+        if (message.type === 'user' && 'sourceToolAssistantUUID' in message && message.sourceToolAssistantUUID) {
           effectiveParentUuid = message.sourceToolAssistantUUID
         }
 
@@ -1042,8 +983,7 @@ class Project {
           isSidechain,
           teamName: teamInfo?.teamName,
           agentName: teamInfo?.agentName,
-          promptId:
-            message.type === 'user' ? (getPromptId() ?? undefined) : undefined,
+          promptId: message.type === 'user' ? (getPromptId() ?? undefined) : undefined,
           agentId,
           ...message,
           // Session-stamp fields MUST come after the spread. On --fork-session
@@ -1075,18 +1015,13 @@ class Project {
         const text = getFirstMeaningfulUserMessageTextContent(messages)
         if (text) {
           const flat = text.replace(/\n/g, ' ').trim()
-          this.currentSessionLastPrompt =
-            flat.length > 200 ? flat.slice(0, 200).trim() + '…' : flat
+          this.currentSessionLastPrompt = flat.length > 200 ? flat.slice(0, 200).trim() + '…' : flat
         }
       }
     })
   }
 
-  async insertFileHistorySnapshot(
-    messageId: UUID,
-    snapshot: FileHistorySnapshot,
-    isSnapshotUpdate: boolean,
-  ) {
+  async insertFileHistorySnapshot(messageId: UUID, snapshot: FileHistorySnapshot, isSnapshotUpdate: boolean) {
     return this.trackWrite(async () => {
       const fileHistoryMessage: FileHistorySnapshotMessage = {
         type: 'file-history-snapshot',
@@ -1110,10 +1045,7 @@ class Project {
     })
   }
 
-  async insertContentReplacement(
-    replacements: ContentReplacementRecord[],
-    agentId?: AgentId,
-  ) {
+  async insertContentReplacement(replacements: ContentReplacementRecord[], agentId?: AgentId) {
     return this.trackWrite(async () => {
       const entry: ContentReplacementEntry = {
         type: 'content-replacement',
@@ -1144,11 +1076,7 @@ class Project {
     } else {
       const existing = await this.getExistingSessionFile(sessionId)
       if (!existing) {
-        logError(
-          new Error(
-            `appendEntry: session file not found for other session ${sessionId}`,
-          ),
-        )
+        logError(new Error(`appendEntry: session file not found for other session ${sessionId}`))
         return
       }
       sessionFile = existing
@@ -1201,9 +1129,7 @@ class Project {
       // Content replacement records can always be appended. Subagent records
       // go to the sidechain file (for AgentTool resume); main-thread
       // records go to the session file (for /resume).
-      const targetFile = entry.agentId
-        ? getAgentTranscriptPath(entry.agentId)
-        : sessionFile
+      const targetFile = entry.agentId ? getAgentTranscriptPath(entry.agentId) : sessionFile
       void this.enqueueWrite(targetFile, entry)
     } else if (entry.type === 'marble-origami-commit') {
       // Always append. Commit order matters for restore (later commits may
@@ -1221,11 +1147,8 @@ class Project {
       } else {
         // At this point, entry must be a TranscriptMessage (user/assistant/attachment/system)
         // All other entry types have been handled above
-        const isAgentSidechain =
-          entry.isSidechain && entry.agentId !== undefined
-        const targetFile = isAgentSidechain
-          ? getAgentTranscriptPath(asAgentId(entry.agentId!))
-          : sessionFile
+        const isAgentSidechain = entry.isSidechain && entry.agentId !== undefined
+        const targetFile = isAgentSidechain ? getAgentTranscriptPath(asAgentId(entry.agentId!)) : sessionFile
 
         // For message entries, check if UUID already exists in current session.
         // Skip dedup for agent sidechain LOCAL writes — they go to a separate
@@ -1282,9 +1205,7 @@ class Project {
    * Caches positive results so we only stat once per session.
    */
   private existingSessionFiles = new Map<string, string>()
-  private async getExistingSessionFile(
-    sessionId: UUID,
-  ): Promise<string | null> {
+  private async getExistingSessionFile(sessionId: UUID): Promise<string | null> {
     const cached = this.existingSessionFiles.get(sessionId)
     if (cached) return cached
 
@@ -1307,14 +1228,10 @@ class Project {
     // CCR v2 path: write as internal worker event
     if (this.internalEventWriter) {
       try {
-        await this.internalEventWriter(
-          'transcript',
-          entry as unknown as Record<string, unknown>,
-          {
-            ...(isCompactBoundaryMessage(entry) && { isCompaction: true }),
-            ...(entry.agentId && { agentId: entry.agentId }),
-          },
-        )
+        await this.internalEventWriter('transcript', entry as unknown as Record<string, unknown>, {
+          ...(isCompactBoundaryMessage(entry) && { isCompaction: true }),
+          ...(entry.agentId && { agentId: entry.agentId }),
+        })
       } catch {
         logEvent('tengu_session_persistence_failed', {})
         logForDebugging('Failed to write transcript as internal event')
@@ -1323,18 +1240,11 @@ class Project {
     }
 
     // v1 Session Ingress path
-    if (
-      !isEnvTruthy(process.env.ENABLE_SESSION_PERSISTENCE) ||
-      !this.remoteIngressUrl
-    ) {
+    if (!isEnvTruthy(process.env.ENABLE_SESSION_PERSISTENCE) || !this.remoteIngressUrl) {
       return
     }
 
-    const success = await sessionIngress.appendSessionLog(
-      sessionId,
-      entry,
-      this.remoteIngressUrl,
-    )
+    const success = await sessionIngress.appendSessionLog(sessionId, entry, this.remoteIngressUrl)
 
     if (!success) {
       logEvent('tengu_session_persistence_failed', {})
@@ -1353,25 +1263,19 @@ class Project {
 
   setInternalEventWriter(writer: InternalEventWriter): void {
     this.internalEventWriter = writer
-    logForDebugging(
-      'CCR v2 internal event writer registered for transcript persistence',
-    )
+    logForDebugging('CCR v2 internal event writer registered for transcript persistence')
     // Use fast flush interval for CCR v2
     this.FLUSH_INTERVAL_MS = REMOTE_FLUSH_INTERVAL_MS
   }
 
   setInternalEventReader(reader: InternalEventReader): void {
     this.internalEventReader = reader
-    logForDebugging(
-      'CCR v2 internal event reader registered for session resume',
-    )
+    logForDebugging('CCR v2 internal event reader registered for session resume')
   }
 
   setInternalSubagentEventReader(reader: InternalEventReader): void {
     this.internalSubagentEventReader = reader
-    logForDebugging(
-      'CCR v2 subagent event reader registered for session resume',
-    )
+    logForDebugging('CCR v2 subagent event reader registered for session resume')
   }
 
   getInternalEventReader(): InternalEventReader | null {
@@ -1430,13 +1334,7 @@ export async function recordTranscript(
     }
   }
   if (newMessages.length > 0) {
-    await getProject().insertMessageChain(
-      newMessages,
-      false,
-      undefined,
-      startingParentUuid,
-      teamInfo,
-    )
+    await getProject().insertMessageChain(newMessages, false, undefined, startingParentUuid, teamInfo)
   }
   // Return the last ACTUALLY recorded chain-participant's UUID, OR the
   // prefix-tracked UUID if no new chain participants were recorded. This lets
@@ -1453,12 +1351,7 @@ export async function recordSidechainTranscript(
   agentId?: string,
   startingParentUuid?: UUID | null,
 ) {
-  await getProject().insertMessageChain(
-    cleanMessagesForLogging(messages),
-    true,
-    agentId,
-    startingParentUuid,
-  )
+  await getProject().insertMessageChain(cleanMessagesForLogging(messages), true, agentId, startingParentUuid)
 }
 
 export async function recordQueueOperation(queueOp: QueueOperationMessage) {
@@ -1478,23 +1371,14 @@ export async function recordFileHistorySnapshot(
   snapshot: FileHistorySnapshot,
   isSnapshotUpdate: boolean,
 ) {
-  await getProject().insertFileHistorySnapshot(
-    messageId,
-    snapshot,
-    isSnapshotUpdate,
-  )
+  await getProject().insertFileHistorySnapshot(messageId, snapshot, isSnapshotUpdate)
 }
 
-export async function recordAttributionSnapshot(
-  snapshot: AttributionSnapshotMessage,
-) {
+export async function recordAttributionSnapshot(snapshot: AttributionSnapshotMessage) {
   await getProject().insertAttributionSnapshot(snapshot)
 }
 
-export async function recordContentReplacement(
-  replacements: ContentReplacementRecord[],
-  agentId?: AgentId,
-) {
+export async function recordContentReplacement(replacements: ContentReplacementRecord[], agentId?: AgentId) {
   await getProject().insertContentReplacement(replacements, agentId)
 }
 
@@ -1584,17 +1468,13 @@ export async function flushSessionStorage(): Promise<void> {
   await getProject().flush()
 }
 
-export async function hydrateRemoteSession(
-  sessionId: string,
-  ingressUrl: string,
-): Promise<boolean> {
+export async function hydrateRemoteSession(sessionId: string, ingressUrl: string): Promise<boolean> {
   switchSession(asSessionId(sessionId))
 
   const project = getProject()
 
   try {
-    const remoteLogs =
-      (await sessionIngress.getSessionLogs(sessionId, ingressUrl)) || []
+    const remoteLogs = (await sessionIngress.getSessionLogs(sessionId, ingressUrl)) || []
 
     // Ensure the project directory and session file exist
     const projectDir = getProjectDir(getOriginalCwd())
@@ -1604,7 +1484,7 @@ export async function hydrateRemoteSession(
 
     // Replace local logs with remote logs. writeFile truncates, so no
     // unlink is needed; an empty remoteLogs array produces an empty file.
-    const content = remoteLogs.map(e => jsonStringify(e) + '\n').join('')
+    const content = remoteLogs.map((e) => jsonStringify(e) + '\n').join('')
     await writeFile(sessionFile, content, { encoding: 'utf8', mode: 0o600 })
 
     logForDebugging(`Hydrated ${remoteLogs.length} entries from remote`)
@@ -1629,9 +1509,7 @@ export async function hydrateRemoteSession(
  * The server handles compaction filtering — it returns events starting
  * from the latest compaction boundary.
  */
-export async function hydrateFromCCRv2InternalEvents(
-  sessionId: string,
-): Promise<boolean> {
+export async function hydrateFromCCRv2InternalEvents(sessionId: string): Promise<boolean> {
   const startMs = Date.now()
   switchSession(asSessionId(sessionId))
 
@@ -1656,12 +1534,10 @@ export async function hydrateFromCCRv2InternalEvents(
 
     // Write foreground transcript
     const sessionFile = getTranscriptPathForSession(sessionId)
-    const fgContent = events.map(e => jsonStringify(e.payload) + '\n').join('')
+    const fgContent = events.map((e) => jsonStringify(e.payload) + '\n').join('')
     await writeFile(sessionFile, fgContent, { encoding: 'utf8', mode: 0o600 })
 
-    logForDebugging(
-      `Hydrated ${events.length} foreground entries from CCR v2 internal events`,
-    )
+    logForDebugging(`Hydrated ${events.length} foreground entries from CCR v2 internal events`)
 
     // Fetch and write subagent events
     let subagentEventCount = 0
@@ -1687,18 +1563,14 @@ export async function hydrateFromCCRv2InternalEvents(
         for (const [agentId, entries] of byAgent) {
           const agentFile = getAgentTranscriptPath(asAgentId(agentId))
           await mkdir(dirname(agentFile), { recursive: true, mode: 0o700 })
-          const agentContent = entries
-            .map(p => jsonStringify(p) + '\n')
-            .join('')
+          const agentContent = entries.map((p) => jsonStringify(p) + '\n').join('')
           await writeFile(agentFile, agentContent, {
             encoding: 'utf8',
             mode: 0o600,
           })
         }
 
-        logForDebugging(
-          `Hydrated ${subagentEvents.length} subagent entries across ${byAgent.size} agents`,
-        )
+        logForDebugging(`Hydrated ${subagentEvents.length} subagent entries across ${byAgent.size} agents`)
       }
     }
 
@@ -1710,10 +1582,7 @@ export async function hydrateFromCCRv2InternalEvents(
     return events.length > 0
   } catch (error) {
     // Re-throw epoch mismatch so the worker doesn't race against gracefulShutdown
-    if (
-      error instanceof Error &&
-      error.message === 'CCRClient: Epoch mismatch (409)'
-    ) {
+    if (error instanceof Error && error.message === 'CCRClient: Epoch mismatch (409)') {
       throw error
     }
     logForDebugging(`Error hydrating session from CCR v2: ${error}`)
@@ -1743,9 +1612,7 @@ function extractFirstPrompt(transcript: TranscriptMessage[]): string {
  * Gets the last user message that was processed (i.e., before any non-user message appears).
  * Used to determine if a session has valid user interaction.
  */
-export function getFirstMeaningfulUserMessageTextContent<T extends Message>(
-  transcript: T[],
-): string | undefined {
+export function getFirstMeaningfulUserMessageTextContent<T extends Message>(transcript: T[]): string | undefined {
   for (const msg of transcript) {
     if (msg.type !== 'user' || msg.isMeta) continue
     // Skip compact summary messages - they should not be treated as the first prompt
@@ -1811,10 +1678,8 @@ export function getFirstMeaningfulUserMessageTextContent<T extends Message>(
   return undefined
 }
 
-export function removeExtraFields(
-  transcript: TranscriptMessage[],
-): SerializedMessage[] {
-  return transcript.map(m => {
+export function removeExtraFields(transcript: TranscriptMessage[]): SerializedMessage[] {
+  return transcript.map((m) => {
     const { isSidechain, parentUuid, ...serializedMessage } = m
     return serializedMessage
   })
@@ -1836,12 +1701,8 @@ export function removeExtraFields(
  *
  * Mutates the Map in place.
  */
-function applyPreservedSegmentRelinks(
-  messages: Map<UUID, TranscriptMessage>,
-): void {
-  type Seg = NonNullable<
-    SystemCompactBoundaryMessage['compactMetadata']['preservedSegment']
-  >
+function applyPreservedSegmentRelinks(messages: Map<UUID, TranscriptMessage>): void {
+  type Seg = NonNullable<SystemCompactBoundaryMessage['compactMetadata']['preservedSegment']>
 
   // Find the absolute-last boundary and the last seg-boundary (can differ:
   // manual /compact after reactive compact → seg is stale).
@@ -1944,11 +1805,7 @@ function applyPreservedSegmentRelinks(
   const toDelete: UUID[] = []
   for (const [uuid] of messages) {
     const idx = entryIndex.get(uuid)
-    if (
-      idx !== undefined &&
-      idx < absoluteLastBoundaryIdx &&
-      !preservedUuids.has(uuid)
-    ) {
+    if (idx !== undefined && idx < absoluteLastBoundaryIdx && !preservedUuids.has(uuid)) {
       toDelete.push(uuid)
     }
   }
@@ -2076,18 +1933,14 @@ export function buildConversationChain(
   while (currentMsg) {
     if (seen.has(currentMsg.uuid)) {
       logError(
-        new Error(
-          `Cycle detected in parentUuid chain at message ${currentMsg.uuid}. Returning partial transcript.`,
-        ),
+        new Error(`Cycle detected in parentUuid chain at message ${currentMsg.uuid}. Returning partial transcript.`),
       )
       logEvent('tengu_chain_parent_cycle', {})
       break
     }
     seen.add(currentMsg.uuid)
     transcript.push(currentMsg)
-    currentMsg = currentMsg.parentUuid
-      ? messages.get(currentMsg.parentUuid)
-      : undefined
+    currentMsg = currentMsg.parentUuid ? messages.get(currentMsg.parentUuid) : undefined
   }
   transcript.reverse()
   return recoverOrphanedParallelToolResults(messages, transcript, seen)
@@ -2121,9 +1974,7 @@ function recoverOrphanedParallelToolResults(
   seen: Set<UUID>,
 ): TranscriptMessage[] {
   type ChainAssistant = Extract<TranscriptMessage, { type: 'assistant' }>
-  const chainAssistants = chain.filter(
-    (m): m is ChainAssistant => m.type === 'assistant',
-  )
+  const chainAssistants = chain.filter((m): m is ChainAssistant => m.type === 'assistant')
   if (chainAssistants.length === 0) return chain
 
   // Anchor = last on-chain member of each sibling group. chainAssistants is
@@ -2147,7 +1998,7 @@ function recoverOrphanedParallelToolResults(
       m.type === 'user' &&
       m.parentUuid &&
       Array.isArray(m.message.content) &&
-      m.message.content.some(b => b.type === 'tool_result')
+      m.message.content.some((b) => b.type === 'tool_result')
     ) {
       const group = toolResultsByAsst.get(m.parentUuid)
       if (group) group.push(m)
@@ -2168,7 +2019,7 @@ function recoverOrphanedParallelToolResults(
     processedGroups.add(msgId)
 
     const group = siblingsByMsgId.get(msgId) ?? [asst]
-    const orphanedSiblings = group.filter(s => !seen.has(s.uuid))
+    const orphanedSiblings = group.filter((s) => !seen.has(s.uuid))
     const orphanedTRs: TranscriptMessage[] = []
     for (const member of group) {
       const trs = toolResultsByAsst.get(member.uuid)
@@ -2258,9 +2109,7 @@ function buildFileHistorySnapshotChain(
       continue
     }
     const { snapshot, isSnapshotUpdate } = snapshotMessage
-    const existingIndex = isSnapshotUpdate
-      ? indexByMessageId.get(snapshot.messageId)
-      : undefined
+    const existingIndex = isSnapshotUpdate ? indexByMessageId.get(snapshot.messageId) : undefined
     if (existingIndex === undefined) {
       indexByMessageId.set(snapshot.messageId, snapshots.length)
       snapshots.push(snapshot)
@@ -2291,9 +2140,7 @@ function buildAttributionSnapshotChain(
  * @returns LogOption containing the transcript messages
  * @throws Error if file doesn't exist or contains invalid data
  */
-export async function loadTranscriptFromFile(
-  filePath: string,
-): Promise<LogOption> {
+export async function loadTranscriptFromFile(filePath: string): Promise<LogOption> {
   if (filePath.endsWith('.jsonl')) {
     const {
       messages,
@@ -2314,9 +2161,7 @@ export async function loadTranscriptFromFile(
     }
 
     // Find the most recent leaf message using pre-computed leaf UUIDs
-    const leafMessage = findLatestMessage(messages.values(), msg =>
-      leafUuids.has(msg.uuid),
-    )
+    const leafMessage = findLatestMessage(messages.values(), (msg) => leafUuids.has(msg.uuid))
 
     if (!leafMessage) {
       throw new Error('No valid conversation chain found in JSONL file')
@@ -2342,16 +2187,9 @@ export async function loadTranscriptFromFile(
         undefined,
         contentReplacements.get(sessionId) ?? [],
       ),
-      contextCollapseCommits: contextCollapseCommits.filter(
-        e => e.sessionId === sessionId,
-      ),
-      contextCollapseSnapshot:
-        contextCollapseSnapshot?.sessionId === sessionId
-          ? contextCollapseSnapshot
-          : undefined,
-      worktreeSession: worktreeStates.has(sessionId)
-        ? worktreeStates.get(sessionId)
-        : undefined,
+      contextCollapseCommits: contextCollapseCommits.filter((e) => e.sessionId === sessionId),
+      contextCollapseSnapshot: contextCollapseSnapshot?.sessionId === sessionId ? contextCollapseSnapshot : undefined,
+      worktreeSession: worktreeStates.has(sessionId) ? worktreeStates.get(sessionId) : undefined,
     }
   }
 
@@ -2375,20 +2213,10 @@ export async function loadTranscriptFromFile(
     }
     messages = parsed.messages
   } else {
-    throw new Error(
-      'Transcript must be an array of messages or an object with a messages array',
-    )
+    throw new Error('Transcript must be an array of messages or an object with a messages array')
   }
 
-  return convertToLogOption(
-    messages,
-    0,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    filePath,
-  )
+  return convertToLogOption(messages, 0, undefined, undefined, undefined, undefined, filePath)
 }
 
 /**
@@ -2412,12 +2240,7 @@ function hasVisibleUserContent(message: TranscriptMessage): boolean {
 
   // Array content: check for text or image blocks (not tool_result)
   if (Array.isArray(content)) {
-    return content.some(
-      block =>
-        block.type === 'text' ||
-        block.type === 'image' ||
-        block.type === 'document',
-    )
+    return content.some((block) => block.type === 'text' || block.type === 'image' || block.type === 'document')
   }
 
   return false
@@ -2435,10 +2258,7 @@ function hasVisibleAssistantContent(message: TranscriptMessage): boolean {
 
   // Check for text block (not just tool_use/thinking blocks)
   return content.some(
-    block =>
-      block.type === 'text' &&
-      typeof block.text === 'string' &&
-      block.text.trim().length > 0,
+    (block) => block.type === 'text' && typeof block.text === 'string' && block.text.trim().length > 0,
   )
 }
 
@@ -2523,9 +2343,7 @@ function convertToLogOption(
   }
 }
 
-async function trackSessionBranchingAnalytics(
-  logs: LogOption[],
-): Promise<void> {
+async function trackSessionBranchingAnalytics(logs: LogOption[]): Promise<void> {
   const sessionIdCounts = new Map<string, number>()
   let maxCount = 0
   for (const log of logs) {
@@ -2543,7 +2361,7 @@ async function trackSessionBranchingAnalytics(
   }
 
   // Count sessions with branches and calculate stats using functional approach
-  const branchCounts = Array.from(sessionIdCounts.values()).filter(c => c > 1)
+  const branchCounts = Array.from(sessionIdCounts.values()).filter((c) => c > 1)
   const sessionsWithBranches = branchCounts.length
   const totalBranches = branchCounts.reduce((sum, count) => sum + count, 0)
 
@@ -2569,10 +2387,7 @@ export async function fetchLogs(limit?: number): Promise<LogOption[]> {
  * Append an entry to a session file. Creates the parent dir if missing.
  */
 /* eslint-disable custom-rules/no-sync-fs -- sync callers (exit cleanup, materialize) */
-function appendEntryToFile(
-  fullPath: string,
-  entry: Record<string, unknown>,
-): void {
+function appendEntryToFile(fullPath: string, entry: Record<string, unknown>): void {
   const fs = getFsImplementation()
   const line = jsonStringify(entry) + '\n'
   try {
@@ -2595,9 +2410,7 @@ function readFileTailSync(fullPath: string): string {
     fd = openSync(fullPath, 'r')
     const st = fstatSync(fd)
     const tailOffset = Math.max(0, st.size - LITE_READ_BUF_SIZE)
-    const buf = Buffer.allocUnsafe(
-      Math.min(LITE_READ_BUF_SIZE, st.size - tailOffset),
-    )
+    const buf = Buffer.allocUnsafe(Math.min(LITE_READ_BUF_SIZE, st.size - tailOffset))
     const bytesRead = readSync(fd, buf, 0, buf.length, tailOffset)
     return buf.toString('utf8', 0, bytesRead)
   } catch {
@@ -2632,8 +2445,7 @@ export async function saveCustomTitle(
     getProject().currentSessionTitle = customTitle
   }
   logEvent('tengu_session_renamed', {
-    source:
-      source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    source: source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 }
 
@@ -2736,9 +2548,7 @@ export function getCurrentSessionTag(sessionId: UUID): string | undefined {
   return undefined
 }
 
-export function getCurrentSessionTitle(
-  sessionId: SessionId,
-): string | undefined {
+export function getCurrentSessionTitle(sessionId: SessionId): string | undefined {
   // Only returns title for current session (the only one we cache)
   if (sessionId === getSessionId()) {
     return getProject().currentSessionTitle
@@ -2776,10 +2586,8 @@ export function restoreSessionMetadata(meta: {
   if (meta.agentColor) project.currentSessionAgentColor = meta.agentColor
   if (meta.agentSetting) project.currentSessionAgentSetting = meta.agentSetting
   if (meta.mode) project.currentSessionMode = meta.mode
-  if (meta.worktreeSession !== undefined)
-    project.currentSessionWorktree = meta.worktreeSession
-  if (meta.prNumber !== undefined)
-    project.currentSessionPrNumber = meta.prNumber
+  if (meta.worktreeSession !== undefined) project.currentSessionWorktree = meta.worktreeSession
+  if (meta.prNumber !== undefined) project.currentSessionPrNumber = meta.prNumber
   if (meta.prUrl) project.currentSessionPrUrl = meta.prUrl
   if (meta.prRepository) project.currentSessionPrRepository = meta.prRepository
 }
@@ -2830,16 +2638,11 @@ export async function saveAgentName(
     void updateSessionName(agentName)
   }
   logEvent('tengu_agent_name_set', {
-    source:
-      source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    source: source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 }
 
-export async function saveAgentColor(
-  sessionId: UUID,
-  agentColor: string,
-  fullPath?: string,
-) {
+export async function saveAgentColor(sessionId: UUID, agentColor: string, fullPath?: string) {
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, {
     type: 'agent-color',
@@ -2886,9 +2689,7 @@ export function saveMode(mode: 'coordinator' | 'normal'): void {
  * reAppendSessionMetadata on exit. Pass null when exiting a worktree
  * so --resume knows not to cd back into it.
  */
-export function saveWorktreeState(
-  worktreeSession: PersistedWorktreeSession | null,
-): void {
+export function saveWorktreeState(worktreeSession: PersistedWorktreeSession | null): void {
   // Strip ephemeral fields (creationDurationMs, usedSparsePaths) that callers
   // may pass via full WorktreeSession objects — TypeScript structural typing
   // allows this, but we don't want them serialized to the transcript.
@@ -2987,9 +2788,7 @@ export async function loadFullLog(log: LogOption): Promise<LogOption> {
     // Find the most recent user/assistant leaf message from the transcript
     const mostRecentLeaf = findLatestMessage(
       messages.values(),
-      msg =>
-        leafUuids.has(msg.uuid) &&
-        (msg.type === 'user' || msg.type === 'assistant'),
+      (msg) => leafUuids.has(msg.uuid) && (msg.type === 'user' || msg.type === 'assistant'),
     )
     if (!mostRecentLeaf) {
       return log
@@ -3005,49 +2804,30 @@ export async function loadFullLog(log: LogOption): Promise<LogOption> {
       messages: removeExtraFields(transcript),
       firstPrompt: extractFirstPrompt(transcript),
       messageCount: countVisibleMessages(transcript),
-      summary: mostRecentLeaf
-        ? summaries.get(mostRecentLeaf.uuid)
-        : log.summary,
+      summary: mostRecentLeaf ? summaries.get(mostRecentLeaf.uuid) : log.summary,
       customTitle: sessionId ? customTitles.get(sessionId) : log.customTitle,
       tag: sessionId ? tags.get(sessionId) : log.tag,
       agentName: sessionId ? agentNames.get(sessionId) : log.agentName,
       agentColor: sessionId ? agentColors.get(sessionId) : log.agentColor,
       agentSetting: sessionId ? agentSettings.get(sessionId) : log.agentSetting,
       mode: sessionId ? (modes.get(sessionId) as LogOption['mode']) : log.mode,
-      worktreeSession:
-        sessionId && worktreeStates.has(sessionId)
-          ? worktreeStates.get(sessionId)
-          : log.worktreeSession,
+      worktreeSession: sessionId && worktreeStates.has(sessionId) ? worktreeStates.get(sessionId) : log.worktreeSession,
       prNumber: sessionId ? prNumbers.get(sessionId) : log.prNumber,
       prUrl: sessionId ? prUrls.get(sessionId) : log.prUrl,
-      prRepository: sessionId
-        ? prRepositories.get(sessionId)
-        : log.prRepository,
+      prRepository: sessionId ? prRepositories.get(sessionId) : log.prRepository,
       gitBranch: mostRecentLeaf?.gitBranch ?? log.gitBranch,
       isSidechain: transcript[0]?.isSidechain ?? log.isSidechain,
       teamName: transcript[0]?.teamName ?? log.teamName,
       leafUuid: mostRecentLeaf?.uuid ?? log.leafUuid,
-      fileHistorySnapshots: buildFileHistorySnapshotChain(
-        fileHistorySnapshots,
-        transcript,
-      ),
-      attributionSnapshots: buildAttributionSnapshotChain(
-        attributionSnapshots,
-        transcript,
-      ),
-      contentReplacements: sessionId
-        ? (contentReplacements.get(sessionId) ?? [])
-        : log.contentReplacements,
+      fileHistorySnapshots: buildFileHistorySnapshotChain(fileHistorySnapshots, transcript),
+      attributionSnapshots: buildAttributionSnapshotChain(attributionSnapshots, transcript),
+      contentReplacements: sessionId ? (contentReplacements.get(sessionId) ?? []) : log.contentReplacements,
       // Filter to the resumed session's entries. loadTranscriptFile reads
       // the file sequentially so the array is already in commit order;
       // filter preserves that.
-      contextCollapseCommits: sessionId
-        ? contextCollapseCommits.filter(e => e.sessionId === sessionId)
-        : undefined,
+      contextCollapseCommits: sessionId ? contextCollapseCommits.filter((e) => e.sessionId === sessionId) : undefined,
       contextCollapseSnapshot:
-        sessionId && contextCollapseSnapshot?.sessionId === sessionId
-          ? contextCollapseSnapshot
-          : undefined,
+        sessionId && contextCollapseSnapshot?.sessionId === sessionId ? contextCollapseSnapshot : undefined,
     }
   } catch {
     // If loading fails, return the original log
@@ -3074,7 +2854,7 @@ export async function searchSessionsByCustomTitle(
   const { logs } = await enrichLogs(allStatLogs, 0, allStatLogs.length)
   const normalizedQuery = query.toLowerCase().trim()
 
-  const matchingLogs = logs.filter(log => {
+  const matchingLogs = logs.filter((log) => {
     const title = log.customTitle?.toLowerCase().trim()
     if (!title) return false
     return exact ? title === normalizedQuery : title.includes(normalizedQuery)
@@ -3121,16 +2901,13 @@ const METADATA_TYPE_MARKERS = [
   '"type":"worktree-state"',
   '"type":"pr-link"',
 ]
-const METADATA_MARKER_BUFS = METADATA_TYPE_MARKERS.map(m => Buffer.from(m))
+const METADATA_MARKER_BUFS = METADATA_TYPE_MARKERS.map((m) => Buffer.from(m))
 // Longest marker is 22 bytes; +1 for leading `{` = 23.
 const METADATA_PREFIX_BOUND = 25
 
 // null = carry spans whole chunk. Skips concat when carry provably isn't
 // a metadata line (markers sit at byte 1 after `{`).
-function resolveMetadataBuf(
-  carry: Buffer | null,
-  chunkBuf: Buffer,
-): Buffer | null {
+function resolveMetadataBuf(carry: Buffer | null, chunkBuf: Buffer): Buffer | null {
   if (carry === null || carry.length === 0) return chunkBuf
   if (carry.length < METADATA_PREFIX_BOUND) {
     return Buffer.concat([carry, chunkBuf])
@@ -3154,10 +2931,7 @@ function resolveMetadataBuf(
  * Fast path: if a chunk contains zero markers (the common case — metadata entries
  * are <50 per session), the entire chunk is skipped without line splitting.
  */
-async function scanPreBoundaryMetadata(
-  filePath: string,
-  endOffset: number,
-): Promise<string[]> {
+async function scanPreBoundaryMetadata(filePath: string, endOffset: number): Promise<string[]> {
   const { createReadStream } = await import('fs')
   const NEWLINE = 0x0a
 
@@ -3272,11 +3046,7 @@ async function scanPreBoundaryMetadata(
  * O(max(candidates) - lineStart) — one forward byte pass, stopping at the
  * first depth-1 hit.
  */
-function pickDepthOneUuidCandidate(
-  buf: Buffer,
-  lineStart: number,
-  candidates: number[],
-): number {
+function pickDepthOneUuidCandidate(buf: Buffer, lineStart: number, candidates: number[]): number {
   const QUOTE = 0x22
   const BACKSLASH = 0x5c
   const OPEN_BRACE = 0x7b
@@ -3335,8 +3105,7 @@ function walkChainBeforeParse(buf: Buffer): Buffer {
       buf.compare(PARENT_PREFIX, 0, PREFIX_LEN, pos, pos + PREFIX_LEN) === 0
     ) {
       // `{"parentUuid":null,` or `{"parentUuid":"<36 chars>",`
-      const parentStart =
-        buf[pos + PREFIX_LEN] === QUOTE ? pos + PREFIX_LEN + 1 : -1
+      const parentStart = buf[pos + PREFIX_LEN] === QUOTE ? pos + PREFIX_LEN + 1 : -1
       // The top-level uuid is immediately followed by `","timestamp":"` in
       // user/assistant/attachment entries (the create* helpers put them
       // adjacent; both always defined). But the suffix is NOT unique:
@@ -3363,24 +3132,14 @@ function walkChainBeforeParse(buf: Buffer): Buffer {
         const after = next + KEY_LEN + UUID_LEN
         if (
           after + TS_SUFFIX_LEN <= lineEnd &&
-          buf.compare(
-            TS_SUFFIX,
-            0,
-            TS_SUFFIX_LEN,
-            after,
-            after + TS_SUFFIX_LEN,
-          ) === 0
+          buf.compare(TS_SUFFIX, 0, TS_SUFFIX_LEN, after, after + TS_SUFFIX_LEN) === 0
         ) {
           if (suffix0 < 0) suffix0 = next
           else (suffixN ??= [suffix0]).push(next)
         }
         from = next + KEY_LEN
       }
-      const uk = suffixN
-        ? pickDepthOneUuidCandidate(buf, pos, suffixN)
-        : suffix0 >= 0
-          ? suffix0
-          : firstAny
+      const uk = suffixN ? pickDepthOneUuidCandidate(buf, pos, suffixN) : suffix0 >= 0 ? suffix0 : firstAny
       if (uk >= 0) {
         const uuidStart = uk + KEY_LEN
         // UUIDs are pure ASCII so latin1 avoids UTF-8 decode overhead.
@@ -3508,10 +3267,7 @@ export async function loadTranscriptFile(
   const fileHistorySnapshots = new Map<UUID, FileHistorySnapshotMessage>()
   const attributionSnapshots = new Map<UUID, AttributionSnapshotMessage>()
   const contentReplacements = new Map<UUID, ContentReplacementRecord[]>()
-  const agentContentReplacements = new Map<
-    AgentId,
-    ContentReplacementRecord[]
-  >()
+  const agentContentReplacements = new Map<AgentId, ContentReplacementRecord[]>()
   // Array, not Map — commit order matters (nested collapses).
   const contextCollapseCommits: ContextCollapseCommitEntry[] = []
   // Last-wins — later entries supersede.
@@ -3547,10 +3303,7 @@ export async function loadTranscriptFile(
         // for the later boundary are post-that-earlier-boundary and were
         // kept, and we still want the metadata scan.
         if (scan.boundaryStartOffset > 0) {
-          metadataLines = await scanPreBoundaryMetadata(
-            filePath,
-            scan.boundaryStartOffset,
-          )
+          metadataLines = await scanPreBoundaryMetadata(filePath, scan.boundaryStartOffset)
         }
       }
     }
@@ -3583,9 +3336,7 @@ export async function loadTranscriptFile(
     // etc.) for entries written before the compact boundary. Any overlap with
     // the post-boundary buffer is harmless — later values overwrite earlier ones.
     if (metadataLines && metadataLines.length > 0) {
-      const metaEntries = parseJSONL<Entry>(
-        Buffer.from(metadataLines.join('\n')),
-      )
+      const metaEntries = parseJSONL<Entry>(Buffer.from(metadataLines.join('\n')))
       for (const entry of metaEntries) {
         if (entry.type === 'summary' && entry.leafUuid) {
           summaries.set(entry.leafUuid, entry.summary)
@@ -3633,9 +3384,7 @@ export async function loadTranscriptFile(
         const parent = entry.parentUuid
         progressBridge.set(
           entry.uuid,
-          parent && progressBridge.has(parent)
-            ? (progressBridge.get(parent) ?? null)
-            : parent,
+          parent && progressBridge.has(parent) ? (progressBridge.get(parent) ?? null) : parent,
         )
         continue
       }
@@ -3716,14 +3465,10 @@ export async function loadTranscriptFile(
   const allMessages = [...messages.values()]
 
   // Standard leaf computation using parent relationships
-  const parentUuids = new Set(
-    allMessages
-      .map(msg => msg.parentUuid)
-      .filter((uuid): uuid is UUID => uuid !== null),
-  )
+  const parentUuids = new Set(allMessages.map((msg) => msg.parentUuid).filter((uuid): uuid is UUID => uuid !== null))
 
   // Find all terminal messages (messages with no children)
-  const terminalMessages = allMessages.filter(msg => !parentUuids.has(msg.uuid))
+  const terminalMessages = allMessages.filter((msg) => !parentUuids.has(msg.uuid))
 
   const leafUuids = new Set<UUID>()
   let hasCycle = false
@@ -3757,9 +3502,7 @@ export async function loadTranscriptFile(
           }
           break
         }
-        current = current.parentUuid
-          ? messages.get(current.parentUuid)
-          : undefined
+        current = current.parentUuid ? messages.get(current.parentUuid) : undefined
       }
     }
   } else {
@@ -3778,9 +3521,7 @@ export async function loadTranscriptFile(
           leafUuids.add(current.uuid)
           break
         }
-        current = current.parentUuid
-          ? messages.get(current.parentUuid)
-          : undefined
+        current = current.parentUuid ? messages.get(current.parentUuid) : undefined
       }
     }
   }
@@ -3828,10 +3569,7 @@ async function loadSessionFile(sessionId: UUID): Promise<{
   contextCollapseCommits: ContextCollapseCommitEntry[]
   contextCollapseSnapshot: ContextCollapseSnapshotEntry | undefined
 }> {
-  const sessionFile = join(
-    getSessionProjectDir() ?? getProjectDir(getOriginalCwd()),
-    `${sessionId}.jsonl`,
-  )
+  const sessionFile = join(getSessionProjectDir() ?? getProjectDir(getOriginalCwd()), `${sessionId}.jsonl`)
   return loadTranscriptFile(sessionFile)
 }
 
@@ -3858,17 +3596,12 @@ export function clearSessionMessagesCache(): void {
 /**
  * Check if a message UUID exists in the session storage
  */
-export async function doesMessageExistInSession(
-  sessionId: UUID,
-  messageUuid: UUID,
-): Promise<boolean> {
+export async function doesMessageExistInSession(sessionId: UUID, messageUuid: UUID): Promise<boolean> {
   const messageSet = await getSessionMessages(sessionId)
   return messageSet.has(messageUuid)
 }
 
-export async function getLastSessionLog(
-  sessionId: UUID,
-): Promise<LogOption | null> {
+export async function getLastSessionLog(sessionId: UUID): Promise<LogOption | null> {
   // Single read: load all session data at once instead of reading the file twice
   const {
     messages,
@@ -3890,14 +3623,11 @@ export async function getLastSessionLog(
   // may call getLastSessionLog on the current session — overwriting a live cache
   // with a stale disk snapshot would lose unflushed UUIDs and break dedup.
   if (!getSessionMessages.cache.has(sessionId)) {
-    getSessionMessages.cache.set(
-      sessionId,
-      Promise.resolve(new Set(messages.keys())),
-    )
+    getSessionMessages.cache.set(sessionId, Promise.resolve(new Set(messages.keys())))
   }
 
   // Find the most recent non-sidechain message
-  const lastMessage = findLatestMessage(messages.values(), m => !m.isSidechain)
+  const lastMessage = findLatestMessage(messages.values(), (m) => !m.isSidechain)
   if (!lastMessage) return null
 
   // Build the transcript chain from the last message
@@ -3921,13 +3651,8 @@ export async function getLastSessionLog(
       contentReplacements.get(sessionId) ?? [],
     ),
     worktreeSession: worktreeStates.get(sessionId),
-    contextCollapseCommits: contextCollapseCommits.filter(
-      e => e.sessionId === sessionId,
-    ),
-    contextCollapseSnapshot:
-      contextCollapseSnapshot?.sessionId === sessionId
-        ? contextCollapseSnapshot
-        : undefined,
+    contextCollapseCommits: contextCollapseCommits.filter((e) => e.sessionId === sessionId),
+    contextCollapseSnapshot: contextCollapseSnapshot?.sessionId === sessionId ? contextCollapseSnapshot : undefined,
   }
 }
 
@@ -3940,11 +3665,7 @@ export async function loadMessageLogs(limit?: number): Promise<LogOption[]> {
   const sessionLogs = await fetchLogs(limit)
   // fetchLogs returns lite (stat-only) logs — enrich them to get metadata.
   // enrichLogs already filters out sidechains, empty sessions, etc.
-  const { logs: enriched } = await enrichLogs(
-    sessionLogs,
-    0,
-    sessionLogs.length,
-  )
+  const { logs: enriched } = await enrichLogs(sessionLogs, 0, sessionLogs.length)
 
   // enrichLogs returns fresh unshared objects — mutate in place to avoid
   // re-spreading every 30-field LogOption just to renumber the index.
@@ -3968,16 +3689,11 @@ export async function loadAllProjectsMessageLogs(
     // Load all sessions with full message data (e.g. for /insights analysis)
     return loadAllProjectsMessageLogsFull(limit)
   }
-  const result = await loadAllProjectsMessageLogsProgressive(
-    limit,
-    options?.initialEnrichCount ?? INITIAL_ENRICH_COUNT,
-  )
+  const result = await loadAllProjectsMessageLogsProgressive(limit, options?.initialEnrichCount ?? INITIAL_ENRICH_COUNT)
   return result.logs
 }
 
-async function loadAllProjectsMessageLogsFull(
-  limit?: number,
-): Promise<LogOption[]> {
+async function loadAllProjectsMessageLogsFull(limit?: number): Promise<LogOption[]> {
   const projectsDir = getProjectsDir()
 
   let dirents: Dirent[]
@@ -3987,13 +3703,9 @@ async function loadAllProjectsMessageLogsFull(
     return []
   }
 
-  const projectDirs = dirents
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => join(projectsDir, dirent.name))
+  const projectDirs = dirents.filter((dirent) => dirent.isDirectory()).map((dirent) => join(projectsDir, dirent.name))
 
-  const logsPerProject = await Promise.all(
-    projectDirs.map(projectDir => getLogsWithoutIndex(projectDir, limit)),
-  )
+  const logsPerProject = await Promise.all(projectDirs.map((projectDir) => getLogsWithoutIndex(projectDir, limit)))
   const allLogs = logsPerProject.flat()
 
   // Deduplicate — same session+leaf can appear in multiple project dirs.
@@ -4028,9 +3740,7 @@ export async function loadAllProjectsMessageLogsProgressive(
     return { logs: [], allStatLogs: [], nextIndex: 0 }
   }
 
-  const projectDirs = dirents
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => join(projectsDir, dirent.name))
+  const projectDirs = dirents.filter((dirent) => dirent.isDirectory()).map((dirent) => join(projectsDir, dirent.name))
 
   const rawLogs: LogOption[] = []
   for (const projectDir of projectDirs) {
@@ -4075,11 +3785,7 @@ export async function loadSameRepoMessageLogs(
   limit?: number,
   initialEnrichCount: number = INITIAL_ENRICH_COUNT,
 ): Promise<LogOption[]> {
-  const result = await loadSameRepoMessageLogsProgressive(
-    worktreePaths,
-    limit,
-    initialEnrichCount,
-  )
+  const result = await loadSameRepoMessageLogsProgressive(worktreePaths, limit, initialEnrichCount)
   return result.logs
 }
 
@@ -4088,17 +3794,11 @@ export async function loadSameRepoMessageLogsProgressive(
   limit?: number,
   initialEnrichCount: number = INITIAL_ENRICH_COUNT,
 ): Promise<SessionLogResult> {
-  logForDebugging(
-    `/resume: loading sessions for cwd=${getOriginalCwd()}, worktrees=[${worktreePaths.join(', ')}]`,
-  )
+  logForDebugging(`/resume: loading sessions for cwd=${getOriginalCwd()}, worktrees=[${worktreePaths.join(', ')}]`)
   const allStatLogs = await getStatOnlyLogsForWorktrees(worktreePaths, limit)
   logForDebugging(`/resume: found ${allStatLogs.length} session files on disk`)
 
-  const { logs, nextIndex } = await enrichLogs(
-    allStatLogs,
-    0,
-    initialEnrichCount,
-  )
+  const { logs, nextIndex } = await enrichLogs(allStatLogs, 0, initialEnrichCount)
 
   // enrichLogs returns fresh unshared objects — safe to mutate in place
   logs.forEach((log, i) => {
@@ -4110,10 +3810,7 @@ export async function loadSameRepoMessageLogsProgressive(
 /**
  * Gets stat-only logs for worktree paths (no file reads).
  */
-async function getStatOnlyLogsForWorktrees(
-  worktreePaths: string[],
-  limit?: number,
-): Promise<LogOption[]> {
+async function getStatOnlyLogsForWorktrees(worktreePaths: string[], limit?: number): Promise<LogOption[]> {
   const projectsDir = getProjectsDir()
 
   if (worktreePaths.length <= 1) {
@@ -4131,7 +3828,7 @@ async function getStatOnlyLogsForWorktrees(
   // more specific matches take priority over shorter ones. Without this,
   // a short prefix like -code-myrepo could match -code-myrepo-worktree1
   // before the longer, more specific prefix gets a chance.
-  const indexed = worktreePaths.map(wt => {
+  const indexed = worktreePaths.map((wt) => {
     const sanitized = sanitizePath(wt)
     return {
       path: wt,
@@ -4148,9 +3845,7 @@ async function getStatOnlyLogsForWorktrees(
     allDirents = await readdir(projectsDir, { withFileTypes: true })
   } catch (e) {
     // Fall back to current project
-    logForDebugging(
-      `Failed to read projects dir ${projectsDir}, falling back to current project: ${e}`,
-    )
+    logForDebugging(`Failed to read projects dir ${projectsDir}, falling back to current project: ${e}`)
     const projectDir = getProjectDir(getOriginalCwd())
     return getSessionFilesLite(projectDir, limit, getOriginalCwd())
   }
@@ -4163,13 +3858,7 @@ async function getStatOnlyLogsForWorktrees(
     for (const { path: wtPath, prefix } of indexed) {
       if (dirName === prefix || dirName.startsWith(prefix + '-')) {
         seenDirs.add(dirName)
-        allLogs.push(
-          ...(await getSessionFilesLite(
-            join(projectsDir, dirent.name),
-            undefined,
-            wtPath,
-          )),
-        )
+        allLogs.push(...(await getSessionFilesLite(join(projectsDir, dirent.name), undefined, wtPath)))
         break
       }
     }
@@ -4194,24 +3883,18 @@ export async function getAgentTranscript(agentId: AgentId): Promise<{
   const agentFile = getAgentTranscriptPath(agentId)
 
   try {
-    const { messages, agentContentReplacements } =
-      await loadTranscriptFile(agentFile)
+    const { messages, agentContentReplacements } = await loadTranscriptFile(agentFile)
 
     // Find messages with matching agentId
-    const agentMessages = Array.from(messages.values()).filter(
-      msg => msg.agentId === agentId && msg.isSidechain,
-    )
+    const agentMessages = Array.from(messages.values()).filter((msg) => msg.agentId === agentId && msg.isSidechain)
 
     if (agentMessages.length === 0) {
       return null
     }
 
     // Find the most recent leaf message with this agentId
-    const parentUuids = new Set(agentMessages.map(msg => msg.parentUuid))
-    const leafMessage = findLatestMessage(
-      agentMessages,
-      msg => !parentUuids.has(msg.uuid),
-    )
+    const parentUuids = new Set(agentMessages.map((msg) => msg.parentUuid))
+    const leafMessage = findLatestMessage(agentMessages, (msg) => !parentUuids.has(msg.uuid))
 
     if (!leafMessage) {
       return null
@@ -4221,13 +3904,11 @@ export async function getAgentTranscript(agentId: AgentId): Promise<{
     const transcript = buildConversationChain(messages, leafMessage)
 
     // Filter to only include messages with this agentId
-    const agentTranscript = transcript.filter(msg => msg.agentId === agentId)
+    const agentTranscript = transcript.filter((msg) => msg.agentId === agentId)
 
     return {
       // Convert TranscriptMessage[] to Message[]
-      messages: agentTranscript.map(
-        ({ isSidechain, parentUuid, ...msg }) => msg,
-      ),
+      messages: agentTranscript.map(({ isSidechain, parentUuid, ...msg }) => msg),
       contentReplacements: agentContentReplacements.get(agentId) ?? [],
     }
   } catch {
@@ -4250,8 +3931,7 @@ export function extractAgentIdsFromMessages(messages: Message[]): string[] {
       message.data &&
       typeof message.data === 'object' &&
       'type' in message.data &&
-      (message.data.type === 'agent_progress' ||
-        message.data.type === 'skill_progress') &&
+      (message.data.type === 'agent_progress' || message.data.type === 'skill_progress') &&
       'agentId' in message.data &&
       typeof message.data.agentId === 'string'
     ) {
@@ -4278,12 +3958,7 @@ export function extractTeammateTranscriptsFromTasks(tasks: {
   const transcripts: { [agentId: string]: Message[] } = {}
 
   for (const task of Object.values(tasks)) {
-    if (
-      task.type === 'in_process_teammate' &&
-      task.identity?.agentId &&
-      task.messages &&
-      task.messages.length > 0
-    ) {
+    if (task.type === 'in_process_teammate' && task.identity?.agentId && task.messages && task.messages.length > 0) {
       transcripts[task.identity.agentId] = task.messages
     }
   }
@@ -4294,11 +3969,9 @@ export function extractTeammateTranscriptsFromTasks(tasks: {
 /**
  * Load subagent transcripts for the given agent IDs
  */
-export async function loadSubagentTranscripts(
-  agentIds: string[],
-): Promise<{ [agentId: string]: Message[] }> {
+export async function loadSubagentTranscripts(agentIds: string[]): Promise<{ [agentId: string]: Message[] }> {
   const results = await Promise.all(
-    agentIds.map(async agentId => {
+    agentIds.map(async (agentId) => {
       try {
         const result = await getAgentTranscript(asAgentId(agentId))
         if (result && result.messages.length > 0) {
@@ -4325,11 +3998,7 @@ export async function loadSubagentTranscripts(
 export async function loadAllSubagentTranscriptsFromDisk(): Promise<{
   [agentId: string]: Message[]
 }> {
-  const subagentsDir = join(
-    getSessionProjectDir() ?? getProjectDir(getOriginalCwd()),
-    getSessionId(),
-    'subagents',
-  )
+  const subagentsDir = join(getSessionProjectDir() ?? getProjectDir(getOriginalCwd()), getSessionId(), 'subagents')
   let entries: Dirent[]
   try {
     entries = await readdir(subagentsDir, { withFileTypes: true })
@@ -4338,11 +4007,8 @@ export async function loadAllSubagentTranscriptsFromDisk(): Promise<{
   }
   // Filename format is the inverse of getAgentTranscriptPath() — keep in sync.
   const agentIds = entries
-    .filter(
-      d =>
-        d.isFile() && d.name.startsWith('agent-') && d.name.endsWith('.jsonl'),
-    )
-    .map(d => d.name.slice('agent-'.length, -'.jsonl'.length))
+    .filter((d) => d.isFile() && d.name.startsWith('agent-') && d.name.endsWith('.jsonl'))
+    .map((d) => d.name.slice('agent-'.length, -'.jsonl'.length))
   return loadSubagentTranscripts(agentIds)
 }
 
@@ -4393,21 +4059,12 @@ function collectReplIds(messages: readonly Message[]): Set<string> {
  * execution) land in separate calls. A fresh per-call Set would miss the id
  * and leave an orphaned tool_result on disk.
  */
-function transformMessagesForExternalTranscript(
-  messages: Transcript,
-  replIds: Set<string>,
-): Transcript {
-  return messages.flatMap(m => {
+function transformMessagesForExternalTranscript(messages: Transcript, replIds: Set<string>): Transcript {
+  return messages.flatMap((m) => {
     if (m.type === 'assistant' && Array.isArray(m.message.content)) {
       const content = m.message.content
-      const hasRepl = content.some(
-        b => b.type === 'tool_use' && b.name === REPL_TOOL_NAME,
-      )
-      const filtered = hasRepl
-        ? content.filter(
-            b => !(b.type === 'tool_use' && b.name === REPL_TOOL_NAME),
-          )
-        : content
+      const hasRepl = content.some((b) => b.type === 'tool_use' && b.name === REPL_TOOL_NAME)
+      const filtered = hasRepl ? content.filter((b) => !(b.type === 'tool_use' && b.name === REPL_TOOL_NAME)) : content
       if (filtered.length === 0) return []
       if (m.isVirtual) {
         const { isVirtual: _omit, ...rest } = m
@@ -4420,13 +4077,9 @@ function transformMessagesForExternalTranscript(
     }
     if (m.type === 'user' && Array.isArray(m.message.content)) {
       const content = m.message.content
-      const hasRepl = content.some(
-        b => b.type === 'tool_result' && replIds.has(b.tool_use_id),
-      )
+      const hasRepl = content.some((b) => b.type === 'tool_result' && replIds.has(b.tool_use_id))
       const filtered = hasRepl
-        ? content.filter(
-            b => !(b.type === 'tool_result' && replIds.has(b.tool_use_id)),
-          )
+        ? content.filter((b) => !(b.type === 'tool_result' && replIds.has(b.tool_use_id)))
         : content
       if (filtered.length === 0) return []
       if (m.isVirtual) {
@@ -4447,16 +4100,10 @@ function transformMessagesForExternalTranscript(
   }) as Transcript
 }
 
-export function cleanMessagesForLogging(
-  messages: Message[],
-  allMessages: readonly Message[] = messages,
-): Transcript {
+export function cleanMessagesForLogging(messages: Message[], allMessages: readonly Message[] = messages): Transcript {
   const filtered = messages.filter(isLoggableMessage) as Transcript
   return getUserType() !== 'ant'
-    ? transformMessagesForExternalTranscript(
-        filtered,
-        collectReplIds(allMessages),
-      )
+    ? transformMessagesForExternalTranscript(filtered, collectReplIds(allMessages))
     : filtered
 }
 
@@ -4475,9 +4122,7 @@ export async function getLogByIndex(index: number): Promise<LogOption | null> {
  * Returns the assistant message containing the tool_use, or null if not found
  * or the tool call already has a tool_result.
  */
-export async function findUnresolvedToolUse(
-  toolUseId: string,
-): Promise<AssistantMessage | null> {
+export async function findUnresolvedToolUse(toolUseId: string): Promise<AssistantMessage | null> {
   try {
     const transcriptPath = getTranscriptPath()
     const { messages } = await loadTranscriptFile(transcriptPath)
@@ -4500,10 +4145,7 @@ export async function findUnresolvedToolUse(
         const content = message.message.content
         if (Array.isArray(content)) {
           for (const block of content) {
-            if (
-              block.type === 'tool_result' &&
-              block.tool_use_id === toolUseId
-            ) {
+            if (block.type === 'tool_result' && block.tool_use_id === toolUseId) {
               // Found tool result, bail out
               return null
             }
@@ -4525,13 +4167,8 @@ export async function findUnresolvedToolUse(
  */
 export async function getSessionFilesWithMtime(
   projectDir: string,
-): Promise<
-  Map<string, { path: string; mtime: number; ctime: number; size: number }>
-> {
-  const sessionFilesMap = new Map<
-    string,
-    { path: string; mtime: number; ctime: number; size: number }
-  >()
+): Promise<Map<string, { path: string; mtime: number; ctime: number; size: number }>> {
+  const sessionFilesMap = new Map<string, { path: string; mtime: number; ctime: number; size: number }>()
 
   let dirents: Dirent[]
   try {
@@ -4645,9 +4282,7 @@ export async function loadAllLogsFromSessionFile(
     const trailingMessages = childrenByParent.get(leafMessage.uuid)
     if (trailingMessages) {
       // ISO-8601 UTC timestamps are lexically sortable
-      trailingMessages.sort((a, b) =>
-        a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0,
-      )
+      trailingMessages.sort((a, b) => (a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0))
       chain.push(...trailingMessages)
     }
 
@@ -4678,14 +4313,8 @@ export async function loadAllLogsFromSessionFile(
       prRepository: prRepositories.get(sessionId),
       gitBranch: leafMessage.gitBranch,
       projectPath: projectPathOverride ?? firstMessage.cwd,
-      fileHistorySnapshots: buildFileHistorySnapshotChain(
-        fileHistorySnapshots,
-        chain,
-      ),
-      attributionSnapshots: buildAttributionSnapshotChain(
-        attributionSnapshots,
-        chain,
-      ),
+      fileHistorySnapshots: buildFileHistorySnapshotChain(fileHistorySnapshots, chain),
+      attributionSnapshots: buildAttributionSnapshotChain(attributionSnapshots, chain),
       contentReplacements: contentReplacements.get(sessionId) ?? [],
     })
   }
@@ -4698,19 +4327,14 @@ export async function loadAllLogsFromSessionFile(
  * Use this when you need full message data (e.g., for /insights analysis).
 
  */
-async function getLogsWithoutIndex(
-  projectDir: string,
-  limit?: number,
-): Promise<LogOption[]> {
+async function getLogsWithoutIndex(projectDir: string, limit?: number): Promise<LogOption[]> {
   const sessionFilesMap = await getSessionFilesWithMtime(projectDir)
   if (sessionFilesMap.size === 0) return []
 
   // If limit specified, only load N most recent files by mtime
   let filesToProcess: Array<{ path: string; mtime: number }>
   if (limit && sessionFilesMap.size > limit) {
-    filesToProcess = [...sessionFilesMap.values()]
-      .sort((a, b) => b.mtime - a.mtime)
-      .slice(0, limit)
+    filesToProcess = [...sessionFilesMap.values()].sort((a, b) => b.mtime - a.mtime).slice(0, limit)
   } else {
     filesToProcess = [...sessionFilesMap.values()]
   }
@@ -4736,18 +4360,13 @@ async function getLogsWithoutIndex(
  *
  * Accepts a shared buffer to avoid per-file allocation overhead.
  */
-async function readLiteMetadata(
-  filePath: string,
-  fileSize: number,
-  buf: Buffer,
-): Promise<LiteMetadata> {
+async function readLiteMetadata(filePath: string, fileSize: number, buf: Buffer): Promise<LiteMetadata> {
   const { head, tail } = await readHeadAndTail(filePath, fileSize, buf)
   if (!head) return { firstPrompt: '', isSidechain: false }
 
   // Extract stable metadata from the first line via string search.
   // Works even when the first line is truncated (>64KB message).
-  const isSidechain =
-    head.includes('"isSidechain":true') || head.includes('"isSidechain": true')
+  const isSidechain = head.includes('"isSidechain":true') || head.includes('"isSidechain": true')
   const projectPath = extractJsonStringField(head, 'cwd')
   const teamName = extractJsonStringField(head, 'teamName')
   const agentSetting = extractJsonStringField(head, 'agentSetting')
@@ -4775,9 +4394,7 @@ async function readLiteMetadata(
     extractLastJsonStringField(head, 'aiTitle')
   const summary = extractLastJsonStringField(tail, 'summary')
   const tag = extractLastJsonStringField(tail, 'tag')
-  const gitBranch =
-    extractLastJsonStringField(tail, 'gitBranch') ??
-    extractJsonStringField(head, 'gitBranch')
+  const gitBranch = extractLastJsonStringField(tail, 'gitBranch') ?? extractJsonStringField(head, 'gitBranch')
 
   // PR link fields — prNumber is a number not a string, so try both
   const prUrl = extractLastJsonStringField(tail, 'prUrl')
@@ -4821,16 +4438,14 @@ function extractFirstPromptFromChunk(chunk: string): string {
   let firstCommandFallback = ''
   while (start < chunk.length) {
     const newlineIdx = chunk.indexOf('\n', start)
-    const line =
-      newlineIdx >= 0 ? chunk.slice(start, newlineIdx) : chunk.slice(start)
+    const line = newlineIdx >= 0 ? chunk.slice(start, newlineIdx) : chunk.slice(start)
     start = newlineIdx >= 0 ? newlineIdx + 1 : chunk.length
 
     if (!line.includes('"type":"user"') && !line.includes('"type": "user"')) {
       continue
     }
     if (line.includes('"tool_result"')) continue
-    if (line.includes('"isMeta":true') || line.includes('"isMeta": true'))
-      continue
+    if (line.includes('"isMeta":true') || line.includes('"isMeta": true')) continue
 
     try {
       const entry = jsonParse(line) as Record<string, unknown>
@@ -4877,9 +4492,7 @@ function extractFirstPromptFromChunk(chunk: string): string {
             continue
           }
           // Custom command with meaningful args — use clean display
-          return commandArgs
-            ? `${commandNameTag} ${commandArgs}`
-            : commandNameTag
+          return commandArgs ? `${commandNameTag} ${commandArgs}` : commandNameTag
         }
 
         // Format bash input with ! prefix before the generic XML skip
@@ -4887,11 +4500,7 @@ function extractFirstPromptFromChunk(chunk: string): string {
         if (bashInput) return `! ${bashInput}`
 
         if (SKIP_FIRST_PROMPT_PATTERN.test(result)) {
-          if (
-            (feature('PROACTIVE') || feature('KAIROS')) &&
-            result.startsWith(`<${TICK_TAG}>`)
-          )
-            hasTickMessages = true
+          if ((feature('PROACTIVE') || feature('KAIROS')) && result.startsWith(`<${TICK_TAG}>`)) hasTickMessages = true
           continue
         }
         if (result.length > 200) {
@@ -4908,8 +4517,7 @@ function extractFirstPromptFromChunk(chunk: string): string {
   if (firstCommandFallback) return firstCommandFallback
   // Proactive sessions have only tick messages — give them a synthetic prompt
   // so they're not filtered out by enrichLogs
-  if ((feature('PROACTIVE') || feature('KAIROS')) && hasTickMessages)
-    return 'Proactive session'
+  if ((feature('PROACTIVE') || feature('KAIROS')) && hasTickMessages) return 'Proactive session'
   return ''
 }
 
@@ -4918,11 +4526,7 @@ function extractFirstPromptFromChunk(chunk: string): string {
  * value even when the closing quote is missing (truncated buffer). Newline
  * escapes are replaced with spaces and the result is trimmed.
  */
-function extractJsonStringFieldPrefix(
-  text: string,
-  key: string,
-  maxLen: number,
-): string {
+function extractJsonStringFieldPrefix(text: string, key: string, maxLen: number): string {
   const patterns = [`"${key}":"`, `"${key}": "`]
   for (const pattern of patterns) {
     const idx = text.indexOf(pattern)
@@ -4980,9 +4584,7 @@ export async function getSessionFilesLite(
   const sessionFilesMap = await getSessionFilesWithMtime(projectDir)
 
   // Sort by mtime descending and apply limit
-  let entries = [...sessionFilesMap.entries()].sort(
-    (a, b) => b[1].mtime - a[1].mtime,
-  )
+  let entries = [...sessionFilesMap.entries()].sort((a, b) => b[1].mtime - a[1].mtime)
   if (limit && entries.length > limit) {
     entries = entries.slice(0, limit)
   }
@@ -5020,10 +4622,7 @@ export async function getSessionFilesLite(
  * Returns the enriched log, or null if the log has no meaningful content
  * (no firstPrompt, no customTitle — e.g., metadata-only session files).
  */
-async function enrichLog(
-  log: LogOption,
-  readBuf: Buffer,
-): Promise<LogOption | null> {
+async function enrichLog(log: LogOption, readBuf: Buffer): Promise<LogOption | null> {
   if (!log.isLite || !log.fullPath) return log
 
   const meta = await readLiteMetadata(log.fullPath, log.fileSize ?? 0, readBuf)
@@ -5054,15 +4653,11 @@ async function enrichLog(
   }
   // Filter: skip sidechains and agent sessions
   if (enriched.isSidechain) {
-    logForDebugging(
-      `Session ${log.sessionId} filtered from /resume: isSidechain=true`,
-    )
+    logForDebugging(`Session ${log.sessionId} filtered from /resume: isSidechain=true`)
     return null
   }
   if (enriched.teamName) {
-    logForDebugging(
-      `Session ${log.sessionId} filtered from /resume: teamName=${enriched.teamName}`,
-    )
+    logForDebugging(`Session ${log.sessionId} filtered from /resume: teamName=${enriched.teamName}`)
     return null
   }
 

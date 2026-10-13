@@ -7,19 +7,14 @@
  */
 
 import { feature } from 'bun:bundle'
+
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 
 // ============================================================================
 // Permission Modes
 // ============================================================================
 
-export const EXTERNAL_PERMISSION_MODES = [
-  'acceptEdits',
-  'bypassPermissions',
-  'default',
-  'dontAsk',
-  'plan',
-] as const
+export const EXTERNAL_PERMISSION_MODES = ['acceptEdits', 'bypassPermissions', 'default', 'dontAsk', 'plan'] as const
 
 export type ExternalPermissionMode = (typeof EXTERNAL_PERMISSION_MODES)[number]
 
@@ -85,12 +80,7 @@ export type PermissionRule = {
 /**
  * Where a permission update should be persisted
  */
-export type PermissionUpdateDestination =
-  | 'userSettings'
-  | 'projectSettings'
-  | 'localSettings'
-  | 'session'
-  | 'cliArg'
+export type PermissionUpdateDestination = 'userSettings' | 'projectSettings' | 'localSettings' | 'session' | 'cliArg'
 
 /**
  * Update operations for permission configuration
@@ -164,16 +154,12 @@ export type PermissionCommandMetadata = {
 /**
  * Metadata attached to permission decisions
  */
-export type PermissionMetadata =
-  | { command: PermissionCommandMetadata }
-  | undefined
+export type PermissionMetadata = { command: PermissionCommandMetadata } | undefined
 
 /**
  * Result when permission is granted
  */
-export type PermissionAllowDecision<
-  Input extends { [key: string]: unknown } = { [key: string]: unknown },
-> = {
+export type PermissionAllowDecision<Input extends { [key: string]: unknown } = { [key: string]: unknown }> = {
   behavior: 'allow'
   updatedInput?: Input
   userModified?: boolean
@@ -196,9 +182,7 @@ export type PendingClassifierCheck = {
 /**
  * Result when user should be prompted
  */
-export type PermissionAskDecision<
-  Input extends { [key: string]: unknown } = { [key: string]: unknown },
-> = {
+export type PermissionAskDecision<Input extends { [key: string]: unknown } = { [key: string]: unknown }> = {
   behavior: 'ask'
   message: string
   updatedInput?: Input
@@ -238,9 +222,7 @@ export type PermissionDenyDecision = {
 /**
  * A permission decision - allow, ask, or deny
  */
-export type PermissionDecision<
-  Input extends { [key: string]: unknown } = { [key: string]: unknown },
-> =
+export type PermissionDecision<Input extends { [key: string]: unknown } = { [key: string]: unknown }> =
   | PermissionAllowDecision<Input>
   | PermissionAskDecision<Input>
   | PermissionDenyDecision
@@ -248,9 +230,7 @@ export type PermissionDecision<
 /**
  * Permission result with additional passthrough option
  */
-export type PermissionResult<
-  Input extends { [key: string]: unknown } = { [key: string]: unknown },
-> =
+export type PermissionResult<Input extends { [key: string]: unknown } = { [key: string]: unknown }> =
   | PermissionDecision<Input>
   | {
       behavior: 'passthrough'
@@ -426,10 +406,7 @@ export type ToolPermissionRulesBySource = {
  */
 export type ToolPermissionContext = {
   readonly mode: PermissionMode
-  readonly additionalWorkingDirectories: ReadonlyMap<
-    string,
-    AdditionalWorkingDirectory
-  >
+  readonly additionalWorkingDirectories: ReadonlyMap<string, AdditionalWorkingDirectory>
   readonly alwaysAllowRules: ToolPermissionRulesBySource
   readonly alwaysDenyRules: ToolPermissionRulesBySource
   readonly alwaysAskRules: ToolPermissionRulesBySource

@@ -1,7 +1,4 @@
-import {
-  hasUsedBackslashReturn,
-  isShiftEnterKeyBindingInstalled,
-} from '../../commands/terminalSetup/terminalSetup.js'
+import { hasUsedBackslashReturn, isShiftEnterKeyBindingInstalled } from '../../commands/terminalSetup/terminalSetup.js'
 import type { Key } from '../../ink.js'
 import { getGlobalConfig } from '../../utils/config.js'
 import { env } from '../../utils/env.js'
@@ -26,9 +23,7 @@ export function getNewlineInstructions(): string {
   }
 
   // Otherwise show backslash+return instructions
-  return hasUsedBackslashReturn()
-    ? '\\⏎ for newline'
-    : 'backslash (\\) + return (⏎) for newline'
+  return hasUsedBackslashReturn() ? '\\⏎ for newline' : 'backslash (\\) + return (⏎) for newline'
 }
 
 /**

@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box } from '../ink.js'
 
 type QueuedMessageContextValue = {
@@ -8,9 +9,7 @@ type QueuedMessageContextValue = {
   paddingWidth: number
 }
 
-const QueuedMessageContext = React.createContext<
-  QueuedMessageContextValue | undefined
->(undefined)
+const QueuedMessageContext = React.createContext<QueuedMessageContextValue | undefined>(undefined)
 
 export function useQueuedMessage(): QueuedMessageContextValue | undefined {
   return React.useContext(QueuedMessageContext)
@@ -24,18 +23,11 @@ type Props = {
   children: React.ReactNode
 }
 
-export function QueuedMessageProvider({
-  isFirst,
-  useBriefLayout,
-  children,
-}: Props): React.ReactNode {
+export function QueuedMessageProvider({ isFirst, useBriefLayout, children }: Props): React.ReactNode {
   // Brief mode already indents via paddingLeft in HighlightedThinkingText /
   // BriefTool UI — adding paddingX here would double-indent the queue.
   const padding = useBriefLayout ? 0 : PADDING_X
-  const value = React.useMemo(
-    () => ({ isQueued: true, isFirst, paddingWidth: padding * 2 }),
-    [isFirst, padding],
-  )
+  const value = React.useMemo(() => ({ isQueued: true, isFirst, paddingWidth: padding * 2 }), [isFirst, padding])
 
   return (
     <QueuedMessageContext.Provider value={value}>

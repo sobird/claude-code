@@ -1,13 +1,12 @@
-import { useCallback, useState } from 'react'
 import { isDeepStrictEqual } from 'util'
+
+import { useCallback, useState } from 'react'
+
 import { useRegisterOverlay } from '../../context/overlayContext.js'
-import type { InputEvent } from '../../ink/events/input-event.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- raw space/arrow multiselect input
 import { useInput } from '../../ink.js'
-import {
-  normalizeFullWidthDigits,
-  normalizeFullWidthSpace,
-} from '../../utils/stringUtils.js'
+import type { InputEvent } from '../../ink/events/input-event.js'
+import { normalizeFullWidthDigits, normalizeFullWidthSpace } from '../../utils/stringUtils.js'
 import type { OptionWithDescription } from './select.js'
 import { useSelectNavigation } from './use-select-navigation.js'
 
@@ -182,7 +181,7 @@ export function useMultiSelectState<T>({
   // State for input type options
   const [inputValues, setInputValues] = useState<Map<T, string>>(() => {
     const initialMap = new Map<T, string>()
-    options.forEach(option => {
+    options.forEach((option) => {
       if (option.type === 'input' && option.initialValue) {
         initialMap.set(option.value, option.initialValue)
       }
@@ -192,8 +191,7 @@ export function useMultiSelectState<T>({
 
   const updateSelectedValues = useCallback(
     (values: T[] | ((prev: T[]) => T[])) => {
-      const newValues =
-        typeof values === 'function' ? values(selectedValues) : values
+      const newValues = typeof values === 'function' ? values(selectedValues) : values
       setSelectedValues(newValues)
       onChange?.(newValues)
     },
@@ -203,9 +201,7 @@ export function useMultiSelectState<T>({
   const navigation = useSelectNavigation<T>({
     visibleOptionCount,
     options,
-    initialFocusValue: initialFocusLast
-      ? options[options.length - 1]?.value
-      : undefined,
+    initialFocusValue: initialFocusLast ? options[options.length - 1]?.value : undefined,
     onFocus,
     focusValue,
   })
@@ -216,27 +212,27 @@ export function useMultiSelectState<T>({
 
   const updateInputValue = useCallback(
     (value: T, inputValue: string) => {
-      setInputValues(prev => {
+      setInputValues((prev) => {
         const next = new Map(prev)
         next.set(value, inputValue)
         return next
       })
 
       // Find the option and call its onChange
-      const option = options.find(opt => opt.value === value)
+      const option = options.find((opt) => opt.value === value)
       if (option && option.type === 'input') {
         option.onChange(inputValue)
       }
 
       // Update selected values to include/exclude based on input
-      updateSelectedValues(prev => {
+      updateSelectedValues((prev) => {
         if (inputValue) {
           if (!prev.includes(value)) {
             return [...prev, value]
           }
           return prev
         } else {
-          return prev.filter(v => v !== value)
+          return prev.filter((v) => v !== value)
         }
       })
     },
@@ -247,9 +243,7 @@ export function useMultiSelectState<T>({
   useInput(
     (input, key, event: InputEvent) => {
       const normalizedInput = normalizeFullWidthDigits(input)
-      const focusedOption = options.find(
-        opt => opt.value === navigation.focusedValue,
-      )
+      const focusedOption = options.find((opt) => opt.value === navigation.focusedValue)
       const isInInput = focusedOption?.type === 'input'
 
       // When in input field, only allow navigation keys
@@ -268,12 +262,7 @@ export function useMultiSelectState<T>({
 
       // Handle Tab to move forward
       if (key.tab && !key.shift) {
-        if (
-          submitButtonText &&
-          onSubmit &&
-          navigation.focusedValue === lastOptionValue &&
-          !isSubmitFocused
-        ) {
+        if (submitButtonText && onSubmit && navigation.focusedValue === lastOptionValue && !isSubmitFocused) {
           setIsSubmitFocused(true)
         } else if (!isSubmitFocused) {
           navigation.focusNextOption()
@@ -293,25 +282,12 @@ export function useMultiSelectState<T>({
       }
 
       // Handle arrow down / Ctrl+N / j
-      if (
-        key.downArrow ||
-        (key.ctrl && input === 'n') ||
-        (!key.ctrl && !key.shift && input === 'j')
-      ) {
+      if (key.downArrow || (key.ctrl && input === 'n') || (!key.ctrl && !key.shift && input === 'j')) {
         if (isSubmitFocused && onDownFromLastItem) {
           onDownFromLastItem()
-        } else if (
-          submitButtonText &&
-          onSubmit &&
-          navigation.focusedValue === lastOptionValue &&
-          !isSubmitFocused
-        ) {
+        } else if (submitButtonText && onSubmit && navigation.focusedValue === lastOptionValue && !isSubmitFocused) {
           setIsSubmitFocused(true)
-        } else if (
-          !submitButtonText &&
-          onDownFromLastItem &&
-          navigation.focusedValue === lastOptionValue
-        ) {
+        } else if (!submitButtonText && onDownFromLastItem && navigation.focusedValue === lastOptionValue) {
           // No submit button — exit from the last option
           onDownFromLastItem()
         } else if (!isSubmitFocused) {
@@ -321,18 +297,11 @@ export function useMultiSelectState<T>({
       }
 
       // Handle arrow up / Ctrl+P / k
-      if (
-        key.upArrow ||
-        (key.ctrl && input === 'p') ||
-        (!key.ctrl && !key.shift && input === 'k')
-      ) {
+      if (key.upArrow || (key.ctrl && input === 'p') || (!key.ctrl && !key.shift && input === 'k')) {
         if (submitButtonText && onSubmit && isSubmitFocused) {
           setIsSubmitFocused(false)
           navigation.focusOption(lastOptionValue)
-        } else if (
-          onUpFromFirstItem &&
-          navigation.focusedValue === options[0]?.value
-        ) {
+        } else if (onUpFromFirstItem && navigation.focusedValue === options[0]?.value) {
           onUpFromFirstItem()
         } else {
           navigation.focusPreviousOption()
@@ -374,7 +343,7 @@ export function useMultiSelectState<T>({
         // Enter or Space toggles selection (including for input fields)
         if (navigation.focusedValue !== undefined) {
           const newValues = selectedValues.includes(navigation.focusedValue)
-            ? selectedValues.filter(v => v !== navigation.focusedValue)
+            ? selectedValues.filter((v) => v !== navigation.focusedValue)
             : [...selectedValues, navigation.focusedValue]
           updateSelectedValues(newValues)
         }
@@ -387,7 +356,7 @@ export function useMultiSelectState<T>({
         if (index >= 0 && index < options.length) {
           const value = options[index]!.value
           const newValues = selectedValues.includes(value)
-            ? selectedValues.filter(v => v !== value)
+            ? selectedValues.filter((v) => v !== value)
             : [...selectedValues, value]
           updateSelectedValues(newValues)
         }

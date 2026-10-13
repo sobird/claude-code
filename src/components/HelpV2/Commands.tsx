@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useMemo } from 'react'
+
 import { type Command, formatDescriptionWithSource } from '../../commands.js'
 import { Box, Text } from '../../ink.js'
 import { truncate } from '../../utils/format.js'
@@ -15,14 +16,7 @@ type Props = {
   emptyMessage?: string
 }
 
-export function Commands({
-  commands,
-  maxHeight,
-  columns,
-  title,
-  onCancel,
-  emptyMessage,
-}: Props): React.ReactNode {
+export function Commands({ commands, maxHeight, columns, title, onCancel, emptyMessage }: Props): React.ReactNode {
   const { headerFocused, focusHeader } = useTabHeaderFocus()
   const maxWidth = Math.max(1, columns - 10)
   const visibleCount = Math.max(1, Math.floor((maxHeight - 10) / 2))
@@ -32,13 +26,13 @@ export function Commands({
     // project scope). Dedupe by name to avoid React key collisions in Select.
     const seen = new Set<string>()
     return commands
-      .filter(cmd => {
+      .filter((cmd) => {
         if (seen.has(cmd.name)) return false
         seen.add(cmd.name)
         return true
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map(cmd => ({
+      .map((cmd) => ({
         label: `/${cmd.name}`,
         value: cmd.name,
         description: truncate(formatDescriptionWithSource(cmd), maxWidth, true),

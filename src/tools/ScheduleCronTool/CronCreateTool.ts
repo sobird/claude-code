@@ -1,14 +1,10 @@
 import { z } from 'zod/v4'
+
 import { setScheduledTasksEnabled } from '../../bootstrap/state.js'
 import type { ValidationResult } from '../../Tool.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { cronToHuman, parseCronExpression } from '../../utils/cron.js'
-import {
-  addCronTask,
-  getCronFilePath,
-  listAllCronTasks,
-  nextCronRunMs,
-} from '../../utils/cronTasks.js'
+import { addCronTask, getCronFilePath, listAllCronTasks, nextCronRunMs } from '../../utils/cronTasks.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { semanticBoolean } from '../../utils/semanticBoolean.js'
 import { getTeammateContext } from '../../utils/teammateContext.js'
@@ -107,8 +103,7 @@ export const CronCreateTool = buildTool({
     if (input.durable && getTeammateContext()) {
       return {
         result: false,
-        message:
-          'durable crons are not supported for teammates (teammates do not persist across sessions)',
+        message: 'durable crons are not supported for teammates (teammates do not persist across sessions)',
         errorCode: 4,
       }
     }
@@ -118,13 +113,7 @@ export const CronCreateTool = buildTool({
     // Kill switch forces session-only; schema stays stable so the model sees
     // no validation errors when the gate flips mid-session.
     const effectiveDurable = durable && isDurableCronEnabled()
-    const id = await addCronTask(
-      cron,
-      prompt,
-      recurring,
-      effectiveDurable,
-      getTeammateContext()?.agentId,
-    )
+    const id = await addCronTask(cron, prompt, recurring, effectiveDurable, getTeammateContext()?.agentId)
     // Enable the scheduler so the task fires in this session. The
     // useScheduledTasks hook polls this flag and will start watching
     // on the next tick. For durable: false tasks the file never changes

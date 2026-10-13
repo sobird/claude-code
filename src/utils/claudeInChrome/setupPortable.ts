@@ -1,6 +1,7 @@
 import { readdir } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
+
 import { isFsInaccessible } from '../errors.js'
 
 export const CHROME_EXTENSION_URL = 'https://claude.ai/chrome'
@@ -12,20 +13,11 @@ const DEV_EXTENSION_ID = 'dihbgbndebgnbjfmelmegjepbnkhlgni'
 const ANT_EXTENSION_ID = 'dngcpimnedloihjnnfngkgjoidhnaolf'
 
 function getExtensionIds(): string[] {
-  return process.env.USER_TYPE === 'ant'
-    ? [PROD_EXTENSION_ID, DEV_EXTENSION_ID, ANT_EXTENSION_ID]
-    : [PROD_EXTENSION_ID]
+  return process.env.USER_TYPE === 'ant' ? [PROD_EXTENSION_ID, DEV_EXTENSION_ID, ANT_EXTENSION_ID] : [PROD_EXTENSION_ID]
 }
 
 // Must match ChromiumBrowser from common.ts
-export type ChromiumBrowser =
-  | 'chrome'
-  | 'brave'
-  | 'arc'
-  | 'chromium'
-  | 'edge'
-  | 'vivaldi'
-  | 'opera'
+export type ChromiumBrowser = 'chrome' | 'brave' | 'arc' | 'chromium' | 'edge' | 'vivaldi' | 'opera'
 
 export type BrowserPath = {
   browser: ChromiumBrowser
@@ -35,15 +27,7 @@ export type BrowserPath = {
 type Logger = (message: string) => void
 
 // Browser detection order - must match BROWSER_DETECTION_ORDER from common.ts
-const BROWSER_DETECTION_ORDER: ChromiumBrowser[] = [
-  'chrome',
-  'brave',
-  'arc',
-  'edge',
-  'chromium',
-  'vivaldi',
-  'opera',
-]
+const BROWSER_DETECTION_ORDER: ChromiumBrowser[] = ['chrome', 'brave', 'arc', 'edge', 'chromium', 'vivaldi', 'opera']
 
 type BrowserDataConfig = {
   macos: string[]
@@ -173,33 +157,22 @@ export async function detectExtensionInstallationPortable(
     }
 
     const profileDirs = browserProfileEntries
-      .filter(entry => entry.isDirectory())
-      .filter(
-        entry => entry.name === 'Default' || entry.name.startsWith('Profile '),
-      )
-      .map(entry => entry.name)
+      .filter((entry) => entry.isDirectory())
+      .filter((entry) => entry.name === 'Default' || entry.name.startsWith('Profile '))
+      .map((entry) => entry.name)
 
     if (profileDirs.length > 0) {
-      log?.(
-        `[Claude in Chrome] Found ${browser} profiles: ${profileDirs.join(', ')}`,
-      )
+      log?.(`[Claude in Chrome] Found ${browser} profiles: ${profileDirs.join(', ')}`)
     }
 
     // Check each profile for any of the extension IDs
     for (const profile of profileDirs) {
       for (const extensionId of extensionIds) {
-        const extensionPath = join(
-          browserBasePath,
-          profile,
-          'Extensions',
-          extensionId,
-        )
+        const extensionPath = join(browserBasePath, profile, 'Extensions', extensionId)
 
         try {
           await readdir(extensionPath)
-          log?.(
-            `[Claude in Chrome] Extension ${extensionId} found in ${browser} ${profile}`,
-          )
+          log?.(`[Claude in Chrome] Extension ${extensionId} found in ${browser} ${profile}`)
           return { isInstalled: true, browser }
         } catch {
           // Extension not found in this profile, continue checking
@@ -215,10 +188,7 @@ export async function detectExtensionInstallationPortable(
 /**
  * Simple wrapper that returns just the boolean result
  */
-export async function isChromeExtensionInstalledPortable(
-  browserPaths: BrowserPath[],
-  log?: Logger,
-): Promise<boolean> {
+export async function isChromeExtensionInstalledPortable(browserPaths: BrowserPath[], log?: Logger): Promise<boolean> {
   const result = await detectExtensionInstallationPortable(browserPaths, log)
   return result.isInstalled
 }

@@ -1,21 +1,16 @@
 import { randomUUID } from 'crypto'
 import { basename } from 'path'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
 import { readFileSync } from 'src/utils/fileRead.js'
 import { expandPath } from 'src/utils/path.js'
+
 import type { PermissionOption } from '../components/permissions/FilePermissionDialog/permissionOptions.js'
-import type {
-  MCPServerConnection,
-  McpSSEIDEServerConfig,
-  McpWebSocketIDEServerConfig,
-} from '../services/mcp/types.js'
+import type { MCPServerConnection, McpSSEIDEServerConfig, McpWebSocketIDEServerConfig } from '../services/mcp/types.js'
 import type { ToolUseContext } from '../Tool.js'
 import type { FileEdit } from '../tools/FileEditTool/types.js'
-import {
-  getEditsForPatch,
-  getPatchForEdits,
-} from '../tools/FileEditTool/utils.js'
+import { getEditsForPatch, getPatchForEdits } from '../tools/FileEditTool/utils.js'
 import { getGlobalConfig } from '../utils/config.js'
 import { getPatchFromContents } from '../utils/diff.js'
 import { isENOENT } from '../utils/errors.js'
@@ -43,13 +38,7 @@ type Props = {
   editMode: 'single' | 'multiple'
 }
 
-export function useDiffInIDE({
-  onChange,
-  toolUseContext,
-  filePath,
-  edits,
-  editMode,
-}: Props): {
+export function useDiffInIDE({ onChange, toolUseContext, filePath, edits, editMode }: Props): {
   closeTabInIDE: () => void
   showingDiffInIDE: boolean
   ideName: string
@@ -59,10 +48,7 @@ export function useDiffInIDE({
   const [hasError, setHasError] = useState(false)
 
   const sha = useMemo(() => randomUUID().slice(0, 6), [])
-  const tabName = useMemo(
-    () => `✻ [Claude Code] ${basename(filePath)} (${sha}) ⧉`,
-    [filePath, sha],
-  )
+  const tabName = useMemo(() => `✻ [Claude Code] ${basename(filePath)} (${sha}) ⧉`, [filePath, sha])
 
   const shouldShowDiffInIDE =
     hasAccessToIDEExtensionDiffFeature(toolUseContext.options.mcpClients) &&
@@ -71,8 +57,7 @@ export function useDiffInIDE({
     // File writes may come through here but are not supported for diffs.
     !filePath.endsWith('.ipynb')
 
-  const ideName =
-    getConnectedIdeName(toolUseContext.options.mcpClients) ?? 'IDE'
+  const ideName = getConnectedIdeName(toolUseContext.options.mcpClients) ?? 'IDE'
 
   async function showDiff(): Promise<void> {
     if (!shouldShowDiffInIDE) {
@@ -82,12 +67,7 @@ export function useDiffInIDE({
     try {
       logEvent('tengu_ext_will_show_diff', {})
 
-      const { oldContent, newContent } = await showDiffInIDE(
-        filePath,
-        edits,
-        toolUseContext,
-        tabName,
-      )
+      const { oldContent, newContent } = await showDiffInIDE(filePath, edits, toolUseContext, tabName)
       // Skip if component has been unmounted
       if (isUnmounted.current) {
         return
@@ -95,20 +75,13 @@ export function useDiffInIDE({
 
       logEvent('tengu_ext_diff_accepted', {})
 
-      const newEdits = computeEditsFromContents(
-        filePath,
-        oldContent,
-        newContent,
-        editMode,
-      )
+      const newEdits = computeEditsFromContents(filePath, oldContent, newContent, editMode)
 
       if (newEdits.length === 0) {
         // No changes -- edit was rejected (eg. reverted)
         logEvent('tengu_ext_diff_rejected', {})
         // We close the tab here because 'no' no longer auto-closes
-        const ideClient = getConnectedIdeClient(
-          toolUseContext.options.mcpClients,
-        )
+        const ideClient = getConnectedIdeClient(toolUseContext.options.mcpClients)
         if (ideClient) {
           // Close the tab in the IDE
           await closeTabInIDE(tabName, ideClient)
@@ -188,11 +161,7 @@ export function computeEditsFromContents(
 
   // For single edit mode, verify we only got one hunk
   if (singleHunk && patch.length > 1) {
-    logError(
-      new Error(
-        `Unexpected number of hunks: ${patch.length}. Expected 1 hunk.`,
-      ),
-    )
+    logError(new Error(`Unexpected number of hunks: ${patch.length}. Expected 1 hunk.`))
   }
 
   // Re-compute the edits to match the patch
@@ -270,13 +239,8 @@ async function showDiffInIDE(
 
     // Only convert paths if we're in WSL and IDE is on Windows
     const ideRunningInWindows =
-      (ideClient.config as McpSSEIDEServerConfig | McpWebSocketIDEServerConfig)
-        .ideRunningInWindows === true
-    if (
-      getPlatform() === 'wsl' &&
-      ideRunningInWindows &&
-      process.env.WSL_DISTRO_NAME
-    ) {
+      (ideClient.config as McpSSEIDEServerConfig | McpWebSocketIDEServerConfig).ideRunningInWindows === true
+    if (getPlatform() === 'wsl' && ideRunningInWindows && process.env.WSL_DISTRO_NAME) {
       const converter = new WindowsToWSLConverter(process.env.WSL_DISTRO_NAME)
       ideOldPath = converter.toIDEPath(oldFilePath)
     }
@@ -326,10 +290,7 @@ async function showDiffInIDE(
   }
 }
 
-async function closeTabInIDE(
-  tabName: string,
-  ideClient?: MCPServerConnection | undefined,
-): Promise<void> {
+async function closeTabInIDE(tabName: string, ideClient?: MCPServerConnection | undefined): Promise<void> {
   try {
     if (!ideClient || ideClient.type !== 'connected') {
       throw new Error('IDE client not available')
@@ -367,13 +328,8 @@ function isRejectedMessage(data: unknown): data is { text: 'DIFF_REJECTED' } {
   )
 }
 
-function isSaveMessage(
-  data: unknown,
-): data is [{ text: 'FILE_SAVED' }, { text: string }] {
+function isSaveMessage(data: unknown): data is [{ text: 'FILE_SAVED' }, { text: string }] {
   return (
-    Array.isArray(data) &&
-    data[0]?.type === 'text' &&
-    data[0].text === 'FILE_SAVED' &&
-    typeof data[1].text === 'string'
+    Array.isArray(data) && data[0]?.type === 'text' && data[0].text === 'FILE_SAVED' && typeof data[1].text === 'string'
   )
 }

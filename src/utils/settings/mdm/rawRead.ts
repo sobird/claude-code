@@ -11,6 +11,7 @@
 
 import { execFile } from 'child_process'
 import { existsSync } from 'fs'
+
 import {
   getMacOSPlistPaths,
   MDM_SUBPROCESS_TIMEOUT_MS,
@@ -29,20 +30,12 @@ export type RawReadResult = {
 
 let rawReadPromise: Promise<RawReadResult> | null = null
 
-function execFilePromise(
-  cmd: string,
-  args: string[],
-): Promise<{ stdout: string; code: number | null }> {
-  return new Promise(resolve => {
-    execFile(
-      cmd,
-      args,
-      { encoding: 'utf-8', timeout: MDM_SUBPROCESS_TIMEOUT_MS },
-      (err, stdout) => {
-        // biome-ignore lint/nursery/noFloatingPromises: resolve() is not a floating promise
-        resolve({ stdout: stdout ?? '', code: err ? 1 : 0 })
-      },
-    )
+function execFilePromise(cmd: string, args: string[]): Promise<{ stdout: string; code: number | null }> {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { encoding: 'utf-8', timeout: MDM_SUBPROCESS_TIMEOUT_MS }, (err, stdout) => {
+      // biome-ignore lint/nursery/noFloatingPromises: resolve() is not a floating promise
+      resolve({ stdout: stdout ?? '', code: err ? 1 : 0 })
+    })
   })
 }
 
@@ -68,20 +61,15 @@ export function fireRawRead(): Promise<RawReadResult> {
           if (!existsSync(path)) {
             return { stdout: '', label, ok: false }
           }
-          const { stdout, code } = await execFilePromise(PLUTIL_PATH, [
-            ...PLUTIL_ARGS_PREFIX,
-            path,
-          ])
+          const { stdout, code } = await execFilePromise(PLUTIL_PATH, [...PLUTIL_ARGS_PREFIX, path])
           return { stdout, label, ok: code === 0 && !!stdout }
         }),
       )
 
       // First source wins (array is in priority order)
-      const winner = allResults.find(r => r.ok)
+      const winner = allResults.find((r) => r.ok)
       return {
-        plistStdouts: winner
-          ? [{ stdout: winner.stdout, label: winner.label }]
-          : [],
+        plistStdouts: winner ? [{ stdout: winner.stdout, label: winner.label }] : [],
         hklmStdout: null,
         hkcuStdout: null,
       }
@@ -89,18 +77,8 @@ export function fireRawRead(): Promise<RawReadResult> {
 
     if (process.platform === 'win32') {
       const [hklm, hkcu] = await Promise.all([
-        execFilePromise('reg', [
-          'query',
-          WINDOWS_REGISTRY_KEY_PATH_HKLM,
-          '/v',
-          WINDOWS_REGISTRY_VALUE_NAME,
-        ]),
-        execFilePromise('reg', [
-          'query',
-          WINDOWS_REGISTRY_KEY_PATH_HKCU,
-          '/v',
-          WINDOWS_REGISTRY_VALUE_NAME,
-        ]),
+        execFilePromise('reg', ['query', WINDOWS_REGISTRY_KEY_PATH_HKLM, '/v', WINDOWS_REGISTRY_VALUE_NAME]),
+        execFilePromise('reg', ['query', WINDOWS_REGISTRY_KEY_PATH_HKCU, '/v', WINDOWS_REGISTRY_VALUE_NAME]),
       ])
       return {
         plistStdouts: null,

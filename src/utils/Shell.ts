@@ -1,27 +1,20 @@
 import { execFileSync, spawn } from 'child_process'
 import { constants as fsConstants, readFileSync, unlinkSync } from 'fs'
 import { type FileHandle, mkdir, open, realpath } from 'fs/promises'
-import memoize from 'lodash-es/memoize.js'
 import { isAbsolute, resolve } from 'path'
 import { join as posixJoin } from 'path/posix'
+
+import memoize from 'lodash-es/memoize.js'
 import { logEvent } from 'src/services/analytics/index.js'
-import {
-  getOriginalCwd,
-  getSessionId,
-  setCwdState,
-} from '../bootstrap/state.js'
+
+import { getOriginalCwd, getSessionId, setCwdState } from '../bootstrap/state.js'
 import { generateTaskId } from '../Task.js'
 import { pwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
 import { errorMessage, isENOENT } from './errors.js'
 import { getFsImplementation } from './fsOperations.js'
 import { logError } from './log.js'
-import {
-  createAbortedCommand,
-  createFailedCommand,
-  type ShellCommand,
-  wrapSpawn,
-} from './ShellCommand.js'
+import { createAbortedCommand, createFailedCommand, type ShellCommand, wrapSpawn } from './ShellCommand.js'
 import { getTaskOutputDir } from './task/diskOutput.js'
 import { TaskOutput } from './task/TaskOutput.js'
 import { which } from './which.js'
@@ -29,6 +22,7 @@ import { which } from './which.js'
 export type { ExecResult } from './ShellCommand.js'
 
 import { accessSync } from 'fs'
+
 import { onCwdChangedForHooks } from './hooks/fileChangedWatcher.js'
 import { getClaudeTempDirName } from './permissions/filesystem.js'
 import { getPlatform } from './platform.js'
@@ -75,24 +69,20 @@ export async function findSuitableShell(): Promise<string> {
   const shellOverride = process.env.CLAUDE_CODE_SHELL
   if (shellOverride) {
     // Validate it's a supported shell type
-    const isSupported =
-      shellOverride.includes('bash') || shellOverride.includes('zsh')
+    const isSupported = shellOverride.includes('bash') || shellOverride.includes('zsh')
     if (isSupported && isExecutable(shellOverride)) {
       logForDebugging(`Using shell override: ${shellOverride}`)
       return shellOverride
     } else {
       // Note, if we ever want to add support for new shells here we'll need to update or Bash tool parsing to account for this
-      logForDebugging(
-        `CLAUDE_CODE_SHELL="${shellOverride}" is not a valid bash/zsh path, falling back to detection`,
-      )
+      logForDebugging(`CLAUDE_CODE_SHELL="${shellOverride}" is not a valid bash/zsh path, falling back to detection`)
     }
   }
 
   // Check user's preferred shell from environment
   const env_shell = process.env.SHELL
   // Only consider SHELL if it's bash or zsh
-  const isEnvShellSupported =
-    env_shell && (env_shell.includes('bash') || env_shell.includes('zsh'))
+  const isEnvShellSupported = env_shell && (env_shell.includes('bash') || env_shell.includes('zsh'))
   const preferBash = env_shell?.includes('bash')
 
   // Try to locate shells using which (uses Bun.which when available)
@@ -103,9 +93,7 @@ export async function findSuitableShell(): Promise<string> {
 
   // Order shells based on user preference
   const shellOrder = preferBash ? ['bash', 'zsh'] : ['zsh', 'bash']
-  const supportedShells = shellOrder.flatMap(shell =>
-    shellPaths.map(path => `${path}/${shell}`),
-  )
+  const supportedShells = shellOrder.flatMap((shell) => shellPaths.map((path) => `${path}/${shell}`))
 
   // Add discovered paths to the beginning of our search list
   // Put the user's preferred shell type first
@@ -122,7 +110,7 @@ export async function findSuitableShell(): Promise<string> {
     supportedShells.unshift(env_shell)
   }
 
-  const shellPath = supportedShells.find(shell => shell && isExecutable(shell))
+  const shellPath = supportedShells.find((shell) => shell && isExecutable(shell))
 
   // If no valid shell found, throw a helpful error
   if (!shellPath) {
@@ -184,14 +172,7 @@ export async function exec(
   shellType: ShellType,
   options?: ExecOptions,
 ): Promise<ShellCommand> {
-  const {
-    timeout,
-    onProgress,
-    preventCwdChanges,
-    shouldUseSandbox,
-    shouldAutoBackground,
-    onStdout,
-  } = options ?? {}
+  const { timeout, onProgress, preventCwdChanges, shouldUseSandbox, shouldAutoBackground, onStdout } = options ?? {}
   const commandTimeout = timeout || DEFAULT_TIMEOUT
 
   const provider = await resolveProvider[shellType]()
@@ -201,17 +182,13 @@ export async function exec(
     .padStart(4, '0')
 
   // Sandbox temp directory - use per-user directory name to prevent multi-user permission conflicts
-  const sandboxTmpDir = posixJoin(
-    process.env.CLAUDE_CODE_TMPDIR || '/tmp',
-    getClaudeTempDirName(),
-  )
+  const sandboxTmpDir = posixJoin(process.env.CLAUDE_CODE_TMPDIR || '/tmp', getClaudeTempDirName())
 
-  const { commandString: builtCommand, cwdFilePath } =
-    await provider.buildExecCommand(command, {
-      id,
-      sandboxTmpDir: shouldUseSandbox ? sandboxTmpDir : undefined,
-      useSandbox: shouldUseSandbox ?? false,
-    })
+  const { commandString: builtCommand, cwdFilePath } = await provider.buildExecCommand(command, {
+    id,
+    sandboxTmpDir: shouldUseSandbox ? sandboxTmpDir : undefined,
+    useSandbox: shouldUseSandbox ?? false,
+  })
 
   let commandString = builtCommand
 
@@ -223,9 +200,7 @@ export async function exec(
     await realpath(cwd)
   } catch {
     const fallback = getOriginalCwd()
-    logForDebugging(
-      `Shell CWD "${cwd}" no longer exists, recovering to "${fallback}"`,
-    )
+    logForDebugging(`Shell CWD "${cwd}" no longer exists, recovering to "${fallback}"`)
     try {
       await realpath(fallback)
       setCwdState(fallback)
@@ -257,12 +232,7 @@ export async function exec(
   const sandboxBinShell = isSandboxedPowerShell ? '/bin/sh' : binShell
 
   if (shouldUseSandbox) {
-    commandString = await SandboxManager.wrapWithSandbox(
-      commandString,
-      sandboxBinShell,
-      undefined,
-      abortSignal,
-    )
+    commandString = await SandboxManager.wrapWithSandbox(commandString, sandboxBinShell, undefined, abortSignal)
     // Create sandbox temp directory for sandboxed processes with secure permissions
     try {
       const fs = getFsImplementation()
@@ -273,9 +243,7 @@ export async function exec(
   }
 
   const spawnBinary = isSandboxedPowerShell ? '/bin/sh' : binShell
-  const shellArgs = isSandboxedPowerShell
-    ? ['-c', commandString]
-    : provider.getSpawnArgs(commandString)
+  const shellArgs = isSandboxedPowerShell ? ['-c', commandString] : provider.getSpawnArgs(commandString)
   const envOverrides = await provider.getEnvironmentOverrides(command)
 
   // When onStdout is provided, use pipe mode: stdout flows through
@@ -305,10 +273,7 @@ export async function exec(
       taskOutput.path,
       process.platform === 'win32'
         ? 'w'
-        : fsConstants.O_WRONLY |
-            fsConstants.O_CREAT |
-            fsConstants.O_APPEND |
-            O_NOFOLLOW,
+        : fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_APPEND | O_NOFOLLOW,
     )
   }
 
@@ -327,22 +292,14 @@ export async function exec(
           : {}),
       },
       cwd,
-      stdio: usePipeMode
-        ? ['pipe', 'pipe', 'pipe']
-        : ['pipe', outputHandle?.fd, outputHandle?.fd],
+      stdio: usePipeMode ? ['pipe', 'pipe', 'pipe'] : ['pipe', outputHandle?.fd, outputHandle?.fd],
       // Don't pass the signal - we'll handle termination ourselves with tree-kill
       detached: provider.detached,
       // Prevent visible console window on Windows (no-op on other platforms)
       windowsHide: true,
     })
 
-    const shellCommand = wrapSpawn(
-      childProcess,
-      abortSignal,
-      commandTimeout,
-      taskOutput,
-      shouldAutoBackground,
-    )
+    const shellCommand = wrapSpawn(childProcess, abortSignal, commandTimeout, taskOutput, shouldAutoBackground)
 
     // Close our copy of the fd — the child has its own dup.
     // Must happen after wrapSpawn attaches 'error' listener, since the await
@@ -377,12 +334,9 @@ export async function exec(
     // On Windows, cwdFilePath is a POSIX path (for bash's `pwd -P >| $path`),
     // but Node.js needs a native Windows path for readFileSync/unlinkSync.
     // Similarly, `pwd -P` outputs a POSIX path that must be converted before setCwd.
-    const nativeCwdFilePath =
-      getPlatform() === 'windows'
-        ? posixPathToWindowsPath(cwdFilePath)
-        : cwdFilePath
+    const nativeCwdFilePath = getPlatform() === 'windows' ? posixPathToWindowsPath(cwdFilePath) : cwdFilePath
 
-    void shellCommand.result.then(async result => {
+    void shellCommand.result.then(async (result) => {
       // On Linux, bwrap creates 0-byte mount-point files on the host to deny
       // writes to non-existent paths (.bashrc, HEAD, etc.). These persist after
       // bwrap exits as ghost dotfiles in cwd. Cleanup is synchronous and a no-op
@@ -445,9 +399,7 @@ export async function exec(
  * Set the current working directory
  */
 export function setCwd(path: string, relativeTo?: string): void {
-  const resolved = isAbsolute(path)
-    ? path
-    : resolve(relativeTo || getFsImplementation().cwd(), path)
+  const resolved = isAbsolute(path) ? path : resolve(relativeTo || getFsImplementation().cwd(), path)
   // Resolve symlinks to match the behavior of pwd -P.
   // realpathSync throws ENOENT if the path doesn't exist - convert to a
   // friendlier error message instead of a separate existsSync pre-check (TOCTOU).

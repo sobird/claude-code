@@ -5,6 +5,7 @@ import {
   logEvent,
 } from 'src/services/analytics/index.js'
 import { useInterval } from 'usehooks-ts'
+
 import { useUpdateNotification } from '../hooks/useUpdateNotification.js'
 import { Box, Text } from '../ink.js'
 import {
@@ -18,10 +19,7 @@ import {
 import { getGlobalConfig, isAutoUpdaterDisabled } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
 import { getCurrentInstallationType } from '../utils/doctorDiagnostic.js'
-import {
-  installOrUpdateClaudePackage,
-  localInstallationExists,
-} from '../utils/localInstaller.js'
+import { installOrUpdateClaudePackage, localInstallationExists } from '../utils/localInstaller.js'
 import { removeInstalledSymlink } from '../utils/nativeInstaller/index.js'
 import { gt, gte } from '../utils/semver.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
@@ -67,13 +65,8 @@ export function AutoUpdater({
       return
     }
 
-    if (
-      process.env.NODE_ENV === 'test' ||
-      process.env.NODE_ENV === 'development'
-    ) {
-      logForDebugging(
-        'AutoUpdater: Skipping update check in test/dev environment',
-      )
+    if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
+      logForDebugging('AutoUpdater: Skipping update check in test/dev environment')
       return
     }
 
@@ -120,9 +113,7 @@ export function AutoUpdater({
 
       // Detect actual running installation type
       const installationType = await getCurrentInstallationType()
-      logForDebugging(
-        `AutoUpdater: Detected installation type: ${installationType}`,
-      )
+      logForDebugging(`AutoUpdater: Detected installation type: ${installationType}`)
 
       // Skip update for development builds
       if (installationType === 'development') {
@@ -147,16 +138,12 @@ export function AutoUpdater({
         installStatus = await installGlobalPackage()
       } else if (installationType === 'native') {
         // This shouldn't happen - native should use NativeAutoUpdater
-        logForDebugging(
-          'AutoUpdater: Unexpected native installation in non-native updater',
-        )
+        logForDebugging('AutoUpdater: Unexpected native installation in non-native updater')
         onChangeIsUpdating(false)
         return
       } else {
         // Fallback to config-based detection for unknown types
-        logForDebugging(
-          `AutoUpdater: Unknown installation type, falling back to config`,
-        )
+        logForDebugging(`AutoUpdater: Unknown installation type, falling back to config`)
         const isMigrated = config.installMethod === 'local'
         updateMethod = isMigrated ? 'local' : 'global'
 
@@ -171,27 +158,20 @@ export function AutoUpdater({
 
       if (installStatus === 'success') {
         logEvent('tengu_auto_updater_success', {
-          fromVersion:
-            currentVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          toVersion:
-            latestVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          fromVersion: currentVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          toVersion: latestVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           durationMs: Date.now() - startTime,
           wasMigrated: updateMethod === 'local',
-          installationType:
-            installationType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          installationType: installationType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
       } else {
         logEvent('tengu_auto_updater_fail', {
-          fromVersion:
-            currentVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          attemptedVersion:
-            latestVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          status:
-            installStatus as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          fromVersion: currentVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          attemptedVersion: latestVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          status: installStatus as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           durationMs: Date.now() - startTime,
           wasMigrated: updateMethod === 'local',
-          installationType:
-            installationType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          installationType: installationType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
       }
 
@@ -227,8 +207,7 @@ export function AutoUpdater({
     <Box flexDirection="row" gap={1}>
       {verbose && (
         <Text dimColor wrap="truncate">
-          globalVersion: {versions.global} &middot; latestVersion:{' '}
-          {versions.latest}
+          globalVersion: {versions.global} &middot; latestVersion: {versions.latest}
         </Text>
       )}
       {isUpdating ? (
@@ -248,8 +227,7 @@ export function AutoUpdater({
           </Text>
         )
       )}
-      {(autoUpdaterResult?.status === 'install_failed' ||
-        autoUpdaterResult?.status === 'no_permissions') && (
+      {(autoUpdaterResult?.status === 'install_failed' || autoUpdaterResult?.status === 'no_permissions') && (
         <Text color="error" wrap="truncate">
           ✗ Auto-update failed &middot; Try <Text bold>claude doctor</Text> or{' '}
           <Text bold>

@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import React, { useEffect } from 'react'
+
 import { useNotifications } from '../context/notifications.js'
 import { Text } from '../ink.js'
 import { getGlobalConfig } from '../utils/config.js'
@@ -17,9 +19,7 @@ export function isBuddyTeaserWindow(): boolean {
 export function isBuddyLive(): boolean {
   if (process.env.USER_TYPE === 'ant') return true
   const d = new Date()
-  return (
-    d.getFullYear() > 2026 || (d.getFullYear() === 2026 && d.getMonth() >= 3)
-  )
+  return d.getFullYear() > 2026 || (d.getFullYear() === 2026 && d.getMonth() >= 3)
 }
 
 function RainbowText({ text }: { text: string }): React.ReactNode {
@@ -53,9 +53,7 @@ export function useBuddyNotification(): void {
   }, [addNotification, removeNotification])
 }
 
-export function findBuddyTriggerPositions(
-  text: string,
-): Array<{ start: number; end: number }> {
+export function findBuddyTriggerPositions(text: string): Array<{ start: number; end: number }> {
   if (!feature('BUDDY')) return []
   const triggers: Array<{ start: number; end: number }> = []
   const re = /\/buddy\b/g

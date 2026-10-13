@@ -1,6 +1,7 @@
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import figures from 'figures'
 import * as React from 'react'
+
 import { TEAMMATE_MESSAGE_TAG } from '../../constants/xml.js'
 import { Ansi, Box, Text, type TextProps } from '../../ink.js'
 import { toInkColor } from '../../utils/ink.js'
@@ -58,12 +59,8 @@ function getDisplayName(teammateId: string): string {
   return teammateId
 }
 
-export function UserTeammateMessage({
-  addMargin,
-  param: { text },
-  isTranscriptMode,
-}: Props): React.ReactNode {
-  const messages = parseTeammateMessages(text).filter(msg => {
+export function UserTeammateMessage({ addMargin, param: { text }, isTranscriptMode }: Props): React.ReactNode {
+  const messages = parseTeammateMessages(text).filter((msg) => {
     // Pre-filter shutdown lifecycle messages to avoid empty wrapper
     // Box elements creating blank lines between model turns
     if (isShutdownApproved(msg.content)) {
@@ -88,14 +85,9 @@ export function UserTeammateMessage({
         const displayName = getDisplayName(msg.teammateId)
 
         // Try to render as plan approval message (request or response)
-        const planApprovalElement = tryRenderPlanApprovalMessage(
-          msg.content,
-          displayName,
-        )
+        const planApprovalElement = tryRenderPlanApprovalMessage(msg.content, displayName)
         if (planApprovalElement) {
-          return (
-            <React.Fragment key={index}>{planApprovalElement}</React.Fragment>
-          )
+          return <React.Fragment key={index}>{planApprovalElement}</React.Fragment>
         }
 
         // Try to render as shutdown message (request or rejected)
@@ -105,13 +97,9 @@ export function UserTeammateMessage({
         }
 
         // Try to render as task assignment message
-        const taskAssignmentElement = tryRenderTaskAssignmentMessage(
-          msg.content,
-        )
+        const taskAssignmentElement = tryRenderTaskAssignmentMessage(msg.content)
         if (taskAssignmentElement) {
-          return (
-            <React.Fragment key={index}>{taskAssignmentElement}</React.Fragment>
-          )
+          return <React.Fragment key={index}>{taskAssignmentElement}</React.Fragment>
         }
 
         // Try to parse as structured JSON message
@@ -137,17 +125,13 @@ export function UserTeammateMessage({
           }
           return (
             <Box key={index} flexDirection="column" marginTop={1}>
-              <Text
-                color={inkColor}
-              >{`@${displayName}${figures.pointer}`}</Text>
+              <Text color={inkColor}>{`@${displayName}${figures.pointer}`}</Text>
               <MessageResponse>
                 <Text color="success">✓</Text>
                 <Text>
                   {' '}
                   Completed task #{taskCompleted.taskId}
-                  {taskCompleted.taskSubject && (
-                    <Text dimColor> ({taskCompleted.taskSubject})</Text>
-                  )}
+                  {taskCompleted.taskSubject && <Text dimColor> ({taskCompleted.taskSubject})</Text>}
                 </Text>
               </MessageResponse>
             </Box>

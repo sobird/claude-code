@@ -1,7 +1,8 @@
 import React from 'react'
+
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
-import { stringWidth } from '../../ink/stringWidth.js'
 import { Ansi, Text } from '../../ink.js'
+import { stringWidth } from '../../ink/stringWidth.js'
 import type { Theme } from '../../utils/theme.js'
 
 type DividerProps = {
@@ -63,13 +64,7 @@ type DividerProps = {
  * // With centered title
  * <Divider title="3 new messages" />
  */
-export function Divider({
-  width,
-  color,
-  char = '─',
-  padding = 0,
-  title,
-}: DividerProps): React.ReactNode {
+export function Divider({ width, color, char = '─', padding = 0, title }: DividerProps): React.ReactNode {
   const { columns: terminalWidth } = useTerminalSize()
   const effectiveWidth = Math.max(0, (width ?? terminalWidth) - padding)
 

@@ -1,16 +1,14 @@
 import React, { type RefObject, useEffect, useRef } from 'react'
+
 import { useNotifications } from '../context/notifications.js'
-import {
-  useCopyOnSelect,
-  useSelectionBgColor,
-} from '../hooks/useCopyOnSelect.js'
+import { useCopyOnSelect, useSelectionBgColor } from '../hooks/useCopyOnSelect.js'
+// eslint-disable-next-line custom-rules/prefer-use-keybindings -- Esc needs conditional propagation based on selection state
+import { type Key, useInput } from '../ink.js'
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox.js'
 import { useSelection } from '../ink/hooks/use-selection.js'
 import type { FocusMove, SelectionState } from '../ink/selection.js'
 import { isXtermJs } from '../ink/terminal.js'
 import { getClipboardPath } from '../ink/termio/osc.js'
-// eslint-disable-next-line custom-rules/prefer-use-keybindings -- Esc needs conditional propagation based on selection state
-import { type Key, useInput } from '../ink.js'
 import { useKeybindings } from '../keybindings/useKeybinding.js'
 import { logForDebugging } from '../utils/debug.js'
 
@@ -119,14 +117,7 @@ const WHEEL_DECAY_IDLE_MS = 500
 export function shouldClearSelectionOnKey(key: Key): boolean {
   if (key.wheelUp || key.wheelDown) return false
   const isNav =
-    key.leftArrow ||
-    key.rightArrow ||
-    key.upArrow ||
-    key.downArrow ||
-    key.home ||
-    key.end ||
-    key.pageUp ||
-    key.pageDown
+    key.leftArrow || key.rightArrow || key.upArrow || key.downArrow || key.home || key.end || key.pageUp || key.pageDown
   if (isNav && (key.shift || key.meta || key.super)) return false
   return true
 }
@@ -186,11 +177,7 @@ export type WheelAccelState = {
  *  a direction flip is deferred for bounce detection — call sites no-op on
  *  step=0 (scrollBy(0) is a no-op, onScroll(false) is idempotent). Exported
  *  for tests. */
-export function computeWheelStep(
-  state: WheelAccelState,
-  dir: 1 | -1,
-  now: number,
-): number {
+export function computeWheelStep(state: WheelAccelState, dir: 1 | -1, now: number): number {
   if (!state.xtermJs) {
     // Device-switch guard ①: idle disengage. Runs BEFORE pendingFlip resolve
     // so a pending bounce (28% of last-mouse-events) doesn't bypass it via
@@ -305,8 +292,7 @@ export function computeWheelStep(
     state.frac = 0
   } else {
     const m = Math.pow(0.5, gap / WHEEL_DECAY_HALFLIFE_MS)
-    const cap =
-      gap >= WHEEL_DECAY_GAP_MS ? WHEEL_DECAY_CAP_SLOW : WHEEL_DECAY_CAP_FAST
+    const cap = gap >= WHEEL_DECAY_GAP_MS ? WHEEL_DECAY_CAP_SLOW : WHEEL_DECAY_CAP_FAST
     state.mult = Math.min(cap, 1 + (state.mult - 1) * m + WHEEL_DECAY_STEP * m)
   }
   const total = state.mult + state.frac
@@ -377,12 +363,7 @@ const AUTOSCROLL_MAX_TICKS = 200 // 10s @ 50ms
  * Scrolling breaks sticky mode; Ctrl+End re-enables it. Wheeling down at
  * the bottom also re-enables sticky so new content follows naturally.
  */
-export function ScrollKeybindingHandler({
-  scrollRef,
-  isActive,
-  onScroll,
-  isModal = false,
-}: Props): React.ReactNode {
+export function ScrollKeybindingHandler({ scrollRef, isActive, onScroll, isModal = false }: Props): React.ReactNode {
   const selection = useSelection()
   const { addNotification } = useNotifications()
   // Lazy-inited on first wheel event so the XTVERSION probe (fired at
@@ -519,10 +500,7 @@ export function ScrollKeybindingHandler({
         const s = scrollRef.current
         if (!s) return
         const max = Math.max(0, s.getScrollHeight() - s.getViewportHeight())
-        translateSelectionForJump(
-          s,
-          max - (s.getScrollTop() + s.getPendingDelta()),
-        )
+        translateSelectionForJump(s, max - (s.getScrollTop() + s.getPendingDelta()))
         // scrollTo(max) eager-writes scrollTop so the render-phase sticky
         // follow computes followDelta=0. Without this, scrollToBottom()
         // alone leaves scrollTop stale → followDelta=max-stale →
@@ -599,9 +577,7 @@ export function ScrollKeybindingHandler({
     (input, key, event) => {
       const s = scrollRef.current
       if (!s) return
-      const sticky = applyModalPagerAction(s, modalPagerAction(input, key), d =>
-        translateSelectionForJump(s, d),
-      )
+      const sticky = applyModalPagerAction(s, modalPagerAction(input, key), (d) => translateSelectionForJump(s, d))
       if (sticky === null) return
       onScroll?.(sticky, s)
       event.stopImmediatePropagation()
@@ -701,13 +677,7 @@ function useDragToScroll(
       // after the immediate tick already called stop() at a scroll boundary).
       // ticks cap defends against a lost release event (mouse released
       // outside terminal window) leaving isDragging stuck true.
-      if (
-        !sel?.isDragging ||
-        !sel.focus ||
-        !s ||
-        dir === 0 ||
-        ++ticksRef.current > AUTOSCROLL_MAX_TICKS
-      ) {
+      if (!sel?.isDragging || !sel.focus || !s || dir === 0 || ++ticksRef.current > AUTOSCROLL_MAX_TICKS) {
         stop()
         return
       }
@@ -805,18 +775,10 @@ function useDragToScroll(
       // stuck true, the reason AUTOSCROLL_MAX_TICKS exists) still resets.
       // Safe: start() below re-records lastScrolledDirRef before its
       // early-return, so a mid-scroll reset here is instantly undone.
-      if (
-        !sel?.isDragging ||
-        (sel.scrolledOffAbove.length === 0 && sel.scrolledOffBelow.length === 0)
-      ) {
+      if (!sel?.isDragging || (sel.scrolledOffAbove.length === 0 && sel.scrolledOffBelow.length === 0)) {
         lastScrolledDirRef.current = 0
       }
-      const dir = dragScrollDirection(
-        sel,
-        top,
-        bottom,
-        lastScrolledDirRef.current,
-      )
+      const dir = dragScrollDirection(sel, top, bottom, lastScrolledDirRef.current)
       if (dir === 0) {
         // Blocked reversal: focus jumped to the opposite edge (off-window
         // drag return, fast flick). handleSelectionDrag already moved focus
@@ -968,10 +930,7 @@ export type ModalPagerAction =
  */
 export function modalPagerAction(
   input: string,
-  key: Pick<
-    Key,
-    'ctrl' | 'meta' | 'shift' | 'upArrow' | 'downArrow' | 'home' | 'end'
-  >,
+  key: Pick<Key, 'ctrl' | 'meta' | 'shift' | 'upArrow' | 'downArrow' | 'home' | 'end'>,
 ): ModalPagerAction | null {
   if (key.meta) return null
   // Special keys first — arrows/home/end arrive with empty or junk input,

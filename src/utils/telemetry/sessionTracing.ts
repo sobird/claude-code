@@ -10,9 +10,11 @@
  * - Configure OTEL_TRACES_EXPORTER (console, otlp, etc.)
  */
 
-import { feature } from 'bun:bundle'
-import { context as otelContext, type Span, trace } from '@opentelemetry/api'
 import { AsyncLocalStorage } from 'async_hooks'
+import { feature } from 'bun:bundle'
+
+import { context as otelContext, type Span, trace } from '@opentelemetry/api'
+
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import type { AssistantMessage, UserMessage } from '../../types/message.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from '../envUtils.js'
@@ -46,13 +48,7 @@ export { isBetaTracingEnabled, type LLMRequestNewContext }
 // Message type for API calls (UserMessage or AssistantMessage)
 type APIMessage = UserMessage | AssistantMessage
 
-type SpanType =
-  | 'interaction'
-  | 'llm_request'
-  | 'tool'
-  | 'tool.blocked_on_user'
-  | 'tool.execution'
-  | 'hook'
+type SpanType = 'interaction' | 'llm_request' | 'tool' | 'tool.blocked_on_user' | 'tool.execution' | 'hook'
 
 interface SpanContext {
   span: Span
@@ -125,19 +121,14 @@ function ensureCleanupInterval(): void {
  */
 export function isEnhancedTelemetryEnabled(): boolean {
   if (feature('ENHANCED_TELEMETRY_BETA')) {
-    const env =
-      process.env.CLAUDE_CODE_ENHANCED_TELEMETRY_BETA ??
-      process.env.ENABLE_ENHANCED_TELEMETRY_BETA
+    const env = process.env.CLAUDE_CODE_ENHANCED_TELEMETRY_BETA ?? process.env.ENABLE_ENHANCED_TELEMETRY_BETA
     if (isEnvTruthy(env)) {
       return true
     }
     if (isEnvDefinedFalsy(env)) {
       return false
     }
-    return (
-      process.env.USER_TYPE === 'ant' ||
-      getFeatureValue_CACHED_MAY_BE_STALE('enhanced_telemetry_beta', false)
-    )
+    return process.env.USER_TYPE === 'ant' || getFeatureValue_CACHED_MAY_BE_STALE('enhanced_telemetry_beta', false)
   }
   return false
 }
@@ -177,9 +168,7 @@ export function startInteractionSpan(userPrompt: string): Span {
   ensureCleanupInterval()
 
   // Start Perfetto span regardless of OTel tracing state
-  const perfettoSpanId = isPerfettoTracingEnabled()
-    ? startInteractionPerfettoSpan(userPrompt)
-    : undefined
+  const perfettoSpanId = isPerfettoTracingEnabled() ? startInteractionPerfettoSpan(userPrompt) : undefined
 
   if (!isAnyTracingEnabled()) {
     // Still track Perfetto span even if OTel is disabled
@@ -200,9 +189,7 @@ export function startInteractionSpan(userPrompt: string): Span {
   }
 
   const tracer = getTracer()
-  const isUserPromptLoggingEnabled = isEnvTruthy(
-    process.env.OTEL_LOG_USER_PROMPTS,
-  )
+  const isUserPromptLoggingEnabled = isEnvTruthy(process.env.OTEL_LOG_USER_PROMPTS)
   const promptToLog = isUserPromptLoggingEnabled ? userPrompt : '<REDACTED>'
 
   interactionSequence++
@@ -313,9 +300,7 @@ export function startLLMRequestSpan(
     speed: fastMode ? 'fast' : 'normal',
   })
 
-  const ctx = parentSpanCtx
-    ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
+  const ctx = parentSpanCtx ? trace.setSpan(otelContext.active(), parentSpanCtx.span) : otelContext.active()
   const span = tracer.startSpan('claude_code.llm_request', { attributes }, ctx)
 
   // Add query_source (agent name) if provided
@@ -386,12 +371,9 @@ export function endLLMRequestSpan(
     // Legacy fallback: find the most recent llm_request span
     // WARNING: This can cause mismatched responses when multiple requests are in flight
     llmSpanContext = Array.from(activeSpans.values())
-      .findLast(r => {
+      .findLast((r) => {
         const ctx = r.deref()
-        return (
-          ctx?.attributes['span.type'] === 'llm_request' ||
-          ctx?.attributes['model']
-        )
+        return ctx?.attributes['span.type'] === 'llm_request' || ctx?.attributes['model']
       })
       ?.deref()
   }
@@ -431,25 +413,17 @@ export function endLLMRequestSpan(
   }
 
   if (metadata) {
-    if (metadata.inputTokens !== undefined)
-      endAttributes['input_tokens'] = metadata.inputTokens
-    if (metadata.outputTokens !== undefined)
-      endAttributes['output_tokens'] = metadata.outputTokens
-    if (metadata.cacheReadTokens !== undefined)
-      endAttributes['cache_read_tokens'] = metadata.cacheReadTokens
+    if (metadata.inputTokens !== undefined) endAttributes['input_tokens'] = metadata.inputTokens
+    if (metadata.outputTokens !== undefined) endAttributes['output_tokens'] = metadata.outputTokens
+    if (metadata.cacheReadTokens !== undefined) endAttributes['cache_read_tokens'] = metadata.cacheReadTokens
     if (metadata.cacheCreationTokens !== undefined)
       endAttributes['cache_creation_tokens'] = metadata.cacheCreationTokens
-    if (metadata.success !== undefined)
-      endAttributes['success'] = metadata.success
-    if (metadata.statusCode !== undefined)
-      endAttributes['status_code'] = metadata.statusCode
+    if (metadata.success !== undefined) endAttributes['success'] = metadata.success
+    if (metadata.statusCode !== undefined) endAttributes['status_code'] = metadata.statusCode
     if (metadata.error !== undefined) endAttributes['error'] = metadata.error
-    if (metadata.attempt !== undefined)
-      endAttributes['attempt'] = metadata.attempt
-    if (metadata.hasToolCall !== undefined)
-      endAttributes['response.has_tool_call'] = metadata.hasToolCall
-    if (metadata.ttftMs !== undefined)
-      endAttributes['ttft_ms'] = metadata.ttftMs
+    if (metadata.attempt !== undefined) endAttributes['attempt'] = metadata.attempt
+    if (metadata.hasToolCall !== undefined) endAttributes['response.has_tool_call'] = metadata.hasToolCall
+    if (metadata.ttftMs !== undefined) endAttributes['ttft_ms'] = metadata.ttftMs
 
     // Add experimental response attributes (model_output, thinking_output)
     addBetaLLMResponseAttributes(endAttributes, metadata)
@@ -469,9 +443,7 @@ export function startToolSpan(
   toolInput?: string,
 ): Span {
   // Start Perfetto span regardless of OTel tracing state
-  const perfettoSpanId = isPerfettoTracingEnabled()
-    ? startToolPerfettoSpan(toolName, toolAttributes)
-    : undefined
+  const perfettoSpanId = isPerfettoTracingEnabled() ? startToolPerfettoSpan(toolName, toolAttributes) : undefined
 
   if (!isAnyTracingEnabled()) {
     // Still track Perfetto span even if OTel is disabled
@@ -499,9 +471,7 @@ export function startToolSpan(
     ...toolAttributes,
   })
 
-  const ctx = parentSpanCtx
-    ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
+  const ctx = parentSpanCtx ? trace.setSpan(otelContext.active(), parentSpanCtx.span) : otelContext.active()
   const span = tracer.startSpan('claude_code.tool', { attributes }, ctx)
 
   // Add experimental tool input attributes
@@ -525,9 +495,7 @@ export function startToolSpan(
 
 export function startToolBlockedOnUserSpan(): Span {
   // Start Perfetto span regardless of OTel tracing state
-  const perfettoSpanId = isPerfettoTracingEnabled()
-    ? startUserInputPerfettoSpan('tool_permission')
-    : undefined
+  const perfettoSpanId = isPerfettoTracingEnabled() ? startUserInputPerfettoSpan('tool_permission') : undefined
 
   if (!isAnyTracingEnabled()) {
     // Still track Perfetto span even if OTel is disabled
@@ -552,14 +520,8 @@ export function startToolBlockedOnUserSpan(): Span {
 
   const attributes = createSpanAttributes('tool.blocked_on_user')
 
-  const ctx = parentSpanCtx
-    ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
-  const span = tracer.startSpan(
-    'claude_code.tool.blocked_on_user',
-    { attributes },
-    ctx,
-  )
+  const ctx = parentSpanCtx ? trace.setSpan(otelContext.active(), parentSpanCtx.span) : otelContext.active()
+  const span = tracer.startSpan('claude_code.tool.blocked_on_user', { attributes }, ctx)
 
   const spanId = getSpanId(span)
   const spanContextObj: SpanContext = {
@@ -574,14 +536,9 @@ export function startToolBlockedOnUserSpan(): Span {
   return span
 }
 
-export function endToolBlockedOnUserSpan(
-  decision?: string,
-  source?: string,
-): void {
+export function endToolBlockedOnUserSpan(decision?: string, source?: string): void {
   const blockedSpanContext = Array.from(activeSpans.values())
-    .findLast(
-      r => r.deref()?.attributes['span.type'] === 'tool.blocked_on_user',
-    )
+    .findLast((r) => r.deref()?.attributes['span.type'] === 'tool.blocked_on_user')
     ?.deref()
 
   if (!blockedSpanContext) {
@@ -633,14 +590,8 @@ export function startToolExecutionSpan(): Span {
 
   const attributes = createSpanAttributes('tool.execution')
 
-  const ctx = parentSpanCtx
-    ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
-  const span = tracer.startSpan(
-    'claude_code.tool.execution',
-    { attributes },
-    ctx,
-  )
+  const ctx = parentSpanCtx ? trace.setSpan(otelContext.active(), parentSpanCtx.span) : otelContext.active()
+  const span = tracer.startSpan('claude_code.tool.execution', { attributes }, ctx)
 
   const spanId = getSpanId(span)
   const spanContextObj: SpanContext = {
@@ -654,16 +605,13 @@ export function startToolExecutionSpan(): Span {
   return span
 }
 
-export function endToolExecutionSpan(metadata?: {
-  success?: boolean
-  error?: string
-}): void {
+export function endToolExecutionSpan(metadata?: { success?: boolean; error?: string }): void {
   if (!isAnyTracingEnabled()) {
     return
   }
 
   const executionSpanContext = Array.from(activeSpans.values())
-    .findLast(r => r.deref()?.attributes['span.type'] === 'tool.execution')
+    .findLast((r) => r.deref()?.attributes['span.type'] === 'tool.execution')
     ?.deref()
 
   if (!executionSpanContext) {
@@ -744,10 +692,7 @@ function isToolContentLoggingEnabled(): boolean {
  * Only logs if OTEL_LOG_TOOL_CONTENT=1 is set.
  * Truncates content if it exceeds MAX_CONTENT_SIZE.
  */
-export function addToolContentEvent(
-  eventName: string,
-  attributes: Record<string, string | number | boolean>,
-): void {
+export function addToolContentEvent(eventName: string, attributes: Record<string, string | number | boolean>): void {
   if (!isAnyTracingEnabled() || !isToolContentLoggingEnabled()) {
     return
   }
@@ -780,9 +725,7 @@ export function getCurrentSpan(): Span | null {
     return null
   }
 
-  return (
-    toolContext.getStore()?.span ?? interactionContext.getStore()?.span ?? null
-  )
+  return toolContext.getStore()?.span ?? interactionContext.getStore()?.span ?? null
 }
 
 export async function executeInSpan<T>(
@@ -801,9 +744,7 @@ export async function executeInSpan<T>(
     ...attributes,
   })
 
-  const ctx = parentSpanCtx
-    ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
+  const ctx = parentSpanCtx ? trace.setSpan(otelContext.active(), parentSpanCtx.span) : otelContext.active()
   const span = tracer.startSpan(spanName, { attributes: finalAttributes }, ctx)
 
   const spanId = getSpanId(span)
@@ -841,12 +782,7 @@ export async function executeInSpan<T>(
  * @param hookDefinitions JSON string of hook definitions for tracing
  * @returns The span (or a dummy span if tracing is disabled)
  */
-export function startHookSpan(
-  hookEvent: string,
-  hookName: string,
-  numHooks: number,
-  hookDefinitions: string,
-): Span {
+export function startHookSpan(hookEvent: string, hookName: string, numHooks: number, hookDefinitions: string): Span {
   if (!isBetaTracingEnabled()) {
     return trace.getActiveSpan() || getTracer().startSpan('dummy')
   }
@@ -861,9 +797,7 @@ export function startHookSpan(
     hook_definitions: hookDefinitions,
   })
 
-  const ctx = parentSpanCtx
-    ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
+  const ctx = parentSpanCtx ? trace.setSpan(otelContext.active(), parentSpanCtx.span) : otelContext.active()
   const span = tracer.startSpan('claude_code.hook', { attributes }, ctx)
 
   const spanId = getSpanId(span)
@@ -910,14 +844,11 @@ export function endHookSpan(
   }
 
   if (metadata) {
-    if (metadata.numSuccess !== undefined)
-      endAttributes['num_success'] = metadata.numSuccess
-    if (metadata.numBlocking !== undefined)
-      endAttributes['num_blocking'] = metadata.numBlocking
+    if (metadata.numSuccess !== undefined) endAttributes['num_success'] = metadata.numSuccess
+    if (metadata.numBlocking !== undefined) endAttributes['num_blocking'] = metadata.numBlocking
     if (metadata.numNonBlockingError !== undefined)
       endAttributes['num_non_blocking_error'] = metadata.numNonBlockingError
-    if (metadata.numCancelled !== undefined)
-      endAttributes['num_cancelled'] = metadata.numCancelled
+    if (metadata.numCancelled !== undefined) endAttributes['num_cancelled'] = metadata.numCancelled
   }
 
   spanContext.span.setAttributes(endAttributes)

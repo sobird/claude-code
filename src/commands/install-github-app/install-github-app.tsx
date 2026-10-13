@@ -4,11 +4,12 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
+
 import { WorkflowMultiselectDialog } from '../../components/WorkflowMultiselectDialog.js'
 import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { Box } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
 import { getAnthropicApiKey, isAnthropicAuthEnabled } from '../../utils/auth.js'
 import { openBrowser } from '../../utils/browser.js'
@@ -24,8 +25,8 @@ import { ErrorStep } from './ErrorStep.js'
 import { ExistingWorkflowStep } from './ExistingWorkflowStep.js'
 import { InstallAppStep } from './InstallAppStep.js'
 import { OAuthFlowStep } from './OAuthFlowStep.js'
-import { SuccessStep } from './SuccessStep.js'
 import { setupGitHubActions } from './setupGitHubActions.js'
+import { SuccessStep } from './SuccessStep.js'
 import type { State, Warning, Workflow } from './types.js'
 import { WarningsStep } from './WarningsStep.js'
 
@@ -47,18 +48,15 @@ const INITIAL_STATE: State = {
   authType: 'api_key',
 }
 
-function InstallGitHubApp(props: {
-  onDone: (message: string) => void
-}): React.ReactNode {
+function InstallGitHubApp(props: { onDone: (message: string) => void }): React.ReactNode {
   const [existingApiKey] = useState(() => getAnthropicApiKey())
   const [state, setState] = useState({
     ...INITIAL_STATE,
     useExistingKey: !!existingApiKey,
-    selectedApiKeyOption: (existingApiKey
-      ? 'existing'
-      : isAnthropicAuthEnabled()
-        ? 'oauth'
-        : 'new') as 'existing' | 'new' | 'oauth',
+    selectedApiKeyOption: (existingApiKey ? 'existing' : isAnthropicAuthEnabled() ? 'oauth' : 'new') as
+      | 'existing'
+      | 'new'
+      | 'oauth',
   })
   useExitOnCtrlCDWithKeybindings()
 
@@ -77,8 +75,7 @@ function InstallGitHubApp(props: {
     if (ghVersionResult.exitCode !== 0) {
       warnings.push({
         title: 'GitHub CLI not found',
-        message:
-          'GitHub CLI (gh) does not appear to be installed or accessible.',
+        message: 'GitHub CLI (gh) does not appear to be installed or accessible.',
         instructions: [
           'Install GitHub CLI from https://cli.github.com/',
           'macOS: brew install gh',
@@ -119,7 +116,7 @@ function InstallGitHubApp(props: {
 
         if (missingScopes.length > 0) {
           // Missing required scopes - exit immediately
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             step: 'error',
             error: `GitHub CLI is missing required permissions: ${missingScopes.join(', ')}.`,
@@ -145,7 +142,7 @@ function InstallGitHubApp(props: {
       step: 'check-gh' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       warnings,
       currentRepo,
@@ -163,7 +160,7 @@ function InstallGitHubApp(props: {
 
   const runSetupGitHubActions = useCallback(
     async (apiKeyOrOAuthToken: string | null, secretName: string) => {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         step: 'creating',
         currentWorkflowInstallStep: 0,
@@ -175,7 +172,7 @@ function InstallGitHubApp(props: {
           apiKeyOrOAuthToken,
           secretName,
           () => {
-            setState(prev => ({
+            setState((prev) => ({
               ...prev,
               currentWorkflowInstallStep: prev.currentWorkflowInstallStep + 1,
             }))
@@ -192,19 +189,15 @@ function InstallGitHubApp(props: {
         logEvent('tengu_install_github_app_step_completed', {
           step: 'creating' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
-        setState(prev => ({ ...prev, step: 'success' }))
+        setState((prev) => ({ ...prev, step: 'success' }))
       } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : 'Failed to set up GitHub Actions'
+        const errorMessage = error instanceof Error ? error.message : 'Failed to set up GitHub Actions'
 
         if (errorMessage.includes('workflow file already exists')) {
           logEvent('tengu_install_github_app_error', {
-            reason:
-              'workflow_file_exists' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            reason: 'workflow_file_exists' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           })
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             step: 'error',
             error: 'A Claude workflow file already exists in this repository.',
@@ -219,11 +212,10 @@ function InstallGitHubApp(props: {
           }))
         } else {
           logEvent('tengu_install_github_app_error', {
-            reason:
-              'setup_github_actions_failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            reason: 'setup_github_actions_failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           })
 
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             step: 'error',
             error: errorMessage,
@@ -249,26 +241,16 @@ function InstallGitHubApp(props: {
     await openBrowser(installUrl)
   }
 
-  async function checkRepositoryPermissions(
-    repoName: string,
-  ): Promise<{ hasAccess: boolean; error?: string }> {
+  async function checkRepositoryPermissions(repoName: string): Promise<{ hasAccess: boolean; error?: string }> {
     try {
-      const result = await execFileNoThrow('gh', [
-        'api',
-        `repos/${repoName}`,
-        '--jq',
-        '.permissions.admin',
-      ])
+      const result = await execFileNoThrow('gh', ['api', `repos/${repoName}`, '--jq', '.permissions.admin'])
 
       if (result.code === 0) {
         const hasAdmin = result.stdout.trim() === 'true'
         return { hasAccess: hasAdmin }
       }
 
-      if (
-        result.stderr.includes('404') ||
-        result.stderr.includes('Not Found')
-      ) {
+      if (result.stderr.includes('404') || result.stderr.includes('Not Found')) {
         return {
           hasAccess: false,
           error: 'repository_not_found',
@@ -309,7 +291,7 @@ function InstallGitHubApp(props: {
       })
 
       if (hasAnthropicKey) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           secretExists: true,
           step: 'check-existing-secret',
@@ -318,7 +300,7 @@ function InstallGitHubApp(props: {
         // No existing secret found
         if (existingApiKey) {
           // User has local key, skip to creating with it
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             apiKeyOrOAuthToken: existingApiKey,
             useExistingKey: true,
@@ -326,14 +308,14 @@ function InstallGitHubApp(props: {
           await runSetupGitHubActions(existingApiKey, state.secretName)
         } else {
           // No local key, go to API key step
-          setState(prev => ({ ...prev, step: 'api-key' }))
+          setState((prev) => ({ ...prev, step: 'api-key' }))
         }
       }
     } else {
       // Error checking secrets
       if (existingApiKey) {
         // User has local key, skip to creating with it
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           apiKeyOrOAuthToken: existingApiKey,
           useExistingKey: true,
@@ -341,7 +323,7 @@ function InstallGitHubApp(props: {
         await runSetupGitHubActions(existingApiKey, state.secretName)
       } else {
         // No local key, go to API key step
-        setState(prev => ({ ...prev, step: 'api-key' }))
+        setState((prev) => ({ ...prev, step: 'api-key' }))
       }
     }
   }
@@ -351,12 +333,10 @@ function InstallGitHubApp(props: {
       logEvent('tengu_install_github_app_step_completed', {
         step: 'warnings' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
-      setState(prev => ({ ...prev, step: 'install-app' }))
+      setState((prev) => ({ ...prev, step: 'install-app' }))
       setTimeout(openGitHubAppInstallation, 0)
     } else if (state.step === 'choose-repo') {
-      let repoName = state.useCurrentRepo
-        ? state.currentRepo
-        : state.selectedRepoName
+      let repoName = state.useCurrentRepo ? state.currentRepo : state.selectedRepoName
 
       if (!repoName.trim()) {
         return
@@ -370,10 +350,7 @@ function InstallGitHubApp(props: {
           repoWarnings.push({
             title: 'Invalid GitHub URL format',
             message: 'The repository URL format appears to be invalid.',
-            instructions: [
-              'Use format: owner/repo or https://github.com/owner/repo',
-              'Example: anthropics/claude-cli',
-            ],
+            instructions: ['Use format: owner/repo or https://github.com/owner/repo', 'Example: anthropics/claude-cli'],
           })
         } else {
           repoName = match[1]?.replace(/\.git$/, '') || ''
@@ -384,10 +361,7 @@ function InstallGitHubApp(props: {
         repoWarnings.push({
           title: 'Repository format warning',
           message: 'Repository should be in format "owner/repo"',
-          instructions: [
-            'Use format: owner/repo',
-            'Example: anthropics/claude-cli',
-          ],
+          instructions: ['Use format: owner/repo', 'Example: anthropics/claude-cli'],
         })
       }
 
@@ -420,7 +394,7 @@ function InstallGitHubApp(props: {
 
       if (repoWarnings.length > 0) {
         const allWarnings = [...state.warnings, ...repoWarnings]
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           selectedRepoName: repoName,
           workflowExists,
@@ -431,7 +405,7 @@ function InstallGitHubApp(props: {
         logEvent('tengu_install_github_app_step_completed', {
           step: 'choose-repo' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           selectedRepoName: repoName,
           workflowExists,
@@ -444,9 +418,9 @@ function InstallGitHubApp(props: {
         step: 'install-app' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
       if (state.workflowExists) {
-        setState(prev => ({ ...prev, step: 'check-existing-workflow' }))
+        setState((prev) => ({ ...prev, step: 'check-existing-workflow' }))
       } else {
-        setState(prev => ({ ...prev, step: 'select-workflows' }))
+        setState((prev) => ({ ...prev, step: 'select-workflows' }))
       }
     } else if (state.step === 'check-existing-workflow') {
       return
@@ -472,17 +446,13 @@ function InstallGitHubApp(props: {
       }
 
       // If user selected 'existing' option, use the existing API key
-      const apiKeyToUse =
-        state.selectedApiKeyOption === 'existing'
-          ? existingApiKey
-          : state.apiKeyOrOAuthToken
+      const apiKeyToUse = state.selectedApiKeyOption === 'existing' ? existingApiKey : state.apiKeyOrOAuthToken
 
       if (!apiKeyToUse) {
         logEvent('tengu_install_github_app_error', {
-          reason:
-            'api_key_missing' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          reason: 'api_key_missing' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           step: 'error',
           error: 'API key is required',
@@ -491,7 +461,7 @@ function InstallGitHubApp(props: {
       }
 
       // Store the API key being used (either existing or newly entered)
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         apiKeyOrOAuthToken: apiKeyToUse,
         useExistingKey: state.selectedApiKeyOption === 'existing',
@@ -517,7 +487,7 @@ function InstallGitHubApp(props: {
           logEvent('tengu_install_github_app_step_completed', {
             step: 'api-key' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           })
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             secretExists: true,
             step: 'check-existing-secret',
@@ -540,22 +510,22 @@ function InstallGitHubApp(props: {
   }
 
   const handleRepoUrlChange = (value: string) => {
-    setState(prev => ({ ...prev, selectedRepoName: value }))
+    setState((prev) => ({ ...prev, selectedRepoName: value }))
   }
 
   const handleApiKeyChange = (value: string) => {
-    setState(prev => ({ ...prev, apiKeyOrOAuthToken: value }))
+    setState((prev) => ({ ...prev, apiKeyOrOAuthToken: value }))
   }
 
   const handleApiKeyOptionChange = (option: 'existing' | 'new' | 'oauth') => {
-    setState(prev => ({ ...prev, selectedApiKeyOption: option }))
+    setState((prev) => ({ ...prev, selectedApiKeyOption: option }))
   }
 
   const handleCreateOAuthToken = useCallback(() => {
     logEvent('tengu_install_github_app_step_completed', {
       step: 'api-key' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
-    setState(prev => ({ ...prev, step: 'oauth-flow' }))
+    setState((prev) => ({ ...prev, step: 'oauth-flow' }))
   }, [])
 
   const handleOAuthSuccess = useCallback(
@@ -563,7 +533,7 @@ function InstallGitHubApp(props: {
       logEvent('tengu_install_github_app_step_completed', {
         step: 'oauth-flow' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         apiKeyOrOAuthToken: token,
         useExistingKey: false,
@@ -576,16 +546,16 @@ function InstallGitHubApp(props: {
   )
 
   const handleOAuthCancel = useCallback(() => {
-    setState(prev => ({ ...prev, step: 'api-key' }))
+    setState((prev) => ({ ...prev, step: 'api-key' }))
   }, [])
 
   const handleSecretNameChange = (value: string) => {
     if (value && !/^[a-zA-Z0-9_]+$/.test(value)) return
-    setState(prev => ({ ...prev, secretName: value }))
+    setState((prev) => ({ ...prev, secretName: value }))
   }
 
   const handleToggleUseCurrentRepo = (useCurrentRepo: boolean) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       useCurrentRepo,
       selectedRepoName: useCurrentRepo ? prev.currentRepo : '',
@@ -593,11 +563,11 @@ function InstallGitHubApp(props: {
   }
 
   const handleToggleUseExistingKey = (useExistingKey: boolean) => {
-    setState(prev => ({ ...prev, useExistingKey }))
+    setState((prev) => ({ ...prev, useExistingKey }))
   }
 
   const handleToggleUseExistingSecret = (useExistingSecret: boolean) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       useExistingSecret,
       secretName: useExistingSecret ? 'ANTHROPIC_API_KEY' : '',
@@ -614,7 +584,7 @@ function InstallGitHubApp(props: {
       step: 'check-existing-workflow' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
-    setState(prev => ({ ...prev, workflowAction: action }))
+    setState((prev) => ({ ...prev, workflowAction: action }))
 
     if (action === 'skip' || action === 'update') {
       // Check if user has existing local API key
@@ -622,7 +592,7 @@ function InstallGitHubApp(props: {
         await checkExistingSecret()
       } else {
         // No local key, go straight to API key step
-        setState(prev => ({ ...prev, step: 'api-key' }))
+        setState((prev) => ({ ...prev, step: 'api-key' }))
       }
     }
   }
@@ -645,9 +615,7 @@ function InstallGitHubApp(props: {
     case 'check-gh':
       return <CheckGitHubStep />
     case 'warnings':
-      return (
-        <WarningsStep warnings={state.warnings} onContinue={handleSubmit} />
-      )
+      return <WarningsStep warnings={state.warnings} onContinue={handleSubmit} />
     case 'choose-repo':
       return (
         <ChooseRepoStep
@@ -660,19 +628,9 @@ function InstallGitHubApp(props: {
         />
       )
     case 'install-app':
-      return (
-        <InstallAppStep
-          repoUrl={state.selectedRepoName}
-          onSubmit={handleSubmit}
-        />
-      )
+      return <InstallAppStep repoUrl={state.selectedRepoName} onSubmit={handleSubmit} />
     case 'check-existing-workflow':
-      return (
-        <ExistingWorkflowStep
-          repoName={state.selectedRepoName}
-          onSelectAction={handleWorkflowAction}
-        />
-      )
+      return <ExistingWorkflowStep repoName={state.selectedRepoName} onSelectAction={handleWorkflowAction} />
     case 'check-existing-secret':
       return (
         <CheckExistingSecretStep
@@ -692,9 +650,7 @@ function InstallGitHubApp(props: {
           onApiKeyChange={handleApiKeyChange}
           onToggleUseExistingKey={handleToggleUseExistingKey}
           onSubmit={handleSubmit}
-          onCreateOAuthToken={
-            isAnthropicAuthEnabled() ? handleCreateOAuthToken : undefined
-          }
+          onCreateOAuthToken={isAnthropicAuthEnabled() ? handleCreateOAuthToken : undefined}
           selectedOption={state.selectedApiKeyOption}
           onSelectOption={handleApiKeyOptionChange}
         />
@@ -724,22 +680,18 @@ function InstallGitHubApp(props: {
     case 'error':
       return (
         <Box tabIndex={0} autoFocus onKeyDown={handleDismissKeyDown}>
-          <ErrorStep
-            error={state.error}
-            errorReason={state.errorReason}
-            errorInstructions={state.errorInstructions}
-          />
+          <ErrorStep error={state.error} errorReason={state.errorReason} errorInstructions={state.errorInstructions} />
         </Box>
       )
     case 'select-workflows':
       return (
         <WorkflowMultiselectDialog
           defaultSelections={state.selectedWorkflows}
-          onSubmit={selectedWorkflows => {
+          onSubmit={(selectedWorkflows) => {
             logEvent('tengu_install_github_app_step_completed', {
               step: 'select-workflows' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
             })
-            setState(prev => ({
+            setState((prev) => ({
               ...prev,
               selectedWorkflows,
             }))
@@ -748,23 +700,16 @@ function InstallGitHubApp(props: {
               void checkExistingSecret()
             } else {
               // No local key, go straight to API key step
-              setState(prev => ({ ...prev, step: 'api-key' }))
+              setState((prev) => ({ ...prev, step: 'api-key' }))
             }
           }}
         />
       )
     case 'oauth-flow':
-      return (
-        <OAuthFlowStep
-          onSuccess={handleOAuthSuccess}
-          onCancel={handleOAuthCancel}
-        />
-      )
+      return <OAuthFlowStep onSuccess={handleOAuthSuccess} onCancel={handleOAuthCancel} />
   }
 }
 
-export async function call(
-  onDone: LocalJSXCommandOnDone,
-): Promise<React.ReactNode> {
+export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNode> {
   return <InstallGitHubApp onDone={onDone} />
 }

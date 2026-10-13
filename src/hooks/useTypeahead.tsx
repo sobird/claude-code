@@ -4,48 +4,25 @@ import { useNotifications } from 'src/context/notifications.js'
 import { Text } from 'src/ink.js'
 import { logEvent } from 'src/services/analytics/index.js'
 import { useDebounceCallback } from 'usehooks-ts'
+
 import { type Command, getCommandName } from '../commands.js'
-import {
-  getModeFromInput,
-  getValueFromInput,
-} from '../components/PromptInput/inputModes.js'
-import type {
-  SuggestionItem,
-  SuggestionType,
-} from '../components/PromptInput/PromptInputFooterSuggestions.js'
-import {
-  useIsModalOverlayActive,
-  useRegisterOverlay,
-} from '../context/overlayContext.js'
-import { KeyboardEvent } from '../ink/events/keyboard-event.js'
+import { getModeFromInput, getValueFromInput } from '../components/PromptInput/inputModes.js'
+import type { SuggestionItem, SuggestionType } from '../components/PromptInput/PromptInputFooterSuggestions.js'
+import { useIsModalOverlayActive, useRegisterOverlay } from '../context/overlayContext.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- backward-compat bridge until consumers wire handleKeyDown to <Box onKeyDown>
 import { useInput } from '../ink.js'
-import {
-  useOptionalKeybindingContext,
-  useRegisterKeybindingContext,
-} from '../keybindings/KeybindingContext.js'
+import { KeyboardEvent } from '../ink/events/keyboard-event.js'
+import { useOptionalKeybindingContext, useRegisterKeybindingContext } from '../keybindings/KeybindingContext.js'
 import { useKeybindings } from '../keybindings/useKeybinding.js'
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js'
 import { useAppState, useAppStateStore } from '../state/AppState.js'
 import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir.js'
-import type {
-  InlineGhostText,
-  PromptInputMode,
-} from '../types/textInputTypes.js'
+import type { InlineGhostText, PromptInputMode } from '../types/textInputTypes.js'
 import { isAgentSwarmsEnabled } from '../utils/agentSwarmsEnabled.js'
-import {
-  generateProgressiveArgumentHint,
-  parseArguments,
-} from '../utils/argumentSubstitution.js'
-import {
-  getShellCompletions,
-  type ShellCompletionType,
-} from '../utils/bash/shellCompletion.js'
+import { generateProgressiveArgumentHint, parseArguments } from '../utils/argumentSubstitution.js'
+import { getShellCompletions, type ShellCompletionType } from '../utils/bash/shellCompletion.js'
 import { formatLogMetadata } from '../utils/format.js'
-import {
-  getSessionIdFromLog,
-  searchSessionsByCustomTitle,
-} from '../utils/sessionStorage.js'
+import { getSessionIdFromLog, searchSessionsByCustomTitle } from '../utils/sessionStorage.js'
 import {
   applyCommandSuggestion,
   findMidInputSlashCommand,
@@ -59,10 +36,7 @@ import {
   isPathLikeToken,
 } from '../utils/suggestions/directoryCompletion.js'
 import { getShellHistoryCompletion } from '../utils/suggestions/shellHistoryCompletion.js'
-import {
-  getSlackChannelSuggestions,
-  hasSlackMcpServer,
-} from '../utils/suggestions/slackChannelSuggestions.js'
+import { getSlackChannelSuggestions, hasSlackMcpServer } from '../utils/suggestions/slackChannelSuggestions.js'
 import { TEAM_LEAD_NAME } from '../utils/swarm/constants.js'
 import {
   applyFileSuggestion,
@@ -78,16 +52,13 @@ import { generateUnifiedSuggestions } from './unifiedSuggestions.js'
 // \p{M} = combining marks (macOS NFD accents, Devanagari vowel signs)
 const AT_TOKEN_HEAD_RE = /^@[\p{L}\p{N}\p{M}_\-./\\()[\]~:]*/u
 const PATH_CHAR_HEAD_RE = /^[\p{L}\p{N}\p{M}_\-./\\()[\]~:]+/u
-const TOKEN_WITH_AT_RE =
-  /(@[\p{L}\p{N}\p{M}_\-./\\()[\]~:]*|[\p{L}\p{N}\p{M}_\-./\\()[\]~:]+)$/u
+const TOKEN_WITH_AT_RE = /(@[\p{L}\p{N}\p{M}_\-./\\()[\]~:]*|[\p{L}\p{N}\p{M}_\-./\\()[\]~:]+)$/u
 const TOKEN_WITHOUT_AT_RE = /[\p{L}\p{N}\p{M}_\-./\\()[\]~:]+$/u
 const HAS_AT_SYMBOL_RE = /(^|\s)@([\p{L}\p{N}\p{M}_\-./\\()[\]~:]*|"[^"]*"?)$/u
 const HASH_CHANNEL_RE = /(^|\s)#([a-z0-9][a-z0-9_-]*)$/
 
 // Type guard for path completion metadata
-function isPathMetadata(
-  metadata: unknown,
-): metadata is { type: 'directory' | 'file' } {
+function isPathMetadata(metadata: unknown): metadata is { type: 'directory' | 'file' } {
   return (
     typeof metadata === 'object' &&
     metadata !== null &&
@@ -119,9 +90,7 @@ function getPreservedSelection(
   }
 
   // Try to find the same item in the new list by ID
-  const newIndex = newSuggestions.findIndex(
-    item => item.id === prevSelectedItem.id,
-  )
+  const newIndex = newSuggestions.findIndex((item) => item.id === prevSelectedItem.id)
 
   // Return the new index if found, otherwise default to 0
   return newIndex >= 0 ? newIndex : 0
@@ -129,9 +98,7 @@ function getPreservedSelection(
 
 function buildResumeInputFromSuggestion(suggestion: SuggestionItem): string {
   const metadata = suggestion.metadata as { sessionId: string } | undefined
-  return metadata?.sessionId
-    ? `/resume ${metadata.sessionId}`
-    : `/resume ${suggestion.displayText}`
+  return metadata?.sessionId ? `/resume ${metadata.sessionId}` : `/resume ${suggestion.displayText}`
 }
 
 type Props = {
@@ -179,10 +146,7 @@ type UseTypeaheadResult = {
  * @param completionToken The completion token
  * @returns The search token with @ and quotes removed
  */
-export function extractSearchToken(completionToken: {
-  token: string
-  isQuoted?: boolean
-}): string {
+export function extractSearchToken(completionToken: { token: string; isQuoted?: boolean }): string {
   if (completionToken.isQuoted) {
     // Remove @" prefix and optional closing "
     return completionToken.token.slice(2).replace(/"$/, '')
@@ -212,19 +176,14 @@ export function formatReplacementValue(options: {
   isQuoted?: boolean
   isComplete: boolean
 }): string {
-  const { displayText, mode, hasAtPrefix, needsQuotes, isQuoted, isComplete } =
-    options
+  const { displayText, mode, hasAtPrefix, needsQuotes, isQuoted, isComplete } = options
   const space = isComplete ? ' ' : ''
 
   if (isQuoted || needsQuotes) {
     // Use quoted format
-    return mode === 'bash'
-      ? `"${displayText}"${space}`
-      : `@"${displayText}"${space}`
+    return mode === 'bash' ? `"${displayText}"${space}` : `@"${displayText}"${space}`
   } else if (hasAtPrefix) {
-    return mode === 'bash'
-      ? `${displayText}${space}`
-      : `@${displayText}${space}`
+    return mode === 'bash' ? `${displayText}${space}` : `@${displayText}${space}`
   } else {
     return displayText
   }
@@ -255,8 +214,7 @@ export function applyShellSuggestion(
     replacementText = suggestion.displayText
   }
 
-  const newInput =
-    input.slice(0, wordStart) + replacementText + input.slice(cursorOffset)
+  const newInput = input.slice(0, wordStart) + replacementText + input.slice(cursorOffset)
 
   onInputChange(newInput)
   setCursorOffset(wordStart + replacementText.length)
@@ -276,8 +234,7 @@ function applyTriggerSuggestion(
   if (!m || m.index === undefined) return
   const prefixStart = m.index + (m[1]?.length ?? 0)
   const before = input.slice(0, prefixStart)
-  const newInput =
-    before + suggestion.displayText + ' ' + input.slice(cursorOffset)
+  const newInput = before + suggestion.displayText + ' ' + input.slice(cursorOffset)
   onInputChange(newInput)
   setCursorOffset(before.length + suggestion.displayText.length + 1)
 }
@@ -287,21 +244,14 @@ let currentShellCompletionAbortController: AbortController | null = null
 /**
  * Generate bash shell completion suggestions
  */
-async function generateBashSuggestions(
-  input: string,
-  cursorOffset: number,
-): Promise<SuggestionItem[]> {
+async function generateBashSuggestions(input: string, cursorOffset: number): Promise<SuggestionItem[]> {
   try {
     if (currentShellCompletionAbortController) {
       currentShellCompletionAbortController.abort()
     }
 
     currentShellCompletionAbortController = new AbortController()
-    const suggestions = await getShellCompletions(
-      input,
-      cursorOffset,
-      currentShellCompletionAbortController.signal,
-    )
+    const suggestions = await getShellCompletions(input, cursorOffset, currentShellCompletionAbortController.signal)
 
     return suggestions
   } catch {
@@ -382,10 +332,7 @@ export function extractCompletionToken(
   // Fast path for @ tokens: use lastIndexOf to avoid expensive $ anchor scan
   if (includeAtSymbol) {
     const atIdx = textBeforeCursor.lastIndexOf('@')
-    if (
-      atIdx >= 0 &&
-      (atIdx === 0 || /\s/.test(textBeforeCursor[atIdx - 1]!))
-    ) {
+    if (atIdx >= 0 && (atIdx === 0 || /\s/.test(textBeforeCursor[atIdx - 1]!))) {
       const fromAt = textBeforeCursor.substring(atIdx)
       const atHeadMatch = fromAt.match(AT_TOKEN_HEAD_RE)
       if (atHeadMatch && atHeadMatch[0].length === fromAt.length) {
@@ -440,10 +387,7 @@ function extractCommandNameAndArgs(value: string): {
   return null
 }
 
-function hasCommandWithArguments(
-  isAtEndWithWhitespace: boolean,
-  value: string,
-) {
+function hasCommandWithArguments(isAtEndWithWhitespace: boolean, value: string) {
   // If value.endsWith(' ') but the user is not at the end, then the user has
   // potentially gone back to the command in an effort to edit the command name
   // (but preserve the arguments).
@@ -469,41 +413,31 @@ export function useTypeahead({
   onModeChange,
 }: Props): UseTypeaheadResult {
   const { addNotification } = useNotifications()
-  const thinkingToggleShortcut = useShortcutDisplay(
-    'chat:thinkingToggle',
-    'Chat',
-    'alt+t',
-  )
+  const thinkingToggleShortcut = useShortcutDisplay('chat:thinkingToggle', 'Chat', 'alt+t')
   const [suggestionType, setSuggestionType] = useState<SuggestionType>('none')
 
   // Compute max column width from ALL commands once (not filtered results)
   // This prevents layout shift when filtering
   const allCommandsMaxWidth = useMemo(() => {
-    const visibleCommands = commands.filter(cmd => !cmd.isHidden)
+    const visibleCommands = commands.filter((cmd) => !cmd.isHidden)
     if (visibleCommands.length === 0) return undefined
-    const maxLen = Math.max(
-      ...visibleCommands.map(cmd => getCommandName(cmd).length),
-    )
+    const maxLen = Math.max(...visibleCommands.map((cmd) => getCommandName(cmd).length))
     return maxLen + 6 // +1 for "/" prefix, +5 for padding
   }, [commands])
 
-  const [maxColumnWidth, setMaxColumnWidth] = useState<number | undefined>(
-    undefined,
-  )
-  const mcpResources = useAppState(s => s.mcp.resources)
+  const [maxColumnWidth, setMaxColumnWidth] = useState<number | undefined>(undefined)
+  const mcpResources = useAppState((s) => s.mcp.resources)
   const store = useAppStateStore()
-  const promptSuggestion = useAppState(s => s.promptSuggestion)
+  const promptSuggestion = useAppState((s) => s.promptSuggestion)
   // PromptInput hides suggestion ghost text in teammate view — mirror that
   // gate here so Tab/rightArrow can't accept what isn't displayed.
-  const isViewingTeammate = useAppState(s => !!s.viewingAgentTaskId)
+  const isViewingTeammate = useAppState((s) => !!s.viewingAgentTaskId)
 
   // Access keybinding context to check for pending chord sequences
   const keybindingContext = useOptionalKeybindingContext()
 
   // State for inline ghost text (bash history completion - async)
-  const [inlineGhostText, setInlineGhostText] = useState<
-    InlineGhostText | undefined
-  >(undefined)
+  const [inlineGhostText, setInlineGhostText] = useState<InlineGhostText | undefined>(undefined)
 
   // Synchronous ghost text for prompt mode mid-input slash commands.
   // Computed during render via useMemo to eliminate the one-frame flicker
@@ -517,17 +451,12 @@ export function useTypeahead({
     return {
       text: match.suffix,
       fullCommand: match.fullCommand,
-      insertPosition:
-        midInputCommand.startPos + 1 + midInputCommand.partialCommand.length,
+      insertPosition: midInputCommand.startPos + 1 + midInputCommand.partialCommand.length,
     }
   }, [input, cursorOffset, mode, commands, suppressSuggestions])
 
   // Merged ghost text: prompt mode uses synchronous useMemo, bash mode uses async useState
-  const effectiveGhostText = suppressSuggestions
-    ? undefined
-    : mode === 'prompt'
-      ? syncPromptGhostText
-      : inlineGhostText
+  const effectiveGhostText = suppressSuggestions ? undefined : mode === 'prompt' ? syncPromptGhostText : inlineGhostText
 
   // Use a ref for cursorOffset to avoid re-triggering suggestions on cursor movement alone
   // We only want to re-fetch suggestions when the actual search token changes
@@ -566,12 +495,7 @@ export function useTypeahead({
   const fetchFileSuggestions = useCallback(
     async (searchToken: string, isAtSymbol = false): Promise<void> => {
       latestSearchTokenRef.current = searchToken
-      const combinedItems = await generateUnifiedSuggestions(
-        searchToken,
-        mcpResources,
-        agents,
-        isAtSymbol,
-      )
+      const combinedItems = await generateUnifiedSuggestions(searchToken, mcpResources, agents, isAtSymbol)
       // Discard stale results if a newer query was initiated while waiting
       if (latestSearchTokenRef.current !== searchToken) {
         return
@@ -587,25 +511,15 @@ export function useTypeahead({
         setMaxColumnWidth(undefined)
         return
       }
-      setSuggestionsState(prev => ({
+      setSuggestionsState((prev) => ({
         commandArgumentHint: undefined,
         suggestions: combinedItems,
-        selectedSuggestion: getPreservedSelection(
-          prev.suggestions,
-          prev.selectedSuggestion,
-          combinedItems,
-        ),
+        selectedSuggestion: getPreservedSelection(prev.suggestions, prev.selectedSuggestion, combinedItems),
       }))
       setSuggestionType(combinedItems.length > 0 ? 'file' : 'none')
       setMaxColumnWidth(undefined) // No fixed width for file suggestions
     },
-    [
-      mcpResources,
-      setSuggestionsState,
-      setSuggestionType,
-      setMaxColumnWidth,
-      agents,
-    ],
+    [mcpResources, setSuggestionsState, setSuggestionType, setMaxColumnWidth, agents],
   )
 
   // Pre-warm the file index on mount so the first @-mention doesn't block.
@@ -623,7 +537,7 @@ export function useTypeahead({
   // subsequent tests in the shard. The subscriber still registers so
   // fileSuggestions tests that trigger a refresh directly work correctly.
   useEffect(() => {
-    if ("production" !== 'test') {
+    if ('production' !== 'test') {
       startBackgroundCacheRefresh()
     }
     return onIndexBuildComplete(() => {
@@ -639,27 +553,17 @@ export function useTypeahead({
   // key-repeat (~33ms) so held-delete/backspace coalesces into one search
   // instead of stuttering on each repeated key. The search itself is ~8–15ms
   // on a 270k-file index.
-  const debouncedFetchFileSuggestions = useDebounceCallback(
-    fetchFileSuggestions,
-    50,
-  )
+  const debouncedFetchFileSuggestions = useDebounceCallback(fetchFileSuggestions, 50)
 
   const fetchSlackChannels = useCallback(
     async (partial: string): Promise<void> => {
       latestSlackTokenRef.current = partial
-      const channels = await getSlackChannelSuggestions(
-        store.getState().mcp.clients,
-        partial,
-      )
+      const channels = await getSlackChannelSuggestions(store.getState().mcp.clients, partial)
       if (latestSlackTokenRef.current !== partial) return
-      setSuggestionsState(prev => ({
+      setSuggestionsState((prev) => ({
         commandArgumentHint: undefined,
         suggestions: channels,
-        selectedSuggestion: getPreservedSelection(
-          prev.suggestions,
-          prev.selectedSuggestion,
-          channels,
-        ),
+        selectedSuggestion: getPreservedSelection(prev.suggestions, prev.selectedSuggestion, channels),
       }))
       setSuggestionType(channels.length > 0 ? 'slack-channel' : 'none')
       setMaxColumnWidth(undefined)
@@ -670,10 +574,7 @@ export function useTypeahead({
 
   // First keystroke after # needs the MCP round-trip; subsequent keystrokes
   // that share the same first-word segment hit the cache synchronously.
-  const debouncedFetchSlackChannels = useDebounceCallback(
-    fetchSlackChannels,
-    150,
-  )
+  const debouncedFetchSlackChannels = useDebounceCallback(fetchSlackChannels, 150)
 
   // Handle immediate suggestion logic (cheap operations)
   // biome-ignore lint/correctness/useExhaustiveDependencies: store is a stable context ref, read imperatively at call-time
@@ -692,15 +593,9 @@ export function useTypeahead({
       // Note: ghost text for prompt mode is computed synchronously via syncPromptGhostText useMemo.
       // We only need to clear dropdown suggestions here when ghost text is active.
       if (mode === 'prompt') {
-        const midInputCommand = findMidInputSlashCommand(
-          value,
-          effectiveCursorOffset,
-        )
+        const midInputCommand = findMidInputSlashCommand(value, effectiveCursorOffset)
         if (midInputCommand) {
-          const match = getBestCommandMatch(
-            midInputCommand.partialCommand,
-            commands,
-          )
+          const match = getBestCommandMatch(midInputCommand.partialCommand, commands)
           if (match) {
             // Clear dropdown suggestions when showing ghost text
             setSuggestionsState(() => ({
@@ -747,10 +642,7 @@ export function useTypeahead({
       // Check for @ to trigger team member / named subagent suggestions
       // Must check before @ file symbol to prevent conflict
       // Skip in bash mode - @ has no special meaning in shell commands
-      const atMatch =
-        mode !== 'bash'
-          ? value.substring(0, effectiveCursorOffset).match(/(^|\s)@([\w-]*)$/)
-          : null
+      const atMatch = mode !== 'bash' ? value.substring(0, effectiveCursorOffset).match(/(^|\s)@([\w-]*)$/) : null
       if (atMatch) {
         const partialName = (atMatch[2] ?? '').toLowerCase()
         // Imperative read — reading at call-time fixes staleness for
@@ -785,14 +677,10 @@ export function useTypeahead({
 
         if (members.length > 0) {
           debouncedFetchFileSuggestions.cancel()
-          setSuggestionsState(prev => ({
+          setSuggestionsState((prev) => ({
             commandArgumentHint: undefined,
             suggestions: members,
-            selectedSuggestion: getPreservedSelection(
-              prev.suggestions,
-              prev.selectedSuggestion,
-              members,
-            ),
+            selectedSuggestion: getPreservedSelection(prev.suggestions, prev.selectedSuggestion, members),
           }))
           setSuggestionType('agent')
           setMaxColumnWidth(undefined)
@@ -802,9 +690,7 @@ export function useTypeahead({
 
       // Check for # to trigger Slack channel suggestions (requires Slack MCP server)
       if (mode === 'prompt') {
-        const hashMatch = value
-          .substring(0, effectiveCursorOffset)
-          .match(HASH_CHANNEL_RE)
+        const hashMatch = value.substring(0, effectiveCursorOffset).match(HASH_CHANNEL_RE)
         if (hashMatch && hasSlackMcpServer(store.getState().mcp.clients)) {
           debouncedFetchSlackChannels(hashMatch[2]!)
           return
@@ -816,9 +702,7 @@ export function useTypeahead({
 
       // Check for @ symbol to trigger file suggestions (including quoted paths)
       // Includes colon for MCP resources (e.g., server:resource/path)
-      const hasAtSymbol = value
-        .substring(0, effectiveCursorOffset)
-        .match(HAS_AT_SYMBOL_RE)
+      const hasAtSymbol = value.substring(0, effectiveCursorOffset).match(HAS_AT_SYMBOL_RE)
 
       // First, check for slash command suggestions (higher priority than @ symbol)
       // Only show slash command selector if cursor is not on the "/" character itself
@@ -831,18 +715,10 @@ export function useTypeahead({
         value[effectiveCursorOffset - 1] === ' '
 
       // Handle directory completion for commands
-      if (
-        mode === 'prompt' &&
-        isCommandInput(value) &&
-        effectiveCursorOffset > 0
-      ) {
+      if (mode === 'prompt' && isCommandInput(value) && effectiveCursorOffset > 0) {
         const parsedCommand = extractCommandNameAndArgs(value)
 
-        if (
-          parsedCommand &&
-          parsedCommand.commandName === 'add-dir' &&
-          parsedCommand.args
-        ) {
+        if (parsedCommand && parsedCommand.commandName === 'add-dir' && parsedCommand.args) {
           const { args } = parsedCommand
 
           // Clear suggestions if args end with whitespace (user is done with path)
@@ -854,13 +730,9 @@ export function useTypeahead({
 
           const dirSuggestions = await getDirectoryCompletions(args)
           if (dirSuggestions.length > 0) {
-            setSuggestionsState(prev => ({
+            setSuggestionsState((prev) => ({
               suggestions: dirSuggestions,
-              selectedSuggestion: getPreservedSelection(
-                prev.suggestions,
-                prev.selectedSuggestion,
-                dirSuggestions,
-              ),
+              selectedSuggestion: getPreservedSelection(prev.suggestions, prev.selectedSuggestion, dirSuggestions),
               commandArgumentHint: undefined,
             }))
             setSuggestionType('directory')
@@ -887,7 +759,7 @@ export function useTypeahead({
             limit: 10,
           })
 
-          const suggestions = matches.map(log => {
+          const suggestions = matches.map((log) => {
             const sessionId = getSessionIdFromLog(log)
             return {
               id: `resume-title-${sessionId}`,
@@ -898,13 +770,9 @@ export function useTypeahead({
           })
 
           if (suggestions.length > 0) {
-            setSuggestionsState(prev => ({
+            setSuggestionsState((prev) => ({
               suggestions,
-              selectedSuggestion: getPreservedSelection(
-                prev.suggestions,
-                prev.selectedSuggestion,
-                suggestions,
-              ),
+              selectedSuggestion: getPreservedSelection(prev.suggestions, prev.selectedSuggestion, suggestions),
               commandArgumentHint: undefined,
             }))
             setSuggestionType('custom-title')
@@ -931,40 +799,28 @@ export function useTypeahead({
 
           // Extract command name: everything after / until the first space (or end)
           const spaceIndex = value.indexOf(' ')
-          const commandName =
-            spaceIndex === -1 ? value.slice(1) : value.slice(1, spaceIndex)
+          const commandName = spaceIndex === -1 ? value.slice(1) : value.slice(1, spaceIndex)
 
           // Check if there are real arguments (non-whitespace after the command)
-          const hasRealArguments =
-            spaceIndex !== -1 && value.slice(spaceIndex + 1).trim().length > 0
+          const hasRealArguments = spaceIndex !== -1 && value.slice(spaceIndex + 1).trim().length > 0
 
           // Check if input is exactly "command + single space" (ready for arguments)
-          const hasExactlyOneTrailingSpace =
-            spaceIndex !== -1 && value.length === spaceIndex + 1
+          const hasExactlyOneTrailingSpace = spaceIndex !== -1 && value.length === spaceIndex + 1
 
           // If input has a space after the command, don't show suggestions
           // This prevents Enter from selecting a different command after Tab completion
           if (spaceIndex !== -1) {
-            const exactMatch = commands.find(
-              cmd => getCommandName(cmd) === commandName,
-            )
+            const exactMatch = commands.find((cmd) => getCommandName(cmd) === commandName)
             if (exactMatch || hasRealArguments) {
               // Priority 1: Static argumentHint (only on first trailing space for backwards compat)
               if (exactMatch?.argumentHint && hasExactlyOneTrailingSpace) {
                 commandArgumentHint = exactMatch.argumentHint
               }
               // Priority 2: Progressive hint from argNames (show when trailing space)
-              else if (
-                exactMatch?.type === 'prompt' &&
-                exactMatch.argNames?.length &&
-                value.endsWith(' ')
-              ) {
+              else if (exactMatch?.type === 'prompt' && exactMatch.argNames?.length && value.endsWith(' ')) {
                 const argsText = value.slice(spaceIndex + 1)
                 const typedArgs = parseArguments(argsText)
-                commandArgumentHint = generateProgressiveArgumentHint(
-                  exactMatch.argNames,
-                  typedArgs,
-                )
+                commandArgumentHint = generateProgressiveArgumentHint(exactMatch.argNames, typedArgs)
               }
               setSuggestionsState(() => ({
                 commandArgumentHint,
@@ -1002,17 +858,10 @@ export function useTypeahead({
         // because there may be relevant @ symbol and file suggestions.
         debouncedFetchFileSuggestions.cancel()
         clearSuggestions()
-      } else if (
-        isCommandInput(value) &&
-        hasCommandWithArguments(isAtEndWithWhitespace, value)
-      ) {
+      } else if (isCommandInput(value) && hasCommandWithArguments(isAtEndWithWhitespace, value)) {
         // If we have a command with arguments (no trailing space), clear any stale hint
         // This prevents the hint from flashing when transitioning between states
-        setSuggestionsState(prev =>
-          prev.commandArgumentHint
-            ? { ...prev, commandArgumentHint: undefined }
-            : prev,
-        )
+        setSuggestionsState((prev) => (prev.commandArgumentHint ? { ...prev, commandArgumentHint: undefined } : prev))
       }
 
       if (suggestionType === 'custom-title') {
@@ -1021,17 +870,10 @@ export function useTypeahead({
         clearSuggestions()
       }
 
-      if (
-        suggestionType === 'agent' &&
-        suggestionsRef.current.some((s: SuggestionItem) =>
-          s.id?.startsWith('dm-'),
-        )
-      ) {
+      if (suggestionType === 'agent' && suggestionsRef.current.some((s: SuggestionItem) => s.id?.startsWith('dm-'))) {
         // If we had team member suggestions but the input no longer has @
         // we need to clear the suggestions.
-        const hasAt = value
-          .substring(0, effectiveCursorOffset)
-          .match(/(^|\s)@([\w-]*)$/)
+        const hasAt = value.substring(0, effectiveCursorOffset).match(/(^|\s)@([\w-]*)$/)
         if (!hasAt) {
           clearSuggestions()
         }
@@ -1041,11 +883,7 @@ export function useTypeahead({
       // Skip @ autocomplete in bash mode - @ has no special meaning in shell commands
       if (hasAtSymbol && mode !== 'bash') {
         // Get the @ token (including the @ symbol)
-        const completionToken = extractCompletionToken(
-          value,
-          effectiveCursorOffset,
-          true,
-        )
+        const completionToken = extractCompletionToken(value, effectiveCursorOffset, true)
         if (completionToken && completionToken.token.startsWith('@')) {
           const searchToken = extractSearchToken(completionToken)
 
@@ -1061,13 +899,9 @@ export function useTypeahead({
               return
             }
             if (pathSuggestions.length > 0) {
-              setSuggestionsState(prev => ({
+              setSuggestionsState((prev) => ({
                 suggestions: pathSuggestions,
-                selectedSuggestion: getPreservedSelection(
-                  prev.suggestions,
-                  prev.selectedSuggestion,
-                  pathSuggestions,
-                ),
+                selectedSuggestion: getPreservedSelection(prev.suggestions, prev.selectedSuggestion, pathSuggestions),
                 commandArgumentHint: undefined,
               }))
               setSuggestionType('directory')
@@ -1087,11 +921,7 @@ export function useTypeahead({
 
       // If we have active file suggestions or the input changed, check for file suggestions
       if (suggestionType === 'file') {
-        const completionToken = extractCompletionToken(
-          value,
-          effectiveCursorOffset,
-          true,
-        )
+        const completionToken = extractCompletionToken(value, effectiveCursorOffset, true)
         if (completionToken) {
           const searchToken = extractSearchToken(completionToken)
           // Skip if we already fetched for this exact token
@@ -1108,9 +938,7 @@ export function useTypeahead({
 
       // Clear shell suggestions if not in bash mode OR if input has changed
       if (suggestionType === 'shell') {
-        const inputSnapshot = (
-          suggestionsRef.current[0]?.metadata as { inputSnapshot?: string }
-        )?.inputSnapshot
+        const inputSnapshot = (suggestionsRef.current[0]?.metadata as { inputSnapshot?: string })?.inputSnapshot
 
         if (mode !== 'bash' || value !== inputSnapshot) {
           debouncedFetchFileSuggestions.cancel()
@@ -1172,16 +1000,9 @@ export function useTypeahead({
       if (midInputCommand) {
         // Replace the partial command with the full command + space
         const before = input.slice(0, midInputCommand.startPos)
-        const after = input.slice(
-          midInputCommand.startPos + midInputCommand.token.length,
-        )
-        const newInput =
-          before + '/' + effectiveGhostText.fullCommand + ' ' + after
-        const newCursorOffset =
-          midInputCommand.startPos +
-          1 +
-          effectiveGhostText.fullCommand.length +
-          1
+        const after = input.slice(midInputCommand.startPos + midInputCommand.token.length)
+        const newInput = before + '/' + effectiveGhostText.fullCommand + ' ' + after
+        const newCursorOffset = midInputCommand.startPos + 1 + effectiveGhostText.fullCommand.length + 1
 
         onInputChange(newInput)
         setCursorOffset(newCursorOffset)
@@ -1230,21 +1051,15 @@ export function useTypeahead({
             const spaceIndex = input.indexOf(' ')
             const commandPart = input.slice(0, spaceIndex + 1) // Include the space
             const cmdSuffix =
-              isPathMetadata(suggestion.metadata) &&
-              suggestion.metadata.type === 'directory'
-                ? '/'
-                : ' '
+              isPathMetadata(suggestion.metadata) && suggestion.metadata.type === 'directory' ? '/' : ' '
             newInput = commandPart + suggestion.id + cmdSuffix
 
             onInputChange(newInput)
             setCursorOffset(newInput.length)
 
-            if (
-              isPathMetadata(suggestion.metadata) &&
-              suggestion.metadata.type === 'directory'
-            ) {
+            if (isPathMetadata(suggestion.metadata) && suggestion.metadata.type === 'directory') {
               // For directories, fetch new suggestions for the updated path
-              setSuggestionsState(prev => ({
+              setSuggestionsState((prev) => ({
                 ...prev,
                 commandArgumentHint: undefined,
               }))
@@ -1255,19 +1070,11 @@ export function useTypeahead({
           } else {
             // General path completion: replace the path token in input with @-prefixed path
             // Try to get token with @ prefix first to check if already prefixed
-            const completionTokenWithAt = extractCompletionToken(
-              input,
-              cursorOffset,
-              true,
-            )
-            const completionToken =
-              completionTokenWithAt ??
-              extractCompletionToken(input, cursorOffset, false)
+            const completionTokenWithAt = extractCompletionToken(input, cursorOffset, true)
+            const completionToken = completionTokenWithAt ?? extractCompletionToken(input, cursorOffset, false)
 
             if (completionToken) {
-              const isDir =
-                isPathMetadata(suggestion.metadata) &&
-                suggestion.metadata.type === 'directory'
+              const isDir = isPathMetadata(suggestion.metadata) && suggestion.metadata.type === 'directory'
               const result = applyDirectorySuggestion(
                 input,
                 suggestion.id,
@@ -1282,7 +1089,7 @@ export function useTypeahead({
 
               if (isDir) {
                 // For directories, fetch new suggestions for the updated path
-                setSuggestionsState(prev => ({
+                setSuggestionsState((prev) => ({
                   ...prev,
                   commandArgumentHint: undefined,
                 }))
@@ -1301,9 +1108,7 @@ export function useTypeahead({
       } else if (suggestionType === 'shell' && suggestions.length > 0) {
         const suggestion = suggestions[index]
         if (suggestion) {
-          const metadata = suggestion.metadata as
-            | { completionType: ShellCompletionType }
-            | undefined
+          const metadata = suggestion.metadata as { completionType: ShellCompletionType } | undefined
           applyShellSuggestion(
             suggestion,
             input,
@@ -1314,42 +1119,20 @@ export function useTypeahead({
           )
           clearSuggestions()
         }
-      } else if (
-        suggestionType === 'agent' &&
-        suggestions.length > 0 &&
-        suggestions[index]?.id?.startsWith('dm-')
-      ) {
+      } else if (suggestionType === 'agent' && suggestions.length > 0 && suggestions[index]?.id?.startsWith('dm-')) {
         const suggestion = suggestions[index]
         if (suggestion) {
-          applyTriggerSuggestion(
-            suggestion,
-            input,
-            cursorOffset,
-            DM_MEMBER_RE,
-            onInputChange,
-            setCursorOffset,
-          )
+          applyTriggerSuggestion(suggestion, input, cursorOffset, DM_MEMBER_RE, onInputChange, setCursorOffset)
           clearSuggestions()
         }
       } else if (suggestionType === 'slack-channel' && suggestions.length > 0) {
         const suggestion = suggestions[index]
         if (suggestion) {
-          applyTriggerSuggestion(
-            suggestion,
-            input,
-            cursorOffset,
-            HASH_CHANNEL_RE,
-            onInputChange,
-            setCursorOffset,
-          )
+          applyTriggerSuggestion(suggestion, input, cursorOffset, HASH_CHANNEL_RE, onInputChange, setCursorOffset)
           clearSuggestions()
         }
       } else if (suggestionType === 'file' && suggestions.length > 0) {
-        const completionToken = extractCompletionToken(
-          input,
-          cursorOffset,
-          true,
-        )
+        const completionToken = extractCompletionToken(input, cursorOffset, true)
         if (!completionToken) {
           clearSuggestions()
           return
@@ -1364,9 +1147,7 @@ export function useTypeahead({
         let effectiveTokenLength: number
         if (completionToken.isQuoted) {
           // Remove @" prefix and optional closing " to get effective length
-          effectiveTokenLength = completionToken.token
-            .slice(2)
-            .replace(/"$/, '').length
+          effectiveTokenLength = completionToken.token.slice(2).replace(/"$/, '').length
         } else if (hasAtPrefix) {
           effectiveTokenLength = completionToken.token.length - 1
         } else {
@@ -1395,10 +1176,7 @@ export function useTypeahead({
           )
           // Don't clear suggestions so user can continue typing or select a specific option
           // Instead, update for the new prefix
-          void updateSuggestions(
-            input.replace(completionToken.token, replacementValue),
-            cursorOffset,
-          )
+          void updateSuggestions(input.replace(completionToken.token, replacementValue), cursorOffset)
         } else if (index < suggestions.length) {
           // Otherwise, apply the selected suggestion
           const suggestion = suggestions[index]
@@ -1432,17 +1210,12 @@ export function useTypeahead({
       if (mode === 'bash') {
         suggestionType = 'shell'
         // This should be very fast, taking <10ms
-        const bashSuggestions = await generateBashSuggestions(
-          input,
-          cursorOffset,
-        )
+        const bashSuggestions = await generateBashSuggestions(input, cursorOffset)
         if (bashSuggestions.length === 1) {
           // If single suggestion, apply it immediately
           const suggestion = bashSuggestions[0]
           if (suggestion) {
-            const metadata = suggestion.metadata as
-              | { completionType: ShellCompletionType }
-              | undefined
+            const metadata = suggestion.metadata as { completionType: ShellCompletionType } | undefined
             applyShellSuggestion(
               suggestion,
               input,
@@ -1463,16 +1236,9 @@ export function useTypeahead({
         if (completionInfo) {
           // If token starts with @, search without the @ prefix
           const isAtSymbol = completionInfo.token.startsWith('@')
-          const searchToken = isAtSymbol
-            ? completionInfo.token.substring(1)
-            : completionInfo.token
+          const searchToken = isAtSymbol ? completionInfo.token.substring(1) : completionInfo.token
 
-          suggestionItems = await generateUnifiedSuggestions(
-            searchToken,
-            mcpResources,
-            agents,
-            isAtSymbol,
-          )
+          suggestionItems = await generateUnifiedSuggestions(searchToken, mcpResources, agents, isAtSymbol)
         } else {
           suggestionItems = []
         }
@@ -1480,14 +1246,10 @@ export function useTypeahead({
 
       if (suggestionItems.length > 0) {
         // Multiple suggestions or not bash mode: show list
-        setSuggestionsState(prev => ({
+        setSuggestionsState((prev) => ({
           commandArgumentHint: undefined,
           suggestions: suggestionItems,
-          selectedSuggestion: getPreservedSelection(
-            prev.suggestions,
-            prev.selectedSuggestion,
-            suggestionItems,
-          ),
+          selectedSuggestion: getPreservedSelection(prev.suggestions, prev.selectedSuggestion, suggestionItems),
         }))
         setSuggestionType(suggestionType)
         setMaxColumnWidth(undefined)
@@ -1520,10 +1282,7 @@ export function useTypeahead({
 
     const suggestion = suggestions[selectedSuggestion]
 
-    if (
-      suggestionType === 'command' &&
-      selectedSuggestion < suggestions.length
-    ) {
+    if (suggestionType === 'command' && selectedSuggestion < suggestions.length) {
       if (suggestion) {
         applyCommandSuggestion(
           suggestion,
@@ -1536,10 +1295,7 @@ export function useTypeahead({
         debouncedFetchFileSuggestions.cancel()
         clearSuggestions()
       }
-    } else if (
-      suggestionType === 'custom-title' &&
-      selectedSuggestion < suggestions.length
-    ) {
+    } else if (suggestionType === 'custom-title' && selectedSuggestion < suggestions.length) {
       // Apply custom title and execute /resume command with sessionId
       if (suggestion) {
         const newInput = buildResumeInputFromSuggestion(suggestion)
@@ -1549,23 +1305,11 @@ export function useTypeahead({
         debouncedFetchFileSuggestions.cancel()
         clearSuggestions()
       }
-    } else if (
-      suggestionType === 'shell' &&
-      selectedSuggestion < suggestions.length
-    ) {
+    } else if (suggestionType === 'shell' && selectedSuggestion < suggestions.length) {
       const suggestion = suggestions[selectedSuggestion]
       if (suggestion) {
-        const metadata = suggestion.metadata as
-          | { completionType: ShellCompletionType }
-          | undefined
-        applyShellSuggestion(
-          suggestion,
-          input,
-          cursorOffset,
-          onInputChange,
-          setCursorOffset,
-          metadata?.completionType,
-        )
+        const metadata = suggestion.metadata as { completionType: ShellCompletionType } | undefined
+        applyShellSuggestion(suggestion, input, cursorOffset, onInputChange, setCursorOffset, metadata?.completionType)
         debouncedFetchFileSuggestions.cancel()
         clearSuggestions()
       }
@@ -1574,36 +1318,16 @@ export function useTypeahead({
       selectedSuggestion < suggestions.length &&
       suggestion?.id?.startsWith('dm-')
     ) {
-      applyTriggerSuggestion(
-        suggestion,
-        input,
-        cursorOffset,
-        DM_MEMBER_RE,
-        onInputChange,
-        setCursorOffset,
-      )
+      applyTriggerSuggestion(suggestion, input, cursorOffset, DM_MEMBER_RE, onInputChange, setCursorOffset)
       debouncedFetchFileSuggestions.cancel()
       clearSuggestions()
-    } else if (
-      suggestionType === 'slack-channel' &&
-      selectedSuggestion < suggestions.length
-    ) {
+    } else if (suggestionType === 'slack-channel' && selectedSuggestion < suggestions.length) {
       if (suggestion) {
-        applyTriggerSuggestion(
-          suggestion,
-          input,
-          cursorOffset,
-          HASH_CHANNEL_RE,
-          onInputChange,
-          setCursorOffset,
-        )
+        applyTriggerSuggestion(suggestion, input, cursorOffset, HASH_CHANNEL_RE, onInputChange, setCursorOffset)
         debouncedFetchSlackChannels.cancel()
         clearSuggestions()
       }
-    } else if (
-      suggestionType === 'file' &&
-      selectedSuggestion < suggestions.length
-    ) {
+    } else if (suggestionType === 'file' && selectedSuggestion < suggestions.length) {
       // Extract completion token directly when needed
       const completionInfo = extractCompletionToken(input, cursorOffset, true)
       if (completionInfo) {
@@ -1631,10 +1355,7 @@ export function useTypeahead({
           clearSuggestions()
         }
       }
-    } else if (
-      suggestionType === 'directory' &&
-      selectedSuggestion < suggestions.length
-    ) {
+    } else if (suggestionType === 'directory' && selectedSuggestion < suggestions.length) {
       if (suggestion) {
         // In command context (e.g., /add-dir), Enter submits the command
         // rather than applying the directory suggestion. Just clear
@@ -1646,19 +1367,11 @@ export function useTypeahead({
         }
 
         // General path completion: replace the path token
-        const completionTokenWithAt = extractCompletionToken(
-          input,
-          cursorOffset,
-          true,
-        )
-        const completionToken =
-          completionTokenWithAt ??
-          extractCompletionToken(input, cursorOffset, false)
+        const completionTokenWithAt = extractCompletionToken(input, cursorOffset, true)
+        const completionToken = completionTokenWithAt ?? extractCompletionToken(input, cursorOffset, false)
 
         if (completionToken) {
-          const isDir =
-            isPathMetadata(suggestion.metadata) &&
-            suggestion.metadata.type === 'directory'
+          const isDir = isPathMetadata(suggestion.metadata) && suggestion.metadata.type === 'directory'
           const result = applyDirectorySuggestion(
             input,
             suggestion.id,
@@ -1704,32 +1417,21 @@ export function useTypeahead({
     clearSuggestions()
     // Remember the input when dismissed to prevent immediate re-triggering
     dismissedForInputRef.current = input
-  }, [
-    debouncedFetchFileSuggestions,
-    debouncedFetchSlackChannels,
-    clearSuggestions,
-    input,
-  ])
+  }, [debouncedFetchFileSuggestions, debouncedFetchSlackChannels, clearSuggestions, input])
 
   // Handler for autocomplete:previous - selects previous suggestion
   const handleAutocompletePrevious = useCallback(() => {
-    setSuggestionsState(prev => ({
+    setSuggestionsState((prev) => ({
       ...prev,
-      selectedSuggestion:
-        prev.selectedSuggestion <= 0
-          ? suggestions.length - 1
-          : prev.selectedSuggestion - 1,
+      selectedSuggestion: prev.selectedSuggestion <= 0 ? suggestions.length - 1 : prev.selectedSuggestion - 1,
     }))
   }, [suggestions.length, setSuggestionsState])
 
   // Handler for autocomplete:next - selects next suggestion
   const handleAutocompleteNext = useCallback(() => {
-    setSuggestionsState(prev => ({
+    setSuggestionsState((prev) => ({
       ...prev,
-      selectedSuggestion:
-        prev.selectedSuggestion >= suggestions.length - 1
-          ? 0
-          : prev.selectedSuggestion + 1,
+      selectedSuggestion: prev.selectedSuggestion >= suggestions.length - 1 ? 0 : prev.selectedSuggestion + 1,
     }))
   }, [suggestions.length, setSuggestionsState])
 
@@ -1741,12 +1443,7 @@ export function useTypeahead({
       'autocomplete:previous': handleAutocompletePrevious,
       'autocomplete:next': handleAutocompleteNext,
     }),
-    [
-      handleAutocompleteAccept,
-      handleAutocompleteDismiss,
-      handleAutocompletePrevious,
-      handleAutocompleteNext,
-    ],
+    [handleAutocompleteAccept, handleAutocompleteDismiss, handleAutocompletePrevious, handleAutocompleteNext],
   )
 
   // Register autocomplete as an overlay so CancelRequestHandler defers ESC handling
@@ -1802,12 +1499,7 @@ export function useTypeahead({
       // Accept prompt suggestion if it exists in AppState
       const suggestionText = promptSuggestion.text
       const suggestionShownAt = promptSuggestion.shownAt
-      if (
-        suggestionText &&
-        suggestionShownAt > 0 &&
-        input === '' &&
-        !isViewingTeammate
-      ) {
+      if (suggestionText && suggestionShownAt > 0 && input === '' && !isViewingTeammate) {
         e.preventDefault()
         markAccepted()
         acceptSuggestionText(suggestionText)
@@ -1818,11 +1510,7 @@ export function useTypeahead({
         e.preventDefault()
         addNotification({
           key: 'thinking-toggle-hint',
-          jsx: (
-            <Text dimColor>
-              Use {thinkingToggleShortcut} to toggle thinking
-            </Text>
-          ),
+          jsx: <Text dimColor>Use {thinkingToggleShortcut} to toggle thinking</Text>,
           priority: 'immediate',
           timeoutMs: 3000,
         })

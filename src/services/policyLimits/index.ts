@@ -12,16 +12,14 @@
  * - API returns empty restrictions for users without policy limits
  */
 
-import axios from 'axios'
 import { createHash } from 'crypto'
 import { readFileSync as fsReadFileSync } from 'fs'
 import { unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
-import {
-  CLAUDE_AI_INFERENCE_SCOPE,
-  getOauthConfig,
-  OAUTH_BETA_HEADER,
-} from '../../constants/oauth.js'
+
+import axios from 'axios'
+
+import { CLAUDE_AI_INFERENCE_SCOPE, getOauthConfig, OAUTH_BETA_HEADER } from '../../constants/oauth.js'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
   getAnthropicApiKeyWithSource,
@@ -32,20 +30,13 @@ import { logForDebugging } from '../../utils/debug.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { classifyAxiosError } from '../../utils/errors.js'
 import { safeParseJSON } from '../../utils/json.js'
-import {
-  getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
-} from '../../utils/model/providers.js'
+import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/providers.js'
 import { isEssentialTrafficOnly } from '../../utils/privacyLevel.js'
 import { sleep } from '../../utils/sleep.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
 import { getRetryDelay } from '../api/withRetry.js'
-import {
-  type PolicyLimitsFetchResult,
-  type PolicyLimitsResponse,
-  PolicyLimitsResponseSchema,
-} from './types.js'
+import { type PolicyLimitsFetchResult, type PolicyLimitsResponse, PolicyLimitsResponseSchema } from './types.js'
 
 function isNodeError(e: unknown): e is NodeJS.ErrnoException {
   return e instanceof Error
@@ -97,14 +88,12 @@ export function initializePolicyLimitsLoadingPromise(): void {
   }
 
   if (isPolicyLimitsEligible()) {
-    loadingCompletePromise = new Promise(resolve => {
+    loadingCompletePromise = new Promise((resolve) => {
       loadingCompleteResolve = resolve
 
       setTimeout(() => {
         if (loadingCompleteResolve) {
-          logForDebugging(
-            'Policy limits: Loading promise timed out, resolving anyway',
-          )
+          logForDebugging('Policy limits: Loading promise timed out, resolving anyway')
           loadingCompleteResolve()
           loadingCompleteResolve = null
         }
@@ -136,9 +125,7 @@ function sortKeysDeep(obj: unknown): unknown {
   }
   if (obj !== null && typeof obj === 'object') {
     const sorted: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(obj).sort(([a], [b]) =>
-      a.localeCompare(b),
-    )) {
+    for (const [key, value] of Object.entries(obj).sort(([a], [b]) => a.localeCompare(b))) {
       sorted[key] = sortKeysDeep(value)
     }
     return sorted
@@ -149,9 +136,7 @@ function sortKeysDeep(obj: unknown): unknown {
 /**
  * Compute a checksum from restrictions content for HTTP caching
  */
-function computeChecksum(
-  restrictions: PolicyLimitsResponse['restrictions'],
-): string {
+function computeChecksum(restrictions: PolicyLimitsResponse['restrictions']): string {
   const sorted = sortKeysDeep(restrictions)
   const normalized = jsonStringify(sorted)
   const hash = createHash('sha256').update(normalized).digest('hex')
@@ -200,10 +185,7 @@ export function isPolicyLimitsEligible(): boolean {
 
   // Only Team and Enterprise OAuth users are eligible — these orgs have
   // admin-configurable policy restrictions (e.g. allow_remote_sessions)
-  if (
-    tokens.subscriptionType !== 'enterprise' &&
-    tokens.subscriptionType !== 'team'
-  ) {
+  if (tokens.subscriptionType !== 'enterprise' && tokens.subscriptionType !== 'team') {
     return false
   }
 
@@ -264,9 +246,7 @@ function getAuthHeaders(): {
 /**
  * Fetch policy limits with retry logic and exponential backoff
  */
-async function fetchWithRetry(
-  cachedChecksum?: string,
-): Promise<PolicyLimitsFetchResult> {
+async function fetchWithRetry(cachedChecksum?: string): Promise<PolicyLimitsFetchResult> {
   let lastResult: PolicyLimitsFetchResult | null = null
 
   for (let attempt = 1; attempt <= DEFAULT_MAX_RETRIES + 1; attempt++) {
@@ -285,9 +265,7 @@ async function fetchWithRetry(
     }
 
     const delayMs = getRetryDelay(attempt)
-    logForDebugging(
-      `Policy limits: Retry ${attempt}/${DEFAULT_MAX_RETRIES} after ${delayMs}ms`,
-    )
+    logForDebugging(`Policy limits: Retry ${attempt}/${DEFAULT_MAX_RETRIES} after ${delayMs}ms`)
     await sleep(delayMs)
   }
 
@@ -297,9 +275,7 @@ async function fetchWithRetry(
 /**
  * Fetch policy limits (single attempt, no retries)
  */
-async function fetchPolicyLimits(
-  cachedChecksum?: string,
-): Promise<PolicyLimitsFetchResult> {
+async function fetchPolicyLimits(cachedChecksum?: string): Promise<PolicyLimitsFetchResult> {
   try {
     await checkAndRefreshOAuthTokenIfNeeded()
 
@@ -325,8 +301,7 @@ async function fetchPolicyLimits(
     const response = await axios.get(endpoint, {
       headers,
       timeout: FETCH_TIMEOUT_MS,
-      validateStatus: status =>
-        status === 200 || status === 304 || status === 404,
+      validateStatus: (status) => status === 200 || status === 304 || status === 404,
     })
 
     // Handle 304 Not Modified - cached version is still valid
@@ -351,9 +326,7 @@ async function fetchPolicyLimits(
 
     const parsed = PolicyLimitsResponseSchema().safeParse(response.data)
     if (!parsed.success) {
-      logForDebugging(
-        `Policy limits: Invalid response format - ${parsed.error.message}`,
-      )
+      logForDebugging(`Policy limits: Invalid response format - ${parsed.error.message}`)
       return {
         success: false,
         error: 'Invalid policy limits format',
@@ -407,9 +380,7 @@ function loadCachedRestrictions(): PolicyLimitsResponse['restrictions'] | null {
 /**
  * Save restrictions to cache file
  */
-async function saveCachedRestrictions(
-  restrictions: PolicyLimitsResponse['restrictions'],
-): Promise<void> {
+async function saveCachedRestrictions(restrictions: PolicyLimitsResponse['restrictions']): Promise<void> {
   try {
     const path = getCachePath()
     const data: PolicyLimitsResponse = { restrictions }
@@ -419,9 +390,7 @@ async function saveCachedRestrictions(
     })
     logForDebugging(`Policy limits: Saved to ${path}`)
   } catch (error) {
-    logForDebugging(
-      `Policy limits: Failed to save - ${error instanceof Error ? error.message : 'unknown error'}`,
-    )
+    logForDebugging(`Policy limits: Failed to save - ${error instanceof Error ? error.message : 'unknown error'}`)
   }
 }
 
@@ -429,18 +398,14 @@ async function saveCachedRestrictions(
  * Fetch and load policy limits with file caching
  * Fails open - returns null if fetch fails and no cache exists
  */
-async function fetchAndLoadPolicyLimits(): Promise<
-  PolicyLimitsResponse['restrictions'] | null
-> {
+async function fetchAndLoadPolicyLimits(): Promise<PolicyLimitsResponse['restrictions'] | null> {
   if (!isPolicyLimitsEligible()) {
     return null
   }
 
   const cachedRestrictions = loadCachedRestrictions()
 
-  const cachedChecksum = cachedRestrictions
-    ? computeChecksum(cachedRestrictions)
-    : undefined
+  const cachedChecksum = cachedRestrictions ? computeChecksum(cachedRestrictions) : undefined
 
   try {
     const result = await fetchWithRetry(cachedChecksum)
@@ -478,9 +443,7 @@ async function fetchAndLoadPolicyLimits(): Promise<
       logForDebugging('Policy limits: Deleted cached file (404 response)')
     } catch (e) {
       if (isNodeError(e) && e.code !== 'ENOENT') {
-        logForDebugging(
-          `Policy limits: Failed to delete cached file - ${e.message}`,
-        )
+        logForDebugging(`Policy limits: Failed to delete cached file - ${e.message}`)
       }
     }
     return newRestrictions
@@ -510,10 +473,7 @@ const ESSENTIAL_TRAFFIC_DENY_ON_MISS = new Set(['allow_product_feedback'])
 export function isPolicyAllowed(policy: string): boolean {
   const restrictions = getRestrictionsFromCache()
   if (!restrictions) {
-    if (
-      isEssentialTrafficOnly() &&
-      ESSENTIAL_TRAFFIC_DENY_ON_MISS.has(policy)
-    ) {
+    if (isEssentialTrafficOnly() && ESSENTIAL_TRAFFIC_DENY_ON_MISS.has(policy)) {
       return false
     }
     return true // fail open
@@ -528,9 +488,7 @@ export function isPolicyAllowed(policy: string): boolean {
 /**
  * Get restrictions synchronously from session cache or file
  */
-function getRestrictionsFromCache():
-  | PolicyLimitsResponse['restrictions']
-  | null {
+function getRestrictionsFromCache(): PolicyLimitsResponse['restrictions'] | null {
   if (!isPolicyLimitsEligible()) {
     return null
   }
@@ -555,7 +513,7 @@ function getRestrictionsFromCache():
  */
 export async function loadPolicyLimits(): Promise<void> {
   if (isPolicyLimitsEligible() && !loadingCompletePromise) {
-    loadingCompletePromise = new Promise(resolve => {
+    loadingCompletePromise = new Promise((resolve) => {
       loadingCompleteResolve = resolve
     })
   }

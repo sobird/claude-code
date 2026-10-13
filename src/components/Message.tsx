@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import type { BetaContentBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type {
   ImageBlockParam,
@@ -8,14 +9,12 @@ import type {
   ToolUseBlockParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
+
 import type { Command } from '../commands.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { Box } from '../ink.js'
 import type { Tools } from '../Tool.js'
-import {
-  type ConnectorTextBlock,
-  isConnectorTextBlock,
-} from '../types/connectorText.js'
+import { type ConnectorTextBlock, isConnectorTextBlock } from '../types/connectorText.js'
 import type {
   AssistantMessage,
   AttachmentMessage as AttachmentMessageType,
@@ -139,12 +138,7 @@ function MessageImpl({
       )
     case 'user': {
       if (message.isCompactSummary) {
-        return (
-          <CompactSummary
-            message={message}
-            screen={isTranscriptMode ? 'transcript' : 'prompt'}
-          />
-        )
+        return <CompactSummary message={message} screen={isTranscriptMode ? 'transcript' : 'prompt'} />
       }
       // Precompute the imageIndex prop for each content block. The previous
       // version incremented a counter inside the .map() callback, which
@@ -185,11 +179,7 @@ function MessageImpl({
           ))}
         </Box>
       )
-      return isLatestBashOutput ? (
-        <ExpandShellOutputProvider>{content}</ExpandShellOutputProvider>
-      ) : (
-        content
-      )
+      return isLatestBashOutput ? <ExpandShellOutputProvider>{content}</ExpandShellOutputProvider> : content
     }
     case 'system':
       if (message.subtype === 'compact_boundary') {
@@ -298,11 +288,7 @@ function UserMessage({
   addMargin: boolean
   tools: Tools
   progressMessagesForMessage: ProgressMessage[]
-  param:
-    | TextBlockParam
-    | ImageBlockParam
-    | ToolUseBlockParam
-    | ToolResultBlockParam
+  param: TextBlockParam | ImageBlockParam | ToolUseBlockParam | ToolResultBlockParam
   style?: 'condensed'
   verbose: boolean
   imageIndex?: number
@@ -326,12 +312,7 @@ function UserMessage({
     case 'image':
       // If previous message is user (text or image), this is a continuation - use connector
       // Otherwise this image starts a new user turn - use margin
-      return (
-        <UserImageMessage
-          imageId={imageIndex}
-          addMargin={addMargin && !isUserContinuation}
-        />
-      )
+      return <UserImageMessage imageId={imageIndex} addMargin={addMargin && !isUserContinuation} />
     case 'tool_result':
       return (
         <UserToolResultMessage
@@ -451,8 +432,7 @@ function AssistantMessageBlock({
         return null
       }
       // In transcript mode with hidePastThinking, only show the last thinking block
-      const isLastThinking =
-        !lastThinkingBlockId || thinkingBlockId === lastThinkingBlockId
+      const isLastThinking = !lastThinkingBlockId || thinkingBlockId === lastThinkingBlockId
       return (
         <AssistantThinkingMessage
           addMargin={addMargin}
@@ -486,14 +466,9 @@ function AssistantMessageBlock({
   }
 }
 
-export function hasThinkingContent(m: {
-  type: string
-  message?: { content: Array<{ type: string }> }
-}): boolean {
+export function hasThinkingContent(m: { type: string; message?: { content: Array<{ type: string }> } }): boolean {
   if (m.type !== 'assistant' || !m.message) return false
-  return m.message.content.some(
-    b => b.type === 'thinking' || b.type === 'redacted_thinking',
-  )
+  return m.message.content.some((b) => b.type === 'thinking' || b.type === 'redacted_thinking')
 }
 
 /** Exported for testing */
@@ -502,10 +477,7 @@ export function areMessagePropsEqual(prev: Props, next: Props): boolean {
   // Only re-render on lastThinkingBlockId change if this message actually
   // has thinking content — otherwise every message in scrollback re-renders
   // whenever streaming thinking starts/stops (CC-941).
-  if (
-    prev.lastThinkingBlockId !== next.lastThinkingBlockId &&
-    hasThinkingContent(next.message)
-  ) {
+  if (prev.lastThinkingBlockId !== next.lastThinkingBlockId && hasThinkingContent(next.message)) {
     return false
   }
   // Verbose toggle changes thinking block visibility/expansion

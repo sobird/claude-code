@@ -1,4 +1,5 @@
 import { useContext, useMemo } from 'react'
+
 import StdinContext from '../components/StdinContext.js'
 import type { DOMElement } from '../dom.js'
 import instances from '../instances.js'
@@ -47,7 +48,7 @@ export function useSearchHighlight(): {
     return {
       setQuery: (query: string) => ink.setSearchHighlight(query),
       scanElement: (el: DOMElement) => ink.scanElementSubtree(el),
-      setPositions: state => ink.setSearchPositions(state),
+      setPositions: (state) => ink.setSearchPositions(state),
     }
   }, [ink])
 }

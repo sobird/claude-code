@@ -1,4 +1,5 @@
 import { join } from 'path'
+
 import type { LocalCommandResult } from '../../commands.js'
 import { loadInstalledPluginsV2 } from '../../utils/plugins/installedPluginsManager.js'
 import { OFFICIAL_MARKETPLACE_NAME } from '../../utils/plugins/officialMarketplace.js'
@@ -8,10 +9,7 @@ const INTERNAL_MARKETPLACE_NAME = 'claude-code-marketplace'
 const SKILL_NAME = 'thinkback'
 
 function getPluginId(): string {
-  const marketplaceName =
-    process.env.USER_TYPE === 'ant'
-      ? INTERNAL_MARKETPLACE_NAME
-      : OFFICIAL_MARKETPLACE_NAME
+  const marketplaceName = process.env.USER_TYPE === 'ant' ? INTERNAL_MARKETPLACE_NAME : OFFICIAL_MARKETPLACE_NAME
   return `thinkback@${marketplaceName}`
 }
 
@@ -24,8 +22,7 @@ export async function call(): Promise<LocalCommandResult> {
   if (!installations || installations.length === 0) {
     return {
       type: 'text' as const,
-      value:
-        'Thinkback plugin not installed. Run /think-back first to install it.',
+      value: 'Thinkback plugin not installed. Run /think-back first to install it.',
     }
   }
 

@@ -1,5 +1,6 @@
 import { HOOK_EVENTS, type HookEvent } from 'src/entrypoints/agentSdkTypes.js'
 import type { AppState } from 'src/state/AppState.js'
+
 import { logForDebugging } from '../debug.js'
 import type { HooksSettings } from '../settings/types.js'
 import { addSessionHook } from './sessionHooks.js'
@@ -39,9 +40,7 @@ export function registerFrontmatterHooks(
     let targetEvent: HookEvent = event
     if (isAgent && event === 'Stop') {
       targetEvent = 'SubagentStop'
-      logForDebugging(
-        `Converting Stop hook to SubagentStop for ${sourceName} (subagents trigger SubagentStop)`,
-      )
+      logForDebugging(`Converting Stop hook to SubagentStop for ${sourceName} (subagents trigger SubagentStop)`)
     }
 
     for (const matcherConfig of matchers) {
@@ -60,8 +59,6 @@ export function registerFrontmatterHooks(
   }
 
   if (hookCount > 0) {
-    logForDebugging(
-      `Registered ${hookCount} frontmatter hook(s) from ${sourceName} for session ${sessionId}`,
-    )
+    logForDebugging(`Registered ${hookCount} frontmatter hook(s) from ${sourceName} for session ${sessionId}`)
   }
 }

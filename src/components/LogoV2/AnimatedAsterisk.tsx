@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
+
 import { TEARDROP_ASTERISK } from '../../constants/figures.js'
 import { Box, Text, useAnimationFrame } from '../../ink.js'
 import { getInitialSettings } from '../../utils/settings/settings.js'
@@ -10,16 +11,10 @@ const SWEEP_COUNT = 2
 const TOTAL_ANIMATION_MS = SWEEP_DURATION_MS * SWEEP_COUNT
 const SETTLED_GREY = toRGBColor({ r: 153, g: 153, b: 153 })
 
-export function AnimatedAsterisk({
-  char = TEARDROP_ASTERISK,
-}: {
-  char?: string
-}): React.ReactNode {
+export function AnimatedAsterisk({ char = TEARDROP_ASTERISK }: { char?: string }): React.ReactNode {
   // Read prefersReducedMotion once at mount — no useSettings() subscription,
   // since that would re-render whenever settings change.
-  const [reducedMotion] = useState(
-    () => getInitialSettings().prefersReducedMotion ?? false,
-  )
+  const [reducedMotion] = useState(() => getInitialSettings().prefersReducedMotion ?? false)
   const [done, setDone] = useState(reducedMotion)
   // useAnimationFrame's clock is shared — capture our start offset so the
   // sweep always begins at hue 0 regardless of when we mount.

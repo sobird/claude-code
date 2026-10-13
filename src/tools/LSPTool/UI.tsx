@@ -1,5 +1,6 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import React from 'react'
+
 import { CtrlOToExpand } from '../../components/CtrlOToExpand.js'
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js'
 import { MessageResponse } from '../../components/MessageResponse.js'
@@ -10,10 +11,7 @@ import type { Input, Output } from './LSPTool.js'
 import { getSymbolAtPosition } from './symbolContext.js'
 
 // Lookup map for operation-specific labels
-const OPERATION_LABELS: Record<
-  Input['operation'],
-  { singular: string; plural: string; special?: string }
-> = {
+const OPERATION_LABELS: Record<Input['operation'], { singular: string; plural: string; special?: string }> = {
   goToDefinition: { singular: 'definition', plural: 'definitions' },
   findReferences: { singular: 'reference', plural: 'references' },
   documentSymbol: { singular: 'symbol', plural: 'symbols' },
@@ -46,8 +44,7 @@ function LSPResultSummary({
     singular: 'result',
     plural: 'results',
   }
-  const countLabel =
-    resultCount === 1 ? labelConfig.singular : labelConfig.plural
+  const countLabel = resultCount === 1 ? labelConfig.singular : labelConfig.plural
 
   const primaryText =
     operation === 'hover' && resultCount > 0 && labelConfig.special ? (
@@ -99,10 +96,7 @@ export function userFacingName(): string {
   return 'LSP'
 }
 
-export function renderToolUseMessage(
-  input: Partial<Input>,
-  { verbose }: { verbose: boolean },
-): React.ReactNode {
+export function renderToolUseMessage(input: Partial<Input>, { verbose }: { verbose: boolean }): React.ReactNode {
   if (!input.operation) {
     return null
   }
@@ -121,14 +115,8 @@ export function renderToolUseMessage(
     input.character !== undefined
   ) {
     // Convert from 1-based (user input) to 0-based (internal file reading)
-    const symbol = getSymbolAtPosition(
-      input.filePath,
-      input.line - 1,
-      input.character - 1,
-    )
-    const displayPath = verbose
-      ? input.filePath
-      : getDisplayPath(input.filePath)
+    const symbol = getSymbolAtPosition(input.filePath, input.line - 1, input.character - 1)
+    const displayPath = verbose ? input.filePath : getDisplayPath(input.filePath)
 
     if (symbol) {
       parts.push(`operation: "${input.operation}"`)
@@ -148,9 +136,7 @@ export function renderToolUseMessage(
   parts.push(`operation: "${input.operation}"`)
 
   if (input.filePath) {
-    const displayPath = verbose
-      ? input.filePath
-      : getDisplayPath(input.filePath)
+    const displayPath = verbose ? input.filePath : getDisplayPath(input.filePath)
     parts.push(`file: "${displayPath}"`)
   }
 
@@ -161,11 +147,7 @@ export function renderToolUseErrorMessage(
   result: ToolResultBlockParam['content'],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
-  if (
-    !verbose &&
-    typeof result === 'string' &&
-    extractTag(result, 'tool_use_error')
-  ) {
+  if (!verbose && typeof result === 'string' && extractTag(result, 'tool_use_error')) {
     return (
       <MessageResponse>
         <Text color="error">LSP operation failed</Text>

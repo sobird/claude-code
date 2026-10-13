@@ -1,10 +1,8 @@
-import {
-  buildComputerUseTools,
-  createComputerUseMcpServer,
-} from '@ant/computer-use-mcp'
+import { homedir } from 'os'
+
+import { buildComputerUseTools, createComputerUseMcpServer } from '@ant/computer-use-mcp'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import { homedir } from 'os'
 
 import { shutdownDatadog } from '../../services/analytics/datadog.js'
 import { shutdown1PEventLogging } from '../../services/analytics/firstPartyEventLogger.js'
@@ -26,7 +24,7 @@ async function tryGetInstalledAppNames(): Promise<string[] | undefined> {
   const adapter = getComputerUseHostAdapter()
   const enumP = adapter.executor.listInstalledApps()
   let timer: ReturnType<typeof setTimeout> | undefined
-  const timeoutP = new Promise<undefined>(resolve => {
+  const timeoutP = new Promise<undefined>((resolve) => {
     timer = setTimeout(resolve, APP_ENUM_TIMEOUT_MS, undefined)
   })
   const installed = await Promise.race([enumP, timeoutP])
@@ -57,22 +55,14 @@ async function tryGetInstalledAppNames(): Promise<string[] | undefined> {
  * Real dispatch still goes through `wrapper.tsx`'s `.call()` override; this
  * server exists only to answer ListTools.
  */
-export async function createComputerUseMcpServerForCli(): Promise<
-  ReturnType<typeof createComputerUseMcpServer>
-> {
+export async function createComputerUseMcpServerForCli(): Promise<ReturnType<typeof createComputerUseMcpServer>> {
   const adapter = getComputerUseHostAdapter()
   const coordinateMode = getChicagoCoordinateMode()
   const server = createComputerUseMcpServer(adapter, coordinateMode)
 
   const installedAppNames = await tryGetInstalledAppNames()
-  const tools = buildComputerUseTools(
-    adapter.executor.capabilities,
-    coordinateMode,
-    installedAppNames,
-  )
-  server.setRequestHandler(ListToolsRequestSchema, async () =>
-    adapter.isDisabled() ? { tools: [] } : { tools },
-  )
+  const tools = buildComputerUseTools(adapter.executor.capabilities, coordinateMode, installedAppNames)
+  server.setRequestHandler(ListToolsRequestSchema, async () => (adapter.isDisabled() ? { tools: [] } : { tools }))
 
   return server
 }

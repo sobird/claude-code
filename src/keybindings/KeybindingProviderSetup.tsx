@@ -7,12 +7,13 @@
  * support when the file changes.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+
 import { useNotifications } from '../context/notifications.js'
-import type { InputEvent } from '../ink/events/input-event.js'
 // ChordInterceptor intentionally uses useInput to intercept all keystrokes before
 // other handlers process them - this is required for chord sequence support
 // eslint-disable-next-line custom-rules/prefer-use-keybindings
 import { type Key, useInput } from '../ink.js'
+import type { InputEvent } from '../ink/events/input-event.js'
 import { count } from '../utils/array.js'
 import { logForDebugging } from '../utils/debug.js'
 import { plural } from '../utils/stringUtils.js'
@@ -24,11 +25,7 @@ import {
   subscribeToKeybindingChanges,
 } from './loadUserBindings.js'
 import { resolveKeyWithChordState } from './resolver.js'
-import type {
-  KeybindingContextName,
-  ParsedBinding,
-  ParsedKeystroke,
-} from './types.js'
+import type { KeybindingContextName, ParsedBinding, ParsedKeystroke } from './types.js'
 import type { KeybindingWarning } from './validate.js'
 
 /**
@@ -65,10 +62,7 @@ type Props = {
  * Display keybinding warnings to the user via notifications.
  * Shows a brief message pointing to /doctor for details.
  */
-function useKeybindingWarnings(
-  warnings: KeybindingWarning[],
-  isReload: boolean,
-): void {
+function useKeybindingWarnings(warnings: KeybindingWarning[], isReload: boolean): void {
   const { addNotification, removeNotification } = useNotifications()
 
   useEffect(() => {
@@ -79,8 +73,8 @@ function useKeybindingWarnings(
       return
     }
 
-    const errorCount = count(warnings, w => w.severity === 'error')
-    const warnCount = count(warnings, w => w.severity === 'warning')
+    const errorCount = count(warnings, (w) => w.severity === 'error')
+    const warnCount = count(warnings, (w) => w.severity === 'warning')
 
     let message: string
     if (errorCount > 0 && warnCount > 0) {
@@ -105,14 +99,13 @@ function useKeybindingWarnings(
 
 export function KeybindingSetup({ children }: Props): React.ReactNode {
   // Load bindings synchronously for initial render
-  const [{ bindings, warnings }, setLoadResult] =
-    useState<KeybindingsLoadResult>(() => {
-      const result = loadKeybindingsSyncWithWarnings()
-      logForDebugging(
-        `[keybindings] KeybindingSetup initialized with ${result.bindings.length} bindings, ${result.warnings.length} warnings`,
-      )
-      return result
-    })
+  const [{ bindings, warnings }, setLoadResult] = useState<KeybindingsLoadResult>(() => {
+    const result = loadKeybindingsSyncWithWarnings()
+    logForDebugging(
+      `[keybindings] KeybindingSetup initialized with ${result.bindings.length} bindings, ${result.warnings.length} warnings`,
+    )
+    return result
+  })
 
   // Track if this is a reload (not initial load)
   const [isReload, setIsReload] = useState(false)
@@ -124,9 +117,7 @@ export function KeybindingSetup({ children }: Props): React.ReactNode {
   // The ref is used by resolve() to get the current value without waiting for re-render
   // The state is used to trigger re-renders when needed (e.g., for UI updates)
   const pendingChordRef = useRef<ParsedKeystroke[] | null>(null)
-  const [pendingChord, setPendingChordState] = useState<
-    ParsedKeystroke[] | null
-  >(null)
+  const [pendingChord, setPendingChordState] = useState<ParsedKeystroke[] | null>(null)
   const chordTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Handler registry for action callbacks (used by ChordInterceptor to invoke handlers)
@@ -146,19 +137,13 @@ export function KeybindingSetup({ children }: Props): React.ReactNode {
   // to see the current value immediately, not after a React render cycle.
   const activeContextsRef = useRef<Set<KeybindingContextName>>(new Set())
 
-  const registerActiveContext = useCallback(
-    (context: KeybindingContextName) => {
-      activeContextsRef.current.add(context)
-    },
-    [],
-  )
+  const registerActiveContext = useCallback((context: KeybindingContextName) => {
+    activeContextsRef.current.add(context)
+  }, [])
 
-  const unregisterActiveContext = useCallback(
-    (context: KeybindingContextName) => {
-      activeContextsRef.current.delete(context)
-    },
-    [],
-  )
+  const unregisterActiveContext = useCallback((context: KeybindingContextName) => {
+    activeContextsRef.current.delete(context)
+  }, [])
 
   // Clear chord timeout when component unmounts or chord changes
   const clearChordTimeout = useCallback(() => {
@@ -200,15 +185,13 @@ export function KeybindingSetup({ children }: Props): React.ReactNode {
     void initializeKeybindingWatcher()
 
     // Subscribe to changes
-    const unsubscribe = subscribeToKeybindingChanges(result => {
+    const unsubscribe = subscribeToKeybindingChanges((result) => {
       // Any callback invocation is a reload since initial load happens
       // synchronously in useState, not via this subscription
       setIsReload(true)
 
       setLoadResult(result)
-      logForDebugging(
-        `[keybindings] Reloaded: ${result.bindings.length} bindings, ${result.warnings.length} warnings`,
-      )
+      logForDebugging(`[keybindings] Reloaded: ${result.bindings.length} bindings, ${result.warnings.length} warnings`)
     })
 
     return () => {
@@ -290,23 +273,13 @@ function ChordInterceptor({
           }
         }
       }
-      const contexts: KeybindingContextName[] = [
-        ...handlerContexts,
-        ...activeContexts,
-        'Global',
-      ]
+      const contexts: KeybindingContextName[] = [...handlerContexts, ...activeContexts, 'Global']
 
       // Track whether we're completing a chord (pending was non-null)
       const wasInChord = pendingChordRef.current !== null
 
       // Check if this keystroke is part of a chord sequence
-      const result = resolveKeyWithChordState(
-        input,
-        key,
-        contexts,
-        bindings,
-        pendingChordRef.current,
-      )
+      const result = resolveKeyWithChordState(input, key, contexts, bindings, pendingChordRef.current)
 
       switch (result.type) {
         case 'chord_started':
@@ -366,13 +339,7 @@ function ChordInterceptor({
           break
       }
     },
-    [
-      bindings,
-      pendingChordRef,
-      setPendingChord,
-      activeContexts,
-      handlerRegistryRef,
-    ],
+    [bindings, pendingChordRef, setPendingChord, activeContexts, handlerRegistryRef],
   )
 
   useInput(handleInput)

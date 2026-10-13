@@ -1,9 +1,7 @@
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
-import {
-  isTaskAssignment,
-  type TaskAssignmentMessage,
-} from '../../utils/teammateMailbox.js'
+import { isTaskAssignment, type TaskAssignmentMessage } from '../../utils/teammateMailbox.js'
 
 type Props = {
   assignment: TaskAssignmentMessage
@@ -15,13 +13,7 @@ type Props = {
 export function TaskAssignmentDisplay({ assignment }: Props): React.ReactNode {
   return (
     <Box flexDirection="column" marginY={1}>
-      <Box
-        borderStyle="round"
-        borderColor="cyan_FOR_SUBAGENTS_ONLY"
-        flexDirection="column"
-        paddingX={1}
-        paddingY={1}
-      >
+      <Box borderStyle="round" borderColor="cyan_FOR_SUBAGENTS_ONLY" flexDirection="column" paddingX={1} paddingY={1}>
         <Box marginBottom={1}>
           <Text color="cyan_FOR_SUBAGENTS_ONLY" bold>
             Task #{assignment.taskId} assigned by {assignment.assignedBy}
@@ -43,9 +35,7 @@ export function TaskAssignmentDisplay({ assignment }: Props): React.ReactNode {
 /**
  * Try to parse and render a task assignment message from raw content.
  */
-export function tryRenderTaskAssignmentMessage(
-  content: string,
-): React.ReactNode | null {
+export function tryRenderTaskAssignmentMessage(content: string): React.ReactNode | null {
   const assignment = isTaskAssignment(content)
   if (assignment) {
     return <TaskAssignmentDisplay assignment={assignment} />

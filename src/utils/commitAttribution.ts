@@ -1,18 +1,16 @@
 import { createHash, randomUUID, type UUID } from 'crypto'
 import { stat } from 'fs/promises'
 import { isAbsolute, join, relative, sep } from 'path'
+
 import { getOriginalCwd, getSessionId } from '../bootstrap/state.js'
-import type {
-  AttributionSnapshotMessage,
-  FileAttributionState,
-} from '../types/logs.js'
+import type { AttributionSnapshotMessage, FileAttributionState } from '../types/logs.js'
 import { getCwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
 import { execFileNoThrowWithCwd } from './execFileNoThrow.js'
 import { getFsImplementation } from './fsOperations.js'
 import { isGeneratedFile } from './generatedFiles.js'
-import { getRemoteUrlForDir, resolveGitDir } from './git/gitFilesystem.js'
 import { findGitRoot, gitExe } from './git.js'
+import { getRemoteUrlForDir, resolveGitDir } from './git/gitFilesystem.js'
 import { logError } from './log.js'
 import { getCanonicalName, type ModelName } from './model/model.js'
 import { sequential } from './sequential.js'
@@ -123,7 +121,7 @@ export const isInternalModelRepo = sequential(async (): Promise<boolean> => {
     repoClassCache = 'none'
     return false
   }
-  const isInternal = INTERNAL_MODEL_REPOS.some(repo => remoteUrl.includes(repo))
+  const isInternal = INTERNAL_MODEL_REPOS.some((repo) => remoteUrl.includes(repo))
   repoClassCache = isInternal ? 'internal' : 'external'
   return isInternal
 })
@@ -274,10 +272,7 @@ export function normalizeFilePath(filePath: string): string {
     // Keep original cwd
   }
 
-  if (
-    resolvedPath.startsWith(resolvedCwd + sep) ||
-    resolvedPath === resolvedCwd
-  ) {
+  if (resolvedPath.startsWith(resolvedCwd + sep) || resolvedPath === resolvedCwd) {
     // Normalize to forward slashes so keys match git diff output on Windows
     return relative(resolvedCwd, resolvedPath).replaceAll(sep, '/')
   }
@@ -337,25 +332,20 @@ function computeFileModificationState(
 
     if (oldContent === '' || newContent === '') {
       // New file or full deletion - contribution is the content length
-      claudeContribution =
-        oldContent === '' ? newContent.length : oldContent.length
+      claudeContribution = oldContent === '' ? newContent.length : oldContent.length
     } else {
       // Find actual changed region via common prefix/suffix matching.
       // This correctly handles same-length replacements (e.g., "Esc" → "esc")
       // where Math.abs(newLen - oldLen) would be 0.
       const minLen = Math.min(oldContent.length, newContent.length)
       let prefixEnd = 0
-      while (
-        prefixEnd < minLen &&
-        oldContent[prefixEnd] === newContent[prefixEnd]
-      ) {
+      while (prefixEnd < minLen && oldContent[prefixEnd] === newContent[prefixEnd]) {
         prefixEnd++
       }
       let suffixLen = 0
       while (
         suffixLen < minLen - prefixEnd &&
-        oldContent[oldContent.length - 1 - suffixLen] ===
-          newContent[newContent.length - 1 - suffixLen]
+        oldContent[oldContent.length - 1 - suffixLen] === newContent[newContent.length - 1 - suffixLen]
       ) {
         suffixLen++
       }
@@ -408,13 +398,7 @@ export function trackFileModification(
   mtime: number = Date.now(),
 ): AttributionState {
   const normalizedPath = normalizeFilePath(filePath)
-  const newFileState = computeFileModificationState(
-    state.fileStates,
-    filePath,
-    oldContent,
-    newContent,
-    mtime,
-  )
+  const newFileState = computeFileModificationState(state.fileStates, filePath, oldContent, newContent, mtime)
   if (!newFileState) {
     return state
   }
@@ -422,9 +406,7 @@ export function trackFileModification(
   const newFileStates = new Map(state.fileStates)
   newFileStates.set(normalizedPath, newFileState)
 
-  logForDebugging(
-    `Attribution: Tracked ${newFileState.claudeContribution} chars for ${normalizedPath}`,
-  )
+  logForDebugging(`Attribution: Tracked ${newFileState.claudeContribution} chars for ${normalizedPath}`)
 
   return {
     ...state,
@@ -450,11 +432,7 @@ export function trackFileCreation(
  * Track a file deletion by Claude (e.g., via bash rm command).
  * Used when Claude deletes a file through a non-tracked mechanism.
  */
-export function trackFileDeletion(
-  state: AttributionState,
-  filePath: string,
-  oldContent: string,
-): AttributionState {
+export function trackFileDeletion(state: AttributionState, filePath: string, oldContent: string): AttributionState {
   const normalizedPath = normalizeFilePath(filePath)
   const existingState = state.fileStates.get(normalizedPath)
   const existingContribution = existingState?.claudeContribution ?? 0
@@ -528,9 +506,7 @@ export function trackBulkFileChanges(
         const normalizedPath = normalizeFilePath(change.path)
         newFileStates.set(normalizedPath, newFileState)
 
-        logForDebugging(
-          `Attribution: Tracked ${newFileState.claudeContribution} chars for ${normalizedPath}`,
-        )
+        logForDebugging(`Attribution: Tracked ${newFileState.claudeContribution} chars for ${normalizedPath}`)
       }
     }
   }
@@ -562,10 +538,7 @@ export async function calculateCommitAttribution(
 
   // Merge file states from all sessions
   const mergedFileStates = new Map<string, FileAttributionState>()
-  const mergedBaselines = new Map<
-    string,
-    { contentHash: string; mtime: number }
-  >()
+  const mergedBaselines = new Map<string, { contentHash: string; mtime: number }>()
 
   for (const state of states) {
     surfaces.add(state.surface)
@@ -576,12 +549,7 @@ export async function calculateCommitAttribution(
       state.sessionBaselines instanceof Map
         ? state.sessionBaselines
         : new Map(
-            Object.entries(
-              (state.sessionBaselines ?? {}) as Record<
-                string,
-                { contentHash: string; mtime: number }
-              >,
-            ),
+            Object.entries((state.sessionBaselines ?? {}) as Record<string, { contentHash: string; mtime: number }>),
           )
     for (const [path, baseline] of baselines) {
       if (!mergedBaselines.has(path)) {
@@ -594,18 +562,13 @@ export async function calculateCommitAttribution(
     const fileStates =
       state.fileStates instanceof Map
         ? state.fileStates
-        : new Map(
-            Object.entries(
-              (state.fileStates ?? {}) as Record<string, FileAttributionState>,
-            ),
-          )
+        : new Map(Object.entries((state.fileStates ?? {}) as Record<string, FileAttributionState>))
     for (const [path, fileState] of fileStates) {
       const existing = mergedFileStates.get(path)
       if (existing) {
         mergedFileStates.set(path, {
           ...fileState,
-          claudeContribution:
-            existing.claudeContribution + fileState.claudeContribution,
+          claudeContribution: existing.claudeContribution + fileState.claudeContribution,
         })
       } else {
         mergedFileStates.set(path, fileState)
@@ -615,7 +578,7 @@ export async function calculateCommitAttribution(
 
   // Process files in parallel
   const fileResults = await Promise.all(
-    stagedFiles.map(async file => {
+    stagedFiles.map(async (file) => {
       // Skip generated files
       if (isGeneratedFile(file)) {
         return { type: 'generated' as const, file }
@@ -708,19 +671,14 @@ export async function calculateCommitAttribution(
     totalClaudeChars += result.claudeChars
     totalHumanChars += result.humanChars
 
-    surfaceCounts[result.surface] =
-      (surfaceCounts[result.surface] ?? 0) + result.claudeChars
+    surfaceCounts[result.surface] = (surfaceCounts[result.surface] ?? 0) + result.claudeChars
   }
 
   const totalChars = totalClaudeChars + totalHumanChars
-  const claudePercent =
-    totalChars > 0 ? Math.round((totalClaudeChars / totalChars) * 100) : 0
+  const claudePercent = totalChars > 0 ? Math.round((totalClaudeChars / totalChars) * 100) : 0
 
   // Calculate surface breakdown (percentage of total content per surface)
-  const surfaceBreakdown: Record<
-    string,
-    { claudeChars: number; percent: number }
-  > = {}
+  const surfaceBreakdown: Record<string, { claudeChars: number; percent: number }> = {}
   for (const [surface, chars] of Object.entries(surfaceCounts)) {
     // Calculate what percentage of TOTAL content this surface contributed
     const percent = totalChars > 0 ? Math.round((chars / totalChars) * 100) : 0
@@ -753,11 +711,10 @@ export async function getGitDiffSize(filePath: string): Promise<number> {
 
   try {
     // Use git diff --stat to get a summary of changes
-    const result = await execFileNoThrowWithCwd(
-      gitExe(),
-      ['diff', '--cached', '--stat', '--', filePath],
-      { cwd, timeout: 5000 },
-    )
+    const result = await execFileNoThrowWithCwd(gitExe(), ['diff', '--cached', '--stat', '--', filePath], {
+      cwd,
+      timeout: 5000,
+    })
 
     if (result.code !== 0 || !result.stdout) {
       return 0
@@ -794,11 +751,10 @@ export async function isFileDeleted(filePath: string): Promise<boolean> {
   const cwd = getAttributionRepoRoot()
 
   try {
-    const result = await execFileNoThrowWithCwd(
-      gitExe(),
-      ['diff', '--cached', '--name-status', '--', filePath],
-      { cwd, timeout: 5000 },
-    )
+    const result = await execFileNoThrowWithCwd(gitExe(), ['diff', '--cached', '--name-status', '--', filePath], {
+      cwd,
+      timeout: 5000,
+    })
 
     if (result.code === 0 && result.stdout) {
       // Format: "D\tfilename" for deleted files
@@ -818,11 +774,7 @@ export async function getStagedFiles(): Promise<string[]> {
   const cwd = getAttributionRepoRoot()
 
   try {
-    const result = await execFileNoThrowWithCwd(
-      gitExe(),
-      ['diff', '--cached', '--name-only'],
-      { cwd, timeout: 5000 },
-    )
+    const result = await execFileNoThrowWithCwd(gitExe(), ['diff', '--cached', '--name-only'], { cwd, timeout: 5000 })
 
     if (result.code === 0 && result.stdout) {
       return result.stdout.split('\n').filter(Boolean)
@@ -844,16 +796,10 @@ export async function isGitTransientState(): Promise<boolean> {
   const gitDir = await resolveGitDir(getAttributionRepoRoot())
   if (!gitDir) return false
 
-  const indicators = [
-    'rebase-merge',
-    'rebase-apply',
-    'MERGE_HEAD',
-    'CHERRY_PICK_HEAD',
-    'BISECT_LOG',
-  ]
+  const indicators = ['rebase-merge', 'rebase-apply', 'MERGE_HEAD', 'CHERRY_PICK_HEAD', 'BISECT_LOG']
 
   const results = await Promise.all(
-    indicators.map(async indicator => {
+    indicators.map(async (indicator) => {
       try {
         await stat(join(gitDir, indicator))
         return true
@@ -863,16 +809,13 @@ export async function isGitTransientState(): Promise<boolean> {
     }),
   )
 
-  return results.some(exists => exists)
+  return results.some((exists) => exists)
 }
 
 /**
  * Convert attribution state to snapshot message for persistence.
  */
-export function stateToSnapshotMessage(
-  state: AttributionState,
-  messageId: UUID,
-): AttributionSnapshotMessage {
+export function stateToSnapshotMessage(state: AttributionState, messageId: UUID): AttributionSnapshotMessage {
   const fileStates: Record<string, FileAttributionState> = {}
 
   for (const [path, fileState] of state.fileStates) {
@@ -896,9 +839,7 @@ export function stateToSnapshotMessage(
 /**
  * Restore attribution state from snapshot messages.
  */
-export function restoreAttributionStateFromSnapshots(
-  snapshots: AttributionSnapshotMessage[],
-): AttributionState {
+export function restoreAttributionStateFromSnapshots(snapshots: AttributionSnapshotMessage[]): AttributionState {
   const state = createEmptyAttributionState()
 
   // Snapshots are full-state dumps (see stateToSnapshotMessage), not deltas.
@@ -920,8 +861,7 @@ export function restoreAttributionStateFromSnapshots(
   state.promptCount = lastSnapshot.promptCount ?? 0
   state.promptCountAtLastCommit = lastSnapshot.promptCountAtLastCommit ?? 0
   state.permissionPromptCount = lastSnapshot.permissionPromptCount ?? 0
-  state.permissionPromptCountAtLastCommit =
-    lastSnapshot.permissionPromptCountAtLastCommit ?? 0
+  state.permissionPromptCountAtLastCommit = lastSnapshot.permissionPromptCountAtLastCommit ?? 0
   state.escapeCount = lastSnapshot.escapeCount ?? 0
   state.escapeCountAtLastCommit = lastSnapshot.escapeCountAtLastCommit ?? 0
 

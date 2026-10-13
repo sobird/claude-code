@@ -1,12 +1,10 @@
 import React, { Suspense, use, useMemo } from 'react'
+
 import { useSettings } from '../../../hooks/useSettings.js'
 import { useTerminalSize } from '../../../hooks/useTerminalSize.js'
-import { stringWidth } from '../../../ink/stringWidth.js'
 import { Ansi, Box, Text, useTheme } from '../../../ink.js'
-import {
-  type CliHighlight,
-  getCliHighlightPromise,
-} from '../../../utils/cliHighlight.js'
+import { stringWidth } from '../../../ink/stringWidth.js'
+import { type CliHighlight, getCliHighlightPromise } from '../../../utils/cliHighlight.js'
 import { applyMarkdown } from '../../../utils/markdown.js'
 import sliceAnsi from '../../../utils/sliceAnsi.js'
 
@@ -75,35 +73,21 @@ function PreviewBoxBody({
   // Render markdown with syntax highlighting for code blocks. applyMarkdown
   // returns an ANSI-styled string (bold, colors, etc.) that we split into
   // lines. stringWidth and sliceAnsi below correctly handle ANSI codes.
-  const rendered = useMemo(
-    () => applyMarkdown(content, theme, highlight),
-    [content, theme, highlight],
-  )
+  const rendered = useMemo(() => applyMarkdown(content, theme, highlight), [content, theme, highlight])
   const contentLines = rendered.split('\n')
   const isTruncated = contentLines.length > effectiveMaxLines
 
   // Truncate to effectiveMaxLines
-  const truncatedLines = isTruncated
-    ? contentLines.slice(0, effectiveMaxLines)
-    : contentLines
+  const truncatedLines = isTruncated ? contentLines.slice(0, effectiveMaxLines) : contentLines
 
   // Pad content with empty lines if shorter than minHeight, but never exceed
   // the truncation limit — otherwise padding undoes the truncation
   const effectiveMinHeight = Math.min(minHeight ?? 0, effectiveMaxLines)
-  const paddingNeeded = Math.max(
-    0,
-    effectiveMinHeight - truncatedLines.length - (isTruncated ? 1 : 0),
-  )
-  const lines =
-    paddingNeeded > 0
-      ? [...truncatedLines, ...Array<string>(paddingNeeded).fill('')]
-      : truncatedLines
+  const paddingNeeded = Math.max(0, effectiveMinHeight - truncatedLines.length - (isTruncated ? 1 : 0))
+  const lines = paddingNeeded > 0 ? [...truncatedLines, ...Array<string>(paddingNeeded).fill('')] : truncatedLines
 
   // Calculate content width (max visual line width, handling unicode/emoji/CJK)
-  const contentWidth = Math.max(
-    minWidth,
-    ...lines.map(line => stringWidth(line)),
-  )
+  const contentWidth = Math.max(minWidth, ...lines.map((line) => stringWidth(line)))
   // Add 2 for border padding, cap at the container width to prevent line wrapping
   const boxWidth = Math.min(contentWidth + 4, effectiveMaxWidth)
   const innerWidth = boxWidth - 4 // Account for borders and padding
@@ -133,11 +117,8 @@ function PreviewBoxBody({
         // Pad or truncate line to fit inner width (using visual width for unicode/emoji/CJK).
         // sliceAnsi handles ANSI escape codes correctly; stringWidth strips them before measuring.
         const lineWidth = stringWidth(line)
-        const displayLine =
-          lineWidth > innerWidth ? sliceAnsi(line, 0, innerWidth) : line
-        const padding = ' '.repeat(
-          Math.max(0, innerWidth - stringWidth(displayLine)),
-        )
+        const displayLine = lineWidth > innerWidth ? sliceAnsi(line, 0, innerWidth) : line
+        const padding = ' '.repeat(Math.max(0, innerWidth - stringWidth(displayLine)))
 
         return (
           <Box key={index} flexDirection="row">

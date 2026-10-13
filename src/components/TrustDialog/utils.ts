@@ -1,6 +1,7 @@
 import type { PermissionRule } from 'src/utils/permissions/PermissionRule.js'
 import { getSettingsForSource } from 'src/utils/settings/settings.js'
 import type { SettingsJson } from 'src/utils/settings/types.js'
+
 import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
 import { SAFE_ENV_VARS } from '../../utils/managedEnvConstants.js'
 import { getPermissionRulesForSource } from '../../utils/permissions/permissionsLoader.js'
@@ -44,10 +45,9 @@ export function getHooksSources(): string[] {
 
 function hasBashPermission(rules: PermissionRule[]): boolean {
   return rules.some(
-    rule =>
+    (rule) =>
       rule.ruleBehavior === 'allow' &&
-      (rule.ruleValue.toolName === BASH_TOOL_NAME ||
-        rule.ruleValue.toolName.startsWith(BASH_TOOL_NAME + '(')),
+      (rule.ruleValue.toolName === BASH_TOOL_NAME || rule.ruleValue.toolName.startsWith(BASH_TOOL_NAME + '(')),
   )
 }
 
@@ -219,9 +219,7 @@ function hasDangerousEnvVars(settings: SettingsJson | null): boolean {
   if (!settings?.env) {
     return false
   }
-  return Object.keys(settings.env).some(
-    key => !SAFE_ENV_VARS.has(key.toUpperCase()),
-  )
+  return Object.keys(settings.env).some((key) => !SAFE_ENV_VARS.has(key.toUpperCase()))
 }
 
 /**

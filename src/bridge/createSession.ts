@@ -61,8 +61,7 @@ export async function createBridgeSession({
   const { getMainLoopModel } = await import('../utils/model/model.js')
   const { default: axios } = await import('axios')
 
-  const accessToken =
-    getAccessToken?.() ?? getClaudeAIOAuthTokens()?.accessToken
+  const accessToken = getAccessToken?.() ?? getClaudeAIOAuthTokens()?.accessToken
   if (!accessToken) {
     logForDebugging('[bridge] No access token for session creation')
     return null
@@ -147,31 +146,22 @@ export async function createBridgeSession({
     response = await axios.post(url, requestBody, {
       headers,
       signal,
-      validateStatus: s => s < 500,
+      validateStatus: (s) => s < 500,
     })
   } catch (err: unknown) {
-    logForDebugging(
-      `[bridge] Session creation request failed: ${errorMessage(err)}`,
-    )
+    logForDebugging(`[bridge] Session creation request failed: ${errorMessage(err)}`)
     return null
   }
   const isSuccess = response.status === 200 || response.status === 201
 
   if (!isSuccess) {
     const detail = extractErrorDetail(response.data)
-    logForDebugging(
-      `[bridge] Session creation failed with status ${response.status}${detail ? `: ${detail}` : ''}`,
-    )
+    logForDebugging(`[bridge] Session creation failed with status ${response.status}${detail ? `: ${detail}` : ''}`)
     return null
   }
 
   const sessionData: unknown = response.data
-  if (
-    !sessionData ||
-    typeof sessionData !== 'object' ||
-    !('id' in sessionData) ||
-    typeof sessionData.id !== 'string'
-  ) {
+  if (!sessionData || typeof sessionData !== 'object' || !('id' in sessionData) || typeof sessionData.id !== 'string') {
     logForDebugging('[bridge] No session ID in response')
     return null
   }
@@ -197,8 +187,7 @@ export async function getBridgeSession(
   const { getOAuthHeaders } = await import('../utils/teleport/api.js')
   const { default: axios } = await import('axios')
 
-  const accessToken =
-    opts?.getAccessToken?.() ?? getClaudeAIOAuthTokens()?.accessToken
+  const accessToken = opts?.getAccessToken?.() ?? getClaudeAIOAuthTokens()?.accessToken
   if (!accessToken) {
     logForDebugging('[bridge] No access token for session fetch')
     return null
@@ -221,22 +210,19 @@ export async function getBridgeSession(
 
   let response
   try {
-    response = await axios.get<{ environment_id?: string; title?: string }>(
-      url,
-      { headers, timeout: 10_000, validateStatus: s => s < 500 },
-    )
+    response = await axios.get<{ environment_id?: string; title?: string }>(url, {
+      headers,
+      timeout: 10_000,
+      validateStatus: (s) => s < 500,
+    })
   } catch (err: unknown) {
-    logForDebugging(
-      `[bridge] Session fetch request failed: ${errorMessage(err)}`,
-    )
+    logForDebugging(`[bridge] Session fetch request failed: ${errorMessage(err)}`)
     return null
   }
 
   if (response.status !== 200) {
     const detail = extractErrorDetail(response.data)
-    logForDebugging(
-      `[bridge] Session fetch failed with status ${response.status}${detail ? `: ${detail}` : ''}`,
-    )
+    logForDebugging(`[bridge] Session fetch failed with status ${response.status}${detail ? `: ${detail}` : ''}`)
     return null
   }
 
@@ -274,8 +260,7 @@ export async function archiveBridgeSession(
   const { getOAuthHeaders } = await import('../utils/teleport/api.js')
   const { default: axios } = await import('axios')
 
-  const accessToken =
-    opts?.getAccessToken?.() ?? getClaudeAIOAuthTokens()?.accessToken
+  const accessToken = opts?.getAccessToken?.() ?? getClaudeAIOAuthTokens()?.accessToken
   if (!accessToken) {
     logForDebugging('[bridge] No access token for session archive')
     return
@@ -302,7 +287,7 @@ export async function archiveBridgeSession(
     {
       headers,
       timeout: opts?.timeoutMs ?? 10_000,
-      validateStatus: s => s < 500,
+      validateStatus: (s) => s < 500,
     },
   )
 
@@ -310,9 +295,7 @@ export async function archiveBridgeSession(
     logForDebugging(`[bridge] Session ${sessionId} archived successfully`)
   } else {
     const detail = extractErrorDetail(response.data)
-    logForDebugging(
-      `[bridge] Session archive failed with status ${response.status}${detail ? `: ${detail}` : ''}`,
-    )
+    logForDebugging(`[bridge] Session archive failed with status ${response.status}${detail ? `: ${detail}` : ''}`)
   }
 }
 
@@ -335,8 +318,7 @@ export async function updateBridgeSessionTitle(
   const { getOAuthHeaders } = await import('../utils/teleport/api.js')
   const { default: axios } = await import('axios')
 
-  const accessToken =
-    opts?.getAccessToken?.() ?? getClaudeAIOAuthTokens()?.accessToken
+  const accessToken = opts?.getAccessToken?.() ?? getClaudeAIOAuthTokens()?.accessToken
   if (!accessToken) {
     logForDebugging('[bridge] No access token for session title update')
     return
@@ -362,11 +344,7 @@ export async function updateBridgeSessionTitle(
   logForDebugging(`[bridge] Updating session title: ${compatId} → ${title}`)
 
   try {
-    const response = await axios.patch(
-      url,
-      { title },
-      { headers, timeout: 10_000, validateStatus: s => s < 500 },
-    )
+    const response = await axios.patch(url, { title }, { headers, timeout: 10_000, validateStatus: (s) => s < 500 })
 
     if (response.status === 200) {
       logForDebugging(`[bridge] Session title updated successfully`)
@@ -377,8 +355,6 @@ export async function updateBridgeSessionTitle(
       )
     }
   } catch (err: unknown) {
-    logForDebugging(
-      `[bridge] Session title update request failed: ${errorMessage(err)}`,
-    )
+    logForDebugging(`[bridge] Session title update request failed: ${errorMessage(err)}`)
   }
 }

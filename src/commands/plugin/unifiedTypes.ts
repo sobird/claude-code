@@ -1,2 +1,2 @@
 // Auto-generated stub — replace with real implementation
-export type UnifiedInstalledItem = unknown;
+export type UnifiedInstalledItem = unknown

@@ -1,6 +1,7 @@
 import { execa } from 'execa'
 import * as React from 'react'
 import { useEffect, useState } from 'react'
+
 import { Select } from '../../components/CustomSelect/index.js'
 import { Dialog } from '../../components/design-system/Dialog.js'
 import { LoadingState } from '../../components/design-system/LoadingState.js'
@@ -68,17 +69,14 @@ function errorMessage(err: ImportTokenError, codeUrl: string): string {
   }
 }
 
-type Step =
-  | { name: 'checking' }
-  | { name: 'confirm'; token: RedactedGithubToken }
-  | { name: 'uploading' }
+type Step = { name: 'checking' } | { name: 'confirm'; token: RedactedGithubToken } | { name: 'uploading' }
 
 function Web({ onDone }: { onDone: LocalJSXCommandOnDone }) {
   const [step, setStep] = useState<Step>({ name: 'checking' })
 
   useEffect(() => {
     logEvent('tengu_remote_setup_started', {})
-    void checkLoginState().then(async result => {
+    void checkLoginState().then(async (result) => {
       switch (result.status) {
         case 'not_signed_in':
           logEvent('tengu_remote_setup_result', {
@@ -152,26 +150,17 @@ function Web({ onDone }: { onDone: LocalJSXCommandOnDone }) {
 
   const token = step.token
   return (
-    <Dialog
-      title="Connect Claude on the web to GitHub?"
-      onCancel={handleCancel}
-      hideInputGuide
-    >
+    <Dialog title="Connect Claude on the web to GitHub?" onCancel={handleCancel} hideInputGuide>
       <Box flexDirection="column">
-        <Text>
-          Claude on the web requires connecting to your GitHub account to clone
-          and push code on your behalf.
-        </Text>
-        <Text dimColor>
-          Your local credentials are used to authenticate with GitHub
-        </Text>
+        <Text>Claude on the web requires connecting to your GitHub account to clone and push code on your behalf.</Text>
+        <Text dimColor>Your local credentials are used to authenticate with GitHub</Text>
       </Box>
       <Select
         options={[
           { label: 'Continue', value: 'send' },
           { label: 'Cancel', value: 'cancel' },
         ]}
-        onChange={value => {
+        onChange={(value) => {
           if (value === 'send') {
             void handleConfirm(token)
           } else {
@@ -184,8 +173,6 @@ function Web({ onDone }: { onDone: LocalJSXCommandOnDone }) {
   )
 }
 
-export async function call(
-  onDone: LocalJSXCommandOnDone,
-): Promise<React.ReactNode> {
+export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNode> {
   return <Web onDone={onDone} />
 }

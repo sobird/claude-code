@@ -1,15 +1,13 @@
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources'
 import { randomUUID } from 'crypto'
+
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources'
 import * as React from 'react'
 import { BashModeProgress } from 'src/components/BashModeProgress.js'
 import type { SetToolJSXFn } from 'src/Tool.js'
 import { BashTool } from 'src/tools/BashTool/BashTool.js'
-import type {
-  AttachmentMessage,
-  SystemMessage,
-  UserMessage,
-} from 'src/types/message.js'
+import type { AttachmentMessage, SystemMessage, UserMessage } from 'src/types/message.js'
 import type { ShellProgress } from 'src/types/tools.js'
+
 import { logEvent } from '../../services/analytics/index.js'
 import { errorMessage, ShellError } from '../errors.js'
 import {
@@ -39,8 +37,7 @@ export async function processBashCommand(
   // same platform + env-var gate as tools.ts so input-box routing matches
   // tool-list visibility. Computed up front so telemetry records the
   // actual shell, not the raw setting.
-  const usePowerShell =
-    isPowerShellToolEnabled() && resolveDefaultShell() === 'powershell'
+  const usePowerShell = isPowerShellToolEnabled() && resolveDefaultShell() === 'powershell'
 
   logEvent('tengu_input_bash', { powershell: usePowerShell })
 
@@ -56,13 +53,7 @@ export async function processBashCommand(
 
   // Just show initial UI
   setToolJSX({
-    jsx: (
-      <BashModeProgress
-        input={inputString}
-        progress={null}
-        verbose={context.options.verbose}
-      />
-    ),
+    jsx: <BashModeProgress input={inputString} progress={null} verbose={context.options.verbose} />,
     shouldHidePromptInput: false,
   })
 
@@ -70,7 +61,7 @@ export async function processBashCommand(
     const bashModeContext: ProcessUserInputContext = {
       ...context,
       // TODO: Clean up this hack
-      setToolJSX: _ => {
+      setToolJSX: (_) => {
         jsx = _?.jsx
       },
     }
@@ -80,11 +71,7 @@ export async function processBashCommand(
       setToolJSX({
         jsx: (
           <>
-            <BashModeProgress
-              input={inputString!}
-              progress={progress.data}
-              verbose={context.options.verbose}
-            />
+            <BashModeProgress input={inputString!} progress={progress.data} verbose={context.options.verbose} />
             {jsx}
           </>
         ),
@@ -103,9 +90,7 @@ export async function processBashCommand(
     let PowerShellTool: PSMod['PowerShellTool'] | null = null
     if (usePowerShell) {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      PowerShellTool = (
-        require('src/tools/PowerShellTool/PowerShellTool.js') as PSMod
-      ).PowerShellTool
+      PowerShellTool = (require('src/tools/PowerShellTool/PowerShellTool.js') as PSMod).PowerShellTool
       /* eslint-enable @typescript-eslint/no-require-imports */
     }
     const shellTool = PowerShellTool ?? BashTool
@@ -139,19 +124,12 @@ export async function processBashCommand(
     // and model-initiated Bash. When BashTool.call() persists large output to disk,
     // data.persistedOutputPath is set and the formatter wraps in <persisted-output>.
     // Pass stderr:'' to keep it separate for the <bash-stderr> UI tag.
-    const mapped = await processToolResultBlock(
-      shellTool,
-      { ...data, stderr: '' },
-      randomUUID(),
-    )
+    const mapped = await processToolResultBlock(shellTool, { ...data, stderr: '' }, randomUUID())
     // mapped.content may contain our own <persisted-output> wrapper (trusted
     // XML from buildLargeToolResultMessage). Escaping it would turn structural
     // tags into &lt;persisted-output&gt;, breaking the model's parse and
     // UserBashOutputMessage's extractTag. Escape the raw fallback only.
-    const stdout =
-      typeof mapped.content === 'string'
-        ? mapped.content
-        : escapeXml(data.stdout)
+    const stdout = typeof mapped.content === 'string' ? mapped.content : escapeXml(data.stdout)
     return {
       messages: [
         createSyntheticUserCaveatMessage(),

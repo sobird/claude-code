@@ -1,4 +1,5 @@
 import { toJSONSchema } from 'zod/v4'
+
 import { jsonStringify } from '../slowOperations.js'
 import { SettingsSchema } from './types.js'
 

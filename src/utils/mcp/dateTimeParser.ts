@@ -3,9 +3,7 @@ import { logError } from '../log.js'
 import { extractTextContent } from '../messages.js'
 import { asSystemPrompt } from '../systemPromptType.js'
 
-export type DateTimeParseResult =
-  | { success: true; value: string }
-  | { success: false; error: string }
+export type DateTimeParseResult = { success: true; value: string } | { success: false; error: string }
 
 /**
  * Parse natural language date/time input into ISO 8601 format using Haiku.
@@ -104,8 +102,7 @@ Parse the user's input into ISO 8601 format. Return ONLY the formatted string, o
     logError(error)
     return {
       success: false,
-      error:
-        'Unable to parse date/time. Please enter in ISO 8601 format manually.',
+      error: 'Unable to parse date/time. Please enter in ISO 8601 format manually.',
     }
   }
 }

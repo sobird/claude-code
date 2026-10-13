@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import {
   checkGate_CACHED_OR_BLOCKING,
   getDynamicConfig_CACHED_MAY_BE_STALE,
@@ -30,8 +31,7 @@ export function isBridgeEnabled(): boolean {
   // Negative pattern (if (!feature(...)) return) does not eliminate
   // inline string literals from external builds.
   return feature('BRIDGE_MODE')
-    ? isClaudeAISubscriber() &&
-        getFeatureValue_CACHED_MAY_BE_STALE('tengu_ccr_bridge', false)
+    ? isClaudeAISubscriber() && getFeatureValue_CACHED_MAY_BE_STALE('tengu_ccr_bridge', false)
     : false
 }
 
@@ -49,8 +49,7 @@ export function isBridgeEnabled(): boolean {
  */
 export async function isBridgeEnabledBlocking(): Promise<boolean> {
   return feature('BRIDGE_MODE')
-    ? isClaudeAISubscriber() &&
-        (await checkGate_CACHED_OR_BLOCKING('tengu_ccr_bridge'))
+    ? isClaudeAISubscriber() && (await checkGate_CACHED_OR_BLOCKING('tengu_ccr_bridge'))
     : false
 }
 
@@ -105,9 +104,7 @@ function hasProfileScope(): boolean {
     return false
   }
 }
-function getOauthAccountInfo(): ReturnType<
-  typeof authModule.getOauthAccountInfo
-> {
+function getOauthAccountInfo(): ReturnType<typeof authModule.getOauthAccountInfo> {
   try {
     return authModule.getOauthAccountInfo()
   } catch {
@@ -124,9 +121,7 @@ function getOauthAccountInfo(): ReturnType<
  * on the env-based implementation regardless of this gate.
  */
 export function isEnvLessBridgeEnabled(): boolean {
-  return feature('BRIDGE_MODE')
-    ? getFeatureValue_CACHED_MAY_BE_STALE('tengu_bridge_repl_v2', false)
-    : false
+  return feature('BRIDGE_MODE') ? getFeatureValue_CACHED_MAY_BE_STALE('tengu_bridge_repl_v2', false) : false
 }
 
 /**
@@ -140,10 +135,7 @@ export function isEnvLessBridgeEnabled(): boolean {
  */
 export function isCseShimEnabled(): boolean {
   return feature('BRIDGE_MODE')
-    ? getFeatureValue_CACHED_MAY_BE_STALE(
-        'tengu_bridge_repl_v2_cse_shim_enabled',
-        true,
-      )
+    ? getFeatureValue_CACHED_MAY_BE_STALE('tengu_bridge_repl_v2_cse_shim_enabled', true)
     : true
 }
 
@@ -183,9 +175,7 @@ export function checkBridgeMinVersion(): string | null {
  * config.ts → growthbook.ts import cycle (growthbook.ts → user.ts → config.ts).
  */
 export function getCcrAutoConnectDefault(): boolean {
-  return feature('CCR_AUTO_CONNECT')
-    ? getFeatureValue_CACHED_MAY_BE_STALE('tengu_cobalt_harbor', false)
-    : false
+  return feature('CCR_AUTO_CONNECT') ? getFeatureValue_CACHED_MAY_BE_STALE('tengu_cobalt_harbor', false) : false
 }
 
 /**
@@ -196,7 +186,6 @@ export function getCcrAutoConnectDefault(): boolean {
  */
 export function isCcrMirrorEnabled(): boolean {
   return feature('CCR_MIRROR')
-    ? isEnvTruthy(process.env.CLAUDE_CODE_CCR_MIRROR) ||
-        getFeatureValue_CACHED_MAY_BE_STALE('tengu_ccr_mirror', false)
+    ? isEnvTruthy(process.env.CLAUDE_CODE_CCR_MIRROR) || getFeatureValue_CACHED_MAY_BE_STALE('tengu_ccr_mirror', false)
     : false
 }

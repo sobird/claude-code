@@ -1,5 +1,6 @@
 import { feature } from 'bun:bundle'
 import { stat } from 'fs/promises'
+
 import {
   OUTPUT_FILE_TAG,
   STATUS_TAG,
@@ -10,13 +11,7 @@ import {
 } from '../../constants/xml.js'
 import { abortSpeculation } from '../../services/PromptSuggestion/speculation.js'
 import type { AppState } from '../../state/AppState.js'
-import type {
-  LocalShellSpawnInput,
-  SetAppState,
-  Task,
-  TaskContext,
-  TaskHandle,
-} from '../../Task.js'
+import type { LocalShellSpawnInput, SetAppState, Task, TaskContext, TaskHandle } from '../../Task.js'
 import { createTaskStateBase } from '../../Task.js'
 import type { AgentId } from '../../types/ids.js'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
@@ -24,22 +19,12 @@ import { tailFile } from '../../utils/fsOperations.js'
 import { logError } from '../../utils/log.js'
 import { enqueuePendingNotification } from '../../utils/messageQueueManager.js'
 import type { ShellCommand } from '../../utils/ShellCommand.js'
-import {
-  evictTaskOutput,
-  getTaskOutputPath,
-} from '../../utils/task/diskOutput.js'
+import { evictTaskOutput, getTaskOutputPath } from '../../utils/task/diskOutput.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
 import { escapeXml } from '../../utils/xml.js'
-import {
-  backgroundAgentTask,
-  isLocalAgentTask,
-} from '../LocalAgentTask/LocalAgentTask.js'
+import { backgroundAgentTask, isLocalAgentTask } from '../LocalAgentTask/LocalAgentTask.js'
 import { isMainSessionTask } from '../LocalMainSessionTask.js'
-import {
-  type BashTaskKind,
-  isLocalShellTask,
-  type LocalShellTaskState,
-} from './guards.js'
+import { type BashTaskKind, isLocalShellTask, type LocalShellTaskState } from './guards.js'
 import { killTask } from './killShellTasks.js'
 
 /** Prefix that identifies a LocalShellTask summary to the UI collapse transform. */
@@ -65,7 +50,7 @@ const PROMPT_PATTERNS = [
 
 export function looksLikePrompt(tail: string): boolean {
   const lastLine = tail.trimEnd().split('\n').pop() ?? ''
-  return PROMPT_PATTERNS.some(p => p.test(lastLine))
+  return PROMPT_PATTERNS.some((p) => p.test(lastLine))
 }
 
 // Output-side analog of peekForStdinData (utils/process.ts): fire a one-shot
@@ -85,7 +70,7 @@ function startStallWatchdog(
 
   const timer = setInterval(() => {
     void stat(outputPath).then(
-      s => {
+      (s) => {
         if (s.size > lastSize) {
           lastSize = s.size
           lastGrowth = Date.now()
@@ -105,9 +90,7 @@ function startStallWatchdog(
             // overlapping tick's callback sees cancelled=true and bails.
             cancelled = true
             clearInterval(timer)
-            const toolUseIdLine = toolUseId
-              ? `\n<${TOOL_USE_ID_TAG}>${toolUseId}</${TOOL_USE_ID_TAG}>`
-              : ''
+            const toolUseIdLine = toolUseId ? `\n<${TOOL_USE_ID_TAG}>${toolUseId}</${TOOL_USE_ID_TAG}>` : ''
             const summary = `${BACKGROUND_BASH_SUMMARY_PREFIX}"${description}" appears to be waiting for interactive input`
             // No <status> tag — print.ts treats <status> as a terminal
             // signal and an unknown value falls through to 'completed',
@@ -157,7 +140,7 @@ function enqueueShellNotification(
   // If the task was already marked as notified (e.g., by TaskStopTool), skip
   // enqueueing to avoid sending redundant messages to the model.
   let shouldEnqueue = false
-  updateTaskState(taskId, setAppState, task => {
+  updateTaskState(taskId, setAppState, (task) => {
     if (task.notified) {
       return task
     }
@@ -206,9 +189,7 @@ function enqueueShellNotification(
   }
 
   const outputPath = getTaskOutputPath(taskId)
-  const toolUseIdLine = toolUseId
-    ? `\n<${TOOL_USE_ID_TAG}>${toolUseId}</${TOOL_USE_ID_TAG}>`
-    : ''
+  const toolUseIdLine = toolUseId ? `\n<${TOOL_USE_ID_TAG}>${toolUseId}</${TOOL_USE_ID_TAG}>` : ''
   const message = `<${TASK_NOTIFICATION_TAG}>
 <${TASK_ID_TAG}>${taskId}</${TASK_ID_TAG}>${toolUseIdLine}
 <${OUTPUT_FILE_TAG}>${outputPath}</${OUTPUT_FILE_TAG}>
@@ -267,20 +248,14 @@ export async function spawnShellTask(
   // Just transition to backgrounded state so the process keeps running.
   shellCommand.background(taskId)
 
-  const cancelStallWatchdog = startStallWatchdog(
-    taskId,
-    description,
-    kind,
-    toolUseId,
-    agentId,
-  )
+  const cancelStallWatchdog = startStallWatchdog(taskId, description, kind, toolUseId, agentId)
 
-  void shellCommand.result.then(async result => {
+  void shellCommand.result.then(async (result) => {
     cancelStallWatchdog()
     await flushAndCleanup(shellCommand)
     let wasKilled = false
 
-    updateTaskState<LocalShellTaskState>(taskId, setAppState, task => {
+    updateTaskState<LocalShellTaskState>(taskId, setAppState, (task) => {
       if (task.status === 'killed') {
         wasKilled = true
         return task
@@ -357,11 +332,7 @@ export function registerForeground(
  * Background a specific foreground task.
  * @returns true if backgrounded successfully, false otherwise
  */
-function backgroundTask(
-  taskId: string,
-  getAppState: () => AppState,
-  setAppState: SetAppState,
-): boolean {
+function backgroundTask(taskId: string, getAppState: () => AppState, setAppState: SetAppState): boolean {
   // Step 1: Get the task and shell command from current state
   const state = getAppState()
   const task = state.tasks[taskId]
@@ -378,7 +349,7 @@ function backgroundTask(
     return false
   }
 
-  setAppState(prev => {
+  setAppState((prev) => {
     const prevTask = prev.tasks[taskId]
     if (!isLocalShellTask(prevTask) || prevTask.isBackgrounded) {
       return prev
@@ -392,22 +363,16 @@ function backgroundTask(
     }
   })
 
-  const cancelStallWatchdog = startStallWatchdog(
-    taskId,
-    description,
-    kind,
-    toolUseId,
-    agentId,
-  )
+  const cancelStallWatchdog = startStallWatchdog(taskId, description, kind, toolUseId, agentId)
 
   // Set up result handler
-  void shellCommand.result.then(async result => {
+  void shellCommand.result.then(async (result) => {
     cancelStallWatchdog()
     await flushAndCleanup(shellCommand)
     let wasKilled = false
     let cleanupFn: (() => void) | undefined
 
-    updateTaskState<LocalShellTaskState>(taskId, setAppState, t => {
+    updateTaskState<LocalShellTaskState>(taskId, setAppState, (t) => {
       if (t.status === 'killed') {
         wasKilled = true
         return t
@@ -430,28 +395,10 @@ function backgroundTask(
     cleanupFn?.()
 
     if (wasKilled) {
-      enqueueShellNotification(
-        taskId,
-        description,
-        'killed',
-        result.code,
-        setAppState,
-        toolUseId,
-        kind,
-        agentId,
-      )
+      enqueueShellNotification(taskId, description, 'killed', result.code, setAppState, toolUseId, kind, agentId)
     } else {
       const finalStatus = result.code === 0 ? 'completed' : 'failed'
-      enqueueShellNotification(
-        taskId,
-        description,
-        finalStatus,
-        result.code,
-        setAppState,
-        toolUseId,
-        kind,
-        agentId,
-      )
+      enqueueShellNotification(taskId, description, finalStatus, result.code, setAppState, toolUseId, kind, agentId)
     }
 
     void evictTaskOutput(taskId)
@@ -469,30 +416,23 @@ function backgroundTask(
  * Used to determine whether Ctrl+B should background existing tasks vs. background the session.
  */
 export function hasForegroundTasks(state: AppState): boolean {
-  return Object.values(state.tasks).some(task => {
+  return Object.values(state.tasks).some((task) => {
     if (isLocalShellTask(task) && !task.isBackgrounded && task.shellCommand) {
       return true
     }
     // Exclude main session tasks - they display in the main view, not as foreground tasks
-    if (
-      isLocalAgentTask(task) &&
-      !task.isBackgrounded &&
-      !isMainSessionTask(task)
-    ) {
+    if (isLocalAgentTask(task) && !task.isBackgrounded && !isMainSessionTask(task)) {
       return true
     }
     return false
   })
 }
 
-export function backgroundAll(
-  getAppState: () => AppState,
-  setAppState: SetAppState,
-): void {
+export function backgroundAll(getAppState: () => AppState, setAppState: SetAppState): void {
   const state = getAppState()
 
   // Background all foreground bash tasks
-  const foregroundBashTaskIds = Object.keys(state.tasks).filter(id => {
+  const foregroundBashTaskIds = Object.keys(state.tasks).filter((id) => {
     const task = state.tasks[id]
     return isLocalShellTask(task) && !task.isBackgrounded && task.shellCommand
   })
@@ -501,7 +441,7 @@ export function backgroundAll(
   }
 
   // Background all foreground agent tasks
-  const foregroundAgentTaskIds = Object.keys(state.tasks).filter(id => {
+  const foregroundAgentTaskIds = Object.keys(state.tasks).filter((id) => {
     const task = state.tasks[id]
     return isLocalAgentTask(task) && !task.isBackgrounded
   })
@@ -530,7 +470,7 @@ export function backgroundExistingForegroundTask(
   }
 
   let agentId: AgentId | undefined
-  setAppState(prev => {
+  setAppState((prev) => {
     const prevTask = prev.tasks[taskId]
     if (!isLocalShellTask(prevTask) || prevTask.isBackgrounded) {
       return prev
@@ -545,22 +485,16 @@ export function backgroundExistingForegroundTask(
     }
   })
 
-  const cancelStallWatchdog = startStallWatchdog(
-    taskId,
-    description,
-    undefined,
-    toolUseId,
-    agentId,
-  )
+  const cancelStallWatchdog = startStallWatchdog(taskId, description, undefined, toolUseId, agentId)
 
   // Set up result handler (mirrors backgroundTask's handler)
-  void shellCommand.result.then(async result => {
+  void shellCommand.result.then(async (result) => {
     cancelStallWatchdog()
     await flushAndCleanup(shellCommand)
     let wasKilled = false
     let cleanupFn: (() => void) | undefined
 
-    updateTaskState<LocalShellTaskState>(taskId, setAppState, t => {
+    updateTaskState<LocalShellTaskState>(taskId, setAppState, (t) => {
       if (t.status === 'killed') {
         wasKilled = true
         return t
@@ -578,21 +512,8 @@ export function backgroundExistingForegroundTask(
 
     cleanupFn?.()
 
-    const finalStatus = wasKilled
-      ? 'killed'
-      : result.code === 0
-        ? 'completed'
-        : 'failed'
-    enqueueShellNotification(
-      taskId,
-      description,
-      finalStatus,
-      result.code,
-      setAppState,
-      toolUseId,
-      undefined,
-      agentId,
-    )
+    const finalStatus = wasKilled ? 'killed' : result.code === 0 ? 'completed' : 'failed'
+    enqueueShellNotification(taskId, description, finalStatus, result.code, setAppState, toolUseId, undefined, agentId)
 
     void evictTaskOutput(taskId)
   })
@@ -605,25 +526,17 @@ export function backgroundExistingForegroundTask(
  * Used when backgrounding raced with completion — the tool result already
  * carries the full output, so the <task_notification> would be redundant.
  */
-export function markTaskNotified(
-  taskId: string,
-  setAppState: SetAppState,
-): void {
-  updateTaskState(taskId, setAppState, t =>
-    t.notified ? t : { ...t, notified: true },
-  )
+export function markTaskNotified(taskId: string, setAppState: SetAppState): void {
+  updateTaskState(taskId, setAppState, (t) => (t.notified ? t : { ...t, notified: true }))
 }
 
 /**
  * Unregister a foreground task when the command completes without being backgrounded.
  */
-export function unregisterForeground(
-  taskId: string,
-  setAppState: SetAppState,
-): void {
+export function unregisterForeground(taskId: string, setAppState: SetAppState): void {
   let cleanupFn: (() => void) | undefined
 
-  setAppState(prev => {
+  setAppState((prev) => {
     const task = prev.tasks[taskId]
     // Only remove if it's a foreground task (not backgrounded)
     if (!isLocalShellTask(task) || task.isBackgrounded) {

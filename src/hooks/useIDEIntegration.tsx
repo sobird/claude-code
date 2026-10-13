@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+
 import type { ScopedMcpServerConfig } from '../services/mcp/types.js'
 import { getGlobalConfig } from '../utils/config.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from '../utils/envUtils.js'
@@ -13,13 +14,9 @@ import {
 type UseIDEIntegrationProps = {
   autoConnectIdeFlag?: boolean
   ideToInstallExtension: IdeType | null
-  setDynamicMcpConfig: React.Dispatch<
-    React.SetStateAction<Record<string, ScopedMcpServerConfig> | undefined>
-  >
+  setDynamicMcpConfig: React.Dispatch<React.SetStateAction<Record<string, ScopedMcpServerConfig> | undefined>>
   setShowIdeOnboarding: React.Dispatch<React.SetStateAction<boolean>>
-  setIDEInstallationState: React.Dispatch<
-    React.SetStateAction<IDEExtensionInstallationStatus | null>
-  >
+  setIDEInstallationState: React.Dispatch<React.SetStateAction<IDEExtensionInstallationStatus | null>>
 }
 
 export function useIDEIntegration({
@@ -52,7 +49,7 @@ export function useIDEIntegration({
         return
       }
 
-      setDynamicMcpConfig(prev => {
+      setDynamicMcpConfig((prev) => {
         // Only add the IDE if we don't already have one
         if (prev?.ide) {
           return prev
@@ -76,13 +73,7 @@ export function useIDEIntegration({
       addIde,
       ideToInstallExtension,
       () => setShowIdeOnboarding(true),
-      status => setIDEInstallationState(status),
+      (status) => setIDEInstallationState(status),
     )
-  }, [
-    autoConnectIdeFlag,
-    ideToInstallExtension,
-    setDynamicMcpConfig,
-    setShowIdeOnboarding,
-    setIDEInstallationState,
-  ])
+  }, [autoConnectIdeFlag, ideToInstallExtension, setDynamicMcpConfig, setShowIdeOnboarding, setIDEInstallationState])
 }

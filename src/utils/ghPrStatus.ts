@@ -2,13 +2,7 @@ import { execFileNoThrow } from './execFileNoThrow.js'
 import { getBranch, getDefaultBranch, getIsGit } from './git.js'
 import { jsonParse } from './slowOperations.js'
 
-export type PrReviewState =
-  | 'approved'
-  | 'pending'
-  | 'changes_requested'
-  | 'draft'
-  | 'merged'
-  | 'closed'
+export type PrReviewState = 'approved' | 'pending' | 'changes_requested' | 'draft' | 'merged' | 'closed'
 
 export type PrStatus = {
   number: number
@@ -23,10 +17,7 @@ const GH_TIMEOUT_MS = 5000
  * Draft PRs always show as 'draft' regardless of reviewDecision.
  * reviewDecision can be: APPROVED, CHANGES_REQUESTED, REVIEW_REQUIRED, or empty string.
  */
-export function deriveReviewState(
-  isDraft: boolean,
-  reviewDecision: string,
-): PrReviewState {
+export function deriveReviewState(isDraft: boolean, reviewDecision: string): PrReviewState {
   if (isDraft) return 'draft'
   switch (reviewDecision) {
     case 'APPROVED':
@@ -49,20 +40,12 @@ export async function fetchPrStatus(): Promise<PrStatus | null> {
 
   // Skip on the default branch — `gh pr view` returns the most recently
   // merged PR there, which is misleading.
-  const [branch, defaultBranch] = await Promise.all([
-    getBranch(),
-    getDefaultBranch(),
-  ])
+  const [branch, defaultBranch] = await Promise.all([getBranch(), getDefaultBranch()])
   if (branch === defaultBranch) return null
 
   const { stdout, code } = await execFileNoThrow(
     'gh',
-    [
-      'pr',
-      'view',
-      '--json',
-      'number,url,reviewDecision,isDraft,headRefName,state',
-    ],
+    ['pr', 'view', '--json', 'number,url,reviewDecision,isDraft,headRefName,state'],
     { timeout: GH_TIMEOUT_MS, preserveOutputOnError: false },
   )
 
@@ -80,11 +63,7 @@ export async function fetchPrStatus(): Promise<PrStatus | null> {
 
     // Don't show PR status for PRs from the default branch (e.g., main, master)
     // This can happen when someone opens a PR from main to another branch
-    if (
-      data.headRefName === defaultBranch ||
-      data.headRefName === 'main' ||
-      data.headRefName === 'master'
-    ) {
+    if (data.headRefName === defaultBranch || data.headRefName === 'main' || data.headRefName === 'master') {
       return null
     }
 

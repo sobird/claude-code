@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { Box, Text } from '../../ink.js'
 
@@ -13,11 +14,7 @@ export function AgentNavigationFooter({
 
   return (
     <Box marginLeft={2}>
-      <Text dimColor>
-        {exitState.pending
-          ? `Press ${exitState.keyName} again to exit`
-          : instructions}
-      </Text>
+      <Text dimColor>{exitState.pending ? `Press ${exitState.keyName} again to exit` : instructions}</Text>
     </Box>
   )
 }

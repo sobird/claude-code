@@ -4,18 +4,12 @@ import { useMemo, useState } from 'react'
 import { useTerminalSize } from 'src/hooks/useTerminalSize.js'
 import { stringWidth } from 'src/ink/stringWidth.js'
 import { useAppState, useSetAppState } from 'src/state/AppState.js'
-import {
-  enterTeammateView,
-  exitTeammateView,
-} from 'src/state/teammateViewHelpers.js'
+import { enterTeammateView, exitTeammateView } from 'src/state/teammateViewHelpers.js'
 import { isPanelAgentTask } from 'src/tasks/LocalAgentTask/LocalAgentTask.js'
 import { getPillLabel, pillNeedsCta } from 'src/tasks/pillLabel.js'
-import {
-  type BackgroundTaskState,
-  isBackgroundTask,
-  type TaskState,
-} from 'src/tasks/types.js'
+import { type BackgroundTaskState, isBackgroundTask, type TaskState } from 'src/tasks/types.js'
 import { calculateHorizontalScrollWindow } from 'src/utils/horizontalScroll.js'
+
 import { Box, Text } from '../../ink.js'
 import {
   AGENT_COLOR_TO_THEME_COLOR,
@@ -43,39 +37,30 @@ export function BackgroundTaskStatus({
 }: Props): React.ReactNode {
   const setAppState = useSetAppState()
   const { columns } = useTerminalSize()
-  const tasks = useAppState(s => s.tasks)
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId)
+  const tasks = useAppState((s) => s.tasks)
+  const viewingAgentTaskId = useAppState((s) => s.viewingAgentTaskId)
 
   const runningTasks = useMemo(
     () =>
       (Object.values(tasks ?? {}) as TaskState[]).filter(
-        t =>
-          isBackgroundTask(t) &&
-          !(process.env.USER_TYPE === 'ant' && isPanelAgentTask(t)),
+        (t) => isBackgroundTask(t) && !(process.env.USER_TYPE === 'ant' && isPanelAgentTask(t)),
       ),
     [tasks],
   )
 
   // Check if all tasks are in-process teammates (team mode)
   // In spinner-tree mode, don't show teammate pills (teammates appear in the spinner tree)
-  const expandedView = useAppState(s => s.expandedView)
+  const expandedView = useAppState((s) => s.expandedView)
   const showSpinnerTree = expandedView === 'teammates'
   const allTeammates =
-    !showSpinnerTree &&
-    runningTasks.length > 0 &&
-    runningTasks.every(t => t.type === 'in_process_teammate')
+    !showSpinnerTree && runningTasks.length > 0 && runningTasks.every((t) => t.type === 'in_process_teammate')
 
   // Memoize teammate-related computations at the top level (rules of hooks)
   const teammateEntries = useMemo(
     () =>
       runningTasks
-        .filter(
-          (t): t is BackgroundTaskState & { type: 'in_process_teammate' } =>
-            t.type === 'in_process_teammate',
-        )
-        .sort((a, b) =>
-          a.identity.agentName.localeCompare(b.identity.agentName),
-        ),
+        .filter((t): t is BackgroundTaskState & { type: 'in_process_teammate' } => t.type === 'in_process_teammate')
+        .sort((a, b) => a.identity.agentName.localeCompare(b.identity.agentName)),
     [runningTasks],
   )
 
@@ -92,7 +77,7 @@ export function BackgroundTaskStatus({
       taskId: undefined as string | undefined,
     }
 
-    const teammatePills = teammateEntries.map(t => ({
+    const teammatePills = teammateEntries.map((t) => ({
       name: t.identity.agentName,
       color: getAgentThemeColor(t.identity.color),
       isIdle: t.isIdle,
@@ -129,9 +114,7 @@ export function BackgroundTaskStatus({
   if (allTeammates || (!showSpinnerTree && isViewingTeammate)) {
     const selectedIdx = tasksSelected ? teammateFooterIndex : -1
     // Which agent is currently foregrounded (bold)
-    const viewedIdx = viewingAgentTaskId
-      ? teammateEntries.findIndex(t => t.id === viewingAgentTaskId) + 1
-      : 0 // 0 = main/leader
+    const viewedIdx = viewingAgentTaskId ? teammateEntries.findIndex((t) => t.id === viewingAgentTaskId) + 1 : 0 // 0 = main/leader
 
     // Calculate available width for pills
     // Reserve space for: arrows, hint, and minimal padding
@@ -142,13 +125,12 @@ export function BackgroundTaskStatus({
     const availableWidth = Math.max(20, columns - HINT_WIDTH - PADDING)
 
     // Calculate visible window of pills
-    const { startIndex, endIndex, showLeftArrow, showRightArrow } =
-      calculateHorizontalScrollWindow(
-        pillWidths,
-        availableWidth,
-        ARROW_WIDTH,
-        selectedIdx >= 0 ? selectedIdx : 0,
-      )
+    const { startIndex, endIndex, showLeftArrow, showRightArrow } = calculateHorizontalScrollWindow(
+      pillWidths,
+      availableWidth,
+      ARROW_WIDTH,
+      selectedIdx >= 0 ? selectedIdx : 0,
+    )
 
     const visiblePills = allPills.slice(startIndex, endIndex)
 
@@ -169,9 +151,7 @@ export function BackgroundTaskStatus({
                 isViewed={viewedIdx === pill.idx}
                 isIdle={pill.isIdle}
                 onClick={() =>
-                  pill.taskId
-                    ? enterTeammateView(pill.taskId, setAppState)
-                    : exitTeammateView(setAppState)
+                  pill.taskId ? enterTeammateView(pill.taskId, setAppState) : exitTeammateView(setAppState)
                 }
               />
             </React.Fragment>
@@ -201,9 +181,7 @@ export function BackgroundTaskStatus({
       <SummaryPill selected={tasksSelected} onClick={onOpenDialog}>
         {getPillLabel(runningTasks)}
       </SummaryPill>
-      {pillNeedsCta(runningTasks) && (
-        <Text dimColor> · {figures.arrowDown} to view</Text>
-      )}
+      {pillNeedsCta(runningTasks) && <Text dimColor> · {figures.arrowDown} to view</Text>}
     </>
   )
 }
@@ -217,14 +195,7 @@ type AgentPillProps = {
   onClick?: () => void
 }
 
-function AgentPill({
-  name,
-  color,
-  isSelected,
-  isViewed,
-  isIdle,
-  onClick,
-}: AgentPillProps): React.ReactNode {
+function AgentPill({ name, color, isSelected, isViewed, isIdle, onClick }: AgentPillProps): React.ReactNode {
   const [hover, setHover] = useState(false)
   // Hover mirrors the keyboard-selected look so the affordance is familiar.
   const highlighted = isSelected || hover
@@ -262,11 +233,7 @@ function AgentPill({
 
   if (!onClick) return label
   return (
-    <Box
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
+    <Box onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {label}
     </Box>
   )
@@ -289,19 +256,13 @@ function SummaryPill({
   )
   if (!onClick) return label
   return (
-    <Box
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
+    <Box onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {label}
     </Box>
   )
 }
 
-function getAgentThemeColor(
-  colorName: string | undefined,
-): keyof Theme | undefined {
+function getAgentThemeColor(colorName: string | undefined): keyof Theme | undefined {
   if (!colorName) return undefined
   if (AGENT_COLORS.includes(colorName as AgentColorName)) {
     return AGENT_COLOR_TO_THEME_COLOR[colorName as AgentColorName]

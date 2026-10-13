@@ -1,11 +1,6 @@
-import React, {
-  type PropsWithChildren,
-  type Ref,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from 'react'
+import React, { type PropsWithChildren, type Ref, useImperativeHandle, useRef, useState } from 'react'
 import type { Except } from 'type-fest'
+
 import { markScrollActivity } from '../../bootstrap/state.js'
 import type { DOMElement } from '../dom.js'
 import { markDirty, scheduleRenderFrom } from '../dom.js'
@@ -68,10 +63,7 @@ export type ScrollBoxHandle = {
   setClampBounds: (min: number | undefined, max: number | undefined) => void
 }
 
-export type ScrollBoxProps = Except<
-  Styles,
-  'textWrap' | 'overflow' | 'overflowX' | 'overflowY'
-> & {
+export type ScrollBoxProps = Except<Styles, 'textWrap' | 'overflow' | 'overflowX' | 'overflowY'> & {
   ref?: Ref<ScrollBoxHandle>
   /**
    * When true, automatically pins scroll position to the bottom when content
@@ -90,12 +82,7 @@ export type ScrollBoxProps = Except<
  *
  * Works best inside a fullscreen (constrained-height root) Ink tree.
  */
-function ScrollBox({
-  children,
-  ref,
-  stickyScroll,
-  ...style
-}: PropsWithChildren<ScrollBoxProps>): React.ReactNode {
+function ScrollBox({ children, ref, stickyScroll, ...style }: PropsWithChildren<ScrollBoxProps>): React.ReactNode {
   const domRef = useRef<DOMElement>(null)
   // scrollTo/scrollBy bypass React: they mutate scrollTop on the DOM node,
   // mark it dirty, and call the root's throttled scheduleRender directly.
@@ -170,7 +157,7 @@ function ScrollBox({
         el.stickyScroll = true
         markDirty(el)
         notify()
-        forceRender(n => n + 1)
+        forceRender((n) => n + 1)
       },
       getScrollTop() {
         return domRef.current?.scrollTop ?? 0
@@ -186,11 +173,7 @@ function ScrollBox({
       },
       getFreshScrollHeight() {
         const content = domRef.current?.childNodes[0] as DOMElement | undefined
-        return (
-          content?.yogaNode?.getComputedHeight() ??
-          domRef.current?.scrollHeight ??
-          0
-        )
+        return content?.yogaNode?.getComputedHeight() ?? domRef.current?.scrollHeight ?? 0
       },
       getViewportHeight() {
         return domRef.current?.scrollViewportHeight ?? 0
@@ -234,7 +217,7 @@ function ScrollBox({
   // commit, which is too late for the first frame.
   return (
     <ink-box
-      ref={el => {
+      ref={(el) => {
         domRef.current = el
         if (el) el.scrollTop ??= 0
       }}

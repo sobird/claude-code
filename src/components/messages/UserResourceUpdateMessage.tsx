@@ -1,5 +1,6 @@
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
+
 import { REFRESH_ARROW } from '../../constants/figures.js'
 import { Box, Text } from '../../ink.js'
 
@@ -63,10 +64,7 @@ function formatUri(uri: string): string {
   return uri
 }
 
-export function UserResourceUpdateMessage({
-  addMargin,
-  param: { text },
-}: Props): React.ReactNode {
+export function UserResourceUpdateMessage({ addMargin, param: { text } }: Props): React.ReactNode {
   const updates = parseUpdates(text)
   if (updates.length === 0) return null
 
@@ -75,13 +73,8 @@ export function UserResourceUpdateMessage({
       {updates.map((update, i) => (
         <Box key={i}>
           <Text>
-            <Text color="success">{REFRESH_ARROW}</Text>{' '}
-            <Text dimColor>{update.server}:</Text>{' '}
-            <Text color="suggestion">
-              {update.kind === 'resource'
-                ? formatUri(update.target)
-                : update.target}
-            </Text>
+            <Text color="success">{REFRESH_ARROW}</Text> <Text dimColor>{update.server}:</Text>{' '}
+            <Text color="suggestion">{update.kind === 'resource' ? formatUri(update.target) : update.target}</Text>
             {update.reason && <Text dimColor> · {update.reason}</Text>}
           </Text>
         </Box>

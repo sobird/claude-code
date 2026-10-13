@@ -1,7 +1,9 @@
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { constants as fsConstants } from 'fs'
 import { mkdir, open } from 'fs/promises'
 import { dirname, isAbsolute, join, normalize, sep as pathSep } from 'path'
+
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+
 import type { ToolUseContext } from '../Tool.js'
 import type { Command } from '../types/command.js'
 import { logForDebugging } from '../utils/debug.js'
@@ -34,10 +36,7 @@ export type BundledSkillDefinition = {
    * same contract as disk-based skills.
    */
   files?: Record<string, string>
-  getPromptForCommand: (
-    args: string,
-    context: ToolUseContext,
-  ) => Promise<ContentBlockParam[]>
+  getPromptForCommand: (args: string, context: ToolUseContext) => Promise<ContentBlockParam[]>
 }
 
 // Internal registry for bundled skills
@@ -128,10 +127,7 @@ export function getBundledSkillExtractDir(skillName: string): string {
  * Returns the directory written to, or null if write failed (skill
  * continues to work, just without the base-directory prefix).
  */
-async function extractBundledSkillFiles(
-  skillName: string,
-  files: Record<string, string>,
-): Promise<string | null> {
+async function extractBundledSkillFiles(skillName: string, files: Record<string, string>): Promise<string | null> {
   const dir = getBundledSkillExtractDir(skillName)
   try {
     await writeSkillFiles(dir, files)
@@ -144,10 +140,7 @@ async function extractBundledSkillFiles(
   }
 }
 
-async function writeSkillFiles(
-  dir: string,
-  files: Record<string, string>,
-): Promise<void> {
+async function writeSkillFiles(dir: string, files: Record<string, string>): Promise<void> {
   // Group by parent dir so we mkdir each subtree once, then write.
   const byParent = new Map<string, [string, string][]>()
   for (const [relPath, content] of Object.entries(files)) {
@@ -176,12 +169,7 @@ async function writeSkillFiles(
 const O_NOFOLLOW = fsConstants.O_NOFOLLOW ?? 0
 // On Windows, use string flags — numeric O_EXCL can produce EINVAL through libuv.
 const SAFE_WRITE_FLAGS =
-  process.platform === 'win32'
-    ? 'wx'
-    : fsConstants.O_WRONLY |
-      fsConstants.O_CREAT |
-      fsConstants.O_EXCL |
-      O_NOFOLLOW
+  process.platform === 'win32' ? 'wx' : fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | O_NOFOLLOW
 
 async function safeWriteFile(p: string, content: string): Promise<void> {
   const fh = await open(p, SAFE_WRITE_FLAGS, 0o600)
@@ -195,26 +183,16 @@ async function safeWriteFile(p: string, content: string): Promise<void> {
 /** Normalize and validate a skill-relative path; throws on traversal. */
 function resolveSkillFilePath(baseDir: string, relPath: string): string {
   const normalized = normalize(relPath)
-  if (
-    isAbsolute(normalized) ||
-    normalized.split(pathSep).includes('..') ||
-    normalized.split('/').includes('..')
-  ) {
+  if (isAbsolute(normalized) || normalized.split(pathSep).includes('..') || normalized.split('/').includes('..')) {
     throw new Error(`bundled skill file path escapes skill dir: ${relPath}`)
   }
   return join(baseDir, normalized)
 }
 
-function prependBaseDir(
-  blocks: ContentBlockParam[],
-  baseDir: string,
-): ContentBlockParam[] {
+function prependBaseDir(blocks: ContentBlockParam[], baseDir: string): ContentBlockParam[] {
   const prefix = `Base directory for this skill: ${baseDir}\n\n`
   if (blocks.length > 0 && blocks[0]!.type === 'text') {
-    return [
-      { type: 'text', text: prefix + blocks[0]!.text },
-      ...blocks.slice(1),
-    ]
+    return [{ type: 'text', text: prefix + blocks[0]!.text }, ...blocks.slice(1)]
   }
   return [{ type: 'text', text: prefix }, ...blocks]
 }

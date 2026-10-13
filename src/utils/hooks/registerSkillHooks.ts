@@ -1,5 +1,6 @@
 import { HOOK_EVENTS } from 'src/entrypoints/agentSdkTypes.js'
 import type { AppState } from 'src/state/AppState.js'
+
 import { logForDebugging } from '../debug.js'
 import type { HooksSettings } from '../settings/types.js'
 import { addSessionHook, removeSessionHook } from './sessionHooks.js'
@@ -35,30 +36,18 @@ export function registerSkillHooks(
         // For once: true hooks, use onHookSuccess callback to remove after execution
         const onHookSuccess = hook.once
           ? () => {
-              logForDebugging(
-                `Removing one-shot hook for event ${eventName} in skill '${skillName}'`,
-              )
+              logForDebugging(`Removing one-shot hook for event ${eventName} in skill '${skillName}'`)
               removeSessionHook(setAppState, sessionId, eventName, hook)
             }
           : undefined
 
-        addSessionHook(
-          setAppState,
-          sessionId,
-          eventName,
-          matcher.matcher || '',
-          hook,
-          onHookSuccess,
-          skillRoot,
-        )
+        addSessionHook(setAppState, sessionId, eventName, matcher.matcher || '', hook, onHookSuccess, skillRoot)
         registeredCount++
       }
     }
   }
 
   if (registeredCount > 0) {
-    logForDebugging(
-      `Registered ${registeredCount} hooks from skill '${skillName}'`,
-    )
+    logForDebugging(`Registered ${registeredCount} hooks from skill '${skillName}'`)
   }
 }

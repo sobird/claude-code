@@ -7,8 +7,10 @@
  * - reconcileMarketplaces(): bundled diff + install (I/O, idempotent, additive)
  */
 
-import isEqual from 'lodash-es/isEqual.js'
 import { isAbsolute, resolve } from 'path'
+
+import isEqual from 'lodash-es/isEqual.js'
+
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import { logForDebugging } from '../debug.js'
 import { errorMessage } from '../errors.js'
@@ -21,11 +23,7 @@ import {
   getDeclaredMarketplaces,
   loadKnownMarketplacesConfig,
 } from './marketplaceManager.js'
-import {
-  isLocalMarketplaceSource,
-  type KnownMarketplacesFile,
-  type MarketplaceSource,
-} from './schemas.js'
+import { isLocalMarketplaceSource, type KnownMarketplacesFile, type MarketplaceSource } from './schemas.js'
 
 export type MarketplaceDiff = {
   /** Declared in settings, absent from known_marketplaces.json */
@@ -111,9 +109,7 @@ export type ReconcileResult = {
  * Make known_marketplaces.json consistent with declared intent.
  * Idempotent. Additive only (never deletes). Does not touch AppState.
  */
-export async function reconcileMarketplaces(
-  opts?: ReconcileOptions,
-): Promise<ReconcileResult> {
+export async function reconcileMarketplaces(opts?: ReconcileOptions): Promise<ReconcileResult> {
   const declared = getDeclaredMarketplaces()
   if (Object.keys(declared).length === 0) {
     return { installed: [], updated: [], failed: [], upToDate: [], skipped: [] }
@@ -166,14 +162,8 @@ export async function reconcileMarketplaces(
     // be valid; addMarketplaceSource would fail anyway, so skipping avoids a
     // noisy "failed" event and preserves the working entry. Missing entries
     // are NOT skipped (nothing to preserve; the user should see the error).
-    if (
-      item.action === 'update' &&
-      isLocalMarketplaceSource(item.source) &&
-      !(await pathExists(item.source.path))
-    ) {
-      logForDebugging(
-        `[reconcile] '${item.name}' declared path does not exist; keeping materialized entry`,
-      )
+    if (item.action === 'update' && isLocalMarketplaceSource(item.source) && !(await pathExists(item.source.path))) {
+      logForDebugging(`[reconcile] '${item.name}' declared path does not exist; keeping materialized entry`)
       skipped.push(item.name)
       continue
     }
@@ -191,7 +181,7 @@ export async function reconcileMarketplaces(
   }
 
   logForDebugging(
-    `[reconcile] ${toProcess.length} marketplace(s): ${toProcess.map(w => `${w.name}(${w.action})`).join(', ')}`,
+    `[reconcile] ${toProcess.length} marketplace(s): ${toProcess.map((w) => `${w.name}(${w.action})`).join(', ')}`,
   )
 
   const installed: string[] = []
@@ -246,14 +236,8 @@ export async function reconcileMarketplaces(
  * its own absolute path, and deleting the worktree leaves a dead
  * installLocation. The canonical root is stable across all worktrees.
  */
-function normalizeSource(
-  source: MarketplaceSource,
-  projectRoot?: string,
-): MarketplaceSource {
-  if (
-    (source.source === 'directory' || source.source === 'file') &&
-    !isAbsolute(source.path)
-  ) {
+function normalizeSource(source: MarketplaceSource, projectRoot?: string): MarketplaceSource {
+  if ((source.source === 'directory' || source.source === 'file') && !isAbsolute(source.path)) {
     const base = projectRoot ?? getOriginalCwd()
     const canonicalRoot = findCanonicalGitRoot(base)
     return {

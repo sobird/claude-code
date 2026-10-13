@@ -1,18 +1,13 @@
 import { feature } from 'bun:bundle'
+
 import { toString as qrToString } from 'qrcode'
 import * as React from 'react'
 import { useEffect, useState } from 'react'
+
 import { getBridgeAccessToken } from '../../bridge/bridgeConfig.js'
-import {
-  checkBridgeMinVersion,
-  getBridgeDisabledReason,
-  isEnvLessBridgeEnabled,
-} from '../../bridge/bridgeEnabled.js'
+import { checkBridgeMinVersion, getBridgeDisabledReason, isEnvLessBridgeEnabled } from '../../bridge/bridgeEnabled.js'
 import { checkEnvLessBridgeMinVersion } from '../../bridge/envLessBridgeConfig.js'
-import {
-  BRIDGE_LOGIN_INSTRUCTION,
-  REMOTE_CONTROL_DISCONNECTED_MSG,
-} from '../../bridge/types.js'
+import { BRIDGE_LOGIN_INSTRUCTION, REMOTE_CONTROL_DISCONNECTED_MSG } from '../../bridge/types.js'
 import { Dialog } from '../../components/design-system/Dialog.js'
 import { ListItem } from '../../components/design-system/ListItem.js'
 import { shouldShowRemoteCallout } from '../../components/RemoteCallout.js'
@@ -25,10 +20,7 @@ import {
 } from '../../services/analytics/index.js'
 import { useAppState, useSetAppState } from '../../state/AppState.js'
 import type { ToolUseContext } from '../../Tool.js'
-import type {
-  LocalJSXCommandContext,
-  LocalJSXCommandOnDone,
-} from '../../types/command.js'
+import type { LocalJSXCommandContext, LocalJSXCommandOnDone } from '../../types/command.js'
 import { logForDebugging } from '../../utils/debug.js'
 
 type Props = {
@@ -50,9 +42,9 @@ type Props = {
  */
 function BridgeToggle({ onDone, name }: Props): React.ReactNode {
   const setAppState = useSetAppState()
-  const replBridgeConnected = useAppState(s => s.replBridgeConnected)
-  const replBridgeEnabled = useAppState(s => s.replBridgeEnabled)
-  const replBridgeOutboundOnly = useAppState(s => s.replBridgeOutboundOnly)
+  const replBridgeConnected = useAppState((s) => s.replBridgeConnected)
+  const replBridgeEnabled = useAppState((s) => s.replBridgeEnabled)
+  const replBridgeOutboundOnly = useAppState((s) => s.replBridgeOutboundOnly)
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false)
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: bridge starts once, should not restart on state changes
@@ -73,8 +65,7 @@ function BridgeToggle({ onDone, name }: Props): React.ReactNode {
       if (cancelled) return
       if (error) {
         logEvent('tengu_bridge_command', {
-          action:
-            'preflight_failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          action: 'preflight_failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
         onDone(error, { display: 'system' })
         return
@@ -84,7 +75,7 @@ function BridgeToggle({ onDone, name }: Props): React.ReactNode {
       // Store the name now so it's in AppState when the callout handler later
       // enables the bridge (the handler only sets replBridgeEnabled, not the name).
       if (shouldShowRemoteCallout()) {
-        setAppState(prev => {
+        setAppState((prev) => {
           if (prev.showRemoteCallout) return prev
           return {
             ...prev,
@@ -99,10 +90,9 @@ function BridgeToggle({ onDone, name }: Props): React.ReactNode {
       // Enable the bridge — useReplBridge in REPL.tsx handles the rest:
       // registers environment, creates session with conversation, connects WebSocket
       logEvent('tengu_bridge_command', {
-        action:
-          'connect' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        action: 'connect' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
-      setAppState(prev => {
+      setAppState((prev) => {
         if (prev.replBridgeEnabled && !prev.replBridgeOutboundOnly) return prev
         return {
           ...prev,
@@ -136,9 +126,9 @@ function BridgeToggle({ onDone, name }: Props): React.ReactNode {
 function BridgeDisconnectDialog({ onDone }: Props): React.ReactNode {
   useRegisterOverlay('bridge-disconnect-dialog')
   const setAppState = useSetAppState()
-  const sessionUrl = useAppState(s => s.replBridgeSessionUrl)
-  const connectUrl = useAppState(s => s.replBridgeConnectUrl)
-  const sessionActive = useAppState(s => s.replBridgeSessionActive)
+  const sessionUrl = useAppState((s) => s.replBridgeSessionUrl)
+  const connectUrl = useAppState((s) => s.replBridgeConnectUrl)
+  const sessionActive = useAppState((s) => s.replBridgeSessionActive)
   const [focusIndex, setFocusIndex] = useState(2)
   const [showQR, setShowQR] = useState(false)
   const [qrText, setQrText] = useState('')
@@ -161,7 +151,7 @@ function BridgeDisconnectDialog({ onDone }: Props): React.ReactNode {
   }, [showQR, displayUrl])
 
   function handleDisconnect(): void {
-    setAppState(prev => {
+    setAppState((prev) => {
       if (!prev.replBridgeEnabled) return prev
       return {
         ...prev,
@@ -171,14 +161,13 @@ function BridgeDisconnectDialog({ onDone }: Props): React.ReactNode {
       }
     })
     logEvent('tengu_bridge_command', {
-      action:
-        'disconnect' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      action: 'disconnect' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     onDone(REMOTE_CONTROL_DISCONNECTED_MSG, { display: 'system' })
   }
 
   function handleShowQR(): void {
-    setShowQR(prev => !prev)
+    setShowQR((prev) => !prev)
   }
 
   function handleContinue(): void {
@@ -189,9 +178,8 @@ function BridgeDisconnectDialog({ onDone }: Props): React.ReactNode {
 
   useKeybindings(
     {
-      'select:next': () => setFocusIndex(i => (i + 1) % ITEM_COUNT),
-      'select:previous': () =>
-        setFocusIndex(i => (i - 1 + ITEM_COUNT) % ITEM_COUNT),
+      'select:next': () => setFocusIndex((i) => (i + 1) % ITEM_COUNT),
+      'select:previous': () => setFocusIndex((i) => (i - 1 + ITEM_COUNT) % ITEM_COUNT),
       'select:accept': () => {
         if (focusIndex === 0) {
           handleDisconnect()
@@ -205,7 +193,7 @@ function BridgeDisconnectDialog({ onDone }: Props): React.ReactNode {
     { context: 'Select' },
   )
 
-  const qrLines = qrText ? qrText.split('\n').filter(l => l.length > 0) : []
+  const qrLines = qrText ? qrText.split('\n').filter((l) => l.length > 0) : []
 
   return (
     <Dialog title="Remote Control" onCancel={handleContinue} hideInputGuide>
@@ -246,9 +234,7 @@ function BridgeDisconnectDialog({ onDone }: Props): React.ReactNode {
  */
 async function checkBridgePrerequisites(): Promise<string | null> {
   // Check organization policy — remote control may be disabled
-  const { waitForPolicyLimitsToLoad, isPolicyAllowed } = await import(
-    '../../services/policyLimits/index.js'
-  )
+  const { waitForPolicyLimitsToLoad, isPolicyAllowed } = await import('../../services/policyLimits/index.js')
   await waitForPolicyLimitsToLoad()
   if (!isPolicyAllowed('allow_remote_control')) {
     return "Remote Control is disabled by your organization's policy."
@@ -270,9 +256,7 @@ async function checkBridgePrerequisites(): Promise<string | null> {
       useV2 = false
     }
   }
-  const versionError = useV2
-    ? await checkEnvLessBridgeMinVersion()
-    : checkBridgeMinVersion()
+  const versionError = useV2 ? await checkEnvLessBridgeMinVersion() : checkBridgeMinVersion()
   if (versionError) {
     return versionError
   }

@@ -4,6 +4,7 @@
  */
 
 import { randomBytes } from 'crypto'
+
 import { tryParseShellCommand } from '../../utils/bash/shellQuote.js'
 
 // BRE→ERE conversion placeholders (null-byte sentinels, never appear in user input)
@@ -63,12 +64,7 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
   for (const token of tokens) {
     if (typeof token === 'string') {
       args.push(token)
-    } else if (
-      typeof token === 'object' &&
-      token !== null &&
-      'op' in token &&
-      token.op === 'glob'
-    ) {
+    } else if (typeof token === 'object' && token !== null && 'op' in token && token.op === 'glob') {
       // Glob patterns are too complex for this simple parser
       return null
     }
@@ -94,11 +90,7 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
       if (i < args.length) {
         const nextArg = args[i]
         // If next arg is empty string or starts with dot, it's a backup suffix
-        if (
-          typeof nextArg === 'string' &&
-          !nextArg.startsWith('-') &&
-          (nextArg === '' || nextArg.startsWith('.'))
-        ) {
+        if (typeof nextArg === 'string' && !nextArg.startsWith('-') && (nextArg === '' || nextArg.startsWith('.'))) {
           i++ // Skip the backup suffix
         }
       }
@@ -241,10 +233,7 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
  * Apply a sed substitution to file content
  * Returns the new content after applying the substitution
  */
-export function applySedSubstitution(
-  content: string,
-  sedInfo: SedEditInfo,
-): string {
+export function applySedSubstitution(content: string, sedInfo: SedEditInfo): string {
   // Convert sed pattern to JavaScript regex
   let regexFlags = ''
 

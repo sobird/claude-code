@@ -1,4 +1,5 @@
 import { dirname } from 'path'
+
 import { getFsImplementation } from './fsOperations.js'
 import { jsonStringify } from './slowOperations.js'
 
@@ -24,11 +25,7 @@ type DiagnosticLogEntry = {
  * @param data     Optional additional data to log
  */
 // sync IO: called from sync context
-export function logForDiagnosticsNoPII(
-  level: DiagnosticLogLevel,
-  event: string,
-  data?: Record<string, unknown>,
-): void {
+export function logForDiagnosticsNoPII(level: DiagnosticLogLevel, event: string, data?: Record<string, unknown>): void {
   const logFile = getDiagnosticLogFile()
   if (!logFile) {
     return

@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box, Text } from '../ink.js'
 import { useAppState } from '../state/AppState.js'
 import { getViewedTeammateTask } from '../state/selectors.js'
@@ -11,7 +12,7 @@ import { OffscreenFreeze } from './OffscreenFreeze.js'
  * Displays teammate name (colored), task description, and exit hint.
  */
 export function TeammateViewHeader(): React.ReactNode {
-  const viewedTeammate = useAppState(s => getViewedTeammateTask(s))
+  const viewedTeammate = useAppState((s) => getViewedTeammateTask(s))
 
   if (!viewedTeammate) {
     return null

@@ -3,12 +3,9 @@ import { extraUsage } from 'src/commands/extra-usage/index.js'
 import { Box, Text } from 'src/ink.js'
 import { useClaudeAiLimits } from 'src/services/claudeAiLimitsHook.js'
 import { shouldProcessMockLimits } from 'src/services/rateLimitMocking.js' // Used for /mock-limits command
-import {
-  getRateLimitTier,
-  getSubscriptionType,
-  isClaudeAISubscriber,
-} from 'src/utils/auth.js'
+import { getRateLimitTier, getSubscriptionType, isClaudeAISubscriber } from 'src/utils/auth.js'
 import { hasClaudeAiBillingAccess } from 'src/utils/billing.js'
+
 import { MessageResponse } from '../MessageResponse.js'
 
 type UpsellParams = {
@@ -63,37 +60,27 @@ type RateLimitMessageProps = {
   onOpenRateLimitOptions?: () => void
 }
 
-export function RateLimitMessage({
-  text,
-  onOpenRateLimitOptions,
-}: RateLimitMessageProps): React.ReactNode {
+export function RateLimitMessage({ text, onOpenRateLimitOptions }: RateLimitMessageProps): React.ReactNode {
   const subscriptionType = getSubscriptionType()
   const rateLimitTier = getRateLimitTier()
-  const isTeamOrEnterprise =
-    subscriptionType === 'team' || subscriptionType === 'enterprise'
+  const isTeamOrEnterprise = subscriptionType === 'team' || subscriptionType === 'enterprise'
   const isMax20x = rateLimitTier === 'default_claude_max_20x'
   // Always show upsell when using /mock-limits command, otherwise show for subscribers
   const shouldShowUpsell = shouldProcessMockLimits() || isClaudeAISubscriber()
 
   const canSeeRateLimitOptionsUpsell = shouldShowUpsell && !isMax20x
 
-  const [hasOpenedInteractiveMenu, setHasOpenedInteractiveMenu] =
-    useState(false)
+  const [hasOpenedInteractiveMenu, setHasOpenedInteractiveMenu] = useState(false)
 
   // Check actual rate limit status - only auto-open if user is currently rate limited
   // AND we've verified this with the API (resetsAt is only set after API response).
   // This prevents false alerts when resuming sessions with old rate limit messages.
   const claudeAiLimits = useClaudeAiLimits()
   const isCurrentlyRateLimited =
-    claudeAiLimits.status === 'rejected' &&
-    claudeAiLimits.resetsAt !== undefined &&
-    !claudeAiLimits.isUsingOverage
+    claudeAiLimits.status === 'rejected' && claudeAiLimits.resetsAt !== undefined && !claudeAiLimits.isUsingOverage
 
   const shouldAutoOpenRateLimitOptionsMenu =
-    canSeeRateLimitOptionsUpsell &&
-    !hasOpenedInteractiveMenu &&
-    isCurrentlyRateLimited &&
-    onOpenRateLimitOptions
+    canSeeRateLimitOptionsUpsell && !hasOpenedInteractiveMenu && isCurrentlyRateLimited && onOpenRateLimitOptions
 
   useEffect(() => {
     if (shouldAutoOpenRateLimitOptionsMenu) {
@@ -113,12 +100,7 @@ export function RateLimitMessage({
     })
     if (!message) return null
     return <Text dimColor>{message}</Text>
-  }, [
-    shouldShowUpsell,
-    isMax20x,
-    isTeamOrEnterprise,
-    shouldAutoOpenRateLimitOptionsMenu,
-  ])
+  }, [shouldShowUpsell, isMax20x, isTeamOrEnterprise, shouldAutoOpenRateLimitOptionsMenu])
 
   return (
     <MessageResponse>

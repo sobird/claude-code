@@ -22,12 +22,14 @@ startKeychainPrefetch()
 
 import { feature } from 'bun:bundle'
 import { readFileSync } from 'fs'
+
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings'
 import chalk from 'chalk'
 import mapValues from 'lodash-es/mapValues.js'
 import pickBy from 'lodash-es/pickBy.js'
 import uniqBy from 'lodash-es/uniqBy.js'
 import React from 'react'
+
 import { getOauthConfig } from './constants/oauth.js'
 import { getRemoteSessionUrl } from './constants/product.js'
 import { getSystemContext, getUserContext } from './context.js'
@@ -126,6 +128,7 @@ const assistantModule = feature('KAIROS')
 const kairosGate = feature('KAIROS') ? (require('./assistant/gate.js') as typeof import('./assistant/gate.js')) : null
 
 import { relative, resolve } from 'path'
+
 import { registerMcpAddCommand } from 'src/commands/mcp/addCommand.js'
 import { registerMcpXaaIdpCommand } from 'src/commands/mcp/xaaIdpCommand.js'
 import { isAnalyticsDisabled } from 'src/services/analytics/config.js'
@@ -169,6 +172,7 @@ import { type ProcessedResume, processResumedConversation } from 'src/utils/sess
 import { parseSettingSourcesFlag } from 'src/utils/settings/constants.js'
 import { setCwd } from 'src/utils/Shell.js'
 import { plural } from 'src/utils/stringUtils.js'
+
 import {
   getOriginalCwd,
   setAdditionalDirectoriesForClaudeMd,

@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+
 import type { QuerySource } from '../../constants/querySource.js'
 import { queryModelWithoutStreaming } from '../../services/api/claude.js'
 import type { Message } from '../../types/message.js'
@@ -28,10 +29,7 @@ export type ApiQueryHookConfig<TResult> = {
   useTools?: boolean
 
   parseResponse: (content: string, context: ApiQueryHookContext) => TResult
-  logResult: (
-    result: ApiQueryResult<TResult>,
-    context: ApiQueryHookContext,
-  ) => void
+  logResult: (result: ApiQueryResult<TResult>, context: ApiQueryHookContext) => void
   // Must be a function to ensure lazy loading (config is accessed before allowed)
   // Receives context so callers can inherit the main loop model if desired.
   getModel: (context: ApiQueryHookContext) => string
@@ -53,9 +51,7 @@ export type ApiQueryResult<TResult> =
       uuid: string
     }
 
-export function createApiQueryHook<TResult>(
-  config: ApiQueryHookConfig<TResult>,
-) {
+export function createApiQueryHook<TResult>(config: ApiQueryHookConfig<TResult>) {
   return async (context: ApiQueryHookContext): Promise<void> => {
     try {
       const shouldRun = await config.shouldRun(context)
@@ -70,9 +66,7 @@ export function createApiQueryHook<TResult>(
       context.queryMessageCount = messages.length
 
       // Use config's system prompt if provided, otherwise use context's
-      const systemPrompt = config.systemPrompt
-        ? asSystemPrompt([config.systemPrompt])
-        : context.systemPrompt
+      const systemPrompt = config.systemPrompt ? asSystemPrompt([config.systemPrompt]) : context.systemPrompt
 
       // Use config's tools preference (defaults to true = use context tools)
       const useTools = config.useTools ?? true
@@ -95,10 +89,8 @@ export function createApiQueryHook<TResult>(
           },
           model,
           toolChoice: undefined,
-          isNonInteractiveSession:
-            context.toolUseContext.options.isNonInteractiveSession,
-          hasAppendSystemPrompt:
-            !!context.toolUseContext.options.appendSystemPrompt,
+          isNonInteractiveSession: context.toolUseContext.options.isNonInteractiveSession,
+          hasAppendSystemPrompt: !!context.toolUseContext.options.appendSystemPrompt,
           temperatureOverride: 0,
           agents: context.toolUseContext.options.agentDefinitions.activeAgents,
           querySource: config.name,

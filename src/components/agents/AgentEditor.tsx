@@ -3,14 +3,12 @@ import figures from 'figures'
 import * as React from 'react'
 import { useCallback, useMemo, useState } from 'react'
 import { useSetAppState } from 'src/state/AppState.js'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
+
 import { Box, Text } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import type { Tools } from '../../Tool.js'
-import {
-  type AgentColorName,
-  setAgentColor,
-} from '../../tools/AgentTool/agentColorManager.js'
+import { type AgentColorName, setAgentColor } from '../../tools/AgentTool/agentColorManager.js'
 import {
   type AgentDefinition,
   getActiveAgentsFromList,
@@ -39,19 +37,14 @@ type SaveChanges = {
   model?: string
 }
 
-export function AgentEditor({
-  agent,
-  tools,
-  onSaved,
-  onBack,
-}: Props): React.ReactNode {
+export function AgentEditor({ agent, tools, onSaved, onBack }: Props): React.ReactNode {
   const setAppState = useSetAppState()
   const [editMode, setEditMode] = useState<EditMode>('menu')
   const [selectedMenuIndex, setSelectedMenuIndex] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  const [selectedColor, setSelectedColor] = useState<
-    AgentColorName | undefined
-  >(agent.color as AgentColorName | undefined)
+  const [selectedColor, setSelectedColor] = useState<AgentColorName | undefined>(
+    agent.color as AgentColorName | undefined,
+  )
 
   const handleOpenInEditor = useCallback(async () => {
     const filePath = getActualAgentFilePath(agent)
@@ -60,9 +53,7 @@ export function AgentEditor({
     if (result.error) {
       setError(result.error)
     } else {
-      onSaved(
-        `Opened ${agent.agentType} in editor. If you made edits, restart to load the latest version.`,
-      )
+      onSaved(`Opened ${agent.agentType} in editor. If you made edits, restart to load the latest version.`)
     }
   }, [agent, onSaved])
 
@@ -98,8 +89,8 @@ export function AgentEditor({
           setAgentColor(agent.agentType, finalColor)
         }
 
-        setAppState(state => {
-          const allAgents = state.agentDefinitions.allAgents.map(a =>
+        setAppState((state) => {
+          const allAgents = state.agentDefinitions.allAgents.map((a) =>
             a.agentType === agent.agentType
               ? {
                   ...a,
@@ -152,10 +143,10 @@ export function AgentEditor({
     (e: KeyboardEvent) => {
       if (e.key === 'up') {
         e.preventDefault()
-        setSelectedMenuIndex(index => Math.max(0, index - 1))
+        setSelectedMenuIndex((index) => Math.max(0, index - 1))
       } else if (e.key === 'down') {
         e.preventDefault()
-        setSelectedMenuIndex(index => Math.min(menuItems.length - 1, index + 1))
+        setSelectedMenuIndex((index) => Math.min(menuItems.length - 1, index + 1))
       } else if (e.key === 'return') {
         e.preventDefault()
         const selectedItem = menuItems[selectedMenuIndex]
@@ -170,20 +161,12 @@ export function AgentEditor({
   useKeybinding('confirm:no', handleEscape, { context: 'Confirmation' })
 
   const renderMenu = (): React.ReactNode => (
-    <Box
-      flexDirection="column"
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleMenuKeyDown}
-    >
+    <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleMenuKeyDown}>
       <Text dimColor>Source: {getAgentSourceDisplayName(agent.source)}</Text>
 
       <Box marginTop={1} flexDirection="column">
         {menuItems.map((item, index) => (
-          <Text
-            key={item.label}
-            color={index === selectedMenuIndex ? 'suggestion' : undefined}
-          >
+          <Text key={item.label} color={index === selectedMenuIndex ? 'suggestion' : undefined}>
             {index === selectedMenuIndex ? `${figures.pointer} ` : '  '}
             {item.label}
           </Text>
@@ -207,7 +190,7 @@ export function AgentEditor({
         <ToolSelector
           tools={tools}
           initialTools={agent.tools}
-          onComplete={async finalTools => {
+          onComplete={async (finalTools) => {
             setEditMode('menu')
             await handleSave({ tools: finalTools })
           }}
@@ -218,10 +201,8 @@ export function AgentEditor({
       return (
         <ColorPicker
           agentName={agent.agentType}
-          currentColor={
-            selectedColor || (agent.color as AgentColorName) || 'automatic'
-          }
-          onConfirm={async color => {
+          currentColor={selectedColor || (agent.color as AgentColorName) || 'automatic'}
+          onConfirm={async (color) => {
             setSelectedColor(color)
             setEditMode('menu')
             await handleSave({ color })
@@ -233,7 +214,7 @@ export function AgentEditor({
       return (
         <ModelSelector
           initialModel={agent.model}
-          onComplete={async model => {
+          onComplete={async (model) => {
             setEditMode('menu')
             await handleSave({ model })
           }}

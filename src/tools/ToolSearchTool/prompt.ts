@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import { isReplBridgeActive } from '../../bootstrap/state.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import type { Tool } from '../../Tool.js'
@@ -8,14 +9,11 @@ import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
-    ? (
-        require('../BriefTool/prompt.js') as typeof import('../BriefTool/prompt.js')
-      ).BRIEF_TOOL_NAME
+    ? (require('../BriefTool/prompt.js') as typeof import('../BriefTool/prompt.js')).BRIEF_TOOL_NAME
     : null
 const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS')
-  ? (
-      require('../SendUserFileTool/prompt.js') as typeof import('../SendUserFileTool/prompt.js')
-    ).SEND_USER_FILE_TOOL_NAME
+  ? (require('../SendUserFileTool/prompt.js') as typeof import('../SendUserFileTool/prompt.js'))
+      .SEND_USER_FILE_TOOL_NAME
   : null
 
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -34,8 +32,7 @@ const PROMPT_HEAD = `Fetches full schema definitions for deferred tools so they 
 // <available-deferred-tools> block (pre-gate behavior).
 function getToolLocationHint(): string {
   const deltaEnabled =
-    process.env.USER_TYPE === 'ant' ||
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_glacier_2xr', false)
+    process.env.USER_TYPE === 'ant' || getFeatureValue_CACHED_MAY_BE_STALE('tengu_glacier_2xr', false)
   return deltaEnabled
     ? 'Deferred tools appear by name in <system-reminder> messages.'
     : 'Deferred tools appear by name in <available-deferred-tools> messages.'
@@ -85,22 +82,13 @@ export function isDeferredTool(tool: Tool): boolean {
   // see without a ToolSearch round-trip. No runtime gate needed here: this
   // tool's isEnabled() IS isBriefEnabled(), so being asked about its deferral
   // status implies the gate already passed.
-  if (
-    (feature('KAIROS') || feature('KAIROS_BRIEF')) &&
-    BRIEF_TOOL_NAME &&
-    tool.name === BRIEF_TOOL_NAME
-  ) {
+  if ((feature('KAIROS') || feature('KAIROS_BRIEF')) && BRIEF_TOOL_NAME && tool.name === BRIEF_TOOL_NAME) {
     return false
   }
 
   // SendUserFile is a file-delivery communication channel (sibling of Brief).
   // Must be immediately available without a ToolSearch round-trip.
-  if (
-    feature('KAIROS') &&
-    SEND_USER_FILE_TOOL_NAME &&
-    tool.name === SEND_USER_FILE_TOOL_NAME &&
-    isReplBridgeActive()
-  ) {
+  if (feature('KAIROS') && SEND_USER_FILE_TOOL_NAME && tool.name === SEND_USER_FILE_TOOL_NAME && isReplBridgeActive()) {
     return false
   }
 

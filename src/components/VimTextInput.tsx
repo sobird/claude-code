@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 import React from 'react'
+
 import { useClipboardImageHint } from '../hooks/useClipboardImageHint.js'
 import { useVimInput } from '../hooks/useVimInput.js'
 import { Box, color, useTerminalFocus, useTheme } from '../ink.js'
@@ -38,8 +39,7 @@ export default function VimTextInput(props: Props): React.ReactNode {
     columns: props.columns,
     maxVisibleLines: props.maxVisibleLines,
     onImagePaste: props.onImagePaste,
-    disableCursorMovementForUpDownKeys:
-      props.disableCursorMovementForUpDownKeys,
+    disableCursorMovementForUpDownKeys: props.disableCursorMovementForUpDownKeys,
     disableEscapeDoublePress: props.disableEscapeDoublePress,
     externalOffset: props.cursorOffset,
     onOffsetChange: props.onChangeCursorOffset,

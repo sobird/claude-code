@@ -10,6 +10,7 @@
 import type { Dirent } from 'fs'
 import { readdir, stat } from 'fs/promises'
 import { basename, join } from 'path'
+
 import { getWorktreePathsPortable } from './getWorktreePathsPortable.js'
 import type { LiteSessionFile } from './sessionStoragePortable.js'
 import {
@@ -86,10 +87,7 @@ export function parseSessionInfoFromLite(
   // Check first line for sidechain sessions
   const firstNewline = head.indexOf('\n')
   const firstLine = firstNewline >= 0 ? head.slice(0, firstNewline) : head
-  if (
-    firstLine.includes('"isSidechain":true') ||
-    firstLine.includes('"isSidechain": true')
-  ) {
+  if (firstLine.includes('"isSidechain":true') || firstLine.includes('"isSidechain": true')) {
     return null
   }
   // User title (customTitle) wins over AI title (aiTitle); distinct
@@ -121,18 +119,13 @@ export function parseSessionInfoFromLite(
   // Skip metadata-only sessions (no title, no summary, no prompt)
   if (!summary) return null
   const gitBranch =
-    extractLastJsonStringField(tail, 'gitBranch') ||
-    extractJsonStringField(head, 'gitBranch') ||
-    undefined
-  const sessionCwd =
-    extractJsonStringField(head, 'cwd') || projectPath || undefined
+    extractLastJsonStringField(tail, 'gitBranch') || extractJsonStringField(head, 'gitBranch') || undefined
+  const sessionCwd = extractJsonStringField(head, 'cwd') || projectPath || undefined
   // Type-scope tag extraction to the {"type":"tag"} JSONL line to avoid
   // collision with tool_use inputs containing a `tag` parameter (git tag,
   // Docker tags, cloud resource tags). Mirrors sessionStorage.ts:608.
-  const tagLine = tail.split('\n').findLast(l => l.startsWith('{"type":"tag"'))
-  const tag = tagLine
-    ? extractLastJsonStringField(tagLine, 'tag') || undefined
-    : undefined
+  const tagLine = tail.split('\n').findLast((l) => l.startsWith('{"type":"tag"'))
+  const tag = tagLine ? extractLastJsonStringField(tagLine, 'tag') || undefined : undefined
 
   return {
     sessionId,
@@ -166,11 +159,7 @@ type Candidate = {
  * stat'ing each for mtime. When `doStat` is false, mtime is set to 0
  * (caller must sort/dedup after reading file contents instead).
  */
-export async function listCandidates(
-  projectDir: string,
-  doStat: boolean,
-  projectPath?: string,
-): Promise<Candidate[]> {
+export async function listCandidates(projectDir: string, doStat: boolean, projectPath?: string): Promise<Candidate[]> {
   let names: string[]
   try {
     names = await readdir(projectDir)
@@ -306,11 +295,7 @@ async function readAllAndSort(candidates: Candidate[]): Promise<SessionInfo[]> {
  * Gathers candidate session files for a specific project directory
  * (and optionally its git worktrees).
  */
-async function gatherProjectCandidates(
-  dir: string,
-  includeWorktrees: boolean,
-  doStat: boolean,
-): Promise<Candidate[]> {
+async function gatherProjectCandidates(dir: string, includeWorktrees: boolean, doStat: boolean): Promise<Candidate[]> {
   const canonicalDir = await canonicalizePath(dir)
 
   let worktreePaths: string[]
@@ -337,7 +322,7 @@ async function gatherProjectCandidates(
 
   // Sort worktree paths by sanitized prefix length (longest first) so
   // more specific matches take priority over shorter ones
-  const indexed = worktreePaths.map(wt => {
+  const indexed = worktreePaths.map((wt) => {
     const sanitized = sanitizePath(wt)
     return {
       path: wt,
@@ -365,9 +350,7 @@ async function gatherProjectCandidates(
   if (canonicalProjectDir) {
     const dirBase = basename(canonicalProjectDir)
     seenDirs.add(caseInsensitive ? dirBase.toLowerCase() : dirBase)
-    all.push(
-      ...(await listCandidates(canonicalProjectDir, doStat, canonicalDir)),
-    )
+    all.push(...(await listCandidates(canonicalProjectDir, doStat, canonicalDir)))
   }
 
   for (const dirent of allDirents) {
@@ -379,19 +362,10 @@ async function gatherProjectCandidates(
       // Only use startsWith for truncated paths (>MAX_SANITIZED_LENGTH) where
       // a hash suffix follows. For short paths, require exact match to avoid
       // /root/project matching /root/project-foo.
-      const isMatch =
-        dirName === prefix ||
-        (prefix.length >= MAX_SANITIZED_LENGTH &&
-          dirName.startsWith(prefix + '-'))
+      const isMatch = dirName === prefix || (prefix.length >= MAX_SANITIZED_LENGTH && dirName.startsWith(prefix + '-'))
       if (isMatch) {
         seenDirs.add(dirName)
-        all.push(
-          ...(await listCandidates(
-            join(projectsDir, dirent.name),
-            doStat,
-            wtPath,
-          )),
-        )
+        all.push(...(await listCandidates(join(projectsDir, dirent.name), doStat, wtPath)))
         break
       }
     }
@@ -414,9 +388,7 @@ async function gatherAllCandidates(doStat: boolean): Promise<Candidate[]> {
   }
 
   const perProject = await Promise.all(
-    dirents
-      .filter(d => d.isDirectory())
-      .map(d => listCandidates(join(projectsDir, d.name), doStat)),
+    dirents.filter((d) => d.isDirectory()).map((d) => listCandidates(join(projectsDir, d.name), doStat)),
   )
 
   return perProject.flat()
@@ -436,9 +408,7 @@ async function gatherAllCandidates(doStat: boolean): Promise<Candidate[]> {
  * When neither is set, stat is skipped (read-all-then-sort, same I/O cost
  * as the original implementation).
  */
-export async function listSessionsImpl(
-  options?: ListSessionsOptions,
-): Promise<SessionInfo[]> {
+export async function listSessionsImpl(options?: ListSessionsOptions): Promise<SessionInfo[]> {
   const { dir, limit, offset, includeWorktrees } = options ?? {}
   const off = offset ?? 0
   // Only stat when we need to sort before reading (won't read all anyway).

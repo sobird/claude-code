@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import type { PendingClassifierCheck } from '../../../types/permissions.js'
 import { logError } from '../../../utils/log.js'
 import type { PermissionDecision } from '../../../utils/permissions/PermissionResult.js'
@@ -23,18 +24,12 @@ type CoordinatorPermissionParams = {
  * permission, or null if the caller should fall through to the
  * interactive dialog.
  */
-async function handleCoordinatorPermission(
-  params: CoordinatorPermissionParams,
-): Promise<PermissionDecision | null> {
+async function handleCoordinatorPermission(params: CoordinatorPermissionParams): Promise<PermissionDecision | null> {
   const { ctx, updatedInput, suggestions, permissionMode } = params
 
   try {
     // 1. Try permission hooks first (fast, local)
-    const hookResult = await ctx.runHooks(
-      permissionMode,
-      suggestions,
-      updatedInput,
-    )
+    const hookResult = await ctx.runHooks(permissionMode, suggestions, updatedInput)
     if (hookResult) return hookResult
 
     // 2. Try classifier (slow, inference -- bash only)

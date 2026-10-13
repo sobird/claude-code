@@ -1,4 +1,5 @@
 import React, { createContext, type ReactNode, useContext } from 'react'
+
 import { Box, Text } from '../../ink.js'
 
 export const OrderedListItemContext = createContext({ marker: '' })
@@ -7,9 +8,7 @@ type OrderedListItemProps = {
   children: ReactNode
 }
 
-export function OrderedListItem({
-  children,
-}: OrderedListItemProps): React.ReactNode {
+export function OrderedListItem({ children }: OrderedListItemProps): React.ReactNode {
   const { marker } = useContext(OrderedListItemContext)
 
   return (

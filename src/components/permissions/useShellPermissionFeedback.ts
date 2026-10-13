@@ -1,4 +1,5 @@
 import { useState } from 'react'
+
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -89,7 +90,7 @@ export function useShellPermissionFeedback({
         explainer_visible: explainerVisible,
       })
       // Increment escape count for attribution tracking
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
         attribution: {
           ...prev.attribution,
@@ -98,12 +99,7 @@ export function useShellPermissionFeedback({
       }))
     }
 
-    logUnaryPermissionEvent(
-      'tool_use_single',
-      toolUseConfirm,
-      'reject',
-      hasFeedback,
-    )
+    logUnaryPermissionEvent('tool_use_single', toolUseConfirm, 'reject', hasFeedback)
 
     if (trimmedFeedback) {
       toolUseConfirm.onReject(trimmedFeedback)

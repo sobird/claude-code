@@ -222,7 +222,6 @@ foreach ($response->content as $block) {
 
 `$block->type === 'tool_use'` also works; `instanceof ToolUseBlock` narrows for PHPStan.
 
-
 ---
 
 ## Extended Thinking

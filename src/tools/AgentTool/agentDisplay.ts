@@ -4,10 +4,7 @@
  */
 
 import { getDefaultSubagentModel } from '../../utils/model/agent.js'
-import {
-  getSourceDisplayName,
-  type SettingSource,
-} from '../../utils/settings/constants.js'
+import { getSourceDisplayName, type SettingSource } from '../../utils/settings/constants.js'
 import type { AgentDefinition } from './loadAgentsDir.js'
 
 type AgentSource = SettingSource | 'built-in' | 'plugin'
@@ -43,10 +40,7 @@ export type ResolvedAgent = AgentDefinition & {
  * Also deduplicates by (agentType, source) to handle git worktree duplicates
  * where the same agent file is loaded from both the worktree and main repo.
  */
-export function resolveAgentOverrides(
-  allAgents: AgentDefinition[],
-  activeAgents: AgentDefinition[],
-): ResolvedAgent[] {
+export function resolveAgentOverrides(allAgents: AgentDefinition[], activeAgents: AgentDefinition[]): ResolvedAgent[] {
   const activeMap = new Map<string, AgentDefinition>()
   for (const agent of activeAgents) {
     activeMap.set(agent.agentType, agent)
@@ -63,8 +57,7 @@ export function resolveAgentOverrides(
     seen.add(key)
 
     const active = activeMap.get(agent.agentType)
-    const overriddenBy =
-      active && active.source !== agent.source ? active.source : undefined
+    const overriddenBy = active && active.source !== agent.source ? active.source : undefined
     resolved.push({ ...agent, overriddenBy })
   }
 
@@ -75,9 +68,7 @@ export function resolveAgentOverrides(
  * Resolve the display model string for an agent.
  * Returns the model alias or 'inherit' for display purposes.
  */
-export function resolveAgentModelDisplay(
-  agent: AgentDefinition,
-): string | undefined {
+export function resolveAgentModelDisplay(agent: AgentDefinition): string | undefined {
   const model = agent.model || getDefaultSubagentModel()
   if (!model) return undefined
   return model === 'inherit' ? 'inherit' : model
@@ -94,10 +85,7 @@ export function getOverrideSourceLabel(source: AgentSource): string {
 /**
  * Compare agents alphabetically by name (case-insensitive).
  */
-export function compareAgentsByName(
-  a: AgentDefinition,
-  b: AgentDefinition,
-): number {
+export function compareAgentsByName(a: AgentDefinition, b: AgentDefinition): number {
   return a.agentType.localeCompare(b.agentType, undefined, {
     sensitivity: 'base',
   })

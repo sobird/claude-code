@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useState } from 'react'
 import { useInterval } from 'usehooks-ts'
+
 import { Text } from '../ink.js'
 import {
   type AutoUpdaterResult,
@@ -10,10 +11,7 @@ import {
 } from '../utils/autoUpdater.js'
 import { isAutoUpdaterDisabled } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
-import {
-  getPackageManager,
-  type PackageManager,
-} from '../utils/nativeInstaller/packageManagers.js'
+import { getPackageManager, type PackageManager } from '../utils/nativeInstaller/packageManagers.js'
 import { gt, gte } from '../utils/semver.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
 
@@ -28,14 +26,10 @@ type Props = {
 
 export function PackageManagerAutoUpdater({ verbose }: Props): React.ReactNode {
   const [updateAvailable, setUpdateAvailable] = useState(false)
-  const [packageManager, setPackageManager] =
-    useState<PackageManager>('unknown')
+  const [packageManager, setPackageManager] = useState<PackageManager>('unknown')
 
   const checkForUpdates = React.useCallback(async () => {
-    if (
-      process.env.NODE_ENV === 'test' ||
-      process.env.NODE_ENV === 'development'
-    ) {
+    if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
       return
     }
 
@@ -68,15 +62,12 @@ export function PackageManagerAutoUpdater({ verbose }: Props): React.ReactNode {
       latest = maxVersion
     }
 
-    const hasUpdate =
-      latest && !gte(MACRO.VERSION, latest) && !shouldSkipVersion(latest)
+    const hasUpdate = latest && !gte(MACRO.VERSION, latest) && !shouldSkipVersion(latest)
 
     setUpdateAvailable(!!hasUpdate)
 
     if (hasUpdate) {
-      logForDebugging(
-        `PackageManagerAutoUpdater: Update available ${MACRO.VERSION} -> ${latest}`,
-      )
+      logForDebugging(`PackageManagerAutoUpdater: Update available ${MACRO.VERSION} -> ${latest}`)
     }
   }, [])
 

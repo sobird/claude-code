@@ -1,9 +1,7 @@
 import * as React from 'react'
+
 import { useAppState, useAppStateStore } from '../../state/AppState.js'
-import {
-  getActiveAgentForInput,
-  getViewedTeammateTask,
-} from '../../state/selectors.js'
+import { getActiveAgentForInput, getViewedTeammateTask } from '../../state/selectors.js'
 import {
   AGENT_COLOR_TO_THEME_COLOR,
   AGENT_COLORS,
@@ -12,17 +10,9 @@ import {
 } from '../../tools/AgentTool/agentColorManager.js'
 import { getStandaloneAgentName } from '../../utils/standaloneAgent.js'
 import { isInsideTmux } from '../../utils/swarm/backends/detection.js'
-import {
-  getCachedDetectionResult,
-  isInProcessEnabled,
-} from '../../utils/swarm/backends/registry.js'
+import { getCachedDetectionResult, isInProcessEnabled } from '../../utils/swarm/backends/registry.js'
 import { getSwarmSocketName } from '../../utils/swarm/constants.js'
-import {
-  getAgentName,
-  getTeammateColor,
-  getTeamName,
-  isTeammate,
-} from '../../utils/teammate.js'
+import { getAgentName, getTeammateColor, getTeamName, isTeammate } from '../../utils/teammate.js'
 import { isInProcessTeammate } from '../../utils/teammateContext.js'
 import type { Theme } from '../../utils/theme.js'
 
@@ -42,12 +32,12 @@ type SwarmBannerInfo = {
  * - --agent CLI flag: Returns "@agentName" with cyan background
  */
 export function useSwarmBanner(): SwarmBannerInfo {
-  const teamContext = useAppState(s => s.teamContext)
-  const standaloneAgentContext = useAppState(s => s.standaloneAgentContext)
-  const agent = useAppState(s => s.agent)
+  const teamContext = useAppState((s) => s.teamContext)
+  const standaloneAgentContext = useAppState((s) => s.standaloneAgentContext)
+  const agent = useAppState((s) => s.agent)
   // Subscribe so the banner updates on enter/exit teammate view even though
   // getActiveAgentForInput reads it from store.getState().
-  useAppState(s => s.viewingAgentTaskId)
+  useAppState((s) => s.viewingAgentTaskId)
   const store = useAppStateStore()
   const [insideTmux, setInsideTmux] = React.useState<boolean | null>(null)
 
@@ -64,19 +54,14 @@ export function useSwarmBanner(): SwarmBannerInfo {
     if (agentName && getTeamName()) {
       return {
         text: `@${agentName}`,
-        bgColor: toThemeColor(
-          teamContext?.selfAgentColor ?? getTeammateColor(),
-        ),
+        bgColor: toThemeColor(teamContext?.selfAgentColor ?? getTeammateColor()),
       }
     }
   }
 
   // Leader with spawned teammates: tmux-attach hint when external, else show
   // the viewed teammate's name when inside tmux / native panes / in-process.
-  const hasTeammates =
-    teamContext?.teamName &&
-    teamContext.teammates &&
-    Object.keys(teamContext.teammates).length > 0
+  const hasTeammates = teamContext?.teamName && teamContext.teammates && Object.keys(teamContext.teammates).length > 0
   if (hasTeammates) {
     const viewedTeammate = getViewedTeammateTask(state)
     const viewedColor = toThemeColor(viewedTeammate?.identity.color)
@@ -89,10 +74,7 @@ export function useSwarmBanner(): SwarmBannerInfo {
         bgColor: viewedColor,
       }
     }
-    if (
-      (insideTmux === true || inProcessMode || nativePanes) &&
-      viewedTeammate
-    ) {
+    if ((insideTmux === true || inProcessMode || nativePanes) && viewedTeammate) {
       return {
         text: `@${viewedTeammate.identity.agentName}`,
         bgColor: viewedColor,
@@ -133,9 +115,7 @@ export function useSwarmBanner(): SwarmBannerInfo {
 
   // --agent CLI flag (when not handled above).
   if (agent) {
-    const agentDef = state.agentDefinitions.activeAgents.find(
-      a => a.agentType === agent,
-    )
+    const agentDef = state.agentDefinitions.activeAgents.find((a) => a.agentType === agent)
     return {
       text: agent,
       bgColor: toThemeColor(agentDef?.color, 'promptBorder'),
@@ -145,10 +125,7 @@ export function useSwarmBanner(): SwarmBannerInfo {
   return null
 }
 
-function toThemeColor(
-  colorName: string | undefined,
-  fallback: keyof Theme = 'cyan_FOR_SUBAGENTS_ONLY',
-): keyof Theme {
+function toThemeColor(colorName: string | undefined, fallback: keyof Theme = 'cyan_FOR_SUBAGENTS_ONLY'): keyof Theme {
   return colorName && AGENT_COLORS.includes(colorName as AgentColorName)
     ? AGENT_COLOR_TO_THEME_COLOR[colorName as AgentColorName]
     : fallback

@@ -3,25 +3,18 @@ import { useEffect, useState } from 'react'
 import { extraUsage as extraUsageCommand } from 'src/commands/extra-usage/index.js'
 import { formatCost } from 'src/cost-tracker.js'
 import { getSubscriptionType } from 'src/utils/auth.js'
+
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
-import {
-  type ExtraUsage,
-  fetchUtilization,
-  type RateLimit,
-  type Utilization,
-} from '../../services/api/usage.js'
+import { type ExtraUsage, fetchUtilization, type RateLimit, type Utilization } from '../../services/api/usage.js'
 import { formatResetText } from '../../utils/format.js'
 import { logError } from '../../utils/log.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js'
 import { Byline } from '../design-system/Byline.js'
 import { ProgressBar } from '../design-system/ProgressBar.js'
-import {
-  isEligibleForOverageCreditGrant,
-  OverageCreditUpsell,
-} from '../LogoV2/OverageCreditUpsell.js'
+import { isEligibleForOverageCreditGrant, OverageCreditUpsell } from '../LogoV2/OverageCreditUpsell.js'
 
 type LimitBarProps = {
   title: string
@@ -31,13 +24,7 @@ type LimitBarProps = {
   extraSubtext?: string
 }
 
-function LimitBar({
-  title,
-  limit,
-  maxWidth,
-  showTimeInReset = true,
-  extraSubtext,
-}: LimitBarProps): React.ReactNode {
+function LimitBar({ title, limit, maxWidth, showTimeInReset = true, extraSubtext }: LimitBarProps): React.ReactNode {
   const { utilization, resets_at } = limit
   if (utilization === null) {
     return null
@@ -119,14 +106,8 @@ export function Usage(): React.ReactNode {
     } catch (err) {
       logError(err as Error)
       const axiosError = err as { response?: { data?: unknown } }
-      const responseBody = axiosError.response?.data
-        ? jsonStringify(axiosError.response.data)
-        : undefined
-      setError(
-        responseBody
-          ? `Failed to load usage data: ${responseBody}`
-          : 'Failed to load usage data',
-      )
+      const responseBody = axiosError.response?.data ? jsonStringify(axiosError.response.data) : undefined
+      setError(responseBody ? `Failed to load usage data: ${responseBody}` : 'Failed to load usage data')
     } finally {
       setIsLoading(false)
     }
@@ -150,18 +131,8 @@ export function Usage(): React.ReactNode {
         <Text color="error">Error: {error}</Text>
         <Text dimColor>
           <Byline>
-            <ConfigurableShortcutHint
-              action="settings:retry"
-              context="Settings"
-              fallback="r"
-              description="retry"
-            />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Settings"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="settings:retry" context="Settings" fallback="r" description="retry" />
+            <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
           </Byline>
         </Text>
       </Box>
@@ -173,12 +144,7 @@ export function Usage(): React.ReactNode {
       <Box flexDirection="column" gap={1}>
         <Text dimColor>Loading usage data…</Text>
         <Text dimColor>
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Settings"
-            fallback="Esc"
-            description="cancel"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
         </Text>
       </Box>
     )
@@ -189,10 +155,7 @@ export function Usage(): React.ReactNode {
   // Show for null (unknown plan) to stay consistent with rateLimitMessages.ts,
   // which labels it "Sonnet limit" in that case.
   const subscriptionType = getSubscriptionType()
-  const showSonnetBar =
-    subscriptionType === 'max' ||
-    subscriptionType === 'team' ||
-    subscriptionType === null
+  const showSonnetBar = subscriptionType === 'max' || subscriptionType === 'team' || subscriptionType === null
 
   const limits = [
     {
@@ -215,40 +178,18 @@ export function Usage(): React.ReactNode {
 
   return (
     <Box flexDirection="column" gap={1} width="100%">
-      {limits.some(({ limit }) => limit) || (
-        <Text dimColor>/usage is only available for subscription plans.</Text>
-      )}
+      {limits.some(({ limit }) => limit) || <Text dimColor>/usage is only available for subscription plans.</Text>}
 
       {limits.map(
-        ({ title, limit }) =>
-          limit && (
-            <LimitBar
-              key={title}
-              title={title}
-              limit={limit}
-              maxWidth={maxWidth}
-            />
-          ),
+        ({ title, limit }) => limit && <LimitBar key={title} title={title} limit={limit} maxWidth={maxWidth} />,
       )}
 
-      {utilization.extra_usage && (
-        <ExtraUsageSection
-          extraUsage={utilization.extra_usage}
-          maxWidth={maxWidth}
-        />
-      )}
+      {utilization.extra_usage && <ExtraUsageSection extraUsage={utilization.extra_usage} maxWidth={maxWidth} />}
 
-      {isEligibleForOverageCreditGrant() && (
-        <OverageCreditUpsell maxWidth={maxWidth} />
-      )}
+      {isEligibleForOverageCreditGrant() && <OverageCreditUpsell maxWidth={maxWidth} />}
 
       <Text dimColor>
-        <ConfigurableShortcutHint
-          action="confirm:no"
-          context="Settings"
-          fallback="Esc"
-          description="cancel"
-        />
+        <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
       </Text>
     </Box>
   )
@@ -261,10 +202,7 @@ type ExtraUsageSectionProps = {
 
 const EXTRA_USAGE_SECTION_TITLE = 'Extra usage'
 
-function ExtraUsageSection({
-  extraUsage,
-  maxWidth,
-}: ExtraUsageSectionProps): React.ReactNode {
+function ExtraUsageSection({ extraUsage, maxWidth }: ExtraUsageSectionProps): React.ReactNode {
   const subscriptionType = getSubscriptionType()
   const isProOrMax = subscriptionType === 'pro' || subscriptionType === 'max'
   if (!isProOrMax) {
@@ -294,10 +232,7 @@ function ExtraUsageSection({
     )
   }
 
-  if (
-    typeof extraUsage.used_credits !== 'number' ||
-    typeof extraUsage.utilization !== 'number'
-  ) {
+  if (typeof extraUsage.used_credits !== 'number' || typeof extraUsage.utilization !== 'number') {
     return null
   }
 

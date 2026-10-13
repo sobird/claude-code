@@ -2,19 +2,16 @@ import figures from 'figures'
 import sample from 'lodash-es/sample.js'
 import * as React from 'react'
 import { useRef, useState } from 'react'
+
 import { getSpinnerVerbs } from '../../constants/spinnerVerbs.js'
 import { TURN_COMPLETION_VERBS } from '../../constants/turnCompletionVerbs.js'
 import { useElapsedTime } from '../../hooks/useElapsedTime.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
-import { stringWidth } from '../../ink/stringWidth.js'
 import { Box, Text } from '../../ink.js'
+import { stringWidth } from '../../ink/stringWidth.js'
 import type { InProcessTeammateTaskState } from '../../tasks/InProcessTeammateTask/types.js'
 import { summarizeRecentActivities } from '../../utils/collapseReadSearch.js'
-import {
-  formatDuration,
-  formatNumber,
-  truncateToWidth,
-} from '../../utils/format.js'
+import { formatDuration, formatNumber, truncateToWidth } from '../../utils/format.js'
 import { toInkColor } from '../../utils/ink.js'
 import { TEAMMATE_SELECT_HINT } from './teammateSelectHint.js'
 
@@ -31,9 +28,7 @@ type Props = {
  * Extract the last 3 lines of content from a teammate's conversation.
  * Shows recent activity from any message type (user or assistant).
  */
-function getMessagePreview(
-  messages: InProcessTeammateTaskState['messages'],
-): string[] {
+function getMessagePreview(messages: InProcessTeammateTaskState['messages']): string[] {
   if (!messages?.length) return []
 
   const allLines: string[] = []
@@ -43,11 +38,7 @@ function getMessagePreview(
   for (let i = messages.length - 1; i >= 0 && allLines.length < 3; i--) {
     const msg = messages[i]
     // Only process messages that have content (user/assistant messages)
-    if (
-      !msg ||
-      (msg.type !== 'user' && msg.type !== 'assistant') ||
-      !msg.message?.content?.length
-    ) {
+    if (!msg || (msg.type !== 'user' && msg.type !== 'assistant') || !msg.message?.content?.length) {
       continue
     }
     const content = msg.message.content
@@ -58,8 +49,7 @@ function getMessagePreview(
 
       if ('type' in block && block.type === 'tool_use' && 'name' in block) {
         // Try to show meaningful info from tool input
-        const input =
-          'input' in block ? (block.input as Record<string, unknown>) : null
+        const input = 'input' in block ? (block.input as Record<string, unknown>) : null
         let toolLine = `Using ${block.name}…`
         if (input) {
           // Look for common descriptive fields
@@ -75,9 +65,7 @@ function getMessagePreview(
         }
         allLines.push(truncateToWidth(toolLine, maxLineLength))
       } else if ('type' in block && block.type === 'text' && 'text' in block) {
-        const textLines = (block.text as string)
-          .split('\n')
-          .filter(l => l.trim())
+        const textLines = (block.text as string).split('\n').filter((l) => l.trim())
         // Take from end of text (most recent lines)
         for (let j = textLines.length - 1; j >= 0 && allLines.length < 3; j--) {
           const line = textLines[j]
@@ -100,12 +88,8 @@ export function TeammateSpinnerLine({
   allIdle,
   showPreview,
 }: Props): React.ReactNode {
-  const [randomVerb] = useState(
-    () => teammate.spinnerVerb ?? sample(getSpinnerVerbs()),
-  )
-  const [pastTenseVerb] = useState(
-    () => teammate.pastTenseVerb ?? sample(TURN_COMPLETION_VERBS),
-  )
+  const [randomVerb] = useState(() => teammate.spinnerVerb ?? sample(getSpinnerVerbs()))
+  const [pastTenseVerb] = useState(() => teammate.pastTenseVerb ?? sample(TURN_COMPLETION_VERBS))
   const isHighlighted = isSelected || isForegrounded
   const treeChar = isHighlighted ? (isLast ? '╘═' : '╞═') : isLast ? '└─' : '├─'
   const nameColor = toInkColor(teammate.identity.color)
@@ -129,19 +113,13 @@ export function TeammateSpinnerLine({
   }
 
   // Get elapsed idle time (how long they've been idle) - for "Idle for X..." display
-  const idleElapsedTime = useElapsedTime(
-    idleStartRef.current ?? Date.now(),
-    teammate.isIdle && !allIdle,
-  )
+  const idleElapsedTime = useElapsedTime(idleStartRef.current ?? Date.now(), teammate.isIdle && !allIdle)
 
   // Freeze the duration when we first detect all idle
   // Use the teammate's actual work time (since task started) for the past-tense display
   if (allIdle && frozenDurationRef.current === null) {
     frozenDurationRef.current = formatDuration(
-      Math.max(
-        0,
-        Date.now() - teammate.startTime - (teammate.totalPausedMs ?? 0),
-      ),
+      Math.max(0, Date.now() - teammate.startTime - (teammate.totalPausedMs ?? 0)),
     )
   }
 
@@ -149,9 +127,7 @@ export function TeammateSpinnerLine({
   const displayTime = allIdle
     ? (frozenDurationRef.current ??
       (() => {
-        throw new Error(
-          `frozenDurationRef is null for idle teammate ${teammate.identity.agentName}`,
-        )
+        throw new Error(`frozenDurationRef is null for idle teammate ${teammate.identity.agentName}`)
       })())
     : idleElapsedTime
 
@@ -187,28 +163,16 @@ export function TeammateSpinnerLine({
   // Progressive hiding: view hint → select hint → stats
   // Stats always visible (dimmed when not selected); hints only when highlighted/selected
   const showViewHint =
-    isSelected &&
-    !isForegrounded &&
-    availableForActivity > viewHintWidth + statsWidth + minActivityWidth + 5
+    isSelected && !isForegrounded && availableForActivity > viewHintWidth + statsWidth + minActivityWidth + 5
   const showSelectHint =
     isHighlighted &&
-    availableForActivity >
-      selectHintWidth +
-        (showViewHint ? viewHintWidth : 0) +
-        statsWidth +
-        minActivityWidth +
-        5
+    availableForActivity > selectHintWidth + (showViewHint ? viewHintWidth : 0) + statsWidth + minActivityWidth + 5
   const showStats = availableForActivity > statsWidth + minActivityWidth + 5
 
   // Activity text gets remaining space
   const extrasCost =
-    (showStats ? statsWidth : 0) +
-    (showSelectHint ? selectHintWidth : 0) +
-    (showViewHint ? viewHintWidth : 0)
-  const activityMaxWidth = Math.max(
-    minActivityWidth,
-    availableForActivity - extrasCost - 1,
-  )
+    (showStats ? statsWidth : 0) + (showSelectHint ? selectHintWidth : 0) + (showViewHint ? viewHintWidth : 0)
+  const activityMaxWidth = Math.max(minActivityWidth, availableForActivity - extrasCost - 1)
 
   // Format the activity text for active teammates, rolling up search/read ops
   const activityText = (() => {
@@ -245,11 +209,7 @@ export function TeammateSpinnerLine({
     if (isHighlighted) {
       return null
     }
-    return (
-      <Text dimColor>
-        {activityText?.endsWith('…') ? activityText : `${activityText}…`}
-      </Text>
-    )
+    return <Text dimColor>{activityText?.endsWith('…') ? activityText : `${activityText}…`}</Text>
   }
 
   // Get preview lines if enabled
@@ -267,19 +227,14 @@ export function TeammateSpinnerLine({
         </Text>
         <Text dimColor={!isSelected}>{treeChar} </Text>
         {/* Agent name: hidden on very narrow screens */}
-        {showName && (
-          <Text color={isSelected ? 'suggestion' : nameColor}>
-            @{teammate.identity.agentName}
-          </Text>
-        )}
+        {showName && <Text color={isSelected ? 'suggestion' : nameColor}>@{teammate.identity.agentName}</Text>}
         {showName && <Text dimColor={!isSelected}>: </Text>}
         {renderStatus()}
         {/* Stats: only shown when selected and terminal is wide enough */}
         {showStats && (
           <Text dimColor>
             {' '}
-            · {toolUseCount} tool {toolUseCount === 1 ? 'use' : 'uses'} ·{' '}
-            {formatNumber(tokenCount)} tokens
+            · {toolUseCount} tool {toolUseCount === 1 ? 'use' : 'uses'} · {formatNumber(tokenCount)} tokens
           </Text>
         )}
         {/* Hints: select hint when highlighted, view hint when selected but not foregrounded */}

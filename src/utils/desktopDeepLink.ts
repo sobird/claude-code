@@ -1,6 +1,8 @@
 import { readdir } from 'fs/promises'
 import { join } from 'path'
+
 import { coerce as semverCoerce } from 'semver'
+
 import { getSessionId } from '../bootstrap/state.js'
 import { getCwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
@@ -17,14 +19,9 @@ function isDevMode(): boolean {
 
   // Local builds from build directories are dev mode even with NODE_ENV=production
   const pathsToCheck = [process.argv[1] || '', process.execPath || '']
-  const buildDirs = [
-    '/build-ant/',
-    '/build-ant-native/',
-    '/build-external/',
-    '/build-external-native/',
-  ]
+  const buildDirs = ['/build-ant/', '/build-ant-native/', '/build-external/', '/build-external-native/']
 
-  return pathsToCheck.some(p => buildDirs.some(dir => p.includes(dir)))
+  return pathsToCheck.some((p) => buildDirs.some((dir) => p.includes(dir)))
 }
 
 /**
@@ -61,19 +58,11 @@ async function isDesktopInstalled(): Promise<boolean> {
   } else if (platform === 'linux') {
     // Check if xdg-mime can find a handler for claude://
     // Note: xdg-mime returns exit code 0 even with no handler, so check stdout too
-    const { code, stdout } = await execFileNoThrow('xdg-mime', [
-      'query',
-      'default',
-      'x-scheme-handler/claude',
-    ])
+    const { code, stdout } = await execFileNoThrow('xdg-mime', ['query', 'default', 'x-scheme-handler/claude'])
     return code === 0 && stdout.trim().length > 0
   } else if (platform === 'win32') {
     // On Windows, try to query the registry for the protocol handler
-    const { code } = await execFileNoThrow('reg', [
-      'query',
-      'HKEY_CLASSES_ROOT\\claude',
-      '/ve',
-    ])
+    const { code } = await execFileNoThrow('reg', ['query', 'HKEY_CLASSES_ROOT\\claude', '/ve'])
     return code === 0
   }
 
@@ -109,9 +98,9 @@ async function getDesktopVersion(): Promise<string | null> {
     try {
       const entries = await readdir(installDir)
       const versions = entries
-        .filter(e => e.startsWith('app-'))
-        .map(e => e.slice(4))
-        .filter(v => semverCoerce(v) !== null)
+        .filter((e) => e.startsWith('app-'))
+        .map((e) => e.slice(4))
+        .filter((v) => semverCoerce(v) !== null)
         .sort((a, b) => {
           const ca = semverCoerce(a)!
           const cb = semverCoerce(b)!
@@ -187,12 +176,7 @@ async function openDeepLink(deepLinkUrl: string): Promise<boolean> {
     return code === 0
   } else if (platform === 'win32') {
     // On Windows, use cmd /c start to open URLs
-    const { code } = await execFileNoThrow('cmd', [
-      '/c',
-      'start',
-      '',
-      deepLinkUrl,
-    ])
+    const { code } = await execFileNoThrow('cmd', ['/c', 'start', '', deepLinkUrl])
     return code === 0
   }
 
@@ -215,8 +199,7 @@ export async function openCurrentSessionInDesktop(): Promise<{
   if (!installed) {
     return {
       success: false,
-      error:
-        'Claude Desktop is not installed. Install it from https://claude.ai/download',
+      error: 'Claude Desktop is not installed. Install it from https://claude.ai/download',
     }
   }
 

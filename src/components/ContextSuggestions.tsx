@@ -1,5 +1,6 @@
 import figures from 'figures'
 import * as React from 'react'
+
 import { Box, Text } from '../ink.js'
 import type { ContextSuggestion } from '../utils/contextSuggestions.js'
 import { formatTokens } from '../utils/format.js'
@@ -23,8 +24,7 @@ export function ContextSuggestions({ suggestions }: Props): React.ReactNode {
             {suggestion.savingsTokens ? (
               <Text dimColor>
                 {' '}
-                {figures.arrowRight} save ~
-                {formatTokens(suggestion.savingsTokens)}
+                {figures.arrowRight} save ~{formatTokens(suggestion.savingsTokens)}
               </Text>
             ) : null}
           </Box>

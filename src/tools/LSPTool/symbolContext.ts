@@ -18,11 +18,7 @@ const MAX_READ_BYTES = 64 * 1024
  * wrapped in try/catch so ENOENT and other errors fall back gracefully.
  * @returns The symbol at that position, or null if extraction fails
  */
-export function getSymbolAtPosition(
-  filePath: string,
-  line: number,
-  character: number,
-): string | null {
+export function getSymbolAtPosition(filePath: string, line: number, character: number): string | null {
   try {
     const fs = getFsImplementation()
     const absolutePath = expandPath(filePath)
@@ -79,10 +75,9 @@ export function getSymbolAtPosition(
     // Log unexpected errors for debugging (permission issues, encoding problems, etc.)
     // Use logForDebugging since this is a display enhancement, not a critical error
     if (error instanceof Error) {
-      logForDebugging(
-        `Symbol extraction failed for ${filePath}:${line}:${character}: ${error.message}`,
-        { level: 'warn' },
-      )
+      logForDebugging(`Symbol extraction failed for ${filePath}:${line}:${character}: ${error.message}`, {
+        level: 'warn',
+      })
     }
     // Still return null for graceful fallback to position display
     return null

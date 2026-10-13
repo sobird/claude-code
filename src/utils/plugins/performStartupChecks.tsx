@@ -2,10 +2,7 @@ import { performBackgroundPluginInstallations } from '../../services/plugins/Plu
 import type { AppState } from '../../state/AppState.js'
 import { checkHasTrustDialogAccepted } from '../config.js'
 import { logForDebugging } from '../debug.js'
-import {
-  clearMarketplacesCache,
-  registerSeedMarketplaces,
-} from './marketplaceManager.js'
+import { clearMarketplacesCache, registerSeedMarketplaces } from './marketplaceManager.js'
 import { clearPluginCache } from './pluginLoader.js'
 
 type SetAppState = (f: (prevState: AppState) => AppState) => void
@@ -25,16 +22,12 @@ type SetAppState = (f: (prevState: AppState) => AppState) => void
  *
  * @param setAppState Function to update app state with installation progress
  */
-export async function performStartupChecks(
-  setAppState: SetAppState,
-): Promise<void> {
+export async function performStartupChecks(setAppState: SetAppState): Promise<void> {
   logForDebugging('performStartupChecks called')
 
   // Check if the current directory has been trusted
   if (!checkHasTrustDialogAccepted()) {
-    logForDebugging(
-      'Trust not accepted for current directory - skipping plugin installations',
-    )
+    logForDebugging('Trust not accepted for current directory - skipping plugin installations')
     return
   }
 
@@ -56,7 +49,7 @@ export async function performStartupChecks(
       // /reload-plugins. Without this signal, the initial plugin-load
       // (which raced and cached "marketplace not found") would persist
       // until the user manually reloads.
-      setAppState(prev => {
+      setAppState((prev) => {
         if (prev.plugins.needsRefresh) return prev
         return {
           ...prev,
@@ -70,8 +63,6 @@ export async function performStartupChecks(
     await performBackgroundPluginInstallations(setAppState)
   } catch (error) {
     // Even if something fails here, don't block startup
-    logForDebugging(
-      `Error initiating background plugin installations: ${error}`,
-    )
+    logForDebugging(`Error initiating background plugin installations: ${error}`)
   }
 }

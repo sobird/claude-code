@@ -1,8 +1,6 @@
 import React from 'react'
-import {
-  type ExitState,
-  useExitOnCtrlCDWithKeybindings,
-} from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
+
+import { type ExitState, useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import type { Theme } from '../../utils/theme.js'
@@ -42,11 +40,7 @@ export function Dialog({
   inputGuide,
   isCancelActive = true,
 }: DialogProps): React.ReactNode {
-  const exitState = useExitOnCtrlCDWithKeybindings(
-    undefined,
-    undefined,
-    isCancelActive,
-  )
+  const exitState = useExitOnCtrlCDWithKeybindings(undefined, undefined, isCancelActive)
 
   // Use configurable keybinding for ESC to cancel.
   // isCancelActive lets consumers (e.g. ElicitationDialog) disable this while
@@ -62,12 +56,7 @@ export function Dialog({
   ) : (
     <Byline>
       <KeyboardShortcutHint shortcut="Enter" action="confirm" />
-      <ConfigurableShortcutHint
-        action="confirm:no"
-        context="Confirmation"
-        fallback="Esc"
-        description="cancel"
-      />
+      <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
     </Byline>
   )
 

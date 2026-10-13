@@ -9,6 +9,7 @@
  * away and preserve the user's existing input text (the prompt is not cleared).
  */
 import { useMemo } from 'react'
+
 import { useIsModalOverlayActive } from '../context/overlayContext.js'
 import { useOptionalKeybindingContext } from '../keybindings/KeybindingContext.js'
 import { useKeybindings } from '../keybindings/useKeybinding.js'
@@ -20,10 +21,7 @@ type Props = {
   onSubmit: (
     input: string,
     helpers: PromptInputHelpers,
-    ...rest: [
-      speculationAccept?: undefined,
-      options?: { fromKeybinding?: boolean },
-    ]
+    ...rest: [speculationAccept?: undefined, options?: { fromKeybinding?: boolean }]
   ) => void
   /** Set to false to disable command keybindings (e.g., when a dialog is open) */
   isActive?: boolean
@@ -40,10 +38,7 @@ const NOOP_HELPERS: PromptInputHelpers = {
  * user's keybinding configuration. When triggered, each handler submits
  * the corresponding slash command (e.g., "command:commit" submits "/commit").
  */
-export function CommandKeybindingHandlers({
-  onSubmit,
-  isActive = true,
-}: Props): null {
+export function CommandKeybindingHandlers({ onSubmit, isActive = true }: Props): null {
   const keybindingContext = useOptionalKeybindingContext()
   const isModalOverlayActive = useIsModalOverlayActive()
 

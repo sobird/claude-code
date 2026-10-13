@@ -4,11 +4,9 @@ import { queryModelWithoutStreaming } from 'src/services/api/claude.js'
 import { getEmptyToolPermissionContext } from 'src/Tool.js'
 import { AGENT_TOOL_NAME } from 'src/tools/AgentTool/constants.js'
 import { prependUserContext } from 'src/utils/api.js'
-import {
-  createUserMessage,
-  normalizeMessagesForAPI,
-} from 'src/utils/messages.js'
+import { createUserMessage, normalizeMessagesForAPI } from 'src/utils/messages.js'
 import type { ModelName } from 'src/utils/model/model.js'
+
 import { isAutoMemoryEnabled } from '../../memdir/paths.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -167,7 +165,7 @@ export async function generateAgent(
   const textBlocks = response.message.content.filter(
     (block): block is ContentBlock & { type: 'text' } => block.type === 'text',
   )
-  const responseText = textBlocks.map(block => block.text).join('\n')
+  const responseText = textBlocks.map((block) => block.text).join('\n')
 
   let parsed: GeneratedAgent
   try {
@@ -185,8 +183,7 @@ export async function generateAgent(
   }
 
   logEvent('tengu_agent_definition_generated', {
-    agent_identifier:
-      parsed.identifier as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    agent_identifier: parsed.identifier as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 
   return {

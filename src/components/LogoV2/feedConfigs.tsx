@@ -1,22 +1,20 @@
-import figures from 'figures'
 import { homedir } from 'os'
+
+import figures from 'figures'
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import type { Step } from '../../projectOnboardingState.js'
-import {
-  formatCreditAmount,
-  getCachedReferrerReward,
-} from '../../services/api/referral.js'
+import { formatCreditAmount, getCachedReferrerReward } from '../../services/api/referral.js'
 import type { LogOption } from '../../types/logs.js'
 import { getCwd } from '../../utils/cwd.js'
 import { formatRelativeTimeAgo } from '../../utils/format.js'
 import type { FeedConfig, FeedLine } from './Feed.js'
 
 export function createRecentActivityFeed(activities: LogOption[]): FeedConfig {
-  const lines: FeedLine[] = activities.map(log => {
+  const lines: FeedLine[] = activities.map((log) => {
     const time = formatRelativeTimeAgo(log.modified)
-    const description =
-      log.summary && log.summary !== 'No prompt' ? log.summary : log.firstPrompt
+    const description = log.summary && log.summary !== 'No prompt' ? log.summary : log.firstPrompt
 
     return {
       text: description || '',
@@ -33,7 +31,7 @@ export function createRecentActivityFeed(activities: LogOption[]): FeedConfig {
 }
 
 export function createWhatsNewFeed(releaseNotes: string[]): FeedConfig {
-  const lines: FeedLine[] = releaseNotes.map(note => {
+  const lines: FeedLine[] = releaseNotes.map((note) => {
     if (process.env.USER_TYPE === 'ant') {
       const match = note.match(/^(\d+\s+\w+\s+ago)\s+(.+)$/)
       if (match) {
@@ -54,10 +52,7 @@ export function createWhatsNewFeed(releaseNotes: string[]): FeedConfig {
       : 'Check the Claude Code changelog for updates'
 
   return {
-    title:
-      process.env.USER_TYPE === 'ant'
-        ? "What's new [ANT-ONLY: Latest CC commits]"
-        : "What's new",
+    title: process.env.USER_TYPE === 'ant' ? "What's new [ANT-ONLY: Latest CC commits]" : "What's new",
     lines,
     footer: lines.length > 0 ? '/release-notes for more' : undefined,
     emptyMessage,

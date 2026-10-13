@@ -1,5 +1,7 @@
 import { join } from 'path'
+
 import React from 'react'
+
 import { ExportDialog } from '../../components/ExportDialog.js'
 import type { ToolUseContext } from '../../Tool.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
@@ -19,7 +21,7 @@ function formatTimestamp(date: Date): string {
 }
 
 export function extractFirstPrompt(messages: Message[]): string {
-  const firstUserMessage = messages.find(msg => msg.type === 'user')
+  const firstUserMessage = messages.find((msg) => msg.type === 'user')
 
   if (!firstUserMessage || firstUserMessage.type !== 'user') {
     return ''
@@ -31,7 +33,7 @@ export function extractFirstPrompt(messages: Message[]): string {
   if (typeof content === 'string') {
     result = content.trim()
   } else if (Array.isArray(content)) {
-    const textContent = content.find(item => item.type === 'text')
+    const textContent = content.find((item) => item.type === 'text')
     if (textContent && 'text' in textContent) {
       result = textContent.text.trim()
     }
@@ -56,9 +58,7 @@ export function sanitizeFilename(text: string): string {
     .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
 }
 
-async function exportWithReactRenderer(
-  context: ToolUseContext,
-): Promise<string> {
+async function exportWithReactRenderer(context: ToolUseContext): Promise<string> {
   const tools = context.options.tools || []
   return renderMessagesToPlainText(context.messages, tools)
 }
@@ -74,9 +74,7 @@ export async function call(
   // If args are provided, write directly to file and skip dialog
   const filename = args.trim()
   if (filename) {
-    const finalFilename = filename.endsWith('.txt')
-      ? filename
-      : filename.replace(/\.[^.]+$/, '') + '.txt'
+    const finalFilename = filename.endsWith('.txt') ? filename : filename.replace(/\.[^.]+$/, '') + '.txt'
     const filepath = join(getCwd(), finalFilename)
 
     try {
@@ -87,9 +85,7 @@ export async function call(
       onDone(`Conversation exported to: ${filepath}`)
       return null
     } catch (error) {
-      onDone(
-        `Failed to export conversation: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      )
+      onDone(`Failed to export conversation: ${error instanceof Error ? error.message : 'Unknown error'}`)
       return null
     }
   }
@@ -101,9 +97,7 @@ export async function call(
   let defaultFilename: string
   if (firstPrompt) {
     const sanitized = sanitizeFilename(firstPrompt)
-    defaultFilename = sanitized
-      ? `${timestamp}-${sanitized}.txt`
-      : `conversation-${timestamp}.txt`
+    defaultFilename = sanitized ? `${timestamp}-${sanitized}.txt` : `conversation-${timestamp}.txt`
   } else {
     defaultFilename = `conversation-${timestamp}.txt`
   }
@@ -113,7 +107,7 @@ export async function call(
     <ExportDialog
       content={content}
       defaultFilename={defaultFilename}
-      onDone={result => {
+      onDone={(result) => {
         onDone(result.message)
       }}
     />

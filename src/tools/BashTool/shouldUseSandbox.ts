@@ -1,4 +1,5 @@
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
+
 import { splitCommand_DEPRECATED } from '../../utils/bash/commands.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
 import { getSettings_DEPRECATED } from '../../utils/settings/settings.js'
@@ -133,10 +134,7 @@ export function shouldUseSandbox(input: Partial<SandboxInput>): boolean {
   }
 
   // Don't sandbox if explicitly overridden AND unsandboxed commands are allowed by policy
-  if (
-    input.dangerouslyDisableSandbox &&
-    SandboxManager.areUnsandboxedCommandsAllowed()
-  ) {
+  if (input.dangerouslyDisableSandbox && SandboxManager.areUnsandboxedCommandsAllowed()) {
     return false
   }
 

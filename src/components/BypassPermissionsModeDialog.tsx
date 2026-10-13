@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
+
 import { Box, Link, Newline, Text } from '../ink.js'
 import { gracefulShutdownSync } from '../utils/gracefulShutdown.js'
 import { updateSettingsForSource } from '../utils/settings/settings.js'
@@ -10,9 +11,7 @@ type Props = {
   onAccept(): void
 }
 
-export function BypassPermissionsModeDialog({
-  onAccept,
-}: Props): React.ReactNode {
+export function BypassPermissionsModeDialog({ onAccept }: Props): React.ReactNode {
   React.useEffect(() => {
     logEvent('tengu_bypass_permissions_mode_dialog_shown', {})
   }, [])
@@ -40,22 +39,17 @@ export function BypassPermissionsModeDialog({
   }, [])
 
   return (
-    <Dialog
-      title="WARNING: Claude Code running in Bypass Permissions mode"
-      color="error"
-      onCancel={handleEscape}
-    >
+    <Dialog title="WARNING: Claude Code running in Bypass Permissions mode" color="error" onCancel={handleEscape}>
       <Box flexDirection="column" gap={1}>
         <Text>
-          In Bypass Permissions mode, Claude Code will not ask for your approval
-          before running potentially dangerous commands.
+          In Bypass Permissions mode, Claude Code will not ask for your approval before running potentially dangerous
+          commands.
           <Newline />
-          This mode should only be used in a sandboxed container/VM that has
-          restricted internet access and can easily be restored if damaged.
+          This mode should only be used in a sandboxed container/VM that has restricted internet access and can easily
+          be restored if damaged.
         </Text>
         <Text>
-          By proceeding, you accept all responsibility for actions taken while
-          running in Bypass Permissions mode.
+          By proceeding, you accept all responsibility for actions taken while running in Bypass Permissions mode.
         </Text>
 
         <Link url="https://code.claude.com/docs/en/security" />
@@ -66,7 +60,7 @@ export function BypassPermissionsModeDialog({
           { label: 'No, exit', value: 'decline' },
           { label: 'Yes, I accept', value: 'accept' },
         ]}
-        onChange={value => onChange(value as 'accept' | 'decline')}
+        onChange={(value) => onChange(value as 'accept' | 'decline')}
       />
     </Dialog>
   )

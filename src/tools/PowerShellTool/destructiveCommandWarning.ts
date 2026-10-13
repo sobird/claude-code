@@ -19,23 +19,19 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
   // grouping and flags after it are still this command's flags:
   // `Remove-Item (Join-Path $r "tmp") -Recurse -Force` must still warn.
   {
-    pattern:
-      /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Recurse\b[^|;&\n}]*-Force\b/i,
+    pattern: /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Recurse\b[^|;&\n}]*-Force\b/i,
     warning: 'Note: may recursively force-remove files',
   },
   {
-    pattern:
-      /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Force\b[^|;&\n}]*-Recurse\b/i,
+    pattern: /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Force\b[^|;&\n}]*-Recurse\b/i,
     warning: 'Note: may recursively force-remove files',
   },
   {
-    pattern:
-      /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Recurse\b/i,
+    pattern: /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Recurse\b/i,
     warning: 'Note: may recursively remove files',
   },
   {
-    pattern:
-      /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Force\b/i,
+    pattern: /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Force\b/i,
     warning: 'Note: may force-remove files',
   },
 
@@ -65,8 +61,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may overwrite remote history',
   },
   {
-    pattern:
-      /\bgit\s+clean\b(?![^|;&\n]*(?:-[a-zA-Z]*n|--dry-run))[^|;&\n]*-[a-zA-Z]*f/i,
+    pattern: /\bgit\s+clean\b(?![^|;&\n]*(?:-[a-zA-Z]*n|--dry-run))[^|;&\n]*-[a-zA-Z]*f/i,
     warning: 'Note: may permanently delete untracked files',
   },
   {

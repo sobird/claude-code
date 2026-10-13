@@ -13,6 +13,7 @@
  * so no manual cleanup or state management is needed.
  */
 import { useContext, useEffect, useLayoutEffect } from 'react'
+
 import instances from '../ink/instances.js'
 import { AppStoreContext, useAppState } from '../state/AppState.js'
 
@@ -41,14 +42,14 @@ export function useRegisterOverlay(id: string, enabled = true): void {
   const setAppState = store?.setState
   useEffect(() => {
     if (!enabled || !setAppState) return
-    setAppState(prev => {
+    setAppState((prev) => {
       if (prev.activeOverlays.has(id)) return prev
       const next = new Set(prev.activeOverlays)
       next.add(id)
       return { ...prev, activeOverlays: next }
     })
     return () => {
-      setAppState(prev => {
+      setAppState((prev) => {
         if (!prev.activeOverlays.has(id)) return prev
         const next = new Set(prev.activeOverlays)
         next.delete(id)
@@ -85,7 +86,7 @@ export function useRegisterOverlay(id: string, enabled = true): void {
  * }
  */
 export function useIsOverlayActive(): boolean {
-  return useAppState(s => s.activeOverlays.size > 0)
+  return useAppState((s) => s.activeOverlays.size > 0)
 }
 
 /**
@@ -100,7 +101,7 @@ export function useIsOverlayActive(): boolean {
  * focus: !isSearchingHistory && !isModalOverlayActive
  */
 export function useIsModalOverlayActive(): boolean {
-  return useAppState(s => {
+  return useAppState((s) => {
     for (const id of s.activeOverlays) {
       if (!NON_MODAL_OVERLAYS.has(id)) return true
     }

@@ -1,19 +1,31 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { randomUUID } from 'crypto'
-import {
-  createBridgeApiClient,
-  BridgeFatalError,
-  isExpiredErrorType,
-  isSuppressible403,
-} from './bridgeApi.js'
-import type { BridgeConfig, BridgeApiClient } from './types.js'
-import { logForDebugging } from '../utils/debug.js'
-import { logForDiagnosticsNoPII } from '../utils/diagLogs.js'
+
+import { HybridTransport } from '../cli/transports/HybridTransport.js'
+import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
+import type { SDKControlRequest, SDKControlResponse } from '../entrypoints/sdk/controlTypes.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../services/analytics/index.js'
+import type { Message } from '../types/message.js'
 import { registerCleanup } from '../utils/cleanupRegistry.js'
+import { updateSessionBridgeId } from '../utils/concurrentSessions.js'
+import { logForDebugging } from '../utils/debug.js'
+import { logForDiagnosticsNoPII } from '../utils/diagLogs.js'
+import { isEnvTruthy, isInProtectedNamespace } from '../utils/envUtils.js'
+import { errorMessage } from '../utils/errors.js'
+import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
+import { updateSessionIngressAuthToken } from '../utils/sessionIngressAuth.js'
+import { sleep } from '../utils/sleep.js'
+import { createBridgeApiClient, BridgeFatalError, isExpiredErrorType, isSuppressible403 } from './bridgeApi.js'
+import { validateBridgeId } from './bridgeApi.js'
+import {
+  wrapApiForFaultInjection,
+  registerBridgeDebugHandle,
+  clearBridgeDebugHandle,
+  injectBridgeFault,
+} from './bridgeDebug.js'
 import {
   handleIngressMessage,
   handleServerControlRequest,
@@ -22,50 +34,15 @@ import {
   extractTitleText,
   BoundedUUIDSet,
 } from './bridgeMessaging.js'
-import {
-  decodeWorkSecret,
-  buildSdkUrl,
-  buildCCRv2SdkUrl,
-  sameSessionId,
-} from './workSecret.js'
-import { toCompatSessionId, toInfraSessionId } from './sessionIdCompat.js'
-import { updateSessionBridgeId } from '../utils/concurrentSessions.js'
-import { getTrustedDeviceToken } from './trustedDevice.js'
-import { HybridTransport } from '../cli/transports/HybridTransport.js'
-import {
-  type ReplBridgeTransport,
-  createV1ReplTransport,
-  createV2ReplTransport,
-} from './replBridgeTransport.js'
-import { updateSessionIngressAuthToken } from '../utils/sessionIngressAuth.js'
-import { isEnvTruthy, isInProtectedNamespace } from '../utils/envUtils.js'
-import { validateBridgeId } from './bridgeApi.js'
-import {
-  describeAxiosError,
-  extractHttpStatus,
-  logBridgeSkip,
-} from './debugUtils.js'
-import type { Message } from '../types/message.js'
-import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
-import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
-import type {
-  SDKControlRequest,
-  SDKControlResponse,
-} from '../entrypoints/sdk/controlTypes.js'
 import { createCapacityWake, type CapacitySignal } from './capacityWake.js'
+import { describeAxiosError, extractHttpStatus, logBridgeSkip } from './debugUtils.js'
 import { FlushGate } from './flushGate.js'
-import {
-  DEFAULT_POLL_CONFIG,
-  type PollIntervalConfig,
-} from './pollConfigDefaults.js'
-import { errorMessage } from '../utils/errors.js'
-import { sleep } from '../utils/sleep.js'
-import {
-  wrapApiForFaultInjection,
-  registerBridgeDebugHandle,
-  clearBridgeDebugHandle,
-  injectBridgeFault,
-} from './bridgeDebug.js'
+import { DEFAULT_POLL_CONFIG, type PollIntervalConfig } from './pollConfigDefaults.js'
+import { type ReplBridgeTransport, createV1ReplTransport, createV2ReplTransport } from './replBridgeTransport.js'
+import { toCompatSessionId, toInfraSessionId } from './sessionIdCompat.js'
+import { getTrustedDeviceToken } from './trustedDevice.js'
+import type { BridgeConfig, BridgeApiClient } from './types.js'
+import { decodeWorkSecret, buildSdkUrl, buildCCRv2SdkUrl, sameSessionId } from './workSecret.js'
 
 export type ReplBridgeHandle = {
   bridgeSessionId: string
@@ -189,9 +166,7 @@ export type BridgeCoreParams = {
    * throw, which corrupts the 3-way invariant documented in src/CLAUDE.md if
    * the callback lets the throw escape here.
    */
-  onSetPermissionMode?: (
-    mode: PermissionMode,
-  ) => { ok: true } | { ok: false; error: string }
+  onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
   onStateChange?: (state: BridgeState, detail?: string) => void
   /**
    * Fires on each real user message to flow through writeMessages() until
@@ -257,9 +232,7 @@ let initSequence = 0
  *
  * Returns null on registration or session-creation failure.
  */
-export async function initBridgeCore(
-  params: BridgeCoreParams,
-): Promise<BridgeCoreHandle | null> {
+export async function initBridgeCore(params: BridgeCoreParams): Promise<BridgeCoreHandle | null> {
   const {
     dir,
     machineName,
@@ -299,8 +272,7 @@ export async function initBridgeCore(
 
   // bridgePointer import hoisted: perpetual mode reads it before register;
   // non-perpetual writes it after session create; both use clear at teardown.
-  const { writeBridgePointer, clearBridgePointer, readBridgePointer } =
-    await import('./bridgePointer.js')
+  const { writeBridgePointer, clearBridgePointer, readBridgePointer } = await import('./bridgePointer.js')
 
   // Perpetual mode: read the crash-recovery pointer and treat it as prior
   // state. The pointer is written unconditionally after session create
@@ -326,8 +298,7 @@ export async function initBridgeCore(
   })
   // Ant-only: interpose so /bridge-kick can inject poll/register/heartbeat
   // failures. Zero cost in external builds (rawApi passes through unchanged).
-  const api =
-    process.env.USER_TYPE === 'ant' ? wrapApiForFaultInjection(rawApi) : rawApi
+  const api = process.env.USER_TYPE === 'ant' ? wrapApiForFaultInjection(rawApi) : rawApi
 
   const bridgeConfig: BridgeConfig = {
     dir,
@@ -353,10 +324,7 @@ export async function initBridgeCore(
     environmentId = reg.environment_id
     environmentSecret = reg.environment_secret
   } catch (err) {
-    logBridgeSkip(
-      'registration_failed',
-      `[bridge:repl] Environment registration failed: ${errorMessage(err)}`,
-    )
+    logBridgeSkip('registration_failed', `[bridge:repl] Environment registration failed: ${errorMessage(err)}`)
     // Stale pointer may be the cause (expired/deleted env) — clear it so
     // the next start doesn't retry the same dead ID.
     if (prior) {
@@ -378,10 +346,7 @@ export async function initBridgeCore(
    * then resurrected). Returns true on success; caller falls back to
    * fresh session creation on false.
    */
-  async function tryReconnectInPlace(
-    requestedEnvId: string,
-    sessionId: string,
-  ): Promise<boolean> {
+  async function tryReconnectInPlace(requestedEnvId: string, sessionId: string): Promise<boolean> {
     if (environmentId !== requestedEnvId) {
       logForDebugging(
         `[bridge:repl] Env mismatch (requested ${requestedEnvId}, got ${environmentId}) — cannot reconnect in place`,
@@ -397,24 +362,17 @@ export async function initBridgeCore(
     // cse_* (doReconnect Strategy 1 path — currentSessionId never mutates
     // to cse_* but future-proof the check).
     const infraId = toInfraSessionId(sessionId)
-    const candidates =
-      infraId === sessionId ? [sessionId] : [sessionId, infraId]
+    const candidates = infraId === sessionId ? [sessionId] : [sessionId, infraId]
     for (const id of candidates) {
       try {
         await api.reconnectSession(environmentId, id)
-        logForDebugging(
-          `[bridge:repl] Reconnected session ${id} in place on env ${environmentId}`,
-        )
+        logForDebugging(`[bridge:repl] Reconnected session ${id} in place on env ${environmentId}`)
         return true
       } catch (err) {
-        logForDebugging(
-          `[bridge:repl] reconnectSession(${id}) failed: ${errorMessage(err)}`,
-        )
+        logForDebugging(`[bridge:repl] reconnectSession(${id}) failed: ${errorMessage(err)}`)
       }
     }
-    logForDebugging(
-      '[bridge:repl] reconnectSession exhausted — falling through to fresh session',
-    )
+    logForDebugging('[bridge:repl] reconnectSession exhausted — falling through to fresh session')
     return false
   }
 
@@ -422,9 +380,7 @@ export async function initBridgeCore(
   // teardown. reconnectSession re-queues it. doReconnect() has the same
   // call but only fires on poll 404 (env dead);
   // here the env is alive but idle.
-  const reusedPriorSession = prior
-    ? await tryReconnectInPlace(prior.environmentId, prior.sessionId)
-    : false
+  const reusedPriorSession = prior ? await tryReconnectInPlace(prior.environmentId, prior.sessionId) : false
   if (prior && !reusedPriorSession) {
     await clearBridgePointer(dir)
   }
@@ -438,12 +394,9 @@ export async function initBridgeCore(
   // re-created after a connection loss.
   let currentSessionId: string
 
-
   if (reusedPriorSession && prior) {
     currentSessionId = prior.sessionId
-    logForDebugging(
-      `[bridge:repl] Perpetual session reused: ${currentSessionId}`,
-    )
+    logForDebugging(`[bridge:repl] Perpetual session reused: ${currentSessionId}`)
     // Server already has all initialMessages from the prior CLI run. Mark
     // them as previously-flushed so the initial flush filter excludes them
     // (previouslyFlushedUUIDs is a fresh Set on every CLI start). Duplicate
@@ -463,9 +416,7 @@ export async function initBridgeCore(
     })
 
     if (!createdSessionId) {
-      logForDebugging(
-        '[bridge:repl] Session creation failed, deregistering environment',
-      )
+      logForDebugging('[bridge:repl] Session creation failed, deregistering environment')
       logEvent('tengu_bridge_repl_session_failed', {})
       await api.deregisterEnvironment(environmentId).catch(() => {})
       onStateChange?.('failed', 'Session creation failed')
@@ -625,9 +576,7 @@ export async function initBridgeCore(
     )
 
     if (environmentRecreations > MAX_ENVIRONMENT_RECREATIONS) {
-      logForDebugging(
-        `[bridge:repl] Environment reconnect limit reached (${MAX_ENVIRONMENT_RECREATIONS}), giving up`,
-      )
+      logForDebugging(`[bridge:repl] Environment reconnect limit reached (${MAX_ENVIRONMENT_RECREATIONS}), giving up`)
       return false
     }
 
@@ -654,9 +603,7 @@ export async function initBridgeCore(
     // back). Best-effort: the env is probably gone, so this likely 404s.
     if (currentWorkId) {
       const workIdBeingCleared = currentWorkId
-      await api
-        .stopWork(environmentId, workIdBeingCleared, false)
-        .catch(() => {})
+      await api.stopWork(environmentId, workIdBeingCleared, false).catch(() => {})
       // When doReconnect runs concurrently with the poll loop (ws_closed
       // handler case — void-called, unlike the awaited onEnvironmentLost
       // path), onWorkReceived can fire during the stopWork await and set
@@ -665,9 +612,7 @@ export async function initBridgeCore(
       // archiveSession, which would destroy the session its new
       // transport is connected to.
       if (currentWorkId !== workIdBeingCleared) {
-        logForDebugging(
-          '[bridge:repl] Poll loop recovered during stopWork await — deferring to it',
-        )
+        logForDebugging('[bridge:repl] Poll loop recovered during stopWork await — deferring to it')
         environmentRecreations = 0
         return true
       }
@@ -693,24 +638,18 @@ export async function initBridgeCore(
       environmentSecret = reg.environment_secret
     } catch (err) {
       bridgeConfig.reuseEnvironmentId = undefined
-      logForDebugging(
-        `[bridge:repl] Environment re-registration failed: ${errorMessage(err)}`,
-      )
+      logForDebugging(`[bridge:repl] Environment re-registration failed: ${errorMessage(err)}`)
       return false
     }
     // Clear before any await — a stale value would poison the next fresh
     // registration if doReconnect runs again.
     bridgeConfig.reuseEnvironmentId = undefined
 
-    logForDebugging(
-      `[bridge:repl] Re-registered: requested=${requestedEnvId} got=${environmentId}`,
-    )
+    logForDebugging(`[bridge:repl] Re-registered: requested=${requestedEnvId} got=${environmentId}`)
 
     // Bail out if teardown started while we were registering
     if (pollController.signal.aborted) {
-      logForDebugging(
-        '[bridge:repl] Reconnect aborted after env registration, cleaning up',
-      )
+      logForDebugging('[bridge:repl] Reconnect aborted after env registration, cleaning up')
       await api.deregisterEnvironment(environmentId).catch(() => {})
       return false
     }
@@ -719,9 +658,7 @@ export async function initBridgeCore(
     // transport during the registerBridgeEnvironment await. Bail before
     // tryReconnectInPlace/archiveSession kill it server-side.
     if (transport !== null) {
-      logForDebugging(
-        '[bridge:repl] Poll loop recovered during registerBridgeEnvironment await — deferring to it',
-      )
+      logForDebugging('[bridge:repl] Poll loop recovered during registerBridgeEnvironment await — deferring to it')
       environmentRecreations = 0
       return true
     }
@@ -748,9 +685,7 @@ export async function initBridgeCore(
 
     // Bail out if teardown started while we were archiving
     if (pollController.signal.aborted) {
-      logForDebugging(
-        '[bridge:repl] Reconnect aborted after archive, cleaning up',
-      )
+      logForDebugging('[bridge:repl] Reconnect aborted after archive, cleaning up')
       await api.deregisterEnvironment(environmentId).catch(() => {})
       return false
     }
@@ -770,17 +705,13 @@ export async function initBridgeCore(
     })
 
     if (!newSessionId) {
-      logForDebugging(
-        '[bridge:repl] Session creation failed during reconnection',
-      )
+      logForDebugging('[bridge:repl] Session creation failed during reconnection')
       return false
     }
 
     // Bail out if teardown started during session creation (up to 15s)
     if (pollController.signal.aborted) {
-      logForDebugging(
-        '[bridge:repl] Reconnect aborted after session creation, cleaning up',
-      )
+      logForDebugging('[bridge:repl] Reconnect aborted after session creation, cleaning up')
       await archiveSession(newSessionId)
       return false
     }
@@ -826,7 +757,6 @@ export async function initBridgeCore(
     // UUIDs are scoped per-session on the server, so re-flushing is safe.
     previouslyFlushedUUIDs?.clear()
 
-
     // Reset the counter so independent reconnections hours apart don't
     // exhaust the limit — it guards against rapid consecutive failures,
     // not lifetime total.
@@ -849,22 +779,18 @@ export async function initBridgeCore(
     const msgs = flushGate.end()
     if (msgs.length === 0) return
     if (!transport) {
-      logForDebugging(
-        `[bridge:repl] Cannot drain ${msgs.length} pending message(s): no transport`,
-      )
+      logForDebugging(`[bridge:repl] Cannot drain ${msgs.length} pending message(s): no transport`)
       return
     }
     for (const msg of msgs) {
       recentPostedUUIDs.add(msg.uuid)
     }
     const sdkMessages = toSDKMessages(msgs)
-    const events = sdkMessages.map(sdkMsg => ({
+    const events = sdkMessages.map((sdkMsg) => ({
       ...sdkMsg,
       session_id: currentSessionId,
     }))
-    logForDebugging(
-      `[bridge:repl] Drained ${msgs.length} pending message(s) after flush`,
-    )
+    logForDebugging(`[bridge:repl] Drained ${msgs.length} pending message(s) after flush`)
     void transport.writeBatch(events)
   }
 
@@ -885,9 +811,7 @@ export async function initBridgeCore(
    * exhaustion. Transient drops are retried internally by the transport.
    */
   function handleTransportPermanentClose(closeCode: number | undefined): void {
-    logForDebugging(
-      `[bridge:repl] Transport permanently closed: code=${closeCode}`,
-    )
+    logForDebugging(`[bridge:repl] Transport permanently closed: code=${closeCode}`)
     logEvent('tengu_bridge_repl_ws_closed', {
       code: closeCode,
     })
@@ -912,10 +836,9 @@ export async function initBridgeCore(
     // a permanent close — no new transport will drain these.
     const dropped = flushGate.drop()
     if (dropped > 0) {
-      logForDebugging(
-        `[bridge:repl] Dropping ${dropped} pending message(s) on transport close (code=${closeCode})`,
-        { level: 'warn' },
-      )
+      logForDebugging(`[bridge:repl] Dropping ${dropped} pending message(s) on transport close (code=${closeCode})`, {
+        level: 'warn',
+      })
     }
 
     if (closeCode === 1000) {
@@ -935,14 +858,9 @@ export async function initBridgeCore(
     // to a fresh session if the env is truly gone. The poll loop
     // (already woken above) picks up the re-queued work once
     // doReconnect completes.
-    onStateChange?.(
-      'reconnecting',
-      `Remote Control connection lost (code ${closeCode})`,
-    )
-    logForDebugging(
-      `[bridge:repl] Transport reconnect budget exhausted (code=${closeCode}), attempting env reconnect`,
-    )
-    void reconnectEnvironmentWithSession().then(success => {
+    onStateChange?.('reconnecting', `Remote Control connection lost (code ${closeCode})`)
+    logForDebugging(`[bridge:repl] Transport reconnect budget exhausted (code=${closeCode}), attempting env reconnect`)
+    void reconnectEnvironmentWithSession().then((success) => {
       if (success) return
       // doReconnect has four abort-check return-false sites for
       // teardown-in-progress. Don't pollute the BQ failure signal
@@ -954,9 +872,7 @@ export async function initBridgeCore(
       // createSession failed — poll loop would poll a sessionless
       // env getting null work with no errors, never hitting any
       // give-up path. Tear down explicitly.
-      logForDebugging(
-        '[bridge:repl] reconnectEnvironmentWithSession resolved false — tearing down',
-      )
+      logForDebugging('[bridge:repl] reconnectEnvironmentWithSession resolved false — tearing down')
       logEvent('tengu_bridge_repl_reconnect_failed', {
         close_code: closeCode,
       })
@@ -971,9 +887,7 @@ export async function initBridgeCore(
   let sigusr2Handler: (() => void) | undefined
   if (process.env.USER_TYPE === 'ant' && process.platform !== 'win32') {
     sigusr2Handler = () => {
-      logForDebugging(
-        '[bridge:repl] SIGUSR2 received — forcing doReconnect() for testing',
-      )
+      logForDebugging('[bridge:repl] SIGUSR2 received — forcing doReconnect() for testing')
       void reconnectEnvironmentWithSession()
     }
     process.on('SIGUSR2', sigusr2Handler)
@@ -986,7 +900,7 @@ export async function initBridgeCore(
   let debugFireClose: ((code: number) => void) | null = null
   if (process.env.USER_TYPE === 'ant') {
     registerBridgeDebugHandle({
-      fireClose: code => {
+      fireClose: (code) => {
         if (!debugFireClose) {
           logForDebugging('[bridge:debug] fireClose: no transport wired yet')
           return
@@ -1051,21 +965,14 @@ export async function initBridgeCore(
       // force=false → server re-queues. Likely already expired, but
       // idempotent and makes re-dispatch immediate if not.
       if (currentWorkId) {
-        void api
-          .stopWork(environmentId, currentWorkId, false)
-          .catch((e: unknown) => {
-            logForDebugging(
-              `[bridge:repl] stopWork after heartbeat fatal: ${errorMessage(e)}`,
-            )
-          })
+        void api.stopWork(environmentId, currentWorkId, false).catch((e: unknown) => {
+          logForDebugging(`[bridge:repl] stopWork after heartbeat fatal: ${errorMessage(e)}`)
+        })
       }
       currentWorkId = null
       currentIngressToken = null
       wakePollLoop()
-      onStateChange?.(
-        'reconnecting',
-        'Work item lease expired, fetching fresh token',
-      )
+      onStateChange?.('reconnecting', 'Work item lease expired, fetching fresh token')
     },
     async onEnvironmentLost() {
       const success = await reconnectEnvironmentWithSession()
@@ -1074,12 +981,7 @@ export async function initBridgeCore(
       }
       return { environmentId, environmentSecret }
     },
-    onWorkReceived: (
-      workSessionId: string,
-      ingressToken: string,
-      workId: string,
-      serverUseCcrV2: boolean,
-    ) => {
+    onWorkReceived: (workSessionId: string, ingressToken: string, workId: string, serverUseCcrV2: boolean) => {
       // When new work arrives while a transport is already open, the
       // server has decided to re-dispatch (e.g. token rotation, server
       // restart). Close the existing transport and reconnect — discarding
@@ -1118,9 +1020,7 @@ export async function initBridgeCore(
       // infrastructure layer delivers cse_* in the work queue
       // (container_manager.go:129). Same UUID, different tag.
       if (!sameSessionId(workSessionId, currentSessionId)) {
-        logForDebugging(
-          `[bridge:repl] Rejecting foreign session: expected=${currentSessionId} got=${workSessionId}`,
-        )
+        logForDebugging(`[bridge:repl] Rejecting foreign session: expected=${currentSessionId} got=${workSessionId}`)
         return
       }
 
@@ -1136,8 +1036,7 @@ export async function initBridgeCore(
       // selector set by sessionRunner/environment-manager) to avoid the
       // inheritance hazard in spawn mode where the parent's orchestrator
       // var would leak into a v1 child.
-      const useCcrV2 =
-        serverUseCcrV2 || isEnvTruthy(process.env.CLAUDE_BRIDGE_USE_CCR_V2)
+      const useCcrV2 = serverUseCcrV2 || isEnvTruthy(process.env.CLAUDE_BRIDGE_USE_CCR_V2)
 
       // Auth is the one place v1 and v2 diverge hard:
       //
@@ -1156,9 +1055,7 @@ export async function initBridgeCore(
       if (!useCcrV2) {
         v1OauthToken = getOAuthToken()
         if (!v1OauthToken) {
-          logForDebugging(
-            '[bridge:repl] No OAuth token available for session ingress, skipping work',
-          )
+          logForDebugging('[bridge:repl] No OAuth token available for session ingress, skipping work')
           return
         }
         updateSessionIngressAuthToken(v1OauthToken)
@@ -1238,11 +1135,7 @@ export async function initBridgeCore(
           // new messages that could arrive at the server interleaved with
           // the historical messages, and delays the web UI from showing
           // the session as active until history is persisted.
-          if (
-            !initialFlushDone &&
-            initialMessages &&
-            initialMessages.length > 0
-          ) {
+          if (!initialFlushDone && initialMessages && initialMessages.length > 0) {
             initialFlushDone = true
 
             // Cap the initial flush to the most recent N messages. The full
@@ -1251,9 +1144,7 @@ export async function initBridgeCore(
             // plus elevated Firestore pressure. A 0 or negative cap disables it.
             const historyCap = initialHistoryCap
             const eligibleMessages = initialMessages.filter(
-              m =>
-                isEligibleBridgeMessage(m) &&
-                !previouslyFlushedUUIDs?.has(m.uuid),
+              (m) => isEligibleBridgeMessage(m) && !previouslyFlushedUUIDs?.has(m.uuid),
             )
             const cappedMessages =
               historyCap > 0 && eligibleMessages.length > historyCap
@@ -1270,10 +1161,8 @@ export async function initBridgeCore(
             }
             const sdkMessages = toSDKMessages(cappedMessages)
             if (sdkMessages.length > 0) {
-              logForDebugging(
-                `[bridge:repl] Flushing ${sdkMessages.length} initial message(s) via transport`,
-              )
-              const events = sdkMessages.map(sdkMsg => ({
+              logForDebugging(`[bridge:repl] Flushing ${sdkMessages.length} initial message(s) via transport`)
+              const events = sdkMessages.map((sdkMsg) => ({
                 ...sdkMsg,
                 session_id: currentSessionId,
               }))
@@ -1300,9 +1189,7 @@ export async function initBridgeCore(
                     }
                   }
                 })
-                .catch(e =>
-                  logForDebugging(`[bridge:repl] Initial flush failed: ${e}`),
-                )
+                .catch((e) => logForDebugging(`[bridge:repl] Initial flush failed: ${e}`))
                 .finally(() => {
                   // Guard: if transport was replaced during the flush,
                   // don't signal connected or drain — the new transport
@@ -1329,7 +1216,7 @@ export async function initBridgeCore(
           }
         })
 
-        newTransport.setOnData(data => {
+        newTransport.setOnData((data) => {
           handleIngressMessage(
             data,
             recentPostedUUIDs,
@@ -1347,7 +1234,7 @@ export async function initBridgeCore(
         // wireTransport was `newTransport.getLastSequenceNum()` — but after
         // the guard below passes we know transport === newTransport.
         debugFireClose = handleTransportPermanentClose
-        newTransport.setOnClose(closeCode => {
+        newTransport.setOnClose((closeCode) => {
           // Guard: if transport was replaced, ignore stale close.
           if (transport !== newTransport) return
           handleTransportPermanentClose(closeCode)
@@ -1359,11 +1246,7 @@ export async function initBridgeCore(
         // initial flush starts. Starting the gate here ensures those
         // calls are queued. If there are no initial messages, the gate
         // stays inactive.
-        if (
-          !initialFlushDone &&
-          initialMessages &&
-          initialMessages.length > 0
-        ) {
+        if (!initialFlushDone && initialMessages && initialMessages.length > 0) {
           flushGate.start()
         }
 
@@ -1381,16 +1264,14 @@ export async function initBridgeCore(
         // handler/convert.go:30 validates TagCodeSession.
         const sessionUrl = buildCCRv2SdkUrl(baseUrl, workSessionId)
         const thisGen = v2Generation
-        logForDebugging(
-          `[bridge:repl] CCR v2: sessionUrl=${sessionUrl} session=${workSessionId} gen=${thisGen}`,
-        )
+        logForDebugging(`[bridge:repl] CCR v2: sessionUrl=${sessionUrl} session=${workSessionId} gen=${thisGen}`)
         void createV2ReplTransport({
           sessionUrl,
           ingressToken,
           sessionId: workSessionId,
           initialSequenceNum: lastTransportSequenceNum,
         }).then(
-          t => {
+          (t) => {
             // Teardown started while registerWorker was in flight. Teardown
             // saw transport === null and skipped close(); installing now
             // would leak CCRClient heartbeat timers and reset
@@ -1406,19 +1287,16 @@ export async function initBridgeCore(
             // (stale epoch) and discards the second (correct epoch). The
             // generation check catches it regardless of transport state.
             if (thisGen !== v2Generation) {
-              logForDebugging(
-                `[bridge:repl] CCR v2: discarding stale handshake gen=${thisGen} current=${v2Generation}`,
-              )
+              logForDebugging(`[bridge:repl] CCR v2: discarding stale handshake gen=${thisGen} current=${v2Generation}`)
               t.close()
               return
             }
             wireTransport(t)
           },
           (err: unknown) => {
-            logForDebugging(
-              `[bridge:repl] CCR v2: createV2ReplTransport failed: ${errorMessage(err)}`,
-              { level: 'error' },
-            )
+            logForDebugging(`[bridge:repl] CCR v2: createV2ReplTransport failed: ${errorMessage(err)}`, {
+              level: 'error',
+            })
             logEvent('tengu_bridge_repl_ccr_v2_init_failed', {})
             // If a newer attempt is in flight or already succeeded, don't
             // touch its work item — our failure is irrelevant.
@@ -1427,13 +1305,9 @@ export async function initBridgeCore(
             // instead of waiting for its own timeout. currentWorkId was set
             // above; without this, the session looks stuck to the user.
             if (currentWorkId) {
-              void api
-                .stopWork(environmentId, currentWorkId, false)
-                .catch((e: unknown) => {
-                  logForDebugging(
-                    `[bridge:repl] stopWork after v2 init failure: ${errorMessage(e)}`,
-                  )
-                })
+              void api.stopWork(environmentId, currentWorkId, false).catch((e: unknown) => {
+                logForDebugging(`[bridge:repl] stopWork after v2 init failure: ${errorMessage(e)}`)
+              })
               currentWorkId = null
               currentIngressToken = null
             }
@@ -1453,9 +1327,7 @@ export async function initBridgeCore(
         // WS reconnect attempt.
         const wsUrl = buildSdkUrl(sessionIngressUrl, workSessionId)
         logForDebugging(`[bridge:repl] Ingress URL: ${wsUrl}`)
-        logForDebugging(
-          `[bridge:repl] Creating HybridTransport: session=${workSessionId}`,
-        )
+        logForDebugging(`[bridge:repl] Creating HybridTransport: session=${workSessionId}`)
         // v1OauthToken was validated non-null above (we'd have returned early).
         const oauthToken = v1OauthToken ?? ''
         wireTransport(
@@ -1479,10 +1351,7 @@ export async function initBridgeCore(
                 maxConsecutiveFailures: 50,
                 isBridge: true,
                 onBatchDropped: () => {
-                  onStateChange?.(
-                    'reconnecting',
-                    'Lost sync with Remote Control — events could not be delivered',
-                  )
+                  onStateChange?.('reconnecting', 'Lost sync with Remote Control — events could not be delivered')
                   // SI has been down ~20 min. Wake the poll loop so that when
                   // SI recovers, next poll → onWorkReceived → fresh transport
                   // → initial flush succeeds → onStateChange('connected') at
@@ -1531,17 +1400,14 @@ export async function initBridgeCore(
   // (Query.ts drops it; web/iOS/Android never see it in their message loop).
   // Interval comes from GrowthBook (tengu_bridge_poll_interval_config
   // session_keepalive_interval_v2_ms, default 120s); 0 = disabled.
-  const keepAliveIntervalMs =
-    getPollIntervalConfig().session_keepalive_interval_v2_ms
+  const keepAliveIntervalMs = getPollIntervalConfig().session_keepalive_interval_v2_ms
   const keepAliveTimer =
     keepAliveIntervalMs > 0
       ? setInterval(() => {
           if (!transport) return
           logForDebugging('[bridge:repl] keep_alive sent')
           void transport.write({ type: 'keep_alive' }).catch((err: unknown) => {
-            logForDebugging(
-              `[bridge:repl] keep_alive write failed: ${errorMessage(err)}`,
-            )
+            logForDebugging(`[bridge:repl] keep_alive write failed: ${errorMessage(err)}`)
           })
         }, keepAliveIntervalMs)
       : null
@@ -1635,9 +1501,7 @@ export async function initBridgeCore(
             logForDebugging('[bridge:repl] Teardown: stopWork completed')
           })
           .catch((err: unknown) => {
-            logForDebugging(
-              `[bridge:repl] Teardown stopWork failed: ${errorMessage(err)}`,
-            )
+            logForDebugging(`[bridge:repl] Teardown stopWork failed: ${errorMessage(err)}`)
           })
       : Promise.resolve()
 
@@ -1652,9 +1516,7 @@ export async function initBridgeCore(
     logForDebugging('[bridge:repl] Teardown: transport closed')
 
     await api.deregisterEnvironment(environmentId).catch((err: unknown) => {
-      logForDebugging(
-        `[bridge:repl] Teardown deregister failed: ${errorMessage(err)}`,
-      )
+      logForDebugging(`[bridge:repl] Teardown deregister failed: ${errorMessage(err)}`)
     })
 
     // Clear the crash-recovery pointer — explicit disconnect or clean REPL
@@ -1662,17 +1524,13 @@ export async function initBridgeCore(
     // reaches this line, leaving the pointer for next-launch recovery.
     await clearBridgePointer(dir)
 
-    logForDebugging(
-      `[bridge:repl] Teardown complete: env=${environmentId} duration=${Date.now() - teardownStart}ms`,
-    )
+    logForDebugging(`[bridge:repl] Teardown complete: env=${environmentId} duration=${Date.now() - teardownStart}ms`)
   }
 
   // 8. Register cleanup for graceful shutdown
   const unregister = registerCleanup(() => doTeardownImpl?.())
 
-  logForDebugging(
-    `[bridge:repl] Ready: env=${environmentId} session=${currentSessionId}`,
-  )
+  logForDebugging(`[bridge:repl] Ready: env=${environmentId} session=${currentSessionId}`)
   onStateChange?.('ready')
 
   return {
@@ -1697,10 +1555,7 @@ export async function initBridgeCore(
       //  - initialMessageUUIDs: messages sent as session creation events
       //  - recentPostedUUIDs: messages recently sent via POST
       const filtered = messages.filter(
-        m =>
-          isEligibleBridgeMessage(m) &&
-          !initialMessageUUIDs.has(m.uuid) &&
-          !recentPostedUUIDs.has(m.uuid),
+        (m) => isEligibleBridgeMessage(m) && !initialMessageUUIDs.has(m.uuid) && !recentPostedUUIDs.has(m.uuid),
       )
       if (filtered.length === 0) return
 
@@ -1721,14 +1576,12 @@ export async function initBridgeCore(
       // Queue messages while the initial flush is in progress to prevent
       // them from arriving at the server interleaved with history.
       if (flushGate.enqueue(...filtered)) {
-        logForDebugging(
-          `[bridge:repl] Queued ${filtered.length} message(s) during initial flush`,
-        )
+        logForDebugging(`[bridge:repl] Queued ${filtered.length} message(s) during initial flush`)
         return
       }
 
       if (!transport) {
-        const types = filtered.map(m => m.type).join(',')
+        const types = filtered.map((m) => m.type).join(',')
         logForDebugging(
           `[bridge:repl] Transport not configured, dropping ${filtered.length} message(s) [${types}] for session=${currentSessionId}`,
           { level: 'warn' },
@@ -1741,14 +1594,12 @@ export async function initBridgeCore(
         recentPostedUUIDs.add(msg.uuid)
       }
 
-      logForDebugging(
-        `[bridge:repl] Sending ${filtered.length} message(s) via transport`,
-      )
+      logForDebugging(`[bridge:repl] Sending ${filtered.length} message(s) via transport`)
 
       // Convert to SDK format and send via HTTP POST (HybridTransport).
       // The web UI receives them via the subscribe WebSocket.
       const sdkMessages = toSDKMessages(filtered)
-      const events = sdkMessages.map(sdkMsg => ({
+      const events = sdkMessages.map((sdkMsg) => ({
         ...sdkMsg,
         session_id: currentSessionId,
       }))
@@ -1759,9 +1610,7 @@ export async function initBridgeCore(
       // Still run echo dedup (server bounces writes back on the WS).
       // No initialMessageUUIDs filter — daemon has no initial messages.
       // No flushGate — daemon never starts it (no initial flush).
-      const filtered = messages.filter(
-        m => !m.uuid || !recentPostedUUIDs.has(m.uuid),
-      )
+      const filtered = messages.filter((m) => !m.uuid || !recentPostedUUIDs.has(m.uuid))
       if (filtered.length === 0) return
       if (!transport) {
         logForDebugging(
@@ -1773,27 +1622,21 @@ export async function initBridgeCore(
       for (const msg of filtered) {
         if (msg.uuid) recentPostedUUIDs.add(msg.uuid)
       }
-      const events = filtered.map(m => ({ ...m, session_id: currentSessionId }))
+      const events = filtered.map((m) => ({ ...m, session_id: currentSessionId }))
       void transport.writeBatch(events)
     },
     sendControlRequest(request: SDKControlRequest) {
       if (!transport) {
-        logForDebugging(
-          '[bridge:repl] Transport not configured, skipping control_request',
-        )
+        logForDebugging('[bridge:repl] Transport not configured, skipping control_request')
         return
       }
       const event = { ...request, session_id: currentSessionId }
       void transport.write(event)
-      logForDebugging(
-        `[bridge:repl] Sent control_request request_id=${request.request_id}`,
-      )
+      logForDebugging(`[bridge:repl] Sent control_request request_id=${request.request_id}`)
     },
     sendControlResponse(response: SDKControlResponse) {
       if (!transport) {
-        logForDebugging(
-          '[bridge:repl] Transport not configured, skipping control_response',
-        )
+        logForDebugging('[bridge:repl] Transport not configured, skipping control_response')
         return
       }
       const event = { ...response, session_id: currentSessionId }
@@ -1802,9 +1645,7 @@ export async function initBridgeCore(
     },
     sendControlCancelRequest(requestId: string) {
       if (!transport) {
-        logForDebugging(
-          '[bridge:repl] Transport not configured, skipping control_cancel_request',
-        )
+        logForDebugging('[bridge:repl] Transport not configured, skipping control_cancel_request')
         return
       }
       const event = {
@@ -1813,21 +1654,15 @@ export async function initBridgeCore(
         session_id: currentSessionId,
       }
       void transport.write(event)
-      logForDebugging(
-        `[bridge:repl] Sent control_cancel_request request_id=${requestId}`,
-      )
+      logForDebugging(`[bridge:repl] Sent control_cancel_request request_id=${requestId}`)
     },
     sendResult() {
       if (!transport) {
-        logForDebugging(
-          `[bridge:repl] sendResult: skipping, transport not configured session=${currentSessionId}`,
-        )
+        logForDebugging(`[bridge:repl] sendResult: skipping, transport not configured session=${currentSessionId}`)
         return
       }
       void transport.write(makeResultMessage(currentSessionId))
-      logForDebugging(
-        `[bridge:repl] Sent result for session=${currentSessionId}`,
-      )
+      logForDebugging(`[bridge:repl] Sent result for session=${currentSessionId}`)
     },
     async teardown() {
       unregister()
@@ -1867,12 +1702,7 @@ async function startWorkPollLoop({
   getCredentials: () => { environmentId: string; environmentSecret: string }
   signal: AbortSignal
   onStateChange?: (state: BridgeState, detail?: string) => void
-  onWorkReceived: (
-    sessionId: string,
-    ingressToken: string,
-    workId: string,
-    useCodeSessions: boolean,
-  ) => void
+  onWorkReceived: (sessionId: string, ingressToken: string, workId: string, useCodeSessions: boolean) => void
   /** Called when the environment has been deleted. Returns new credentials or null. */
   onEnvironmentLost?: () => Promise<{
     environmentId: string
@@ -1919,9 +1749,7 @@ async function startWorkPollLoop({
 }): Promise<void> {
   const MAX_ENVIRONMENT_RECREATIONS = 3
 
-  logForDebugging(
-    `[bridge:repl] Starting work poll loop for env=${getCredentials().environmentId}`,
-  )
+  logForDebugging(`[bridge:repl] Starting work poll loop for env=${getCredentials().environmentId}`)
 
   let consecutiveErrors = 0
   let firstErrorTime: number | null = null
@@ -1938,16 +1766,10 @@ async function startWorkPollLoop({
   while (!signal.aborted) {
     // Capture credentials outside try so the catch block can detect
     // whether a concurrent reconnection replaced the environment.
-    const { environmentId: envId, environmentSecret: envSecret } =
-      getCredentials()
+    const { environmentId: envId, environmentSecret: envSecret } = getCredentials()
     const pollConfig = getPollIntervalConfig()
     try {
-      const work = await api.pollForWork(
-        envId,
-        envSecret,
-        signal,
-        pollConfig.reclaim_older_than_ms,
-      )
+      const work = await api.pollForWork(envId, envSecret, signal, pollConfig.reclaim_older_than_ms)
 
       // A successful poll proves the env is genuinely healthy — reset the
       // env-loss counter so events hours apart each start fresh. Outside
@@ -1959,9 +1781,7 @@ async function startWorkPollLoop({
 
       // Reset error tracking on successful poll
       if (consecutiveErrors > 0) {
-        logForDebugging(
-          `[bridge:repl] Poll recovered after ${consecutiveErrors} consecutive error(s)`,
-        )
+        logForDebugging(`[bridge:repl] Poll recovered after ${consecutiveErrors} consecutive error(s)`)
         consecutiveErrors = 0
         firstErrorTime = null
         lastPollErrorTime = null
@@ -1986,24 +1806,16 @@ async function startWorkPollLoop({
           //   - Capacity wake fires (transport lost → poll for new work)
           //   - Heartbeat config disabled (GrowthBook update)
           //   - Loop aborted (shutdown)
-          if (
-            pollConfig.non_exclusive_heartbeat_interval_ms > 0 &&
-            getHeartbeatInfo
-          ) {
+          if (pollConfig.non_exclusive_heartbeat_interval_ms > 0 && getHeartbeatInfo) {
             logEvent('tengu_bridge_heartbeat_mode_entered', {
-              heartbeat_interval_ms:
-                pollConfig.non_exclusive_heartbeat_interval_ms,
+              heartbeat_interval_ms: pollConfig.non_exclusive_heartbeat_interval_ms,
             })
             // Deadline computed once at entry — GB updates to atCapMs don't
             // shift an in-flight deadline (next entry picks up the new value).
             const pollDeadline = atCapMs > 0 ? Date.now() + atCapMs : null
             let needsBackoff = false
             let hbCycles = 0
-            while (
-              !signal.aborted &&
-              isAtCapacity() &&
-              (pollDeadline === null || Date.now() < pollDeadline)
-            ) {
+            while (!signal.aborted && isAtCapacity() && (pollDeadline === null || Date.now() < pollDeadline)) {
               const hbConfig = getPollIntervalConfig()
               if (hbConfig.non_exclusive_heartbeat_interval_ms <= 0) break
 
@@ -2016,20 +1828,13 @@ async function startWorkPollLoop({
               const cap = capacitySignal()
 
               try {
-                await api.heartbeatWork(
-                  info.environmentId,
-                  info.workId,
-                  info.sessionToken,
-                )
+                await api.heartbeatWork(info.environmentId, info.workId, info.sessionToken)
               } catch (err) {
-                logForDebugging(
-                  `[bridge:repl:heartbeat] Failed: ${errorMessage(err)}`,
-                )
+                logForDebugging(`[bridge:repl:heartbeat] Failed: ${errorMessage(err)}`)
                 if (err instanceof BridgeFatalError) {
                   cap.cleanup()
                   logEvent('tengu_bridge_heartbeat_error', {
-                    status:
-                      err.status as unknown as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                    status: err.status as unknown as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                     error_type: (err.status === 401 || err.status === 403
                       ? 'auth_failed'
                       : 'fatal') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -2055,10 +1860,7 @@ async function startWorkPollLoop({
               }
 
               hbCycles++
-              await sleep(
-                hbConfig.non_exclusive_heartbeat_interval_ms,
-                cap.signal,
-              )
+              await sleep(hbConfig.non_exclusive_heartbeat_interval_ms, cap.signal)
               cap.cleanup()
             }
 
@@ -2072,8 +1874,7 @@ async function startWorkPollLoop({
                     ? 'poll_due'
                     : 'config_disabled'
             logEvent('tengu_bridge_heartbeat_mode_exited', {
-              reason:
-                exitReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              reason: exitReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               heartbeat_cycles: hbCycles,
             })
 
@@ -2100,10 +1901,7 @@ async function startWorkPollLoop({
           // under for 10 min after a laptop wake. Use atCapMs when enabled,
           // else the heartbeat interval as a floor (guaranteed > 0 on the
           // backoff path) so heartbeat-only configs don't tight-loop.
-          const sleepMs =
-            atCapMs > 0
-              ? atCapMs
-              : pollConfig.non_exclusive_heartbeat_interval_ms
+          const sleepMs = atCapMs > 0 ? atCapMs : pollConfig.non_exclusive_heartbeat_interval_ms
           if (sleepMs > 0) {
             const cap = capacitySignal()
             const sleepStart = Date.now()
@@ -2140,9 +1938,7 @@ async function startWorkPollLoop({
       try {
         secret = decodeWorkSecret(work.secret)
       } catch (err) {
-        logForDebugging(
-          `[bridge:repl] Failed to decode work secret: ${errorMessage(err)}`,
-        )
+        logForDebugging(`[bridge:repl] Failed to decode work secret: ${errorMessage(err)}`)
         logEvent('tengu_bridge_repl_work_secret_failed', {})
         // Can't ack (needs the JWT we failed to decode). stopWork uses OAuth.
         // Prevents XAUTOCLAIM re-delivering this poisoned item every cycle.
@@ -2156,9 +1952,7 @@ async function startWorkPollLoop({
       try {
         await api.acknowledgeWork(envId, work.id, secret.session_ingress_token)
       } catch (err) {
-        logForDebugging(
-          `[bridge:repl] Acknowledge failed workId=${work.id}: ${errorMessage(err)}`,
-        )
+        logForDebugging(`[bridge:repl] Acknowledge failed workId=${work.id}: ${errorMessage(err)}`)
       }
 
       if (work.data.type === 'healthcheck') {
@@ -2171,18 +1965,11 @@ async function startWorkPollLoop({
         try {
           validateBridgeId(workSessionId, 'session_id')
         } catch {
-          logForDebugging(
-            `[bridge:repl] Invalid session_id in work: ${workSessionId}`,
-          )
+          logForDebugging(`[bridge:repl] Invalid session_id in work: ${workSessionId}`)
           continue
         }
 
-        onWorkReceived(
-          workSessionId,
-          secret.session_ingress_token,
-          work.id,
-          secret.use_code_sessions === true,
-        )
+        onWorkReceived(workSessionId, secret.session_ingress_token, work.id, secret.use_code_sessions === true)
         logForDebugging('[bridge:repl] Work accepted, continuing poll loop')
       }
     } catch (err) {
@@ -2198,11 +1985,7 @@ async function startWorkPollLoop({
       // The server sends error.type='not_found_error' (standard Anthropic
       // API shape), not a bridge-specific string — but status===404 is
       // the real signal and survives body-shape changes.
-      if (
-        err instanceof BridgeFatalError &&
-        err.status === 404 &&
-        onEnvironmentLost
-      ) {
+      if (err instanceof BridgeFatalError && err.status === 404 && onEnvironmentLost) {
         // If credentials have already been refreshed by a concurrent
         // reconnection (e.g. WS close handler), the stale poll's error
         // is expected — skip onEnvironmentLost and retry with fresh creds.
@@ -2228,10 +2011,7 @@ async function startWorkPollLoop({
           logForDebugging(
             `[bridge:repl] Environment re-registration limit reached (${MAX_ENVIRONMENT_RECREATIONS}), giving up`,
           )
-          onStateChange?.(
-            'failed',
-            'Environment deleted and re-registration limit reached',
-          )
+          onStateChange?.('failed', 'Environment deleted and re-registration limit reached')
           onFatalError?.()
           break
         }
@@ -2255,16 +2035,11 @@ async function startWorkPollLoop({
           consecutiveErrors = 0
           firstErrorTime = null
           onStateChange?.('ready')
-          logForDebugging(
-            `[bridge:repl] Re-registered environment: ${newCreds.environmentId}`,
-          )
+          logForDebugging(`[bridge:repl] Re-registered environment: ${newCreds.environmentId}`)
           continue
         }
 
-        onStateChange?.(
-          'failed',
-          'Environment deleted and re-registration failed',
-        )
+        onStateChange?.('failed', 'Environment deleted and re-registration failed')
         onFatalError?.()
         break
       }
@@ -2278,24 +2053,17 @@ async function startWorkPollLoop({
         )
         logEvent('tengu_bridge_repl_fatal_error', {
           status: err.status,
-          error_type:
-            err.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          error_type: err.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
-        logForDiagnosticsNoPII(
-          isExpiry ? 'info' : 'error',
-          'bridge_repl_fatal_error',
-          { status: err.status, error_type: err.errorType },
-        )
+        logForDiagnosticsNoPII(isExpiry ? 'info' : 'error', 'bridge_repl_fatal_error', {
+          status: err.status,
+          error_type: err.errorType,
+        })
         // Cosmetic 403 errors (e.g., external_poll_sessions scope,
         // environments:manage permission) — suppress user-visible error
         // but always trigger teardown so cleanup runs.
         if (!isSuppressible) {
-          onStateChange?.(
-            'failed',
-            isExpiry
-              ? 'session expired · /remote-control to reconnect'
-              : err.message,
-          )
+          onStateChange?.('failed', isExpiry ? 'session expired · /remote-control to reconnect' : err.message)
         }
         // Always trigger teardown — matches bridgeMain.ts where fatalExit=true
         // is unconditional and post-loop cleanup always runs.
@@ -2309,10 +2077,7 @@ async function startWorkPollLoop({
       // greatly exceeds the max backoff delay, the machine likely slept.
       // Reset error tracking so we retry with a fresh budget instead of
       // immediately giving up.
-      if (
-        lastPollErrorTime !== null &&
-        now - lastPollErrorTime > POLL_ERROR_MAX_DELAY_MS * 2
-      ) {
+      if (lastPollErrorTime !== null && now - lastPollErrorTime > POLL_ERROR_MAX_DELAY_MS * 2) {
         logForDebugging(
           `[bridge:repl] Detected system sleep (${Math.round((now - lastPollErrorTime) / 1000)}s gap), resetting poll error budget`,
         )
@@ -2364,10 +2129,7 @@ async function startWorkPollLoop({
       }
 
       // Exponential backoff: 2s → 4s → 8s → 16s → 32s → 60s (cap)
-      const backoff = Math.min(
-        POLL_ERROR_INITIAL_DELAY_MS * 2 ** (consecutiveErrors - 1),
-        POLL_ERROR_MAX_DELAY_MS,
-      )
+      const backoff = Math.min(POLL_ERROR_INITIAL_DELAY_MS * 2 ** (consecutiveErrors - 1), POLL_ERROR_MAX_DELAY_MS)
       // The poll_due heartbeat-loop exit leaves a healthy lease exposed to
       // this backoff path. Heartbeat before each sleep so /poll outages
       // (the VerifyEnvironmentSecretAuth DB path heartbeat was introduced to
@@ -2376,11 +2138,7 @@ async function startWorkPollLoop({
         const info = getHeartbeatInfo?.()
         if (info) {
           try {
-            await api.heartbeatWork(
-              info.environmentId,
-              info.workId,
-              info.sessionToken,
-            )
+            await api.heartbeatWork(info.environmentId, info.workId, info.sessionToken)
           } catch {
             // Best-effort — if heartbeat also fails the lease dies, same as
             // pre-poll_due behavior (where the only heartbeat-loop exits were

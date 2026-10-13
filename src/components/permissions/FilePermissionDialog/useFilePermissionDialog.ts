@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useAppState } from 'src/state/AppState.js'
+
 import { useKeybindings } from '../../../keybindings/useKeybinding.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -15,10 +16,7 @@ import {
   type PermissionOption,
   type PermissionOptionWithLabel,
 } from './permissionOptions.js'
-import {
-  PERMISSION_HANDLERS,
-  type PermissionHandlerParams,
-} from './usePermissionHandler.js'
+import { PERMISSION_HANDLERS, type PermissionHandlerParams } from './usePermissionHandler.js'
 
 export interface ToolInput {
   [key: string]: unknown
@@ -60,7 +58,7 @@ export function useFilePermissionDialog<T extends ToolInput>({
   parseInput,
   operationType = 'write',
 }: UseFilePermissionDialogProps<T>): UseFilePermissionDialogResult<T> {
-  const toolPermissionContext = useAppState(s => s.toolPermissionContext)
+  const toolPermissionContext = useAppState((s) => s.toolPermissionContext)
   const [acceptFeedback, setAcceptFeedback] = useState('')
   const [rejectFeedback, setRejectFeedback] = useState('')
   const [focusedOption, setFocusedOption] = useState('yes')
@@ -102,11 +100,7 @@ export function useFilePermissionDialog<T extends ToolInput>({
 
       // Override the input in toolUseConfirm to pass the parsed input
       const originalOnAllow = toolUseConfirm.onAllow
-      toolUseConfirm.onAllow = (
-        _input: unknown,
-        permissionUpdates: PermissionUpdate[],
-        feedback?: string,
-      ) => {
+      toolUseConfirm.onAllow = (_input: unknown, permissionUpdates: PermissionUpdate[], feedback?: string) => {
         originalOnAllow(input, permissionUpdates, feedback)
       }
 
@@ -114,10 +108,7 @@ export function useFilePermissionDialog<T extends ToolInput>({
       handler(params, {
         feedback,
         hasFeedback: !!feedback,
-        enteredFeedbackMode:
-          option.type === 'accept-once'
-            ? yesFeedbackModeEntered
-            : noFeedbackModeEntered,
+        enteredFeedbackMode: option.type === 'accept-once' ? yesFeedbackModeEntered : noFeedbackModeEntered,
         scope: option.type === 'accept-session' ? option.scope : undefined,
       })
     },
@@ -137,7 +128,7 @@ export function useFilePermissionDialog<T extends ToolInput>({
 
   // Handler for confirm:cycleMode - select accept-session option
   const handleCycleMode = useCallback(() => {
-    const sessionOption = options.find(o => o.option.type === 'accept-session')
+    const sessionOption = options.find((o) => o.option.type === 'accept-session')
     if (sessionOption) {
       const parsedInput = parseInput(toolUseConfirm.input)
       onChange(sessionOption.option, parsedInput)
@@ -145,10 +136,7 @@ export function useFilePermissionDialog<T extends ToolInput>({
   }, [options, parseInput, toolUseConfirm.input, onChange])
 
   // Register keyboard shortcut handler via keybindings system
-  useKeybindings(
-    { 'confirm:cycleMode': handleCycleMode },
-    { context: 'Confirmation' },
-  )
+  useKeybindings({ 'confirm:cycleMode': handleCycleMode }, { context: 'Confirmation' })
 
   // Wrap setFocusedOption and reset input mode when navigating away
   const handleFocusedOptionChange = useCallback(

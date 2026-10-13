@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react'
+
 import { isAutoMemoryEnabled } from '../../../memdir/paths.js'
 import type { Tools } from '../../../Tool.js'
 import type { AgentDefinition } from '../../../tools/AgentTool/loadAgentsDir.js'
@@ -24,12 +25,7 @@ type Props = {
   onCancel: () => void
 }
 
-export function CreateAgentWizard({
-  tools,
-  existingAgents,
-  onComplete,
-  onCancel,
-}: Props): ReactNode {
+export function CreateAgentWizard({ tools, existingAgents, onComplete, onCancel }: Props): ReactNode {
   // Create step components with props
   const steps: WizardStepComponent<AgentWizardData>[] = [
     LocationStep, // 0
@@ -43,13 +39,7 @@ export function CreateAgentWizard({
     ColorStep, // 8
     // MemoryStep is conditionally included based on GrowthBook gate
     ...(isAutoMemoryEnabled() ? [MemoryStep] : []),
-    () => (
-      <ConfirmStepWrapper
-        tools={tools}
-        existingAgents={existingAgents}
-        onComplete={onComplete}
-      />
-    ),
+    () => <ConfirmStepWrapper tools={tools} existingAgents={existingAgents} onComplete={onComplete} />,
   ]
 
   return (

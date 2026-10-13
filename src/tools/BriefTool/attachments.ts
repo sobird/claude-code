@@ -9,7 +9,6 @@ import { feature } from 'bun:bundle'
 import { stat } from 'fs/promises'
 
 import type { ValidationResult } from '../../Tool.js'
-
 import { getCwd } from '../../utils/cwd.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { getErrnoCode } from '../../utils/errors.js'
@@ -23,9 +22,7 @@ export type ResolvedAttachment = {
   file_uuid?: string
 }
 
-export async function validateAttachmentPaths(
-  rawPaths: string[],
-): Promise<ValidationResult> {
+export async function validateAttachmentPaths(rawPaths: string[]): Promise<ValidationResult> {
   const cwd = getCwd()
   for (const rawPath of rawPaths) {
     const fullPath = expandPath(rawPath)
@@ -90,21 +87,17 @@ export async function resolveAttachments(
     // REPL does, at main.tsx init). CLAUDE_CODE_BRIEF_UPLOAD lets a host that
     // runs the CLI as a subprocess opt in — e.g. the cowork desktop bridge,
     // which already passes CLAUDE_CODE_OAUTH_TOKEN for auth.
-    const shouldUpload =
-      uploadCtx.replBridgeEnabled ||
-      isEnvTruthy(process.env.CLAUDE_CODE_BRIEF_UPLOAD)
+    const shouldUpload = uploadCtx.replBridgeEnabled || isEnvTruthy(process.env.CLAUDE_CODE_BRIEF_UPLOAD)
     const { uploadBriefAttachment } = await import('./upload.js')
     const uuids = await Promise.all(
-      stated.map(a =>
+      stated.map((a) =>
         uploadBriefAttachment(a.path, a.size, {
           replBridgeEnabled: shouldUpload,
           signal: uploadCtx.signal,
         }),
       ),
     )
-    return stated.map((a, i) =>
-      uuids[i] === undefined ? a : { ...a, file_uuid: uuids[i] },
-    )
+    return stated.map((a, i) => (uuids[i] === undefined ? a : { ...a, file_uuid: uuids[i] }))
   }
   return stated
 }

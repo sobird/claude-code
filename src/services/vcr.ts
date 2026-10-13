@@ -1,18 +1,14 @@
-import type { BetaContentBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import { createHash, randomUUID, type UUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'
+import { dirname, join } from 'path'
+
+import type { BetaContentBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import isPlainObject from 'lodash-es/isPlainObject.js'
 import mapValues from 'lodash-es/mapValues.js'
-import { dirname, join } from 'path'
 import { addToTotalSessionCost } from 'src/cost-tracker.js'
 import { calculateUSDCost } from 'src/utils/modelCost.js'
-import type {
-  AssistantMessage,
-  Message,
-  StreamEvent,
-  SystemAPIErrorMessage,
-  UserMessage,
-} from '../types/message.js'
+
+import type { AssistantMessage, Message, StreamEvent, SystemAPIErrorMessage, UserMessage } from '../types/message.js'
 import { getCwd } from '../utils/cwd.js'
 import { env } from '../utils/env.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from '../utils/envUtils.js'
@@ -36,30 +32,18 @@ function shouldUseVCR(): boolean {
  * Generic fixture management helper
  * Handles caching, reading, writing fixtures for any data type
  */
-async function withFixture<T>(
-  input: unknown,
-  fixtureName: string,
-  f: () => Promise<T>,
-): Promise<T> {
+async function withFixture<T>(input: unknown, fixtureName: string, f: () => Promise<T>): Promise<T> {
   if (!shouldUseVCR()) {
     return await f()
   }
 
   // Create hash of input for fixture filename
-  const hash = createHash('sha1')
-    .update(jsonStringify(input))
-    .digest('hex')
-    .slice(0, 12)
-  const filename = join(
-    process.env.CLAUDE_CODE_TEST_FIXTURES_ROOT ?? getCwd(),
-    `fixtures/${fixtureName}-${hash}.json`,
-  )
+  const hash = createHash('sha1').update(jsonStringify(input)).digest('hex').slice(0, 12)
+  const filename = join(process.env.CLAUDE_CODE_TEST_FIXTURES_ROOT ?? getCwd(), `fixtures/${fixtureName}-${hash}.json`)
 
   // Fetch cached fixture
   try {
-    const cached = jsonParse(
-      await readFile(filename, { encoding: 'utf8' }),
-    ) as T
+    const cached = jsonParse(await readFile(filename, { encoding: 'utf8' })) as T
     return cached
   } catch (e: unknown) {
     const code = getErrnoCode(e)
@@ -69,9 +53,7 @@ async function withFixture<T>(
   }
 
   if ((env.isCI || process.env.CI) && !isEnvTruthy(process.env.VCR_RECORD)) {
-    throw new Error(
-      `Fixture missing: ${filename}. Re-run tests with VCR_RECORD=1, then commit the result.`,
-    )
+    throw new Error(`Fixture missing: ${filename}. Re-run tests with VCR_RECORD=1, then commit the result.`)
   }
 
   // Create & write new fixture
@@ -94,7 +76,7 @@ export async function withVCR(
   }
 
   const messagesForAPI = normalizeMessagesForAPI(
-    messages.filter(_ => {
+    messages.filter((_) => {
       if (_.type !== 'user') {
         return true
       }
@@ -106,23 +88,21 @@ export async function withVCR(
   )
 
   const dehydratedInput = mapMessages(
-    messagesForAPI.map(_ => _.message.content),
+    messagesForAPI.map((_) => _.message.content),
     dehydrateValue,
   )
   const filename = join(
     process.env.CLAUDE_CODE_TEST_FIXTURES_ROOT ?? getCwd(),
-    `fixtures/${dehydratedInput.map(_ => createHash('sha1').update(jsonStringify(_)).digest('hex').slice(0, 6)).join('-')}.json`,
+    `fixtures/${dehydratedInput.map((_) => createHash('sha1').update(jsonStringify(_)).digest('hex').slice(0, 6)).join('-')}.json`,
   )
 
   // Fetch cached fixture
   try {
-    const cached = jsonParse(
-      await readFile(filename, { encoding: 'utf8' }),
-    ) as { output: (AssistantMessage | StreamEvent)[] }
+    const cached = jsonParse(await readFile(filename, { encoding: 'utf8' })) as {
+      output: (AssistantMessage | StreamEvent)[]
+    }
     cached.output.forEach(addCachedCostToTotalSessionCost)
-    return cached.output.map((message, index) =>
-      mapMessage(message, hydrateValue, index, randomUUID()),
-    )
+    return cached.output.map((message, index) => mapMessage(message, hydrateValue, index, randomUUID()))
   } catch (e: unknown) {
     const code = getErrnoCode(e)
     if (code !== 'ENOENT') {
@@ -148,9 +128,7 @@ export async function withVCR(
     jsonStringify(
       {
         input: dehydratedInput,
-        output: results.map((message, index) =>
-          mapMessage(message, dehydrateValue, index),
-        ),
+        output: results.map((message, index) => mapMessage(message, dehydrateValue, index)),
       },
       null,
       2,
@@ -160,9 +138,7 @@ export async function withVCR(
   return results
 }
 
-function addCachedCostToTotalSessionCost(
-  message: AssistantMessage | StreamEvent,
-): void {
+function addCachedCostToTotalSessionCost(message: AssistantMessage | StreamEvent): void {
   if (message.type === 'stream_event') {
     return
   }
@@ -176,11 +152,11 @@ function mapMessages(
   messages: (UserMessage | AssistantMessage)['message']['content'][],
   f: (s: unknown) => unknown,
 ): (UserMessage | AssistantMessage)['message']['content'][] {
-  return messages.map(_ => {
+  return messages.map((_) => {
     if (typeof _ === 'string') {
       return f(_)
     }
-    return _.map(_ => {
+    return _.map((_) => {
       switch (_.type) {
         case 'tool_result':
           if (typeof _.content === 'string') {
@@ -189,7 +165,7 @@ function mapMessages(
           if (Array.isArray(_.content)) {
             return {
               ..._,
-              content: _.content.map(_ => {
+              content: _.content.map((_) => {
                 switch (_.type) {
                   case 'text':
                     return { ..._, text: f(_.text) }
@@ -226,7 +202,7 @@ function mapValuesDeep(
 ): Record<string, unknown> {
   return mapValues(obj, (val, key) => {
     if (Array.isArray(val)) {
-      return val.map(_ => mapValuesDeep(_, f))
+      return val.map((_) => mapValuesDeep(_, f))
     }
     if (isPlainObject(val)) {
       return mapValuesDeep(val as Record<string, unknown>, f)
@@ -252,7 +228,7 @@ function mapAssistantMessage(
     message: {
       ...message.message,
       content: message.message.content
-        .map(_ => {
+        .map((_) => {
           switch (_.type) {
             case 'text':
               return {
@@ -323,12 +299,8 @@ function dehydrateValue(s: unknown): unknown {
   // hashes match across platforms (e.g., [CWD]\foo\bar -> [CWD]/foo/bar)
   // Handle both single backslashes and JSON-escaped double backslashes (\\)
   s1 = s1
-    .replace(/\[CWD\][^\s"'<>]*/g, match =>
-      match.replaceAll('\\\\', '/').replaceAll('\\', '/'),
-    )
-    .replace(/\[CONFIG_HOME\][^\s"'<>]*/g, match =>
-      match.replaceAll('\\\\', '/').replaceAll('\\', '/'),
-    )
+    .replace(/\[CWD\][^\s"'<>]*/g, (match) => match.replaceAll('\\\\', '/').replaceAll('\\', '/'))
+    .replace(/\[CONFIG_HOME\][^\s"'<>]*/g, (match) => match.replaceAll('\\\\', '/').replaceAll('\\', '/'))
   if (s1.includes('Files modified by user:')) {
     return 'Files modified by user: [FILES]'
   }
@@ -348,14 +320,8 @@ function hydrateValue(s: unknown): unknown {
 
 export async function* withStreamingVCR(
   messages: Message[],
-  f: () => AsyncGenerator<
-    StreamEvent | AssistantMessage | SystemAPIErrorMessage,
-    void
-  >,
-): AsyncGenerator<
-  StreamEvent | AssistantMessage | SystemAPIErrorMessage,
-  void
-> {
+  f: () => AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void>,
+): AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void> {
   if (!shouldUseVCR()) {
     return yield* f()
   }
@@ -390,14 +356,9 @@ export async function withTokenCountVCR(
   // auto-memory path) and messages carry fresh UUIDs per run; without this,
   // every test run produces a new hash and fixtures never hit in CI.
   const cwdSlug = getCwd().replace(/[^a-zA-Z0-9]/g, '-')
-  const dehydrated = (
-    dehydrateValue(jsonStringify({ messages, tools })) as string
-  )
+  const dehydrated = (dehydrateValue(jsonStringify({ messages, tools })) as string)
     .replaceAll(cwdSlug, '[CWD_SLUG]')
-    .replace(
-      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
-      '[UUID]',
-    )
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[UUID]')
     .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?/g, '[TIMESTAMP]')
   const result = await withFixture(dehydrated, 'token-count', async () => ({
     tokenCount: await f(),

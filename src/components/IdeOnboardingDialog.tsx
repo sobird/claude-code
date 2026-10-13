@@ -1,5 +1,6 @@
 import React from 'react'
 import { envDynamic } from 'src/utils/envDynamic.js'
+
 import { Box, Text } from '../ink.js'
 import { useKeybindings } from '../keybindings/useKeybinding.js'
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
@@ -17,10 +18,7 @@ interface Props {
   installationStatus: IDEExtensionInstallationStatus | null
 }
 
-export function IdeOnboardingDialog({
-  onDone,
-  installationStatus,
-}: Props): React.ReactNode {
+export function IdeOnboardingDialog({ onDone, installationStatus }: Props): React.ReactNode {
   markDialogAsShown()
 
   // Handle Enter/Escape to dismiss
@@ -38,8 +36,7 @@ export function IdeOnboardingDialog({
   const ideName = toIDEDisplayName(ideType)
   const installedVersion = installationStatus?.installedVersion
   const pluginOrExtension = isJetBrains ? 'plugin' : 'extension'
-  const mentionShortcut =
-    env.platform === 'darwin' ? 'Cmd+Option+K' : 'Ctrl+Alt+K'
+  const mentionShortcut = env.platform === 'darwin' ? 'Cmd+Option+K' : 'Ctrl+Alt+K'
 
   return (
     <>
@@ -50,23 +47,18 @@ export function IdeOnboardingDialog({
             <Text>Welcome to Claude Code for {ideName}</Text>
           </>
         }
-        subtitle={
-          installedVersion
-            ? `installed ${pluginOrExtension} v${installedVersion}`
-            : undefined
-        }
+        subtitle={installedVersion ? `installed ${pluginOrExtension} v${installedVersion}` : undefined}
         color="ide"
         onCancel={onDone}
         hideInputGuide
       >
         <Box flexDirection="column" gap={1}>
           <Text>
-            • Claude has context of <Text color="suggestion">⧉ open files</Text>{' '}
-            and <Text color="suggestion">⧉ selected lines</Text>
+            • Claude has context of <Text color="suggestion">⧉ open files</Text> and{' '}
+            <Text color="suggestion">⧉ selected lines</Text>
           </Text>
           <Text>
-            • Review Claude Code&apos;s changes{' '}
-            <Text color="diffAddedWord">+11</Text>{' '}
+            • Review Claude Code&apos;s changes <Text color="diffAddedWord">+11</Text>{' '}
             <Text color="diffRemovedWord">-22</Text> in the comfort of your IDE
           </Text>
           <Text>
@@ -98,7 +90,7 @@ function markDialogAsShown(): void {
     return
   }
   const terminal = envDynamic.terminal || 'unknown'
-  saveGlobalConfig(current => ({
+  saveGlobalConfig((current) => ({
     ...current,
     hasIdeOnboardingBeenShown: {
       ...current.hasIdeOnboardingBeenShown,

@@ -22,6 +22,7 @@
 import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
+
 import { registerCleanup } from '../utils/cleanupRegistry.js'
 import { logForDebugging } from '../utils/debug.js'
 import { isEnvTruthy } from '../utils/envUtils.js'
@@ -95,10 +96,7 @@ export async function initUpstreamProxy(opts?: {
 
   const sessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID
   if (!sessionId) {
-    logForDebugging(
-      '[upstreamproxy] CLAUDE_CODE_REMOTE_SESSION_ID unset; proxy disabled',
-      { level: 'warn' },
-    )
+    logForDebugging('[upstreamproxy] CLAUDE_CODE_REMOTE_SESSION_ID unset; proxy disabled', { level: 'warn' })
     return state
   }
 
@@ -115,18 +113,10 @@ export async function initUpstreamProxy(opts?: {
   // sessionHandler.ts). getOauthConfig() is wrong here: it keys off
   // USER_TYPE + USE_{LOCAL,STAGING}_OAUTH, none of which the container sets,
   // so it always returned the prod URL and the CA fetch 404'd.
-  const baseUrl =
-    opts?.ccrBaseUrl ??
-    process.env.ANTHROPIC_BASE_URL ??
-    'https://api.anthropic.com'
-  const caBundlePath =
-    opts?.caBundlePath ?? join(homedir(), '.ccr', 'ca-bundle.crt')
+  const baseUrl = opts?.ccrBaseUrl ?? process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com'
+  const caBundlePath = opts?.caBundlePath ?? join(homedir(), '.ccr', 'ca-bundle.crt')
 
-  const caOk = await downloadCaBundle(
-    baseUrl,
-    opts?.systemCaPath ?? SYSTEM_CA_BUNDLE,
-    caBundlePath,
-  )
+  const caOk = await downloadCaBundle(baseUrl, opts?.systemCaPath ?? SYSTEM_CA_BUNDLE, caBundlePath)
   if (!caOk) return state
 
   try {
@@ -209,10 +199,9 @@ async function readToken(path: string): Promise<string | null> {
     return raw.trim() || null
   } catch (err) {
     if (isENOENT(err)) return null
-    logForDebugging(
-      `[upstreamproxy] token read failed: ${err instanceof Error ? err.message : String(err)}`,
-      { level: 'warn' },
-    )
+    logForDebugging(`[upstreamproxy] token read failed: ${err instanceof Error ? err.message : String(err)}`, {
+      level: 'warn',
+    })
     return null
   }
 }
@@ -236,26 +225,18 @@ function setNonDumpable(): void {
     const PR_SET_DUMPABLE = 4
     const rc = lib.symbols.prctl(PR_SET_DUMPABLE, 0n, 0n, 0n, 0n)
     if (rc !== 0) {
-      logForDebugging(
-        '[upstreamproxy] prctl(PR_SET_DUMPABLE,0) returned nonzero',
-        {
-          level: 'warn',
-        },
-      )
+      logForDebugging('[upstreamproxy] prctl(PR_SET_DUMPABLE,0) returned nonzero', {
+        level: 'warn',
+      })
     }
   } catch (err) {
-    logForDebugging(
-      `[upstreamproxy] prctl unavailable: ${err instanceof Error ? err.message : String(err)}`,
-      { level: 'warn' },
-    )
+    logForDebugging(`[upstreamproxy] prctl unavailable: ${err instanceof Error ? err.message : String(err)}`, {
+      level: 'warn',
+    })
   }
 }
 
-async function downloadCaBundle(
-  baseUrl: string,
-  systemCaPath: string,
-  outPath: string,
-): Promise<boolean> {
+async function downloadCaBundle(baseUrl: string, systemCaPath: string, outPath: string): Promise<boolean> {
   try {
     // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
     const resp = await fetch(`${baseUrl}/v1/code/upstreamproxy/ca-cert`, {
@@ -264,10 +245,7 @@ async function downloadCaBundle(
       signal: AbortSignal.timeout(5000),
     })
     if (!resp.ok) {
-      logForDebugging(
-        `[upstreamproxy] ca-cert fetch ${resp.status}; proxy disabled`,
-        { level: 'warn' },
-      )
+      logForDebugging(`[upstreamproxy] ca-cert fetch ${resp.status}; proxy disabled`, { level: 'warn' })
       return false
     }
     const ccrCa = await resp.text()

@@ -11,10 +11,7 @@ import {
   resolveAgentModelDisplay,
   resolveAgentOverrides,
 } from '../../tools/AgentTool/agentDisplay.js'
-import {
-  getActiveAgentsFromList,
-  getAgentDefinitionsWithOverrides,
-} from '../../tools/AgentTool/loadAgentsDir.js'
+import { getActiveAgentsFromList, getAgentDefinitionsWithOverrides } from '../../tools/AgentTool/loadAgentsDir.js'
 import { getCwd } from '../../utils/cwd.js'
 
 function formatAgent(agent: ResolvedAgent): string {
@@ -39,9 +36,7 @@ export async function agentsHandler(): Promise<void> {
   let totalActive = 0
 
   for (const { label, source } of AGENT_SOURCE_GROUPS) {
-    const groupAgents = resolvedAgents
-      .filter(a => a.source === source)
-      .sort(compareAgentsByName)
+    const groupAgents = resolvedAgents.filter((a) => a.source === source).sort(compareAgentsByName)
 
     if (groupAgents.length === 0) continue
 

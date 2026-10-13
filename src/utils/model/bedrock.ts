@@ -1,12 +1,11 @@
 import memoize from 'lodash-es/memoize.js'
+
 import { refreshAndGetAwsCredentials } from '../auth.js'
 import { getAWSRegion, isEnvTruthy } from '../envUtils.js'
 import { logError } from '../log.js'
 import { getAWSClientProxyConfig } from '../proxy.js'
 
-export const getBedrockInferenceProfiles = memoize(async function (): Promise<
-  string[]
-> {
+export const getBedrockInferenceProfiles = memoize(async function (): Promise<string[]> {
   const [client, { ListInferenceProfilesCommand }] = await Promise.all([
     createBedrockClient(),
     import('@aws-sdk/client-bedrock'),
@@ -31,8 +30,8 @@ export const getBedrockInferenceProfiles = memoize(async function (): Promise<
 
     // Filter for Anthropic models (SYSTEM_DEFINED filtering handled in query)
     return allProfiles
-      .filter(profile => profile.inferenceProfileId?.includes('anthropic'))
-      .map(profile => profile.inferenceProfileId)
+      .filter((profile) => profile.inferenceProfileId?.includes('anthropic'))
+      .map((profile) => profile.inferenceProfileId)
       .filter(Boolean) as string[]
   } catch (error) {
     logError(error as Error)
@@ -40,11 +39,8 @@ export const getBedrockInferenceProfiles = memoize(async function (): Promise<
   }
 })
 
-export function findFirstMatch(
-  profiles: string[],
-  substring: string,
-): string | null {
-  return profiles.find(p => p.includes(substring)) ?? null
+export function findFirstMatch(profiles: string[], substring: string): string | null {
+  return profiles.find((p) => p.includes(substring)) ?? null
 }
 
 async function createBedrockClient() {
@@ -64,9 +60,7 @@ async function createBedrockClient() {
     }),
     ...(await getAWSClientProxyConfig()),
     ...(skipAuth && {
-      requestHandler: new (
-        await import('@smithy/node-http-handler')
-      ).NodeHttpHandler(),
+      requestHandler: new (await import('@smithy/node-http-handler')).NodeHttpHandler(),
       httpAuthSchemes: [
         {
           schemeId: 'smithy.api#noAuth',
@@ -94,9 +88,7 @@ async function createBedrockClient() {
 }
 
 export async function createBedrockRuntimeClient() {
-  const { BedrockRuntimeClient } = await import(
-    '@aws-sdk/client-bedrock-runtime'
-  )
+  const { BedrockRuntimeClient } = await import('@aws-sdk/client-bedrock-runtime')
   const region = getAWSRegion()
   const skipAuth = isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH)
 
@@ -109,9 +101,7 @@ export async function createBedrockRuntimeClient() {
     ...(skipAuth && {
       // BedrockRuntimeClient defaults to HTTP/2 without fallback
       // proxy servers may not support this, so we explicitly force HTTP/1.1
-      requestHandler: new (
-        await import('@smithy/node-http-handler')
-      ).NodeHttpHandler(),
+      requestHandler: new (await import('@smithy/node-http-handler')).NodeHttpHandler(),
       httpAuthSchemes: [
         {
           schemeId: 'smithy.api#noAuth',
@@ -138,9 +128,7 @@ export async function createBedrockRuntimeClient() {
   return new BedrockRuntimeClient(clientConfig)
 }
 
-export const getInferenceProfileBackingModel = memoize(async function (
-  profileId: string,
-): Promise<string | null> {
+export const getInferenceProfileBackingModel = memoize(async function (profileId: string): Promise<string | null> {
   try {
     const [client, { GetInferenceProfileCommand }] = await Promise.all([
       createBedrockClient(),
@@ -166,9 +154,7 @@ export const getInferenceProfileBackingModel = memoize(async function (
     // Extract model name from ARN
     // ARN format: arn:aws:bedrock:region:account:foundation-model/model-name
     const lastSlashIndex = primaryModel.modelArn.lastIndexOf('/')
-    return lastSlashIndex >= 0
-      ? primaryModel.modelArn.substring(lastSlashIndex + 1)
-      : primaryModel.modelArn
+    return lastSlashIndex >= 0 ? primaryModel.modelArn.substring(lastSlashIndex + 1) : primaryModel.modelArn
   } catch (error) {
     logError(error as Error)
     return null
@@ -219,9 +205,7 @@ export type BedrockRegionPrefix = (typeof BEDROCK_REGION_PREFIXES)[number]
  * - "anthropic.claude-3-5-sonnet-20241022-v2:0" → undefined (foundation model)
  * - "claude-sonnet-4-5-20250929" → undefined (first-party format)
  */
-export function getBedrockRegionPrefix(
-  modelId: string,
-): BedrockRegionPrefix | undefined {
+export function getBedrockRegionPrefix(modelId: string): BedrockRegionPrefix | undefined {
   // Extract the inference profile ID from ARN format if present
   // ARN format: arn:aws:bedrock:<region>:<account>:inference-profile/<profile-id>
   const effectiveModelId = extractModelIdFromArn(modelId)
@@ -245,10 +229,7 @@ export function getBedrockRegionPrefix(
  * - applyBedrockRegionPrefix("anthropic.claude-sonnet-4-5-v1:0", "eu") → "eu.anthropic.claude-sonnet-4-5-v1:0"
  * - applyBedrockRegionPrefix("claude-sonnet-4-5-20250929", "eu") → "claude-sonnet-4-5-20250929" (not a Bedrock model)
  */
-export function applyBedrockRegionPrefix(
-  modelId: string,
-  prefix: BedrockRegionPrefix,
-): string {
+export function applyBedrockRegionPrefix(modelId: string, prefix: BedrockRegionPrefix): string {
   // Check if it already has a region prefix and replace it
   const existingPrefix = getBedrockRegionPrefix(modelId)
   if (existingPrefix) {

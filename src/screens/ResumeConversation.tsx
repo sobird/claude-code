@@ -1,23 +1,22 @@
 import { feature } from 'bun:bundle'
 import { dirname } from 'path'
+
 import React from 'react'
 import { useTerminalSize } from 'src/hooks/useTerminalSize.js'
+
 import { getOriginalCwd, switchSession } from '../bootstrap/state.js'
 import type { Command } from '../commands.js'
 import { LogSelector } from '../components/LogSelector.js'
 import { Spinner } from '../components/Spinner.js'
 import { restoreCostStateForSession } from '../cost-tracker.js'
-import { setClipboard } from '../ink/termio/osc.js'
 import { Box, Text } from '../ink.js'
+import { setClipboard } from '../ink/termio/osc.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../services/analytics/index.js'
-import type {
-  MCPServerConnection,
-  ScopedMcpServerConfig,
-} from '../services/mcp/types.js'
+import type { MCPServerConnection, ScopedMcpServerConfig } from '../services/mcp/types.js'
 import { useAppState, useSetAppState } from '../state/AppState.js'
 import type { Tool } from '../Tool.js'
 import type { AgentColorName } from '../tools/AgentTool/agentColorManager.js'
@@ -107,7 +106,7 @@ export function ResumeConversation({
   onTurnComplete,
 }: Props): React.ReactNode {
   const { rows } = useTerminalSize()
-  const agentDefinitions = useAppState(s => s.agentDefinitions)
+  const agentDefinitions = useAppState((s) => s.agentDefinitions)
   const setAppState = useSetAppState()
   const [logs, setLogs] = React.useState<LogOption[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -121,25 +120,23 @@ export function ResumeConversation({
     agentColor?: AgentColorName
     mainThreadAgentDefinition?: AgentDefinition
   } | null>(null)
-  const [crossProjectCommand, setCrossProjectCommand] = React.useState<
-    string | null
-  >(null)
+  const [crossProjectCommand, setCrossProjectCommand] = React.useState<string | null>(null)
   const sessionLogResultRef = React.useRef<SessionLogResult | null>(null)
   // Mirror of logs.length so loadMoreLogs can compute value indices outside
   // the setLogs updater (keeping it pure per React's contract).
   const logCountRef = React.useRef(0)
 
   const filteredLogs = React.useMemo(() => {
-    let result = logs.filter(l => !l.isSidechain)
+    let result = logs.filter((l) => !l.isSidechain)
     if (filterByPr !== undefined) {
       if (filterByPr === true) {
-        result = result.filter(l => l.prNumber !== undefined)
+        result = result.filter((l) => l.prNumber !== undefined)
       } else if (typeof filterByPr === 'number') {
-        result = result.filter(l => l.prNumber === filterByPr)
+        result = result.filter((l) => l.prNumber === filterByPr)
       } else if (typeof filterByPr === 'string') {
         const prNumber = parsePrIdentifier(filterByPr)
         if (prNumber !== null) {
-          result = result.filter(l => l.prNumber === prNumber)
+          result = result.filter((l) => l.prNumber === prNumber)
         }
       }
     }
@@ -149,13 +146,13 @@ export function ResumeConversation({
 
   React.useEffect(() => {
     loadSameRepoMessageLogsProgressive(worktreePaths)
-      .then(result => {
+      .then((result) => {
         sessionLogResultRef.current = result
         logCountRef.current = result.logs.length
         setLogs(result.logs)
         setLoading(false)
       })
-      .catch(error => {
+      .catch((error) => {
         logError(error)
         setLoading(false)
       })
@@ -165,7 +162,7 @@ export function ResumeConversation({
     const ref = sessionLogResultRef.current
     if (!ref || ref.nextIndex >= ref.allStatLogs.length) return
 
-    void enrichLogs(ref.allStatLogs, ref.nextIndex, count).then(result => {
+    void enrichLogs(ref.allStatLogs, ref.nextIndex, count).then((result) => {
       ref.nextIndex = result.nextIndex
       if (result.logs.length > 0) {
         // enrichLogs returns fresh unshared objects — safe to mutate in place.
@@ -174,7 +171,7 @@ export function ResumeConversation({
         result.logs.forEach((log, i) => {
           log.value = offset + i
         })
-        setLogs(prev => prev.concat(result.logs))
+        setLogs((prev) => prev.concat(result.logs))
         logCountRef.current += result.logs.length
       } else if (ref.nextIndex < ref.allStatLogs.length) {
         loadMoreLogs(count)
@@ -189,12 +186,12 @@ export function ResumeConversation({
         ? loadAllProjectsMessageLogsProgressive()
         : loadSameRepoMessageLogsProgressive(worktreePaths)
       promise
-        .then(result => {
+        .then((result) => {
           sessionLogResultRef.current = result
           logCountRef.current = result.logs.length
           setLogs(result.logs)
         })
-        .catch(error => {
+        .catch((error) => {
           logError(error)
         })
         .finally(() => {
@@ -219,11 +216,7 @@ export function ResumeConversation({
     setResuming(true)
     const resumeStart = performance.now()
 
-    const crossProjectCheck = checkCrossProjectResume(
-      log,
-      showAllProjects,
-      worktreePaths,
-    )
+    const crossProjectCheck = checkCrossProjectResume(log, showAllProjects, worktreePaths)
     if (crossProjectCheck.isCrossProject) {
       if (!crossProjectCheck.isSameRepoWorktree) {
         const raw = await setClipboard(crossProjectCheck.command)
@@ -251,10 +244,8 @@ export function ResumeConversation({
             require('../tools/AgentTool/loadAgentsDir.js') as typeof import('../tools/AgentTool/loadAgentsDir.js')
           /* eslint-enable @typescript-eslint/no-require-imports */
           getAgentDefinitionsWithOverrides.cache.clear?.()
-          const freshAgentDefs = await getAgentDefinitionsWithOverrides(
-            getOriginalCwd(),
-          )
-          setAppState(prev => ({
+          const freshAgentDefs = await getAgentDefinitionsWithOverrides(getOriginalCwd())
+          setAppState((prev) => ({
             ...prev,
             agentDefinitions: {
               ...freshAgentDefs,
@@ -267,10 +258,7 @@ export function ResumeConversation({
       }
 
       if (result.sessionId && !forkSession) {
-        switchSession(
-          asSessionId(result.sessionId),
-          log.fullPath ? dirname(log.fullPath) : null,
-        )
+        switchSession(asSessionId(result.sessionId), log.fullPath ? dirname(log.fullPath) : null)
         await renameRecordingForSession()
         await resetSessionFilePointer()
         restoreCostStateForSession(result.sessionId)
@@ -283,7 +271,7 @@ export function ResumeConversation({
         mainThreadAgentDefinition,
         agentDefinitions,
       )
-      setAppState(prev => ({ ...prev, agent: resolvedAgentDef?.agentType }))
+      setAppState((prev) => ({ ...prev, agent: resolvedAgentDef?.agentType }))
 
       if (feature('COORDINATOR_MODE')) {
         /* eslint-disable @typescript-eslint/no-require-imports */
@@ -294,18 +282,13 @@ export function ResumeConversation({
         saveMode(isCoordinatorMode() ? 'coordinator' : 'normal')
       }
 
-      const standaloneAgentContext = computeStandaloneAgentContext(
-        result.agentName,
-        result.agentColor,
-      )
+      const standaloneAgentContext = computeStandaloneAgentContext(result.agentName, result.agentColor)
       if (standaloneAgentContext) {
-        setAppState(prev => ({ ...prev, standaloneAgentContext }))
+        setAppState((prev) => ({ ...prev, standaloneAgentContext }))
       }
       void updateSessionName(result.agentName)
 
-      restoreSessionMetadata(
-        forkSession ? { ...result, worktreeSession: undefined } : result,
-      )
+      restoreSessionMetadata(forkSession ? { ...result, worktreeSession: undefined } : result)
 
       if (!forkSession) {
         restoreWorktreeForResume(result.worktreeSession)
@@ -318,16 +301,12 @@ export function ResumeConversation({
         /* eslint-disable @typescript-eslint/no-require-imports */
         ;(
           require('../services/contextCollapse/persist.js') as typeof import('../services/contextCollapse/persist.js')
-        ).restoreFromEntries(
-          result.contextCollapseCommits ?? [],
-          result.contextCollapseSnapshot,
-        )
+        ).restoreFromEntries(result.contextCollapseCommits ?? [], result.contextCollapseSnapshot)
         /* eslint-enable @typescript-eslint/no-require-imports */
       }
 
       logEvent('tengu_session_resumed', {
-        entrypoint:
-          'picker' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        entrypoint: 'picker' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         success: true,
         resume_duration_ms: Math.round(performance.now() - resumeStart),
       })
@@ -338,15 +317,12 @@ export function ResumeConversation({
         fileHistorySnapshots: result.fileHistorySnapshots,
         contentReplacements: result.contentReplacements,
         agentName: result.agentName,
-        agentColor: (result.agentColor === 'default'
-          ? undefined
-          : result.agentColor) as AgentColorName | undefined,
+        agentColor: (result.agentColor === 'default' ? undefined : result.agentColor) as AgentColorName | undefined,
         mainThreadAgentDefinition: resolvedAgentDef,
       })
     } catch (e) {
       logEvent('tengu_session_resumed', {
-        entrypoint:
-          'picker' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        entrypoint: 'picker' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         success: false,
       })
       logError(e as Error)
@@ -412,9 +388,7 @@ export function ResumeConversation({
       maxHeight={rows}
       onCancel={onCancel}
       onSelect={onSelect}
-      onLogsChanged={
-        isResumeWithRenameEnabled ? () => loadLogs(showAllProjects) : undefined
-      }
+      onLogsChanged={isResumeWithRenameEnabled ? () => loadLogs(showAllProjects) : undefined}
       onLoadMore={loadMoreLogs}
       initialSearchQuery={initialSearchQuery}
       showAllProjects={showAllProjects}
@@ -442,11 +416,7 @@ function NoConversationsMessage(): React.ReactNode {
   )
 }
 
-function CrossProjectMessage({
-  command,
-}: {
-  command: string
-}): React.ReactNode {
+function CrossProjectMessage({ command }: { command: string }): React.ReactNode {
   React.useEffect(() => {
     const timeout = setTimeout(() => {
       // eslint-disable-next-line custom-rules/no-process-exit

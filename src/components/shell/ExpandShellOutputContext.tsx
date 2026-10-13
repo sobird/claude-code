@@ -10,16 +10,8 @@ import { useContext } from 'react'
  */
 const ExpandShellOutputContext = React.createContext(false)
 
-export function ExpandShellOutputProvider({
-  children,
-}: {
-  children: React.ReactNode
-}): React.ReactNode {
-  return (
-    <ExpandShellOutputContext.Provider value={true}>
-      {children}
-    </ExpandShellOutputContext.Provider>
-  )
+export function ExpandShellOutputProvider({ children }: { children: React.ReactNode }): React.ReactNode {
+  return <ExpandShellOutputContext.Provider value={true}>{children}</ExpandShellOutputContext.Provider>
 }
 
 /**

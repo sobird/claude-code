@@ -1,20 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+
 import { BoundedUUIDSet } from '../bridge/bridgeMessaging.js'
 import type { ToolUseConfirm } from '../components/permissions/PermissionRequest.js'
 import type { SpinnerMode } from '../components/Spinner/types.js'
+import { createSyntheticAssistantMessage, createToolStub } from '../remote/remotePermissionBridge.js'
 import {
   type RemotePermissionResponse,
   type RemoteSessionConfig,
   RemoteSessionManager,
 } from '../remote/RemoteSessionManager.js'
-import {
-  createSyntheticAssistantMessage,
-  createToolStub,
-} from '../remote/remotePermissionBridge.js'
-import {
-  convertSDKMessage,
-  isSessionEndMessage,
-} from '../remote/sdkMessageAdapter.js'
+import { convertSDKMessage, isSessionEndMessage } from '../remote/sdkMessageAdapter.js'
 import { useSetAppState } from '../state/AppState.js'
 import type { AppState } from '../state/AppStateStore.js'
 import type { Tool } from '../Tool.js'
@@ -47,19 +42,14 @@ type UseRemoteSessionProps = {
   onInit?: (slashCommands: string[]) => void
   setToolUseConfirmQueue: React.Dispatch<React.SetStateAction<ToolUseConfirm[]>>
   tools: Tool[]
-  setStreamingToolUses?: React.Dispatch<
-    React.SetStateAction<StreamingToolUse[]>
-  >
+  setStreamingToolUses?: React.Dispatch<React.SetStateAction<StreamingToolUse[]>>
   setStreamMode?: React.Dispatch<React.SetStateAction<SpinnerMode>>
   setInProgressToolUseIDs?: (f: (prev: Set<string>) => Set<string>) => void
 }
 
 type UseRemoteSessionResult = {
   isRemoteMode: boolean
-  sendMessage: (
-    content: RemoteMessageContent,
-    opts?: { uuid?: string },
-  ) => Promise<boolean>
+  sendMessage: (content: RemoteMessageContent, opts?: { uuid?: string }) => Promise<boolean>
   cancelRequest: () => void
   disconnect: () => void
 }
@@ -89,11 +79,7 @@ export function useRemoteSession({
   const setAppState = useSetAppState()
   const setConnStatus = useCallback(
     (s: AppState['remoteConnectionStatus']) =>
-      setAppState(prev =>
-        prev.remoteConnectionStatus === s
-          ? prev
-          : { ...prev, remoteConnectionStatus: s },
-      ),
+      setAppState((prev) => (prev.remoteConnectionStatus === s ? prev : { ...prev, remoteConnectionStatus: s })),
     [setAppState],
   )
 
@@ -103,11 +89,7 @@ export function useRemoteSession({
   const runningTaskIdsRef = useRef(new Set<string>())
   const writeTaskCount = useCallback(() => {
     const n = runningTaskIdsRef.current.size
-    setAppState(prev =>
-      prev.remoteBackgroundTaskCount === n
-        ? prev
-        : { ...prev, remoteBackgroundTaskCount: n },
-    )
+    setAppState((prev) => (prev.remoteBackgroundTaskCount === n ? prev : { ...prev, remoteBackgroundTaskCount: n }))
   }, [setAppState])
 
   // Timer for detecting stuck sessions
@@ -149,19 +131,15 @@ export function useRemoteSession({
       return
     }
 
-    logForDebugging(
-      `[useRemoteSession] Initializing for session ${config.sessionId}`,
-    )
+    logForDebugging(`[useRemoteSession] Initializing for session ${config.sessionId}`)
 
     const manager = new RemoteSessionManager(config, {
-      onMessage: sdkMessage => {
+      onMessage: (sdkMessage) => {
         const parts = [`type=${sdkMessage.type}`]
         if ('subtype' in sdkMessage) parts.push(`subtype=${sdkMessage.subtype}`)
         if (sdkMessage.type === 'user') {
           const c = sdkMessage.message?.content
-          parts.push(
-            `content=${Array.isArray(c) ? c.map(b => b.type).join(',') : typeof c}`,
-          )
+          parts.push(`content=${Array.isArray(c) ? c.map((b) => b.type).join(',') : typeof c}`)
         }
         logForDebugging(`[useRemoteSession] Received ${parts.join(' ')}`)
 
@@ -179,25 +157,13 @@ export function useRemoteSession({
         // the same uuid we passed to sendEventToRemoteSession. DO NOT delete on
         // match — the same uuid can echo more than once (server broadcast +
         // worker echo), and BoundedUUIDSet already caps growth via its ring.
-        if (
-          sdkMessage.type === 'user' &&
-          sdkMessage.uuid &&
-          sentUUIDsRef.current.has(sdkMessage.uuid)
-        ) {
-          logForDebugging(
-            `[useRemoteSession] Dropping echoed user message ${sdkMessage.uuid}`,
-          )
+        if (sdkMessage.type === 'user' && sdkMessage.uuid && sentUUIDsRef.current.has(sdkMessage.uuid)) {
+          logForDebugging(`[useRemoteSession] Dropping echoed user message ${sdkMessage.uuid}`)
           return
         }
         // Handle init message - extract available slash commands
-        if (
-          sdkMessage.type === 'system' &&
-          sdkMessage.subtype === 'init' &&
-          onInit
-        ) {
-          logForDebugging(
-            `[useRemoteSession] Init received with ${sdkMessage.slash_commands.length} slash commands`,
-          )
+        if (sdkMessage.type === 'system' && sdkMessage.subtype === 'init' && onInit) {
+          logForDebugging(`[useRemoteSession] Init received with ${sdkMessage.slash_commands.length} slash commands`)
           onInit(sdkMessage.slash_commands)
         }
 
@@ -257,7 +223,7 @@ export function useRemoteSession({
               }
             }
             if (resultIds.length > 0) {
-              setInProgressToolUseIDs(prev => {
+              setInProgressToolUseIDs((prev) => {
                 const next = new Set(prev)
                 for (const id of resultIds) next.delete(id)
                 return next.size === prev.size ? prev : next
@@ -272,29 +238,24 @@ export function useRemoteSession({
         // tool_result. So we must convert tool_results to render them.
         const converted = convertSDKMessage(
           sdkMessage,
-          config.viewerOnly
-            ? { convertToolResults: true, convertUserTextMessages: true }
-            : undefined,
+          config.viewerOnly ? { convertToolResults: true, convertUserTextMessages: true } : undefined,
         )
 
         if (converted.type === 'message') {
           // When we receive a complete message, clear streaming tool uses
           // since the complete message replaces the partial streaming state
-          setStreamingToolUses?.(prev => (prev.length > 0 ? [] : prev))
+          setStreamingToolUses?.((prev) => (prev.length > 0 ? [] : prev))
 
           // Mark tool_use blocks as in-progress so the UI shows the correct
           // spinner state instead of "Waiting…" (queued). In local sessions,
           // toolOrchestration.ts handles this, but remote sessions receive
           // pre-built assistant messages without running local tool execution.
-          if (
-            setInProgressToolUseIDs &&
-            converted.message.type === 'assistant'
-          ) {
+          if (setInProgressToolUseIDs && converted.message.type === 'assistant') {
             const toolUseIds = converted.message.message.content
-              .filter(block => block.type === 'tool_use')
-              .map(block => block.id)
+              .filter((block) => block.type === 'tool_use')
+              .map((block) => block.id)
             if (toolUseIds.length > 0) {
-              setInProgressToolUseIDs(prev => {
+              setInProgressToolUseIDs((prev) => {
                 const next = new Set(prev)
                 for (const id of toolUseIds) {
                   next.add(id)
@@ -304,7 +265,7 @@ export function useRemoteSession({
             }
           }
 
-          setMessages(prev => [...prev, converted.message])
+          setMessages((prev) => [...prev, converted.message])
           // Note: Don't stop loading on assistant messages - the agent may still be
           // working (tool use loops). Loading stops only on session end or permission request.
         } else if (converted.type === 'stream_event') {
@@ -312,7 +273,7 @@ export function useRemoteSession({
           if (setStreamingToolUses && setStreamMode) {
             handleMessageFromStream(
               converted.event,
-              message => setMessages(prev => [...prev, message]),
+              (message) => setMessages((prev) => [...prev, message]),
               () => {
                 // No-op for response length - remote sessions don't track this
               },
@@ -320,32 +281,22 @@ export function useRemoteSession({
               setStreamingToolUses,
             )
           } else {
-            logForDebugging(
-              `[useRemoteSession] Stream event received but streaming callbacks not provided`,
-            )
+            logForDebugging(`[useRemoteSession] Stream event received but streaming callbacks not provided`)
           }
         }
         // 'ignored' messages are silently dropped
       },
       onPermissionRequest: (request, requestId) => {
-        logForDebugging(
-          `[useRemoteSession] Permission request for tool: ${request.tool_name}`,
-        )
+        logForDebugging(`[useRemoteSession] Permission request for tool: ${request.tool_name}`)
 
         // Look up the Tool object by name, or create a stub for unknown tools
-        const tool =
-          findToolByName(toolsRef.current, request.tool_name) ??
-          createToolStub(request.tool_name)
+        const tool = findToolByName(toolsRef.current, request.tool_name) ?? createToolStub(request.tool_name)
 
-        const syntheticMessage = createSyntheticAssistantMessage(
-          request,
-          requestId,
-        )
+        const syntheticMessage = createSyntheticAssistantMessage(request, requestId)
 
         const permissionResult: PermissionAskDecision = {
           behavior: 'ask',
-          message:
-            request.description ?? `${request.tool_name} requires permission`,
+          message: request.description ?? `${request.tool_name} requires permission`,
           suggestions: request.permission_suggestions,
           blockedPath: request.blocked_path,
         }
@@ -353,8 +304,7 @@ export function useRemoteSession({
         const toolUseConfirm: ToolUseConfirm = {
           assistantMessage: syntheticMessage,
           tool,
-          description:
-            request.description ?? `${request.tool_name} requires permission`,
+          description: request.description ?? `${request.tool_name} requires permission`,
           input: request.input,
           toolUseContext: {} as ToolUseConfirm['toolUseContext'],
           toolUseID: request.tool_use_id,
@@ -369,9 +319,7 @@ export function useRemoteSession({
               message: 'User aborted',
             }
             manager.respondToPermissionRequest(requestId, response)
-            setToolUseConfirmQueue(queue =>
-              queue.filter(item => item.toolUseID !== request.tool_use_id),
-            )
+            setToolUseConfirmQueue((queue) => queue.filter((item) => item.toolUseID !== request.tool_use_id))
           },
           onAllow(updatedInput, _permissionUpdates, _feedback) {
             const response: RemotePermissionResponse = {
@@ -379,9 +327,7 @@ export function useRemoteSession({
               updatedInput,
             }
             manager.respondToPermissionRequest(requestId, response)
-            setToolUseConfirmQueue(queue =>
-              queue.filter(item => item.toolUseID !== request.tool_use_id),
-            )
+            setToolUseConfirmQueue((queue) => queue.filter((item) => item.toolUseID !== request.tool_use_id))
             // Resume loading indicator after approving
             setIsLoading(true)
           },
@@ -391,27 +337,21 @@ export function useRemoteSession({
               message: feedback ?? 'User denied permission',
             }
             manager.respondToPermissionRequest(requestId, response)
-            setToolUseConfirmQueue(queue =>
-              queue.filter(item => item.toolUseID !== request.tool_use_id),
-            )
+            setToolUseConfirmQueue((queue) => queue.filter((item) => item.toolUseID !== request.tool_use_id))
           },
           async recheckPermission() {
             // No-op for remote — permission state is on the container
           },
         }
 
-        setToolUseConfirmQueue(queue => [...queue, toolUseConfirm])
+        setToolUseConfirmQueue((queue) => [...queue, toolUseConfirm])
         // Pause loading indicator while waiting for permission
         setIsLoading(false)
       },
       onPermissionCancelled: (requestId, toolUseId) => {
-        logForDebugging(
-          `[useRemoteSession] Permission request cancelled: ${requestId}`,
-        )
+        logForDebugging(`[useRemoteSession] Permission request cancelled: ${requestId}`)
         const idToRemove = toolUseId ?? requestId
-        setToolUseConfirmQueue(queue =>
-          queue.filter(item => item.toolUseID !== idToRemove),
-        )
+        setToolUseConfirmQueue((queue) => queue.filter((item) => item.toolUseID !== idToRemove))
         setIsLoading(true)
       },
       onConnected: () => {
@@ -427,7 +367,7 @@ export function useRemoteSession({
         writeTaskCount()
         // Same for tool_use IDs: missed tool_result during the gap would
         // leave stale spinner state forever.
-        setInProgressToolUseIDs?.(prev => (prev.size > 0 ? new Set() : prev))
+        setInProgressToolUseIDs?.((prev) => (prev.size > 0 ? new Set() : prev))
       },
       onDisconnected: () => {
         logForDebugging('[useRemoteSession] Disconnected')
@@ -435,9 +375,9 @@ export function useRemoteSession({
         setIsLoading(false)
         runningTaskIdsRef.current.clear()
         writeTaskCount()
-        setInProgressToolUseIDs?.(prev => (prev.size > 0 ? new Set() : prev))
+        setInProgressToolUseIDs?.((prev) => (prev.size > 0 ? new Set() : prev))
       },
-      onError: error => {
+      onError: (error) => {
         logForDebugging(`[useRemoteSession] Error: ${error.message}`)
       },
     })
@@ -470,10 +410,7 @@ export function useRemoteSession({
 
   // Send a user message to the remote session
   const sendMessage = useCallback(
-    async (
-      content: RemoteMessageContent,
-      opts?: { uuid?: string },
-    ): Promise<boolean> => {
+    async (content: RemoteMessageContent, opts?: { uuid?: string }): Promise<boolean> => {
       const manager = managerRef.current
       if (!manager) {
         logForDebugging('[useRemoteSession] Cannot send - no manager')
@@ -503,30 +440,16 @@ export function useRemoteSession({
       // Update the session title after the first message when no initial prompt was provided.
       // This gives the session a meaningful title on claude.ai instead of "Background task".
       // Skip in viewerOnly mode — the remote agent owns the session title.
-      if (
-        !hasUpdatedTitleRef.current &&
-        config &&
-        !config.hasInitialPrompt &&
-        !config.viewerOnly
-      ) {
+      if (!hasUpdatedTitleRef.current && config && !config.hasInitialPrompt && !config.viewerOnly) {
         hasUpdatedTitleRef.current = true
         const sessionId = config.sessionId
         // Extract plain text from content (may be string or content block array)
-        const description =
-          typeof content === 'string'
-            ? content
-            : extractTextContent(content, ' ')
+        const description = typeof content === 'string' ? content : extractTextContent(content, ' ')
         if (description) {
           // generateSessionTitle never rejects (wraps body in try/catch,
           // returns null on failure), so no .catch needed on this chain.
-          void generateSessionTitle(
-            description,
-            new AbortController().signal,
-          ).then(title => {
-            void updateSessionTitle(
-              sessionId,
-              title ?? truncateToWidth(description, 75),
-            )
+          void generateSessionTitle(description, new AbortController().signal).then((title) => {
+            void updateSessionTitle(sessionId, title ?? truncateToWidth(description, 75))
           })
         }
       }
@@ -536,20 +459,16 @@ export function useRemoteSession({
       // Use a longer timeout when the remote session is compacting, since
       // the CLI worker is busy with an API call and won't emit messages.
       if (!config?.viewerOnly) {
-        const timeoutMs = isCompactingRef.current
-          ? COMPACTION_TIMEOUT_MS
-          : RESPONSE_TIMEOUT_MS
+        const timeoutMs = isCompactingRef.current ? COMPACTION_TIMEOUT_MS : RESPONSE_TIMEOUT_MS
         responseTimeoutRef.current = setTimeout(
           (setMessages, manager) => {
-            logForDebugging(
-              '[useRemoteSession] Response timeout - attempting reconnect',
-            )
+            logForDebugging('[useRemoteSession] Response timeout - attempting reconnect')
             // Add a warning message to the conversation
             const warningMessage = createSystemMessage(
               'Remote session may be unresponsive. Attempting to reconnect…',
               'warning',
             )
-            setMessages(prev => [...prev, warningMessage])
+            setMessages((prev) => [...prev, warningMessage])
 
             // Attempt to reconnect the WebSocket - the subscription may have become stale
             manager.reconnect()

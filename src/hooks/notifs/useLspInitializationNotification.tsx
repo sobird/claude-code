@@ -1,12 +1,10 @@
 import * as React from 'react'
 import { useInterval } from 'usehooks-ts'
+
 import { getIsRemoteMode, getIsScrollDraining } from '../../bootstrap/state.js'
 import { useNotifications } from '../../context/notifications.js'
 import { Text } from '../../ink.js'
-import {
-  getInitializationStatus,
-  getLspServerManager,
-} from '../../services/lsp/manager.js'
+import { getInitializationStatus, getLspServerManager } from '../../services/lsp/manager.js'
 import { useSetAppState } from '../../state/AppState.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
@@ -29,9 +27,7 @@ export function useLspInitializationNotification(): void {
   // render (the arg expression runs even though useState ignores it after
   // mount). Showed up as 7.2s isEnvTruthy self-time during PageUp spam
   // after #24498 swapped cheap !!process.env.X for isEnvTruthy().
-  const [shouldPoll, setShouldPoll] = React.useState(() =>
-    isEnvTruthy("true"),
-  )
+  const [shouldPoll, setShouldPoll] = React.useState(() => isEnvTruthy('true'))
   // Track which errors we've already notified about to avoid duplicates
   const notifiedErrorsRef = React.useRef<Set<string>>(new Set())
 
@@ -46,10 +42,10 @@ export function useLspInitializationNotification(): void {
       logForDebugging(`LSP error: ${source} - ${errorMessage}`)
 
       // Add error to appState.plugins.errors
-      setAppState(prev => {
+      setAppState((prev) => {
         // Check if this error already exists to avoid duplicates
         const existingKeys = new Set(
-          prev.plugins.errors.map(e => {
+          prev.plugins.errors.map((e) => {
             if (e.type === 'generic-error') {
               return `generic-error:${e.source}:${e.error}`
             }
@@ -79,9 +75,7 @@ export function useLspInitializationNotification(): void {
       })
 
       // Show notification - extract plugin name from source like "plugin:typescript-lsp:typescript"
-      const displayName = source.startsWith('plugin:')
-        ? (source.split(':')[1] ?? source)
-        : source
+      const displayName = source.startsWith('plugin:') ? (source.split(':')[1] ?? source) : source
 
       addNotification({
         key: `lsp-error-${source}`,

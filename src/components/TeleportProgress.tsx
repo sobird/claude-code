@@ -1,6 +1,7 @@
 import figures from 'figures'
 import * as React from 'react'
 import { useState } from 'react'
+
 import type { Root } from '../ink.js'
 import { Box, Text, useAnimationFrame } from '../ink.js'
 import { AppStateProvider } from '../state/AppState.js'
@@ -26,14 +27,11 @@ const STEPS: { key: TeleportProgressStep; label: string }[] = [
   { key: 'checking_out', label: 'Checking out branch' },
 ]
 
-export function TeleportProgress({
-  currentStep,
-  sessionId,
-}: Props): React.ReactNode {
+export function TeleportProgress({ currentStep, sessionId }: Props): React.ReactNode {
   const [ref, time] = useAnimationFrame(100)
   const frame = Math.floor(time / 100) % SPINNER_FRAMES.length
 
-  const currentStepIndex = STEPS.findIndex(s => s.key === currentStep)
+  const currentStepIndex = STEPS.findIndex((s) => s.key === currentStep)
 
   return (
     <Box ref={ref} flexDirection="column" paddingX={1} paddingY={1}>
@@ -91,10 +89,7 @@ export function TeleportProgress({
  * Teleports to a remote session with progress UI rendered into the existing root.
  * Fetches the session, checks out the branch, and returns the result.
  */
-export async function teleportWithProgress(
-  root: Root,
-  sessionId: string,
-): Promise<TeleportResult> {
+export async function teleportWithProgress(root: Root, sessionId: string): Promise<TeleportResult> {
   // Capture the setState function from the rendered component
   let setStep: (step: TeleportProgressStep) => void = () => {}
 
@@ -112,9 +107,7 @@ export async function teleportWithProgress(
 
   const result = await teleportResumeCodeSession(sessionId, setStep)
   setStep('checking_out')
-  const { branchName, branchError } = await checkOutTeleportedSessionBranch(
-    result.branch,
-  )
+  const { branchName, branchError } = await checkOutTeleportedSessionBranch(result.branch)
   return {
     messages: processMessagesForTeleportResume(result.log, branchError),
     branchName,

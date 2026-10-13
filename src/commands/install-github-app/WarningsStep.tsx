@@ -1,5 +1,6 @@
 import figures from 'figures'
 import React from 'react'
+
 import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app.js'
 import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
@@ -19,9 +20,7 @@ export function WarningsStep({ warnings, onContinue }: WarningsStepProps) {
       <Box flexDirection="column" borderStyle="round" paddingX={1}>
         <Box flexDirection="column" marginBottom={1}>
           <Text bold>{figures.warning} Setup Warnings</Text>
-          <Text dimColor>
-            We found some potential issues, but you can continue anyway
-          </Text>
+          <Text dimColor>We found some potential issues, but you can continue anyway</Text>
         </Box>
 
         {warnings.map((warning, index) => (

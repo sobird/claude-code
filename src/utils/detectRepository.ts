@@ -99,9 +99,7 @@ export function parseGitRemote(input: string): ParsedRepository | null {
   }
 
   // URL format: https://host/owner/repo.git, ssh://git@host/owner/repo, git://host/owner/repo
-  const urlMatch = trimmed.match(
-    /^(https?|ssh|git):\/\/(?:[^@]+@)?([^/:]+(?::\d+)?)\/([^/]+)\/([^/]+?)(?:\.git)?$/,
-  )
+  const urlMatch = trimmed.match(/^(https?|ssh|git):\/\/(?:[^@]+@)?([^/:]+(?::\d+)?)\/([^/]+)\/([^/]+?)(?:\.git)?$/)
   if (urlMatch?.[1] && urlMatch[2] && urlMatch[3] && urlMatch[4]) {
     const protocol = urlMatch[1]
     const hostWithPort = urlMatch[2]
@@ -109,10 +107,7 @@ export function parseGitRemote(input: string): ParsedRepository | null {
     if (!looksLikeRealHostname(hostWithoutPort)) return null
     // Only preserve port for HTTPS — SSH/git ports are not usable for constructing
     // web URLs (e.g. ssh://git@ghe.corp.com:2222 → port 2222 is SSH, not HTTPS).
-    const host =
-      protocol === 'https' || protocol === 'http'
-        ? hostWithPort
-        : hostWithoutPort
+    const host = protocol === 'https' || protocol === 'http' ? hostWithPort : hostWithoutPort
     return {
       host,
       owner: urlMatch[3],
@@ -143,11 +138,7 @@ export function parseGitHubRepository(input: string): string | null {
   }
 
   // If no URL pattern matched, check if it's already in owner/repo format
-  if (
-    !trimmed.includes('://') &&
-    !trimmed.includes('@') &&
-    trimmed.includes('/')
-  ) {
+  if (!trimmed.includes('://') && !trimmed.includes('@') && trimmed.includes('/')) {
     const parts = trimmed.split('/')
     if (parts.length === 2 && parts[0] && parts[1]) {
       // Remove .git extension if present

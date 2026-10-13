@@ -1,11 +1,9 @@
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
+
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- 'r' is a view-specific key, not a global keybinding
 import { Box, Text, useInput } from '../../../ink.js'
-import {
-  type AutoModeDenial,
-  getAutoModeDenials,
-} from '../../../utils/autoModeDenials.js'
+import { type AutoModeDenial, getAutoModeDenials } from '../../../utils/autoModeDenials.js'
 import { Select } from '../../CustomSelect/select.js'
 import { StatusIcon } from '../../design-system/StatusIcon.js'
 import { useTabHeaderFocus } from '../../design-system/Tabs.js'
@@ -13,17 +11,10 @@ import { useTabHeaderFocus } from '../../design-system/Tabs.js'
 type Props = {
   onHeaderFocusChange?: (focused: boolean) => void
   /** Called when approved/retry state changes so parent can act on exit */
-  onStateChange: (state: {
-    approved: Set<number>
-    retry: Set<number>
-    denials: readonly AutoModeDenial[]
-  }) => void
+  onStateChange: (state: { approved: Set<number>; retry: Set<number>; denials: readonly AutoModeDenial[] }) => void
 }
 
-export function RecentDenialsTab({
-  onHeaderFocusChange,
-  onStateChange,
-}: Props): React.ReactNode {
+export function RecentDenialsTab({ onHeaderFocusChange, onStateChange }: Props): React.ReactNode {
   const { headerFocused, focusHeader } = useTabHeaderFocus()
   useEffect(() => {
     onHeaderFocusChange?.(headerFocused)
@@ -43,7 +34,7 @@ export function RecentDenialsTab({
 
   const handleSelect = useCallback((value: string) => {
     const idx = Number(value)
-    setApproved(prev => {
+    setApproved((prev) => {
       const next = new Set(prev)
       if (next.has(idx)) next.delete(idx)
       else next.add(idx)
@@ -58,14 +49,14 @@ export function RecentDenialsTab({
   useInput(
     (input, _key) => {
       if (input === 'r') {
-        setRetry(prev => {
+        setRetry((prev) => {
           const next = new Set(prev)
           if (next.has(focusedIdx)) next.delete(focusedIdx)
           else next.add(focusedIdx)
           return next
         })
         // Retry implies approve
-        setApproved(prev => {
+        setApproved((prev) => {
           if (prev.has(focusedIdx)) return prev
           const next = new Set(prev)
           next.add(focusedIdx)
@@ -77,12 +68,7 @@ export function RecentDenialsTab({
   )
 
   if (denials.length === 0) {
-    return (
-      <Text dimColor>
-        No recent denials. Commands denied by the auto mode classifier will
-        appear here.
-      </Text>
-    )
+    return <Text dimColor>No recent denials. Commands denied by the auto mode classifier will appear here.</Text>
   }
 
   const options = denials.map((d, idx) => {

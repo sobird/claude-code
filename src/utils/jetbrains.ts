@@ -1,5 +1,6 @@
 import { homedir, platform } from 'os'
 import { join } from 'path'
+
 import { getFsImplementation } from '../utils/fsOperations.js'
 import type { IdeType } from './ide.js'
 
@@ -35,8 +36,7 @@ function buildCommonPluginDirectoryPaths(ideName: string): string[] {
   }
 
   const appData = process.env.APPDATA || join(homeDir, 'AppData', 'Roaming')
-  const localAppData =
-    process.env.LOCALAPPDATA || join(homeDir, 'AppData', 'Local')
+  const localAppData = process.env.LOCALAPPDATA || join(homeDir, 'AppData', 'Local')
 
   switch (platform()) {
     case 'darwin':
@@ -45,28 +45,19 @@ function buildCommonPluginDirectoryPaths(ideName: string): string[] {
         join(homeDir, 'Library', 'Application Support'),
       )
       if (ideName.toLowerCase() === 'androidstudio') {
-        directories.push(
-          join(homeDir, 'Library', 'Application Support', 'Google'),
-        )
+        directories.push(join(homeDir, 'Library', 'Application Support', 'Google'))
       }
       break
 
     case 'win32':
-      directories.push(
-        join(appData, 'JetBrains'),
-        join(localAppData, 'JetBrains'),
-        join(appData),
-      )
+      directories.push(join(appData, 'JetBrains'), join(localAppData, 'JetBrains'), join(appData))
       if (ideName.toLowerCase() === 'androidstudio') {
         directories.push(join(localAppData, 'Google'))
       }
       break
 
     case 'linux':
-      directories.push(
-        join(homeDir, '.config', 'JetBrains'),
-        join(homeDir, '.local', 'share', 'JetBrains'),
-      )
+      directories.push(join(homeDir, '.config', 'JetBrains'), join(homeDir, '.local', 'share', 'JetBrains'))
       for (const pattern of idePatterns) {
         directories.push(join(homeDir, '.' + pattern))
       }
@@ -93,7 +84,7 @@ async function detectPluginDirectories(ideName: string): Promise<string[]> {
   }
 
   // Precompile once — idePatterns is invariant across baseDirs
-  const regexes = idePatterns.map(p => new RegExp('^' + p))
+  const regexes = idePatterns.map((p) => new RegExp('^' + p))
 
   for (const baseDir of pluginDirPaths) {
     try {
@@ -126,14 +117,10 @@ async function detectPluginDirectories(ideName: string): Promise<string[]> {
     }
   }
 
-  return foundDirectories.filter(
-    (dir, index) => foundDirectories.indexOf(dir) === index,
-  )
+  return foundDirectories.filter((dir, index) => foundDirectories.indexOf(dir) === index)
 }
 
-export async function isJetBrainsPluginInstalled(
-  ideType: IdeType,
-): Promise<boolean> {
+export async function isJetBrainsPluginInstalled(ideType: IdeType): Promise<boolean> {
   const pluginDirs = await detectPluginDirectories(ideType)
   for (const dir of pluginDirs) {
     const pluginPath = join(dir, PLUGIN_PREFIX)
@@ -150,17 +137,14 @@ export async function isJetBrainsPluginInstalled(
 const pluginInstalledCache = new Map<IdeType, boolean>()
 const pluginInstalledPromiseCache = new Map<IdeType, Promise<boolean>>()
 
-async function isJetBrainsPluginInstalledMemoized(
-  ideType: IdeType,
-  forceRefresh = false,
-): Promise<boolean> {
+async function isJetBrainsPluginInstalledMemoized(ideType: IdeType, forceRefresh = false): Promise<boolean> {
   if (!forceRefresh) {
     const existing = pluginInstalledPromiseCache.get(ideType)
     if (existing) {
       return existing
     }
   }
-  const promise = isJetBrainsPluginInstalled(ideType).then(result => {
+  const promise = isJetBrainsPluginInstalled(ideType).then((result) => {
     pluginInstalledCache.set(ideType, result)
     return result
   })
@@ -168,10 +152,7 @@ async function isJetBrainsPluginInstalledMemoized(
   return promise
 }
 
-export async function isJetBrainsPluginInstalledCached(
-  ideType: IdeType,
-  forceRefresh = false,
-): Promise<boolean> {
+export async function isJetBrainsPluginInstalledCached(ideType: IdeType, forceRefresh = false): Promise<boolean> {
   if (forceRefresh) {
     pluginInstalledCache.delete(ideType)
     pluginInstalledPromiseCache.delete(ideType)
@@ -184,8 +165,6 @@ export async function isJetBrainsPluginInstalledCached(
  * Returns false if the result hasn't been resolved yet.
  * Use this only in sync contexts (e.g., status notice isActive checks).
  */
-export function isJetBrainsPluginInstalledCachedSync(
-  ideType: IdeType,
-): boolean {
+export function isJetBrainsPluginInstalledCachedSync(ideType: IdeType): boolean {
   return pluginInstalledCache.get(ideType) ?? false
 }

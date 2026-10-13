@@ -1,11 +1,9 @@
 import { feature } from 'bun:bundle'
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { randomUUID } from 'crypto'
+
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import last from 'lodash-es/last.js'
-import {
-  getSessionId,
-  isSessionPersistenceDisabled,
-} from 'src/bootstrap/state.js'
+import { getSessionId, isSessionPersistenceDisabled } from 'src/bootstrap/state.js'
 import type {
   PermissionMode,
   SDKCompactBoundaryMessage,
@@ -18,17 +16,11 @@ import { accumulateUsage, updateUsage } from 'src/services/api/claude.js'
 import type { NonNullableUsage } from 'src/services/api/logging.js'
 import { EMPTY_USAGE } from 'src/services/api/logging.js'
 import stripAnsi from 'strip-ansi'
+
 import type { Command } from './commands.js'
 import { getSlashCommandToolSkills } from './commands.js'
-import {
-  LOCAL_COMMAND_STDERR_TAG,
-  LOCAL_COMMAND_STDOUT_TAG,
-} from './constants/xml.js'
-import {
-  getModelUsage,
-  getTotalAPIDuration,
-  getTotalCost,
-} from './cost-tracker.js'
+import { LOCAL_COMMAND_STDERR_TAG, LOCAL_COMMAND_STDOUT_TAG } from './constants/xml.js'
+import { getModelUsage, getTotalAPIDuration, getTotalCost } from './cost-tracker.js'
 import type { CanUseToolFn } from './hooks/useCanUseTool.js'
 import { loadMemoryPrompt } from './memdir/memdir.js'
 import { hasAutoMemPathOverride } from './memdir/paths.js'
@@ -47,65 +39,32 @@ import { getGlobalConfig } from './utils/config.js'
 import { getCwd } from './utils/cwd.js'
 import { isBareMode, isEnvTruthy } from './utils/envUtils.js'
 import { getFastModeState } from './utils/fastMode.js'
-import {
-  type FileHistoryState,
-  fileHistoryEnabled,
-  fileHistoryMakeSnapshot,
-} from './utils/fileHistory.js'
-import {
-  cloneFileStateCache,
-  type FileStateCache,
-} from './utils/fileStateCache.js'
+import { type FileHistoryState, fileHistoryEnabled, fileHistoryMakeSnapshot } from './utils/fileHistory.js'
+import { cloneFileStateCache, type FileStateCache } from './utils/fileStateCache.js'
 import { headlessProfilerCheckpoint } from './utils/headlessProfiler.js'
 import { registerStructuredOutputEnforcement } from './utils/hooks/hookHelpers.js'
 import { getInMemoryErrors } from './utils/log.js'
 import { countToolCalls, SYNTHETIC_MESSAGES } from './utils/messages.js'
-import {
-  getMainLoopModel,
-  parseUserSpecifiedModel,
-} from './utils/model/model.js'
+import { getMainLoopModel, parseUserSpecifiedModel } from './utils/model/model.js'
 import { loadAllPluginsCacheOnly } from './utils/plugins/pluginLoader.js'
-import {
-  type ProcessUserInputContext,
-  processUserInput,
-} from './utils/processUserInput/processUserInput.js'
+import { type ProcessUserInputContext, processUserInput } from './utils/processUserInput/processUserInput.js'
 import { fetchSystemPromptParts } from './utils/queryContext.js'
+import { flushSessionStorage, recordTranscript } from './utils/sessionStorage.js'
 import { setCwd } from './utils/Shell.js'
-import {
-  flushSessionStorage,
-  recordTranscript,
-} from './utils/sessionStorage.js'
 import { asSystemPrompt } from './utils/systemPromptType.js'
 import { resolveThemeSetting } from './utils/systemTheme.js'
-import {
-  shouldEnableThinkingByDefault,
-  type ThinkingConfig,
-} from './utils/thinking.js'
+import { shouldEnableThinkingByDefault, type ThinkingConfig } from './utils/thinking.js'
 
 // Lazy: MessageSelector.tsx pulls React/ink; only needed for message filtering at query time
 /* eslint-disable @typescript-eslint/no-require-imports */
-const messageSelector =
-  (): typeof import('src/components/MessageSelector.js') =>
-    require('src/components/MessageSelector.js')
+const messageSelector = (): typeof import('src/components/MessageSelector.js') =>
+  require('src/components/MessageSelector.js')
 
-import {
-  localCommandOutputToSDKAssistantMessage,
-  toSDKCompactMetadata,
-} from './utils/messages/mappers.js'
-import {
-  buildSystemInitMessage,
-  sdkCompatToolName,
-} from './utils/messages/systemInit.js'
-import {
-  getScratchpadDir,
-  isScratchpadEnabled,
-} from './utils/permissions/filesystem.js'
+import { localCommandOutputToSDKAssistantMessage, toSDKCompactMetadata } from './utils/messages/mappers.js'
+import { buildSystemInitMessage, sdkCompatToolName } from './utils/messages/systemInit.js'
+import { getScratchpadDir, isScratchpadEnabled } from './utils/permissions/filesystem.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
-import {
-  handleOrphanedPermission,
-  isResultSuccessful,
-  normalizeMessage,
-} from './utils/queryHelpers.js'
+import { handleOrphanedPermission, isResultSuccessful, normalizeMessage } from './utils/queryHelpers.js'
 
 // Dead code elimination: conditional import for coordinator mode
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -166,10 +125,7 @@ export type QueryEngineConfig = {
    * projectSnippedView; QueryEngine truncates here to bound memory in long
    * headless sessions (no UI to preserve).
    */
-  snipReplay?: (
-    yieldedSystemMsg: Message,
-    store: Message[],
-  ) => { messages: Message[]; executed: boolean } | undefined
+  snipReplay?: (yieldedSystemMsg: Message, store: Message[]) => { messages: Message[]; executed: boolean } | undefined
 }
 
 /**
@@ -249,14 +205,7 @@ export class QueryEngine {
       toolUseID,
       forceDecision,
     ) => {
-      const result = await canUseTool(
-        tool,
-        input,
-        toolUseContext,
-        assistantMessage,
-        toolUseID,
-        forceDecision,
-      )
+      const result = await canUseTool(tool, input, toolUseContext, assistantMessage, toolUseID, forceDecision)
 
       // Track denials for SDK reporting
       if (result.behavior !== 'allow') {
@@ -271,9 +220,7 @@ export class QueryEngine {
     }
 
     const initialAppState = getAppState()
-    const initialMainLoopModel = userSpecifiedModel
-      ? parseUserSpecifiedModel(userSpecifiedModel)
-      : getMainLoopModel()
+    const initialMainLoopModel = userSpecifiedModel ? parseUserSpecifiedModel(userSpecifiedModel) : getMainLoopModel()
 
     const initialThinkingConfig: ThinkingConfig = thinkingConfig
       ? thinkingConfig
@@ -283,8 +230,7 @@ export class QueryEngine {
 
     headlessProfilerCheckpoint('before_getSystemPrompt')
     // Narrow once so TS tracks the type through the conditionals below.
-    const customPrompt =
-      typeof customSystemPrompt === 'string' ? customSystemPrompt : undefined
+    const customPrompt = typeof customSystemPrompt === 'string' ? customSystemPrompt : undefined
     const {
       defaultSystemPrompt,
       userContext: baseUserContext,
@@ -301,10 +247,7 @@ export class QueryEngine {
     headlessProfilerCheckpoint('after_getSystemPrompt')
     const userContext = {
       ...baseUserContext,
-      ...getCoordinatorUserContext(
-        mcpClients,
-        isScratchpadEnabled() ? getScratchpadDir() : undefined,
-      ),
+      ...getCoordinatorUserContext(mcpClients, isScratchpadEnabled() ? getScratchpadDir() : undefined),
     }
 
     // When an SDK caller provides a custom system prompt AND has set
@@ -314,9 +257,7 @@ export class QueryEngine {
     // Write/Edit tools to call, MEMORY.md filename, loading semantics).
     // The caller can layer their own policy text via appendSystemPrompt.
     const memoryMechanicsPrompt =
-      customPrompt !== undefined && hasAutoMemPathOverride()
-        ? await loadMemoryPrompt()
-        : null
+      customPrompt !== undefined && hasAutoMemPathOverride() ? await loadMemoryPrompt() : null
 
     const systemPrompt = asSystemPrompt([
       ...(customPrompt !== undefined ? [customPrompt] : defaultSystemPrompt),
@@ -325,9 +266,7 @@ export class QueryEngine {
     ])
 
     // Register function hook for structured output enforcement
-    const hasStructuredOutputTool = tools.some(t =>
-      toolMatchesName(t, SYNTHETIC_OUTPUT_TOOL_NAME),
-    )
+    const hasStructuredOutputTool = tools.some((t) => toolMatchesName(t, SYNTHETIC_OUTPUT_TOOL_NAME))
     if (jsonSchema && hasStructuredOutputTool) {
       registerStructuredOutputEnforcement(setAppState, getSessionId())
     }
@@ -341,7 +280,7 @@ export class QueryEngine {
       // the result.  The second processUserInputContext below (after
       // slash-command processing) keeps the no-op — nothing else calls
       // setMessages past that point.
-      setMessages: fn => {
+      setMessages: (fn) => {
         this.mutableMessages = fn(this.mutableMessages)
       },
       onChangeAPIKey: () => {},
@@ -373,19 +312,15 @@ export class QueryEngine {
       discoveredSkillNames: this.discoveredSkillNames,
       setInProgressToolUseIDs: () => {},
       setResponseLength: () => {},
-      updateFileHistoryState: (
-        updater: (prev: FileHistoryState) => FileHistoryState,
-      ) => {
-        setAppState(prev => {
+      updateFileHistoryState: (updater: (prev: FileHistoryState) => FileHistoryState) => {
+        setAppState((prev) => {
           const updated = updater(prev.fileHistory)
           if (updated === prev.fileHistory) return prev
           return { ...prev, fileHistory: updated }
         })
       },
-      updateAttributionState: (
-        updater: (prev: AttributionState) => AttributionState,
-      ) => {
-        setAppState(prev => {
+      updateAttributionState: (updater: (prev: AttributionState) => AttributionState) => {
+        setAppState((prev) => {
           const updated = updater(prev.attribution)
           if (updated === prev.attribution) return prev
           return { ...prev, attribution: updated }
@@ -453,10 +388,7 @@ export class QueryEngine {
         void transcriptPromise
       } else {
         await transcriptPromise
-        if (
-          isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
-        ) {
+        if (isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) || isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)) {
           await flushSessionStorage()
         }
       }
@@ -464,7 +396,7 @@ export class QueryEngine {
 
     // Filter messages that should be acknowledged after transcript
     const replayableMessages = messagesFromUserInput.filter(
-      msg =>
+      (msg) =>
         (msg.type === 'user' &&
           !msg.isMeta && // Skip synthetic caveat messages
           !msg.toolUseResult && // Skip tool results (they'll be acked from query)
@@ -474,7 +406,7 @@ export class QueryEngine {
     const messagesToAck = replayUserMessages ? replayableMessages : []
 
     // Update the ToolPermissionContext based on user input processing (as necessary)
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
       toolPermissionContext: {
         ...prev.toolPermissionContext,
@@ -541,8 +473,7 @@ export class QueryEngine {
       tools,
       mcpClients,
       model: mainLoopModel,
-      permissionMode: initialAppState.toolPermissionContext
-        .mode as PermissionMode, // TODO: avoid the cast
+      permissionMode: initialAppState.toolPermissionContext.mode as PermissionMode, // TODO: avoid the cast
       commands,
       agents,
       skills,
@@ -607,10 +538,7 @@ export class QueryEngine {
 
       if (persistSession) {
         await recordTranscript(messages)
-        if (
-          isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
-        ) {
+        if (isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) || isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)) {
           await flushSessionStorage()
         }
       }
@@ -629,29 +557,21 @@ export class QueryEngine {
         usage: this.totalUsage,
         modelUsage: getModelUsage(),
         permission_denials: this.permissionDenials,
-        fast_mode_state: getFastModeState(
-          mainLoopModel,
-          initialAppState.fastMode,
-        ),
+        fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
         uuid: randomUUID(),
       }
       return
     }
 
     if (fileHistoryEnabled() && persistSession) {
-      messagesFromUserInput
-        .filter(messageSelector().selectableUserMessagesFilter)
-        .forEach(message => {
-          void fileHistoryMakeSnapshot(
-            (updater: (prev: FileHistoryState) => FileHistoryState) => {
-              setAppState(prev => ({
-                ...prev,
-                fileHistory: updater(prev.fileHistory),
-              }))
-            },
-            message.uuid,
-          )
-        })
+      messagesFromUserInput.filter(messageSelector().selectableUserMessagesFilter).forEach((message) => {
+        void fileHistoryMakeSnapshot((updater: (prev: FileHistoryState) => FileHistoryState) => {
+          setAppState((prev) => ({
+            ...prev,
+            fileHistory: updater(prev.fileHistory),
+          }))
+        }, message.uuid)
+      })
     }
 
     // Track current message usage (reset on each message_start)
@@ -698,16 +618,10 @@ export class QueryEngine {
         // between turns), tailUuid points to a never-written message →
         // applyPreservedSegmentRelinks fails its tail→head walk → returns
         // without pruning → resume loads full pre-compact history.
-        if (
-          persistSession &&
-          message.type === 'system' &&
-          message.subtype === 'compact_boundary'
-        ) {
+        if (persistSession && message.type === 'system' && message.subtype === 'compact_boundary') {
           const tailUuid = message.compactMetadata?.preservedSegment?.tailUuid
           if (tailUuid) {
-            const tailIdx = this.mutableMessages.findLastIndex(
-              m => m.uuid === tailUuid,
-            )
+            const tailIdx = this.mutableMessages.findLastIndex((m) => m.uuid === tailUuid)
             if (tailIdx !== -1) {
               await recordTranscript(this.mutableMessages.slice(0, tailIdx + 1))
             }
@@ -789,16 +703,10 @@ export class QueryEngine {
           if (message.event.type === 'message_start') {
             // Reset current message usage for new message
             currentMessageUsage = EMPTY_USAGE
-            currentMessageUsage = updateUsage(
-              currentMessageUsage,
-              message.event.message.usage,
-            )
+            currentMessageUsage = updateUsage(currentMessageUsage, message.event.message.usage)
           }
           if (message.event.type === 'message_delta') {
-            currentMessageUsage = updateUsage(
-              currentMessageUsage,
-              message.event.usage,
-            )
+            currentMessageUsage = updateUsage(currentMessageUsage, message.event.usage)
             // Capture stop_reason from message_delta. The assistant message
             // is yielded at content_block_stop with stop_reason=null; the
             // real value only arrives here (see claude.ts message_delta
@@ -809,10 +717,7 @@ export class QueryEngine {
           }
           if (message.event.type === 'message_stop') {
             // Accumulate current message usage into total
-            this.totalUsage = accumulateUsage(
-              this.totalUsage,
-              currentMessageUsage,
-            )
+            this.totalUsage = accumulateUsage(this.totalUsage, currentMessageUsage)
           }
 
           if (includePartialMessages) {
@@ -841,10 +746,7 @@ export class QueryEngine {
           // Handle max turns reached signal from query.ts
           else if (message.attachment.type === 'max_turns_reached') {
             if (persistSession) {
-              if (
-                isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-                isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
-              ) {
+              if (isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) || isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)) {
                 await flushSessionStorage()
               }
             }
@@ -861,22 +763,14 @@ export class QueryEngine {
               usage: this.totalUsage,
               modelUsage: getModelUsage(),
               permission_denials: this.permissionDenials,
-              fast_mode_state: getFastModeState(
-                mainLoopModel,
-                initialAppState.fastMode,
-              ),
+              fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
               uuid: randomUUID(),
-              errors: [
-                `Reached maximum number of turns (${message.attachment.maxTurns})`,
-              ],
+              errors: [`Reached maximum number of turns (${message.attachment.maxTurns})`],
             }
             return
           }
           // Yield queued_command attachments as SDK user message replays
-          else if (
-            replayUserMessages &&
-            message.attachment.type === 'queued_command'
-          ) {
+          else if (replayUserMessages && message.attachment.type === 'queued_command') {
             yield {
               type: 'user',
               message: {
@@ -902,10 +796,7 @@ export class QueryEngine {
           // never shrinks (memory leak in long SDK sessions). The subtype
           // check lives inside the injected callback so feature-gated strings
           // stay out of this file (excluded-strings check).
-          const snipResult = this.config.snipReplay?.(
-            message,
-            this.mutableMessages,
-          )
+          const snipResult = this.config.snipReplay?.(message, this.mutableMessages)
           if (snipResult !== undefined) {
             if (snipResult.executed) {
               this.mutableMessages.length = 0
@@ -915,10 +806,7 @@ export class QueryEngine {
           }
           this.mutableMessages.push(message)
           // Yield compact boundary messages to SDK
-          if (
-            message.subtype === 'compact_boundary' &&
-            message.compactMetadata
-          ) {
+          if (message.subtype === 'compact_boundary' && message.compactMetadata) {
             // Release pre-compaction messages for GC. The boundary was just
             // pushed so it's the last element. query.ts already uses
             // getMessagesAfterCompactBoundary() internally, so only
@@ -971,10 +859,7 @@ export class QueryEngine {
       // Check if USD budget has been exceeded
       if (maxBudgetUsd !== undefined && getTotalCost() >= maxBudgetUsd) {
         if (persistSession) {
-          if (
-            isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-            isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
-          ) {
+          if (isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) || isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)) {
             await flushSessionStorage()
           }
         }
@@ -991,10 +876,7 @@ export class QueryEngine {
           usage: this.totalUsage,
           modelUsage: getModelUsage(),
           permission_denials: this.permissionDenials,
-          fast_mode_state: getFastModeState(
-            mainLoopModel,
-            initialAppState.fastMode,
-          ),
+          fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
           uuid: randomUUID(),
           errors: [`Reached maximum budget ($${maxBudgetUsd})`],
         }
@@ -1003,21 +885,12 @@ export class QueryEngine {
 
       // Check if structured output retry limit exceeded (only on user messages)
       if (message.type === 'user' && jsonSchema) {
-        const currentCalls = countToolCalls(
-          this.mutableMessages,
-          SYNTHETIC_OUTPUT_TOOL_NAME,
-        )
+        const currentCalls = countToolCalls(this.mutableMessages, SYNTHETIC_OUTPUT_TOOL_NAME)
         const callsThisQuery = currentCalls - initialStructuredOutputCalls
-        const maxRetries = parseInt(
-          process.env.MAX_STRUCTURED_OUTPUT_RETRIES || '5',
-          10,
-        )
+        const maxRetries = parseInt(process.env.MAX_STRUCTURED_OUTPUT_RETRIES || '5', 10)
         if (callsThisQuery >= maxRetries) {
           if (persistSession) {
-            if (
-              isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-              isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
-            ) {
+            if (isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) || isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)) {
               await flushSessionStorage()
             }
           }
@@ -1034,14 +907,9 @@ export class QueryEngine {
             usage: this.totalUsage,
             modelUsage: getModelUsage(),
             permission_denials: this.permissionDenials,
-            fast_mode_state: getFastModeState(
-              mainLoopModel,
-              initialAppState.fastMode,
-            ),
+            fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
             uuid: randomUUID(),
-            errors: [
-              `Failed to provide valid structured output after ${maxRetries} attempts`,
-            ],
+            errors: [`Failed to provide valid structured output after ${maxRetries} attempts`],
           }
           return
         }
@@ -1055,26 +923,18 @@ export class QueryEngine {
     // return '' and -p mode emit a blank line. Allowlist to assistant|user:
     // isResultSuccessful handles both (user with all tool_result blocks is a
     // valid successful terminal state).
-    const result = messages.findLast(
-      m => m.type === 'assistant' || m.type === 'user',
-    )
+    const result = messages.findLast((m) => m.type === 'assistant' || m.type === 'user')
     // Capture for the error_during_execution diagnostic — isResultSuccessful
     // is a type predicate (message is Message), so inside the false branch
     // `result` narrows to never and these accesses don't typecheck.
     const edeResultType = result?.type ?? 'undefined'
-    const edeLastContentType =
-      result?.type === 'assistant'
-        ? (last(result.message.content)?.type ?? 'none')
-        : 'n/a'
+    const edeLastContentType = result?.type === 'assistant' ? (last(result.message.content)?.type ?? 'none') : 'n/a'
 
     // Flush buffered transcript writes before yielding result.
     // The desktop app kills the CLI process immediately after receiving the
     // result message, so any unflushed writes would be lost.
     if (persistSession) {
-      if (
-        isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-        isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
-      ) {
+      if (isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) || isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)) {
         await flushSessionStorage()
       }
     }
@@ -1093,10 +953,7 @@ export class QueryEngine {
         usage: this.totalUsage,
         modelUsage: getModelUsage(),
         permission_denials: this.permissionDenials,
-        fast_mode_state: getFastModeState(
-          mainLoopModel,
-          initialAppState.fastMode,
-        ),
+        fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
         uuid: randomUUID(),
         // Diagnostic prefix: these are what isResultSuccessful() checks — if
         // the result type isn't assistant-with-text/thinking or user-with-
@@ -1105,12 +962,10 @@ export class QueryEngine {
         // entire process's logError buffer (ripgrep timeouts, ENOENT, etc).
         errors: (() => {
           const all = getInMemoryErrors()
-          const start = errorLogWatermark
-            ? all.lastIndexOf(errorLogWatermark) + 1
-            : 0
+          const start = errorLogWatermark ? all.lastIndexOf(errorLogWatermark) + 1 : 0
           return [
             `[ede_diagnostic] result_type=${edeResultType} last_content_type=${edeLastContentType} stop_reason=${lastStopReason}`,
-            ...all.slice(start).map(_ => _.error),
+            ...all.slice(start).map((_) => _.error),
           ]
         })(),
       }
@@ -1123,10 +978,7 @@ export class QueryEngine {
 
     if (result.type === 'assistant') {
       const lastContent = last(result.message.content)
-      if (
-        lastContent?.type === 'text' &&
-        !SYNTHETIC_MESSAGES.has(lastContent.text)
-      ) {
+      if (lastContent?.type === 'text' && !SYNTHETIC_MESSAGES.has(lastContent.text)) {
         textResult = lastContent.text
       }
       isApiError = Boolean(result.isApiErrorMessage)
@@ -1147,10 +999,7 @@ export class QueryEngine {
       modelUsage: getModelUsage(),
       permission_denials: this.permissionDenials,
       structured_output: structuredOutputFromTool,
-      fast_mode_state: getFastModeState(
-        mainLoopModel,
-        initialAppState.fastMode,
-      ),
+      fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
       uuid: randomUUID(),
     }
   }
@@ -1276,8 +1125,7 @@ export async function* ask({
     ...(feature('HISTORY_SNIP')
       ? {
           snipReplay: (yielded: Message, store: Message[]) => {
-            if (!snipProjection!.isSnipBoundaryMessage(yielded))
-              return undefined
+            if (!snipProjection!.isSnipBoundaryMessage(yielded)) return undefined
             return snipModule!.snipCompactIfNeeded(store, { force: true })
           },
         }

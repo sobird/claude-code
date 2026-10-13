@@ -1,6 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+
 import { createBridgeClient } from './bridgeClient.js'
 import { BROWSER_TOOLS } from './browserTools.js'
 import { createMcpSocketClient } from './mcpSocketClient.js'

@@ -56,9 +56,7 @@ export type ActiveAgentForInput =
  *
  * Used by input routing logic to direct user messages to the correct agent.
  */
-export function getActiveAgentForInput(
-  appState: AppState,
-): ActiveAgentForInput {
+export function getActiveAgentForInput(appState: AppState): ActiveAgentForInput {
   const viewedTask = getViewedTeammateTask(appState)
   if (viewedTask) {
     return { type: 'viewed', task: viewedTask }

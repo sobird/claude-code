@@ -1,9 +1,8 @@
-import memoize from 'lodash-es/memoize.js'
 import { join } from 'path'
-import {
-  getCurrentProjectConfig,
-  saveCurrentProjectConfig,
-} from './utils/config.js'
+
+import memoize from 'lodash-es/memoize.js'
+
+import { getCurrentProjectConfig, saveCurrentProjectConfig } from './utils/config.js'
 import { getCwd } from './utils/cwd.js'
 import { isDirEmpty } from './utils/file.js'
 import { getFsImplementation } from './utils/fsOperations.js'
@@ -17,9 +16,7 @@ export type Step = {
 }
 
 export function getSteps(): Step[] {
-  const hasClaudeMd = getFsImplementation().existsSync(
-    join(getCwd(), 'CLAUDE.md'),
-  )
+  const hasClaudeMd = getFsImplementation().existsSync(join(getCwd(), 'CLAUDE.md'))
   const isWorkspaceDirEmpty = isDirEmpty(getCwd())
 
   return [
@@ -53,7 +50,7 @@ export function maybeMarkProjectOnboardingComplete(): void {
     return
   }
   if (isProjectOnboardingComplete()) {
-    saveCurrentProjectConfig(current => ({
+    saveCurrentProjectConfig((current) => ({
       ...current,
       hasCompletedProjectOnboarding: true,
     }))
@@ -76,7 +73,7 @@ export const shouldShowProjectOnboarding = memoize((): boolean => {
 })
 
 export function incrementProjectOnboardingSeenCount(): void {
-  saveCurrentProjectConfig(current => ({
+  saveCurrentProjectConfig((current) => ({
     ...current,
     projectOnboardingSeenCount: current.projectOnboardingSeenCount + 1,
   }))

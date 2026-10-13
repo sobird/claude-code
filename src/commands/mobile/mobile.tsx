@@ -1,9 +1,10 @@
 import { toString as qrToString } from 'qrcode'
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
+
 import { Pane } from '../../components/design-system/Pane.js'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { Box, Text } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
 
@@ -66,20 +67,15 @@ function MobileQRCode({ onDone }: Props): React.ReactNode {
     }
     if (e.key === 'tab' || e.key === 'left' || e.key === 'right') {
       e.preventDefault()
-      setPlatform(prev => (prev === 'ios' ? 'android' : 'ios'))
+      setPlatform((prev) => (prev === 'ios' ? 'android' : 'ios'))
     }
   }
 
-  const lines = qrCode.split('\n').filter(line => line.length > 0)
+  const lines = qrCode.split('\n').filter((line) => line.length > 0)
 
   return (
     <Pane>
-      <Box
-        flexDirection="column"
-        tabIndex={0}
-        autoFocus
-        onKeyDown={handleKeyDown}
-      >
+      <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
         <Text> </Text>
         <Text> </Text>
         {lines.map((line, i) => (
@@ -95,10 +91,7 @@ function MobileQRCode({ onDone }: Props): React.ReactNode {
               iOS
             </Text>
             <Text dimColor>{' / '}</Text>
-            <Text
-              bold={platform === 'android'}
-              underline={platform === 'android'}
-            >
+            <Text bold={platform === 'android'} underline={platform === 'android'}>
               Android
             </Text>
           </Text>
@@ -110,8 +103,6 @@ function MobileQRCode({ onDone }: Props): React.ReactNode {
   )
 }
 
-export async function call(
-  onDone: LocalJSXCommandOnDone,
-): Promise<React.ReactNode> {
+export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNode> {
   return <MobileQRCode onDone={onDone} />
 }

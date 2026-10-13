@@ -1,5 +1,7 @@
-import React from 'react'
 import { pathToFileURL } from 'url'
+
+import React from 'react'
+
 import Link from '../ink/components/Link.js'
 
 type Props = {

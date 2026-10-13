@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import { z } from 'zod/v4'
+
 import { clearInvokedSkillsForAgent } from '../../bootstrap/state.js'
 import {
   ALL_AGENT_DISALLOWED_TOOLS,
@@ -14,13 +16,6 @@ import {
 } from '../../services/analytics/index.js'
 import { clearDumpState } from '../../services/api/dumpPrompts.js'
 import type { AppState } from '../../state/AppState.js'
-import type {
-  Tool,
-  ToolPermissionContext,
-  Tools,
-  ToolUseContext,
-} from '../../Tool.js'
-import { toolMatchesName } from '../../Tool.js'
 import {
   completeAgentTask as completeAsyncAgent,
   createActivityDescriptionResolver,
@@ -35,6 +30,8 @@ import {
   updateAgentProgress as updateAsyncAgentProgress,
   updateProgressFromMessage,
 } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
+import type { Tool, ToolPermissionContext, Tools, ToolUseContext } from '../../Tool.js'
+import { toolMatchesName } from '../../Tool.js'
 import { asAgentId } from '../../types/ids.js'
 import type { Message as MessageType } from '../../types/message.js'
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
@@ -43,16 +40,10 @@ import { isInProtectedNamespace } from '../../utils/envUtils.js'
 import { AbortError, errorMessage } from '../../utils/errors.js'
 import type { CacheSafeParams } from '../../utils/forkedAgent.js'
 import { lazySchema } from '../../utils/lazySchema.js'
-import {
-  extractTextContent,
-  getLastAssistantMessage,
-} from '../../utils/messages.js'
+import { extractTextContent, getLastAssistantMessage } from '../../utils/messages.js'
 import type { PermissionMode } from '../../utils/permissions/PermissionMode.js'
 import { permissionRuleValueFromString } from '../../utils/permissions/permissionRuleParser.js'
-import {
-  buildTranscriptForClassifier,
-  classifyYoloAction,
-} from '../../utils/permissions/yoloClassifier.js'
+import { buildTranscriptForClassifier, classifyYoloAction } from '../../utils/permissions/yoloClassifier.js'
 import { emitTaskProgress as emitTaskProgressEvent } from '../../utils/task/sdkProgress.js'
 import { isInProcessTeammate } from '../../utils/teammateContext.js'
 import { getTokenCountFromUsage } from '../../utils/tokens.js'
@@ -78,17 +69,14 @@ export function filterToolsForAgent({
   isAsync?: boolean
   permissionMode?: PermissionMode
 }): Tools {
-  return tools.filter(tool => {
+  return tools.filter((tool) => {
     // Allow MCP tools for all agents
     if (tool.name.startsWith('mcp__')) {
       return true
     }
     // Allow ExitPlanMode for agents in plan mode (e.g., in-process teammates)
     // This bypasses both the ALL_AGENT_DISALLOWED_TOOLS and async tool filters
-    if (
-      toolMatchesName(tool, EXIT_PLAN_MODE_V2_TOOL_NAME) &&
-      permissionMode === 'plan'
-    ) {
+    if (toolMatchesName(tool, EXIT_PLAN_MODE_V2_TOOL_NAME) && permissionMode === 'plan') {
       return true
     }
     if (ALL_AGENT_DISALLOWED_TOOLS.has(tool.name)) {
@@ -120,20 +108,12 @@ export function filterToolsForAgent({
  * Handles wildcard expansion and validation in one place
  */
 export function resolveAgentTools(
-  agentDefinition: Pick<
-    AgentDefinition,
-    'tools' | 'disallowedTools' | 'source' | 'permissionMode'
-  >,
+  agentDefinition: Pick<AgentDefinition, 'tools' | 'disallowedTools' | 'source' | 'permissionMode'>,
   availableTools: Tools,
   isAsync = false,
   isMainThread = false,
 ): ResolvedAgentTools {
-  const {
-    tools: agentTools,
-    disallowedTools,
-    source,
-    permissionMode,
-  } = agentDefinition
+  const { tools: agentTools, disallowedTools, source, permissionMode } = agentDefinition
   // When isMainThread is true, skip filterToolsForAgent entirely — the main
   // thread's tool pool is already properly assembled by useMergedTools(), so
   // the sub-agent disallow lists shouldn't apply.
@@ -148,21 +128,17 @@ export function resolveAgentTools(
 
   // Create a set of disallowed tool names for quick lookup
   const disallowedToolSet = new Set(
-    disallowedTools?.map(toolSpec => {
+    disallowedTools?.map((toolSpec) => {
       const { toolName } = permissionRuleValueFromString(toolSpec)
       return toolName
     }) ?? [],
   )
 
   // Filter available tools based on disallowed list
-  const allowedAvailableTools = filteredAvailableTools.filter(
-    tool => !disallowedToolSet.has(tool.name),
-  )
+  const allowedAvailableTools = filteredAvailableTools.filter((tool) => !disallowedToolSet.has(tool.name))
 
   // If tools is undefined or ['*'], allow all tools (after filtering disallowed)
-  const hasWildcard =
-    agentTools === undefined ||
-    (agentTools.length === 1 && agentTools[0] === '*')
+  const hasWildcard = agentTools === undefined || (agentTools.length === 1 && agentTools[0] === '*')
   if (hasWildcard) {
     return {
       hasWildcard: true,
@@ -191,7 +167,7 @@ export function resolveAgentTools(
     if (toolName === AGENT_TOOL_NAME) {
       if (ruleContent) {
         // Parse comma-separated agent types: "worker, researcher" → ["worker", "researcher"]
-        allowedAgentTypes = ruleContent.split(',').map(s => s.trim())
+        allowedAgentTypes = ruleContent.split(',').map((s) => s.trim())
       }
       // For sub-agents, Agent is excluded by filterToolsForAgent — mark the spec
       // valid for allowedAgentTypes tracking but skip tool resolution.
@@ -285,14 +261,7 @@ export function finalizeAgentTool(
     isAsync: boolean
   },
 ): AgentToolResult {
-  const {
-    prompt,
-    resolvedAgentModel,
-    isBuiltInAgent,
-    startTime,
-    agentType,
-    isAsync,
-  } = metadata
+  const { prompt, resolvedAgentModel, isBuiltInAgent, startTime, agentType, isAsync } = metadata
 
   const lastAssistantMessage = getLastAssistantMessage(agentMessages)
   if (lastAssistantMessage === undefined) {
@@ -301,14 +270,12 @@ export function finalizeAgentTool(
   // Extract text content from the agent's response. If the final assistant
   // message is a pure tool_use block (loop exited mid-turn), fall back to
   // the most recent assistant message that has text content.
-  let content = lastAssistantMessage.message.content.filter(
-    _ => _.type === 'text',
-  )
+  let content = lastAssistantMessage.message.content.filter((_) => _.type === 'text')
   if (content.length === 0) {
     for (let i = agentMessages.length - 1; i >= 0; i--) {
       const m = agentMessages[i]!
       if (m.type !== 'assistant') continue
-      const textBlocks = m.message.content.filter(_ => _.type === 'text')
+      const textBlocks = m.message.content.filter((_) => _.type === 'text')
       if (textBlocks.length > 0) {
         content = textBlocks
         break
@@ -320,10 +287,8 @@ export function finalizeAgentTool(
   const totalToolUseCount = countToolUses(agentMessages)
 
   logEvent('tengu_agent_tool_completed', {
-    agent_type:
-      agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    model:
-      resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    agent_type: agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    model: resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     prompt_char_count: prompt.length,
     response_char_count: content.length,
     assistant_message_count: agentMessages.length,
@@ -338,10 +303,8 @@ export function finalizeAgentTool(
   const lastRequestId = lastAssistantMessage.requestId
   if (lastRequestId) {
     logEvent('tengu_cache_eviction_hint', {
-      scope:
-        'subagent_end' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      last_request_id:
-        lastRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      scope: 'subagent_end' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      last_request_id: lastRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
   }
 
@@ -362,7 +325,7 @@ export function finalizeAgentTool(
  */
 export function getLastToolUseName(message: MessageType): string | undefined {
   if (message.type !== 'assistant') return undefined
-  const block = message.message.content.findLast(b => b.type === 'tool_use')
+  const block = message.message.content.findLast((b) => b.type === 'tool_use')
   return block?.type === 'tool_use' ? block.name : undefined
 }
 
@@ -429,16 +392,13 @@ export async function classifyHandoffIfNeeded({
         ? 'blocked'
         : 'allowed'
     logEvent('tengu_auto_mode_decision', {
-      decision:
-        handoffDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      decision: handoffDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       toolName:
         // Use legacy name for analytics continuity across the Task→Agent rename
         LEGACY_AGENT_TOOL_NAME as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       inProtectedNamespace: isInProtectedNamespace(),
-      classifierModel:
-        classifierResult.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      agentType:
-        subagentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      classifierModel: classifierResult.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      agentType: subagentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       toolUseCount: totalToolUseCount,
       isHandoff: true,
       // For handoff, the relevant agent completion is the subagent's final
@@ -446,33 +406,24 @@ export async function classifyHandoffIfNeeded({
       // before the handoff review prompt.
       agentMsgId: getLastAssistantMessage(agentMessages)?.message
         .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      classifierStage:
-        classifierResult.stage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      classifierStage: classifierResult.stage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       classifierStage1RequestId:
         classifierResult.stage1RequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      classifierStage1MsgId:
-        classifierResult.stage1MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      classifierStage1MsgId: classifierResult.stage1MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       classifierStage2RequestId:
         classifierResult.stage2RequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      classifierStage2MsgId:
-        classifierResult.stage2MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      classifierStage2MsgId: classifierResult.stage2MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
     if (classifierResult.shouldBlock) {
       // When classifier is unavailable, still propagate the sub-agent's
       // results but with a warning so the parent agent can verify the work.
       if (classifierResult.unavailable) {
-        logForDebugging(
-          'Handoff classifier unavailable, allowing sub-agent output with warning',
-          { level: 'warn' },
-        )
+        logForDebugging('Handoff classifier unavailable, allowing sub-agent output with warning', { level: 'warn' })
         return `Note: The safety classifier was unavailable when reviewing this sub-agent's work. Please carefully verify the sub-agent's actions and output before acting on them.`
       }
 
-      logForDebugging(
-        `Handoff classifier flagged sub-agent output: ${classifierResult.reason}`,
-        { level: 'warn' },
-      )
+      logForDebugging(`Handoff classifier flagged sub-agent output: ${classifierResult.reason}`, { level: 'warn' })
       return `SECURITY WARNING: This sub-agent performed actions that may violate security policy. Reason: ${classifierResult.reason}. Review the sub-agent's actions carefully before acting on its output.`
     }
   }
@@ -485,9 +436,7 @@ export async function classifyHandoffIfNeeded({
  * Used when an async agent is killed to preserve what it accomplished.
  * Returns undefined if no text content is found.
  */
-export function extractPartialResult(
-  messages: MessageType[],
-): string | undefined {
+export function extractPartialResult(messages: MessageType[]): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i]!
     if (m.type !== 'assistant') continue
@@ -519,9 +468,7 @@ export async function runAsyncAgentLifecycle({
 }: {
   taskId: string
   abortController: AbortController
-  makeStream: (
-    onCacheSafeParams: ((p: CacheSafeParams) => void) | undefined,
-  ) => AsyncGenerator<MessageType, void>
+  makeStream: (onCacheSafeParams: ((p: CacheSafeParams) => void) | undefined) => AsyncGenerator<MessageType, void>
   metadata: Parameters<typeof finalizeAgentTool>[2]
   description: string
   toolUseContext: ToolUseContext
@@ -537,17 +484,10 @@ export async function runAsyncAgentLifecycle({
   const agentMessages: MessageType[] = []
   try {
     const tracker = createProgressTracker()
-    const resolveActivity = createActivityDescriptionResolver(
-      toolUseContext.options.tools,
-    )
+    const resolveActivity = createActivityDescriptionResolver(toolUseContext.options.tools)
     const onCacheSafeParams = enableSummarization
       ? (params: CacheSafeParams) => {
-          const { stop } = startAgentSummarization(
-            taskId,
-            asAgentId(taskId),
-            params,
-            rootSetAppState,
-          )
+          const { stop } = startAgentSummarization(taskId, asAgentId(taskId), params, rootSetAppState)
           stopSummarization = stop
         }
       : undefined
@@ -556,7 +496,7 @@ export async function runAsyncAgentLifecycle({
       // Append immediately when UI holds the task (retain). Bootstrap reads
       // disk in parallel and UUID-merges the prefix — disk-write-before-yield
       // means live is always a suffix of disk, so merge is order-correct.
-      rootSetAppState(prev => {
+      rootSetAppState((prev) => {
         const t = prev.tasks[taskId]
         if (!isLocalAgentTask(t) || !t.retain) return prev
         const base = t.messages ?? []
@@ -568,27 +508,11 @@ export async function runAsyncAgentLifecycle({
           },
         }
       })
-      updateProgressFromMessage(
-        tracker,
-        message,
-        resolveActivity,
-        toolUseContext.options.tools,
-      )
-      updateAsyncAgentProgress(
-        taskId,
-        getProgressUpdate(tracker),
-        rootSetAppState,
-      )
+      updateProgressFromMessage(tracker, message, resolveActivity, toolUseContext.options.tools)
+      updateAsyncAgentProgress(taskId, getProgressUpdate(tracker), rootSetAppState)
       const lastToolName = getLastToolUseName(message)
       if (lastToolName) {
-        emitTaskProgress(
-          tracker,
-          taskId,
-          toolUseContext.toolUseId,
-          description,
-          metadata.startTime,
-          lastToolName,
-        )
+        emitTaskProgress(tracker, taskId, toolUseContext.toolUseId, description, metadata.startTime, lastToolName)
       }
     }
 
@@ -608,8 +532,7 @@ export async function runAsyncAgentLifecycle({
       const handoffWarning = await classifyHandoffIfNeeded({
         agentMessages,
         tools: toolUseContext.options.tools,
-        toolPermissionContext:
-          toolUseContext.getAppState().toolPermissionContext,
+        toolPermissionContext: toolUseContext.getAppState().toolPermissionContext,
         abortSignal: abortController.signal,
         subagentType: metadata.agentType,
         totalToolUseCount: agentResult.totalToolUseCount,
@@ -644,15 +567,12 @@ export async function runAsyncAgentLifecycle({
       // so TaskOutput unblocks even if git hangs (gh-20236).
       killAsyncAgent(taskId, rootSetAppState)
       logEvent('tengu_agent_tool_terminated', {
-        agent_type:
-          metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        model:
-          metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        agent_type: metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        model: metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         duration_ms: Date.now() - metadata.startTime,
         is_async: true,
         is_built_in_agent: metadata.isBuiltInAgent,
-        reason:
-          'user_kill_async' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'user_kill_async' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
       const worktreeResult = await getWorktreeResult()
       const partialResult = extractPartialResult(agentMessages)

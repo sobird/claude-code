@@ -1,6 +1,7 @@
 import type * as React from 'react'
 import { useCallback, useEffect } from 'react'
 import { useAppStateStore, useSetAppState } from 'src/state/AppState.js'
+
 import type { Theme } from '../utils/theme.js'
 
 type Priority = 'low' | 'medium' | 'high' | 'immediate'
@@ -52,7 +53,7 @@ export function useNotifications(): {
 
   // Process queue when current notification finishes or queue changes
   const processQueue = useCallback(() => {
-    setAppState(prev => {
+    setAppState((prev) => {
       const next = getNext(prev.notifications.queue)
       if (prev.notifications.current !== null || !next) {
         return prev
@@ -61,7 +62,7 @@ export function useNotifications(): {
       currentTimeoutId = setTimeout(
         (setAppState, nextKey, processQueue) => {
           currentTimeoutId = null
-          setAppState(prev => {
+          setAppState((prev) => {
             // Compare by key instead of reference to handle re-created notifications
             if (prev.notifications.current?.key !== nextKey) {
               return prev
@@ -85,7 +86,7 @@ export function useNotifications(): {
       return {
         ...prev,
         notifications: {
-          queue: prev.notifications.queue.filter(_ => _ !== next),
+          queue: prev.notifications.queue.filter((_) => _ !== next),
           current: next,
         },
       }
@@ -106,7 +107,7 @@ export function useNotifications(): {
         currentTimeoutId = setTimeout(
           (setAppState, notif, processQueue) => {
             currentTimeoutId = null
-            setAppState(prev => {
+            setAppState((prev) => {
               // Compare by key instead of reference to handle re-created notifications
               if (prev.notifications.current?.key !== notif.key) {
                 return prev
@@ -114,9 +115,7 @@ export function useNotifications(): {
               return {
                 ...prev,
                 notifications: {
-                  queue: prev.notifications.queue.filter(
-                    _ => !notif.invalidates?.includes(_.key),
-                  ),
+                  queue: prev.notifications.queue.filter((_) => !notif.invalidates?.includes(_.key)),
                   current: null,
                 },
               }
@@ -130,21 +129,14 @@ export function useNotifications(): {
         )
 
         // Show the immediate notification right away
-        setAppState(prev => ({
+        setAppState((prev) => ({
           ...prev,
           notifications: {
             current: notif,
             queue:
               // Only re-queue the current notification if it's not immediate
-              [
-                ...(prev.notifications.current
-                  ? [prev.notifications.current]
-                  : []),
-                ...prev.notifications.queue,
-              ].filter(
-                _ =>
-                  _.priority !== 'immediate' &&
-                  !notif.invalidates?.includes(_.key),
+              [...(prev.notifications.current ? [prev.notifications.current] : []), ...prev.notifications.queue].filter(
+                (_) => _.priority !== 'immediate' && !notif.invalidates?.includes(_.key),
               ),
           },
         }))
@@ -152,7 +144,7 @@ export function useNotifications(): {
       }
 
       // Handle non-immediate notifications
-      setAppState(prev => {
+      setAppState((prev) => {
         // Check if we can fold into an existing notification with the same key
         if (notif.fold) {
           // Fold into current notification if keys match
@@ -166,7 +158,7 @@ export function useNotifications(): {
             currentTimeoutId = setTimeout(
               (setAppState, foldedKey, processQueue) => {
                 currentTimeoutId = null
-                setAppState(p => {
+                setAppState((p) => {
                   if (p.notifications.current?.key !== foldedKey) {
                     return p
                   }
@@ -196,14 +188,9 @@ export function useNotifications(): {
           }
 
           // Fold into queued notification if keys match
-          const queueIdx = prev.notifications.queue.findIndex(
-            _ => _.key === notif.key,
-          )
+          const queueIdx = prev.notifications.queue.findIndex((_) => _.key === notif.key)
           if (queueIdx !== -1) {
-            const folded = notif.fold(
-              prev.notifications.queue[queueIdx]!,
-              notif,
-            )
+            const folded = notif.fold(prev.notifications.queue[queueIdx]!, notif)
             const newQueue = [...prev.notifications.queue]
             newQueue[queueIdx] = folded
             return {
@@ -217,16 +204,13 @@ export function useNotifications(): {
         }
 
         // Only add to queue if not already present (prevent duplicates)
-        const queuedKeys = new Set(prev.notifications.queue.map(_ => _.key))
-        const shouldAdd =
-          !queuedKeys.has(notif.key) &&
-          prev.notifications.current?.key !== notif.key
+        const queuedKeys = new Set(prev.notifications.queue.map((_) => _.key))
+        const shouldAdd = !queuedKeys.has(notif.key) && prev.notifications.current?.key !== notif.key
 
         if (!shouldAdd) return prev
 
         const invalidatesCurrent =
-          prev.notifications.current !== null &&
-          notif.invalidates?.includes(prev.notifications.current.key)
+          prev.notifications.current !== null && notif.invalidates?.includes(prev.notifications.current.key)
 
         if (invalidatesCurrent && currentTimeoutId) {
           clearTimeout(currentTimeoutId)
@@ -239,9 +223,7 @@ export function useNotifications(): {
             current: invalidatesCurrent ? null : prev.notifications.current,
             queue: [
               ...prev.notifications.queue.filter(
-                _ =>
-                  _.priority !== 'immediate' &&
-                  !notif.invalidates?.includes(_.key),
+                (_) => _.priority !== 'immediate' && !notif.invalidates?.includes(_.key),
               ),
               notif,
             ],
@@ -257,9 +239,9 @@ export function useNotifications(): {
 
   const removeNotification = useCallback<RemoveNotificationFn>(
     (key: string) => {
-      setAppState(prev => {
+      setAppState((prev) => {
         const isCurrent = prev.notifications.current?.key === key
-        const inQueue = prev.notifications.queue.some(n => n.key === key)
+        const inQueue = prev.notifications.queue.some((n) => n.key === key)
 
         if (!isCurrent && !inQueue) {
           return prev
@@ -274,7 +256,7 @@ export function useNotifications(): {
           ...prev,
           notifications: {
             current: isCurrent ? null : prev.notifications.current,
-            queue: prev.notifications.queue.filter(n => n.key !== key),
+            queue: prev.notifications.queue.filter((n) => n.key !== key),
           },
         }
       })
@@ -306,7 +288,5 @@ const PRIORITIES: Record<Priority, number> = {
 }
 export function getNext(queue: Notification[]): Notification | undefined {
   if (queue.length === 0) return undefined
-  return queue.reduce((min, n) =>
-    PRIORITIES[n.priority] < PRIORITIES[min.priority] ? n : min,
-  )
+  return queue.reduce((min, n) => (PRIORITIES[n.priority] < PRIORITIES[min.priority] ? n : min))
 }

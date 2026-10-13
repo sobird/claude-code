@@ -6,6 +6,7 @@
  */
 
 import memoize from 'lodash-es/memoize.js'
+
 import { which } from '../which.js'
 
 /**

@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Text } from '../../ink.js'
 import type { CollapsedReadSearchGroup } from '../../types/message.js'
 
@@ -41,33 +42,20 @@ export function TeamMemCountParts({
   let count = hasPrecedingParts ? 1 : 0
 
   if (tmReadCount > 0) {
-    const verb = isActiveGroup
-      ? count === 0
-        ? 'Recalling'
-        : 'recalling'
-      : count === 0
-        ? 'Recalled'
-        : 'recalled'
+    const verb = isActiveGroup ? (count === 0 ? 'Recalling' : 'recalling') : count === 0 ? 'Recalled' : 'recalled'
     if (count > 0) {
       nodes.push(<Text key="comma-tmr">, </Text>)
     }
     nodes.push(
       <Text key="team-mem-read">
-        {verb} <Text bold>{tmReadCount}</Text> team{' '}
-        {tmReadCount === 1 ? 'memory' : 'memories'}
+        {verb} <Text bold>{tmReadCount}</Text> team {tmReadCount === 1 ? 'memory' : 'memories'}
       </Text>,
     )
     count++
   }
 
   if (tmSearchCount > 0) {
-    const verb = isActiveGroup
-      ? count === 0
-        ? 'Searching'
-        : 'searching'
-      : count === 0
-        ? 'Searched'
-        : 'searched'
+    const verb = isActiveGroup ? (count === 0 ? 'Searching' : 'searching') : count === 0 ? 'Searched' : 'searched'
     if (count > 0) {
       nodes.push(<Text key="comma-tms">, </Text>)
     }
@@ -76,20 +64,13 @@ export function TeamMemCountParts({
   }
 
   if (tmWriteCount > 0) {
-    const verb = isActiveGroup
-      ? count === 0
-        ? 'Writing'
-        : 'writing'
-      : count === 0
-        ? 'Wrote'
-        : 'wrote'
+    const verb = isActiveGroup ? (count === 0 ? 'Writing' : 'writing') : count === 0 ? 'Wrote' : 'wrote'
     if (count > 0) {
       nodes.push(<Text key="comma-tmw">, </Text>)
     }
     nodes.push(
       <Text key="team-mem-write">
-        {verb} <Text bold>{tmWriteCount}</Text> team{' '}
-        {tmWriteCount === 1 ? 'memory' : 'memories'}
+        {verb} <Text bold>{tmWriteCount}</Text> team {tmWriteCount === 1 ? 'memory' : 'memories'}
       </Text>,
     )
   }

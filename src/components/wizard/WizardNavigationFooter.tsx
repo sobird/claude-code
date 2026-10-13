@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react'
+
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { Box, Text } from '../../ink.js'
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js'
@@ -14,12 +15,7 @@ export function WizardNavigationFooter({
     <Byline>
       <KeyboardShortcutHint shortcut="↑↓" action="navigate" />
       <KeyboardShortcutHint shortcut="Enter" action="select" />
-      <ConfigurableShortcutHint
-        action="confirm:no"
-        context="Confirmation"
-        fallback="Esc"
-        description="go back"
-      />
+      <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="go back" />
     </Byline>
   ),
 }: Props): ReactNode {
@@ -27,11 +23,7 @@ export function WizardNavigationFooter({
 
   return (
     <Box marginLeft={3} marginTop={1}>
-      <Text dimColor>
-        {exitState.pending
-          ? `Press ${exitState.keyName} again to exit`
-          : instructions}
-      </Text>
+      <Text dimColor>{exitState.pending ? `Press ${exitState.keyName} again to exit` : instructions}</Text>
     </Box>
   )
 }

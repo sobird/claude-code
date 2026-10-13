@@ -1,12 +1,6 @@
 import type { RefObject } from 'react'
-import {
-  useCallback,
-  useDeferredValue,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useSyncExternalStore,
-} from 'react'
+import { useCallback, useDeferredValue, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox.js'
 import type { DOMElement } from '../ink/dom.js'
 
@@ -226,8 +220,7 @@ export function useVirtualScroll(
   // (Ink moves it later), and the first scrollBy after may land in the
   // same bin. NaN sentinel = ref not attached.
   const subscribe = useCallback(
-    (listener: () => void) =>
-      scrollRef.current?.subscribe(listener) ?? NOOP_UNSUB,
+    (listener: () => void) => scrollRef.current?.subscribe(listener) ?? NOOP_UNSUB,
     [scrollRef],
   )
   useSyncExternalStore(subscribe, () => {
@@ -293,18 +286,11 @@ export function useVirtualScroll(
   // render (same commit, zero extra schedule). The flicker that forced
   // inline-recompute came from setState-driven invalidation.
   const n = itemKeys.length
-  if (
-    offsetsRef.current.version !== offsetVersionRef.current ||
-    offsetsRef.current.n !== n
-  ) {
-    const arr =
-      offsetsRef.current.arr.length >= n + 1
-        ? offsetsRef.current.arr
-        : new Float64Array(n + 1)
+  if (offsetsRef.current.version !== offsetVersionRef.current || offsetsRef.current.n !== n) {
+    const arr = offsetsRef.current.arr.length >= n + 1 ? offsetsRef.current.arr : new Float64Array(n + 1)
     arr[0] = 0
     for (let i = 0; i < n; i++) {
-      arr[i + 1] =
-        arr[i]! + (heightCache.current.get(itemKeys[i]!) ?? DEFAULT_ESTIMATE)
+      arr[i + 1] = arr[i]! + (heightCache.current.get(itemKeys[i]!) ?? DEFAULT_ESTIMATE)
     }
     offsetsRef.current = { arr, version: offsetVersionRef.current, n }
   }
@@ -431,12 +417,8 @@ export function useVirtualScroll(
       const maxEnd = Math.min(n, start + MAX_MOUNTED_ITEMS)
       let coverage = 0
       end = start
-      while (
-        end < maxEnd &&
-        (coverage < needed || offsets[end]! < effHi + viewportH + OVERSCAN_ROWS)
-      ) {
-        coverage +=
-          heightCache.current.get(itemKeys[end]!) ?? PESSIMISTIC_HEIGHT
+      while (end < maxEnd && (coverage < needed || offsets[end]! < effHi + viewportH + OVERSCAN_ROWS)) {
+        coverage += heightCache.current.get(itemKeys[end]!) ?? PESSIMISTIC_HEIGHT
         end++
       }
     }
@@ -450,8 +432,7 @@ export function useVirtualScroll(
     }
     while (start > minStart && coverage < needed) {
       start--
-      coverage +=
-        heightCache.current.get(itemKeys[start]!) ?? PESSIMISTIC_HEIGHT
+      coverage += heightCache.current.get(itemKeys[start]!) ?? PESSIMISTIC_HEIGHT
     }
     // Slide cap: limit how many NEW items mount this commit. Scrolling into
     // a fresh range would otherwise mount 194 items at PESSIMISTIC_HEIGHT=1
@@ -463,8 +444,7 @@ export function useVirtualScroll(
     // (setClampBounds) holds the viewport at the mounted edge during
     // catch-up. Only caps range GROWTH; shrinking is unbounded.
     const prev = prevRangeRef.current
-    const scrollVelocity =
-      Math.abs(scrollTop - lastScrollTopRef.current) + Math.abs(pendingDelta)
+    const scrollVelocity = Math.abs(scrollTop - lastScrollTopRef.current) + Math.abs(pendingDelta)
     if (prev && scrollVelocity > viewportH * 2) {
       const [pS, pE] = prev
       if (start < pS - SLIDE_STEP) start = pS - SLIDE_STEP
@@ -584,10 +564,7 @@ export function useVirtualScroll(
   // scrollTop below the real max, pushing the streaming text off-viewport
   // (the "scrolled up, response disappeared" bug). Infinity = unbounded:
   // render-node-to-output's own Math.min(cur, maxScroll) governs instead.
-  const clampMax =
-    effEnd === n
-      ? Infinity
-      : Math.max(effTopSpacer, offsets[effEnd]! - viewportH) + listOrigin
+  const clampMax = effEnd === n ? Infinity : Math.max(effTopSpacer, offsets[effEnd]! - viewportH) + listOrigin
   useLayoutEffect(() => {
     if (isSticky) {
       scrollRef.current?.setClampBounds(undefined, undefined)
@@ -660,10 +637,7 @@ export function useVirtualScroll(
           const yoga = itemRefs.current.get(key)?.yogaNode
           if (yoga && !skipMeasurementRef.current) {
             const h = yoga.getComputedHeight()
-            if (
-              (h > 0 || yoga.getComputedWidth() > 0) &&
-              heightCache.current.get(key) !== h
-            ) {
+            if ((h > 0 || yoga.getComputedWidth() > 0) && heightCache.current.get(key) !== h) {
               heightCache.current.set(key, h)
               offsetVersionRef.current++
             }
@@ -685,14 +659,8 @@ export function useVirtualScroll(
     [itemKeys],
   )
 
-  const getItemElement = useCallback(
-    (index: number) => itemRefs.current.get(itemKeys[index]!) ?? null,
-    [itemKeys],
-  )
-  const getItemHeight = useCallback(
-    (index: number) => heightCache.current.get(itemKeys[index]!),
-    [itemKeys],
-  )
+  const getItemElement = useCallback((index: number) => itemRefs.current.get(itemKeys[index]!) ?? null, [itemKeys])
+  const getItemHeight = useCallback((index: number) => heightCache.current.get(itemKeys[index]!), [itemKeys])
   const scrollToIndex = useCallback(
     (i: number) => {
       // offsetsRef.current holds latest cached offsets (event handlers run

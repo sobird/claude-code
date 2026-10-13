@@ -1,6 +1,7 @@
 import chalk from 'chalk'
 import { marked, type Token, type Tokens } from 'marked'
 import stripAnsi from 'strip-ansi'
+
 import { color } from '../components/design-system/color.js'
 import { BLOCKQUOTE_BAR } from '../constants/figures.js'
 import { stringWidth } from '../ink/stringWidth.js'
@@ -33,15 +34,11 @@ export function configureMarked(): void {
   })
 }
 
-export function applyMarkdown(
-  content: string,
-  theme: ThemeName,
-  highlight: CliHighlight | null = null,
-): string {
+export function applyMarkdown(content: string, theme: ThemeName, highlight: CliHighlight | null = null): string {
   configureMarked()
   return marked
     .lexer(stripPromptXMLTags(content))
-    .map(_ => formatToken(_, theme, 0, null, null, highlight))
+    .map((_) => formatToken(_, theme, 0, null, null, highlight))
     .join('')
     .trim()
 }
@@ -56,17 +53,13 @@ export function formatToken(
 ): string {
   switch (token.type) {
     case 'blockquote': {
-      const inner = (token.tokens ?? [])
-        .map(_ => formatToken(_, theme, 0, null, null, highlight))
-        .join('')
+      const inner = (token.tokens ?? []).map((_) => formatToken(_, theme, 0, null, null, highlight)).join('')
       // Prefix each line with a dim vertical bar. Keep text italic but at
       // normal brightness — chalk.dim is nearly invisible on dark themes.
       const bar = chalk.dim(BLOCKQUOTE_BAR)
       return inner
         .split(EOL)
-        .map(line =>
-          stripAnsi(line).trim() ? `${bar} ${chalk.italic(line)}` : line,
-        )
+        .map((line) => (stripAnsi(line).trim() ? `${bar} ${chalk.italic(line)}` : line))
         .join(EOL)
     }
     case 'code': {
@@ -78,9 +71,7 @@ export function formatToken(
         if (highlight.supportsLanguage(token.lang)) {
           language = token.lang
         } else {
-          logForDebugging(
-            `Language not supported while highlighting code, falling back to plaintext: ${token.lang}`,
-          )
+          logForDebugging(`Language not supported while highlighting code, falling back to plaintext: ${token.lang}`)
         }
       }
       return highlight.highlight(token.text, { language }) + EOL
@@ -90,46 +81,28 @@ export function formatToken(
       return color('permission', theme)(token.text)
     }
     case 'em':
-      return chalk.italic(
-        (token.tokens ?? [])
-          .map(_ => formatToken(_, theme, 0, null, parent, highlight))
-          .join(''),
-      )
+      return chalk.italic((token.tokens ?? []).map((_) => formatToken(_, theme, 0, null, parent, highlight)).join(''))
     case 'strong':
-      return chalk.bold(
-        (token.tokens ?? [])
-          .map(_ => formatToken(_, theme, 0, null, parent, highlight))
-          .join(''),
-      )
+      return chalk.bold((token.tokens ?? []).map((_) => formatToken(_, theme, 0, null, parent, highlight)).join(''))
     case 'heading':
       switch (token.depth) {
         case 1: // h1
           return (
             chalk.bold.italic.underline(
-              (token.tokens ?? [])
-                .map(_ => formatToken(_, theme, 0, null, null, highlight))
-                .join(''),
+              (token.tokens ?? []).map((_) => formatToken(_, theme, 0, null, null, highlight)).join(''),
             ) +
             EOL +
             EOL
           )
         case 2: // h2
           return (
-            chalk.bold(
-              (token.tokens ?? [])
-                .map(_ => formatToken(_, theme, 0, null, null, highlight))
-                .join(''),
-            ) +
+            chalk.bold((token.tokens ?? []).map((_) => formatToken(_, theme, 0, null, null, highlight)).join('')) +
             EOL +
             EOL
           )
         default: // h3+
           return (
-            chalk.bold(
-              (token.tokens ?? [])
-                .map(_ => formatToken(_, theme, 0, null, null, highlight))
-                .join(''),
-            ) +
+            chalk.bold((token.tokens ?? []).map((_) => formatToken(_, theme, 0, null, null, highlight)).join('')) +
             EOL +
             EOL
           )
@@ -146,9 +119,7 @@ export function formatToken(
         return email
       }
       // Extract display text from the link's child tokens
-      const linkText = (token.tokens ?? [])
-        .map(_ => formatToken(_, theme, 0, null, token, highlight))
-        .join('')
+      const linkText = (token.tokens ?? []).map((_) => formatToken(_, theme, 0, null, token, highlight)).join('')
       const plainLinkText = stripAnsi(linkText)
       // If the link has meaningful display text (different from the URL),
       // show it as a clickable hyperlink. In terminals that support OSC 8,
@@ -162,30 +133,19 @@ export function formatToken(
     case 'list': {
       return token.items
         .map((_: Token, index: number) =>
-          formatToken(
-            _,
-            theme,
-            listDepth,
-            token.ordered ? token.start + index : null,
-            token,
-            highlight,
-          ),
+          formatToken(_, theme, listDepth, token.ordered ? token.start + index : null, token, highlight),
         )
         .join('')
     }
     case 'list_item':
       return (token.tokens ?? [])
         .map(
-          _ =>
+          (_) =>
             `${'  '.repeat(listDepth)}${formatToken(_, theme, listDepth + 1, orderedListNumber, token, highlight)}`,
         )
         .join('')
     case 'paragraph':
-      return (
-        (token.tokens ?? [])
-          .map(_ => formatToken(_, theme, 0, null, null, highlight))
-          .join('') + EOL
-      )
+      return (token.tokens ?? []).map((_) => formatToken(_, theme, 0, null, null, highlight)).join('') + EOL
     case 'space':
       return EOL
     case 'br':
@@ -199,7 +159,7 @@ export function formatToken(
         return token.text
       }
       if (parent?.type === 'list_item') {
-        return `${orderedListNumber === null ? '-' : getListNumber(listDepth, orderedListNumber) + '.'} ${token.tokens ? token.tokens.map(_ => formatToken(_, theme, listDepth, orderedListNumber, token, highlight)).join('') : linkifyIssueReferences(token.text)}${EOL}`
+        return `${orderedListNumber === null ? '-' : getListNumber(listDepth, orderedListNumber) + '.'} ${token.tokens ? token.tokens.map((_) => formatToken(_, theme, listDepth, orderedListNumber, token, highlight)).join('') : linkifyIssueReferences(token.text)}${EOL}`
       }
       return linkifyIssueReferences(token.text)
     case 'table': {
@@ -207,11 +167,7 @@ export function formatToken(
 
       // Helper function to get the text content that will be displayed (after stripAnsi)
       function getDisplayText(tokens: Token[] | undefined): string {
-        return stripAnsi(
-          tokens
-            ?.map(_ => formatToken(_, theme, 0, null, null, highlight))
-            .join('') ?? '',
-        )
+        return stripAnsi(tokens?.map((_) => formatToken(_, theme, 0, null, null, highlight)).join('') ?? '')
       }
 
       // Determine column widths based on displayed content (without formatting)
@@ -227,21 +183,17 @@ export function formatToken(
       // Format header row
       let tableOutput = '| '
       tableToken.header.forEach((header, index) => {
-        const content =
-          header.tokens
-            ?.map(_ => formatToken(_, theme, 0, null, null, highlight))
-            .join('') ?? ''
+        const content = header.tokens?.map((_) => formatToken(_, theme, 0, null, null, highlight)).join('') ?? ''
         const displayText = getDisplayText(header.tokens)
         const width = columnWidths[index]!
         const align = tableToken.align?.[index]
-        tableOutput +=
-          padAligned(content, stringWidth(displayText), width, align) + ' | '
+        tableOutput += padAligned(content, stringWidth(displayText), width, align) + ' | '
       })
       tableOutput = tableOutput.trimEnd() + EOL
 
       // Add separator row
       tableOutput += '|'
-      columnWidths.forEach(width => {
+      columnWidths.forEach((width) => {
         // Always use dashes, don't show alignment colons in the output
         const separator = '-'.repeat(width + 2) // +2 for spaces on each side
         tableOutput += separator + '|'
@@ -249,18 +201,14 @@ export function formatToken(
       tableOutput += EOL
 
       // Format data rows
-      tableToken.rows.forEach(row => {
+      tableToken.rows.forEach((row) => {
         tableOutput += '| '
         row.forEach((cell, index) => {
-          const content =
-            cell.tokens
-              ?.map(_ => formatToken(_, theme, 0, null, null, highlight))
-              .join('') ?? ''
+          const content = cell.tokens?.map((_) => formatToken(_, theme, 0, null, null, highlight)).join('') ?? ''
           const displayText = getDisplayText(cell.tokens)
           const width = columnWidths[index]!
           const align = tableToken.align?.[index]
-          tableOutput +=
-            padAligned(content, stringWidth(displayText), width, align) + ' | '
+          tableOutput += padAligned(content, stringWidth(displayText), width, align) + ' | '
         })
         tableOutput = tableOutput.trimEnd() + EOL
       })
@@ -286,8 +234,7 @@ export function formatToken(
 // only) so hostnames like docs.github.io/guide#42 don't false-positive. Repo
 // segment allows dots (e.g. cc.kurs.web). Lookbehind is avoided — it defeats
 // YARR JIT in JSC.
-const ISSUE_REF_PATTERN =
-  /(^|[^\w./-])([A-Za-z0-9][\w-]*\/[A-Za-z0-9][\w.-]*)#(\d+)\b/g
+const ISSUE_REF_PATTERN = /(^|[^\w./-])([A-Za-z0-9][\w-]*\/[A-Za-z0-9][\w.-]*)#(\d+)\b/g
 
 /**
  * Replaces owner/repo#123 references with clickable hyperlinks to GitHub.
@@ -299,11 +246,7 @@ function linkifyIssueReferences(text: string): string {
   return text.replace(
     ISSUE_REF_PATTERN,
     (_match, prefix, repo, num) =>
-      prefix +
-      createHyperlink(
-        `https://github.com/${repo}/issues/${num}`,
-        `${repo}#${num}`,
-      ),
+      prefix + createHyperlink(`https://github.com/${repo}/issues/${num}`, `${repo}#${num}`),
   )
 }
 

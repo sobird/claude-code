@@ -1,5 +1,6 @@
 import type { StructuredPatchHunk } from 'diff'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { useRegisterOverlay } from '../../context/overlayContext.js'
 import { type DiffData, useDiffData } from '../../hooks/useDiffData.js'
@@ -16,10 +17,7 @@ import { DiffFileList } from './DiffFileList.js'
 
 type Props = {
   messages: Message[]
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
 type ViewMode = 'list' | 'detail'
@@ -28,7 +26,7 @@ type DiffSource = { type: 'current' } | { type: 'turn'; turn: TurnDiff }
 
 function turnDiffToDiffData(turn: TurnDiff): DiffData {
   const files = Array.from(turn.files.values())
-    .map(f => ({
+    .map((f) => ({
       path: f.filePath,
       linesAdded: f.linesAdded,
       linesRemoved: f.linesRemoved,
@@ -65,10 +63,7 @@ export function DiffDialog({ messages, onDone }: Props): React.ReactNode {
   const [sourceIndex, setSourceIndex] = useState<number>(0)
 
   const sources: DiffSource[] = useMemo(
-    () => [
-      { type: 'current' },
-      ...turnDiffs.map((turn): DiffSource => ({ type: 'turn', turn })),
-    ],
+    () => [{ type: 'current' }, ...turnDiffs.map((turn): DiffSource => ({ type: 'turn', turn }))],
     [turnDiffs],
   )
 
@@ -121,12 +116,12 @@ export function DiffDialog({ messages, onDone }: Props): React.ReactNode {
         if (viewMode === 'detail') {
           setViewMode('list')
         } else if (viewMode === 'list' && sources.length > 1) {
-          setSourceIndex(prev => Math.max(0, prev - 1))
+          setSourceIndex((prev) => Math.max(0, prev - 1))
         }
       },
       'diff:nextSource': () => {
         if (viewMode === 'list' && sources.length > 1) {
-          setSourceIndex(prev => Math.min(sources.length - 1, prev + 1))
+          setSourceIndex((prev) => Math.min(sources.length - 1, prev + 1))
         }
       },
       'diff:back': () => {
@@ -141,14 +136,12 @@ export function DiffDialog({ messages, onDone }: Props): React.ReactNode {
       },
       'diff:previousFile': () => {
         if (viewMode === 'list') {
-          setSelectedIndex(prev => Math.max(0, prev - 1))
+          setSelectedIndex((prev) => Math.max(0, prev - 1))
         }
       },
       'diff:nextFile': () => {
         if (viewMode === 'list') {
-          setSelectedIndex(prev =>
-            Math.min(diffData.files.length - 1, prev + 1),
-          )
+          setSelectedIndex((prev) => Math.min(diffData.files.length - 1, prev + 1))
         }
       },
     },
@@ -157,21 +150,14 @@ export function DiffDialog({ messages, onDone }: Props): React.ReactNode {
 
   const subtitle = diffData.stats ? (
     <Text dimColor>
-      {diffData.stats.filesCount} {plural(diffData.stats.filesCount, 'file')}{' '}
-      changed
-      {diffData.stats.linesAdded > 0 && (
-        <Text color="diffAddedWord"> +{diffData.stats.linesAdded}</Text>
-      )}
-      {diffData.stats.linesRemoved > 0 && (
-        <Text color="diffRemovedWord"> -{diffData.stats.linesRemoved}</Text>
-      )}
+      {diffData.stats.filesCount} {plural(diffData.stats.filesCount, 'file')} changed
+      {diffData.stats.linesAdded > 0 && <Text color="diffAddedWord"> +{diffData.stats.linesAdded}</Text>}
+      {diffData.stats.linesRemoved > 0 && <Text color="diffRemovedWord"> -{diffData.stats.linesRemoved}</Text>}
     </Text>
   ) : null
 
   // Build header based on current source
-  const headerTitle = currentTurn
-    ? `Turn ${currentTurn.turnIndex}`
-    : 'Uncommitted changes'
+  const headerTitle = currentTurn ? `Turn ${currentTurn.turnIndex}` : 'Uncommitted changes'
   const headerSubtitle = currentTurn
     ? currentTurn.userPromptPreview
       ? `"${currentTurn.userPromptPreview}"`
@@ -185,8 +171,7 @@ export function DiffDialog({ messages, onDone }: Props): React.ReactNode {
         {sourceIndex > 0 && <Text dimColor>◀ </Text>}
         {sources.map((source, i) => {
           const isSelected = i === sourceIndex
-          const label =
-            source.type === 'current' ? 'Current' : `T${source.turn.turnIndex}`
+          const label = source.type === 'current' ? 'Current' : `T${source.turn.turnIndex}`
           return (
             <Text key={i} dimColor={!isSelected} bold={isSelected}>
               {i > 0 ? ' · ' : ''}
@@ -198,11 +183,7 @@ export function DiffDialog({ messages, onDone }: Props): React.ReactNode {
       </Box>
     ) : null
 
-  const dismissShortcut = useShortcutDisplay(
-    'diff:dismiss',
-    'DiffDialog',
-    'esc',
-  )
+  const dismissShortcut = useShortcutDisplay('diff:dismiss', 'DiffDialog', 'esc')
   // Determine the appropriate message when no files are shown
   const emptyMessage = (() => {
     if (diffData.loading) {
@@ -212,11 +193,7 @@ export function DiffDialog({ messages, onDone }: Props): React.ReactNode {
       return 'No file changes in this turn'
     }
     // Check if we have stats but no files (too many files case)
-    if (
-      diffData.stats &&
-      diffData.stats.filesCount > 0 &&
-      diffData.files.length === 0
-    ) {
+    if (diffData.stats && diffData.stats.filesCount > 0 && diffData.files.length === 0) {
       return 'Too many files to display details'
     }
     return 'Working tree is clean'
@@ -244,7 +221,7 @@ export function DiffDialog({ messages, onDone }: Props): React.ReactNode {
       title={title}
       onCancel={handleCancel}
       color="background"
-      inputGuide={exitState =>
+      inputGuide={(exitState) =>
         exitState.pending ? (
           <Text>Press {exitState.keyName} again to exit</Text>
         ) : viewMode === 'list' ? (

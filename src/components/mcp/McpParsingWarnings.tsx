@@ -1,11 +1,9 @@
 import React, { useMemo } from 'react'
 import { getMcpConfigsByScope } from 'src/services/mcp/config.js'
 import type { ConfigScope } from 'src/services/mcp/types.js'
-import {
-  describeMcpConfigFilePath,
-  getScopeLabel,
-} from 'src/services/mcp/utils.js'
+import { describeMcpConfigFilePath, getScopeLabel } from 'src/services/mcp/utils.js'
 import type { ValidationError } from 'src/utils/settings/validation.js'
+
 import { Box, Link, Text } from '../../ink.js'
 
 function McpConfigErrorSection({
@@ -28,9 +26,7 @@ function McpConfigErrorSection({
     <Box flexDirection="column" marginTop={1}>
       <Box>
         {(hasErrors || hasWarnings) && (
-          <Text color={hasErrors ? 'error' : 'warning'}>
-            [{hasErrors ? 'Failed to parse' : 'Contains warnings'}]{' '}
-          </Text>
+          <Text color={hasErrors ? 'error' : 'warning'}>[{hasErrors ? 'Failed to parse' : 'Contains warnings'}] </Text>
         )}
         <Text>{getScopeLabel(scope)}</Text>
       </Box>
@@ -67,9 +63,7 @@ function McpConfigErrorSection({
                 <Text dimColor>
                   {' '}
                   {serverName && `[${serverName}] `}
-                  {warning.path && warning.path !== ''
-                    ? `${warning.path}: `
-                    : ''}
+                  {warning.path && warning.path !== '' ? `${warning.path}: ` : ''}
                   {warning.message}
                 </Text>
               </Text>
@@ -98,12 +92,8 @@ export function McpParsingWarnings(): React.ReactNode {
     [],
   )
 
-  const hasParsingErrors = scopes.some(
-    ({ config }) => filterErrors(config.errors, 'fatal').length > 0,
-  )
-  const hasWarnings = scopes.some(
-    ({ config }) => filterErrors(config.errors, 'warning').length > 0,
-  )
+  const hasParsingErrors = scopes.some(({ config }) => filterErrors(config.errors, 'fatal').length > 0)
+  const hasWarnings = scopes.some(({ config }) => filterErrors(config.errors, 'warning').length > 0)
 
   if (!hasParsingErrors && !hasWarnings) {
     return null
@@ -115,9 +105,7 @@ export function McpParsingWarnings(): React.ReactNode {
       <Box marginTop={1}>
         <Text dimColor>
           For help configuring MCP servers, see:{' '}
-          <Link url="https://code.claude.com/docs/en/mcp">
-            https://code.claude.com/docs/en/mcp
-          </Link>
+          <Link url="https://code.claude.com/docs/en/mcp">https://code.claude.com/docs/en/mcp</Link>
         </Text>
       </Box>
       {scopes.map(({ scope, config }) => (
@@ -139,9 +127,6 @@ export function McpParsingWarnings(): React.ReactNode {
   )
 }
 
-function filterErrors(
-  errors: ValidationError[],
-  severity: 'fatal' | 'warning',
-): ValidationError[] {
-  return errors.filter(e => e.mcpErrorMetadata?.severity === severity)
+function filterErrors(errors: ValidationError[], severity: 'fatal' | 'warning'): ValidationError[] {
+  return errors.filter((e) => e.mcpErrorMetadata?.severity === severity)
 }

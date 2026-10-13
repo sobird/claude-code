@@ -1,6 +1,7 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import * as React from 'react'
 import { Suspense, useState } from 'react'
+
 import type { LocalJSXCommandContext, CommandResultDisplay } from '../../commands.js'
 import { useIsInsideModal, useModalOrTerminalSize } from '../../context/modalContext.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'

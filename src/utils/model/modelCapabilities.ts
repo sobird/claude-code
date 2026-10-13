@@ -1,9 +1,11 @@
 import { readFileSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
+import { join } from 'path'
+
 import isEqual from 'lodash-es/isEqual.js'
 import memoize from 'lodash-es/memoize.js'
-import { join } from 'path'
 import { z } from 'zod/v4'
+
 import { OAUTH_BETA_HEADER } from '../../constants/oauth.js'
 import { getAnthropicClient } from '../../services/api/client.js'
 import { isClaudeAISubscriber } from '../auth.js'
@@ -52,9 +54,7 @@ function isModelCapabilitiesEligible(): boolean {
 
 // Longest-id-first so substring match prefers most specific; secondary key for stable isEqual
 function sortForMatching(models: ModelCapability[]): ModelCapability[] {
-  return [...models].sort(
-    (a, b) => b.id.length - a.id.length || a.id.localeCompare(b.id),
-  )
+  return [...models].sort((a, b) => b.id.length - a.id.length || a.id.localeCompare(b.id))
 }
 
 // Keyed on cache path so tests that set CLAUDE_CONFIG_DIR get a fresh read
@@ -69,7 +69,7 @@ const loadCache = memoize(
       return null
     }
   },
-  path => path,
+  (path) => path,
 )
 
 export function getModelCapability(model: string): ModelCapability | undefined {
@@ -77,9 +77,9 @@ export function getModelCapability(model: string): ModelCapability | undefined {
   const cached = loadCache(getCachePath())
   if (!cached || cached.length === 0) return undefined
   const m = model.toLowerCase()
-  const exact = cached.find(c => c.id.toLowerCase() === m)
+  const exact = cached.find((c) => c.id.toLowerCase() === m)
   if (exact) return exact
-  return cached.find(c => m.includes(c.id.toLowerCase()))
+  return cached.find((c) => m.includes(c.id.toLowerCase()))
 }
 
 export async function refreshModelCapabilities(): Promise<void> {
@@ -111,8 +111,6 @@ export async function refreshModelCapabilities(): Promise<void> {
     loadCache.cache.delete(path)
     logForDebugging(`[modelCapabilities] cached ${models.length} models`)
   } catch (error) {
-    logForDebugging(
-      `[modelCapabilities] fetch failed: ${error instanceof Error ? error.message : 'unknown'}`,
-    )
+    logForDebugging(`[modelCapabilities] fetch failed: ${error instanceof Error ? error.message : 'unknown'}`)
   }
 }

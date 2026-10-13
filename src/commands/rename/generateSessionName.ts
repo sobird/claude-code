@@ -7,10 +7,7 @@ import { extractTextContent } from '../../utils/messages.js'
 import { extractConversationText } from '../../utils/sessionTitle.js'
 import { asSystemPrompt } from '../../utils/systemPromptType.js'
 
-export async function generateSessionName(
-  messages: Message[],
-  signal: AbortSignal,
-): Promise<string | null> {
+export async function generateSessionName(messages: Message[], signal: AbortSignal): Promise<string | null> {
   const conversationText = extractConversationText(messages)
   if (!conversationText) {
     return null

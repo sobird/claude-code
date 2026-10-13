@@ -1,7 +1,9 @@
 import type { UUID } from 'crypto'
+
 import type { ToolResultBlockParam, ToolUseBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { ElicitRequestURLParams, ElicitResult } from '@modelcontextprotocol/sdk/types.js'
 import type { z } from 'zod/v4'
+
 import type { Command } from './commands.js'
 import type { CanUseToolFn } from './hooks/useCanUseTool.js'
 import type { ThinkingConfig } from './utils/thinking.js'

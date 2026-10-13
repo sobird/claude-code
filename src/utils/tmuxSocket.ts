@@ -24,6 +24,7 @@
  */
 
 import { posix } from 'path'
+
 import { registerCleanup } from './cleanupRegistry.js'
 import { logForDebugging } from './debug.js'
 import { toError } from './errors.js'
@@ -161,9 +162,7 @@ export async function checkTmuxAvailable(): Promise<boolean> {
           })
     tmuxAvailable = result.code === 0
     if (!tmuxAvailable) {
-      logForDebugging(
-        `[Socket] tmux is not installed. The Tmux tool and Teammate tool will not be available.`,
-      )
+      logForDebugging(`[Socket] tmux is not installed. The Tmux tool and Teammate tool will not be available.`)
     }
     tmuxAvailabilityChecked = true
   }
@@ -237,9 +236,7 @@ export async function ensureSocketInitialized(): Promise<void> {
     // Log error but don't throw - graceful degradation
     const err = toError(error)
     logError(err)
-    logForDebugging(
-      `[Socket] Failed to initialize tmux socket: ${err.message}. Tmux isolation will be disabled.`,
-    )
+    logForDebugging(`[Socket] Failed to initialize tmux socket: ${err.message}. Tmux isolation will be disabled.`)
   } finally {
     isInitializing = false
   }
@@ -259,9 +256,7 @@ async function killTmuxServer(): Promise<void> {
     logForDebugging(`[Socket] Successfully killed tmux server`)
   } else {
     // Server may already be dead, which is fine
-    logForDebugging(
-      `[Socket] Failed to kill tmux server (exit ${result.code}): ${result.stderr}`,
-    )
+    logForDebugging(`[Socket] Failed to kill tmux server (exit ${result.code}): ${result.stderr}`)
   }
 }
 
@@ -288,25 +283,15 @@ async function doInitialize(): Promise<void> {
     'base',
     '-e',
     'CLAUDE_CODE_SKIP_PROMPT_HISTORY=true',
-    ...(getPlatform() === 'windows'
-      ? ['-e', 'WSL_INTEROP=/run/WSL/1_interop']
-      : []),
+    ...(getPlatform() === 'windows' ? ['-e', 'WSL_INTEROP=/run/WSL/1_interop'] : []),
   ])
 
   if (result.code !== 0) {
     // Session might already exist from a previous run with same PID (unlikely but possible)
     // Check if the session exists
-    const checkResult = await execTmux([
-      '-L',
-      socket,
-      'has-session',
-      '-t',
-      'base',
-    ])
+    const checkResult = await execTmux(['-L', socket, 'has-session', '-t', 'base'])
     if (checkResult.code !== 0) {
-      throw new Error(
-        `Failed to create tmux session on socket ${socket}: ${result.stderr}`,
-      )
+      throw new Error(`Failed to create tmux session on socket ${socket}: ${result.stderr}`)
     }
   }
 
@@ -319,14 +304,7 @@ async function doInitialize(): Promise<void> {
   // Any Claude Code instance spawned on this socket will inherit this env var,
   // preventing test/verification sessions from polluting the user's real
   // command history and --resume session list.
-  await execTmux([
-    '-L',
-    socket,
-    'set-environment',
-    '-g',
-    'CLAUDE_CODE_SKIP_PROMPT_HISTORY',
-    'true',
-  ])
+  await execTmux(['-L', socket, 'set-environment', '-g', 'CLAUDE_CODE_SKIP_PROMPT_HISTORY', 'true'])
 
   // Same WSL_INTEROP pin as the new-session -e above, but in the GLOBAL env
   // so sessions created by TungstenTool inherit it too. The -e on new-session
@@ -334,24 +312,11 @@ async function doInitialize(): Promise<void> {
   // inherits the SERVER's env, which still holds the stale socket from the
   // wsl.exe that spawned it.
   if (getPlatform() === 'windows') {
-    await execTmux([
-      '-L',
-      socket,
-      'set-environment',
-      '-g',
-      'WSL_INTEROP',
-      '/run/WSL/1_interop',
-    ])
+    await execTmux(['-L', socket, 'set-environment', '-g', 'WSL_INTEROP', '/run/WSL/1_interop'])
   }
 
   // Get the socket path and server PID
-  const infoResult = await execTmux([
-    '-L',
-    socket,
-    'display-message',
-    '-p',
-    '#{socket_path},#{pid}',
-  ])
+  const infoResult = await execTmux(['-L', socket, 'display-message', '-p', '#{socket_path},#{pid}'])
 
   if (infoResult.code === 0) {
     const [path, pidStr] = infoResult.stdout.trim().split(',')
@@ -382,31 +347,19 @@ async function doInitialize(): Promise<void> {
   const fallbackPath = posix.join(baseTmpDir, `tmux-${uid}`, socket)
 
   // Get server PID separately
-  const pidResult = await execTmux([
-    '-L',
-    socket,
-    'display-message',
-    '-p',
-    '#{pid}',
-  ])
+  const pidResult = await execTmux(['-L', socket, 'display-message', '-p', '#{pid}'])
 
   if (pidResult.code === 0) {
     const pid = parseInt(pidResult.stdout.trim(), 10)
     if (!isNaN(pid)) {
-      logForDebugging(
-        `[Socket] Using fallback socket path: ${fallbackPath} (server PID: ${pid})`,
-      )
+      logForDebugging(`[Socket] Using fallback socket path: ${fallbackPath} (server PID: ${pid})`)
       setClaudeSocketInfo(fallbackPath, pid)
       return
     }
     // PID parsing failed
-    logForDebugging(
-      `[Socket] Failed to parse server PID from tmux output: "${pidResult.stdout.trim()}"`,
-    )
+    logForDebugging(`[Socket] Failed to parse server PID from tmux output: "${pidResult.stdout.trim()}"`)
   } else {
-    logForDebugging(
-      `[Socket] Failed to get server PID (exit ${pidResult.code}): ${pidResult.stderr}`,
-    )
+    logForDebugging(`[Socket] Failed to get server PID (exit ${pidResult.code}): ${pidResult.stderr}`)
   }
 
   throw new Error(

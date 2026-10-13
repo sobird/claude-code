@@ -1,5 +1,6 @@
 import { homedir } from 'os'
 import { resolve } from 'path'
+
 import { getErrnoCode } from '../errors.js'
 import { getFsImplementation } from '../fsOperations.js'
 import type { MarketplaceSource } from './schemas.js'
@@ -20,18 +21,14 @@ import type { MarketplaceSource } from './schemas.js'
  * @param input The marketplace source input string
  * @returns MarketplaceSource object, error object, or null if format is unrecognized
  */
-export async function parseMarketplaceInput(
-  input: string,
-): Promise<MarketplaceSource | { error: string } | null> {
+export async function parseMarketplaceInput(input: string): Promise<MarketplaceSource | { error: string } | null> {
   const trimmed = input.trim()
   const fs = getFsImplementation()
 
   // Handle git SSH URLs with any valid username (not just 'git')
   // Supports: user@host:path, user@host:path.git, and with #ref suffix
   // Username can contain: alphanumeric, dots, underscores, hyphens
-  const sshMatch = trimmed.match(
-    /^([a-zA-Z0-9._-]+@[^:]+:.+?(?:\.git)?)(#(.+))?$/,
-  )
+  const sshMatch = trimmed.match(/^([a-zA-Z0-9._-]+@[^:]+:.+?(?:\.git)?)(#(.+))?$/)
   if (sshMatch?.[1]) {
     const url = sshMatch[1]
     const ref = sshMatch[3]
@@ -53,13 +50,8 @@ export async function parseMarketplaceInput(
     // through to source:'url' below, which tries to fetch it as a raw
     // marketplace.json — the HTML response parses as "expected object,
     // received string". (gh-31256 / CC-299)
-    if (
-      urlWithoutFragment.endsWith('.git') ||
-      urlWithoutFragment.includes('/_git/')
-    ) {
-      return ref
-        ? { source: 'git', url: urlWithoutFragment, ref }
-        : { source: 'git', url: urlWithoutFragment }
+    if (urlWithoutFragment.endsWith('.git') || urlWithoutFragment.includes('/_git/')) {
+      return ref ? { source: 'git', url: urlWithoutFragment, ref } : { source: 'git', url: urlWithoutFragment }
     }
     // Parse URL to check hostname
     let url: URL
@@ -76,12 +68,8 @@ export async function parseMarketplaceInput(
       if (match?.[1]) {
         // User explicitly provided HTTPS URL - keep it as HTTPS via 'git' type
         // Add .git suffix if not present for proper git clone
-        const gitUrl = urlWithoutFragment.endsWith('.git')
-          ? urlWithoutFragment
-          : `${urlWithoutFragment}.git`
-        return ref
-          ? { source: 'git', url: gitUrl, ref }
-          : { source: 'git', url: gitUrl }
+        const gitUrl = urlWithoutFragment.endsWith('.git') ? urlWithoutFragment : `${urlWithoutFragment}.git`
+        return ref ? { source: 'git', url: gitUrl, ref } : { source: 'git', url: gitUrl }
       }
     }
     return { source: 'url', url: urlWithoutFragment }
@@ -92,10 +80,7 @@ export async function parseMarketplaceInput(
   // These are Windows-only because backslashes are valid filename chars on Unix
   const isWindows = process.platform === 'win32'
   const isWindowsPath =
-    isWindows &&
-    (trimmed.startsWith('.\\') ||
-      trimmed.startsWith('..\\') ||
-      /^[a-zA-Z]:[/\\]/.test(trimmed))
+    isWindows && (trimmed.startsWith('.\\') || trimmed.startsWith('..\\') || /^[a-zA-Z]:[/\\]/.test(trimmed))
   if (
     trimmed.startsWith('./') ||
     trimmed.startsWith('../') ||
@@ -103,9 +88,7 @@ export async function parseMarketplaceInput(
     trimmed.startsWith('~') ||
     isWindowsPath
   ) {
-    const resolvedPath = resolve(
-      trimmed.startsWith('~') ? trimmed.replace(/^~/, homedir()) : trimmed,
-    )
+    const resolvedPath = resolve(trimmed.startsWith('~') ? trimmed.replace(/^~/, homedir()) : trimmed)
 
     // Stat the path to determine if it's a file or directory. Swallow all stat
     // errors (ENOENT, EACCES, EPERM, etc.) and return an error result instead

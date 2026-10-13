@@ -1,5 +1,6 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
+
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint.js'
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js'
 import { MessageResponse } from '../../components/MessageResponse.js'
@@ -8,8 +9,8 @@ import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import { useShortcutDisplay } from '../../keybindings/useShortcutDisplay.js'
 import { useAppStateStore, useSetAppState } from '../../state/AppState.js'
-import type { Tool } from '../../Tool.js'
 import { backgroundAll } from '../../tasks/LocalShellTask/LocalShellTask.js'
+import type { Tool } from '../../Tool.js'
 import type { ProgressMessage } from '../../types/message.js'
 import { env } from '../../utils/env.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
@@ -50,10 +51,7 @@ export function BackgroundHint({
   // Get the configured shortcut for task:background
   const baseShortcut = useShortcutDisplay('task:background', 'Task', 'ctrl+b')
   // In tmux, ctrl+b is the prefix key, so users need to press it twice to send ctrl+b
-  const shortcut =
-    env.terminal === 'tmux' && baseShortcut === 'ctrl+b'
-      ? 'ctrl+b ctrl+b (twice)'
-      : baseShortcut
+  const shortcut = env.terminal === 'tmux' && baseShortcut === 'ctrl+b' ? 'ctrl+b ctrl+b (twice)' : baseShortcut
 
   // Don't show background hint if background tasks are disabled
   if (isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS)) {
@@ -63,11 +61,7 @@ export function BackgroundHint({
   return (
     <Box paddingLeft={5}>
       <Text dimColor>
-        <KeyboardShortcutHint
-          shortcut={shortcut}
-          action="run in background"
-          parens
-        />
+        <KeyboardShortcutHint shortcut={shortcut} action="run in background" parens />
       </Text>
     </Box>
   )
@@ -94,9 +88,7 @@ export function renderToolUseMessage(
     if (isFullscreenEnvEnabled()) {
       const label = extractBashCommentLabel(command)
       if (label) {
-        return label.length > MAX_COMMAND_DISPLAY_CHARS
-          ? label.slice(0, MAX_COMMAND_DISPLAY_CHARS) + '…'
-          : label
+        return label.length > MAX_COMMAND_DISPLAY_CHARS ? label.slice(0, MAX_COMMAND_DISPLAY_CHARS) + '…' : label
       }
     }
 
@@ -188,13 +180,7 @@ export function renderToolResultMessage(
 ): React.ReactNode {
   const lastProgress = progressMessagesForMessage.at(-1)
   const timeoutMs = lastProgress?.data?.timeoutMs
-  return (
-    <BashToolResultMessage
-      content={content}
-      verbose={verbose}
-      timeoutMs={timeoutMs}
-    />
-  )
+  return <BashToolResultMessage content={content} verbose={verbose} timeoutMs={timeoutMs} />
 }
 
 export function renderToolUseErrorMessage(

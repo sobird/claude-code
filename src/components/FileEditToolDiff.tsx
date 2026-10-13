@@ -1,25 +1,14 @@
 import type { StructuredPatchHunk } from 'diff'
 import * as React from 'react'
 import { Suspense, use, useState } from 'react'
+
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { Box, Text } from '../ink.js'
 import type { FileEdit } from '../tools/FileEditTool/types.js'
-import {
-  findActualString,
-  preserveQuoteStyle,
-} from '../tools/FileEditTool/utils.js'
-import {
-  adjustHunkLineNumbers,
-  CONTEXT_LINES,
-  getPatchForDisplay,
-} from '../utils/diff.js'
+import { findActualString, preserveQuoteStyle } from '../tools/FileEditTool/utils.js'
+import { adjustHunkLineNumbers, CONTEXT_LINES, getPatchForDisplay } from '../utils/diff.js'
 import { logError } from '../utils/log.js'
-import {
-  CHUNK_SIZE,
-  openForScan,
-  readCapped,
-  scanForContext,
-} from '../utils/readEditContext.js'
+import { CHUNK_SIZE, openForScan, readCapped, scanForContext } from '../utils/readEditContext.js'
 import { firstLineOf } from '../utils/stringUtils.js'
 import { StructuredDiffList } from './StructuredDiffList.js'
 
@@ -38,9 +27,7 @@ export function FileEditToolDiff(props: Props): React.ReactNode {
   // Snapshot on mount — the diff must stay consistent even if the file changes
   // while the dialog is open. useMemo on props.edits would re-read the file on
   // every render because callers pass fresh array literals.
-  const [dataPromise] = useState(() =>
-    loadDiffData(props.file_path, props.edits),
-  )
+  const [dataPromise] = useState(() => loadDiffData(props.file_path, props.edits))
   return (
     <Suspense fallback={<DiffFrame placeholder />}>
       <DiffBody promise={dataPromise} file_path={props.file_path} />
@@ -48,13 +35,7 @@ export function FileEditToolDiff(props: Props): React.ReactNode {
   )
 }
 
-function DiffBody({
-  promise,
-  file_path,
-}: {
-  promise: Promise<DiffData>
-  file_path: string
-}): React.ReactNode {
+function DiffBody({ promise, file_path }: { promise: Promise<DiffData>; file_path: string }): React.ReactNode {
   const { patch, firstLine, fileContent } = use(promise)
   const { columns } = useTerminalSize()
   return (
@@ -71,33 +52,18 @@ function DiffBody({
   )
 }
 
-function DiffFrame({
-  children,
-  placeholder,
-}: {
-  children?: React.ReactNode
-  placeholder?: boolean
-}): React.ReactNode {
+function DiffFrame({ children, placeholder }: { children?: React.ReactNode; placeholder?: boolean }): React.ReactNode {
   return (
     <Box flexDirection="column">
-      <Box
-        borderColor="subtle"
-        borderStyle="dashed"
-        flexDirection="column"
-        borderLeft={false}
-        borderRight={false}
-      >
+      <Box borderColor="subtle" borderStyle="dashed" flexDirection="column" borderLeft={false} borderRight={false}>
         {placeholder ? <Text dimColor>…</Text> : children}
       </Box>
     </Box>
   )
 }
 
-async function loadDiffData(
-  file_path: string,
-  edits: FileEdit[],
-): Promise<DiffData> {
-  const valid = edits.filter(e => e.old_string != null && e.new_string != null)
+async function loadDiffData(file_path: string, edits: FileEdit[]): Promise<DiffData> {
+  const valid = edits.filter((e) => e.old_string != null && e.new_string != null)
   const single = valid.length === 1 ? valid[0]! : undefined
 
   // SedEditPermissionRequest passes the entire file as old_string. Scanning for
@@ -118,7 +84,7 @@ async function loadDiffData(
       if (!single || single.old_string === '') {
         const file = await readCapped(handle)
         if (file === null) return diffToolInputsOnly(file_path, valid)
-        const normalized = valid.map(e => normalizeEdit(file, e))
+        const normalized = valid.map((e) => normalizeEdit(file, e))
         return {
           patch: getPatchForDisplay({
             filePath: file_path,
@@ -156,7 +122,7 @@ async function loadDiffData(
 
 function diffToolInputsOnly(filePath: string, edits: FileEdit[]): DiffData {
   return {
-    patch: edits.flatMap(e =>
+    patch: edits.flatMap((e) =>
       getPatchForDisplay({
         filePath,
         fileContents: e.old_string,
@@ -169,12 +135,7 @@ function diffToolInputsOnly(filePath: string, edits: FileEdit[]): DiffData {
 }
 
 function normalizeEdit(fileContent: string, edit: FileEdit): FileEdit {
-  const actualOld =
-    findActualString(fileContent, edit.old_string) || edit.old_string
-  const actualNew = preserveQuoteStyle(
-    edit.old_string,
-    actualOld,
-    edit.new_string,
-  )
+  const actualOld = findActualString(fileContent, edit.old_string) || edit.old_string
+  const actualNew = preserveQuoteStyle(edit.old_string, actualOld, edit.new_string)
   return { ...edit, old_string: actualOld, new_string: actualNew }
 }

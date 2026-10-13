@@ -1,18 +1,13 @@
 import figures from 'figures'
 import React, { useCallback, useState } from 'react'
+
 import { Dialog } from '../../components/design-system/Dialog.js'
-import { stringWidth } from '../../ink/stringWidth.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- raw text input for config dialog
 import { Box, Text, useInput } from '../../ink.js'
-import {
-  useKeybinding,
-  useKeybindings,
-} from '../../keybindings/useKeybinding.js'
+import { stringWidth } from '../../ink/stringWidth.js'
+import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
-import type {
-  PluginOptionSchema,
-  PluginOptionValues,
-} from '../../utils/plugins/pluginOptionsStorage.js'
+import type { PluginOptionSchema, PluginOptionValues } from '../../utils/plugins/pluginOptionsStorage.js'
 
 /**
  * Build the onSave payload from collected string inputs.
@@ -37,11 +32,7 @@ export function buildFinalValues(
     const schema = configSchema[fieldKey]
     const value = collected[fieldKey] ?? ''
 
-    if (
-      schema?.sensitive === true &&
-      value === '' &&
-      initialValues?.[fieldKey] !== undefined
-    ) {
+    if (schema?.sensitive === true && value === '' && initialValues?.[fieldKey] !== undefined) {
       continue
     }
 
@@ -93,9 +84,7 @@ export function PluginOptionsDialog({
 
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0)
   const [values, setValues] = useState<Record<string, string>>({})
-  const [currentInput, setCurrentInput] = useState(() =>
-    fields[0] ? initialFor(fields[0]) : '',
-  )
+  const [currentInput, setCurrentInput] = useState(() => (fields[0] ? initialFor(fields[0]) : ''))
 
   const currentField = fields[currentFieldIndex]
   const fieldSchema = currentField ? configSchema[currentField] : null
@@ -107,8 +96,8 @@ export function PluginOptionsDialog({
   // Tab to next field
   const handleNextField = useCallback(() => {
     if (currentFieldIndex < fields.length - 1 && currentField) {
-      setValues(prev => ({ ...prev, [currentField]: currentInput }))
-      setCurrentFieldIndex(prev => prev + 1)
+      setValues((prev) => ({ ...prev, [currentField]: currentInput }))
+      setCurrentFieldIndex((prev) => prev + 1)
       const nextKey = fields[currentFieldIndex + 1]
       setCurrentInput(nextKey ? initialFor(nextKey) : '')
     }
@@ -125,21 +114,11 @@ export function PluginOptionsDialog({
     } else {
       // Move to next field
       setValues(newValues)
-      setCurrentFieldIndex(prev => prev + 1)
+      setCurrentFieldIndex((prev) => prev + 1)
       const nextKey = fields[currentFieldIndex + 1]
       setCurrentInput(nextKey ? initialFor(nextKey) : '')
     }
-  }, [
-    currentField,
-    values,
-    currentInput,
-    currentFieldIndex,
-    fields,
-    configSchema,
-    onSave,
-    initialFor,
-    initialValues,
-  ])
+  }, [currentField, values, currentInput, currentFieldIndex, fields, configSchema, onSave, initialFor, initialValues])
 
   useKeybindings(
     {
@@ -153,13 +132,13 @@ export function PluginOptionsDialog({
   useInput((char, key) => {
     // Backspace
     if (key.backspace || key.delete) {
-      setCurrentInput(prev => prev.slice(0, -1))
+      setCurrentInput((prev) => prev.slice(0, -1))
       return
     }
 
     // Regular character input
     if (char && !key.ctrl && !key.meta && !key.tab && !key.return) {
-      setCurrentInput(prev => prev + char)
+      setCurrentInput((prev) => prev + char)
     }
   })
 
@@ -169,25 +148,16 @@ export function PluginOptionsDialog({
 
   const isSensitive = fieldSchema.sensitive === true
   const isRequired = fieldSchema.required === true
-  const displayValue = isSensitive
-    ? '*'.repeat(stringWidth(currentInput))
-    : currentInput
+  const displayValue = isSensitive ? '*'.repeat(stringWidth(currentInput)) : currentInput
 
   return (
-    <Dialog
-      title={title}
-      subtitle={subtitle}
-      onCancel={onCancel}
-      isCancelActive={false}
-    >
+    <Dialog title={title} subtitle={subtitle} onCancel={onCancel} isCancelActive={false}>
       <Box flexDirection="column">
         <Text bold={true}>
           {fieldSchema.title || currentField}
           {isRequired && <Text color="error"> *</Text>}
         </Text>
-        {fieldSchema.description && (
-          <Text dimColor={true}>{fieldSchema.description}</Text>
-        )}
+        {fieldSchema.description && <Text dimColor={true}>{fieldSchema.description}</Text>}
 
         <Box marginTop={1}>
           <Text>{figures.pointerSmall} </Text>
@@ -201,13 +171,9 @@ export function PluginOptionsDialog({
           Field {currentFieldIndex + 1} of {fields.length}
         </Text>
         {currentFieldIndex < fields.length - 1 && (
-          <Text dimColor={true}>
-            Tab: Next field · Enter: Save and continue
-          </Text>
+          <Text dimColor={true}>Tab: Next field · Enter: Save and continue</Text>
         )}
-        {currentFieldIndex === fields.length - 1 && (
-          <Text dimColor={true}>Enter: Save configuration</Text>
-        )}
+        {currentFieldIndex === fields.length - 1 && <Text dimColor={true}>Enter: Save configuration</Text>}
       </Box>
     </Dialog>
   )

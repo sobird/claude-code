@@ -1,11 +1,12 @@
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { TEARDROP_ASTERISK } from '../../constants/figures.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
-import { setClipboard } from '../../ink/termio/osc.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- enter to copy link
 import { Box, Link, Text, useInput } from '../../ink.js'
+import { setClipboard } from '../../ink/termio/osc.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import { logEvent } from '../../services/analytics/index.js'
 import {
@@ -13,10 +14,7 @@ import {
   formatCreditAmount,
   getCachedOrFetchPassesEligibility,
 } from '../../services/api/referral.js'
-import type {
-  ReferralRedemptionsResponse,
-  ReferrerRewardInfo,
-} from '../../services/oauth/types.js'
+import type { ReferralRedemptionsResponse, ReferrerRewardInfo } from '../../services/oauth/types.js'
 import { count } from '../../utils/array.js'
 import { logError } from '../../utils/log.js'
 import { Pane } from '../design-system/Pane.js'
@@ -27,10 +25,7 @@ type PassStatus = {
 }
 
 type Props = {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
 export function Passes({ onDone }: Props): React.ReactNode {
@@ -38,13 +33,9 @@ export function Passes({ onDone }: Props): React.ReactNode {
   const [passStatuses, setPassStatuses] = useState<PassStatus[]>([])
   const [isAvailable, setIsAvailable] = useState(false)
   const [referralLink, setReferralLink] = useState<string | null>(null)
-  const [referrerReward, setReferrerReward] = useState<
-    ReferrerRewardInfo | null | undefined
-  >(undefined)
+  const [referrerReward, setReferrerReward] = useState<ReferrerRewardInfo | null | undefined>(undefined)
 
-  const exitState = useExitOnCtrlCDWithKeybindings(() =>
-    onDone('Guest passes dialog dismissed', { display: 'system' }),
-  )
+  const exitState = useExitOnCtrlCDWithKeybindings(() => onDone('Guest passes dialog dismissed', { display: 'system' }))
 
   const handleCancel = useCallback(() => {
     onDone('Guest passes dialog dismissed', { display: 'system' })
@@ -54,7 +45,7 @@ export function Passes({ onDone }: Props): React.ReactNode {
 
   useInput((_input, key) => {
     if (key.return && referralLink) {
-      void setClipboard(referralLink).then(raw => {
+      void setClipboard(referralLink).then((raw) => {
         if (raw) process.stdout.write(raw)
         logEvent('tengu_guest_passes_link_copied', {})
         onDone(`Referral link copied to clipboard!`)
@@ -85,9 +76,7 @@ export function Passes({ onDone }: Props): React.ReactNode {
         setReferrerReward(eligibilityData.referrer_reward)
 
         // Use the campaign returned from eligibility for redemptions
-        const campaign =
-          eligibilityData.referral_code_details?.campaign ??
-          'claude_code_guest_pass'
+        const campaign = eligibilityData.referral_code_details?.campaign ?? 'claude_code_guest_pass'
 
         // Fetch redemptions data
         let redemptionsData: ReferralRedemptionsResponse
@@ -132,11 +121,7 @@ export function Passes({ onDone }: Props): React.ReactNode {
         <Box flexDirection="column" gap={1}>
           <Text dimColor>Loading guest pass information…</Text>
           <Text dimColor italic>
-            {exitState.pending ? (
-              <>Press {exitState.keyName} again to exit</>
-            ) : (
-              <>Esc to cancel</>
-            )}
+            {exitState.pending ? <>Press {exitState.keyName} again to exit</> : <>Esc to cancel</>}
           </Text>
         </Box>
       </Pane>
@@ -149,23 +134,17 @@ export function Passes({ onDone }: Props): React.ReactNode {
         <Box flexDirection="column" gap={1}>
           <Text>Guest passes are not currently available.</Text>
           <Text dimColor italic>
-            {exitState.pending ? (
-              <>Press {exitState.keyName} again to exit</>
-            ) : (
-              <>Esc to cancel</>
-            )}
+            {exitState.pending ? <>Press {exitState.keyName} again to exit</> : <>Esc to cancel</>}
           </Text>
         </Box>
       </Pane>
     )
   }
 
-  const availableCount = count(passStatuses, p => p.isAvailable)
+  const availableCount = count(passStatuses, (p) => p.isAvailable)
 
   // Sort passes: available first, then redeemed
-  const sortedPasses = [...passStatuses].sort(
-    (a, b) => +b.isAvailable - +a.isAvailable,
-  )
+  const sortedPasses = [...passStatuses].sort((a, b) => +b.isAvailable - +a.isAvailable)
 
   // ASCII art for tickets
   const renderTicket = (pass: PassStatus) => {
@@ -201,7 +180,7 @@ export function Passes({ onDone }: Props): React.ReactNode {
         <Text color="permission">Guest passes · {availableCount} left</Text>
 
         <Box flexDirection="row" marginLeft={2}>
-          {sortedPasses.slice(0, 3).map(pass => renderTicket(pass))}
+          {sortedPasses.slice(0, 3).map((pass) => renderTicket(pass))}
         </Box>
 
         {referralLink && (
@@ -229,11 +208,7 @@ export function Passes({ onDone }: Props): React.ReactNode {
 
         <Box>
           <Text dimColor italic>
-            {exitState.pending ? (
-              <>Press {exitState.keyName} again to exit</>
-            ) : (
-              <>Enter to copy link · Esc to cancel</>
-            )}
+            {exitState.pending ? <>Press {exitState.keyName} again to exit</> : <>Enter to copy link · Esc to cancel</>}
           </Text>
         </Box>
       </Box>

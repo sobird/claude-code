@@ -1,11 +1,8 @@
 import { feature } from 'bun:bundle'
 import { chmod, mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
-import {
-  getOriginalCwd,
-  getSessionId,
-  onSessionSwitch,
-} from '../bootstrap/state.js'
+
+import { getOriginalCwd, getSessionId, onSessionSwitch } from '../bootstrap/state.js'
 import { registerCleanup } from './cleanupRegistry.js'
 import { logForDebugging } from './debug.js'
 import { getClaudeConfigHomeDir } from './envUtils.js'
@@ -83,9 +80,7 @@ export async function registerSession(): Promise<boolean> {
         startedAt: Date.now(),
         kind,
         entrypoint: process.env.CLAUDE_CODE_ENTRYPOINT,
-        ...(feature('UDS_INBOX')
-          ? { messagingSocketPath: process.env.CLAUDE_CODE_MESSAGING_SOCKET }
-          : {}),
+        ...(feature('UDS_INBOX') ? { messagingSocketPath: process.env.CLAUDE_CODE_MESSAGING_SOCKET } : {}),
         ...(feature('BG_SESSIONS')
           ? {
               name: process.env.CLAUDE_CODE_SESSION_NAME,
@@ -98,7 +93,7 @@ export async function registerSession(): Promise<boolean> {
     // --resume / /resume mutates getSessionId() via switchSession. Without
     // this, the PID file's sessionId goes stale and `claude ps` sparkline
     // reads the wrong transcript.
-    onSessionSwitch(id => {
+    onSessionSwitch((id) => {
       void updatePidFile({ sessionId: id })
     })
     return true
@@ -116,21 +111,14 @@ export async function registerSession(): Promise<boolean> {
 async function updatePidFile(patch: Record<string, unknown>): Promise<void> {
   const pidFile = join(getSessionsDir(), `${process.pid}.json`)
   try {
-    const data = jsonParse(await readFile(pidFile, 'utf8')) as Record<
-      string,
-      unknown
-    >
+    const data = jsonParse(await readFile(pidFile, 'utf8')) as Record<string, unknown>
     await writeFile(pidFile, jsonStringify({ ...data, ...patch }))
   } catch (e) {
-    logForDebugging(
-      `[concurrentSessions] updatePidFile failed: ${errorMessage(e)}`,
-    )
+    logForDebugging(`[concurrentSessions] updatePidFile failed: ${errorMessage(e)}`)
   }
 }
 
-export async function updateSessionName(
-  name: string | undefined,
-): Promise<void> {
+export async function updateSessionName(name: string | undefined): Promise<void> {
   if (!name) return
   await updatePidFile({ name })
 }
@@ -141,9 +129,7 @@ export async function updateSessionName(
  * once (local wins). Cleared on bridge teardown so stale IDs don't
  * suppress a legitimately-remote session after reconnect.
  */
-export async function updateSessionBridgeId(
-  bridgeSessionId: string | null,
-): Promise<void> {
+export async function updateSessionBridgeId(bridgeSessionId: string | null): Promise<void> {
   await updatePidFile({ bridgeSessionId })
 }
 
@@ -152,10 +138,7 @@ export async function updateSessionBridgeId(
  * status-change effect — a dropped write just means ps falls back to
  * transcript-tail derivation for one refresh.
  */
-export async function updateSessionActivity(patch: {
-  status?: SessionStatus
-  waitingFor?: string
-}): Promise<void> {
+export async function updateSessionActivity(patch: { status?: SessionStatus; waitingFor?: string }): Promise<void> {
   if (!feature('BG_SESSIONS')) return
   await updatePidFile({ ...patch, updatedAt: Date.now() })
 }

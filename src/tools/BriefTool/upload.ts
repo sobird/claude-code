@@ -13,16 +13,14 @@
  */
 
 import { feature } from 'bun:bundle'
-import axios from 'axios'
 import { randomUUID } from 'crypto'
 import { readFile } from 'fs/promises'
 import { basename, extname } from 'path'
+
+import axios from 'axios'
 import { z } from 'zod/v4'
 
-import {
-  getBridgeAccessToken,
-  getBridgeBaseUrlOverride,
-} from '../../bridge/bridgeConfig.js'
+import { getBridgeAccessToken, getBridgeBaseUrlOverride } from '../../bridge/bridgeConfig.js'
 import { getOauthConfig } from '../../constants/oauth.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -67,18 +65,12 @@ function debug(msg: string): void {
  * skip → web viewer sees inert cards with no file_uuid.
  */
 function getBridgeBaseUrl(): string {
-  return (
-    getBridgeBaseUrlOverride() ??
-    process.env.ANTHROPIC_BASE_URL ??
-    getOauthConfig().BASE_API_URL
-  )
+  return getBridgeBaseUrlOverride() ?? process.env.ANTHROPIC_BASE_URL ?? getOauthConfig().BASE_API_URL
 }
 
 // /api/oauth/file_upload returns one of ChatMessage{Image,Blob,Document}FileSchema.
 // All share file_uuid; that's the only field we need.
-const uploadResponseSchema = lazySchema(() =>
-  z.object({ file_uuid: z.string() }),
-)
+const uploadResponseSchema = lazySchema(() => z.object({ file_uuid: z.string() }))
 
 export type BriefUploadContext = {
   replBridgeEnabled: boolean
@@ -157,9 +149,7 @@ export async function uploadBriefAttachment(
 
       const parsed = uploadResponseSchema().safeParse(response.data)
       if (!parsed.success) {
-        debug(
-          `unexpected response shape for ${fullPath}: ${parsed.error.message}`,
-        )
+        debug(`unexpected response shape for ${fullPath}: ${parsed.error.message}`)
         return undefined
       }
 

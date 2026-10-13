@@ -1,6 +1,8 @@
 import { resolve as resolvePath } from 'path'
+
 import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
+
 import { useRegisterOverlay } from '../context/overlayContext.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { Text } from '../ink.js'
@@ -37,10 +39,7 @@ const MAX_TOTAL_MATCHES = 500
  * Global Search dialog (ctrl+shift+f / cmd+shift+f).
  * Debounced ripgrep search across the workspace.
  */
-export function GlobalSearchDialog({
-  onDone,
-  onInsert,
-}: Props): React.ReactNode {
+export function GlobalSearchDialog({ onDone, onInsert }: Props): React.ReactNode {
   useRegisterOverlay('global-search')
   const { columns, rows } = useTerminalSize()
   const previewOnRight = columns >= 140
@@ -78,14 +77,8 @@ export function GlobalSearchDialog({
     const controller = new AbortController()
     const absolute = resolvePath(getCwd(), focused.file)
     const start = Math.max(0, focused.line - PREVIEW_CONTEXT_LINES - 1)
-    void readFileInRange(
-      absolute,
-      start,
-      PREVIEW_CONTEXT_LINES * 2 + 1,
-      undefined,
-      controller.signal,
-    )
-      .then(r => {
+    void readFileInRange(absolute, start, PREVIEW_CONTEXT_LINES * 2 + 1, undefined, controller.signal)
+      .then((r) => {
         if (controller.signal.aborted) return
         setPreview({
           file: focused.file,
@@ -110,7 +103,7 @@ export function GlobalSearchDialog({
     abortRef.current?.abort()
 
     if (!q.trim()) {
-      setMatches(m => (m.length ? [] : m))
+      setMatches((m) => (m.length ? [] : m))
       setIsSearching(false)
       setTruncated(false)
       return
@@ -129,10 +122,8 @@ export function GlobalSearchDialog({
     // filter is best-effort — may briefly show a subset until rg fills in
     // the rest.
     const queryLower = q.toLowerCase()
-    setMatches(m => {
-      const filtered = m.filter(match =>
-        match.text.toLowerCase().includes(queryLower),
-      )
+    setMatches((m) => {
+      const filtered = m.filter((match) => match.text.toLowerCase().includes(queryLower))
       return filtered.length === m.length ? m : filtered
     })
 
@@ -149,19 +140,10 @@ export function GlobalSearchDialog({
           // -e disambiguates pattern from options when the query starts with '-'
           // (e.g. searching for "--verbose" or "-rf"). See GrepTool.ts for the
           // same precaution.
-          [
-            '-n',
-            '--no-heading',
-            '-i',
-            '-m',
-            String(MAX_MATCHES_PER_FILE),
-            '-F',
-            '-e',
-            query,
-          ],
+          ['-n', '--no-heading', '-i', '-m', String(MAX_MATCHES_PER_FILE), '-F', '-e', query],
           cwd,
           controller.signal,
-          lines => {
+          (lines) => {
             if (controller.signal.aborted) return
             const parsed: Match[] = []
             for (const line of lines) {
@@ -172,18 +154,16 @@ export function GlobalSearchDialog({
             }
             if (!parsed.length) return
             collected += parsed.length
-            setMatches(prev => {
+            setMatches((prev) => {
               // Append+dedupe instead of replace: prev may hold client-
               // filtered results that are valid matches for this query.
               // Replacing would drop the count to this chunk's size then
               // grow it back — visible as a flicker.
               const seen = new Set(prev.map(matchKey))
-              const fresh = parsed.filter(p => !seen.has(matchKey(p)))
+              const fresh = parsed.filter((p) => !seen.has(matchKey(p)))
               if (!fresh.length) return prev
               const next = prev.concat(fresh)
-              return next.length > MAX_TOTAL_MATCHES
-                ? next.slice(0, MAX_TOTAL_MATCHES)
-                : next
+              return next.length > MAX_TOTAL_MATCHES ? next.slice(0, MAX_TOTAL_MATCHES) : next
             })
             if (collected >= MAX_TOTAL_MATCHES) {
               controller.abort()
@@ -197,7 +177,7 @@ export function GlobalSearchDialog({
           // "No matches" renders instead of the previous query's list.
           .finally(() => {
             if (controller.signal.aborted) return
-            if (collected === 0) setMatches(m => (m.length ? [] : m))
+            if (collected === 0) setMatches((m) => (m.length ? [] : m))
             setIsSearching(false)
           })
       },
@@ -210,20 +190,13 @@ export function GlobalSearchDialog({
     )
   }
 
-  const listWidth = previewOnRight
-    ? Math.floor((columns - 10) * 0.5)
-    : columns - 8
+  const listWidth = previewOnRight ? Math.floor((columns - 10) * 0.5) : columns - 8
   const maxPathWidth = Math.max(20, Math.floor(listWidth * 0.4))
   const maxTextWidth = Math.max(20, listWidth - maxPathWidth - 4)
-  const previewWidth = previewOnRight
-    ? Math.max(40, columns - listWidth - 14)
-    : columns - 6
+  const previewWidth = previewOnRight ? Math.max(40, columns - listWidth - 14) : columns - 6
 
   const handleOpen = (m: Match) => {
-    const opened = openFileInExternalEditor(
-      resolvePath(getCwd(), m.file),
-      m.line,
-    )
+    const opened = openFileInExternalEditor(resolvePath(getCwd(), m.file), m.line)
     logEvent('tengu_global_search_select', {
       result_count: matches.length,
       opened_editor: opened,
@@ -243,9 +216,7 @@ export function GlobalSearchDialog({
   // Always pass a non-empty string so the line is reserved — prevents the
   // searchBox from bouncing when the count appears/disappears.
   const matchLabel =
-    matches.length > 0
-      ? `${matches.length}${truncated ? '+' : ''} matches${isSearching ? '…' : ''}`
-      : ' '
+    matches.length > 0 ? `${matches.length}${truncated ? '+' : ''} matches${isSearching ? '…' : ''}` : ' '
 
   return (
     <FuzzyPicker
@@ -259,15 +230,13 @@ export function GlobalSearchDialog({
       onQueryChange={handleQueryChange}
       onFocus={setFocused}
       onSelect={handleOpen}
-      onTab={{ action: 'mention', handler: m => handleInsert(m, true) }}
+      onTab={{ action: 'mention', handler: (m) => handleInsert(m, true) }}
       onShiftTab={{
         action: 'insert path',
-        handler: m => handleInsert(m, false),
+        handler: (m) => handleInsert(m, false),
       }}
       onCancel={onDone}
-      emptyMessage={q =>
-        isSearching ? 'Searching…' : q ? 'No matches' : 'Type to search…'
-      }
+      emptyMessage={(q) => (isSearching ? 'Searching…' : q ? 'No matches' : 'Type to search…')}
       matchLabel={matchLabel}
       selectAction="open in editor"
       renderItem={(m, isFocused) => (
@@ -275,22 +244,17 @@ export function GlobalSearchDialog({
           <Text dimColor>
             {truncatePathMiddle(m.file, maxPathWidth)}:{m.line}
           </Text>{' '}
-          {highlightMatch(
-            truncateToWidth(m.text.trimStart(), maxTextWidth),
-            query,
-          )}
+          {highlightMatch(truncateToWidth(m.text.trimStart(), maxTextWidth), query)}
         </Text>
       )}
-      renderPreview={m =>
+      renderPreview={(m) =>
         preview?.file === m.file && preview.line === m.line ? (
           <>
             <Text dimColor>
               {truncatePathMiddle(m.file, previewWidth)}:{m.line}
             </Text>
             {preview.content.split('\n').map((line, i) => (
-              <Text key={i}>
-                {highlightMatch(truncateToWidth(line, previewWidth), query)}
-              </Text>
+              <Text key={i}>{highlightMatch(truncateToWidth(line, previewWidth), query)}</Text>
             ))}
           </>
         ) : (

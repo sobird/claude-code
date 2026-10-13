@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import type { KeybindingAction, KeybindingContextName } from '../keybindings/types.js'
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js'
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js'

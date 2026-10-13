@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { MCPServerApprovalDialog } from '../components/MCPServerApprovalDialog.js'
 import { MCPServerMultiselectDialog } from '../components/MCPServerMultiselectDialog.js'
 import type { Root } from '../ink.js'
@@ -15,14 +16,14 @@ import { getProjectMcpServerStatus } from './mcp/utils.js'
 export async function handleMcpjsonServerApprovals(root: Root): Promise<void> {
   const { servers: projectServers } = getMcpConfigsByScope('project')
   const pendingServers = Object.keys(projectServers).filter(
-    serverName => getProjectMcpServerStatus(serverName) === 'pending',
+    (serverName) => getProjectMcpServerStatus(serverName) === 'pending',
   )
 
   if (pendingServers.length === 0) {
     return
   }
 
-  await new Promise<void>(resolve => {
+  await new Promise<void>((resolve) => {
     const done = (): void => void resolve()
     if (pendingServers.length === 1 && pendingServers[0] !== undefined) {
       const serverName = pendingServers[0]
@@ -37,10 +38,7 @@ export async function handleMcpjsonServerApprovals(root: Root): Promise<void> {
       root.render(
         <AppStateProvider>
           <KeybindingSetup>
-            <MCPServerMultiselectDialog
-              serverNames={pendingServers}
-              onDone={done}
-            />
+            <MCPServerMultiselectDialog serverNames={pendingServers} onDone={done} />
           </KeybindingSetup>
         </AppStateProvider>,
       )

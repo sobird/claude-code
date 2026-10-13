@@ -1,10 +1,4 @@
-import {
-  CellWidth,
-  cellAtIndex,
-  type Screen,
-  type StylePool,
-  setCellStyleId,
-} from './screen.js'
+import { CellWidth, cellAtIndex, type Screen, type StylePool, setCellStyleId } from './screen.js'
 
 /**
  * Highlight all visible occurrences of `query` in the screen buffer by
@@ -24,11 +18,7 @@ import {
  * Returns true if any match was highlighted (damage gate — caller forces
  * full-frame damage when true).
  */
-export function applySearchHighlight(
-  screen: Screen,
-  query: string,
-  stylePool: StylePool,
-): boolean {
+export function applySearchHighlight(screen: Screen, query: string, stylePool: StylePool): boolean {
   if (!query) return false
   const lq = query.toLowerCase()
   const qlen = lq.length
@@ -57,11 +47,7 @@ export function applySearchHighlight(
     for (let col = 0; col < w; col++) {
       const idx = rowOff + col
       const cell = cellAtIndex(screen, idx)
-      if (
-        cell.width === CellWidth.SpacerTail ||
-        cell.width === CellWidth.SpacerHead ||
-        noSelect[idx] === 1
-      ) {
+      if (cell.width === CellWidth.SpacerTail || cell.width === CellWidth.SpacerHead || noSelect[idx] === 1) {
         continue
       }
       const lc = cell.char.toLowerCase()

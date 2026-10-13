@@ -12,6 +12,7 @@
 import { mkdirSync } from 'fs'
 import { readdir, rm, stat } from 'fs/promises'
 import { delimiter, join } from 'path'
+
 import { getUseCoworkPlugins } from '../../bootstrap/state.js'
 import { logForDebugging } from '../debug.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from '../envUtils.js'
@@ -127,9 +128,7 @@ export function getPluginDataDir(pluginId: string): string {
  * when the dir is absent or empty so callers can skip the prompt entirely.
  * Recursive walk — not hot-path (only on uninstall).
  */
-export async function getPluginDataDirSize(
-  pluginId: string,
-): Promise<{ bytes: number; human: string } | null> {
+export async function getPluginDataDirSize(pluginId: string): Promise<{ bytes: number; human: string } | null> {
   const dir = pluginDataDirPath(pluginId)
   let bytes = 0
   const walk = async (p: string) => {
@@ -170,9 +169,6 @@ export async function deletePluginDataDir(pluginId: string): Promise<void> {
   try {
     await rm(dir, { recursive: true, force: true })
   } catch (e) {
-    logForDebugging(
-      `Failed to delete plugin data dir ${dir}: ${errorMessage(e)}`,
-      { level: 'warn' },
-    )
+    logForDebugging(`Failed to delete plugin data dir ${dir}: ${errorMessage(e)}`, { level: 'warn' })
   }
 }

@@ -1,21 +1,13 @@
 import axios from 'axios'
 import { getOauthConfig, OAUTH_BETA_HEADER } from 'src/constants/oauth.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
-import {
-  getIsNonInteractiveSession,
-  getKairosActive,
-  preferThirdPartyAuthentication,
-} from '../bootstrap/state.js'
+
+import { getIsNonInteractiveSession, getKairosActive, preferThirdPartyAuthentication } from '../bootstrap/state.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../services/analytics/index.js'
-import {
-  getAnthropicApiKey,
-  getClaudeAIOAuthTokens,
-  handleOAuth401Error,
-  hasProfileScope,
-} from './auth.js'
+import { getAnthropicApiKey, getClaudeAIOAuthTokens, handleOAuth401Error, hasProfileScope } from './auth.js'
 import { isInBundledMode } from './bundledMode.js'
 import { getGlobalConfig, saveGlobalConfig } from './config.js'
 import { logForDebugging } from './debug.js'
@@ -28,11 +20,7 @@ import {
 } from './model/model.js'
 import { getAPIProvider } from './model/providers.js'
 import { isEssentialTrafficOnly } from './privacyLevel.js'
-import {
-  getInitialSettings,
-  getSettingsForSource,
-  updateSettingsForSource,
-} from './settings/settings.js'
+import { getInitialSettings, getSettingsForSource, updateSettingsForSource } from './settings/settings.js'
 import { createSignal } from './signal.js'
 
 export function isFastModeEnabled(): boolean {
@@ -48,10 +36,7 @@ export function isFastModeAvailable(): boolean {
 
 type AuthType = 'oauth' | 'api-key'
 
-function getDisabledReasonMessage(
-  disabledReason: FastModeDisabledReason,
-  authType: AuthType,
-): string {
+function getDisabledReasonMessage(disabledReason: FastModeDisabledReason, authType: AuthType): string {
   switch (disabledReason) {
     case 'free':
       return authType === 'oauth'
@@ -74,10 +59,7 @@ export function getFastModeUnavailableReason(): string | null {
     return 'Fast mode is not available'
   }
 
-  const statigReason = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_penguins_off',
-    null,
-  )
+  const statigReason = getFeatureValue_CACHED_MAY_BE_STALE('tengu_penguins_off', null)
   // Statsig reason has priority over other reasons.
   if (statigReason !== null) {
     logForDebugging(`Fast mode unavailable: ${statigReason}`)
@@ -86,21 +68,14 @@ export function getFastModeUnavailableReason(): string | null {
 
   // Previously, fast mode required the native binary (bun build). This is no
   // longer necessary, but we keep this option behind a flag just in case.
-  if (
-    !isInBundledMode() &&
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_marble_sandcastle', false)
-  ) {
+  if (!isInBundledMode() && getFeatureValue_CACHED_MAY_BE_STALE('tengu_marble_sandcastle', false)) {
     return 'Fast mode requires the native binary · Install from: https://claude.com/product/claude-code'
   }
 
   // Not available in the SDK unless explicitly opted in via --settings.
   // Assistant daemon mode is exempt — it's first-party orchestration, and
   // kairosActive is set before this check runs (main.tsx:~1626 vs ~3249).
-  if (
-    getIsNonInteractiveSession() &&
-    preferThirdPartyAuthentication() &&
-    !getKairosActive()
-  ) {
+  if (getIsNonInteractiveSession() && preferThirdPartyAuthentication() && !getKairosActive()) {
     const flagFastMode = getSettingsForSource('flagSettings')?.fastMode
     if (!flagFastMode) {
       const reason = 'Fast mode is not available in the Agent SDK'
@@ -117,10 +92,7 @@ export function getFastModeUnavailableReason(): string | null {
   }
 
   if (orgStatus.status === 'disabled') {
-    if (
-      orgStatus.reason === 'network_error' ||
-      orgStatus.reason === 'unknown'
-    ) {
+    if (orgStatus.reason === 'network_error' || orgStatus.reason === 'unknown') {
       // The org check can fail behind corporate proxies that block the
       // endpoint. We add CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS=1 to
       // bypass this check in the CC binary. This is OK since we have
@@ -129,8 +101,7 @@ export function getFastModeUnavailableReason(): string | null {
         return null
       }
     }
-    const authType: AuthType =
-      getClaudeAIOAuthTokens() !== null ? 'oauth' : 'api-key'
+    const authType: AuthType = getClaudeAIOAuthTokens() !== null ? 'oauth' : 'api-key'
     const reason = getDisabledReasonMessage(orgStatus.reason, authType)
     logForDebugging(`Fast mode unavailable: ${reason}`)
     return reason
@@ -164,9 +135,7 @@ export function getInitialFastModeSetting(model: ModelSetting): boolean {
   return settings.fastMode === true
 }
 
-export function isFastModeSupportedByModel(
-  modelSetting: ModelSetting,
-): boolean {
+export function isFastModeSupportedByModel(modelSetting: ModelSetting): boolean {
   if (!isFastModeEnabled()) {
     return false
   }
@@ -190,17 +159,13 @@ let hasLoggedCooldownExpiry = false
 // --- Cooldown event listeners ---
 export type CooldownReason = 'rate_limit' | 'overloaded'
 
-const cooldownTriggered =
-  createSignal<[resetAt: number, reason: CooldownReason]>()
+const cooldownTriggered = createSignal<[resetAt: number, reason: CooldownReason]>()
 const cooldownExpired = createSignal()
 export const onCooldownTriggered = cooldownTriggered.subscribe
 export const onCooldownExpired = cooldownExpired.subscribe
 
 export function getFastModeRuntimeState(): FastModeRuntimeState {
-  if (
-    runtimeState.status === 'cooldown' &&
-    Date.now() >= runtimeState.resetAt
-  ) {
+  if (runtimeState.status === 'cooldown' && Date.now() >= runtimeState.resetAt) {
     if (isFastModeEnabled() && !hasLoggedCooldownExpiry) {
       logForDebugging('Fast mode cooldown expired, re-enabling fast mode')
       hasLoggedCooldownExpiry = true
@@ -211,23 +176,17 @@ export function getFastModeRuntimeState(): FastModeRuntimeState {
   return runtimeState
 }
 
-export function triggerFastModeCooldown(
-  resetTimestamp: number,
-  reason: CooldownReason,
-): void {
+export function triggerFastModeCooldown(resetTimestamp: number, reason: CooldownReason): void {
   if (!isFastModeEnabled()) {
     return
   }
   runtimeState = { status: 'cooldown', resetAt: resetTimestamp, reason }
   hasLoggedCooldownExpiry = false
   const cooldownDurationMs = resetTimestamp - Date.now()
-  logForDebugging(
-    `Fast mode cooldown triggered (${reason}), duration ${Math.round(cooldownDurationMs / 1000)}s`,
-  )
+  logForDebugging(`Fast mode cooldown triggered (${reason}), duration ${Math.round(cooldownDurationMs / 1000)}s`)
   logEvent('tengu_fast_mode_fallback_triggered', {
     cooldown_duration_ms: cooldownDurationMs,
-    cooldown_reason:
-      reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    cooldown_reason: reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
   cooldownTriggered.emit(resetTimestamp, reason)
 }
@@ -247,7 +206,7 @@ export function handleFastModeRejectedByAPI(): void {
   }
   orgStatus = { status: 'disabled', reason: 'preference' }
   updateSettingsForSource('userSettings', { fastMode: undefined })
-  saveGlobalConfig(current => ({
+  saveGlobalConfig((current) => ({
     ...current,
     penguinModeOrgEnabled: false,
   }))
@@ -294,17 +253,14 @@ function isOutOfCreditsReason(reason: string | null): boolean {
  */
 export function handleFastModeOverageRejection(reason: string | null): void {
   const message = getOverageDisabledMessage(reason)
-  logForDebugging(
-    `Fast mode overage rejection: ${reason ?? 'unknown'} — ${message}`,
-  )
+  logForDebugging(`Fast mode overage rejection: ${reason ?? 'unknown'} — ${message}`)
   logEvent('tengu_fast_mode_overage_rejected', {
-    overage_disabled_reason: (reason ??
-      'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    overage_disabled_reason: (reason ?? 'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
   // Disable fast mode permanently unless the user has ran out of credits
   if (!isOutOfCreditsReason(reason)) {
     updateSettingsForSource('userSettings', { fastMode: undefined })
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       penguinModeOrgEnabled: false,
     }))
@@ -321,10 +277,7 @@ export function getFastModeState(
   fastModeUserEnabled: boolean | undefined,
 ): 'off' | 'cooldown' | 'on' {
   const enabled =
-    isFastModeEnabled() &&
-    isFastModeAvailable() &&
-    !!fastModeUserEnabled &&
-    isFastModeSupportedByModel(model)
+    isFastModeEnabled() && isFastModeAvailable() && !!fastModeUserEnabled && isFastModeSupportedByModel(model)
   if (enabled && isFastModeCooldown()) {
     return 'cooldown'
   }
@@ -336,12 +289,7 @@ export function getFastModeState(
 
 // Disabled reason returned by the API. The API is the canonical source for why
 // fast mode is disabled (free account, admin preference, extra usage not enabled).
-export type FastModeDisabledReason =
-  | 'free'
-  | 'preference'
-  | 'extra_usage_disabled'
-  | 'network_error'
-  | 'unknown'
+export type FastModeDisabledReason = 'free' | 'preference' | 'extra_usage_disabled' | 'network_error' | 'unknown'
 
 // In-memory cache of the fast mode status from the API.
 // Distinct from the user's fastMode app state — this represents
@@ -364,9 +312,7 @@ type FastModeResponse = {
   disabled_reason: FastModeDisabledReason | null
 }
 
-async function fetchFastModeStatus(
-  auth: { accessToken: string } | { apiKey: string },
-): Promise<FastModeResponse> {
+async function fetchFastModeStatus(auth: { accessToken: string } | { apiKey: string }): Promise<FastModeResponse> {
   const endpoint = `${getOauthConfig().BASE_API_URL}/api/claude_code_penguin_mode`
   const headers: Record<string, string> =
     'accessToken' in auth
@@ -398,10 +344,7 @@ export function resolveFastModeStatusFromCache(): void {
   }
   const isAnt = process.env.USER_TYPE === 'ant'
   const cachedEnabled = getGlobalConfig().penguinModeOrgEnabled === true
-  orgStatus =
-    isAnt || cachedEnabled
-      ? { status: 'enabled' }
-      : { status: 'disabled', reason: 'unknown' }
+  orgStatus = isAnt || cachedEnabled ? { status: 'enabled' } : { status: 'disabled', reason: 'unknown' }
 }
 
 export async function prefetchFastModeStatus(): Promise<void> {
@@ -415,9 +358,7 @@ export async function prefetchFastModeStatus(): Promise<void> {
   }
 
   if (inflightPrefetch) {
-    logForDebugging(
-      'Fast mode prefetch in progress, returning in-flight promise',
-    )
+    logForDebugging('Fast mode prefetch in progress, returning in-flight promise')
     return inflightPrefetch
   }
 
@@ -425,15 +366,11 @@ export async function prefetchFastModeStatus(): Promise<void> {
   // Resolve orgStatus from cache and bail before burning the throttle window.
   // API key auth is unaffected.
   const apiKey = getAnthropicApiKey()
-  const hasUsableOAuth =
-    getClaudeAIOAuthTokens()?.accessToken && hasProfileScope()
+  const hasUsableOAuth = getClaudeAIOAuthTokens()?.accessToken && hasProfileScope()
   if (!hasUsableOAuth && !apiKey) {
     const isAnt = process.env.USER_TYPE === 'ant'
     const cachedEnabled = getGlobalConfig().penguinModeOrgEnabled === true
-    orgStatus =
-      isAnt || cachedEnabled
-        ? { status: 'enabled' }
-        : { status: 'disabled', reason: 'preference' }
+    orgStatus = isAnt || cachedEnabled ? { status: 'enabled' } : { status: 'disabled', reason: 'preference' }
     return
   }
 
@@ -484,9 +421,7 @@ export async function prefetchFastModeStatus(): Promise<void> {
       }
 
       const previousEnabled =
-        orgStatus.status !== 'pending'
-          ? orgStatus.status === 'enabled'
-          : getGlobalConfig().penguinModeOrgEnabled
+        orgStatus.status !== 'pending' ? orgStatus.status === 'enabled' : getGlobalConfig().penguinModeOrgEnabled
       orgStatus = status.enabled
         ? { status: 'enabled' }
         : {
@@ -498,7 +433,7 @@ export async function prefetchFastModeStatus(): Promise<void> {
         if (!status.enabled) {
           updateSettingsForSource('userSettings', { fastMode: undefined })
         }
-        saveGlobalConfig(current => ({
+        saveGlobalConfig((current) => ({
           ...current,
           penguinModeOrgEnabled: status.enabled,
         }))
@@ -513,10 +448,7 @@ export async function prefetchFastModeStatus(): Promise<void> {
       // if no positive cache, disable with network_error reason.
       const isAnt = process.env.USER_TYPE === 'ant'
       const cachedEnabled = getGlobalConfig().penguinModeOrgEnabled === true
-      orgStatus =
-        isAnt || cachedEnabled
-          ? { status: 'enabled' }
-          : { status: 'disabled', reason: 'network_error' }
+      orgStatus = isAnt || cachedEnabled ? { status: 'enabled' } : { status: 'disabled', reason: 'network_error' }
       logForDebugging(
         `Failed to fetch org fast mode status, defaulting to ${orgStatus.status === 'enabled' ? 'enabled (cached)' : 'disabled (network_error)'}: ${err}`,
         { level: 'error' },

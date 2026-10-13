@@ -1,6 +1,7 @@
 import { open } from 'fs/promises'
 import * as path from 'path'
 import { pathToFileURL } from 'url'
+
 import type {
   CallHierarchyIncomingCall,
   CallHierarchyItem,
@@ -12,6 +13,7 @@ import type {
   SymbolInformation,
 } from 'vscode-languageserver-types'
 import { z } from 'zod/v4'
+
 import {
   getInitializationStatus,
   getLspServerManager,
@@ -43,12 +45,7 @@ import {
 } from './formatters.js'
 import { DESCRIPTION, LSP_TOOL_NAME } from './prompt.js'
 import { lspToolInputSchema } from './schemas.js'
-import {
-  renderToolResultMessage,
-  renderToolUseErrorMessage,
-  renderToolUseMessage,
-  userFacingName,
-} from './UI.js'
+import { renderToolResultMessage, renderToolUseErrorMessage, renderToolUseMessage, userFacingName } from './UI.js'
 
 const MAX_LSP_FILE_SIZE_BYTES = 10_000_000
 
@@ -72,16 +69,8 @@ const inputSchema = lazySchema(() =>
       ])
       .describe('The LSP operation to perform'),
     filePath: z.string().describe('The absolute or relative path to the file'),
-    line: z
-      .number()
-      .int()
-      .positive()
-      .describe('The line number (1-based, as shown in editors)'),
-    character: z
-      .number()
-      .int()
-      .positive()
-      .describe('The character offset (1-based, as shown in editors)'),
+    line: z.number().int().positive().describe('The line number (1-based, as shown in editors)'),
+    character: z.number().int().positive().describe('The character offset (1-based, as shown in editors)'),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -102,21 +91,14 @@ const outputSchema = lazySchema(() =>
       ])
       .describe('The LSP operation that was performed'),
     result: z.string().describe('The formatted result of the LSP operation'),
-    filePath: z
-      .string()
-      .describe('The file path the operation was performed on'),
+    filePath: z.string().describe('The file path the operation was performed on'),
     resultCount: z
       .number()
       .int()
       .nonnegative()
       .optional()
       .describe('Number of results (definitions, references, symbols)'),
-    fileCount: z
-      .number()
-      .int()
-      .nonnegative()
-      .optional()
-      .describe('Number of files containing results'),
+    fileCount: z.number().int().nonnegative().optional().describe('Number of files containing results'),
   }),
 )
 type OutputSchema = ReturnType<typeof outputSchema>
@@ -185,11 +167,7 @@ export const LSPTool = buildTool({
       }
       const err = toError(error)
       // Log filesystem access errors for tracking
-      logError(
-        new Error(
-          `Failed to access file stats for LSP operation on ${input.filePath}: ${err.message}`,
-        ),
-      )
+      logError(new Error(`Failed to access file stats for LSP operation on ${input.filePath}: ${err.message}`))
       return {
         result: false,
         message: `Cannot access file: ${input.filePath}. ${err.message}`,
@@ -209,11 +187,7 @@ export const LSPTool = buildTool({
   },
   async checkPermissions(input, context): Promise<PermissionDecision> {
     const appState = context.getAppState()
-    return checkReadPermissionForTool(
-      LSPTool,
-      input,
-      appState.toolPermissionContext,
-    )
+    return checkReadPermissionForTool(LSPTool, input, appState.toolPermissionContext)
   },
   async prompt() {
     return DESCRIPTION
@@ -236,14 +210,11 @@ export const LSPTool = buildTool({
     const manager = getLspServerManager()
     if (!manager) {
       // Log this system-level failure for tracking
-      logError(
-        new Error('LSP server manager not initialized when tool was called'),
-      )
+      logError(new Error('LSP server manager not initialized when tool was called'))
 
       const output: Output = {
         operation: input.operation,
-        result:
-          'LSP server manager not initialized. This may indicate a startup issue.',
+        result: 'LSP server manager not initialized. This may indicate a startup issue.',
         filePath: input.filePath,
       }
       return {
@@ -299,10 +270,7 @@ export const LSPTool = buildTool({
       // For incomingCalls and outgoingCalls, we need a two-step process:
       // 1. First get CallHierarchyItem(s) from prepareCallHierarchy
       // 2. Then request the actual calls using that item
-      if (
-        input.operation === 'incomingCalls' ||
-        input.operation === 'outgoingCalls'
-      ) {
+      if (input.operation === 'incomingCalls' || input.operation === 'outgoingCalls') {
         const callItems = result as CallHierarchyItem[]
         if (!callItems || callItems.length === 0) {
           const output: Output = {
@@ -317,18 +285,14 @@ export const LSPTool = buildTool({
 
         // Use the first call hierarchy item to request calls
         const callMethod =
-          input.operation === 'incomingCalls'
-            ? 'callHierarchy/incomingCalls'
-            : 'callHierarchy/outgoingCalls'
+          input.operation === 'incomingCalls' ? 'callHierarchy/incomingCalls' : 'callHierarchy/outgoingCalls'
 
         result = await manager.sendRequest(absolutePath, callMethod, {
           item: callItems[0],
         })
 
         if (result === undefined) {
-          logForDebugging(
-            `LSP server returned undefined for ${callMethod} on ${input.filePath}`,
-          )
+          logForDebugging(`LSP server returned undefined for ${callMethod} on ${input.filePath}`)
           // Continue to formatter which will handle empty/null gracefully
         }
       }
@@ -345,28 +309,16 @@ export const LSPTool = buildTool({
         if (input.operation === 'workspaceSymbol') {
           // SymbolInformation has location.uri — filter by extracting locations
           const symbols = result as SymbolInformation[]
-          const locations = symbols
-            .filter(s => s?.location?.uri)
-            .map(s => s.location)
-          const filteredLocations = await filterGitIgnoredLocations(
-            locations,
-            cwd,
-          )
-          const filteredUris = new Set(filteredLocations.map(l => l.uri))
-          result = symbols.filter(
-            s => !s?.location?.uri || filteredUris.has(s.location.uri),
-          )
+          const locations = symbols.filter((s) => s?.location?.uri).map((s) => s.location)
+          const filteredLocations = await filterGitIgnoredLocations(locations, cwd)
+          const filteredUris = new Set(filteredLocations.map((l) => l.uri))
+          result = symbols.filter((s) => !s?.location?.uri || filteredUris.has(s.location.uri))
         } else {
           // Location[] or (Location | LocationLink)[]
-          const locations = (result as (Location | LocationLink)[]).map(
-            toLocation,
-          )
-          const filteredLocations = await filterGitIgnoredLocations(
-            locations,
-            cwd,
-          )
-          const filteredUris = new Set(filteredLocations.map(l => l.uri))
-          result = (result as (Location | LocationLink)[]).filter(item => {
+          const locations = (result as (Location | LocationLink)[]).map(toLocation)
+          const filteredLocations = await filterGitIgnoredLocations(locations, cwd)
+          const filteredUris = new Set(filteredLocations.map((l) => l.uri))
+          result = (result as (Location | LocationLink)[]).filter((item) => {
             const loc = toLocation(item)
             return !loc.uri || filteredUris.has(loc.uri)
           })
@@ -374,11 +326,7 @@ export const LSPTool = buildTool({
       }
 
       // Format the result based on operation type
-      const { formatted, resultCount, fileCount } = formatResult(
-        input.operation,
-        result,
-        cwd,
-      )
+      const { formatted, resultCount, fileCount } = formatResult(input.operation, result, cwd)
 
       const output: Output = {
         operation: input.operation,
@@ -396,11 +344,7 @@ export const LSPTool = buildTool({
       const errorMessage = err.message
 
       // Log error for tracking
-      logError(
-        new Error(
-          `LSP tool request failed for ${input.operation} on ${input.filePath}: ${errorMessage}`,
-        ),
-      )
+      logError(new Error(`LSP tool request failed for ${input.operation} on ${input.filePath}: ${errorMessage}`))
 
       const output: Output = {
         operation: input.operation,
@@ -424,10 +368,7 @@ export const LSPTool = buildTool({
 /**
  * Maps LSPTool operation to LSP method and params
  */
-function getMethodAndParams(
-  input: Input,
-  absolutePath: string,
-): { method: string; params: unknown } {
+function getMethodAndParams(input: Input, absolutePath: string): { method: string; params: unknown } {
   const uri = pathToFileURL(absolutePath).href
   // Convert from 1-based (user-friendly) to 0-based (LSP protocol)
   const position = {
@@ -529,7 +470,7 @@ function countSymbols(symbols: DocumentSymbol[]): number {
  * Counts unique files from an array of locations
  */
 function countUniqueFiles(locations: Location[]): number {
-  return new Set(locations.map(loc => loc.uri)).size
+  return new Set(locations.map((loc) => loc.uri)).size
 }
 
 /**
@@ -553,10 +494,7 @@ function uriToFilePath(uri: string): string {
  * Filters out locations whose file paths are gitignored.
  * Uses `git check-ignore` with batched path arguments for efficiency.
  */
-async function filterGitIgnoredLocations<T extends Location>(
-  locations: T[],
-  cwd: string,
-): Promise<T[]> {
+async function filterGitIgnoredLocations<T extends Location>(locations: T[], cwd: string): Promise<T[]> {
   if (locations.length === 0) {
     return locations
   }
@@ -580,15 +518,11 @@ async function filterGitIgnoredLocations<T extends Location>(
   const BATCH_SIZE = 50
   for (let i = 0; i < uniquePaths.length; i += BATCH_SIZE) {
     const batch = uniquePaths.slice(i, i + BATCH_SIZE)
-    const result = await execFileNoThrowWithCwd(
-      'git',
-      ['check-ignore', ...batch],
-      {
-        cwd,
-        preserveOutputOnError: false,
-        timeout: 5_000,
-      },
-    )
+    const result = await execFileNoThrowWithCwd('git', ['check-ignore', ...batch], {
+      cwd,
+      preserveOutputOnError: false,
+      timeout: 5_000,
+    })
 
     if (result.code === 0 && result.stdout) {
       for (const line of result.stdout.split('\n')) {
@@ -604,7 +538,7 @@ async function filterGitIgnoredLocations<T extends Location>(
     return locations
   }
 
-  return locations.filter(loc => {
+  return locations.filter((loc) => {
     const filePath = uriToPath.get(loc.uri)
     return !filePath || !ignoredPaths.has(filePath)
   })
@@ -641,17 +575,13 @@ function formatResult(
   switch (operation) {
     case 'goToDefinition': {
       // Handle both Location and LocationLink formats
-      const rawResults = Array.isArray(result)
-        ? result
-        : result
-          ? [result as Location | LocationLink]
-          : []
+      const rawResults = Array.isArray(result) ? result : result ? [result as Location | LocationLink] : []
 
       // Convert LocationLinks to Locations for uniform handling
       const locations = rawResults.map(toLocation)
 
       // Log and filter out locations with undefined uris
-      const invalidLocations = locations.filter(loc => !loc || !loc.uri)
+      const invalidLocations = locations.filter((loc) => !loc || !loc.uri)
       if (invalidLocations.length > 0) {
         logError(
           new Error(
@@ -661,15 +591,10 @@ function formatResult(
         )
       }
 
-      const validLocations = locations.filter(loc => loc && loc.uri)
+      const validLocations = locations.filter((loc) => loc && loc.uri)
       return {
         formatted: formatGoToDefinitionResult(
-          result as
-            | Location
-            | Location[]
-            | LocationLink
-            | LocationLink[]
-            | null,
+          result as Location | Location[] | LocationLink | LocationLink[] | null,
           cwd,
         ),
         resultCount: validLocations.length,
@@ -680,7 +605,7 @@ function formatResult(
       const locations = (result as Location[]) || []
 
       // Log and filter out locations with undefined uris
-      const invalidLocations = locations.filter(loc => !loc || !loc.uri)
+      const invalidLocations = locations.filter((loc) => !loc || !loc.uri)
       if (invalidLocations.length > 0) {
         logError(
           new Error(
@@ -690,7 +615,7 @@ function formatResult(
         )
       }
 
-      const validLocations = locations.filter(loc => loc && loc.uri)
+      const validLocations = locations.filter((loc) => loc && loc.uri)
       return {
         formatted: formatFindReferencesResult(result as Location[] | null, cwd),
         resultCount: validLocations.length,
@@ -708,17 +633,11 @@ function formatResult(
       // LSP allows documentSymbol to return either DocumentSymbol[] or SymbolInformation[]
       const symbols = (result as (DocumentSymbol | SymbolInformation)[]) || []
       // Detect format: DocumentSymbol has 'range', SymbolInformation has 'location'
-      const isDocumentSymbol =
-        symbols.length > 0 && symbols[0] && 'range' in symbols[0]
+      const isDocumentSymbol = symbols.length > 0 && symbols[0] && 'range' in symbols[0]
       // Count symbols - DocumentSymbol can have nested children, SymbolInformation is flat
-      const count = isDocumentSymbol
-        ? countSymbols(symbols as DocumentSymbol[])
-        : symbols.length
+      const count = isDocumentSymbol ? countSymbols(symbols as DocumentSymbol[]) : symbols.length
       return {
-        formatted: formatDocumentSymbolResult(
-          result as (DocumentSymbol[] | SymbolInformation[]) | null,
-          cwd,
-        ),
+        formatted: formatDocumentSymbolResult(result as (DocumentSymbol[] | SymbolInformation[]) | null, cwd),
         resultCount: count,
         fileCount: symbols.length > 0 ? 1 : 0,
       }
@@ -727,9 +646,7 @@ function formatResult(
       const symbols = (result as SymbolInformation[]) || []
 
       // Log and filter out symbols with undefined location.uri
-      const invalidSymbols = symbols.filter(
-        sym => !sym || !sym.location || !sym.location.uri,
-      )
+      const invalidSymbols = symbols.filter((sym) => !sym || !sym.location || !sym.location.uri)
       if (invalidSymbols.length > 0) {
         logError(
           new Error(
@@ -739,32 +656,23 @@ function formatResult(
         )
       }
 
-      const validSymbols = symbols.filter(
-        sym => sym && sym.location && sym.location.uri,
-      )
-      const locations = validSymbols.map(s => s.location)
+      const validSymbols = symbols.filter((sym) => sym && sym.location && sym.location.uri)
+      const locations = validSymbols.map((s) => s.location)
       return {
-        formatted: formatWorkspaceSymbolResult(
-          result as SymbolInformation[] | null,
-          cwd,
-        ),
+        formatted: formatWorkspaceSymbolResult(result as SymbolInformation[] | null, cwd),
         resultCount: validSymbols.length,
         fileCount: countUniqueFiles(locations),
       }
     }
     case 'goToImplementation': {
       // Handle both Location and LocationLink formats (same as goToDefinition)
-      const rawResults = Array.isArray(result)
-        ? result
-        : result
-          ? [result as Location | LocationLink]
-          : []
+      const rawResults = Array.isArray(result) ? result : result ? [result as Location | LocationLink] : []
 
       // Convert LocationLinks to Locations for uniform handling
       const locations = rawResults.map(toLocation)
 
       // Log and filter out locations with undefined uris
-      const invalidLocations = locations.filter(loc => !loc || !loc.uri)
+      const invalidLocations = locations.filter((loc) => !loc || !loc.uri)
       if (invalidLocations.length > 0) {
         logError(
           new Error(
@@ -774,16 +682,11 @@ function formatResult(
         )
       }
 
-      const validLocations = locations.filter(loc => loc && loc.uri)
+      const validLocations = locations.filter((loc) => loc && loc.uri)
       return {
         // Reuse goToDefinition formatter since the result format is identical
         formatted: formatGoToDefinitionResult(
-          result as
-            | Location
-            | Location[]
-            | LocationLink
-            | LocationLink[]
-            | null,
+          result as Location | Location[] | LocationLink | LocationLink[] | null,
           cwd,
         ),
         resultCount: validLocations.length,
@@ -793,10 +696,7 @@ function formatResult(
     case 'prepareCallHierarchy': {
       const items = (result as CallHierarchyItem[]) || []
       return {
-        formatted: formatPrepareCallHierarchyResult(
-          result as CallHierarchyItem[] | null,
-          cwd,
-        ),
+        formatted: formatPrepareCallHierarchyResult(result as CallHierarchyItem[] | null, cwd),
         resultCount: items.length,
         fileCount: items.length > 0 ? countUniqueFilesFromCallItems(items) : 0,
       }
@@ -804,25 +704,17 @@ function formatResult(
     case 'incomingCalls': {
       const calls = (result as CallHierarchyIncomingCall[]) || []
       return {
-        formatted: formatIncomingCallsResult(
-          result as CallHierarchyIncomingCall[] | null,
-          cwd,
-        ),
+        formatted: formatIncomingCallsResult(result as CallHierarchyIncomingCall[] | null, cwd),
         resultCount: calls.length,
-        fileCount:
-          calls.length > 0 ? countUniqueFilesFromIncomingCalls(calls) : 0,
+        fileCount: calls.length > 0 ? countUniqueFilesFromIncomingCalls(calls) : 0,
       }
     }
     case 'outgoingCalls': {
       const calls = (result as CallHierarchyOutgoingCall[]) || []
       return {
-        formatted: formatOutgoingCallsResult(
-          result as CallHierarchyOutgoingCall[] | null,
-          cwd,
-        ),
+        formatted: formatOutgoingCallsResult(result as CallHierarchyOutgoingCall[] | null, cwd),
         resultCount: calls.length,
-        fileCount:
-          calls.length > 0 ? countUniqueFilesFromOutgoingCalls(calls) : 0,
+        fileCount: calls.length > 0 ? countUniqueFilesFromOutgoingCalls(calls) : 0,
       }
     }
   }
@@ -833,7 +725,7 @@ function formatResult(
  * Filters out items with undefined URIs
  */
 function countUniqueFilesFromCallItems(items: CallHierarchyItem[]): number {
-  const validUris = items.map(item => item.uri).filter(uri => uri)
+  const validUris = items.map((item) => item.uri).filter((uri) => uri)
   return new Set(validUris).size
 }
 
@@ -841,10 +733,8 @@ function countUniqueFilesFromCallItems(items: CallHierarchyItem[]): number {
  * Counts unique files from CallHierarchyIncomingCall array
  * Filters out calls with undefined URIs
  */
-function countUniqueFilesFromIncomingCalls(
-  calls: CallHierarchyIncomingCall[],
-): number {
-  const validUris = calls.map(call => call.from?.uri).filter(uri => uri)
+function countUniqueFilesFromIncomingCalls(calls: CallHierarchyIncomingCall[]): number {
+  const validUris = calls.map((call) => call.from?.uri).filter((uri) => uri)
   return new Set(validUris).size
 }
 
@@ -852,9 +742,7 @@ function countUniqueFilesFromIncomingCalls(
  * Counts unique files from CallHierarchyOutgoingCall array
  * Filters out calls with undefined URIs
  */
-function countUniqueFilesFromOutgoingCalls(
-  calls: CallHierarchyOutgoingCall[],
-): number {
-  const validUris = calls.map(call => call.to?.uri).filter(uri => uri)
+function countUniqueFilesFromOutgoingCalls(calls: CallHierarchyOutgoingCall[]): number {
+  const validUris = calls.map((call) => call.to?.uri).filter((uri) => uri)
   return new Set(validUris).size
 }

@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod/v4'
+
 import { lazySchema } from '../../utils/lazySchema.js'
 
 /**
@@ -61,7 +62,6 @@ export type SettingsSyncUploadResult = {
 export const SYNC_KEYS = {
   USER_SETTINGS: '~/.claude/settings.json',
   USER_MEMORY: '~/.claude/CLAUDE.md',
-  projectSettings: (projectId: string) =>
-    `projects/${projectId}/.claude/settings.local.json`,
+  projectSettings: (projectId: string) => `projects/${projectId}/.claude/settings.local.json`,
   projectMemory: (projectId: string) => `projects/${projectId}/CLAUDE.local.md`,
 } as const

@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useCallback } from 'react'
+
 import { Select } from '../../../components/CustomSelect/select.js'
 import { Box, Text } from '../../../ink.js'
 import type { ToolPermissionContext } from '../../../Tool.js'
@@ -44,17 +45,11 @@ export function RemoveWorkspaceDirectory({
   )
 
   return (
-    <Dialog
-      title="Remove directory from workspace?"
-      onCancel={onCancel}
-      color="error"
-    >
+    <Dialog title="Remove directory from workspace?" onCancel={onCancel} color="error">
       <Box marginX={2} flexDirection="column">
         <Text bold>{directoryPath}</Text>
       </Box>
-      <Text>
-        Claude Code will no longer have access to files in this directory.
-      </Text>
+      <Text>Claude Code will no longer have access to files in this directory.</Text>
       <Select
         onChange={handleSelect}
         onCancel={onCancel}

@@ -1,8 +1,9 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { useMemo } from 'react'
+
+import { useAppState } from '../state/AppState.js'
 import type { Tools, ToolPermissionContext } from '../Tool.js'
 import { assembleToolPool } from '../tools.js'
-import { useAppState } from '../state/AppState.js'
 import { mergeAndFilterTools } from '../utils/toolPool.js'
 
 /**
@@ -29,16 +30,6 @@ export function useMergedTools(
     // It handles: getTools() + MCP deny-rule filtering + dedup + MCP CLI exclusion.
     const assembled = assembleToolPool(toolPermissionContext, mcpTools)
 
-    return mergeAndFilterTools(
-      initialTools,
-      assembled,
-      toolPermissionContext.mode,
-    )
-  }, [
-    initialTools,
-    mcpTools,
-    toolPermissionContext,
-    replBridgeEnabled,
-    replBridgeOutboundOnly,
-  ])
+    return mergeAndFilterTools(initialTools, assembled, toolPermissionContext.mode)
+  }, [initialTools, mcpTools, toolPermissionContext, replBridgeEnabled, replBridgeOutboundOnly])
 }

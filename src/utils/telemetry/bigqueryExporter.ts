@@ -9,6 +9,7 @@ import {
 } from '@opentelemetry/sdk-metrics'
 import axios from 'axios'
 import { checkMetricsEnabled } from 'src/services/api/metricsOptOut.js'
+
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
 import { getSubscriptionType, isClaudeAISubscriber } from '../auth.js'
 import { checkHasTrustDialogAccepted } from '../config.js'
@@ -46,13 +47,8 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
   constructor(options: { timeout?: number } = {}) {
     const defaultEndpoint = 'https://api.anthropic.com/api/claude_code/metrics'
 
-    if (
-      process.env.USER_TYPE === 'ant' &&
-      process.env.ANT_CLAUDE_CODE_METRICS_ENDPOINT
-    ) {
-      this.endpoint =
-        process.env.ANT_CLAUDE_CODE_METRICS_ENDPOINT +
-        '/api/claude_code/metrics'
+    if (process.env.USER_TYPE === 'ant' && process.env.ANT_CLAUDE_CODE_METRICS_ENDPOINT) {
+      this.endpoint = process.env.ANT_CLAUDE_CODE_METRICS_ENDPOINT + '/api/claude_code/metrics'
     } else {
       this.endpoint = defaultEndpoint
     }
@@ -60,10 +56,7 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
     this.timeout = options.timeout || 5000
   }
 
-  async export(
-    metrics: ResourceMetrics,
-    resultCallback: (result: ExportResult) => void,
-  ): Promise<void> {
+  async export(metrics: ResourceMetrics, resultCallback: (result: ExportResult) => void): Promise<void> {
     if (this.isShutdown) {
       resultCallback({
         code: ExportResultCode.FAILED,
@@ -84,19 +77,13 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
     })
   }
 
-  private async doExport(
-    metrics: ResourceMetrics,
-    resultCallback: (result: ExportResult) => void,
-  ): Promise<void> {
+  private async doExport(metrics: ResourceMetrics, resultCallback: (result: ExportResult) => void): Promise<void> {
     try {
       // Skip if trust not established in interactive mode
       // This prevents triggering apiKeyHelper before trust dialog
-      const hasTrust =
-        checkHasTrustDialogAccepted() || getIsNonInteractiveSession()
+      const hasTrust = checkHasTrustDialogAccepted() || getIsNonInteractiveSession()
       if (!hasTrust) {
-        logForDebugging(
-          'BigQuery metrics export: trust not established, skipping',
-        )
+        logForDebugging('BigQuery metrics export: trust not established, skipping')
         resultCallback({ code: ExportResultCode.SUCCESS })
         return
       }
@@ -133,9 +120,7 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
       })
 
       logForDebugging('BigQuery metrics exported successfully')
-      logForDebugging(
-        `BigQuery API Response: ${jsonStringify(response.data, null, 2)}`,
-      )
+      logForDebugging(`BigQuery API Response: ${jsonStringify(response.data, null, 2)}`)
       resultCallback({ code: ExportResultCode.SUCCESS })
     } catch (error) {
       logForDebugging(`BigQuery metrics export failed: ${errorMessage(error)}`)
@@ -147,9 +132,7 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
     }
   }
 
-  private transformMetricsForInternal(
-    metrics: ResourceMetrics,
-  ): InternalMetricsPayload {
+  private transformMetricsForInternal(metrics: ResourceMetrics): InternalMetricsPayload {
     const attrs = metrics.resource.attributes
 
     const resourceAttributes: Record<string, string> = {
@@ -159,9 +142,7 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
       'os.version': (attrs['os.version'] as string) || 'unknown',
       'host.arch': (attrs['host.arch'] as string) || 'unknown',
       'aggregation.temporality':
-        this.selectAggregationTemporality() === AggregationTemporality.DELTA
-          ? 'delta'
-          : 'cumulative',
+        this.selectAggregationTemporality() === AggregationTemporality.DELTA ? 'delta' : 'cumulative',
     }
 
     // Only add wsl.version if it exists (omit instead of default)
@@ -182,8 +163,8 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
 
     const transformed = {
       resource_attributes: resourceAttributes,
-      metrics: metrics.scopeMetrics.flatMap(scopeMetric =>
-        scopeMetric.metrics.map(metric => ({
+      metrics: metrics.scopeMetrics.flatMap((scopeMetric) =>
+        scopeMetric.metrics.map((metric) => ({
           name: metric.descriptor.name,
           description: metric.descriptor.description,
           unit: metric.descriptor.unit,
@@ -199,16 +180,11 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
     const dataPoints = metric.dataPoints || []
 
     return dataPoints
-      .filter(
-        (point): point is OTelDataPoint<number> =>
-          typeof point.value === 'number',
-      )
-      .map(point => ({
+      .filter((point): point is OTelDataPoint<number> => typeof point.value === 'number')
+      .map((point) => ({
         attributes: this.convertAttributes(point.attributes),
         value: point.value,
-        timestamp: this.hrTimeToISOString(
-          point.endTime || point.startTime || [Date.now() / 1000, 0],
-        ),
+        timestamp: this.hrTimeToISOString(point.endTime || point.startTime || [Date.now() / 1000, 0]),
       }))
   }
 
@@ -223,9 +199,7 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
     logForDebugging('BigQuery metrics exporter flush complete')
   }
 
-  private convertAttributes(
-    attributes: Attributes | undefined,
-  ): Record<string, string> {
+  private convertAttributes(attributes: Attributes | undefined): Record<string, string> {
     const result: Record<string, string> = {}
     if (attributes) {
       for (const [key, value] of Object.entries(attributes)) {

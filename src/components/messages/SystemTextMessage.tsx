@@ -1,26 +1,28 @@
-// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import { Box, Text, type TextProps } from '../../ink.js'
 import { feature } from 'bun:bundle'
+import { basename } from 'path'
+
+import figures from 'figures'
+import sample from 'lodash-es/sample.js'
 import * as React from 'react'
 import { useState } from 'react'
-import sample from 'lodash-es/sample.js'
-import {
-  BLACK_CIRCLE,
-  REFERENCE_MARK,
-  TEARDROP_ASTERISK,
-} from '../../constants/figures.js'
-import figures from 'figures'
-import { basename } from 'path'
-import { MessageResponse } from '../MessageResponse.js'
-import { FilePathLink } from '../FilePathLink.js'
+
+import { BLACK_CIRCLE, REFERENCE_MARK, TEARDROP_ASTERISK } from '../../constants/figures.js'
+// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
+import { Box, Text, type TextProps } from '../../ink.js'
 import { openPath } from '../../utils/browser.js'
+import { FilePathLink } from '../FilePathLink.js'
+import { MessageResponse } from '../MessageResponse.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
-const teamMemSaved = feature('TEAMMEM')
-  ? (require('./teamMemSaved.js') as typeof import('./teamMemSaved.js'))
-  : null
+const teamMemSaved = feature('TEAMMEM') ? (require('./teamMemSaved.js') as typeof import('./teamMemSaved.js')) : null
+import { HOOK_TIMING_DISPLAY_THRESHOLD_MS } from 'src/services/tools/toolExecution.js'
+
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { TURN_COMPLETION_VERBS } from '../../constants/turnCompletionVerbs.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
+import Link from '../../ink/components/Link.js'
+import { useAppStateStore } from '../../state/AppState.js'
+import { getPillLabel } from '../../tasks/pillLabel.js'
+import { isBackgroundTask, type TaskState } from '../../tasks/types.js'
 import type {
   SystemMessage,
   SystemStopHookSummaryMessage,
@@ -29,21 +31,12 @@ import type {
   SystemThinkingMessage,
   SystemMemorySavedMessage,
 } from '../../types/message.js'
-import { SystemAPIErrorMessage } from './SystemAPIErrorMessage.js'
-import {
-  formatDuration,
-  formatNumber,
-  formatSecondsShort,
-} from '../../utils/format.js'
 import { getGlobalConfig } from '../../utils/config.js'
-import Link from '../../ink/components/Link.js'
-import ThemedText from '../design-system/ThemedText.js'
+import { formatDuration, formatNumber, formatSecondsShort } from '../../utils/format.js'
 import { CtrlOToExpand } from '../CtrlOToExpand.js'
-import { useAppStateStore } from '../../state/AppState.js'
-import { isBackgroundTask, type TaskState } from '../../tasks/types.js'
-import { getPillLabel } from '../../tasks/pillLabel.js'
+import ThemedText from '../design-system/ThemedText.js'
 import { useSelectedMessageBg } from '../messageActions.js'
-import { HOOK_TIMING_DISPLAY_THRESHOLD_MS } from 'src/services/tools/toolExecution.js'
+import { SystemAPIErrorMessage } from './SystemAPIErrorMessage.js'
 
 type Props = {
   message: SystemMessage
@@ -52,12 +45,7 @@ type Props = {
   isTranscriptMode?: boolean
 }
 
-export function SystemTextMessage({
-  message,
-  addMargin,
-  verbose,
-  isTranscriptMode,
-}: Props): React.ReactNode {
+export function SystemTextMessage({ message, addMargin, verbose, isTranscriptMode }: Props): React.ReactNode {
   const bg = useSelectedMessageBg()
   // Turn duration messages are always shown in grey
   if (message.subtype === 'turn_duration') {
@@ -70,12 +58,7 @@ export function SystemTextMessage({
 
   if (message.subtype === 'away_summary') {
     return (
-      <Box
-        flexDirection="row"
-        marginTop={addMargin ? 1 : 0}
-        backgroundColor={bg}
-        width="100%"
-      >
+      <Box flexDirection="row" marginTop={addMargin ? 1 : 0} backgroundColor={bg} width="100%">
         <Box minWidth={2}>
           <Text dimColor>{REFERENCE_MARK}</Text>
         </Box>
@@ -87,12 +70,7 @@ export function SystemTextMessage({
   // Agents killed confirmation
   if (message.subtype === 'agents_killed') {
     return (
-      <Box
-        flexDirection="row"
-        marginTop={addMargin ? 1 : 0}
-        backgroundColor={bg}
-        width="100%"
-      >
+      <Box flexDirection="row" marginTop={addMargin ? 1 : 0} backgroundColor={bg} width="100%">
         <Box minWidth={2}>
           <Text color="error">{BLACK_CIRCLE}</Text>
         </Box>
@@ -108,7 +86,6 @@ export function SystemTextMessage({
     }
     return null
   }
-
 
   if (message.subtype === 'bridge_status') {
     return <BridgeStatusMessage message={message} addMargin={addMargin} />
@@ -187,19 +164,11 @@ function StopHookSummaryMessage({
   isTranscriptMode?: boolean
 }): React.ReactNode {
   const bg = useSelectedMessageBg()
-  const {
-    hookCount,
-    hookInfos,
-    hookErrors,
-    preventedContinuation,
-    stopReason,
-  } = message
+  const { hookCount, hookInfos, hookErrors, preventedContinuation, stopReason } = message
   const { columns } = useTerminalSize()
 
   // Prefer wall-clock time when available (hooks run in parallel)
-  const totalDurationMs =
-    message.totalDurationMs ??
-    hookInfos.reduce((sum, h) => sum + (h.durationMs ?? 0), 0)
+  const totalDurationMs = message.totalDurationMs ?? hookInfos.reduce((sum, h) => sum + (h.durationMs ?? 0), 0)
   const isAnt = process.env.USER_TYPE === 'ant'
 
   // Only show summary if there are errors or continuation was prevented
@@ -211,31 +180,23 @@ function StopHookSummaryMessage({
     }
   }
 
-  const totalStr =
-    isAnt && totalDurationMs > 0
-      ? ` (${formatSecondsShort(totalDurationMs)})`
-      : ''
+  const totalStr = isAnt && totalDurationMs > 0 ? ` (${formatSecondsShort(totalDurationMs)})` : ''
   // Non-stop hooks (e.g. PreToolUse) render as a child line without bullet
   if (message.hookLabel) {
     return (
       <Box flexDirection="column" width="100%">
         <Text dimColor>
-          {'  ⎿  '}Ran {hookCount} {message.hookLabel}{' '}
-          {hookCount === 1 ? 'hook' : 'hooks'}
+          {'  ⎿  '}Ran {hookCount} {message.hookLabel} {hookCount === 1 ? 'hook' : 'hooks'}
           {totalStr}
         </Text>
         {isTranscriptMode &&
           hookInfos.map((info, idx) => {
             const durationStr =
-              isAnt && info.durationMs !== undefined
-                ? ` (${formatSecondsShort(info.durationMs)})`
-                : ''
+              isAnt && info.durationMs !== undefined ? ` (${formatSecondsShort(info.durationMs)})` : ''
             return (
               <Text key={`cmd-${idx}`} dimColor>
                 {'     ⎿ '}
-                {info.command === 'prompt'
-                  ? `prompt: ${info.promptText || ''}`
-                  : info.command}
+                {info.command === 'prompt' ? `prompt: ${info.promptText || ''}` : info.command}
                 {durationStr}
               </Text>
             )
@@ -245,19 +206,13 @@ function StopHookSummaryMessage({
   }
 
   return (
-    <Box
-      flexDirection="row"
-      marginTop={addMargin ? 1 : 0}
-      backgroundColor={bg}
-      width="100%"
-    >
+    <Box flexDirection="row" marginTop={addMargin ? 1 : 0} backgroundColor={bg} width="100%">
       <Box minWidth={2}>
         <Text>{BLACK_CIRCLE}</Text>
       </Box>
       <Box flexDirection="column" width={columns - 10}>
         <Text>
-          Ran <Text bold>{hookCount}</Text> {message.hookLabel ?? 'stop'}{' '}
-          {hookCount === 1 ? 'hook' : 'hooks'}
+          Ran <Text bold>{hookCount}</Text> {message.hookLabel ?? 'stop'} {hookCount === 1 ? 'hook' : 'hooks'}
           {totalStr}
           {!verbose && hookInfos.length > 0 && (
             <>
@@ -270,15 +225,11 @@ function StopHookSummaryMessage({
           hookInfos.length > 0 &&
           hookInfos.map((info, idx) => {
             const durationStr =
-              isAnt && info.durationMs !== undefined
-                ? ` (${formatSecondsShort(info.durationMs)})`
-                : ''
+              isAnt && info.durationMs !== undefined ? ` (${formatSecondsShort(info.durationMs)})` : ''
             return (
               <Text key={`cmd-${idx}`} dimColor>
                 ⎿ &nbsp;
-                {info.command === 'prompt'
-                  ? `prompt: ${info.promptText || ''}`
-                  : info.command}
+                {info.command === 'prompt' ? `prompt: ${info.promptText || ''}` : info.command}
                 {durationStr}
               </Text>
             )
@@ -318,12 +269,7 @@ function SystemTextMessageInner({
   const bg = useSelectedMessageBg()
 
   return (
-    <Box
-      flexDirection="row"
-      marginTop={addMargin ? 1 : 0}
-      backgroundColor={bg}
-      width="100%"
-    >
+    <Box flexDirection="row" marginTop={addMargin ? 1 : 0} backgroundColor={bg} width="100%">
       {dot && (
         <Box minWidth={2}>
           <Text color={color} dimColor={dimColor}>
@@ -352,9 +298,7 @@ function TurnDurationMessage({
   const store = useAppStateStore()
   const [backgroundTaskSummary] = useState(() => {
     const tasks = store.getState().tasks
-    const running = (Object.values(tasks ?? {}) as TaskState[]).filter(
-      isBackgroundTask,
-    )
+    const running = (Object.values(tasks ?? {}) as TaskState[]).filter(isBackgroundTask)
     return running.length > 0 ? getPillLabel(running) : null
   })
 
@@ -382,20 +326,14 @@ function TurnDurationMessage({
   }
 
   return (
-    <Box
-      flexDirection="row"
-      marginTop={addMargin ? 1 : 0}
-      backgroundColor={bg}
-      width="100%"
-    >
+    <Box flexDirection="row" marginTop={addMargin ? 1 : 0} backgroundColor={bg} width="100%">
       <Box minWidth={2}>
         <Text dimColor>{TEARDROP_ASTERISK}</Text>
       </Box>
       <Text dimColor>
         {showTurnDuration && `${verb} for ${duration}`}
         {budgetSuffix}
-        {backgroundTaskSummary &&
-          ` \u00B7 ${backgroundTaskSummary} still running`}
+        {backgroundTaskSummary && ` \u00B7 ${backgroundTaskSummary} still running`}
       </Text>
     </Box>
   )
@@ -410,22 +348,14 @@ function MemorySavedMessage({
 }): React.ReactNode {
   const bg = useSelectedMessageBg()
   const { writtenPaths } = message
-  const team = feature('TEAMMEM')
-    ? teamMemSaved!.teamMemSavedPart(message)
-    : null
+  const team = feature('TEAMMEM') ? teamMemSaved!.teamMemSavedPart(message) : null
   const privateCount = writtenPaths.length - (team?.count ?? 0)
   const parts = [
-    privateCount > 0
-      ? `${privateCount} ${privateCount === 1 ? 'memory' : 'memories'}`
-      : null,
+    privateCount > 0 ? `${privateCount} ${privateCount === 1 ? 'memory' : 'memories'}` : null,
     team?.segment,
   ].filter(Boolean)
   return (
-    <Box
-      flexDirection="column"
-      marginTop={addMargin ? 1 : 0}
-      backgroundColor={bg}
-    >
+    <Box flexDirection="column" marginTop={addMargin ? 1 : 0} backgroundColor={bg}>
       <Box flexDirection="row">
         <Box minWidth={2}>
           <Text dimColor>{BLACK_CIRCLE}</Text>
@@ -434,7 +364,7 @@ function MemorySavedMessage({
           {message.verb ?? 'Saved'} {parts.join(' \u00B7 ')}
         </Text>
       </Box>
-      {writtenPaths.map(p => (
+      {writtenPaths.map((p) => (
         <MemoryFileRow key={p} path={p} />
       ))}
     </Box>
@@ -445,11 +375,7 @@ function MemoryFileRow({ path }: { path: string }): React.ReactNode {
   const [hover, setHover] = useState(false)
   return (
     <MessageResponse>
-      <Box
-        onClick={() => void openPath(path)}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
+      <Box onClick={() => void openPath(path)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
         <Text dimColor={!hover} underline={hover}>
           <FilePathLink filePath={path}>{basename(path)}</FilePathLink>
         </Text>
@@ -467,12 +393,7 @@ function ThinkingMessage({
 }): React.ReactNode {
   const bg = useSelectedMessageBg()
   return (
-    <Box
-      flexDirection="row"
-      marginTop={addMargin ? 1 : 0}
-      backgroundColor={bg}
-      width="100%"
-    >
+    <Box flexDirection="row" marginTop={addMargin ? 1 : 0} backgroundColor={bg} width="100%">
       <Box minWidth={2}>
         <Text dimColor>{TEARDROP_ASTERISK}</Text>
       </Box>
@@ -490,17 +411,11 @@ function BridgeStatusMessage({
 }): React.ReactNode {
   const bg = useSelectedMessageBg()
   return (
-    <Box
-      flexDirection="row"
-      marginTop={addMargin ? 1 : 0}
-      backgroundColor={bg}
-      width={999}
-    >
+    <Box flexDirection="row" marginTop={addMargin ? 1 : 0} backgroundColor={bg} width={999}>
       <Box minWidth={2} />
       <Box flexDirection="column">
         <Text>
-          <ThemedText color="suggestion">/remote-control</ThemedText> is active.
-          Code in CLI or at
+          <ThemedText color="suggestion">/remote-control</ThemedText> is active. Code in CLI or at
         </Text>
         <Link url={message.url}>{message.url}</Link>
         {message.upgradeNudge && <Text dimColor>⎿ {message.upgradeNudge}</Text>}

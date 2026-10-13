@@ -1,5 +1,6 @@
 import figures from 'figures'
 import React, { useCallback, useState } from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { Box, color, Link, Text, useTheme } from '../../ink.js'
 import { useKeybindings } from '../../keybindings/useKeybinding.js'
@@ -19,16 +20,11 @@ type Props = {
   agentServers?: AgentMcpServerInfo[]
   onSelectServer: (server: ServerInfo) => void
   onSelectAgentServer?: (agentServer: AgentMcpServerInfo) => void
-  onComplete: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onComplete: (result?: string, options?: { display?: CommandResultDisplay }) => void
   defaultTab?: string
 }
 
-type SelectableItem =
-  | { type: 'server'; server: ServerInfo }
-  | { type: 'agent-server'; agentServer: AgentMcpServerInfo }
+type SelectableItem = { type: 'server'; server: ServerInfo } | { type: 'agent-server'; agentServer: AgentMcpServerInfo }
 
 // Define scope order for display (constant, outside component)
 // 'dynamic' (built-in) is rendered separately at the end
@@ -53,9 +49,7 @@ function getScopeHeading(scope: ConfigScope): { label: string; path?: string } {
 }
 
 // Group servers by scope
-function groupServersByScope(
-  serverList: ServerInfo[],
-): Map<ConfigScope, ServerInfo[]> {
+function groupServersByScope(serverList: ServerInfo[]): Map<ConfigScope, ServerInfo[]> {
   const groups = new Map<ConfigScope, ServerInfo[]>()
   for (const server of serverList) {
     const scope = server.scope
@@ -83,26 +77,18 @@ export function MCPListPanel({
 
   // Non-claudeai servers grouped by scope
   const serversByScope = React.useMemo(() => {
-    const regularServers = servers.filter(
-      s => s.client.config.type !== 'claudeai-proxy',
-    )
+    const regularServers = servers.filter((s) => s.client.config.type !== 'claudeai-proxy')
     return groupServersByScope(regularServers)
   }, [servers])
 
   const claudeAiServers = React.useMemo(
-    () =>
-      servers
-        .filter(s => s.client.config.type === 'claudeai-proxy')
-        .sort((a, b) => a.name.localeCompare(b.name)),
+    () => servers.filter((s) => s.client.config.type === 'claudeai-proxy').sort((a, b) => a.name.localeCompare(b.name)),
     [servers],
   )
 
   // Built-in (dynamic) servers - rendered last
   const dynamicServers = React.useMemo(
-    () =>
-      (serversByScope.get('dynamic') ?? []).sort((a, b) =>
-        a.name.localeCompare(b.name),
-      ),
+    () => (serversByScope.get('dynamic') ?? []).sort((a, b) => a.name.localeCompare(b.name)),
     [serversByScope],
   )
 
@@ -150,14 +136,8 @@ export function MCPListPanel({
   // Use configurable keybindings for navigation and selection
   useKeybindings(
     {
-      'confirm:previous': () =>
-        setSelectedIndex(prev =>
-          prev === 0 ? selectableItems.length - 1 : prev - 1,
-        ),
-      'confirm:next': () =>
-        setSelectedIndex(prev =>
-          prev === selectableItems.length - 1 ? 0 : prev + 1,
-        ),
+      'confirm:previous': () => setSelectedIndex((prev) => (prev === 0 ? selectableItems.length - 1 : prev - 1)),
+      'confirm:next': () => setSelectedIndex((prev) => (prev === selectableItems.length - 1 ? 0 : prev + 1)),
       'confirm:yes': handleSelect,
       'confirm:no': handleCancel,
     },
@@ -166,19 +146,15 @@ export function MCPListPanel({
 
   // Build index lookup for each server
   const getServerIndex = (server: ServerInfo): number => {
-    return selectableItems.findIndex(
-      item => item.type === 'server' && item.server === server,
-    )
+    return selectableItems.findIndex((item) => item.type === 'server' && item.server === server)
   }
 
   const getAgentServerIndex = (agentServer: AgentMcpServerInfo): number => {
-    return selectableItems.findIndex(
-      item => item.type === 'agent-server' && item.agentServer === agentServer,
-    )
+    return selectableItems.findIndex((item) => item.type === 'agent-server' && item.agentServer === agentServer)
   }
 
   const debugMode = isDebugMode()
-  const hasFailedClients = servers.some(s => s.client.type === 'failed')
+  const hasFailedClients = servers.some((s) => s.client.type === 'failed')
 
   if (servers.length === 0 && agentServers.length === 0) {
     return null
@@ -214,9 +190,7 @@ export function MCPListPanel({
 
     return (
       <Box key={`${server.name}-${index}`}>
-        <Text color={isSelected ? 'suggestion' : undefined}>
-          {isSelected ? `${figures.pointer} ` : '  '}
-        </Text>
+        <Text color={isSelected ? 'suggestion' : undefined}>{isSelected ? `${figures.pointer} ` : '  '}</Text>
         <Text color={isSelected ? 'suggestion' : undefined}>{server.name}</Text>
         <Text dimColor={!isSelected}> · {statusIcon} </Text>
         <Text dimColor={!isSelected}>{statusText}</Text>
@@ -224,9 +198,7 @@ export function MCPListPanel({
     )
   }
 
-  const renderAgentServerItem = (
-    agentServer: AgentMcpServerInfo,
-  ): React.ReactNode => {
+  const renderAgentServerItem = (agentServer: AgentMcpServerInfo): React.ReactNode => {
     const index = getAgentServerIndex(agentServer)
     const isSelected = selectedIndex === index
     const statusIcon = agentServer.needsAuth
@@ -236,12 +208,8 @@ export function MCPListPanel({
 
     return (
       <Box key={`agent-${agentServer.name}-${index}`}>
-        <Text color={isSelected ? 'suggestion' : undefined}>
-          {isSelected ? `${figures.pointer} ` : '  '}
-        </Text>
-        <Text color={isSelected ? 'suggestion' : undefined}>
-          {agentServer.name}
-        </Text>
+        <Text color={isSelected ? 'suggestion' : undefined}>{isSelected ? `${figures.pointer} ` : '  '}</Text>
+        <Text color={isSelected ? 'suggestion' : undefined}>{agentServer.name}</Text>
         <Text dimColor={!isSelected}> · {statusIcon} </Text>
         <Text dimColor={!isSelected}>{statusText}</Text>
       </Box>
@@ -262,7 +230,7 @@ export function MCPListPanel({
       >
         <Box flexDirection="column">
           {/* Regular servers grouped by scope */}
-          {SCOPE_ORDER.map(scope => {
+          {SCOPE_ORDER.map((scope) => {
             const scopeServers = serversByScope.get(scope)
             if (!scopeServers || scopeServers.length === 0) return null
             const heading = getScopeHeading(scope)
@@ -272,7 +240,7 @@ export function MCPListPanel({
                   <Text bold>{heading.label}</Text>
                   {heading.path && <Text dimColor> ({heading.path})</Text>}
                 </Box>
-                {scopeServers.map(server => renderServerItem(server))}
+                {scopeServers.map((server) => renderServerItem(server))}
               </Box>
             )
           })}
@@ -283,7 +251,7 @@ export function MCPListPanel({
               <Box paddingLeft={2}>
                 <Text bold>claude.ai</Text>
               </Box>
-              {claudeAiServers.map(server => renderServerItem(server))}
+              {claudeAiServers.map((server) => renderServerItem(server))}
             </Box>
           )}
 
@@ -294,18 +262,16 @@ export function MCPListPanel({
                 <Text bold>Agent MCPs</Text>
               </Box>
               {/* Group servers by source agent */}
-              {[...new Set(agentServers.flatMap(s => s.sourceAgents))].map(
-                agentName => (
-                  <Box key={agentName} flexDirection="column" marginTop={1}>
-                    <Box paddingLeft={2}>
-                      <Text dimColor>@{agentName}</Text>
-                    </Box>
-                    {agentServers
-                      .filter(s => s.sourceAgents.includes(agentName))
-                      .map(agentServer => renderAgentServerItem(agentServer))}
+              {[...new Set(agentServers.flatMap((s) => s.sourceAgents))].map((agentName) => (
+                <Box key={agentName} flexDirection="column" marginTop={1}>
+                  <Box paddingLeft={2}>
+                    <Text dimColor>@{agentName}</Text>
                   </Box>
-                ),
-              )}
+                  {agentServers
+                    .filter((s) => s.sourceAgents.includes(agentName))
+                    .map((agentServer) => renderAgentServerItem(agentServer))}
+                </Box>
+              ))}
             </Box>
           )}
 
@@ -314,11 +280,9 @@ export function MCPListPanel({
             <Box flexDirection="column" marginBottom={1}>
               <Box paddingLeft={2}>
                 <Text bold>{dynamicHeading.label}</Text>
-                {dynamicHeading.path && (
-                  <Text dimColor> ({dynamicHeading.path})</Text>
-                )}
+                {dynamicHeading.path && <Text dimColor> ({dynamicHeading.path})</Text>}
               </Box>
-              {dynamicServers.map(server => renderServerItem(server))}
+              {dynamicServers.map((server) => renderServerItem(server))}
             </Box>
           )}
 
@@ -326,16 +290,11 @@ export function MCPListPanel({
           <Box flexDirection="column">
             {hasFailedClients && (
               <Text dimColor>
-                {debugMode
-                  ? '※ Error logs shown inline with --debug'
-                  : '※ Run claude --debug to see error logs'}
+                {debugMode ? '※ Error logs shown inline with --debug' : '※ Run claude --debug to see error logs'}
               </Text>
             )}
             <Text dimColor>
-              <Link url="https://code.claude.com/docs/en/mcp">
-                https://code.claude.com/docs/en/mcp
-              </Link>{' '}
-              for help
+              <Link url="https://code.claude.com/docs/en/mcp">https://code.claude.com/docs/en/mcp</Link> for help
             </Text>
           </Box>
         </Box>
@@ -347,12 +306,7 @@ export function MCPListPanel({
           <Byline>
             <KeyboardShortcutHint shortcut="↑↓" action="navigate" />
             <KeyboardShortcutHint shortcut="Enter" action="confirm" />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline>
         </Text>
       </Box>

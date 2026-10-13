@@ -1,4 +1,5 @@
 import { createContext, type RefObject, useContext } from 'react'
+
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox.js'
 
 /**
@@ -35,10 +36,7 @@ export function useIsInsideModal(): boolean {
  * component caps its visible content height — the modal's inner area is
  * smaller than the terminal.
  */
-export function useModalOrTerminalSize(fallback: {
-  rows: number
-  columns: number
-}): { rows: number; columns: number } {
+export function useModalOrTerminalSize(fallback: { rows: number; columns: number }): { rows: number; columns: number } {
   const ctx = useContext(ModalContext)
   return ctx ? { rows: ctx.rows, columns: ctx.columns } : fallback
 }

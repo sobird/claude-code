@@ -1,13 +1,11 @@
 import { feature } from 'bun:bundle'
+
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
+
 import { BULLET_OPERATOR } from '../../../constants/figures.js'
 import { Text } from '../../../ink.js'
-import {
-  filterToolProgressMessages,
-  type Tool,
-  type Tools,
-} from '../../../Tool.js'
+import { filterToolProgressMessages, type Tool, type Tools } from '../../../Tool.js'
 import type { ProgressMessage } from '../../../types/message.js'
 import {
   INTERRUPT_MESSAGE_FOR_TOOL_USE,
@@ -38,10 +36,7 @@ export function UserToolErrorMessage({
   verbose,
   isTranscriptMode,
 }: Props): React.ReactNode {
-  if (
-    typeof param.content === 'string' &&
-    param.content.includes(INTERRUPT_MESSAGE_FOR_TOOL_USE)
-  ) {
+  if (typeof param.content === 'string' && param.content.includes(INTERRUPT_MESSAGE_FOR_TOOL_USE)) {
     return (
       <MessageResponse height={1}>
         <InterruptedByUser />
@@ -49,47 +44,30 @@ export function UserToolErrorMessage({
     )
   }
 
-  if (
-    typeof param.content === 'string' &&
-    param.content.startsWith(PLAN_REJECTION_PREFIX)
-  ) {
+  if (typeof param.content === 'string' && param.content.startsWith(PLAN_REJECTION_PREFIX)) {
     // Extract the plan content from the error message
     const planContent = param.content.substring(PLAN_REJECTION_PREFIX.length)
     return <RejectedPlanMessage plan={planContent} />
   }
 
-  if (
-    typeof param.content === 'string' &&
-    param.content.startsWith(REJECT_MESSAGE_WITH_REASON_PREFIX)
-  ) {
+  if (typeof param.content === 'string' && param.content.startsWith(REJECT_MESSAGE_WITH_REASON_PREFIX)) {
     return <RejectedToolUseMessage />
   }
 
-  if (
-    feature('TRANSCRIPT_CLASSIFIER') &&
-    typeof param.content === 'string' &&
-    isClassifierDenial(param.content)
-  ) {
+  if (feature('TRANSCRIPT_CLASSIFIER') && typeof param.content === 'string' && isClassifierDenial(param.content)) {
     return (
       <MessageResponse height={1}>
-        <Text dimColor>
-          Denied by auto mode classifier {BULLET_OPERATOR} /feedback if
-          incorrect
-        </Text>
+        <Text dimColor>Denied by auto mode classifier {BULLET_OPERATOR} /feedback if incorrect</Text>
       </MessageResponse>
     )
   }
 
   return (
     tool?.renderToolUseErrorMessage?.(param.content, {
-      progressMessagesForMessage: filterToolProgressMessages(
-        progressMessagesForMessage,
-      ),
+      progressMessagesForMessage: filterToolProgressMessages(progressMessagesForMessage),
       tools,
       verbose,
       isTranscriptMode,
-    }) ?? (
-      <FallbackToolUseErrorMessage result={param.content} verbose={verbose} />
-    )
+    }) ?? <FallbackToolUseErrorMessage result={param.content} verbose={verbose} />
   )
 }

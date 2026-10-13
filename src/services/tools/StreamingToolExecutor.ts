@@ -1,9 +1,6 @@
 import type { ToolUseBlock } from '@anthropic-ai/sdk/resources/index.mjs'
-import {
-  createUserMessage,
-  REJECT_MESSAGE,
-  withMemoryCorrectionHint,
-} from 'src/utils/messages.js'
+import { createUserMessage, REJECT_MESSAGE, withMemoryCorrectionHint } from 'src/utils/messages.js'
+
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import { findToolByName, type Tools, type ToolUseContext } from '../../Tool.js'
 import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
@@ -56,9 +53,7 @@ export class StreamingToolExecutor {
     toolUseContext: ToolUseContext,
   ) {
     this.toolUseContext = toolUseContext
-    this.siblingAbortController = createChildAbortController(
-      toolUseContext.abortController,
-    )
+    this.siblingAbortController = createChildAbortController(toolUseContext.abortController)
   }
 
   /**
@@ -127,11 +122,8 @@ export class StreamingToolExecutor {
    * Check if a tool can execute based on current concurrency state
    */
   private canExecuteTool(isConcurrencySafe: boolean): boolean {
-    const executingTools = this.tools.filter(t => t.status === 'executing')
-    return (
-      executingTools.length === 0 ||
-      (isConcurrencySafe && executingTools.every(t => t.isConcurrencySafe))
-    )
+    const executingTools = this.tools.filter((t) => t.status === 'executing')
+    return executingTools.length === 0 || (isConcurrencySafe && executingTools.every((t) => t.isConcurrencySafe))
   }
 
   /**
@@ -176,8 +168,7 @@ export class StreamingToolExecutor {
         content: [
           {
             type: 'tool_result',
-            content:
-              '<tool_use_error>Error: Streaming fallback - tool execution discarded</tool_use_error>',
+            content: '<tool_use_error>Error: Streaming fallback - tool execution discarded</tool_use_error>',
             is_error: true,
             tool_use_id: toolUseId,
           },
@@ -187,9 +178,7 @@ export class StreamingToolExecutor {
       })
     }
     const desc = this.erroredToolDescription
-    const msg = desc
-      ? `Cancelled: parallel tool call ${desc} errored`
-      : 'Cancelled: parallel tool call errored'
+    const msg = desc ? `Cancelled: parallel tool call ${desc} errored` : 'Cancelled: parallel tool call errored'
     return createUserMessage({
       content: [
         {
@@ -207,9 +196,7 @@ export class StreamingToolExecutor {
   /**
    * Determine why a tool should be cancelled.
    */
-  private getAbortReason(
-    tool: TrackedTool,
-  ): 'sibling_error' | 'user_interrupted' | 'streaming_fallback' | null {
+  private getAbortReason(tool: TrackedTool): 'sibling_error' | 'user_interrupted' | 'streaming_fallback' | null {
     if (this.discarded) {
       return 'streaming_fallback'
     }
@@ -221,9 +208,7 @@ export class StreamingToolExecutor {
       // running. Only cancel tools whose interruptBehavior is 'cancel';
       // 'block' tools shouldn't reach here (abort isn't fired).
       if (this.toolUseContext.abortController.signal.reason === 'interrupt') {
-        return this.getToolInterruptBehavior(tool) === 'cancel'
-          ? 'user_interrupted'
-          : null
+        return this.getToolInterruptBehavior(tool) === 'cancel' ? 'user_interrupted' : null
       }
       return 'user_interrupted'
     }
@@ -244,18 +229,16 @@ export class StreamingToolExecutor {
     const input = tool.block.input as Record<string, unknown> | undefined
     const summary = input?.command ?? input?.file_path ?? input?.pattern ?? ''
     if (typeof summary === 'string' && summary.length > 0) {
-      const truncated =
-        summary.length > 40 ? summary.slice(0, 40) + '\u2026' : summary
+      const truncated = summary.length > 40 ? summary.slice(0, 40) + '\u2026' : summary
       return `${tool.block.name}(${truncated})`
     }
     return tool.block.name
   }
 
   private updateInterruptibleState(): void {
-    const executing = this.tools.filter(t => t.status === 'executing')
+    const executing = this.tools.filter((t) => t.status === 'executing')
     this.toolUseContext.setHasInterruptibleToolInProgress?.(
-      executing.length > 0 &&
-        executing.every(t => this.getToolInterruptBehavior(t) === 'cancel'),
+      executing.length > 0 && executing.every((t) => this.getToolInterruptBehavior(t) === 'cancel'),
     )
   }
 
@@ -264,26 +247,17 @@ export class StreamingToolExecutor {
    */
   private async executeTool(tool: TrackedTool): Promise<void> {
     tool.status = 'executing'
-    this.toolUseContext.setInProgressToolUseIDs(prev =>
-      new Set(prev).add(tool.id),
-    )
+    this.toolUseContext.setInProgressToolUseIDs((prev) => new Set(prev).add(tool.id))
     this.updateInterruptibleState()
 
     const messages: Message[] = []
-    const contextModifiers: Array<(context: ToolUseContext) => ToolUseContext> =
-      []
+    const contextModifiers: Array<(context: ToolUseContext) => ToolUseContext> = []
 
     const collectResults = async () => {
       // If already aborted (by error or user), generate synthetic error block instead of running the tool
       const initialAbortReason = this.getAbortReason(tool)
       if (initialAbortReason) {
-        messages.push(
-          this.createSyntheticErrorMessage(
-            tool.id,
-            initialAbortReason,
-            tool.assistantMessage,
-          ),
-        )
+        messages.push(this.createSyntheticErrorMessage(tool.id, initialAbortReason, tool.assistantMessage))
         tool.results = messages
         tool.contextModifiers = contextModifiers
         tool.status = 'completed'
@@ -298,9 +272,7 @@ export class StreamingToolExecutor {
       // the query controller so the query loop's post-tool abort check ends
       // the turn. Without bubble-up, ExitPlanMode "clear context + auto"
       // sends REJECT_MESSAGE to the model instead of aborting (#21056 regression).
-      const toolAbortController = createChildAbortController(
-        this.siblingAbortController,
-      )
+      const toolAbortController = createChildAbortController(this.siblingAbortController)
       toolAbortController.signal.addEventListener(
         'abort',
         () => {
@@ -309,20 +281,16 @@ export class StreamingToolExecutor {
             !this.toolUseContext.abortController.signal.aborted &&
             !this.discarded
           ) {
-            this.toolUseContext.abortController.abort(
-              toolAbortController.signal.reason,
-            )
+            this.toolUseContext.abortController.abort(toolAbortController.signal.reason)
           }
         },
         { once: true },
       )
 
-      const generator = runToolUse(
-        tool.block,
-        tool.assistantMessage,
-        this.canUseTool,
-        { ...this.toolUseContext, abortController: toolAbortController },
-      )
+      const generator = runToolUse(tool.block, tool.assistantMessage, this.canUseTool, {
+        ...this.toolUseContext,
+        abortController: toolAbortController,
+      })
 
       // Track if this specific tool has produced an error result.
       // This prevents the tool from receiving a duplicate "sibling error"
@@ -334,22 +302,14 @@ export class StreamingToolExecutor {
         // Only add the synthetic error if THIS tool didn't produce the error.
         const abortReason = this.getAbortReason(tool)
         if (abortReason && !thisToolErrored) {
-          messages.push(
-            this.createSyntheticErrorMessage(
-              tool.id,
-              abortReason,
-              tool.assistantMessage,
-            ),
-          )
+          messages.push(this.createSyntheticErrorMessage(tool.id, abortReason, tool.assistantMessage))
           break
         }
 
         const isErrorResult =
           update.message.type === 'user' &&
           Array.isArray(update.message.message.content) &&
-          update.message.message.content.some(
-            _ => _.type === 'tool_result' && _.is_error === true,
-          )
+          update.message.message.content.some((_) => _.type === 'tool_result' && _.is_error === true)
 
         if (isErrorResult) {
           thisToolErrored = true
@@ -443,7 +403,7 @@ export class StreamingToolExecutor {
    * Check if any tool has pending progress messages
    */
   private hasPendingProgress(): boolean {
-    return this.tools.some(t => t.pendingProgress.length > 0)
+    return this.tools.some((t) => t.pendingProgress.length > 0)
   }
 
   /**
@@ -464,17 +424,11 @@ export class StreamingToolExecutor {
 
       // If we still have executing tools but nothing completed, wait for any to complete
       // OR for progress to become available
-      if (
-        this.hasExecutingTools() &&
-        !this.hasCompletedResults() &&
-        !this.hasPendingProgress()
-      ) {
-        const executingPromises = this.tools
-          .filter(t => t.status === 'executing' && t.promise)
-          .map(t => t.promise!)
+      if (this.hasExecutingTools() && !this.hasCompletedResults() && !this.hasPendingProgress()) {
+        const executingPromises = this.tools.filter((t) => t.status === 'executing' && t.promise).map((t) => t.promise!)
 
         // Also wait for progress to become available
-        const progressPromise = new Promise<void>(resolve => {
+        const progressPromise = new Promise<void>((resolve) => {
           this.progressAvailableResolve = resolve
         })
 
@@ -493,21 +447,21 @@ export class StreamingToolExecutor {
    * Check if there are any completed results ready to yield
    */
   private hasCompletedResults(): boolean {
-    return this.tools.some(t => t.status === 'completed')
+    return this.tools.some((t) => t.status === 'completed')
   }
 
   /**
    * Check if there are any tools still executing
    */
   private hasExecutingTools(): boolean {
-    return this.tools.some(t => t.status === 'executing')
+    return this.tools.some((t) => t.status === 'executing')
   }
 
   /**
    * Check if there are any unfinished tools
    */
   private hasUnfinishedTools(): boolean {
-    return this.tools.some(t => t.status !== 'yielded')
+    return this.tools.some((t) => t.status !== 'yielded')
   }
 
   /**
@@ -518,11 +472,8 @@ export class StreamingToolExecutor {
   }
 }
 
-function markToolUseAsComplete(
-  toolUseContext: ToolUseContext,
-  toolUseID: string,
-) {
-  toolUseContext.setInProgressToolUseIDs(prev => {
+function markToolUseAsComplete(toolUseContext: ToolUseContext, toolUseID: string) {
+  toolUseContext.setInProgressToolUseIDs((prev) => {
     const next = new Set(prev)
     next.delete(toolUseID)
     return next

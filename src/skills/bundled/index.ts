@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import { shouldAutoEnableClaudeInChrome } from 'src/utils/claudeInChrome/setup.js'
+
 import { registerBatchSkill } from './batch.js'
 import { registerClaudeInChromeSkill } from './claudeInChrome.js'
 import { registerDebugSkill } from './debug.js'
@@ -55,9 +57,7 @@ export function initBundledSkills(): void {
   }
   if (feature('AGENT_TRIGGERS_REMOTE')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const {
-      registerScheduleRemoteAgentsSkill,
-    } = require('./scheduleRemoteAgents.js')
+    const { registerScheduleRemoteAgentsSkill } = require('./scheduleRemoteAgents.js')
     /* eslint-enable @typescript-eslint/no-require-imports */
     registerScheduleRemoteAgentsSkill()
   }

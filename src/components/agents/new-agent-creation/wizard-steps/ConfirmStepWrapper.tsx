@@ -5,6 +5,7 @@ import {
   logEvent,
 } from 'src/services/analytics/index.js'
 import { useSetAppState } from 'src/state/AppState.js'
+
 import type { Tools } from '../../../../Tool.js'
 import type { AgentDefinition } from '../../../../tools/AgentTool/loadAgentsDir.js'
 import { getActiveAgentsFromList } from '../../../../tools/AgentTool/loadAgentsDir.js'
@@ -20,11 +21,7 @@ type Props = {
   onComplete: (message: string) => void
 }
 
-export function ConfirmStepWrapper({
-  tools,
-  existingAgents,
-  onComplete,
-}: Props): ReactNode {
+export function ConfirmStepWrapper({ tools, existingAgents, onComplete }: Props): ReactNode {
   const { wizardData } = useWizard<AgentWizardData>()
   const [saveError, setSaveError] = useState<string | null>(null)
   const setAppState = useSetAppState()
@@ -46,12 +43,10 @@ export function ConfirmStepWrapper({
           wizardData.finalAgent.memory,
         )
 
-        setAppState(state => {
+        setAppState((state) => {
           if (!wizardData.finalAgent) return state
 
-          const allAgents = state.agentDefinitions.allAgents.concat(
-            wizardData.finalAgent,
-          )
+          const allAgents = state.agentDefinitions.allAgents.concat(wizardData.finalAgent)
           return {
             ...state,
             agentDefinitions: {
@@ -88,9 +83,7 @@ export function ConfirmStepWrapper({
           : `Created agent: ${chalk.bold(wizardData.finalAgent.agentType)}`
         onComplete(message)
       } catch (err) {
-        setSaveError(
-          err instanceof Error ? err.message : 'Failed to save agent',
-        )
+        setSaveError(err instanceof Error ? err.message : 'Failed to save agent')
       }
     },
     [wizardData, onComplete, setAppState],

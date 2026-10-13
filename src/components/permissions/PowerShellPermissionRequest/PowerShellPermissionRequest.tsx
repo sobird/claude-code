@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
 import { Box, Text, useTheme } from '../../../ink.js'
 import { useKeybinding } from '../../../keybindings/useKeybinding.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../services/analytics/growthbook.js'
@@ -16,25 +17,17 @@ import { Select } from '../../CustomSelect/select.js'
 import { type UnaryEvent, usePermissionRequestLogging } from '../hooks.js'
 import { PermissionDecisionDebugInfo } from '../PermissionDecisionDebugInfo.js'
 import { PermissionDialog } from '../PermissionDialog.js'
-import {
-  PermissionExplainerContent,
-  usePermissionExplainerUI,
-} from '../PermissionExplanation.js'
+import { PermissionExplainerContent, usePermissionExplainerUI } from '../PermissionExplanation.js'
 import type { PermissionRequestProps } from '../PermissionRequest.js'
 import { PermissionRuleExplanation } from '../PermissionRuleExplanation.js'
 import { useShellPermissionFeedback } from '../useShellPermissionFeedback.js'
 import { logUnaryPermissionEvent } from '../utils.js'
 import { powershellToolUseOptions } from './powershellToolUseOptions.js'
 
-export function PowerShellPermissionRequest(
-  props: PermissionRequestProps,
-): React.ReactNode {
-  const { toolUseConfirm, toolUseContext, onDone, onReject, workerBadge } =
-    props
+export function PowerShellPermissionRequest(props: PermissionRequestProps): React.ReactNode {
+  const { toolUseConfirm, toolUseContext, onDone, onReject, workerBadge } = props
 
-  const { command, description } = PowerShellTool.inputSchema.parse(
-    toolUseConfirm.input,
-  )
+  const { command, description } = PowerShellTool.inputSchema.parse(toolUseConfirm.input)
 
   const [theme] = useTheme()
   const explainerState = usePermissionExplainerUI({
@@ -62,10 +55,7 @@ export function PowerShellPermissionRequest(
     onReject,
     explainerVisible: explainerState.visible,
   })
-  const destructiveWarning = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_destructive_command_warning',
-    false,
-  )
+  const destructiveWarning = getFeatureValue_CACHED_MAY_BE_STALE('tengu_destructive_command_warning', false)
     ? getDestructiveCommandWarning(command)
     : null
 
@@ -80,9 +70,7 @@ export function PowerShellPermissionRequest(
   // corpus shows 14 multiline rules, zero match twice). For compound commands,
   // computes a prefix per subcommand, excluding subcommands that are already
   // auto-allowed (read-only).
-  const [editablePrefix, setEditablePrefix] = useState<string | undefined>(
-    command.includes('\n') ? undefined : command,
-  )
+  const [editablePrefix, setEditablePrefix] = useState<string | undefined>(command.includes('\n') ? undefined : command)
   const hasUserEditedPrefix = useRef(false)
   useEffect(() => {
     let cancelled = false
@@ -90,10 +78,8 @@ export function PowerShellPermissionRequest(
     // element.name/nameType/args directly. isReadOnlyCommand(text) would need
     // to reparse (pwsh.exe spawn per subcommand) and returns false without the
     // full parsed AST, making the filter a no-op.
-    getCompoundCommandPrefixesStatic(command, element =>
-      isAllowlistedCommand(element, element.text),
-    )
-      .then(prefixes => {
+    getCompoundCommandPrefixesStatic(command, (element) => isAllowlistedCommand(element, element.text))
+      .then((prefixes) => {
         if (cancelled || hasUserEditedPrefix.current) return
         if (prefixes.length > 0) {
           setEditablePrefix(`${prefixes[0]}:*`)
@@ -111,10 +97,7 @@ export function PowerShellPermissionRequest(
     setEditablePrefix(value)
   }, [])
 
-  const unaryEvent = useMemo<UnaryEvent>(
-    () => ({ completion_type: 'tool_use_single', language_name: 'none' }),
-    [],
-  )
+  const unaryEvent = useMemo<UnaryEvent>(() => ({ completion_type: 'tool_use_single', language_name: 'none' }), [])
 
   usePermissionRequestLogging(toolUseConfirm, unaryEvent)
 
@@ -122,9 +105,7 @@ export function PowerShellPermissionRequest(
     () =>
       powershellToolUseOptions({
         suggestions:
-          toolUseConfirm.permissionResult.behavior === 'ask'
-            ? toolUseConfirm.permissionResult.suggestions
-            : undefined,
+          toolUseConfirm.permissionResult.behavior === 'ask' ? toolUseConfirm.permissionResult.suggestions : undefined,
         onRejectFeedbackChange: setRejectFeedback,
         onAcceptFeedbackChange: setAcceptFeedback,
         yesInputMode,
@@ -132,18 +113,12 @@ export function PowerShellPermissionRequest(
         editablePrefix,
         onEditablePrefixChange,
       }),
-    [
-      toolUseConfirm,
-      yesInputMode,
-      noInputMode,
-      editablePrefix,
-      onEditablePrefixChange,
-    ],
+    [toolUseConfirm, yesInputMode, noInputMode, editablePrefix, onEditablePrefixChange],
   )
 
   // Toggle permission debug info with keybinding
   const handleToggleDebug = useCallback(() => {
-    setShowPermissionDebug(prev => !prev)
+    setShowPermissionDebug((prev) => !prev)
   }, [])
   useKeybinding('permission:toggleDebug', handleToggleDebug, {
     context: 'Confirmation',
@@ -203,11 +178,7 @@ export function PowerShellPermissionRequest(
           instructions_length: trimmedFeedback.length,
           entered_feedback_mode: yesFeedbackModeEntered,
         })
-        toolUseConfirm.onAllow(
-          toolUseConfirm.input,
-          [],
-          trimmedFeedback || undefined,
-        )
+        toolUseConfirm.onAllow(toolUseConfirm.input, [], trimmedFeedback || undefined)
         onDone()
         break
       }
@@ -215,9 +186,7 @@ export function PowerShellPermissionRequest(
         logUnaryPermissionEvent('tool_use_single', toolUseConfirm, 'accept')
         // Extract suggestions if present (works for both 'ask' and 'passthrough' behaviors)
         const permissionUpdates =
-          'suggestions' in toolUseConfirm.permissionResult
-            ? toolUseConfirm.permissionResult.suggestions || []
-            : []
+          'suggestions' in toolUseConfirm.permissionResult ? toolUseConfirm.permissionResult.suggestions || [] : []
         toolUseConfirm.onAllow(toolUseConfirm.input, permissionUpdates)
         onDone()
         break
@@ -250,20 +219,12 @@ export function PowerShellPermissionRequest(
             { theme, verbose: true }, // always show the full command
           )}
         </Text>
-        {!explainerState.visible && (
-          <Text dimColor>{toolUseConfirm.description}</Text>
-        )}
-        <PermissionExplainerContent
-          visible={explainerState.visible}
-          promise={explainerState.promise}
-        />
+        {!explainerState.visible && <Text dimColor>{toolUseConfirm.description}</Text>}
+        <PermissionExplainerContent visible={explainerState.visible} promise={explainerState.promise} />
       </Box>
       {showPermissionDebug ? (
         <>
-          <PermissionDecisionDebugInfo
-            permissionResult={toolUseConfirm.permissionResult}
-            toolName="PowerShell"
-          />
+          <PermissionDecisionDebugInfo permissionResult={toolUseConfirm.permissionResult} toolName="PowerShell" />
           {toolUseContext.options.debug && (
             <Box justifyContent="flex-end" marginTop={1}>
               <Text dimColor>Ctrl-D to hide debug info</Text>
@@ -273,10 +234,7 @@ export function PowerShellPermissionRequest(
       ) : (
         <>
           <Box flexDirection="column">
-            <PermissionRuleExplanation
-              permissionResult={toolUseConfirm.permissionResult}
-              toolType="command"
-            />
+            <PermissionRuleExplanation permissionResult={toolUseConfirm.permissionResult} toolType="command" />
             {destructiveWarning && (
               <Box marginBottom={1}>
                 <Text color="warning">{destructiveWarning}</Text>
@@ -295,15 +253,11 @@ export function PowerShellPermissionRequest(
           <Box justifyContent="space-between" marginTop={1}>
             <Text dimColor>
               Esc to cancel
-              {((focusedOption === 'yes' && !yesInputMode) ||
-                (focusedOption === 'no' && !noInputMode)) &&
+              {((focusedOption === 'yes' && !yesInputMode) || (focusedOption === 'no' && !noInputMode)) &&
                 ' · Tab to amend'}
-              {explainerState.enabled &&
-                ` · ctrl+e to ${explainerState.visible ? 'hide' : 'explain'}`}
+              {explainerState.enabled && ` · ctrl+e to ${explainerState.visible ? 'hide' : 'explain'}`}
             </Text>
-            {toolUseContext.options.debug && (
-              <Text dimColor>Ctrl+d to show debug info</Text>
-            )}
+            {toolUseContext.options.debug && <Text dimColor>Ctrl+d to show debug info</Text>}
           </Box>
         </>
       )}

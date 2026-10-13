@@ -11,20 +11,10 @@ type TaskStatusTextProps = {
   suffix?: string
 }
 
-export function TaskStatusText({
-  status,
-  label,
-  suffix,
-}: TaskStatusTextProps): ReactNode {
+export function TaskStatusText({ status, label, suffix }: TaskStatusTextProps): ReactNode {
   const displayLabel = label ?? status
   const color =
-    status === 'completed'
-      ? 'success'
-      : status === 'failed'
-        ? 'error'
-        : status === 'killed'
-          ? 'warning'
-          : undefined
+    status === 'completed' ? 'success' : status === 'failed' ? 'error' : status === 'killed' ? 'warning' : undefined
   return (
     <Text color={color} dimColor>
       ({displayLabel}
@@ -33,11 +23,7 @@ export function TaskStatusText({
   )
 }
 
-export function ShellProgress({
-  shell,
-}: {
-  shell: DeepImmutable<LocalShellTaskState>
-}): ReactNode {
+export function ShellProgress({ shell }: { shell: DeepImmutable<LocalShellTaskState> }): ReactNode {
   switch (shell.status) {
     case 'completed':
       return <TaskStatusText status="completed" label="done" />

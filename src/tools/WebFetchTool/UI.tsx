@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { MessageResponse } from '../../components/MessageResponse.js'
 import { TOOL_SUMMARY_MAX_LENGTH } from '../../constants/toolLimits.js'
 import { Box, Text } from '../../ink.js'
@@ -57,9 +58,7 @@ export function renderToolResultMessage(
   )
 }
 
-export function getToolUseSummary(
-  input: Partial<{ url: string; prompt: string }> | undefined,
-): string | null {
+export function getToolUseSummary(input: Partial<{ url: string; prompt: string }> | undefined): string | null {
   if (!input?.url) {
     return null
   }

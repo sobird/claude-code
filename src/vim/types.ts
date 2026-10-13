@@ -46,9 +46,7 @@ export type TextObjScope = 'inner' | 'around'
  * INSERT mode: Track text being typed (for dot-repeat)
  * NORMAL mode: Track command being parsed (state machine)
  */
-export type VimState =
-  | { mode: 'INSERT'; insertedText: string }
-  | { mode: 'NORMAL'; command: CommandState }
+export type VimState = { mode: 'INSERT'; insertedText: string } | { mode: 'NORMAL'; command: CommandState }
 
 /**
  * Command state machine for NORMAL mode.
@@ -155,9 +153,7 @@ export const TEXT_OBJ_SCOPES = {
   a: 'around',
 } as const satisfies Record<string, TextObjScope>
 
-export function isTextObjScopeKey(
-  key: string,
-): key is keyof typeof TEXT_OBJ_SCOPES {
+export function isTextObjScopeKey(key: string): key is keyof typeof TEXT_OBJ_SCOPES {
   return key in TEXT_OBJ_SCOPES
 }
 

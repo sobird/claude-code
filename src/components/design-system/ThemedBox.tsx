@@ -1,4 +1,5 @@
 import React, { type PropsWithChildren, type Ref } from 'react'
+
 import Box from '../../ink/components/Box.js'
 import type { DOMElement } from '../../ink/dom.js'
 import type { ClickEvent } from '../../ink/events/click-event.js'
@@ -49,18 +50,10 @@ export type Props = BaseStylesWithoutColors &
 /**
  * Resolves a color value that may be a theme key to a raw Color.
  */
-function resolveColor(
-  color: keyof Theme | Color | undefined,
-  theme: Theme,
-): Color | undefined {
+function resolveColor(color: keyof Theme | Color | undefined, theme: Theme): Color | undefined {
   if (!color) return undefined
   // Check if it's a raw color (starts with rgb(, #, ansi256(, or ansi:)
-  if (
-    color.startsWith('rgb(') ||
-    color.startsWith('#') ||
-    color.startsWith('ansi256(') ||
-    color.startsWith('ansi:')
-  ) {
+  if (color.startsWith('rgb(') || color.startsWith('#') || color.startsWith('ansi256(') || color.startsWith('ansi:')) {
     return color as Color
   }
   // It's a theme key - resolve it

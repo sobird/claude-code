@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react'
 import { logError } from 'src/utils/log.js'
+
 import { getOriginalCwd } from '../../../bootstrap/state.js'
 import { Box, Text } from '../../../ink.js'
 import { sanitizeToolNameForAnalytics } from '../../../services/analytics/metadata.js'
@@ -10,32 +11,18 @@ import { shouldShowAlwaysAllowOptions } from '../../../utils/permissions/permiss
 import { logUnaryEvent } from '../../../utils/unaryLogging.js'
 import { type UnaryEvent, usePermissionRequestLogging } from '../hooks.js'
 import { PermissionDialog } from '../PermissionDialog.js'
-import {
-  PermissionPrompt,
-  type PermissionPromptOption,
-  type ToolAnalyticsContext,
-} from '../PermissionPrompt.js'
+import { PermissionPrompt, type PermissionPromptOption, type ToolAnalyticsContext } from '../PermissionPrompt.js'
 import type { PermissionRequestProps } from '../PermissionRequest.js'
 import { PermissionRuleExplanation } from '../PermissionRuleExplanation.js'
 
 type SkillOptionValue = 'yes' | 'yes-exact' | 'yes-prefix' | 'no'
 
-export function SkillPermissionRequest(
-  props: PermissionRequestProps,
-): React.ReactNode {
-  const {
-    toolUseConfirm,
-    onDone,
-    onReject,
-    verbose: _verbose,
-    workerBadge,
-  } = props
+export function SkillPermissionRequest(props: PermissionRequestProps): React.ReactNode {
+  const { toolUseConfirm, onDone, onReject, verbose: _verbose, workerBadge } = props
   const parseInput = (input: unknown): string => {
     const result = SkillTool.inputSchema.safeParse(input)
     if (!result.success) {
-      logError(
-        new Error(`Failed to parse skill tool input: ${result.error.message}`),
-      )
+      logError(new Error(`Failed to parse skill tool input: ${result.error.message}`))
       return ''
     }
     return result.data.skill
@@ -79,8 +66,7 @@ export function SkillPermissionRequest(
       alwaysAllowOptions.push({
         label: (
           <Text>
-            Yes, and don&apos;t ask again for <Text bold>{skill}</Text> in{' '}
-            <Text bold>{originalCwd}</Text>
+            Yes, and don&apos;t ask again for <Text bold>{skill}</Text> in <Text bold>{originalCwd}</Text>
           </Text>
         ),
         value: 'yes-exact',
@@ -93,8 +79,7 @@ export function SkillPermissionRequest(
         alwaysAllowOptions.push({
           label: (
             <Text>
-              Yes, and don&apos;t ask again for{' '}
-              <Text bold>{commandPrefix + ':*'}</Text> commands in{' '}
+              Yes, and don&apos;t ask again for <Text bold>{commandPrefix + ':*'}</Text> commands in{' '}
               <Text bold>{originalCwd}</Text>
             </Text>
           ),
@@ -176,8 +161,7 @@ export function SkillPermissionRequest(
 
           // Extract the skill prefix (everything before the first space)
           const spaceIndex = skill.indexOf(' ')
-          const commandPrefix =
-            spaceIndex > 0 ? skill.substring(0, spaceIndex) : skill
+          const commandPrefix = spaceIndex > 0 ? skill.substring(0, spaceIndex) : skill
 
           toolUseConfirm.onAllow(toolUseConfirm.input, [
             {
@@ -237,10 +221,7 @@ export function SkillPermissionRequest(
       </Box>
 
       <Box flexDirection="column">
-        <PermissionRuleExplanation
-          permissionResult={toolUseConfirm.permissionResult}
-          toolType="tool"
-        />
+        <PermissionRuleExplanation permissionResult={toolUseConfirm.permissionResult} toolType="tool" />
         <PermissionPrompt
           options={options}
           onSelect={handleSelect}

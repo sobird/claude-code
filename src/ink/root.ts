@@ -1,6 +1,8 @@
+import { Stream } from 'stream'
+
 import type { ReactNode } from 'react'
 import { logForDebugging } from 'src/utils/debug.js'
-import { Stream } from 'stream'
+
 import type { FrameEvent } from './frame.js'
 import Ink, { type Options as InkOptions } from './ink.js'
 import instances from './instances.js'
@@ -73,10 +75,7 @@ export type Root = {
 /**
  * Mount a component and render the output.
  */
-export const renderSync = (
-  node: ReactNode,
-  options?: NodeJS.WriteStream | RenderOptions,
-): Instance => {
+export const renderSync = (node: ReactNode, options?: NodeJS.WriteStream | RenderOptions): Instance => {
   const opts = getOptions(options)
   const inkOptions: InkOptions = {
     stdout: process.stdout,
@@ -87,10 +86,7 @@ export const renderSync = (
     ...opts,
   }
 
-  const instance: Ink = getInstance(
-    inkOptions.stdout,
-    () => new Ink(inkOptions),
-  )
+  const instance: Ink = getInstance(inkOptions.stdout, () => new Ink(inkOptions))
 
   instance.render(node)
 
@@ -104,19 +100,14 @@ export const renderSync = (
   }
 }
 
-const wrappedRender = async (
-  node: ReactNode,
-  options?: NodeJS.WriteStream | RenderOptions,
-): Promise<Instance> => {
+const wrappedRender = async (node: ReactNode, options?: NodeJS.WriteStream | RenderOptions): Promise<Instance> => {
   // Preserve the microtask boundary that `await loadYoga()` used to provide.
   // Without it, the first render fires synchronously before async startup work
   // (e.g. useReplBridge notification state) settles, and the subsequent Static
   // write overwrites scrollback instead of appending below the logo.
   await Promise.resolve()
   const instance = renderSync(node, options)
-  logForDebugging(
-    `[render] first ink render: ${Math.round(process.uptime() * 1000)}ms since process start`,
-  )
+  logForDebugging(`[render] first ink render: ${Math.round(process.uptime() * 1000)}ms since process start`)
   return instance
 }
 
@@ -150,15 +141,13 @@ export async function createRoot({
   instances.set(stdout, instance)
 
   return {
-    render: node => instance.render(node),
+    render: (node) => instance.render(node),
     unmount: () => instance.unmount(),
     waitUntilExit: () => instance.waitUntilExit(),
   }
 }
 
-const getOptions = (
-  stdout: NodeJS.WriteStream | RenderOptions | undefined = {},
-): RenderOptions => {
+const getOptions = (stdout: NodeJS.WriteStream | RenderOptions | undefined = {}): RenderOptions => {
   if (stdout instanceof Stream) {
     return {
       stdout,
@@ -169,10 +158,7 @@ const getOptions = (
   return stdout
 }
 
-const getInstance = (
-  stdout: NodeJS.WriteStream,
-  createInstance: () => Ink,
-): Ink => {
+const getInstance = (stdout: NodeJS.WriteStream, createInstance: () => Ink): Ink => {
   let instance = instances.get(stdout)
 
   if (!instance) {

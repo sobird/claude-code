@@ -22,6 +22,7 @@ import {
 } from '@modelcontextprotocol/sdk/client/auth.js'
 import type { FetchLike } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { z } from 'zod/v4'
+
 import { lazySchema } from '../../utils/lazySchema.js'
 import { logMCPDebug } from '../../utils/log.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
@@ -138,25 +139,15 @@ export async function discoverProtectedResource(
 ): Promise<ProtectedResourceMetadata> {
   let prm
   try {
-    prm = await discoverOAuthProtectedResourceMetadata(
-      serverUrl,
-      undefined,
-      opts?.fetchFn ?? defaultFetch,
-    )
+    prm = await discoverOAuthProtectedResourceMetadata(serverUrl, undefined, opts?.fetchFn ?? defaultFetch)
   } catch (e) {
-    throw new Error(
-      `XAA: PRM discovery failed: ${e instanceof Error ? e.message : String(e)}`,
-    )
+    throw new Error(`XAA: PRM discovery failed: ${e instanceof Error ? e.message : String(e)}`)
   }
   if (!prm.resource || !prm.authorization_servers?.[0]) {
-    throw new Error(
-      'XAA: PRM discovery failed: PRM missing resource or authorization_servers',
-    )
+    throw new Error('XAA: PRM discovery failed: PRM missing resource or authorization_servers')
   }
   if (normalizeUrl(prm.resource) !== normalizeUrl(serverUrl)) {
-    throw new Error(
-      `XAA: PRM discovery failed: PRM resource mismatch: expected ${serverUrl}, got ${prm.resource}`,
-    )
+    throw new Error(`XAA: PRM discovery failed: PRM resource mismatch: expected ${serverUrl}, got ${prm.resource}`)
   }
   return {
     resource: prm.resource,
@@ -183,29 +174,22 @@ export async function discoverAuthorizationServer(
     fetchFn: opts?.fetchFn ?? defaultFetch,
   })
   if (!meta?.issuer || !meta.token_endpoint) {
-    throw new Error(
-      `XAA: AS metadata discovery failed: no valid metadata at ${asUrl}`,
-    )
+    throw new Error(`XAA: AS metadata discovery failed: no valid metadata at ${asUrl}`)
   }
   if (normalizeUrl(meta.issuer) !== normalizeUrl(asUrl)) {
-    throw new Error(
-      `XAA: AS metadata discovery failed: issuer mismatch: expected ${asUrl}, got ${meta.issuer}`,
-    )
+    throw new Error(`XAA: AS metadata discovery failed: issuer mismatch: expected ${asUrl}, got ${meta.issuer}`)
   }
   // RFC 8414 §3.3 / RFC 9728 §3 require HTTPS. A PRM-advertised http:// AS
   // that self-consistently reports an http:// issuer would pass the mismatch
   // check above, then we'd POST id_token + client_secret over plaintext.
   if (new URL(meta.token_endpoint).protocol !== 'https:') {
-    throw new Error(
-      `XAA: refusing non-HTTPS token endpoint: ${meta.token_endpoint}`,
-    )
+    throw new Error(`XAA: refusing non-HTTPS token endpoint: ${meta.token_endpoint}`)
   }
   return {
     issuer: meta.issuer,
     token_endpoint: meta.token_endpoint,
     grant_types_supported: meta.grant_types_supported,
-    token_endpoint_auth_methods_supported:
-      meta.token_endpoint_auth_methods_supported,
+    token_endpoint_auth_methods_supported: meta.token_endpoint_auth_methods_supported,
   }
 }
 
@@ -267,10 +251,7 @@ export async function requestJwtAuthorizationGrant(opts: {
     // 4xx → id_token rejected (invalid_grant etc.), clear cache.
     // 5xx → IdP outage, id_token may still be valid, preserve it.
     const shouldClear = res.status < 500
-    throw new XaaTokenExchangeError(
-      `XAA: token exchange failed: HTTP ${res.status}: ${body}`,
-      shouldClear,
-    )
+    throw new XaaTokenExchangeError(`XAA: token exchange failed: HTTP ${res.status}: ${body}`, shouldClear)
   }
   let rawExchange: unknown
   try {
@@ -291,10 +272,7 @@ export async function requestJwtAuthorizationGrant(opts: {
   }
   const result = exchangeParsed.data
   if (!result.access_token) {
-    throw new XaaTokenExchangeError(
-      `XAA: token exchange response missing access_token: ${redactTokens(result)}`,
-      true,
-    )
+    throw new XaaTokenExchangeError(`XAA: token exchange response missing access_token: ${redactTokens(result)}`, true)
   }
   if (result.issued_token_type !== ID_JAG_TOKEN_TYPE) {
     throw new XaaTokenExchangeError(
@@ -380,15 +358,11 @@ export async function exchangeJwtAuthGrant(opts: {
   try {
     rawTokens = await res.json()
   } catch {
-    throw new Error(
-      `XAA: jwt-bearer grant returned non-JSON (captive portal?) at ${opts.tokenEndpoint}`,
-    )
+    throw new Error(`XAA: jwt-bearer grant returned non-JSON (captive portal?) at ${opts.tokenEndpoint}`)
   }
   const tokensParsed = JwtBearerResponseSchema().safeParse(rawTokens)
   if (!tokensParsed.success) {
-    throw new Error(
-      `XAA: jwt-bearer response did not match expected shape: ${redactTokens(rawTokens)}`,
-    )
+    throw new Error(`XAA: jwt-bearer response did not match expected shape: ${redactTokens(rawTokens)}`)
   }
   return tokensParsed.data
 }
@@ -433,10 +407,7 @@ export async function performCrossAppAccess(
 
   logMCPDebug(serverName, `XAA: discovering PRM for ${serverUrl}`)
   const prm = await discoverProtectedResource(serverUrl, { fetchFn })
-  logMCPDebug(
-    serverName,
-    `XAA: discovered resource=${prm.resource} ASes=[${prm.authorization_servers.join(', ')}]`,
-  )
+  logMCPDebug(serverName, `XAA: discovered resource=${prm.resource} ASes=[${prm.authorization_servers.join(', ')}]`)
 
   // Try each advertised AS in order. grant_types_supported is OPTIONAL per
   // RFC 8414 §2 — only skip if the AS explicitly advertises a list that omits
@@ -452,10 +423,7 @@ export async function performCrossAppAccess(
       asErrors.push(`${asUrl}: ${e instanceof Error ? e.message : String(e)}`)
       continue
     }
-    if (
-      candidate.grant_types_supported &&
-      !candidate.grant_types_supported.includes(JWT_BEARER_GRANT)
-    ) {
+    if (candidate.grant_types_supported && !candidate.grant_types_supported.includes(JWT_BEARER_GRANT)) {
       asErrors.push(
         `${asUrl}: does not advertise jwt-bearer grant (supported: ${candidate.grant_types_supported.join(', ')})`,
       )
@@ -465,18 +433,14 @@ export async function performCrossAppAccess(
     break
   }
   if (!asMeta) {
-    throw new Error(
-      `XAA: no authorization server supports jwt-bearer. Tried: ${asErrors.join('; ')}`,
-    )
+    throw new Error(`XAA: no authorization server supports jwt-bearer. Tried: ${asErrors.join('; ')}`)
   }
   // Pick auth method from what the AS advertises. We handle
   // client_secret_basic and client_secret_post; if the AS only supports post,
   // honor that, else default to basic (SEP-990 conformance expectation).
   const authMethods = asMeta.token_endpoint_auth_methods_supported
   const authMethod: 'client_secret_basic' | 'client_secret_post' =
-    authMethods &&
-    !authMethods.includes('client_secret_basic') &&
-    authMethods.includes('client_secret_post')
+    authMethods && !authMethods.includes('client_secret_basic') && authMethods.includes('client_secret_post')
       ? 'client_secret_post'
       : 'client_secret_basic'
   logMCPDebug(

@@ -3,24 +3,22 @@ import React, { useMemo, useState } from 'react'
 import type { SDKMessage } from 'src/entrypoints/agentSdkTypes.js'
 import type { ToolUseContext } from 'src/Tool.js'
 import type { DeepImmutable } from 'src/types/utils.js'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { DIAMOND_FILLED, DIAMOND_OPEN } from '../../constants/figures.js'
 import { useElapsedTime } from '../../hooks/useElapsedTime.js'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { Box, Link, Text } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import type { RemoteAgentTaskState } from '../../tasks/RemoteAgentTask/RemoteAgentTask.js'
 import { getRemoteTaskSessionUrl } from '../../tasks/RemoteAgentTask/RemoteAgentTask.js'
-import {
-  AGENT_TOOL_NAME,
-  LEGACY_AGENT_TOOL_NAME,
-} from '../../tools/AgentTool/constants.js'
+import { AGENT_TOOL_NAME, LEGACY_AGENT_TOOL_NAME } from '../../tools/AgentTool/constants.js'
 import { ASK_USER_QUESTION_TOOL_NAME } from '../../tools/AskUserQuestionTool/prompt.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../tools/ExitPlanModeTool/constants.js'
 import { openBrowser } from '../../utils/browser.js'
 import { errorMessage } from '../../utils/errors.js'
 import { formatDuration, truncateToWidth } from '../../utils/format.js'
-import { toInternalMessages } from '../../utils/messages/mappers.js'
 import { EMPTY_LOOKUPS, normalizeMessages } from '../../utils/messages.js'
+import { toInternalMessages } from '../../utils/messages/mappers.js'
 import { plural } from '../../utils/stringUtils.js'
 import { teleportResumeCodeSession } from '../../utils/teleport.js'
 import { Select } from '../CustomSelect/select.js'
@@ -28,18 +26,12 @@ import { Byline } from '../design-system/Byline.js'
 import { Dialog } from '../design-system/Dialog.js'
 import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint.js'
 import { Message } from '../Message.js'
-import {
-  formatReviewStageCounts,
-  RemoteSessionProgress,
-} from './RemoteSessionProgress.js'
+import { formatReviewStageCounts, RemoteSessionProgress } from './RemoteSessionProgress.js'
 
 type Props = {
   session: DeepImmutable<RemoteAgentTaskState>
   toolUseContext: ToolUseContext
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
   onBack?: () => void
   onKill?: () => void
 }
@@ -63,9 +55,7 @@ export function formatToolUseSummary(name: string, input: unknown): string {
       // is a required schema field so checking it first would make the
       // question fallback dead code.
       const q =
-        'question' in qs[0] &&
-        typeof qs[0].question === 'string' &&
-        qs[0].question
+        'question' in qs[0] && typeof qs[0].question === 'string' && qs[0].question
           ? qs[0].question
           : 'header' in qs[0] && typeof qs[0].header === 'string'
             ? qs[0].header
@@ -95,26 +85,11 @@ const AGENT_VERB = {
   plan_ready: 'done',
 } as const
 
-function UltraplanSessionDetail({
-  session,
-  onDone,
-  onBack,
-  onKill,
-}: Omit<Props, 'toolUseContext'>): React.ReactNode {
+function UltraplanSessionDetail({ session, onDone, onBack, onKill }: Omit<Props, 'toolUseContext'>): React.ReactNode {
   const running = session.status === 'running' || session.status === 'pending'
   const phase = session.ultraplanPhase
-  const statusText = running
-    ? phase
-      ? PHASE_LABEL[phase]
-      : 'running'
-    : session.status
-  const elapsedTime = useElapsedTime(
-    session.startTime,
-    running,
-    1000,
-    0,
-    session.endTime,
-  )
+  const statusText = running ? (phase ? PHASE_LABEL[phase] : 'running') : session.status
+  const elapsedTime = useElapsedTime(session.startTime, running, 1000, 0, session.endTime)
 
   // Counts are eventually correct (lag ≤ poll interval). agentsWorking starts
   // at 1 (the main session agent) and increments per subagent spawn. toolCalls
@@ -129,10 +104,7 @@ function UltraplanSessionDetail({
         if (block.type !== 'tool_use') continue
         calls++
         lastBlock = block
-        if (
-          block.name === AGENT_TOOL_NAME ||
-          block.name === LEGACY_AGENT_TOOL_NAME
-        ) {
+        if (block.name === AGENT_TOOL_NAME || block.name === LEGACY_AGENT_TOOL_NAME) {
           spawns++
         }
       }
@@ -140,35 +112,25 @@ function UltraplanSessionDetail({
     return {
       agentsWorking: 1 + spawns,
       toolCalls: calls,
-      lastToolCall: lastBlock
-        ? formatToolUseSummary(lastBlock.name, lastBlock.input)
-        : null,
+      lastToolCall: lastBlock ? formatToolUseSummary(lastBlock.name, lastBlock.input) : null,
     }
   }, [session.log])
 
   const sessionUrl = getRemoteTaskSessionUrl(session.sessionId)
-  const goBackOrClose =
-    onBack ??
-    (() => onDone('Remote session details dismissed', { display: 'system' }))
+  const goBackOrClose = onBack ?? (() => onDone('Remote session details dismissed', { display: 'system' }))
   const [confirmingStop, setConfirmingStop] = useState(false)
 
   if (confirmingStop) {
     return (
-      <Dialog
-        title="Stop ultraplan?"
-        onCancel={() => setConfirmingStop(false)}
-        color="background"
-      >
+      <Dialog title="Stop ultraplan?" onCancel={() => setConfirmingStop(false)} color="background">
         <Box flexDirection="column" gap={1}>
-          <Text dimColor>
-            This will terminate the Claude Code on the web session.
-          </Text>
+          <Text dimColor>This will terminate the Claude Code on the web session.</Text>
           <Select
             options={[
               { label: 'Terminate session', value: 'stop' as const },
               { label: 'Back', value: 'back' as const },
             ]}
-            onChange={v => {
+            onChange={(v) => {
               if (v === 'stop') {
                 onKill?.()
                 goBackOrClose()
@@ -186,9 +148,7 @@ function UltraplanSessionDetail({
     <Dialog
       title={
         <Text>
-          <Text color="background">
-            {phase === 'plan_ready' ? DIAMOND_FILLED : DIAMOND_OPEN}{' '}
-          </Text>
+          <Text color="background">{phase === 'plan_ready' ? DIAMOND_FILLED : DIAMOND_OPEN} </Text>
           <Text bold>ultraplan</Text>
           <Text dimColor>
             {' · '}
@@ -203,11 +163,8 @@ function UltraplanSessionDetail({
     >
       <Box flexDirection="column" gap={1}>
         <Text>
-          {phase === 'plan_ready' && (
-            <Text color="success">{figures.tick} </Text>
-          )}
-          {agentsWorking} {plural(agentsWorking, 'agent')}{' '}
-          {phase ? AGENT_VERB[phase] : 'working'} · {toolCalls} tool{' '}
+          {phase === 'plan_ready' && <Text color="success">{figures.tick} </Text>}
+          {agentsWorking} {plural(agentsWorking, 'agent')} {phase ? AGENT_VERB[phase] : 'working'} · {toolCalls} tool{' '}
           {plural(toolCalls, 'call')}
         </Text>
         {lastToolCall && <Text dimColor>{lastToolCall}</Text>}
@@ -220,12 +177,10 @@ function UltraplanSessionDetail({
               label: 'Review in Claude Code on the web',
               value: 'open' as const,
             },
-            ...(onKill && running
-              ? [{ label: 'Stop ultraplan', value: 'stop' as const }]
-              : []),
+            ...(onKill && running ? [{ label: 'Stop ultraplan', value: 'stop' as const }] : []),
             { label: 'Back', value: 'back' as const },
           ]}
-          onChange={v => {
+          onChange={(v) => {
             switch (v) {
               case 'open':
                 void openBrowser(sessionUrl)
@@ -273,22 +228,14 @@ function StagePipeline({
   const inSetup = !completed && !hasProgress
   return (
     <Text>
-      {inSetup ? (
-        <Text color="background">Setup</Text>
-      ) : (
-        <Text dimColor>Setup</Text>
-      )}
+      {inSetup ? <Text color="background">Setup</Text> : <Text dimColor>Setup</Text>}
       <Text dimColor> → </Text>
       {STAGES.map((s, i) => {
         const isCurrent = !completed && !inSetup && i === currentIdx
         return (
           <React.Fragment key={s}>
             {i > 0 && <Text dimColor> → </Text>}
-            {isCurrent ? (
-              <Text color="background">{STAGE_LABELS[s]}</Text>
-            ) : (
-              <Text dimColor>{STAGE_LABELS[s]}</Text>
-            )}
+            {isCurrent ? <Text color="background">{STAGE_LABELS[s]}</Text> : <Text dimColor>{STAGE_LABELS[s]}</Text>}
           </React.Fragment>
         )
       })}
@@ -300,9 +247,7 @@ function StagePipeline({
 // Stage-appropriate counts line. Running-state formatting delegates to
 // formatReviewStageCounts (shared with the pill) so the two views can't
 // drift; completed state is dialog-specific (findings summary).
-function reviewCountsLine(
-  session: DeepImmutable<RemoteAgentTaskState>,
-): string {
+function reviewCountsLine(session: DeepImmutable<RemoteAgentTaskState>): string {
   const p = session.reviewProgress
   // No progress data — the orchestrator never wrote a snapshot. Don't
   // claim "0 findings" when completed; we just don't know.
@@ -319,12 +264,7 @@ function reviewCountsLine(
 
 type MenuAction = 'open' | 'stop' | 'back' | 'dismiss'
 
-function ReviewSessionDetail({
-  session,
-  onDone,
-  onBack,
-  onKill,
-}: Omit<Props, 'toolUseContext'>): React.ReactNode {
+function ReviewSessionDetail({ session, onDone, onBack, onKill }: Omit<Props, 'toolUseContext'>): React.ReactNode {
   const completed = session.status === 'completed'
   const running = session.status === 'running' || session.status === 'pending'
   const [confirmingStop, setConfirmingStop] = useState(false)
@@ -333,16 +273,9 @@ function ReviewSessionDetail({
   // dialog is open — the previous inline elapsed-time calculation only
   // re-rendered on session state changes (poll interval), which looked
   // like the clock was stuck.
-  const elapsedTime = useElapsedTime(
-    session.startTime,
-    running,
-    1000,
-    0,
-    session.endTime,
-  )
+  const elapsedTime = useElapsedTime(session.startTime, running, 1000, 0, session.endTime)
 
-  const handleClose = () =>
-    onDone('Remote session details dismissed', { display: 'system' })
+  const handleClose = () => onDone('Remote session details dismissed', { display: 'system' })
   const goBackOrClose = onBack ?? handleClose
 
   const sessionUrl = getRemoteTaskSessionUrl(session.sessionId)
@@ -350,22 +283,18 @@ function ReviewSessionDetail({
 
   if (confirmingStop) {
     return (
-      <Dialog
-        title="Stop ultrareview?"
-        onCancel={() => setConfirmingStop(false)}
-        color="background"
-      >
+      <Dialog title="Stop ultrareview?" onCancel={() => setConfirmingStop(false)} color="background">
         <Box flexDirection="column" gap={1}>
           <Text dimColor>
-            This archives the remote session and stops local tracking. The
-            review will not complete and any findings so far are discarded.
+            This archives the remote session and stops local tracking. The review will not complete and any findings so
+            far are discarded.
           </Text>
           <Select
             options={[
               { label: 'Stop ultrareview', value: 'stop' as const },
               { label: 'Back', value: 'back' as const },
             ]}
-            onChange={v => {
+            onChange={(v) => {
               if (v === 'stop') {
                 onKill?.()
                 goBackOrClose()
@@ -386,9 +315,7 @@ function ReviewSessionDetail({
       ]
     : [
         { label: 'Open in Claude Code on the web', value: 'open' },
-        ...(onKill && running
-          ? [{ label: 'Stop ultrareview', value: 'stop' as const }]
-          : []),
+        ...(onKill && running ? [{ label: 'Stop ultrareview', value: 'stop' as const }] : []),
         { label: 'Back', value: 'back' },
       ]
 
@@ -414,9 +341,7 @@ function ReviewSessionDetail({
     <Dialog
       title={
         <Text>
-          <Text color="background">
-            {completed ? DIAMOND_FILLED : DIAMOND_OPEN}{' '}
-          </Text>
+          <Text color="background">{completed ? DIAMOND_FILLED : DIAMOND_OPEN} </Text>
           <Text bold>ultrareview</Text>
           <Text dimColor>
             {' · '}
@@ -428,7 +353,7 @@ function ReviewSessionDetail({
       }
       onCancel={goBackOrClose}
       color="background"
-      inputGuide={exitState =>
+      inputGuide={(exitState) =>
         exitState.pending ? (
           <Text>Press {exitState.keyName} again to exit</Text>
         ) : (
@@ -459,13 +384,7 @@ function ReviewSessionDetail({
   )
 }
 
-export function RemoteSessionDetailDialog({
-  session,
-  toolUseContext,
-  onDone,
-  onBack,
-  onKill,
-}: Props): React.ReactNode {
+export function RemoteSessionDetailDialog({ session, toolUseContext, onDone, onBack, onKill }: Props): React.ReactNode {
   const [isTeleporting, setIsTeleporting] = useState(false)
   const [teleportError, setTeleportError] = useState<string | null>(null)
 
@@ -477,36 +396,21 @@ export function RemoteSessionDetailDialog({
   const lastMessages = useMemo(() => {
     if (session.isUltraplan || session.isRemoteReview) return []
     return normalizeMessages(toInternalMessages(session.log as SDKMessage[]))
-      .filter(_ => _.type !== 'progress')
+      .filter((_) => _.type !== 'progress')
       .slice(-3)
   }, [session])
 
   if (session.isUltraplan) {
-    return (
-      <UltraplanSessionDetail
-        session={session}
-        onDone={onDone}
-        onBack={onBack}
-        onKill={onKill}
-      />
-    )
+    return <UltraplanSessionDetail session={session} onDone={onDone} onBack={onBack} onKill={onKill} />
   }
 
   // Review sessions get the stage-pipeline view; everything else keeps the
   // generic label/value + recent-messages dialog below.
   if (session.isRemoteReview) {
-    return (
-      <ReviewSessionDetail
-        session={session}
-        onDone={onDone}
-        onBack={onBack}
-        onKill={onKill}
-      />
-    )
+    return <ReviewSessionDetail session={session} onDone={onDone} onBack={onBack} onKill={onKill} />
   }
 
-  const handleClose = () =>
-    onDone('Remote session details dismissed', { display: 'system' })
+  const handleClose = () => onDone('Remote session details dismissed', { display: 'system' })
 
   // Component-specific shortcuts shown in UI hints (t=teleport, space=dismiss,
   // left=back). These are state-dependent actions, not standard dialog keybindings.
@@ -544,30 +448,22 @@ export function RemoteSessionDetailDialog({
   const displayTitle = truncateToWidth(session.title, 50)
 
   // Map TaskStatus to display status (handle 'pending')
-  const displayStatus =
-    session.status === 'pending' ? 'starting' : session.status
+  const displayStatus = session.status === 'pending' ? 'starting' : session.status
 
   return (
-    <Box
-      flexDirection="column"
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       <Dialog
         title="Remote session details"
         onCancel={handleClose}
         color="background"
-        inputGuide={exitState =>
+        inputGuide={(exitState) =>
           exitState.pending ? (
             <Text>Press {exitState.keyName} again to exit</Text>
           ) : (
             <Byline>
               {onBack && <KeyboardShortcutHint shortcut="←" action="go back" />}
               <KeyboardShortcutHint shortcut="Esc/Enter/Space" action="close" />
-              {!isTeleporting && (
-                <KeyboardShortcutHint shortcut="t" action="teleport" />
-              )}
+              {!isTeleporting && <KeyboardShortcutHint shortcut="t" action="teleport" />}
             </Byline>
           )
         }
@@ -584,17 +480,13 @@ export function RemoteSessionDetailDialog({
             )}
           </Text>
           <Text>
-            <Text bold>Runtime</Text>:{' '}
-            {formatDuration(
-              (session.endTime ?? Date.now()) - session.startTime,
-            )}
+            <Text bold>Runtime</Text>: {formatDuration((session.endTime ?? Date.now()) - session.startTime)}
           </Text>
           <Text wrap="truncate-end">
             <Text bold>Title</Text>: {displayTitle}
           </Text>
           <Text>
-            <Text bold>Progress</Text>:{' '}
-            <RemoteSessionProgress session={session} />
+            <Text bold>Progress</Text>: <RemoteSessionProgress session={session} />
           </Text>
           <Text>
             <Text bold>Session URL</Text>:{' '}
@@ -632,8 +524,7 @@ export function RemoteSessionDetailDialog({
             </Box>
             <Box marginTop={1}>
               <Text dimColor italic>
-                Showing last {lastMessages.length} of {session.log.length}{' '}
-                messages
+                Showing last {lastMessages.length} of {session.log.length} messages
               </Text>
             </Box>
           </Box>
@@ -647,9 +538,7 @@ export function RemoteSessionDetailDialog({
         )}
 
         {/* Teleporting status */}
-        {isTeleporting && (
-          <Text color="background">Teleporting to session…</Text>
-        )}
+        {isTeleporting && <Text color="background">Teleporting to session…</Text>}
       </Dialog>
     </Box>
   )

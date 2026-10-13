@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react'
+
 import { isBridgeEnabled } from '../bridge/bridgeEnabled.js'
 import { Box, Text } from '../ink.js'
 import { getClaudeAIOAuthTokens } from '../utils/auth.js'
@@ -23,7 +24,7 @@ export function RemoteCallout({ onDone }: Props): React.ReactNode {
 
   // Permanently mark as seen on mount so it only shows once
   useEffect(() => {
-    saveGlobalConfig(current => {
+    saveGlobalConfig((current) => {
       if (current.remoteDialogSeen) return current
       return { ...current, remoteDialogSeen: true }
     })
@@ -51,22 +52,14 @@ export function RemoteCallout({ onDone }: Props): React.ReactNode {
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Box marginBottom={1} flexDirection="column">
           <Text>
-            Remote Control lets you access this CLI session from the web
-            (claude.ai/code) or the Claude app, so you can pick up where you
-            left off on any device.
+            Remote Control lets you access this CLI session from the web (claude.ai/code) or the Claude app, so you can
+            pick up where you left off on any device.
           </Text>
           <Text> </Text>
-          <Text>
-            You can disconnect remote access anytime by running /remote-control
-            again.
-          </Text>
+          <Text>You can disconnect remote access anytime by running /remote-control again.</Text>
         </Box>
         <Box>
-          <Select
-            options={options}
-            onChange={handleSelect}
-            onCancel={handleCancel}
-          />
+          <Select options={options} onChange={handleSelect} onCancel={handleCancel} />
         </Box>
       </Box>
     </PermissionDialog>

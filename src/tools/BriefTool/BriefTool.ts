@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import { z } from 'zod/v4'
+
 import { getKairosActive, getUserMsgOptIn } from '../../bootstrap/state.js'
 import { getFeatureValue_CACHED_WITH_REFRESH } from '../../services/analytics/growthbook.js'
 import { logEvent } from '../../services/analytics/index.js'
@@ -9,19 +11,12 @@ import { isEnvTruthy } from '../../utils/envUtils.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { plural } from '../../utils/stringUtils.js'
 import { resolveAttachments, validateAttachmentPaths } from './attachments.js'
-import {
-  BRIEF_TOOL_NAME,
-  BRIEF_TOOL_PROMPT,
-  DESCRIPTION,
-  LEGACY_BRIEF_TOOL_NAME,
-} from './prompt.js'
+import { BRIEF_TOOL_NAME, BRIEF_TOOL_PROMPT, DESCRIPTION, LEGACY_BRIEF_TOOL_NAME } from './prompt.js'
 import { renderToolResultMessage, renderToolUseMessage } from './UI.js'
 
 const inputSchema = lazySchema(() =>
   z.strictObject({
-    message: z
-      .string()
-      .describe('The message for the user. Supports markdown formatting.'),
+    message: z.string().describe('The message for the user. Supports markdown formatting.'),
     attachments: z
       .array(z.string())
       .optional()
@@ -91,11 +86,7 @@ export function isBriefEntitled(): boolean {
   return feature('KAIROS') || feature('KAIROS_BRIEF')
     ? getKairosActive() ||
         isEnvTruthy(process.env.CLAUDE_CODE_BRIEF) ||
-        getFeatureValue_CACHED_WITH_REFRESH(
-          'tengu_kairos_brief',
-          false,
-          KAIROS_BRIEF_REFRESH_MS,
-        )
+        getFeatureValue_CACHED_WITH_REFRESH('tengu_kairos_brief', false, KAIROS_BRIEF_REFRESH_MS)
     : false
 }
 
@@ -136,8 +127,7 @@ export function isBriefEnabled(): boolean {
 export const BriefTool = buildTool({
   name: BRIEF_TOOL_NAME,
   aliases: [LEGACY_BRIEF_TOOL_NAME],
-  searchHint:
-    'send a message to the user — your primary visible output channel',
+  searchHint: 'send a message to the user — your primary visible output channel',
   maxResultSizeChars: 100_000,
   userFacingName() {
     return ''

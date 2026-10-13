@@ -7,27 +7,34 @@
 ## 📋 启用功能组件
 
 ### 1. Computer Use MCP Server
+
 - **服务器名称**: `computer-use` (在 `src/utils/computerUse/common.ts` 中定义)
 - **入口点**: `--computer-use-mcp` CLI 参数
 - **依赖包**: `@ant/computer-use-mcp` (外部依赖)
 - **功能**: 提供计算机自动化、截图、鼠标键盘控制的工具
 
 ### 2. 保留的 MCP 名称保护
+
 防止用户配置冲突的 MCP 服务器:
+
 - `claude-in-chrome` (保留给 Chrome 集成)
 - `computer-use` (保留给 Computer Use MCP)
 
 ### 3. 内置 MCP 配置
+
 - 将 `computer-use` 添加到内置 MCP 服务器名称列表
 - 默认配置为禁用状态(需要显式通过 `enabledMcpServers` 启用)
 
 ### 4. 平台特定功能 (仅 macOS)
+
 - 终端检测和被截图隐藏排除
 - 原生截图过滤功能
 - macOS CLI 环境的宿主适配器配置
 
 ### 5. 清理和资源管理
+
 在 turn 结束或中断时自动处理清理:
+
 - 释放基于文件的锁
 - 取消隐藏应用程序窗口
 - 清理 Computer Use 资源
@@ -50,12 +57,14 @@ graph TD
 ## 🔧 使用模式
 
 ### CLI 使用
+
 ```bash
 # 启动 Computer Use MCP server
 claude --computer-use-mcp
 ```
 
 ### 编程使用
+
 ```typescript
 // 在客户端代码中
 if (feature('CHICAGO_MCP')) {
@@ -65,6 +74,7 @@ if (feature('CHICAGO_MCP')) {
 ```
 
 ### 配置示例
+
 ```javascript
 // MCP 配置文件 (默认为禁用)
 {

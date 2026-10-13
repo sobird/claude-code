@@ -1,8 +1,5 @@
 import type { Command } from '../commands.js'
-import {
-  getAttributionTexts,
-  getEnhancedPRAttribution,
-} from '../utils/attribution.js'
+import { getAttributionTexts, getEnhancedPRAttribution } from '../utils/attribution.js'
 import { getDefaultBranch } from '../utils/git.js'
 import { executeShellCommandsInPrompt } from '../utils/promptShellExecution.js'
 import { getUndercoverInstructions, isUndercover } from '../utils/undercover.js'
@@ -23,12 +20,8 @@ const ALLOWED_TOOLS = [
   'mcp__claude_ai_Slack__slack_send_message',
 ]
 
-function getPromptContent(
-  defaultBranch: string,
-  prAttribution?: string,
-): string {
-  const { commit: commitAttribution, pr: defaultPrAttribution } =
-    getAttributionTexts()
+function getPromptContent(defaultBranch: string, prAttribution?: string): string {
+  const { commit: commitAttribution, pr: defaultPrAttribution } = getAttributionTexts()
   // Use provided PR attribution or fall back to default
   const effectivePrAttribution = prAttribution ?? defaultPrAttribution
   const safeUser = process.env.SAFEUSER || ''

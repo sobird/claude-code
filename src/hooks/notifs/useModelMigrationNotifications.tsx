@@ -1,5 +1,6 @@
 import type { Notification } from 'src/context/notifications.js'
 import { type GlobalConfig, getGlobalConfig } from 'src/utils/config.js'
+
 import { useStartupNotification } from './useStartupNotification.js'
 
 // Shows a one-time notification right after a model migration writes its
@@ -8,7 +9,7 @@ import { useStartupNotification } from './useStartupNotification.js'
 // Future model migrations: add an entry to MIGRATIONS below.
 const MIGRATIONS: ((c: GlobalConfig) => Notification | undefined)[] = [
   // Sonnet 4.5 → 4.6 (pro/max/team premium)
-  c => {
+  (c) => {
     if (!recent(c.sonnet45To46MigrationTimestamp)) return
     return {
       key: 'sonnet-46-update',
@@ -20,7 +21,7 @@ const MIGRATIONS: ((c: GlobalConfig) => Notification | undefined)[] = [
   },
   // Opus Pro → default, or pinned 4.0/4.1 → opus alias. Both land on the
   // current Opus default (4.6 for 1P).
-  c => {
+  (c) => {
     const isLegacyRemap = Boolean(c.legacyOpusMigrationTimestamp)
     const ts = c.legacyOpusMigrationTimestamp ?? c.opusProMigrationTimestamp
     if (!recent(ts)) return

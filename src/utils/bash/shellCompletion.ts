@@ -1,9 +1,6 @@
 import type { SuggestionItem } from 'src/components/PromptInput/PromptInputFooterSuggestions.js'
-import {
-  type ParseEntry,
-  quote,
-  tryParseShellCommand,
-} from '../bash/shellQuote.js'
+
+import { type ParseEntry, quote, tryParseShellCommand } from '../bash/shellQuote.js'
 import { logForDebugging } from '../debug.js'
 import { getShellType } from '../localInstaller.js'
 import * as Shell from '../Shell.js'
@@ -39,11 +36,7 @@ function getCompletionTypeFromPrefix(prefix: string): ShellCompletionType {
   if (prefix.startsWith('$')) {
     return 'variable'
   }
-  if (
-    prefix.includes('/') ||
-    prefix.startsWith('~') ||
-    prefix.startsWith('.')
-  ) {
+  if (prefix.includes('/') || prefix.startsWith('~') || prefix.startsWith('.')) {
     return 'file'
   }
   return 'command'
@@ -52,10 +45,8 @@ function getCompletionTypeFromPrefix(prefix: string): ShellCompletionType {
 /**
  * Find the last string token and its index in parsed tokens
  */
-function findLastStringToken(
-  tokens: ParseEntry[],
-): { token: string; index: number } | null {
-  const i = tokens.findLastIndex(t => typeof t === 'string')
+function findLastStringToken(tokens: ParseEntry[]): { token: string; index: number } | null {
+  const i = tokens.findLastIndex((t) => typeof t === 'string')
   return i !== -1 ? { token: tokens[i] as string, index: i } : null
 }
 
@@ -63,10 +54,7 @@ function findLastStringToken(
  * Check if we're in a context that expects a new command
  * (at start of input or after a command operator)
  */
-function isNewCommandContext(
-  tokens: ParseEntry[],
-  currentTokenIndex: number,
-): boolean {
+function isNewCommandContext(tokens: ParseEntry[], currentTokenIndex: number): boolean {
   if (currentTokenIndex === 0) {
     return true
   }
@@ -93,9 +81,7 @@ function parseInputContext(input: string, cursorOffset: number): InputContext {
     const tokens = beforeCursor.split(/\s+/)
     const prefix = tokens[tokens.length - 1] || ''
     const isFirstToken = tokens.length === 1 && !beforeCursor.includes(' ')
-    const completionType = isFirstToken
-      ? 'command'
-      : getCompletionTypeFromPrefix(prefix)
+    const completionType = isFirstToken ? 'command' : getCompletionTypeFromPrefix(prefix)
     return { prefix, completionType }
   }
 
@@ -104,10 +90,7 @@ function parseInputContext(input: string, cursorOffset: number): InputContext {
   if (!lastToken) {
     // No string token found - check if after operator
     const lastParsedToken = parseResult.tokens[parseResult.tokens.length - 1]
-    const completionType =
-      lastParsedToken && isCommandOperator(lastParsedToken)
-        ? 'command'
-        : 'command' // Default to command at start
+    const completionType = lastParsedToken && isCommandOperator(lastParsedToken) ? 'command' : 'command' // Default to command at start
     return { prefix: '', completionType }
   }
 
@@ -126,12 +109,7 @@ function parseInputContext(input: string, cursorOffset: number): InputContext {
   }
 
   // For command-like tokens, check context: are we starting a new command?
-  const completionType = isNewCommandContext(
-    parseResult.tokens,
-    lastToken.index,
-  )
-    ? 'command'
-    : 'file' // Not after operator = file argument
+  const completionType = isNewCommandContext(parseResult.tokens, lastToken.index) ? 'command' : 'file' // Not after operator = file argument
 
   return { prefix: lastToken.token, completionType }
 }
@@ -139,10 +117,7 @@ function parseInputContext(input: string, cursorOffset: number): InputContext {
 /**
  * Generate bash completion command using compgen
  */
-function getBashCompletionCommand(
-  prefix: string,
-  completionType: ShellCompletionType,
-): string {
+function getBashCompletionCommand(prefix: string, completionType: ShellCompletionType): string {
   if (completionType === 'variable') {
     // Variable completion - remove $ prefix
     const varName = prefix.slice(1)
@@ -160,10 +135,7 @@ function getBashCompletionCommand(
 /**
  * Generate zsh completion command using native zsh commands
  */
-function getZshCompletionCommand(
-  prefix: string,
-  completionType: ShellCompletionType,
-): string {
+function getZshCompletionCommand(prefix: string, completionType: ShellCompletionType): string {
   if (completionType === 'variable') {
     // Variable completion - use zsh pattern matching for safe filtering
     const varName = prefix.slice(1)
@@ -237,15 +209,10 @@ export async function getShellCompletions(
       return []
     }
 
-    const completions = await getCompletionsForShell(
-      shellType,
-      prefix,
-      completionType,
-      abortSignal,
-    )
+    const completions = await getCompletionsForShell(shellType, prefix, completionType, abortSignal)
 
     // Add inputSnapshot to all suggestions so we can detect when input changes
-    return completions.map(suggestion => ({
+    return completions.map((suggestion) => ({
       ...suggestion,
       metadata: {
         ...(suggestion.metadata as { completionType: ShellCompletionType }),

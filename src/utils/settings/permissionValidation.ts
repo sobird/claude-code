@@ -1,13 +1,10 @@
 import { z } from 'zod/v4'
+
 import { mcpInfoFromString } from '../../services/mcp/mcpStringUtils.js'
 import { lazySchema } from '../lazySchema.js'
 import { permissionRuleValueFromString } from '../permissions/permissionRuleParser.js'
 import { capitalize } from '../stringUtils.js'
-import {
-  getCustomValidation,
-  isBashPrefixTool,
-  isFilePatternTool,
-} from './toolValidationConfig.js'
+import { getCustomValidation, isBashPrefixTool, isFilePatternTool } from './toolValidationConfig.js'
 
 /**
  * Checks if a character at a given index is escaped (preceded by odd number of backslashes).
@@ -73,8 +70,7 @@ export function validatePermissionRule(rule: string): {
     return {
       valid: false,
       error: 'Mismatched parentheses',
-      suggestion:
-        'Ensure all opening parentheses have matching closing parentheses',
+      suggestion: 'Ensure all opening parentheses have matching closing parentheses',
     }
   }
 
@@ -119,9 +115,7 @@ export function validatePermissionRule(rule: string): {
         examples: [
           `mcp__${mcpInfo.serverName}`,
           `mcp__${mcpInfo.serverName}__*`,
-          mcpInfo.toolName && mcpInfo.toolName !== '*'
-            ? `mcp__${mcpInfo.serverName}__${mcpInfo.toolName}`
-            : undefined,
+          mcpInfo.toolName && mcpInfo.toolName !== '*' ? `mcp__${mcpInfo.serverName}__${mcpInfo.toolName}` : undefined,
         ].filter(Boolean) as string[],
       }
     }
@@ -161,12 +155,8 @@ export function validatePermissionRule(rule: string): {
       return {
         valid: false,
         error: 'The :* pattern must be at the end',
-        suggestion:
-          'Move :* to the end for prefix matching, or use * for wildcard matching',
-        examples: [
-          'Bash(npm run:*) - prefix matching (legacy)',
-          'Bash(npm run *) - wildcard matching',
-        ],
+        suggestion: 'Move :* to the end for prefix matching, or use * for wildcard matching',
+        examples: ['Bash(npm run:*) - prefix matching (legacy)', 'Bash(npm run *) - wildcard matching'],
       }
     }
 
@@ -215,11 +205,7 @@ export function validatePermissionRule(rule: string): {
     }
 
     // Warn about wildcards not at boundaries
-    if (
-      content.includes('*') &&
-      !content.match(/^\*|\*$|\*\*|\/\*|\*\.|\*\)/) &&
-      !content.includes('**')
-    ) {
+    if (content.includes('*') && !content.match(/^\*|\*$|\*\*|\/\*|\*\.|\*\)/) && !content.includes('**')) {
       // This is a loose check - wildcards in the middle might be valid in some cases
       // but often indicate confusion
       return {

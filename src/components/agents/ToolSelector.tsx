@@ -21,8 +21,9 @@ import { TodoWriteTool } from 'src/tools/TodoWriteTool/TodoWriteTool.js'
 import { TungstenTool } from 'src/tools/TungstenTool/TungstenTool.js'
 import { WebFetchTool } from 'src/tools/WebFetchTool/WebFetchTool.js'
 import { WebSearchTool } from 'src/tools/WebSearchTool/WebSearchTool.js'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
+
 import { Box, Text } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import { count } from '../../utils/array.js'
 import { plural } from '../../utils/stringUtils.js'
@@ -69,19 +70,12 @@ function getToolBuckets(): ToolBuckets {
     },
     EDIT: {
       name: 'Edit tools',
-      toolNames: new Set([
-        FileEditTool.name,
-        FileWriteTool.name,
-        NotebookEditTool.name,
-      ]),
+      toolNames: new Set([FileEditTool.name, FileWriteTool.name, NotebookEditTool.name]),
     },
     EXECUTION: {
       name: 'Execution tools',
       toolNames: new Set(
-        [
-          BashTool.name,
-          process.env.USER_TYPE === 'ant' ? TungstenTool.name : undefined,
-        ].filter(n => n !== undefined),
+        [BashTool.name, process.env.USER_TYPE === 'ant' ? TungstenTool.name : undefined].filter((n) => n !== undefined),
       ),
     },
     MCP: {
@@ -103,7 +97,7 @@ function getMcpServerBuckets(tools: Tools): Array<{
 }> {
   const serverMap = new Map<string, Tool[]>()
 
-  tools.forEach(tool => {
+  tools.forEach((tool) => {
     if (isMcpTool(tool)) {
       const mcpInfo = mcpInfoFromString(tool.name)
       if (mcpInfo?.serverName) {
@@ -119,68 +113,53 @@ function getMcpServerBuckets(tools: Tools): Array<{
     .sort((a, b) => a.serverName.localeCompare(b.serverName))
 }
 
-export function ToolSelector({
-  tools,
-  initialTools,
-  onComplete,
-  onCancel,
-}: Props): React.ReactNode {
+export function ToolSelector({ tools, initialTools, onComplete, onCancel }: Props): React.ReactNode {
   // Filter tools for custom agents
-  const customAgentTools = useMemo(
-    () => filterToolsForAgent({ tools, isBuiltIn: false, isAsync: false }),
-    [tools],
-  )
+  const customAgentTools = useMemo(() => filterToolsForAgent({ tools, isBuiltIn: false, isAsync: false }), [tools])
 
   // Expand wildcard or undefined to explicit tool list for internal state
   const expandedInitialTools =
-    !initialTools || initialTools.includes('*')
-      ? customAgentTools.map(t => t.name)
-      : initialTools
+    !initialTools || initialTools.includes('*') ? customAgentTools.map((t) => t.name) : initialTools
 
-  const [selectedTools, setSelectedTools] =
-    useState<string[]>(expandedInitialTools)
+  const [selectedTools, setSelectedTools] = useState<string[]>(expandedInitialTools)
   const [focusIndex, setFocusIndex] = useState(0)
   const [showIndividualTools, setShowIndividualTools] = useState(false)
 
   // Filter selectedTools to only include tools that currently exist
   // This handles MCP tools that disconnect while selected
   const validSelectedTools = useMemo(() => {
-    const toolNames = new Set(customAgentTools.map(t => t.name))
-    return selectedTools.filter(name => toolNames.has(name))
+    const toolNames = new Set(customAgentTools.map((t) => t.name))
+    return selectedTools.filter((name) => toolNames.has(name))
   }, [selectedTools, customAgentTools])
 
   const selectedSet = new Set(validSelectedTools)
-  const isAllSelected =
-    validSelectedTools.length === customAgentTools.length &&
-    customAgentTools.length > 0
+  const isAllSelected = validSelectedTools.length === customAgentTools.length && customAgentTools.length > 0
 
   const handleToggleTool = (toolName: string) => {
     if (!toolName) return
 
-    setSelectedTools(current =>
-      current.includes(toolName)
-        ? current.filter(t => t !== toolName)
-        : [...current, toolName],
+    setSelectedTools((current) =>
+      current.includes(toolName) ? current.filter((t) => t !== toolName) : [...current, toolName],
     )
   }
 
   const handleToggleTools = (toolNames: string[], select: boolean) => {
-    setSelectedTools(current => {
+    setSelectedTools((current) => {
       if (select) {
-        const toolsToAdd = toolNames.filter(t => !current.includes(t))
+        const toolsToAdd = toolNames.filter((t) => !current.includes(t))
         return [...current, ...toolsToAdd]
       } else {
-        return current.filter(t => !toolNames.includes(t))
+        return current.filter((t) => !toolNames.includes(t))
       }
     })
   }
 
   const handleConfirm = () => {
     // Convert to undefined if all tools are selected (for cleaner file format)
-    const allToolNames = customAgentTools.map(t => t.name)
+    const allToolNames = customAgentTools.map((t) => t.name)
     const areAllToolsSelected =
       validSelectedTools.length === allToolNames.length &&
-      allToolNames.every(name => validSelectedTools.includes(name))
+      allToolNames.every((name) => validSelectedTools.includes(name))
     const finalTools = areAllToolsSelected ? undefined : validSelectedTools
 
     onComplete(finalTools)
@@ -197,7 +176,7 @@ export function ToolSelector({
       other: [] as Tool[],
     }
 
-    customAgentTools.forEach(tool => {
+    customAgentTools.forEach((tool) => {
       // Check if it's an MCP tool first
       if (isMcpTool(tool)) {
         buckets.mcp.push(tool)
@@ -217,11 +196,11 @@ export function ToolSelector({
   }, [customAgentTools])
 
   const createBucketToggleAction = (bucketTools: Tool[]) => {
-    const selected = count(bucketTools, t => selectedSet.has(t.name))
+    const selected = count(bucketTools, (t) => selectedSet.has(t.name))
     const needsSelection = selected < bucketTools.length
 
     return () => {
-      const toolNames = bucketTools.map(t => t.name)
+      const toolNames = bucketTools.map((t) => t.name)
       handleToggleTools(toolNames, needsSelection)
     }
   }
@@ -249,7 +228,7 @@ export function ToolSelector({
     id: 'bucket-all',
     label: `${isAllSelected ? figures.checkboxOn : figures.checkboxOff} All tools`,
     action: () => {
-      const allToolNames = customAgentTools.map(t => t.name)
+      const allToolNames = customAgentTools.map((t) => t.name)
       handleToggleTools(allToolNames, !isAllSelected)
     },
   })
@@ -287,7 +266,7 @@ export function ToolSelector({
   bucketConfigs.forEach(({ id, name, tools: bucketTools }) => {
     if (bucketTools.length === 0) return
 
-    const selected = count(bucketTools, t => selectedSet.has(t.name))
+    const selected = count(bucketTools, (t) => selectedSet.has(t.name))
     const isFullySelected = selected === bucketTools.length
 
     navigableItems.push({
@@ -301,9 +280,7 @@ export function ToolSelector({
   const toggleButtonIndex = navigableItems.length
   navigableItems.push({
     id: 'toggle-individual',
-    label: showIndividualTools
-      ? 'Hide advanced options'
-      : 'Show advanced options',
+    label: showIndividualTools ? 'Hide advanced options' : 'Show advanced options',
     action: () => {
       setShowIndividualTools(!showIndividualTools)
       // If hiding tools and focus is on an individual tool, move focus to toggle button
@@ -315,10 +292,7 @@ export function ToolSelector({
   })
 
   // Memoize MCP server buckets (must be outside conditional for hooks rules)
-  const mcpServerBuckets = useMemo(
-    () => getMcpServerBuckets(customAgentTools),
-    [customAgentTools],
-  )
+  const mcpServerBuckets = useMemo(() => getMcpServerBuckets(customAgentTools), [customAgentTools])
 
   // Individual tools (only if expanded)
   if (showIndividualTools) {
@@ -332,14 +306,14 @@ export function ToolSelector({
       })
 
       mcpServerBuckets.forEach(({ serverName, tools: serverTools }) => {
-        const selected = count(serverTools, t => selectedSet.has(t.name))
+        const selected = count(serverTools, (t) => selectedSet.has(t.name))
         const isFullySelected = selected === serverTools.length
 
         navigableItems.push({
           id: `mcp-server-${serverName}`,
           label: `${isFullySelected ? figures.checkboxOn : figures.checkboxOff} ${serverName} (${serverTools.length} ${plural(serverTools.length, 'tool')})`,
           action: () => {
-            const toolNames = serverTools.map(t => t.name)
+            const toolNames = serverTools.map((t) => t.name)
             handleToggleTools(toolNames, !isFullySelected)
           },
         })
@@ -355,13 +329,11 @@ export function ToolSelector({
     }
 
     // Add individual tools
-    customAgentTools.forEach(tool => {
+    customAgentTools.forEach((tool) => {
       let displayName = tool.name
       if (tool.name.startsWith('mcp__')) {
         const mcpInfo = mcpInfoFromString(tool.name)
-        displayName = mcpInfo
-          ? `${mcpInfo.toolName} (${mcpInfo.serverName})`
-          : tool.name
+        displayName = mcpInfo ? `${mcpInfo.toolName} (${mcpInfo.serverName})` : tool.name
       }
 
       navigableItems.push({
@@ -401,10 +373,7 @@ export function ToolSelector({
       e.preventDefault()
       let newIndex = focusIndex + 1
       // Skip headers when navigating down
-      while (
-        newIndex < navigableItems.length - 1 &&
-        navigableItems[newIndex]?.isHeader
-      ) {
+      while (newIndex < navigableItems.length - 1 && navigableItems[newIndex]?.isHeader) {
         newIndex++
       }
       setFocusIndex(Math.min(navigableItems.length - 1, newIndex))
@@ -412,18 +381,9 @@ export function ToolSelector({
   }
 
   return (
-    <Box
-      flexDirection="column"
-      marginTop={1}
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" marginTop={1} tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       {/* Render Continue button */}
-      <Text
-        color={focusIndex === 0 ? 'suggestion' : undefined}
-        bold={focusIndex === 0}
-      >
+      <Text color={focusIndex === 0 ? 'suggestion' : undefined} bold={focusIndex === 0}>
         {focusIndex === 0 ? `${figures.pointer} ` : '  '}[ Continue ]
       </Text>
 
@@ -445,21 +405,11 @@ export function ToolSelector({
             {isHeader && index > 0 && <Box marginTop={1} />}
 
             <Text
-              color={
-                isHeader
-                  ? undefined
-                  : isCurrentlyFocused
-                    ? 'suggestion'
-                    : undefined
-              }
+              color={isHeader ? undefined : isCurrentlyFocused ? 'suggestion' : undefined}
               dimColor={isHeader}
               bold={isToggleButton && isCurrentlyFocused}
             >
-              {isHeader
-                ? ''
-                : isCurrentlyFocused
-                  ? `${figures.pointer} `
-                  : '  '}
+              {isHeader ? '' : isCurrentlyFocused ? `${figures.pointer} ` : '  '}
               {isToggleButton ? `[ ${item.label} ]` : item.label}
             </Text>
           </React.Fragment>
@@ -468,9 +418,7 @@ export function ToolSelector({
 
       <Box marginTop={1} flexDirection="column">
         <Text dimColor>
-          {isAllSelected
-            ? 'All tools selected'
-            : `${selectedSet.size} of ${customAgentTools.length} tools selected`}
+          {isAllSelected ? 'All tools selected' : `${selectedSet.size} of ${customAgentTools.length} tools selected`}
         </Text>
       </Box>
     </Box>

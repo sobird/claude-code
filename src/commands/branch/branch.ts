@@ -1,5 +1,6 @@
 import { randomUUID, type UUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'
+
 import { getOriginalCwd, getSessionId } from '../../bootstrap/state.js'
 import type { LocalJSXCommandContext } from '../../commands.js'
 import { logEvent } from '../../services/analytics/index.js'
@@ -35,22 +36,15 @@ type TranscriptEntry = TranscriptMessage & {
  * Collapses whitespace — multiline first messages (pasted stacks, code)
  * otherwise flow into the saved title and break the resume hint.
  */
-export function deriveFirstPrompt(
-  firstUserMessage: Extract<SerializedMessage, { type: 'user' }> | undefined,
-): string {
+export function deriveFirstPrompt(firstUserMessage: Extract<SerializedMessage, { type: 'user' }> | undefined): string {
   const content = firstUserMessage?.message?.content
   if (!content) return 'Branched conversation'
   const raw =
     typeof content === 'string'
       ? content
-      : content.find(
-          (block): block is { type: 'text'; text: string } =>
-            block.type === 'text',
-        )?.text
+      : content.find((block): block is { type: 'text'; text: string } => block.type === 'text')?.text
   if (!raw) return 'Branched conversation'
-  return (
-    raw.replace(/\s+/g, ' ').trim().slice(0, 100) || 'Branched conversation'
-  )
+  return raw.replace(/\s+/g, ' ').trim().slice(0, 100) || 'Branched conversation'
 }
 
 /**
@@ -91,8 +85,7 @@ async function createFork(customTitle?: string): Promise<{
 
   // Filter to only main conversation messages (exclude sidechains and non-message entries)
   const mainConversationEntries = entries.filter(
-    (entry): entry is TranscriptMessage =>
-      isTranscriptMessage(entry) && !entry.isSidechain,
+    (entry): entry is TranscriptMessage => isTranscriptMessage(entry) && !entry.isSidechain,
   )
 
   // Content-replacement entries for the original session. These record which
@@ -105,10 +98,9 @@ async function createFork(customTitle?: string): Promise<{
   const contentReplacementRecords = entries
     .filter(
       (entry): entry is ContentReplacementEntry =>
-        entry.type === 'content-replacement' &&
-        entry.sessionId === originalSessionId,
+        entry.type === 'content-replacement' && entry.sessionId === originalSessionId,
     )
-    .flatMap(entry => entry.replacements)
+    .flatMap((entry) => entry.replacements)
 
   if (mainConversationEntries.length === 0) {
     throw new Error('No messages to branch')
@@ -180,10 +172,7 @@ async function getUniqueForkName(baseName: string): Promise<string> {
   const candidateName = `${baseName} (Branch)`
 
   // Check if this exact name already exists
-  const existingWithExactName = await searchSessionsByCustomTitle(
-    candidateName,
-    { exact: true },
-  )
+  const existingWithExactName = await searchSessionsByCustomTitle(candidateName, { exact: true })
 
   if (existingWithExactName.length === 0) {
     return candidateName
@@ -195,9 +184,7 @@ async function getUniqueForkName(baseName: string): Promise<string> {
 
   // Extract existing fork numbers to find the next available
   const usedNumbers = new Set<number>([1]) // Consider " (Branch)" as number 1
-  const forkNumberPattern = new RegExp(
-    `^${escapeRegExp(baseName)} \\(Branch(?: (\\d+))?\\)$`,
-  )
+  const forkNumberPattern = new RegExp(`^${escapeRegExp(baseName)} \\(Branch(?: (\\d+))?\\)$`)
 
   for (const session of existingForks) {
     const match = session.customTitle?.match(forkNumberPattern)
@@ -229,19 +216,11 @@ export async function call(
   const originalSessionId = getSessionId()
 
   try {
-    const {
-      sessionId,
-      title,
-      forkPath,
-      serializedMessages,
-      contentReplacementRecords,
-    } = await createFork(customTitle)
+    const { sessionId, title, forkPath, serializedMessages, contentReplacementRecords } = await createFork(customTitle)
 
     // Build LogOption for resume
     const now = new Date()
-    const firstPrompt = deriveFirstPrompt(
-      serializedMessages.find(m => m.type === 'user'),
-    )
+    const firstPrompt = deriveFirstPrompt(serializedMessages.find((m) => m.type === 'user'))
 
     // Save custom title - use provided title or firstPrompt as default
     // This ensures /status and /resume show the same session name
@@ -281,15 +260,12 @@ export async function call(
       onDone(successMessage, { display: 'system' })
     } else {
       // Fallback if resume not available
-      onDone(
-        `Branched conversation${titleInfo}. Resume with: /resume ${sessionId}`,
-      )
+      onDone(`Branched conversation${titleInfo}. Resume with: /resume ${sessionId}`)
     }
 
     return null
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unknown error occurred'
+    const message = error instanceof Error ? error.message : 'Unknown error occurred'
     onDone(`Failed to branch conversation: ${message}`)
     return null
   }

@@ -1,7 +1,4 @@
-import {
-  getSettingsForSource,
-  updateSettingsForSource,
-} from '../utils/settings/settings.js'
+import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings.js'
 
 /**
  * Migrate users on removed fennec model aliases to their new Opus 4.6 aliases.
@@ -32,10 +29,7 @@ export function migrateFennecToOpus(): void {
       updateSettingsForSource('userSettings', {
         model: 'opus',
       })
-    } else if (
-      model.startsWith('fennec-fast-latest') ||
-      model.startsWith('opus-4-5-fast')
-    ) {
+    } else if (model.startsWith('fennec-fast-latest') || model.startsWith('opus-4-5-fast')) {
       updateSettingsForSource('userSettings', {
         model: 'opus[1m]',
         fastMode: true,

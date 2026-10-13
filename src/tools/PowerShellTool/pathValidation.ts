@@ -8,13 +8,11 @@
 
 import { homedir } from 'os'
 import { isAbsolute, resolve } from 'path'
+
 import type { ToolPermissionContext } from '../../Tool.js'
 import type { PermissionRule } from '../../types/permissions.js'
 import { getCwd } from '../../utils/cwd.js'
-import {
-  getFsImplementation,
-  safeResolvePath,
-} from '../../utils/fsOperations.js'
+import { getFsImplementation, safeResolvePath } from '../../utils/fsOperations.js'
 import { containsPathTraversal, getDirectoryForPath } from '../../utils/path.js'
 import {
   allWorkingDirectories,
@@ -24,22 +22,13 @@ import {
   matchingRuleForInput,
   pathInAllowedWorkingPath,
 } from '../../utils/permissions/filesystem.js'
+import { isDangerousRemovalPath, isPathInSandboxWriteAllowlist } from '../../utils/permissions/pathValidation.js'
 import type { PermissionResult } from '../../utils/permissions/PermissionResult.js'
 import { createReadRuleSuggestion } from '../../utils/permissions/PermissionUpdate.js'
 import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js'
-import {
-  isDangerousRemovalPath,
-  isPathInSandboxWriteAllowlist,
-} from '../../utils/permissions/pathValidation.js'
 import { getPlatform } from '../../utils/platform.js'
-import type {
-  ParsedCommandElement,
-  ParsedPowerShellCommand,
-} from '../../utils/powershell/parser.js'
-import {
-  isNullRedirectionTarget,
-  isPowerShellParameter,
-} from '../../utils/powershell/parser.js'
+import type { ParsedCommandElement, ParsedPowerShellCommand } from '../../utils/powershell/parser.js'
+import { isNullRedirectionTarget, isPowerShellParameter } from '../../utils/powershell/parser.js'
 import { COMMON_SWITCHES, COMMON_VALUE_PARAMS } from './commonParameters.js'
 import { resolveToCanonical } from './readOnlyValidation.js'
 
@@ -138,15 +127,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-nonewline',
       '-asbytestream', // PS 6+
     ],
-    knownValueParams: [
-      '-value',
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-      '-encoding',
-      '-stream',
-    ],
+    knownValueParams: ['-value', '-filter', '-include', '-exclude', '-credential', '-encoding', '-stream'],
   },
   'add-content': {
     operationType: 'write',
@@ -160,45 +141,19 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-nonewline',
       '-asbytestream', // PS 6+
     ],
-    knownValueParams: [
-      '-value',
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-      '-encoding',
-      '-stream',
-    ],
+    knownValueParams: ['-value', '-filter', '-include', '-exclude', '-credential', '-encoding', '-stream'],
   },
   'remove-item': {
     operationType: 'write',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
-    knownSwitches: [
-      '-recurse',
-      '-force',
-      '-whatif',
-      '-confirm',
-      '-usetransaction',
-    ],
-    knownValueParams: [
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-      '-stream',
-    ],
+    knownSwitches: ['-recurse', '-force', '-whatif', '-confirm', '-usetransaction'],
+    knownValueParams: ['-filter', '-include', '-exclude', '-credential', '-stream'],
   },
   'clear-content': {
     operationType: 'write',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: ['-force', '-whatif', '-confirm', '-usetransaction'],
-    knownValueParams: [
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-      '-stream',
-    ],
+    knownValueParams: ['-filter', '-include', '-exclude', '-credential', '-stream'],
   },
   // Out-File/Tee-Object/Export-Csv/Export-Clixml were absent, so path-level
   // deny rules (Edit(/etc/**)) hard-blocked `Set-Content /etc/x` but only
@@ -211,14 +166,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
     // (colon syntax, one token) falls to unknown-param → value trapped →
     // paths=[] → Edit deny never consulted → ask (fail-safe but deny downgrade).
     pathParams: ['-filepath', '-path', '-literalpath', '-pspath', '-lp'],
-    knownSwitches: [
-      '-append',
-      '-force',
-      '-noclobber',
-      '-nonewline',
-      '-whatif',
-      '-confirm',
-    ],
+    knownSwitches: ['-append', '-force', '-noclobber', '-nonewline', '-whatif', '-confirm'],
     knownValueParams: ['-inputobject', '-encoding', '-width'],
   },
   'tee-object': {
@@ -242,13 +190,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-whatif',
       '-confirm',
     ],
-    knownValueParams: [
-      '-inputobject',
-      '-delimiter',
-      '-encoding',
-      '-quotefields',
-      '-usequotes',
-    ],
+    knownValueParams: ['-inputobject', '-delimiter', '-encoding', '-quotefields', '-usequotes'],
   },
   'export-clixml': {
     operationType: 'write',
@@ -291,34 +233,13 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
     // -Path (position 0) is source, -Destination (position 1) is dest.
     // Both extracted; both validated as write.
     pathParams: ['-path', '-literalpath', '-pspath', '-lp', '-destination'],
-    knownSwitches: [
-      '-container',
-      '-force',
-      '-passthru',
-      '-recurse',
-      '-whatif',
-      '-confirm',
-      '-usetransaction',
-    ],
-    knownValueParams: [
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-      '-fromsession',
-      '-tosession',
-    ],
+    knownSwitches: ['-container', '-force', '-passthru', '-recurse', '-whatif', '-confirm', '-usetransaction'],
+    knownValueParams: ['-filter', '-include', '-exclude', '-credential', '-fromsession', '-tosession'],
   },
   'move-item': {
     operationType: 'write',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp', '-destination'],
-    knownSwitches: [
-      '-force',
-      '-passthru',
-      '-whatif',
-      '-confirm',
-      '-usetransaction',
-    ],
+    knownSwitches: ['-force', '-passthru', '-whatif', '-confirm', '-usetransaction'],
     knownValueParams: ['-filter', '-include', '-exclude', '-credential'],
   },
   // rename-item/set-item: same class — ren/rni/si in COMMON_ALIASES, neither
@@ -333,20 +254,8 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
     // explicitly rejects `..` in it — so knownValueParams is correct here,
     // unlike New-Item -Name which accepts traversal.
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
-    knownSwitches: [
-      '-force',
-      '-passthru',
-      '-whatif',
-      '-confirm',
-      '-usetransaction',
-    ],
-    knownValueParams: [
-      '-newname',
-      '-credential',
-      '-filter',
-      '-include',
-      '-exclude',
-    ],
+    knownSwitches: ['-force', '-passthru', '-whatif', '-confirm', '-usetransaction'],
+    knownValueParams: ['-newname', '-credential', '-filter', '-include', '-exclude'],
   },
   'set-item': {
     operationType: 'write',
@@ -357,20 +266,8 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
     // here is defense-in-depth — powershellSecurity.ts:379 already lists it
     // in ENV_WRITE_CMDLETS; this makes pathValidation consistent.
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
-    knownSwitches: [
-      '-force',
-      '-passthru',
-      '-whatif',
-      '-confirm',
-      '-usetransaction',
-    ],
-    knownValueParams: [
-      '-value',
-      '-credential',
-      '-filter',
-      '-include',
-      '-exclude',
-    ],
+    knownSwitches: ['-force', '-passthru', '-whatif', '-confirm', '-usetransaction'],
+    knownValueParams: ['-value', '-credential', '-filter', '-include', '-exclude'],
   },
   // ─── Read operations ──────────────────────────────────────────────────────
   'get-content': {
@@ -414,50 +311,25 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-readonly',
       '-system',
     ],
-    knownValueParams: [
-      '-filter',
-      '-include',
-      '-exclude',
-      '-depth',
-      '-attributes',
-      '-credential',
-    ],
+    knownValueParams: ['-filter', '-include', '-exclude', '-depth', '-attributes', '-credential'],
   },
   'get-item': {
     operationType: 'read',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: ['-force', '-usetransaction'],
-    knownValueParams: [
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-      '-stream',
-    ],
+    knownValueParams: ['-filter', '-include', '-exclude', '-credential', '-stream'],
   },
   'get-itemproperty': {
     operationType: 'read',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: ['-usetransaction'],
-    knownValueParams: [
-      '-name',
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-    ],
+    knownValueParams: ['-name', '-filter', '-include', '-exclude', '-credential'],
   },
   'get-itempropertyvalue': {
     operationType: 'read',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: ['-usetransaction'],
-    knownValueParams: [
-      '-name',
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-    ],
+    knownValueParams: ['-name', '-filter', '-include', '-exclude', '-credential'],
   },
   'get-filehash': {
     operationType: 'read',
@@ -486,15 +358,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
     operationType: 'read',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: ['-isvalid', '-usetransaction'],
-    knownValueParams: [
-      '-filter',
-      '-include',
-      '-exclude',
-      '-pathtype',
-      '-credential',
-      '-olderthan',
-      '-newerthan',
-    ],
+    knownValueParams: ['-filter', '-include', '-exclude', '-pathtype', '-credential', '-olderthan', '-newerthan'],
   },
   'resolve-path': {
     operationType: 'read',
@@ -698,50 +562,20 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
   'set-itemproperty': {
     operationType: 'write',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
-    knownSwitches: [
-      '-passthru',
-      '-force',
-      '-whatif',
-      '-confirm',
-      '-usetransaction',
-    ],
-    knownValueParams: [
-      '-name',
-      '-value',
-      '-type',
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-      '-inputobject',
-    ],
+    knownSwitches: ['-passthru', '-force', '-whatif', '-confirm', '-usetransaction'],
+    knownValueParams: ['-name', '-value', '-type', '-filter', '-include', '-exclude', '-credential', '-inputobject'],
   },
   'new-itemproperty': {
     operationType: 'write',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: ['-force', '-whatif', '-confirm', '-usetransaction'],
-    knownValueParams: [
-      '-name',
-      '-value',
-      '-propertytype',
-      '-type',
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-    ],
+    knownValueParams: ['-name', '-value', '-propertytype', '-type', '-filter', '-include', '-exclude', '-credential'],
   },
   'remove-itemproperty': {
     operationType: 'write',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: ['-force', '-whatif', '-confirm', '-usetransaction'],
-    knownValueParams: [
-      '-name',
-      '-filter',
-      '-include',
-      '-exclude',
-      '-credential',
-    ],
+    knownValueParams: ['-name', '-filter', '-include', '-exclude', '-credential'],
   },
   'clear-item': {
     operationType: 'write',
@@ -752,14 +586,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
   'export-alias': {
     operationType: 'write',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
-    knownSwitches: [
-      '-append',
-      '-force',
-      '-noclobber',
-      '-passthru',
-      '-whatif',
-      '-confirm',
-    ],
+    knownSwitches: ['-append', '-force', '-noclobber', '-passthru', '-whatif', '-confirm'],
     knownValueParams: ['-name', '-description', '-scope', '-as'],
   },
 }
@@ -771,10 +598,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
  */
 function matchesParam(paramLower: string, paramList: string[]): boolean {
   for (const p of paramList) {
-    if (
-      p === paramLower ||
-      (paramLower.length > 1 && p.startsWith(paramLower))
-    ) {
+    if (p === paramLower || (paramLower.length > 1 && p.startsWith(paramLower))) {
       return true
     }
   }
@@ -805,11 +629,11 @@ function hasComplexColonValue(rawValue: string): boolean {
 function formatDirectoryList(directories: string[]): string {
   const dirCount = directories.length
   if (dirCount <= MAX_DIRS_TO_LIST) {
-    return directories.map(dir => `'${dir}'`).join(', ')
+    return directories.map((dir) => `'${dir}'`).join(', ')
   }
   const firstDirs = directories
     .slice(0, MAX_DIRS_TO_LIST)
-    .map(dir => `'${dir}'`)
+    .map((dir) => `'${dir}'`)
     .join(', ')
   return `${firstDirs}, and ${dirCount - MAX_DIRS_TO_LIST} more`
 }
@@ -818,11 +642,7 @@ function formatDirectoryList(directories: string[]): string {
  * Expands tilde (~) at the start of a path to the user's home directory.
  */
 function expandTilde(filePath: string): string {
-  if (
-    filePath === '~' ||
-    filePath.startsWith('~/') ||
-    filePath.startsWith('~\\')
-  ) {
+  if (filePath === '~' || filePath.startsWith('~/') || filePath.startsWith('~\\')) {
     return homedir() + filePath.slice(1)
   }
   return filePath
@@ -838,10 +658,7 @@ function expandTilde(filePath: string): string {
  * as the user typed them.
  */
 export function isDangerousRemovalRawPath(filePath: string): boolean {
-  const expanded = expandTilde(filePath.replace(/^['"]|['"]$/g, '')).replace(
-    /\\/g,
-    '/',
-  )
+  const expanded = expandTilde(filePath.replace(/^['"]|['"]$/g, '')).replace(/\\/g, '/')
   return isDangerousRemovalPath(expanded)
 }
 
@@ -869,12 +686,7 @@ function isPathAllowed(
   const permissionType = operationType === 'read' ? 'read' : 'edit'
 
   // 1. Check deny rules first
-  const denyRule = matchingRuleForInput(
-    resolvedPath,
-    context,
-    permissionType,
-    'deny',
-  )
+  const denyRule = matchingRuleForInput(resolvedPath, context, permissionType, 'deny')
   if (denyRule !== null) {
     return {
       allowed: false,
@@ -898,10 +710,7 @@ function isPathAllowed(
 
   // 2.5. For write/create operations, check safety validations
   if (operationType !== 'read') {
-    const safetyCheck = checkPathSafetyForAutoEdit(
-      resolvedPath,
-      precomputedPathsToCheck,
-    )
+    const safetyCheck = checkPathSafetyForAutoEdit(resolvedPath, precomputedPathsToCheck)
     if (!safetyCheck.safe) {
       return {
         allowed: false,
@@ -915,11 +724,7 @@ function isPathAllowed(
   }
 
   // 3. Check if path is in allowed working directory
-  const isInWorkingDir = pathInAllowedWorkingPath(
-    resolvedPath,
-    context,
-    precomputedPathsToCheck,
-  )
+  const isInWorkingDir = pathInAllowedWorkingPath(resolvedPath, context, precomputedPathsToCheck)
   if (isInWorkingDir) {
     if (operationType === 'read' || context.mode === 'acceptEdits') {
       return { allowed: true }
@@ -944,11 +749,7 @@ function isPathAllowed(
   // New-Item don't prompt unnecessarily. Paths IN the working directory are
   // excluded: the sandbox allowlist always seeds '.' (cwd), which would
   // bypass the acceptEdits gate at step 3.
-  if (
-    operationType !== 'read' &&
-    !isInWorkingDir &&
-    isPathInSandboxWriteAllowlist(resolvedPath)
-  ) {
+  if (operationType !== 'read' && !isInWorkingDir && isPathInSandboxWriteAllowlist(resolvedPath)) {
     return {
       allowed: true,
       decisionReason: {
@@ -959,12 +760,7 @@ function isPathAllowed(
   }
 
   // 4. Check allow rules
-  const allowRule = matchingRuleForInput(
-    resolvedPath,
-    context,
-    permissionType,
-    'allow',
-  )
+  const allowRule = matchingRuleForInput(resolvedPath, context, permissionType, 'allow')
   if (allowRule !== null) {
     return {
       allowed: true,
@@ -993,17 +789,10 @@ function checkDenyRuleForGuessedPath(
   // Red-team P3: `~/.ssh/x strips to ~/.ssh/x but expandTilde only fires
   // on leading ~ — the backtick was in front of it. Re-run here.
   const tildeExpanded = expandTilde(strippedPath)
-  const abs = isAbsolute(tildeExpanded)
-    ? tildeExpanded
-    : resolve(cwd, tildeExpanded)
+  const abs = isAbsolute(tildeExpanded) ? tildeExpanded : resolve(cwd, tildeExpanded)
   const { resolvedPath } = safeResolvePath(getFsImplementation(), abs)
   const permissionType = operationType === 'read' ? 'read' : 'edit'
-  const denyRule = matchingRuleForInput(
-    resolvedPath,
-    toolPermissionContext,
-    permissionType,
-    'deny',
-  )
+  const denyRule = matchingRuleForInput(resolvedPath, toolPermissionContext, permissionType, 'deny')
   return denyRule ? { resolvedPath, rule: denyRule } : null
 }
 
@@ -1036,12 +825,7 @@ function validatePath(
     // escapes (`n → n) but that's fine — wrong guess → no deny match →
     // falls to ask.
     const backtickStripped = normalizedPath.replace(/`/g, '')
-    const denyHit = checkDenyRuleForGuessedPath(
-      backtickStripped,
-      cwd,
-      toolPermissionContext,
-      operationType,
-    )
+    const denyHit = checkDenyRuleForGuessedPath(backtickStripped, cwd, toolPermissionContext, operationType)
     if (denyHit) {
       return {
         allowed: false,
@@ -1054,8 +838,7 @@ function validatePath(
       resolvedPath: normalizedPath,
       decisionReason: {
         type: 'other',
-        reason:
-          'Backtick escape characters in paths cannot be statically validated and require manual approval',
+        reason: 'Backtick escape characters in paths cannot be statically validated and require manual approval',
       },
     }
   }
@@ -1071,12 +854,7 @@ function validatePath(
     // makes it {cwd}/Bar::/x → won't match real deny rules → falls to ask.
     // Safe.
     const afterProvider = normalizedPath.slice(normalizedPath.indexOf('::') + 2)
-    const denyHit = checkDenyRuleForGuessedPath(
-      afterProvider,
-      cwd,
-      toolPermissionContext,
-      operationType,
-    )
+    const denyHit = checkDenyRuleForGuessedPath(afterProvider, cwd, toolPermissionContext, operationType)
     if (denyHit) {
       return {
         allowed: false,
@@ -1089,26 +867,20 @@ function validatePath(
       resolvedPath: normalizedPath,
       decisionReason: {
         type: 'other',
-        reason:
-          'Module-qualified provider paths (::) cannot be statically validated and require manual approval',
+        reason: 'Module-qualified provider paths (::) cannot be statically validated and require manual approval',
       },
     }
   }
 
   // SECURITY: Block UNC paths — they can trigger network requests and
   // leak NTLM/Kerberos credentials
-  if (
-    normalizedPath.startsWith('//') ||
-    /DavWWWRoot/i.test(normalizedPath) ||
-    /@SSL@/i.test(normalizedPath)
-  ) {
+  if (normalizedPath.startsWith('//') || /DavWWWRoot/i.test(normalizedPath) || /@SSL@/i.test(normalizedPath)) {
     return {
       allowed: false,
       resolvedPath: normalizedPath,
       decisionReason: {
         type: 'other',
-        reason:
-          'UNC paths are blocked because they can trigger network requests and credential leakage',
+        reason: 'UNC paths are blocked because they can trigger network requests and credential leakage',
       },
     }
   }
@@ -1145,8 +917,7 @@ function validatePath(
   // (C:, D:). Use a single character class [a-z0-9] to catch mixed alphanumeric
   // PSDrive names like `a1:`, `1a:` — the previous alternation `[a-z]{2,}|[0-9]+`
   // missed those since `a1` is neither pure letters nor pure digits.
-  const providerPathRegex =
-    getPlatform() === 'windows' ? /^[a-z0-9]{2,}:/i : /^[a-z0-9]+:/i
+  const providerPathRegex = getPlatform() === 'windows' ? /^[a-z0-9]{2,}:/i : /^[a-z0-9]+:/i
   if (providerPathRegex.test(normalizedPath)) {
     return {
       allowed: false,
@@ -1166,8 +937,7 @@ function validatePath(
         resolvedPath: normalizedPath,
         decisionReason: {
           type: 'other',
-          reason:
-            'Glob patterns are not allowed in write operations. Please specify an exact file path.',
+          reason: 'Glob patterns are not allowed in write operations. Please specify an exact file path.',
         },
       }
     }
@@ -1176,13 +946,8 @@ function validatePath(
     // resolve the full path (including glob chars) and validate that resolved path.
     // This catches patterns that escape the working directory via `..` after the glob.
     if (containsPathTraversal(normalizedPath)) {
-      const absolutePath = isAbsolute(normalizedPath)
-        ? normalizedPath
-        : resolve(cwd, normalizedPath)
-      const { resolvedPath, isCanonical } = safeResolvePath(
-        getFsImplementation(),
-        absolutePath,
-      )
+      const absolutePath = isAbsolute(normalizedPath) ? normalizedPath : resolve(cwd, normalizedPath)
+      const { resolvedPath, isCanonical } = safeResolvePath(getFsImplementation(), absolutePath)
       const result = isPathAllowed(
         resolvedPath,
         toolPermissionContext,
@@ -1209,20 +974,10 @@ function validatePath(
     // Still check deny rules on the base directory so explicit Read(/project/**)
     // deny rules fire. If no deny matches, force ask.
     const basePath = getGlobBaseDirectory(normalizedPath)
-    const absoluteBasePath = isAbsolute(basePath)
-      ? basePath
-      : resolve(cwd, basePath)
-    const { resolvedPath } = safeResolvePath(
-      getFsImplementation(),
-      absoluteBasePath,
-    )
+    const absoluteBasePath = isAbsolute(basePath) ? basePath : resolve(cwd, basePath)
+    const { resolvedPath } = safeResolvePath(getFsImplementation(), absoluteBasePath)
     const permissionType = operationType === 'read' ? 'read' : 'edit'
-    const denyRule = matchingRuleForInput(
-      resolvedPath,
-      toolPermissionContext,
-      permissionType,
-      'deny',
-    )
+    const denyRule = matchingRuleForInput(resolvedPath, toolPermissionContext, permissionType, 'deny')
     if (denyRule !== null) {
       return {
         allowed: false,
@@ -1242,13 +997,8 @@ function validatePath(
   }
 
   // Resolve path
-  const absolutePath = isAbsolute(normalizedPath)
-    ? normalizedPath
-    : resolve(cwd, normalizedPath)
-  const { resolvedPath, isCanonical } = safeResolvePath(
-    getFsImplementation(),
-    absolutePath,
-  )
+  const absolutePath = isAbsolute(normalizedPath) ? normalizedPath : resolve(cwd, normalizedPath)
+  const { resolvedPath, isCanonical } = safeResolvePath(getFsImplementation(), absolutePath)
 
   const result = isPathAllowed(
     resolvedPath,
@@ -1269,10 +1019,7 @@ function getGlobBaseDirectory(filePath: string): string {
     return filePath
   }
   const beforeGlob = filePath.substring(0, globMatch.index)
-  const lastSepIndex = Math.max(
-    beforeGlob.lastIndexOf('/'),
-    beforeGlob.lastIndexOf('\\'),
-  )
+  const lastSepIndex = Math.max(beforeGlob.lastIndexOf('/'), beforeGlob.lastIndexOf('\\'))
   if (lastSepIndex === -1) return '.'
   return beforeGlob.substring(0, lastSepIndex + 1) || '/'
 }
@@ -1357,8 +1104,7 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
       // Normalize Unicode dash to ASCII `-` (pathParams are stored with `-`).
       const normalized = '-' + arg.slice(1)
       const colonIdx = normalized.indexOf(':', 1) // skip first char (the dash)
-      const paramName =
-        colonIdx > 0 ? normalized.substring(0, colonIdx) : normalized
+      const paramName = colonIdx > 0 ? normalized.substring(0, colonIdx) : normalized
       const paramLower = paramName.toLowerCase()
 
       if (matchesParam(paramLower, config.pathParams)) {
@@ -1388,10 +1134,7 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
         if (value) {
           paths.push(value)
         }
-      } else if (
-        config.leafOnlyPathParams &&
-        matchesParam(paramLower, config.leafOnlyPathParams)
-      ) {
+      } else if (config.leafOnlyPathParams && matchesParam(paramLower, config.leafOnlyPathParams)) {
         // Leaf-only path parameter (e.g., New-Item -Name). PowerShell resolves
         // this relative to ANOTHER parameter (-Path), not cwd. validatePath
         // resolves against cwd (L930), so non-leaf values (separators,
@@ -1416,12 +1159,7 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
           }
         }
         if (value !== undefined) {
-          if (
-            value.includes('/') ||
-            value.includes('\\') ||
-            value === '.' ||
-            value === '..'
-          ) {
+          if (value.includes('/') || value.includes('\\') || value === '.' || value === '..') {
             // Non-leaf: separators or traversal. Can't resolve correctly
             // without joining against -Path. Force ask.
             hasUnvalidatablePathArg = true
@@ -1545,11 +1283,7 @@ export function checkPathConstraints(
   let firstAsk: PermissionResult | undefined
 
   for (const statement of parsed.statements) {
-    const result = checkPathConstraintsForStatement(
-      statement,
-      toolPermissionContext,
-      compoundCommandHasCd,
-    )
+    const result = checkPathConstraintsForStatement(statement, toolPermissionContext, compoundCommandHasCd)
     if (result.behavior === 'deny') {
       return result
     }
@@ -1640,8 +1374,7 @@ function checkPathConstraintsForStatement(
       continue
     }
 
-    const { paths, operationType, hasUnvalidatablePathArg, optionalWrite } =
-      extractPathsFromCommand(cmd)
+    const { paths, operationType, hasUnvalidatablePathArg, optionalWrite } = extractPathsFromCommand(cmd)
 
     // SECURITY: Cmdlet receiving piped path from expression source.
     // `'/etc/shadow' | Get-Content` — Get-Content extracts zero paths
@@ -1658,12 +1391,7 @@ function checkPathConstraintsForStatement(
       // feed through the same deny-guess helper used for ::/backtick paths.
       if (pipelineSourceText !== undefined) {
         const stripped = pipelineSourceText.replace(/^['"]|['"]$/g, '')
-        const denyHit = checkDenyRuleForGuessedPath(
-          stripped,
-          cwd,
-          toolPermissionContext,
-          operationType,
-        )
+        const denyHit = checkDenyRuleForGuessedPath(stripped, cwd, toolPermissionContext, operationType)
         if (denyHit) {
           return {
             behavior: 'deny',
@@ -1751,14 +1479,11 @@ function checkPathConstraintsForStatement(
 
       if (!allowed) {
         const canonical = resolveToCanonical(cmd.name)
-        const workingDirs = Array.from(
-          allWorkingDirectories(toolPermissionContext),
-        )
+        const workingDirs = Array.from(allWorkingDirectories(toolPermissionContext))
         const dirListStr = formatDirectoryList(workingDirs)
 
         const message =
-          decisionReason?.type === 'other' ||
-          decisionReason?.type === 'safetyCheck'
+          decisionReason?.type === 'other' || decisionReason?.type === 'safetyCheck'
             ? decisionReason.reason
             : `${canonical} targeting '${resolvedPath}' was blocked. For security, Claude Code may only access files in the allowed working directories for this session: ${dirListStr}.`
 
@@ -1773,10 +1498,7 @@ function checkPathConstraintsForStatement(
         const suggestions: PermissionUpdate[] = []
         if (resolvedPath) {
           if (operationType === 'read') {
-            const suggestion = createReadRuleSuggestion(
-              getDirectoryForPath(resolvedPath),
-              'session',
-            )
+            const suggestion = createReadRuleSuggestion(getDirectoryForPath(resolvedPath), 'session')
             if (suggestion) {
               suggestions.push(suggestion)
             }
@@ -1811,8 +1533,7 @@ function checkPathConstraintsForStatement(
   // Also check nested commands from control flow
   if (statement.nestedCommands) {
     for (const cmd of statement.nestedCommands) {
-      const { paths, operationType, hasUnvalidatablePathArg, optionalWrite } =
-        extractPathsFromCommand(cmd)
+      const { paths, operationType, hasUnvalidatablePathArg, optionalWrite } = extractPathsFromCommand(cmd)
 
       if (hasUnvalidatablePathArg) {
         const canonical = resolveToCanonical(cmd.name)
@@ -1864,14 +1585,11 @@ function checkPathConstraintsForStatement(
 
         if (!allowed) {
           const canonical = resolveToCanonical(cmd.name)
-          const workingDirs = Array.from(
-            allWorkingDirectories(toolPermissionContext),
-          )
+          const workingDirs = Array.from(allWorkingDirectories(toolPermissionContext))
           const dirListStr = formatDirectoryList(workingDirs)
 
           const message =
-            decisionReason?.type === 'other' ||
-            decisionReason?.type === 'safetyCheck'
+            decisionReason?.type === 'other' || decisionReason?.type === 'safetyCheck'
               ? decisionReason.reason
               : `${canonical} targeting '${resolvedPath}' was blocked. For security, Claude Code may only access files in the allowed working directories for this session: ${dirListStr}.`
 
@@ -1886,10 +1604,7 @@ function checkPathConstraintsForStatement(
           const suggestions: PermissionUpdate[] = []
           if (resolvedPath) {
             if (operationType === 'read') {
-              const suggestion = createReadRuleSuggestion(
-                getDirectoryForPath(resolvedPath),
-                'session',
-              )
+              const suggestion = createReadRuleSuggestion(getDirectoryForPath(resolvedPath), 'session')
               if (suggestion) {
                 suggestions.push(suggestion)
               }
@@ -1951,14 +1666,11 @@ function checkPathConstraintsForStatement(
           )
 
           if (!allowed) {
-            const workingDirs = Array.from(
-              allWorkingDirectories(toolPermissionContext),
-            )
+            const workingDirs = Array.from(allWorkingDirectories(toolPermissionContext))
             const dirListStr = formatDirectoryList(workingDirs)
 
             const message =
-              decisionReason?.type === 'other' ||
-              decisionReason?.type === 'safetyCheck'
+              decisionReason?.type === 'other' || decisionReason?.type === 'safetyCheck'
                 ? decisionReason.reason
                 : `Output redirection to '${resolvedPath}' was blocked. For security, Claude Code may only write to files in the allowed working directories for this session: ${dirListStr}.`
 
@@ -1996,22 +1708,14 @@ function checkPathConstraintsForStatement(
       if (!redir.target) continue
       if (isNullRedirectionTarget(redir.target)) continue
 
-      const { allowed, resolvedPath, decisionReason } = validatePath(
-        redir.target,
-        cwd,
-        toolPermissionContext,
-        'create',
-      )
+      const { allowed, resolvedPath, decisionReason } = validatePath(redir.target, cwd, toolPermissionContext, 'create')
 
       if (!allowed) {
-        const workingDirs = Array.from(
-          allWorkingDirectories(toolPermissionContext),
-        )
+        const workingDirs = Array.from(allWorkingDirectories(toolPermissionContext))
         const dirListStr = formatDirectoryList(workingDirs)
 
         const message =
-          decisionReason?.type === 'other' ||
-          decisionReason?.type === 'safetyCheck'
+          decisionReason?.type === 'other' || decisionReason?.type === 'safetyCheck'
             ? decisionReason.reason
             : `Output redirection to '${resolvedPath}' was blocked. For security, Claude Code may only write to files in the allowed working directories for this session: ${dirListStr}.`
 

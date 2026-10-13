@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { BLACK_CIRCLE } from '../constants/figures.js'
 import { useBlink } from '../hooks/useBlink.js'
 import { Box, Text } from '../ink.js'
@@ -9,11 +10,7 @@ type Props = {
   shouldAnimate: boolean
 }
 
-export function ToolUseLoader({
-  isError,
-  isUnresolved,
-  shouldAnimate,
-}: Props): React.ReactNode {
+export function ToolUseLoader({ isError, isUnresolved, shouldAnimate }: Props): React.ReactNode {
   const [ref, isBlinking] = useBlink(shouldAnimate)
 
   const color = isUnresolved ? undefined : isError ? 'error' : 'success'
@@ -29,9 +26,7 @@ export function ToolUseLoader({
   return (
     <Box ref={ref} minWidth={2}>
       <Text color={color} dimColor={isUnresolved}>
-        {!shouldAnimate || isBlinking || isError || !isUnresolved
-          ? BLACK_CIRCLE
-          : ' '}
+        {!shouldAnimate || isBlinking || isError || !isUnresolved ? BLACK_CIRCLE : ' '}
       </Text>
     </Box>
   )

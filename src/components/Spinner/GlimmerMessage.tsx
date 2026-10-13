@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { stringWidth } from '../../ink/stringWidth.js'
+
 import { Text, useTheme } from '../../ink.js'
+import { stringWidth } from '../../ink/stringWidth.js'
 import { getGraphemeSegmenter } from '../../utils/intl.js'
 import { getTheme, type Theme } from '../../utils/theme.js'
 import type { SpinnerMode } from './types.js'
@@ -49,11 +50,7 @@ export function GlimmerMessage({
     const baseRGB = baseColorStr ? parseRGB(baseColorStr) : null
 
     if (baseRGB) {
-      const interpolated = interpolateColor(
-        baseRGB,
-        ERROR_RED,
-        stalledIntensity,
-      )
+      const interpolated = interpolateColor(baseRGB, ERROR_RED, stalledIntensity)
       const color = toRGBColor(interpolated)
       return (
         <>

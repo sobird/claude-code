@@ -18,13 +18,8 @@
  * Split into data/setter context pairs so writers never re-render on
  * their own writes — the setter contexts are stable.
  */
-import React, {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from 'react'
+import React, { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
+
 import type { SuggestionItem } from '../components/PromptInput/PromptInputFooterSuggestions.js'
 
 export type PromptOverlayData = {
@@ -40,20 +35,14 @@ const SetContext = createContext<Setter<PromptOverlayData> | null>(null)
 const DialogContext = createContext<ReactNode>(null)
 const SetDialogContext = createContext<Setter<ReactNode> | null>(null)
 
-export function PromptOverlayProvider({
-  children,
-}: {
-  children: ReactNode
-}): ReactNode {
+export function PromptOverlayProvider({ children }: { children: ReactNode }): ReactNode {
   const [data, setData] = useState<PromptOverlayData | null>(null)
   const [dialog, setDialog] = useState<ReactNode>(null)
   return (
     <SetContext.Provider value={setData}>
       <SetDialogContext.Provider value={setDialog}>
         <DataContext.Provider value={data}>
-          <DialogContext.Provider value={dialog}>
-            {children}
-          </DialogContext.Provider>
+          <DialogContext.Provider value={dialog}>{children}</DialogContext.Provider>
         </DataContext.Provider>
       </SetDialogContext.Provider>
     </SetContext.Provider>

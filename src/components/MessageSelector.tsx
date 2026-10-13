@@ -1,8 +1,6 @@
-import type {
-  ContentBlockParam,
-  TextBlockParam,
-} from '@anthropic-ai/sdk/resources/index.mjs'
 import { randomUUID, type UUID } from 'crypto'
+
+import type { ContentBlockParam, TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import figures from 'figures'
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -18,14 +16,11 @@ import {
   fileHistoryGetDiffStats,
 } from 'src/utils/fileHistory.js'
 import { logError } from 'src/utils/log.js'
+
 import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { Box, Text } from '../ink.js'
 import { useKeybinding, useKeybindings } from '../keybindings/useKeybinding.js'
-import type {
-  Message,
-  PartialCompactDirection,
-  UserMessage,
-} from '../types/message.js'
+import type { Message, PartialCompactDirection, UserMessage } from '../types/message.js'
 import { stripDisplayTags } from '../utils/displayTags.js'
 import {
   createUserMessage,
@@ -42,9 +37,11 @@ function isTextBlock(block: ContentBlockParam): block is TextBlockParam {
 }
 
 import * as path from 'path'
+
 import { useTerminalSize } from 'src/hooks/useTerminalSize.js'
 import type { FileEditOutput } from 'src/tools/FileEditTool/types.js'
 import type { Output as FileWriteToolOutput } from 'src/tools/FileWriteTool/FileWriteTool.js'
+
 import {
   BASH_STDERR_TAG,
   BASH_STDOUT_TAG,
@@ -60,17 +57,9 @@ import { formatRelativeTimeAgo, truncate } from '../utils/format.js'
 import type { Theme } from '../utils/theme.js'
 import { Divider } from './design-system/Divider.js'
 
-type RestoreOption =
-  | 'both'
-  | 'conversation'
-  | 'code'
-  | 'summarize'
-  | 'summarize_up_to'
-  | 'nevermind'
+type RestoreOption = 'both' | 'conversation' | 'code' | 'summarize' | 'summarize_up_to' | 'nevermind'
 
-function isSummarizeOption(
-  option: RestoreOption | null,
-): option is 'summarize' | 'summarize_up_to' {
+function isSummarizeOption(option: RestoreOption | null): option is 'summarize' | 'summarize_up_to' {
   return option === 'summarize' || option === 'summarize_up_to'
 }
 
@@ -79,11 +68,7 @@ type Props = {
   onPreRestore: () => void
   onRestoreMessage: (message: UserMessage) => Promise<void>
   onRestoreCode: (message: UserMessage) => Promise<void>
-  onSummarize: (
-    message: UserMessage,
-    feedback?: string,
-    direction?: PartialCompactDirection,
-  ) => Promise<void>
+  onSummarize: (message: UserMessage, feedback?: string, direction?: PartialCompactDirection) => Promise<void>
   onClose: () => void
   /** Skip pick-list, land on confirm. Caller ran skip-check first. Esc closes fully (no back-to-list). */
   preselectedMessage?: UserMessage
@@ -100,7 +85,7 @@ export function MessageSelector({
   onClose,
   preselectedMessage,
 }: Props): React.ReactNode {
-  const fileHistory = useAppState(s => s.fileHistory)
+  const fileHistory = useAppState((s) => s.fileHistory)
   const [error, setError] = useState<string | undefined>(undefined)
   const isFileHistoryEnabled = fileHistoryEnabled()
 
@@ -123,49 +108,35 @@ export function MessageSelector({
   // Orient the selected message as the middle of the visible options
   const firstVisibleIndex = Math.max(
     0,
-    Math.min(
-      selectedIndex - Math.floor(MAX_VISIBLE_MESSAGES / 2),
-      messageOptions.length - MAX_VISIBLE_MESSAGES,
-    ),
+    Math.min(selectedIndex - Math.floor(MAX_VISIBLE_MESSAGES / 2), messageOptions.length - MAX_VISIBLE_MESSAGES),
   )
 
   const hasMessagesToSelect = messageOptions.length > 1
 
-  const [messageToRestore, setMessageToRestore] = useState<
-    UserMessage | undefined
-  >(preselectedMessage)
-  const [diffStatsForRestore, setDiffStatsForRestore] = useState<
-    DiffStats | undefined
-  >(undefined)
+  const [messageToRestore, setMessageToRestore] = useState<UserMessage | undefined>(preselectedMessage)
+  const [diffStatsForRestore, setDiffStatsForRestore] = useState<DiffStats | undefined>(undefined)
 
   useEffect(() => {
     if (!preselectedMessage || !isFileHistoryEnabled) return
     let cancelled = false
-    void fileHistoryGetDiffStats(fileHistory, preselectedMessage.uuid).then(
-      stats => {
-        if (!cancelled) setDiffStatsForRestore(stats)
-      },
-    )
+    void fileHistoryGetDiffStats(fileHistory, preselectedMessage.uuid).then((stats) => {
+      if (!cancelled) setDiffStatsForRestore(stats)
+    })
     return () => {
       cancelled = true
     }
   }, [preselectedMessage, isFileHistoryEnabled, fileHistory])
 
   const [isRestoring, setIsRestoring] = useState(false)
-  const [restoringOption, setRestoringOption] = useState<RestoreOption | null>(
-    null,
-  )
-  const [selectedRestoreOption, setSelectedRestoreOption] =
-    useState<RestoreOption>('both')
+  const [restoringOption, setRestoringOption] = useState<RestoreOption | null>(null)
+  const [selectedRestoreOption, setSelectedRestoreOption] = useState<RestoreOption>('both')
   // Per-option feedback state; Select's internal inputValues Map persists
   // per-option text independently, so sharing one variable would desync.
   const [summarizeFromFeedback, setSummarizeFromFeedback] = useState('')
   const [summarizeUpToFeedback, setSummarizeUpToFeedback] = useState('')
 
   // Generate options with summarize as input type for inline context
-  function getRestoreOptions(
-    canRestoreCode: boolean,
-  ): OptionWithDescription<RestoreOption>[] {
+  function getRestoreOptions(canRestoreCode: boolean): OptionWithDescription<RestoreOption>[] {
     const baseOptions: OptionWithDescription<RestoreOption>[] = canRestoreCode
       ? [
           { value: 'both', label: 'Restore code and conversation' },
@@ -227,8 +198,7 @@ export function MessageSelector({
 
     logEvent('tengu_message_selector_selected', {
       index_from_end: indexFromEnd,
-      message_type:
-        message.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      message_type: message.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       is_current_prompt: false,
     })
 
@@ -250,8 +220,7 @@ export function MessageSelector({
 
   async function onSelectRestoreOption(option: RestoreOption) {
     logEvent('tengu_message_selector_restore_option_selected', {
-      option:
-        option as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      option: option as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     if (!messageToRestore) {
       setError('Message not found.')
@@ -270,11 +239,7 @@ export function MessageSelector({
       setError(undefined)
       try {
         const direction = option === 'summarize_up_to' ? 'up_to' : 'from'
-        const feedback =
-          (direction === 'up_to'
-            ? summarizeUpToFeedback
-            : summarizeFromFeedback
-          ).trim() || undefined
+        const feedback = (direction === 'up_to' ? summarizeUpToFeedback : summarizeFromFeedback).trim() || undefined
         await onSummarize(messageToRestore, feedback, direction)
         setIsRestoring(false)
         setRestoringOption(null)
@@ -320,9 +285,7 @@ export function MessageSelector({
 
     // Handle errors
     if (conversationError && codeError) {
-      setError(
-        `Failed to restore the conversation and code:\n${conversationError}\n${codeError}`,
-      )
+      setError(`Failed to restore the conversation and code:\n${conversationError}\n${codeError}`)
     } else if (conversationError) {
       setError(`Failed to restore the conversation:\n${conversationError}`)
     } else if (codeError) {
@@ -345,20 +308,13 @@ export function MessageSelector({
     onClose()
   }, [onClose, messageToRestore, preselectedMessage])
 
-  const moveUp = useCallback(
-    () => setSelectedIndex(prev => Math.max(0, prev - 1)),
-    [],
-  )
+  const moveUp = useCallback(() => setSelectedIndex((prev) => Math.max(0, prev - 1)), [])
   const moveDown = useCallback(
-    () =>
-      setSelectedIndex(prev => Math.min(messageOptions.length - 1, prev + 1)),
+    () => setSelectedIndex((prev) => Math.min(messageOptions.length - 1, prev + 1)),
     [messageOptions.length],
   )
   const jumpToTop = useCallback(() => setSelectedIndex(0), [])
-  const jumpToBottom = useCallback(
-    () => setSelectedIndex(messageOptions.length - 1),
-    [messageOptions.length],
-  )
+  const jumpToBottom = useCallback(() => setSelectedIndex(messageOptions.length - 1), [messageOptions.length])
   const handleSelectCurrent = useCallback(() => {
     const selected = messageOptions[selectedIndex]
     if (selected) {
@@ -383,14 +339,11 @@ export function MessageSelector({
     },
     {
       context: 'MessageSelector',
-      isActive:
-        !isRestoring && !error && !messageToRestore && hasMessagesToSelect,
+      isActive: !isRestoring && !error && !messageToRestore && hasMessagesToSelect,
     },
   )
 
-  const [fileHistoryMetadata, setFileHistoryMetadata] = useState<
-    Record<number, DiffStats>
-  >({})
+  const [fileHistoryMetadata, setFileHistoryMetadata] = useState<Record<number, DiffStats>>({})
 
   useEffect(() => {
     async function loadFileHistoryMetadata() {
@@ -401,29 +354,24 @@ export function MessageSelector({
       void Promise.all(
         messageOptions.map(async (userMessage, itemIndex) => {
           if (userMessage.uuid !== currentUUID) {
-            const canRestore = fileHistoryCanRestore(
-              fileHistory,
-              userMessage.uuid,
-            )
+            const canRestore = fileHistoryCanRestore(fileHistory, userMessage.uuid)
 
             const nextUserMessage = messageOptions.at(itemIndex + 1)
             const diffStats = canRestore
               ? computeDiffStatsBetweenMessages(
                   messages,
                   userMessage.uuid,
-                  nextUserMessage?.uuid !== currentUUID
-                    ? nextUserMessage?.uuid
-                    : undefined,
+                  nextUserMessage?.uuid !== currentUUID ? nextUserMessage?.uuid : undefined,
                 )
               : undefined
 
             if (diffStats !== undefined) {
-              setFileHistoryMetadata(prev => ({
+              setFileHistoryMetadata((prev) => ({
                 ...prev,
                 [itemIndex]: diffStats,
               }))
             } else {
-              setFileHistoryMetadata(prev => ({
+              setFileHistoryMetadata((prev) => ({
                 ...prev,
                 [itemIndex]: undefined,
               }))
@@ -436,11 +384,8 @@ export function MessageSelector({
   }, [messageOptions, messages, currentUUID, fileHistory, isFileHistoryEnabled])
 
   const canRestoreCode =
-    isFileHistoryEnabled &&
-    diffStatsForRestore?.filesChanged &&
-    diffStatsForRestore.filesChanged.length > 0
-  const showPickList =
-    !error && !messageToRestore && !preselectedMessage && hasMessagesToSelect
+    isFileHistoryEnabled && diffStatsForRestore?.filesChanged && diffStatsForRestore.filesChanged.length > 0
+  const showPickList = !error && !messageToRestore && !preselectedMessage && hasMessagesToSelect
 
   return (
     <Box flexDirection="column" width="100%">
@@ -463,9 +408,8 @@ export function MessageSelector({
         {!error && messageToRestore && hasMessagesToSelect && (
           <>
             <Text>
-              Confirm you want to restore{' '}
-              {!diffStatsForRestore && 'the conversation '}to the point before
-              you sent this message:
+              Confirm you want to restore {!diffStatsForRestore && 'the conversation '}to the point before you sent this
+              message:
             </Text>
             <Box
               flexDirection="column"
@@ -477,14 +421,8 @@ export function MessageSelector({
               borderLeft={true}
               borderLeftDimColor
             >
-              <UserMessageOption
-                userMessage={messageToRestore}
-                color="text"
-                isCurrent={false}
-              />
-              <Text dimColor>
-                ({formatRelativeTimeAgo(new Date(messageToRestore.timestamp))})
-              </Text>
+              <UserMessageOption userMessage={messageToRestore} color="text" isCurrent={false} />
+              <Text dimColor>({formatRelativeTimeAgo(new Date(messageToRestore.timestamp))})</Text>
             </Box>
             <RestoreOptionDescription
               selectedRestoreOption={selectedRestoreOption}
@@ -501,25 +439,14 @@ export function MessageSelector({
                 isDisabled={isRestoring}
                 options={getRestoreOptions(!!canRestoreCode)}
                 defaultFocusValue={canRestoreCode ? 'both' : 'conversation'}
-                onFocus={value =>
-                  setSelectedRestoreOption(value as RestoreOption)
-                }
-                onChange={value =>
-                  onSelectRestoreOption(value as RestoreOption)
-                }
-                onCancel={() =>
-                  preselectedMessage
-                    ? onClose()
-                    : setMessageToRestore(undefined)
-                }
+                onFocus={(value) => setSelectedRestoreOption(value as RestoreOption)}
+                onChange={(value) => onSelectRestoreOption(value as RestoreOption)}
+                onCancel={() => (preselectedMessage ? onClose() : setMessageToRestore(undefined))}
               />
             )}
             {canRestoreCode && (
               <Box marginBottom={1}>
-                <Text dimColor>
-                  {figures.warning} Rewinding does not affect files edited
-                  manually or via bash.
-                </Text>
+                <Text dimColor>{figures.warning} Rewinding does not affect files edited manually or via bash.</Text>
               </Box>
             )}
           </>
@@ -527,20 +454,13 @@ export function MessageSelector({
         {showPickList && (
           <>
             {isFileHistoryEnabled ? (
-              <Text>
-                Restore the code and/or conversation to the point before…
-              </Text>
+              <Text>Restore the code and/or conversation to the point before…</Text>
             ) : (
-              <Text>
-                Restore and fork the conversation to the point before…
-              </Text>
+              <Text>Restore and fork the conversation to the point before…</Text>
             )}
             <Box width="100%" flexDirection="column">
               {messageOptions
-                .slice(
-                  firstVisibleIndex,
-                  firstVisibleIndex + MAX_VISIBLE_MESSAGES,
-                )
+                .slice(firstVisibleIndex, firstVisibleIndex + MAX_VISIBLE_MESSAGES)
                 .map((msg, visibleOptionIndex) => {
                   const optionIndex = firstVisibleIndex + visibleOptionIndex
                   const isSelected = optionIndex === selectedIndex
@@ -548,8 +468,7 @@ export function MessageSelector({
 
                   const metadataLoaded = optionIndex in fileHistoryMetadata
                   const metadata = fileHistoryMetadata[optionIndex]
-                  const numFilesChanged =
-                    metadata?.filesChanged && metadata.filesChanged.length
+                  const numFilesChanged = metadata?.filesChanged && metadata.filesChanged.length
 
                   return (
                     <Box
@@ -584,8 +503,7 @@ export function MessageSelector({
                                 <Text dimColor={!isSelected} color="inactive">
                                   {numFilesChanged ? (
                                     <>
-                                      {numFilesChanged === 1 &&
-                                      metadata.filesChanged![0]
+                                      {numFilesChanged === 1 && metadata.filesChanged![0]
                                         ? `${path.basename(metadata.filesChanged![0])} `
                                         : `${numFilesChanged} files changed `}
                                       <DiffStatsText diffStats={metadata} />
@@ -614,10 +532,7 @@ export function MessageSelector({
             {exitState.pending ? (
               <>Press {exitState.keyName} again to exit</>
             ) : (
-              <>
-                {!error && hasMessagesToSelect && 'Enter to continue · '}Esc to
-                exit
-              </>
+              <>{!error && hasMessagesToSelect && 'Enter to continue · '}Esc to exit</>
             )}
           </Text>
         )}
@@ -650,15 +565,11 @@ function RestoreOptionDescription({
   canRestoreCode: boolean
   diffStatsForRestore: DiffStats | undefined
 }): React.ReactNode {
-  const showCodeRestore =
-    canRestoreCode &&
-    (selectedRestoreOption === 'both' || selectedRestoreOption === 'code')
+  const showCodeRestore = canRestoreCode && (selectedRestoreOption === 'both' || selectedRestoreOption === 'code')
 
   return (
     <Box flexDirection="column">
-      <Text dimColor>
-        {getRestoreOptionConversationText(selectedRestoreOption)}
-      </Text>
+      <Text dimColor>{getRestoreOptionConversationText(selectedRestoreOption)}</Text>
       {!isSummarizeOption(selectedRestoreOption) &&
         (showCodeRestore ? (
           <RestoreCodeConfirmation diffStatsForRestore={diffStatsForRestore} />
@@ -677,13 +588,8 @@ function RestoreCodeConfirmation({
   if (diffStatsForRestore === undefined) {
     return undefined
   }
-  if (
-    !diffStatsForRestore.filesChanged ||
-    !diffStatsForRestore.filesChanged[0]
-  ) {
-    return (
-      <Text dimColor>The code has not changed (nothing will be restored).</Text>
-    )
+  if (!diffStatsForRestore.filesChanged || !diffStatsForRestore.filesChanged[0]) {
+    return <Text dimColor>The code has not changed (nothing will be restored).</Text>
   }
 
   const numFilesChanged = diffStatsForRestore.filesChanged.length
@@ -703,18 +609,13 @@ function RestoreCodeConfirmation({
   return (
     <>
       <Text dimColor>
-        The code will be restored{' '}
-        <DiffStatsText diffStats={diffStatsForRestore} /> in {fileLabel}.
+        The code will be restored <DiffStatsText diffStats={diffStatsForRestore} /> in {fileLabel}.
       </Text>
     </>
   )
 }
 
-function DiffStatsText({
-  diffStats,
-}: {
-  diffStats: DiffStats | undefined
-}): React.ReactNode {
+function DiffStatsText({ diffStats }: { diffStats: DiffStats | undefined }): React.ReactNode {
   if (!diffStats || !diffStats.filesChanged) {
     return undefined
   }
@@ -751,8 +652,7 @@ function UserMessageOption({
   }
 
   const content = userMessage.message.content
-  const lastBlock =
-    typeof content === 'string' ? null : content[content.length - 1]
+  const lastBlock = typeof content === 'string' ? null : content[content.length - 1]
   const rawMessageText =
     typeof content === 'string'
       ? content.trim()
@@ -837,14 +737,12 @@ function computeDiffStatsBetweenMessages(
   fromMessageId: UUID,
   toMessageId: UUID | undefined,
 ): DiffStats | undefined {
-  const startIndex = messages.findIndex(msg => msg.uuid === fromMessageId)
+  const startIndex = messages.findIndex((msg) => msg.uuid === fromMessageId)
   if (startIndex === -1) {
     return undefined
   }
 
-  let endIndex = toMessageId
-    ? messages.findIndex(msg => msg.uuid === toMessageId)
-    : messages.length
+  let endIndex = toMessageId ? messages.findIndex((msg) => msg.uuid === toMessageId) : messages.length
   if (endIndex === -1) {
     endIndex = messages.length
   }
@@ -873,8 +771,8 @@ function computeDiffStatsBetweenMessages(
         insertions += result.content.split(/\r?\n/).length
       } else {
         for (const hunk of result.structuredPatch) {
-          const additions = count(hunk.lines, line => line.startsWith('+'))
-          const removals = count(hunk.lines, line => line.startsWith('-'))
+          const additions = count(hunk.lines, (line) => line.startsWith('+'))
+          const removals = count(hunk.lines, (line) => line.startsWith('-'))
 
           insertions += additions
           deletions += removals
@@ -892,16 +790,11 @@ function computeDiffStatsBetweenMessages(
   }
 }
 
-export function selectableUserMessagesFilter(
-  message: Message,
-): message is UserMessage {
+export function selectableUserMessagesFilter(message: Message): message is UserMessage {
   if (message.type !== 'user') {
     return false
   }
-  if (
-    Array.isArray(message.message.content) &&
-    message.message.content[0]?.type === 'tool_result'
-  ) {
+  if (Array.isArray(message.message.content) && message.message.content[0]?.type === 'tool_result') {
     return false
   }
   if (isSyntheticMessage(message)) {
@@ -915,14 +808,9 @@ export function selectableUserMessagesFilter(
   }
 
   const content = message.message.content
-  const lastBlock =
-    typeof content === 'string' ? null : content[content.length - 1]
+  const lastBlock = typeof content === 'string' ? null : content[content.length - 1]
   const messageText =
-    typeof content === 'string'
-      ? content.trim()
-      : lastBlock && isTextBlock(lastBlock)
-        ? lastBlock.text.trim()
-        : ''
+    typeof content === 'string' ? content.trim() : lastBlock && isTextBlock(lastBlock) ? lastBlock.text.trim() : ''
 
   // Filter out non-user-authored messages (command outputs, task notifications, ticks).
   if (
@@ -944,10 +832,7 @@ export function selectableUserMessagesFilter(
  * or non-meaningful content. Returns true if there's nothing meaningful to confirm -
  * for example, if the user hit enter then immediately cancelled.
  */
-export function messagesAfterAreOnlySynthetic(
-  messages: Message[],
-  fromIndex: number,
-): boolean {
+export function messagesAfterAreOnlySynthetic(messages: Message[], fromIndex: number): boolean {
   for (let i = fromIndex + 1; i < messages.length; i++) {
     const msg = messages[i]
     if (!msg) continue
@@ -965,9 +850,7 @@ export function messagesAfterAreOnlySynthetic(
       const content = msg.message.content
       if (Array.isArray(content)) {
         const hasMeaningfulContent = content.some(
-          block =>
-            (block.type === 'text' && block.text.trim()) ||
-            block.type === 'tool_use',
+          (block) => (block.type === 'text' && block.text.trim()) || block.type === 'tool_use',
         )
         if (hasMeaningfulContent) return false
       }

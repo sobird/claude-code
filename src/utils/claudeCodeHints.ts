@@ -69,10 +69,7 @@ const ATTR_RE = /(\w+)=(?:"([^"]*)"|([^\s/>]+))/g
  * @param command - The command that produced the output; its first
  *   whitespace-separated token is recorded as `sourceCommand`.
  */
-export function extractClaudeCodeHints(
-  output: string,
-  command: string,
-): { hints: ClaudeCodeHint[]; stripped: string } {
+export function extractClaudeCodeHints(output: string, command: string): { hints: ClaudeCodeHint[]; stripped: string } {
   // Fast path: no tag open sequence → no work, no allocation.
   if (!output.includes('<claude-code-hint')) {
     return { hints: [], stripped: output }
@@ -81,22 +78,18 @@ export function extractClaudeCodeHints(
   const sourceCommand = firstCommandToken(command)
   const hints: ClaudeCodeHint[] = []
 
-  const stripped = output.replace(HINT_TAG_RE, rawLine => {
+  const stripped = output.replace(HINT_TAG_RE, (rawLine) => {
     const attrs = parseAttrs(rawLine)
     const v = Number(attrs.v)
     const type = attrs.type
     const value = attrs.value
 
     if (!SUPPORTED_VERSIONS.has(v)) {
-      logForDebugging(
-        `[claudeCodeHints] dropped hint with unsupported v=${attrs.v}`,
-      )
+      logForDebugging(`[claudeCodeHints] dropped hint with unsupported v=${attrs.v}`)
       return ''
     }
     if (!type || !SUPPORTED_TYPES.has(type)) {
-      logForDebugging(
-        `[claudeCodeHints] dropped hint with unsupported type=${type}`,
-      )
+      logForDebugging(`[claudeCodeHints] dropped hint with unsupported type=${type}`)
       return ''
     }
     if (!value) {
@@ -111,10 +104,7 @@ export function extractClaudeCodeHints(
   // Dropping a matched line leaves a blank line (the surrounding newlines
   // remain). Collapse runs of blank lines introduced by the replace so the
   // model-visible output doesn't grow vertical whitespace.
-  const collapsed =
-    hints.length > 0 || stripped !== output
-      ? stripped.replace(/\n{3,}/g, '\n\n')
-      : stripped
+  const collapsed = hints.length > 0 || stripped !== output ? stripped.replace(/\n{3,}/g, '\n\n') : stripped
 
   return { hints, stripped: collapsed }
 }

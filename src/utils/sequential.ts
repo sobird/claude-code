@@ -16,9 +16,7 @@ type QueueItem<T extends unknown[], R> = {
  * @param fn - The async function to wrap with sequential execution
  * @returns A wrapped version of the function that executes calls sequentially
  */
-export function sequential<T extends unknown[], R>(
-  fn: (...args: T) => Promise<R>,
-): (...args: T) => Promise<R> {
+export function sequential<T extends unknown[], R>(fn: (...args: T) => Promise<R>): (...args: T) => Promise<R> {
   const queue: QueueItem<T, R>[] = []
   let processing = false
 

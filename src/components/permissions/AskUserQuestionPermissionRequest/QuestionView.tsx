@@ -1,22 +1,16 @@
 import figures from 'figures'
 import React, { useCallback, useState } from 'react'
-import type { KeyboardEvent } from '../../../ink/events/keyboard-event.js'
+
 import { Box, Text } from '../../../ink.js'
+import type { KeyboardEvent } from '../../../ink/events/keyboard-event.js'
 import { useAppState } from '../../../state/AppState.js'
-import type {
-  Question,
-  QuestionOption,
-} from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js'
+import type { Question, QuestionOption } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js'
 import type { PastedContent } from '../../../utils/config.js'
 import { getExternalEditor } from '../../../utils/editor.js'
 import { toIDEDisplayName } from '../../../utils/ide.js'
 import type { ImageDimensions } from '../../../utils/imageResizer.js'
 import { editPromptInEditor } from '../../../utils/promptEditor.js'
-import {
-  type OptionWithDescription,
-  Select,
-  SelectMulti,
-} from '../../CustomSelect/index.js'
+import { type OptionWithDescription, Select, SelectMulti } from '../../CustomSelect/index.js'
 import { Divider } from '../../design-system/Divider.js'
 import { FilePathLink } from '../../FilePathLink.js'
 import { PermissionRequestTitle } from '../PermissionRequestTitle.js'
@@ -35,17 +29,8 @@ type Props = {
   pastedContents?: Record<number, PastedContent>
   minContentHeight?: number
   minContentWidth?: number
-  onUpdateQuestionState: (
-    questionText: string,
-    updates: Partial<QuestionState>,
-    isMultiSelect: boolean,
-  ) => void
-  onAnswer: (
-    questionText: string,
-    label: string | string[],
-    textInput?: string,
-    shouldAdvance?: boolean,
-  ) => void
+  onUpdateQuestionState: (questionText: string, updates: Partial<QuestionState>, isMultiSelect: boolean) => void
+  onAnswer: (questionText: string, label: string | string[], textInput?: string, shouldAdvance?: boolean) => void
   onTextInputFocus: (isInInput: boolean) => void
   onCancel: () => void
   onSubmit: () => void
@@ -86,7 +71,7 @@ export function QuestionView({
   pastedContents,
   onRemoveImage,
 }: Props): React.ReactNode {
-  const isInPlanMode = useAppState(s => s.toolPermissionContext.mode) === 'plan'
+  const isInPlanMode = useAppState((s) => s.toolPermissionContext.mode) === 'plan'
   const [isFooterFocused, setIsFooterFocused] = useState(false)
   const [footerIndex, setFooterIndex] = useState(0)
   const [isOtherFocused, setIsOtherFocused] = useState(false)
@@ -160,14 +145,12 @@ export function QuestionView({
     ],
   )
 
-  const textOptions: OptionWithDescription<string>[] = question.options.map(
-    (opt: QuestionOption) => ({
-      type: 'text' as const,
-      value: opt.label,
-      label: opt.label,
-      description: opt.description,
-    }),
-  )
+  const textOptions: OptionWithDescription<string>[] = question.options.map((opt: QuestionOption) => ({
+    type: 'text' as const,
+    value: opt.label,
+    label: opt.label,
+    description: opt.description,
+  }))
 
   const questionText = question.question
   const questionState = questionStates[questionText]
@@ -180,11 +163,7 @@ export function QuestionView({
         // Update the Select's internal state for immediate UI update
         setValue(result.content)
         // Also update the question state for persistence
-        onUpdateQuestionState(
-          questionText,
-          { textInputValue: result.content },
-          question.multiSelect ?? false,
-        )
+        onUpdateQuestionState(questionText, { textInputValue: result.content }, question.multiSelect ?? false)
       }
     },
     [questionText, onUpdateQuestionState, question.multiSelect],
@@ -197,11 +176,7 @@ export function QuestionView({
     placeholder: question.multiSelect ? 'Type something' : 'Type something.',
     initialValue: questionState?.textInputValue ?? '',
     onChange: (value: string) => {
-      onUpdateQuestionState(
-        questionText,
-        { textInputValue: value },
-        question.multiSelect ?? false,
-      )
+      onUpdateQuestionState(questionText, { textInputValue: value }, question.multiSelect ?? false)
     },
   }
 
@@ -209,8 +184,7 @@ export function QuestionView({
 
   // Check if any option has a preview and it's not multi-select
   // Previews only supported for single-select questions
-  const hasAnyPreview =
-    !question.multiSelect && question.options.some(opt => opt.preview)
+  const hasAnyPreview = !question.multiSelect && question.options.some((opt) => opt.preview)
 
   // Delegate to PreviewQuestionView for carousel-style preview mode
   if (hasAnyPreview) {
@@ -237,13 +211,7 @@ export function QuestionView({
   }
 
   return (
-    <Box
-      flexDirection="column"
-      marginTop={0}
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" marginTop={0} tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       {isInPlanMode && planFilePath && (
         <Box flexDirection="column" gap={0}>
           <Divider color="inactive" />
@@ -270,32 +238,18 @@ export function QuestionView({
               <SelectMulti
                 key={question.question}
                 options={options}
-                defaultValue={
-                  questionStates[question.question]?.selectedValue as
-                    | string[]
-                    | undefined
-                }
+                defaultValue={questionStates[question.question]?.selectedValue as string[] | undefined}
                 onChange={(values: string[]) => {
-                  onUpdateQuestionState(
-                    questionText,
-                    { selectedValue: values },
-                    true,
-                  )
+                  onUpdateQuestionState(questionText, { selectedValue: values }, true)
                   const textInput = values.includes('__other__')
                     ? questionStates[questionText]?.textInputValue
                     : undefined
-                  const finalValues = values
-                    .filter(v => v !== '__other__')
-                    .concat(textInput ? [textInput] : [])
+                  const finalValues = values.filter((v) => v !== '__other__').concat(textInput ? [textInput] : [])
                   onAnswer(questionText, finalValues, undefined, false)
                 }}
                 onFocus={handleFocus}
                 onCancel={onCancel}
-                submitButtonText={
-                  currentQuestionIndex === questions.length - 1
-                    ? 'Submit'
-                    : 'Next'
-                }
+                submitButtonText={currentQuestionIndex === questions.length - 1 ? 'Submit' : 'Next'}
                 onSubmit={onSubmit}
                 onDownFromLastItem={handleDownFromLastItem}
                 isDisabled={isFooterFocused}
@@ -308,21 +262,10 @@ export function QuestionView({
               <Select
                 key={question.question}
                 options={options}
-                defaultValue={
-                  questionStates[question.question]?.selectedValue as
-                    | string
-                    | undefined
-                }
+                defaultValue={questionStates[question.question]?.selectedValue as string | undefined}
                 onChange={(value: string) => {
-                  onUpdateQuestionState(
-                    questionText,
-                    { selectedValue: value },
-                    false,
-                  )
-                  const textInput =
-                    value === '__other__'
-                      ? questionStates[questionText]?.textInputValue
-                      : undefined
+                  onUpdateQuestionState(questionText, { selectedValue: value }, false)
+                  const textInput = value === '__other__' ? questionStates[questionText]?.textInputValue : undefined
                   onAnswer(questionText, value, textInput)
                 }}
                 onFocus={handleFocus}
@@ -346,13 +289,7 @@ export function QuestionView({
               ) : (
                 <Text> </Text>
               )}
-              <Text
-                color={
-                  isFooterFocused && footerIndex === 0
-                    ? 'suggestion'
-                    : undefined
-                }
-              >
+              <Text color={isFooterFocused && footerIndex === 0 ? 'suggestion' : undefined}>
                 {options.length + 1}. Chat about this
               </Text>
             </Box>
@@ -363,13 +300,7 @@ export function QuestionView({
                 ) : (
                   <Text> </Text>
                 )}
-                <Text
-                  color={
-                    isFooterFocused && footerIndex === 1
-                      ? 'suggestion'
-                      : undefined
-                  }
-                >
+                <Text color={isFooterFocused && footerIndex === 1 ? 'suggestion' : undefined}>
                   {options.length + 2}. Skip interview and plan immediately
                 </Text>
               </Box>
@@ -385,10 +316,7 @@ export function QuestionView({
               ) : (
                 'Tab/Arrow keys to navigate'
               )}
-              {isOtherFocused && editorName && (
-                <> · ctrl+g to edit in {editorName}</>
-              )}{' '}
-              · Esc to cancel
+              {isOtherFocused && editorName && <> · ctrl+g to edit in {editorName}</>} · Esc to cancel
             </Text>
           </Box>
         </Box>

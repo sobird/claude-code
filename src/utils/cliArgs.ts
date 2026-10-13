@@ -10,10 +10,7 @@
  * @param argv Optional argv array to parse (defaults to process.argv)
  * @returns The value if found, undefined otherwise
  */
-export function eagerParseCliFlag(
-  flagName: string,
-  argv: string[] = process.argv,
-): string | undefined {
+export function eagerParseCliFlag(flagName: string, argv: string[] = process.argv): string | undefined {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     // Handle --flag=value syntax

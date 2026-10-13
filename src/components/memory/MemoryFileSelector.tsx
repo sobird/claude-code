@@ -1,9 +1,11 @@
 import { feature } from 'bun:bundle'
-import chalk from 'chalk'
 import { mkdir } from 'fs/promises'
 import { join } from 'path'
+
+import chalk from 'chalk'
 import * as React from 'react'
 import { use, useEffect, useState } from 'react'
+
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { Box, Text } from '../../ink.js'
@@ -45,10 +47,7 @@ type Props = {
   onCancel: () => void
 }
 
-export function MemoryFileSelector({
-  onSelect,
-  onCancel,
-}: Props): React.ReactNode {
+export function MemoryFileSelector({ onSelect, onCancel }: Props): React.ReactNode {
   const existingMemoryFiles = use(getMemoryFiles())
 
   // Create entries for User and Project CLAUDE.md even if they don't exist
@@ -56,18 +55,16 @@ export function MemoryFileSelector({
   const projectMemoryPath = join(getOriginalCwd(), 'CLAUDE.md')
 
   // Check if these are already in the existing files
-  const hasUserMemory = existingMemoryFiles.some(f => f.path === userMemoryPath)
-  const hasProjectMemory = existingMemoryFiles.some(
-    f => f.path === projectMemoryPath,
-  )
+  const hasUserMemory = existingMemoryFiles.some((f) => f.path === userMemoryPath)
+  const hasProjectMemory = existingMemoryFiles.some((f) => f.path === projectMemoryPath)
 
   // Filter out AutoMem/TeamMem entrypoints: these are MEMORY.md files, and
   // /memory already surfaces "Open auto-memory folder" / "Open team memory
   // folder" options below. Listing the entrypoint file separately is redundant.
   const allMemoryFiles: ExtendedMemoryFileInfo[] = [
     ...existingMemoryFiles
-      .filter(f => f.type !== 'AutoMem' && f.type !== 'TeamMem')
-      .map(f => ({ ...f, exists: true })),
+      .filter((f) => f.type !== 'AutoMem' && f.type !== 'TeamMem')
+      .map((f) => ({ ...f, exists: true })),
     // Add User memory if it doesn't exist
     ...(hasUserMemory
       ? []
@@ -95,7 +92,7 @@ export function MemoryFileSelector({
   const depths = new Map<string, number>()
 
   // Create options for the select component
-  const memoryOptions = allMemoryFiles.map(file => {
+  const memoryOptions = allMemoryFiles.map((file) => {
     const displayPath = getDisplayPath(file.path)
     const existsLabel = file.exists ? '' : ' (new)'
 
@@ -106,17 +103,9 @@ export function MemoryFileSelector({
 
     // Format label based on type
     let label: string
-    if (
-      file.type === 'User' &&
-      !file.isNested &&
-      file.path === userMemoryPath
-    ) {
+    if (file.type === 'User' && !file.isNested && file.path === userMemoryPath) {
       label = `User memory`
-    } else if (
-      file.type === 'Project' &&
-      !file.isNested &&
-      file.path === projectMemoryPath
-    ) {
+    } else if (file.type === 'Project' && !file.isNested && file.path === projectMemoryPath) {
       label = `Project memory`
     } else if (depth > 0) {
       // For child nodes (imported files), show indented with L
@@ -132,11 +121,7 @@ export function MemoryFileSelector({
 
     if (file.type === 'User' && !file.isNested) {
       description = 'Saved in ~/.claude/CLAUDE.md'
-    } else if (
-      file.type === 'Project' &&
-      !file.isNested &&
-      file.path === projectMemoryPath
-    ) {
+    } else if (file.type === 'Project' && !file.isNested && file.path === projectMemoryPath) {
       description = `${isGit ? 'Checked in at' : 'Saved in'} ./CLAUDE.md`
     } else if (file.parent) {
       // For imported files (with @-import)
@@ -162,7 +147,7 @@ export function MemoryFileSelector({
     description: string
   }> = []
 
-  const agentDefinitions = useAppState(s => s.agentDefinitions)
+  const agentDefinitions = useAppState((s) => s.agentDefinitions)
   if (isAutoMemoryEnabled()) {
     // Always show auto-memory folder option
     folderOptions.push({
@@ -197,8 +182,7 @@ export function MemoryFileSelector({
 
   // Initialize with last selected path if it's still in the options, otherwise use first option
   const initialPath =
-    lastSelectedPath &&
-    memoryOptions.some(opt => opt.value === lastSelectedPath)
+    lastSelectedPath && memoryOptions.some((opt) => opt.value === lastSelectedPath)
       ? lastSelectedPath
       : memoryOptions[0]?.value || ''
 
@@ -213,10 +197,8 @@ export function MemoryFileSelector({
 
   // Dream status: prefer live task state (this session fired it), fall back
   // to the cross-process lock mtime.
-  const isDreamRunning = useAppState(s =>
-    Object.values(s.tasks).some(
-      t => t.type === 'dream' && t.status === 'running',
-    ),
+  const isDreamRunning = useAppState((s) =>
+    Object.values(s.tasks).some((t) => t.type === 'dream' && t.status === 'running'),
   )
   const [lastDreamAt, setLastDreamAt] = useState<number | null>(null)
   useEffect(() => {
@@ -266,16 +248,14 @@ export function MemoryFileSelector({
   useKeybinding(
     'select:next',
     () => {
-      setFocusedToggle(prev =>
-        prev !== null && prev < lastToggleIndex ? prev + 1 : null,
-      )
+      setFocusedToggle((prev) => (prev !== null && prev < lastToggleIndex ? prev + 1 : null))
     },
     { context: 'Select', isActive: toggleFocused },
   )
   useKeybinding(
     'select:previous',
     () => {
-      setFocusedToggle(prev => (prev !== null && prev > 0 ? prev - 1 : prev))
+      setFocusedToggle((prev) => (prev !== null && prev > 0 ? prev - 1 : prev))
     },
     { context: 'Select', isActive: toggleFocused },
   )
@@ -291,9 +271,7 @@ export function MemoryFileSelector({
             <Text color={focusedToggle === 1 ? 'suggestion' : undefined}>
               Auto-dream: {autoDreamOn ? 'on' : 'off'}
               {dreamStatus && <Text dimColor> · {dreamStatus}</Text>}
-              {!isDreamRunning && autoDreamOn && (
-                <Text dimColor> · /dream to run</Text>
-              )}
+              {!isDreamRunning && autoDreamOn && <Text dimColor> · /dream to run</Text>}
             </Text>
           </ListItem>
         )}
@@ -303,7 +281,7 @@ export function MemoryFileSelector({
         defaultFocusValue={initialPath}
         options={memoryOptions}
         isDisabled={toggleFocused}
-        onChange={value => {
+        onChange={(value) => {
           if (value.startsWith(OPEN_FOLDER_PREFIX)) {
             const folderPath = value.slice(OPEN_FOLDER_PREFIX.length)
             // Ensure folder exists before opening (idempotent; swallow

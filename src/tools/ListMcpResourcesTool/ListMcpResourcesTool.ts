@@ -1,8 +1,6 @@
 import { z } from 'zod/v4'
-import {
-  ensureConnectedClient,
-  fetchResourcesForClient,
-} from '../../services/mcp/client.js'
+
+import { ensureConnectedClient, fetchResourcesForClient } from '../../services/mcp/client.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { errorMessage } from '../../utils/errors.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -14,10 +12,7 @@ import { renderToolResultMessage, renderToolUseMessage } from './UI.js'
 
 const inputSchema = lazySchema(() =>
   z.object({
-    server: z
-      .string()
-      .optional()
-      .describe('Optional server name to filter resources by'),
+    server: z.string().optional().describe('Optional server name to filter resources by'),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -66,13 +61,11 @@ export const ListMcpResourcesTool = buildTool({
   async call(input, { options: { mcpClients } }) {
     const { server: targetServer } = input
 
-    const clientsToProcess = targetServer
-      ? mcpClients.filter(client => client.name === targetServer)
-      : mcpClients
+    const clientsToProcess = targetServer ? mcpClients.filter((client) => client.name === targetServer) : mcpClients
 
     if (targetServer && clientsToProcess.length === 0) {
       throw new Error(
-        `Server "${targetServer}" not found. Available servers: ${mcpClients.map(c => c.name).join(', ')}`,
+        `Server "${targetServer}" not found. Available servers: ${mcpClients.map((c) => c.name).join(', ')}`,
       )
     }
 
@@ -82,7 +75,7 @@ export const ListMcpResourcesTool = buildTool({
     // ensureConnectedClient is a no-op when healthy (memoize hit), but after
     // onclose it returns a fresh connection so the re-fetch succeeds.
     const results = await Promise.all(
-      clientsToProcess.map(async client => {
+      clientsToProcess.map(async (client) => {
         if (client.type !== 'connected') return []
         try {
           const fresh = await ensureConnectedClient(client)
@@ -110,8 +103,7 @@ export const ListMcpResourcesTool = buildTool({
       return {
         tool_use_id: toolUseID,
         type: 'tool_result',
-        content:
-          'No resources found. MCP servers may still provide tools even if they have no resources.',
+        content: 'No resources found. MCP servers may still provide tools even if they have no resources.',
       }
     }
     return {

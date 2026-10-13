@@ -1,4 +1,5 @@
 import chalk, { Chalk } from 'chalk'
+
 import { env } from './env.js'
 
 export type Theme = {
@@ -88,14 +89,7 @@ export type Theme = {
   rainbow_violet_shimmer: string
 }
 
-export const THEME_NAMES = [
-  'dark',
-  'light',
-  'light-daltonized',
-  'dark-daltonized',
-  'light-ansi',
-  'dark-ansi',
-] as const
+export const THEME_NAMES = ['dark', 'light', 'light-daltonized', 'dark-daltonized', 'light-ansi', 'dark-ansi'] as const
 
 /** A renderable theme. Always resolvable to a concrete color palette. */
 export type ThemeName = (typeof THEME_NAMES)[number]

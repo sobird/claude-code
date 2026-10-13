@@ -1,6 +1,7 @@
 import * as React from 'react'
 import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
 import type { buildMessageLookups } from 'src/utils/messages.js'
+
 import { Box, Text } from '../../ink.js'
 import { MessageResponse } from '../MessageResponse.js'
 
@@ -12,16 +13,9 @@ type Props = {
   isTranscriptMode?: boolean
 }
 
-export function HookProgressMessage({
-  hookEvent,
-  lookups,
-  toolUseID,
-  isTranscriptMode,
-}: Props): React.ReactNode {
-  const inProgressHookCount =
-    lookups.inProgressHookCounts.get(toolUseID)?.get(hookEvent) ?? 0
-  const resolvedHookCount =
-    lookups.resolvedHookCounts.get(toolUseID)?.get(hookEvent) ?? 0
+export function HookProgressMessage({ hookEvent, lookups, toolUseID, isTranscriptMode }: Props): React.ReactNode {
+  const inProgressHookCount = lookups.inProgressHookCounts.get(toolUseID)?.get(hookEvent) ?? 0
+  const resolvedHookCount = lookups.resolvedHookCounts.get(toolUseID)?.get(hookEvent) ?? 0
   if (inProgressHookCount === 0) {
     return null
   }
@@ -37,9 +31,7 @@ export function HookProgressMessage({
             <Text dimColor bold>
               {hookEvent}
             </Text>
-            <Text dimColor>
-              {inProgressHookCount === 1 ? ' hook' : ' hooks'} ran
-            </Text>
+            <Text dimColor>{inProgressHookCount === 1 ? ' hook' : ' hooks'} ran</Text>
           </Box>
         </MessageResponse>
       )

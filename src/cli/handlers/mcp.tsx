@@ -4,9 +4,11 @@
  */
 
 import { stat } from 'fs/promises'
-import pMap from 'p-map'
 import { cwd } from 'process'
+
+import pMap from 'p-map'
 import React from 'react'
+
 import { MCPServerDesktopImportDialog } from '../../components/MCPServerDesktopImportDialog.js'
 import { render } from '../../ink.js'
 import { KeybindingSetup } from '../../keybindings/KeybindingProviderSetup.js'
@@ -21,10 +23,7 @@ import {
   readClientSecret,
   saveMcpClientSecret,
 } from '../../services/mcp/auth.js'
-import {
-  connectToServer,
-  getMcpServerConnectionBatchSize,
-} from '../../services/mcp/client.js'
+import { connectToServer, getMcpServerConnectionBatchSize } from '../../services/mcp/client.js'
 import {
   addMcpConfig,
   getAllMcpConfigs,
@@ -32,31 +31,17 @@ import {
   getMcpConfigsByScope,
   removeMcpConfig,
 } from '../../services/mcp/config.js'
-import type {
-  ConfigScope,
-  ScopedMcpServerConfig,
-} from '../../services/mcp/types.js'
-import {
-  describeMcpConfigFilePath,
-  ensureConfigScope,
-  getScopeLabel,
-} from '../../services/mcp/utils.js'
+import type { ConfigScope, ScopedMcpServerConfig } from '../../services/mcp/types.js'
+import { describeMcpConfigFilePath, ensureConfigScope, getScopeLabel } from '../../services/mcp/utils.js'
 import { AppStateProvider } from '../../state/AppState.js'
-import {
-  getCurrentProjectConfig,
-  getGlobalConfig,
-  saveCurrentProjectConfig,
-} from '../../utils/config.js'
+import { getCurrentProjectConfig, getGlobalConfig, saveCurrentProjectConfig } from '../../utils/config.js'
 import { isFsInaccessible } from '../../utils/errors.js'
 import { gracefulShutdown } from '../../utils/gracefulShutdown.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { getPlatform } from '../../utils/platform.js'
 import { cliError, cliOk } from '../exit.js'
 
-async function checkMcpServerHealth(
-  name: string,
-  server: ScopedMcpServerConfig,
-): Promise<string> {
+async function checkMcpServerHealth(name: string, server: ScopedMcpServerConfig): Promise<string> {
   try {
     const result = await connectToServer(name, server)
     if (result.type === 'connected') {
@@ -72,13 +57,7 @@ async function checkMcpServerHealth(
 }
 
 // mcp serve (lines 4512–4532)
-export async function mcpServeHandler({
-  debug,
-  verbose,
-}: {
-  debug?: boolean
-  verbose?: boolean
-}): Promise<void> {
+export async function mcpServeHandler({ debug, verbose }: { debug?: boolean; verbose?: boolean }): Promise<void> {
   const providedCwd = cwd()
   logEvent('tengu_mcp_start', {})
 
@@ -102,19 +81,12 @@ export async function mcpServeHandler({
 }
 
 // mcp remove (lines 4545–4635)
-export async function mcpRemoveHandler(
-  name: string,
-  options: { scope?: string },
-): Promise<void> {
+export async function mcpRemoveHandler(name: string, options: { scope?: string }): Promise<void> {
   // Look up config before removing so we can clean up secure storage
   const serverBeforeRemoval = getMcpConfigByName(name)
 
   const cleanupSecureStorage = () => {
-    if (
-      serverBeforeRemoval &&
-      (serverBeforeRemoval.type === 'sse' ||
-        serverBeforeRemoval.type === 'http')
-    ) {
+    if (serverBeforeRemoval && (serverBeforeRemoval.type === 'sse' || serverBeforeRemoval.type === 'http')) {
       clearServerTokensFromLocalStorage(name, serverBeforeRemoval)
       clearMcpClientConfig(name, serverBeforeRemoval)
     }
@@ -125,8 +97,7 @@ export async function mcpRemoveHandler(
       const scope = ensureConfigScope(options.scope)
       logEvent('tengu_mcp_delete', {
         name: name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        scope:
-          scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
 
       await removeMcpConfig(name, scope)
@@ -156,26 +127,21 @@ export async function mcpRemoveHandler(
       const scope = scopes[0]!
       logEvent('tengu_mcp_delete', {
         name: name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        scope:
-          scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
 
       await removeMcpConfig(name, scope)
       cleanupSecureStorage()
-      process.stdout.write(
-        `Removed MCP server "${name}" from ${scope} config\n`,
-      )
+      process.stdout.write(`Removed MCP server "${name}" from ${scope} config\n`)
       cliOk(`File modified: ${describeMcpConfigFilePath(scope)}`)
     } else {
       // Server exists in multiple scopes
       process.stderr.write(`MCP server "${name}" exists in multiple scopes:\n`)
-      scopes.forEach(scope => {
-        process.stderr.write(
-          `  - ${getScopeLabel(scope)} (${describeMcpConfigFilePath(scope)})\n`,
-        )
+      scopes.forEach((scope) => {
+        process.stderr.write(`  - ${getScopeLabel(scope)} (${describeMcpConfigFilePath(scope)})\n`)
       })
       process.stderr.write('\nTo remove from a specific scope, use:\n')
-      scopes.forEach(scope => {
+      scopes.forEach((scope) => {
         process.stderr.write(`  claude mcp remove "${name}" -s ${scope}\n`)
       })
       cliError()
@@ -191,9 +157,7 @@ export async function mcpListHandler(): Promise<void> {
   const { servers: configs } = await getAllMcpConfigs()
   if (Object.keys(configs).length === 0) {
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(
-      'No MCP servers configured. Use `claude mcp add` to add a server.',
-    )
+    console.log('No MCP servers configured. Use `claude mcp add` to add a server.')
   } else {
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log('Checking MCP server health...\n')
@@ -274,8 +238,7 @@ export async function mcpGetHandler(name: string): Promise<void> {
         const clientConfig = getMcpClientConfig(name, server)
         if (clientConfig?.clientSecret) parts.push('client_secret configured')
       }
-      if (server.oauth.callbackPort)
-        parts.push(`callback_port ${server.oauth.callbackPort}`)
+      if (server.oauth.callbackPort) parts.push(`callback_port ${server.oauth.callbackPort}`)
       // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.log(`  OAuth: ${parts.join(', ')}`)
     }
@@ -299,8 +262,7 @@ export async function mcpGetHandler(name: string): Promise<void> {
         const clientConfig = getMcpClientConfig(name, server)
         if (clientConfig?.clientSecret) parts.push('client_secret configured')
       }
-      if (server.oauth.callbackPort)
-        parts.push(`callback_port ${server.oauth.callbackPort}`)
+      if (server.oauth.callbackPort) parts.push(`callback_port ${server.oauth.callbackPort}`)
       // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.log(`  OAuth: ${parts.join(', ')}`)
     }
@@ -322,9 +284,7 @@ export async function mcpGetHandler(name: string): Promise<void> {
     }
   }
   // biome-ignore lint/suspicious/noConsole:: intentional console output
-  console.log(
-    `\nTo remove this server, run: claude mcp remove "${name}" -s ${server.scope}`,
-  )
+  console.log(`\nTo remove this server, run: claude mcp remove "${name}" -s ${server.scope}`)
   // Use gracefulShutdown to properly clean up MCP server connections
   // (process.exit bypasses cleanup handlers, leaving child processes orphaned)
   await gracefulShutdown(0)
@@ -371,18 +331,12 @@ export async function mcpAddJsonHandler(
       'url' in parsedJson &&
       typeof parsedJson.url === 'string'
     ) {
-      saveMcpClientSecret(
-        name,
-        { type: parsedJson.type, url: parsedJson.url },
-        clientSecret,
-      )
+      saveMcpClientSecret(name, { type: parsedJson.type, url: parsedJson.url }, clientSecret)
     }
 
     logEvent('tengu_mcp_add', {
-      scope:
-        scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      source:
-        'json' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      source: 'json' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       type: transportType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
@@ -393,31 +347,22 @@ export async function mcpAddJsonHandler(
 }
 
 // mcp add-from-claude-desktop (lines 4881–4927)
-export async function mcpAddFromDesktopHandler(options: {
-  scope?: string
-}): Promise<void> {
+export async function mcpAddFromDesktopHandler(options: { scope?: string }): Promise<void> {
   try {
     const scope = ensureConfigScope(options.scope)
     const platform = getPlatform()
 
     logEvent('tengu_mcp_add', {
-      scope:
-        scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      platform:
-        platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      source:
-        'desktop' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      platform: platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      source: 'desktop' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
-    const { readClaudeDesktopMcpServers } = await import(
-      '../../utils/claudeDesktop.js'
-    )
+    const { readClaudeDesktopMcpServers } = await import('../../utils/claudeDesktop.js')
     const servers = await readClaudeDesktopMcpServers()
 
     if (Object.keys(servers).length === 0) {
-      cliOk(
-        'No MCP servers found in Claude Desktop configuration or configuration file does not exist.',
-      )
+      cliOk('No MCP servers found in Claude Desktop configuration or configuration file does not exist.')
     }
 
     const { unmount } = await render(
@@ -442,7 +387,7 @@ export async function mcpAddFromDesktopHandler(options: {
 // mcp reset-project-choices (lines 4935–4952)
 export async function mcpResetChoicesHandler(): Promise<void> {
   logEvent('tengu_mcp_reset_mcpjson_choices', {})
-  saveCurrentProjectConfig(current => ({
+  saveCurrentProjectConfig((current) => ({
     ...current,
     enabledMcpjsonServers: [],
     disabledMcpjsonServers: [],

@@ -26,14 +26,12 @@ import {
   type ScreenshotDims,
 } from '@ant/computer-use-mcp'
 import * as React from 'react'
+
 import { getSessionId } from '../../bootstrap/state.js'
 import { ComputerUseApproval } from '../../components/permissions/ComputerUseApproval/ComputerUseApproval.js'
 import type { Tool, ToolUseContext } from '../../Tool.js'
 import { logForDebugging } from '../debug.js'
-import {
-  checkComputerUseLock,
-  tryAcquireComputerUseLock,
-} from './computerUseLock.js'
+import { checkComputerUseLock, tryAcquireComputerUseLock } from './computerUseLock.js'
 import { registerEscHotkey } from './escHotkey.js'
 import { getChicagoCoordinateMode } from './gates.js'
 import { getComputerUseHostAdapter } from './hostAdapter.js'
@@ -75,19 +73,13 @@ function formatLockHeld(holder: string): string {
 export function buildSessionContext(): ComputerUseSessionContext {
   return {
     // ── Read state fresh via the per-call ref ─────────────────────────────
-    getAllowedApps: () =>
-      tuc().getAppState().computerUseMcpState?.allowedApps ?? [],
-    getGrantFlags: () =>
-      tuc().getAppState().computerUseMcpState?.grantFlags ??
-      DEFAULT_GRANT_FLAGS,
+    getAllowedApps: () => tuc().getAppState().computerUseMcpState?.allowedApps ?? [],
+    getGrantFlags: () => tuc().getAppState().computerUseMcpState?.grantFlags ?? DEFAULT_GRANT_FLAGS,
     // cc-2 has no Settings page for user-denied apps yet.
     getUserDeniedBundleIds: () => [],
-    getSelectedDisplayId: () =>
-      tuc().getAppState().computerUseMcpState?.selectedDisplayId,
-    getDisplayPinnedByModel: () =>
-      tuc().getAppState().computerUseMcpState?.displayPinnedByModel ?? false,
-    getDisplayResolvedForApps: () =>
-      tuc().getAppState().computerUseMcpState?.displayResolvedForApps,
+    getSelectedDisplayId: () => tuc().getAppState().computerUseMcpState?.selectedDisplayId,
+    getDisplayPinnedByModel: () => tuc().getAppState().computerUseMcpState?.displayPinnedByModel ?? false,
+    getDisplayResolvedForApps: () => tuc().getAppState().computerUseMcpState?.displayResolvedForApps,
     getLastScreenshotDims: (): ScreenshotDims | undefined => {
       const d = tuc().getAppState().computerUseMcpState?.lastScreenshotDims
       return d
@@ -110,13 +102,11 @@ export function buildSessionContext(): ComputerUseSessionContext {
 
     // Package does the merge (dedupe + truthy-only flags). We just persist.
     onAllowedAppsChanged: (apps, flags) =>
-      tuc().setAppState(prev => {
+      tuc().setAppState((prev) => {
         const cu = prev.computerUseMcpState
         const prevApps = cu?.allowedApps
         const prevFlags = cu?.grantFlags
-        const sameApps =
-          prevApps?.length === apps.length &&
-          apps.every((a, i) => prevApps[i]?.bundleId === a.bundleId)
+        const sameApps = prevApps?.length === apps.length && apps.every((a, i) => prevApps[i]?.bundleId === a.bundleId)
         const sameFlags =
           prevFlags?.clipboardRead === flags.clipboardRead &&
           prevFlags?.clipboardWrite === flags.clipboardWrite &&
@@ -133,12 +123,12 @@ export function buildSessionContext(): ComputerUseSessionContext {
             }
       }),
 
-    onAppsHidden: ids => {
+    onAppsHidden: (ids) => {
       if (ids.length === 0) return
-      tuc().setAppState(prev => {
+      tuc().setAppState((prev) => {
         const cu = prev.computerUseMcpState
         const existing = cu?.hiddenDuringTurn
-        if (existing && ids.every(id => existing.has(id))) return prev
+        if (existing && ids.every((id) => existing.has(id))) return prev
         return {
           ...prev,
           computerUseMcpState: {
@@ -153,14 +143,10 @@ export function buildSessionContext(): ComputerUseSessionContext {
     // (pinned display unplugged) — the pin is semantically dead, so clear it
     // and the app-set key so the chase chain runs next time. When autoResolve
     // was true, onDisplayResolvedForApps re-sets the key in the same tick.
-    onResolvedDisplayUpdated: id =>
-      tuc().setAppState(prev => {
+    onResolvedDisplayUpdated: (id) =>
+      tuc().setAppState((prev) => {
         const cu = prev.computerUseMcpState
-        if (
-          cu?.selectedDisplayId === id &&
-          !cu.displayPinnedByModel &&
-          cu.displayResolvedForApps === undefined
-        ) {
+        if (cu?.selectedDisplayId === id && !cu.displayPinnedByModel && cu.displayResolvedForApps === undefined) {
           return prev
         }
         return {
@@ -176,8 +162,8 @@ export function buildSessionContext(): ComputerUseSessionContext {
 
     // switch_display(name) pins; switch_display("auto") unpins and clears the
     // app-set key so the next screenshot auto-resolves fresh.
-    onDisplayPinned: id =>
-      tuc().setAppState(prev => {
+    onDisplayPinned: (id) =>
+      tuc().setAppState((prev) => {
         const cu = prev.computerUseMcpState
         const pinned = id !== undefined
         const nextResolvedFor = pinned ? cu?.displayResolvedForApps : undefined
@@ -199,8 +185,8 @@ export function buildSessionContext(): ComputerUseSessionContext {
         }
       }),
 
-    onDisplayResolvedForApps: key =>
-      tuc().setAppState(prev => {
+    onDisplayResolvedForApps: (key) =>
+      tuc().setAppState((prev) => {
         const cu = prev.computerUseMcpState
         if (cu?.displayResolvedForApps === key) return prev
         return {
@@ -209,8 +195,8 @@ export function buildSessionContext(): ComputerUseSessionContext {
         }
       }),
 
-    onScreenshotCaptured: dims =>
-      tuc().setAppState(prev => {
+    onScreenshotCaptured: (dims) =>
+      tuc().setAppState((prev) => {
         const cu = prev.computerUseMcpState
         const p = cu?.lastScreenshotDims
         return p?.width === dims.width &&
@@ -282,11 +268,7 @@ function getOrBind(): Binding {
   const ctx = buildSessionContext()
   binding = {
     ctx,
-    dispatch: bindSessionContext(
-      getComputerUseHostAdapter(),
-      getChicagoCoordinateMode(),
-      ctx,
-    ),
+    dispatch: bindSessionContext(getComputerUseHostAdapter(), getChicagoCoordinateMode(), ctx),
   }
   return binding
 }
@@ -296,15 +278,11 @@ function getOrBind(): Binding {
  * tool: rendering overrides from `toolRendering.tsx` plus a `.call()` that
  * dispatches through the cached binder.
  */
-type ComputerUseMCPToolOverrides = ReturnType<
-  typeof getComputerUseMCPRenderingOverrides
-> & {
+type ComputerUseMCPToolOverrides = ReturnType<typeof getComputerUseMCPRenderingOverrides> & {
   call: CallOverride
 }
 
-export function getComputerUseMCPToolOverrides(
-  toolName: string,
-): ComputerUseMCPToolOverrides {
+export function getComputerUseMCPToolOverrides(toolName: string): ComputerUseMCPToolOverrides {
   const call: CallOverride = async (args, context: ToolUseContext) => {
     currentToolUseContext = context
     const { dispatch } = getOrBind()
@@ -312,9 +290,7 @@ export function getComputerUseMCPToolOverrides(
     const { telemetry, ...result } = await dispatch(toolName, args)
 
     if (telemetry?.error_kind) {
-      logForDebugging(
-        `[Computer Use MCP] ${toolName} error_kind=${telemetry.error_kind}`,
-      )
+      logForDebugging(`[Computer Use MCP] ${toolName} error_kind=${telemetry.error_kind}`)
     }
 
     // MCP content blocks → Anthropic API blocks. CU only produces text and
@@ -324,7 +300,7 @@ export function getComputerUseMCPToolOverrides(
     // type admits audio/resource too, but CU's handleToolCall never emits
     // those; the fallthrough coerces them to empty text.
     const data = Array.isArray(result.content)
-      ? result.content.map(item =>
+      ? result.content.map((item) =>
           item.type === 'image'
             ? {
                 type: 'image' as const,
@@ -356,9 +332,7 @@ export function getComputerUseMCPToolOverrides(
  * The merge-into-AppState that used to live here (dedupe + truthy-only flags)
  * is now in the package's `bindSessionContext` → `onAllowedAppsChanged`.
  */
-async function runPermissionDialog(
-  req: CuPermissionRequest,
-): Promise<CuPermissionResponse> {
+async function runPermissionDialog(req: CuPermissionRequest): Promise<CuPermissionResponse> {
   const context = tuc()
   const setToolJSX = context.setToolJSX
   if (!setToolJSX) {

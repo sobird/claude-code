@@ -4,24 +4,18 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { getOauthConfig } from '../../constants/oauth.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
-import { setClipboard } from '../../ink/termio/osc.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- raw j/k/arrow menu navigation
 import { Box, color, Link, Text, useInput, useTheme } from '../../ink.js'
+import { setClipboard } from '../../ink/termio/osc.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
-import {
-  AuthenticationCancelledError,
-  performMCPOAuthFlow,
-  revokeServerTokens,
-} from '../../services/mcp/auth.js'
+import { AuthenticationCancelledError, performMCPOAuthFlow, revokeServerTokens } from '../../services/mcp/auth.js'
 import { clearServerCache } from '../../services/mcp/client.js'
-import {
-  useMcpReconnect,
-  useMcpToggleEnabled,
-} from '../../services/mcp/MCPConnectionManager.js'
+import { useMcpReconnect, useMcpToggleEnabled } from '../../services/mcp/MCPConnectionManager.js'
 import {
   describeMcpConfigFilePath,
   excludeCommandsByServer,
@@ -42,25 +36,15 @@ import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint.js'
 import { Spinner } from '../Spinner.js'
 import TextInput from '../TextInput.js'
 import { CapabilitiesSection } from './CapabilitiesSection.js'
-import type {
-  ClaudeAIServerInfo,
-  HTTPServerInfo,
-  SSEServerInfo,
-} from './types.js'
-import {
-  handleReconnectError,
-  handleReconnectResult,
-} from './utils/reconnectHelpers.js'
+import type { ClaudeAIServerInfo, HTTPServerInfo, SSEServerInfo } from './types.js'
+import { handleReconnectError, handleReconnectResult } from './utils/reconnectHelpers.js'
 
 type Props = {
   server: SSEServerInfo | HTTPServerInfo | ClaudeAIServerInfo
   serverToolsCount: number
   onViewTools: () => void
   onCancel: () => void
-  onComplete?: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onComplete?: (result?: string, options?: { display?: CommandResultDisplay }) => void
   borderless?: boolean
 }
 
@@ -77,32 +61,22 @@ export function MCPRemoteServerMenu({
   const { columns: terminalColumns } = useTerminalSize()
   const [isAuthenticating, setIsAuthenticating] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const mcp = useAppState(s => s.mcp)
+  const mcp = useAppState((s) => s.mcp)
   const setAppState = useSetAppState()
-  const [authorizationUrl, setAuthorizationUrl] = React.useState<string | null>(
-    null,
-  )
+  const [authorizationUrl, setAuthorizationUrl] = React.useState<string | null>(null)
   const [isReconnecting, setIsReconnecting] = useState(false)
   const authAbortControllerRef = useRef<AbortController | null>(null)
-  const [isClaudeAIAuthenticating, setIsClaudeAIAuthenticating] =
-    useState(false)
+  const [isClaudeAIAuthenticating, setIsClaudeAIAuthenticating] = useState(false)
   const [claudeAIAuthUrl, setClaudeAIAuthUrl] = useState<string | null>(null)
   const [isClaudeAIClearingAuth, setIsClaudeAIClearingAuth] = useState(false)
-  const [claudeAIClearAuthUrl, setClaudeAIClearAuthUrl] = useState<
-    string | null
-  >(null)
-  const [claudeAIClearAuthBrowserOpened, setClaudeAIClearAuthBrowserOpened] =
-    useState(false)
+  const [claudeAIClearAuthUrl, setClaudeAIClearAuthUrl] = useState<string | null>(null)
+  const [claudeAIClearAuthBrowserOpened, setClaudeAIClearAuthBrowserOpened] = useState(false)
   const [urlCopied, setUrlCopied] = useState(false)
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  )
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const unmountedRef = useRef(false)
   const [callbackUrlInput, setCallbackUrlInput] = useState('')
   const [callbackUrlCursorOffset, setCallbackUrlCursorOffset] = useState(0)
-  const [manualCallbackSubmit, setManualCallbackSubmit] = useState<
-    ((url: string) => void) | null
-  >(null)
+  const [manualCallbackSubmit, setManualCallbackSubmit] = useState<((url: string) => void) | null>(null)
 
   // If the component unmounts mid-auth (e.g. a parent component's Esc handler
   // navigates away before ours fires), abort the OAuth flow so the callback
@@ -125,8 +99,7 @@ export function MCPRemoteServerMenu({
   // 1. It has OAuth tokens (server.isAuthenticated), OR
   // 2. It's connected and has tools (meaning it's working via some auth mechanism)
   const isEffectivelyAuthenticated =
-    server.isAuthenticated ||
-    (server.client.type === 'connected' && serverToolsCount > 0)
+    server.isAuthenticated || (server.client.type === 'connected' && serverToolsCount > 0)
 
   const reconnectMcpServer = useMcpReconnect()
 
@@ -163,19 +136,13 @@ export function MCPRemoteServerMenu({
       scope: server.scope,
     })
 
-    setAppState(prev => {
-      const newClients = prev.mcp.clients.map(c =>
+    setAppState((prev) => {
+      const newClients = prev.mcp.clients.map((c) =>
         c.name === server.name ? { ...c, type: 'needs-auth' as const } : c,
       )
       const newTools = excludeToolsByServer(prev.mcp.tools, server.name)
-      const newCommands = excludeCommandsByServer(
-        prev.mcp.commands,
-        server.name,
-      )
-      const newResources = excludeResourcesByServer(
-        prev.mcp.resources,
-        server.name,
-      )
+      const newCommands = excludeCommandsByServer(prev.mcp.commands, server.name)
+      const newResources = excludeResourcesByServer(prev.mcp.resources, server.name)
 
       return {
         ...prev,
@@ -255,10 +222,9 @@ export function MCPRemoteServerMenu({
       }
     }
     if (input === 'c' && !urlCopied) {
-      const urlToCopy =
-        authorizationUrl || claudeAIAuthUrl || claudeAIClearAuthUrl
+      const urlToCopy = authorizationUrl || claudeAIAuthUrl || claudeAIClearAuthUrl
       if (urlToCopy) {
-        void setClipboard(urlToCopy).then(raw => {
+        void setClipboard(urlToCopy).then((raw) => {
           if (unmountedRef.current) return
           if (raw) process.stdout.write(raw)
           setUrlCopied(true)
@@ -274,10 +240,7 @@ export function MCPRemoteServerMenu({
   const capitalizedServerName = capitalize(String(server.name))
 
   // Count MCP prompts for this server (skills are shown in /skills, not here)
-  const serverCommandsCount = filterMcpPromptsByServer(
-    mcp.commands,
-    server.name,
-  ).length
+  const serverCommandsCount = filterMcpPromptsByServer(mcp.commands, server.name).length
 
   const toggleMcpServer = useMcpToggleEnabled()
 
@@ -287,19 +250,11 @@ export function MCPRemoteServerMenu({
     const orgUuid = accountInfo?.organizationUuid
 
     let authUrl: string
-    if (
-      orgUuid &&
-      server.config.type === 'claudeai-proxy' &&
-      server.config.id
-    ) {
+    if (orgUuid && server.config.type === 'claudeai-proxy' && server.config.id) {
       // Use the direct auth URL with org and server IDs
       // Replace 'mcprs' prefix with 'mcpsrv' if present
-      const serverId = server.config.id.startsWith('mcprs')
-        ? 'mcpsrv' + server.config.id.slice(5)
-        : server.config.id
-      const productSurface = encodeURIComponent(
-        process.env.CLAUDE_CODE_ENTRYPOINT || 'cli',
-      )
+      const serverId = server.config.id.startsWith('mcprs') ? 'mcpsrv' + server.config.id.slice(5) : server.config.id
+      const productSurface = encodeURIComponent(process.env.CLAUDE_CODE_ENTRYPOINT || 'cli')
       authUrl = `${claudeAiBaseUrl}/api/organizations/${orgUuid}/mcp/start-auth/${serverId}?product_surface=${productSurface}`
     } else {
       // Fall back to settings/connectors if we don't have the required IDs
@@ -335,18 +290,9 @@ export function MCPRemoteServerMenu({
       onCancel()
     } catch (err) {
       const action = wasEnabled ? 'disable' : 'enable'
-      onComplete?.(
-        `Failed to ${action} MCP server '${server.name}': ${errorMessage(err)}`,
-      )
+      onComplete?.(`Failed to ${action} MCP server '${server.name}': ${errorMessage(err)}`)
     }
-  }, [
-    server.client.type,
-    server.config.type,
-    server.name,
-    toggleMcpServer,
-    onCancel,
-    onComplete,
-  ])
+  }, [server.client.type, server.config.type, server.name, toggleMcpServer, onCancel, onComplete])
 
   const handleAuthenticate = React.useCallback(async () => {
     if (server.config.type === 'claudeai-proxy') return
@@ -367,17 +313,11 @@ export function MCPRemoteServerMenu({
       }
 
       if (server.config) {
-        await performMCPOAuthFlow(
-          server.name,
-          server.config,
-          setAuthorizationUrl,
-          controller.signal,
-          {
-            onWaitingForCallback: submit => {
-              setManualCallbackSubmit(() => submit)
-            },
+        await performMCPOAuthFlow(server.name, server.config, setAuthorizationUrl, controller.signal, {
+          onWaitingForCallback: (submit) => {
+            setManualCallbackSubmit(() => submit)
           },
-        )
+        })
 
         logEvent('tengu_mcp_auth_config_authenticate', {
           wasAuthenticated: server.isAuthenticated,
@@ -404,10 +344,7 @@ export function MCPRemoteServerMenu({
       }
     } catch (err) {
       // Don't show error if it was a cancellation
-      if (
-        err instanceof Error &&
-        !(err instanceof AuthenticationCancelledError)
-      ) {
+      if (err instanceof Error && !(err instanceof AuthenticationCancelledError)) {
         setError(err.message)
       }
     } finally {
@@ -416,14 +353,7 @@ export function MCPRemoteServerMenu({
       setManualCallbackSubmit(null)
       setCallbackUrlInput('')
     }
-  }, [
-    server.isAuthenticated,
-    server.config,
-    server.name,
-    onComplete,
-    reconnectMcpServer,
-    isEffectivelyAuthenticated,
-  ])
+  }, [server.isAuthenticated, server.config, server.name, onComplete, reconnectMcpServer, isEffectivelyAuthenticated])
 
   const handleClearAuth = async () => {
     if (server.config.type === 'claudeai-proxy') return
@@ -440,20 +370,14 @@ export function MCPRemoteServerMenu({
       })
 
       // Update app state to remove the disconnected server's tools, commands, and resources
-      setAppState(prev => {
-        const newClients = prev.mcp.clients.map(c =>
+      setAppState((prev) => {
+        const newClients = prev.mcp.clients.map((c) =>
           // 'failed' is a misnomer here, but we don't really differentiate between "not connected" and "failed" at the moment
           c.name === server.name ? { ...c, type: 'failed' as const } : c,
         )
         const newTools = excludeToolsByServer(prev.mcp.tools, server.name)
-        const newCommands = excludeCommandsByServer(
-          prev.mcp.commands,
-          server.name,
-        )
-        const newResources = excludeResourcesByServer(
-          prev.mcp.resources,
-          server.name,
-        )
+        const newCommands = excludeCommandsByServer(prev.mcp.commands, server.name)
+        const newResources = excludeResourcesByServer(prev.mcp.resources, server.name)
 
         return {
           ...prev,
@@ -489,10 +413,7 @@ export function MCPRemoteServerMenu({
         {authorizationUrl && (
           <Box flexDirection="column">
             <Box>
-              <Text dimColor>
-                If your browser doesn&apos;t open automatically, copy this URL
-                manually{' '}
-              </Text>
+              <Text dimColor>If your browser doesn&apos;t open automatically, copy this URL manually </Text>
               {urlCopied ? (
                 <Text color="success">(Copied!)</Text>
               ) : (
@@ -507,8 +428,7 @@ export function MCPRemoteServerMenu({
         {isAuthenticating && authorizationUrl && manualCallbackSubmit && (
           <Box flexDirection="column" marginTop={1}>
             <Text dimColor>
-              If the redirect page shows a connection error, paste the URL from
-              your browser&apos;s address bar:
+              If the redirect page shows a connection error, paste the URL from your browser&apos;s address bar:
             </Text>
             <Box>
               <Text dimColor>URL {'>'} </Text>
@@ -527,10 +447,7 @@ export function MCPRemoteServerMenu({
           </Box>
         )}
         <Box marginLeft={3}>
-          <Text dimColor>
-            Return here after authenticating in your browser. Press Esc to go
-            back.
-          </Text>
+          <Text dimColor>Return here after authenticating in your browser. Press Esc to go back.</Text>
         </Box>
       </Box>
     )
@@ -547,10 +464,7 @@ export function MCPRemoteServerMenu({
         {claudeAIAuthUrl && (
           <Box flexDirection="column">
             <Box>
-              <Text dimColor>
-                If your browser doesn&apos;t open automatically, copy this URL
-                manually{' '}
-              </Text>
+              <Text dimColor>If your browser doesn&apos;t open automatically, copy this URL manually </Text>
               {urlCopied ? (
                 <Text color="success">(Copied!)</Text>
               ) : (
@@ -567,12 +481,7 @@ export function MCPRemoteServerMenu({
             Press <Text bold>Enter</Text> after authenticating in your browser.
           </Text>
           <Text dimColor italic>
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="back"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />
           </Text>
         </Box>
       </Box>
@@ -585,17 +494,11 @@ export function MCPRemoteServerMenu({
         <Text color="claude">Clear authentication for {server.name}</Text>
         {claudeAIClearAuthBrowserOpened ? (
           <>
-            <Text>
-              Find the MCP server in the browser and click
-              &quot;Disconnect&quot;.
-            </Text>
+            <Text>Find the MCP server in the browser and click &quot;Disconnect&quot;.</Text>
             {claudeAIClearAuthUrl && (
               <Box flexDirection="column">
                 <Box>
-                  <Text dimColor>
-                    If your browser didn&apos;t open automatically, copy this
-                    URL manually{' '}
-                  </Text>
+                  <Text dimColor>If your browser didn&apos;t open automatically, copy this URL manually </Text>
                   {urlCopied ? (
                     <Text color="success">(Copied!)</Text>
                   ) : (
@@ -624,8 +527,7 @@ export function MCPRemoteServerMenu({
         ) : (
           <>
             <Text>
-              This will open claude.ai in the browser. Find the MCP server in
-              the list and click &quot;Disconnect&quot;.
+              This will open claude.ai in the browser. Find the MCP server in the list and click &quot;Disconnect&quot;.
             </Text>
             <Box marginLeft={3} flexDirection="column">
               <Text color="permission">
@@ -733,11 +635,7 @@ export function MCPRemoteServerMenu({
 
   return (
     <Box flexDirection="column">
-      <Box
-        flexDirection="column"
-        paddingX={1}
-        borderStyle={borderless ? undefined : 'round'}
-      >
+      <Box flexDirection="column" paddingX={1} borderStyle={borderless ? undefined : 'round'}>
         <Box marginBottom={1}>
           <Text bold>{capitalizedServerName} MCP Server</Text>
         </Box>
@@ -755,10 +653,7 @@ export function MCPRemoteServerMenu({
                 <Text> connecting…</Text>
               </>
             ) : server.client.type === 'needs-auth' ? (
-              <Text>
-                {color('warning', theme)(figures.triangleUpOutline)} needs
-                authentication
-              </Text>
+              <Text>{color('warning', theme)(figures.triangleUpOutline)} needs authentication</Text>
             ) : (
               <Text>{color('error', theme)(figures.cross)} failed</Text>
             )}
@@ -768,13 +663,9 @@ export function MCPRemoteServerMenu({
             <Box>
               <Text bold>Auth: </Text>
               {isEffectivelyAuthenticated ? (
-                <Text>
-                  {color('success', theme)(figures.tick)} authenticated
-                </Text>
+                <Text>{color('success', theme)(figures.tick)} authenticated</Text>
               ) : (
-                <Text>
-                  {color('error', theme)(figures.cross)} not authenticated
-                </Text>
+                <Text>{color('error', theme)(figures.cross)} not authenticated</Text>
               )}
             </Box>
           )}
@@ -815,7 +706,7 @@ export function MCPRemoteServerMenu({
           <Box marginTop={1}>
             <Select
               options={menuOptions}
-              onChange={async value => {
+              onChange={async (value) => {
                 switch (value) {
                   case 'tools':
                     onViewTools()
@@ -842,10 +733,7 @@ export function MCPRemoteServerMenu({
                           success: result.client.type === 'connected',
                         })
                       }
-                      const { message } = handleReconnectResult(
-                        result,
-                        server.name,
-                      )
+                      const { message } = handleReconnectResult(result, server.name)
                       onComplete?.(message)
                     } catch (err) {
                       if (server.config.type === 'claudeai-proxy') {
@@ -880,12 +768,7 @@ export function MCPRemoteServerMenu({
             <Byline>
               <KeyboardShortcutHint shortcut="↑↓" action="navigate" />
               <KeyboardShortcutHint shortcut="Enter" action="select" />
-              <ConfigurableShortcutHint
-                action="confirm:no"
-                context="Confirmation"
-                fallback="Esc"
-                description="back"
-              />
+              <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />
             </Byline>
           )}
         </Text>

@@ -1,14 +1,13 @@
 import { relative } from 'path'
+
 import React, { useMemo } from 'react'
+
 import { useDiffInIDE } from '../../../hooks/useDiffInIDE.js'
 import { Box, Text } from '../../../ink.js'
 import type { ToolUseContext } from '../../../Tool.js'
 import { getLanguageName } from '../../../utils/cliHighlight.js'
 import { getCwd } from '../../../utils/cwd.js'
-import {
-  getFsImplementation,
-  safeResolvePath,
-} from '../../../utils/fsOperations.js'
+import { getFsImplementation, safeResolvePath } from '../../../utils/fsOperations.js'
 import { expandPath } from '../../../utils/path.js'
 import type { CompletionType } from '../../../utils/unaryLogging.js'
 import { Select } from '../../CustomSelect/index.js'
@@ -18,14 +17,8 @@ import { PermissionDialog } from '../PermissionDialog.js'
 import type { ToolUseConfirm } from '../PermissionRequest.js'
 import type { WorkerBadgeProps } from '../WorkerBadge.js'
 import type { IDEDiffSupport } from './ideDiffConfig.js'
-import type {
-  FileOperationType,
-  PermissionOption,
-} from './permissionOptions.js'
-import {
-  type ToolInput,
-  useFilePermissionDialog,
-} from './useFilePermissionDialog.js'
+import type { FileOperationType, PermissionOption } from './permissionOptions.js'
+import { type ToolInput, useFilePermissionDialog } from './useFilePermissionDialog.js'
 
 export type FilePermissionDialogProps<T extends ToolInput = ToolInput> = {
   // Required props from PermissionRequestProps
@@ -134,10 +127,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
   // Keyed on the raw input — parseInput is a pure Zod parse whose result
   // depends only on toolUseConfirm.input.
   const ideDiffConfig = useMemo(
-    () =>
-      ideDiffSupport
-        ? ideDiffSupport.getConfig(parseInput(toolUseConfirm.input))
-        : null,
+    () => (ideDiffSupport ? ideDiffSupport.getConfig(parseInput(toolUseConfirm.input)) : null),
     [ideDiffSupport, toolUseConfirm.input],
   )
 
@@ -155,15 +145,12 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
             }>
           },
         ) => {
-          const transformedInput = ideDiffSupport!.applyChanges(
-            parsedInput,
-            input.edits,
-          )
+          const transformedInput = ideDiffSupport!.applyChanges(parsedInput, input.edits)
           fileDialogResult.onChange(option, transformedInput)
         },
         toolUseContext,
         filePath: ideDiffConfig.filePath,
-        edits: (ideDiffConfig.edits || []).map(e => ({
+        edits: (ideDiffConfig.edits || []).map((e) => ({
           old_string: e.old_string,
           new_string: e.new_string,
           replace_all: e.replace_all || false,
@@ -188,9 +175,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
   if (showingDiffInIDE && ideDiffConfig && path) {
     return (
       <ShowInIDEPrompt
-        onChange={(option: PermissionOption, _input, feedback?: string) =>
-          onChange(option, feedback)
-        }
+        onChange={(option: PermissionOption, _input, feedback?: string) => onChange(option, feedback)}
         options={options}
         filePath={path}
         input={parsedInput}
@@ -207,8 +192,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
     )
   }
 
-  const isSymlinkOutsideCwd =
-    symlinkTarget != null && relative(getCwd(), symlinkTarget).startsWith('..')
+  const isSymlinkOutsideCwd = symlinkTarget != null && relative(getCwd(), symlinkTarget).startsWith('..')
 
   const symlinkWarning = symlinkTarget ? (
     <Box paddingX={1} marginBottom={1}>
@@ -222,12 +206,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
 
   return (
     <>
-      <PermissionDialog
-        title={title}
-        subtitle={subtitle}
-        innerPaddingX={0}
-        workerBadge={workerBadge}
-      >
+      <PermissionDialog title={title} subtitle={subtitle} innerPaddingX={0} workerBadge={workerBadge}>
         {symlinkWarning}
         {content}
         <Box flexDirection="column" paddingX={1}>
@@ -235,8 +214,8 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
           <Select
             options={options}
             inlineDescriptions
-            onChange={value => {
-              const selected = options.find(opt => opt.value === value)
+            onChange={(value) => {
+              const selected = options.find((opt) => opt.value === value)
               if (selected) {
                 // For reject option
                 if (selected.option.type === 'reject') {
@@ -254,7 +233,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
               }
             }}
             onCancel={() => onChange({ type: 'reject' })}
-            onFocus={value => setFocusedOption(value)}
+            onFocus={(value) => setFocusedOption(value)}
             onInputModeToggle={handleInputModeToggle}
           />
         </Box>
@@ -262,8 +241,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
       <Box paddingX={1} marginTop={1}>
         <Text dimColor>
           Esc to cancel
-          {((focusedOption === 'yes' && !yesInputMode) ||
-            (focusedOption === 'no' && !noInputMode)) &&
+          {((focusedOption === 'yes' && !yesInputMode) || (focusedOption === 'no' && !noInputMode)) &&
             ' · Tab to amend'}
         </Text>
       </Box>

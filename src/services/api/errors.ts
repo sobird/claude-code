@@ -1,63 +1,34 @@
-import {
-  APIConnectionError,
-  APIConnectionTimeoutError,
-  APIError,
-} from '@anthropic-ai/sdk'
-import type {
-  BetaMessage,
-  BetaStopReason,
-} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import { APIConnectionError, APIConnectionTimeoutError, APIError } from '@anthropic-ai/sdk'
+import type { BetaMessage, BetaStopReason } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import { AFK_MODE_BETA_HEADER } from 'src/constants/betas.js'
 import type { SDKAssistantMessageError } from 'src/entrypoints/agentSdkTypes.js'
-import type {
-  AssistantMessage,
-  Message,
-  UserMessage,
-} from 'src/types/message.js'
+import type { AssistantMessage, Message, UserMessage } from 'src/types/message.js'
 import {
   getAnthropicApiKeyWithSource,
   getClaudeAIOAuthTokens,
   getOauthAccountInfo,
   isClaudeAISubscriber,
 } from 'src/utils/auth.js'
-import {
-  createAssistantAPIErrorMessage,
-  NO_RESPONSE_REQUESTED,
-} from 'src/utils/messages.js'
-import {
-  getDefaultMainLoopModelSetting,
-  isNonCustomOpusModel,
-} from 'src/utils/model/model.js'
+import { createAssistantAPIErrorMessage, NO_RESPONSE_REQUESTED } from 'src/utils/messages.js'
+import { getDefaultMainLoopModelSetting, isNonCustomOpusModel } from 'src/utils/model/model.js'
 import { getModelStrings } from 'src/utils/model/modelStrings.js'
 import { getAPIProvider } from 'src/utils/model/providers.js'
+
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
-import {
-  API_PDF_MAX_PAGES,
-  PDF_TARGET_RAW_SIZE,
-} from '../../constants/apiLimits.js'
+import { API_PDF_MAX_PAGES, PDF_TARGET_RAW_SIZE } from '../../constants/apiLimits.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { formatFileSize } from '../../utils/format.js'
 import { ImageResizeError } from '../../utils/imageResizer.js'
 import { ImageSizeError } from '../../utils/imageValidation.js'
-import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  logEvent,
-} from '../analytics/index.js'
-import {
-  type ClaudeAILimits,
-  getRateLimitErrorMessage,
-  type OverageDisabledReason,
-} from '../claudeAiLimits.js'
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../analytics/index.js'
+import { type ClaudeAILimits, getRateLimitErrorMessage, type OverageDisabledReason } from '../claudeAiLimits.js'
 import { shouldProcessRateLimits } from '../rateLimitMocking.js' // Used for /mock-limits command
 import { extractConnectionErrorDetails, formatAPIError } from './errorUtils.js'
 
 export const API_ERROR_MESSAGE_PREFIX = 'API Error'
 
 export function startsWithApiErrorPrefix(text: string): boolean {
-  return (
-    text.startsWith(API_ERROR_MESSAGE_PREFIX) ||
-    text.startsWith(`Please run /login · ${API_ERROR_MESSAGE_PREFIX}`)
-  )
+  return text.startsWith(API_ERROR_MESSAGE_PREFIX) || text.startsWith(`Please run /login · ${API_ERROR_MESSAGE_PREFIX}`)
 }
 export const PROMPT_TOO_LONG_ERROR_MESSAGE = 'Prompt is too long'
 
@@ -69,11 +40,7 @@ export function isPromptTooLongMessage(msg: AssistantMessage): boolean {
   if (!Array.isArray(content)) {
     return false
   }
-  return content.some(
-    block =>
-      block.type === 'text' &&
-      block.text.startsWith(PROMPT_TOO_LONG_ERROR_MESSAGE),
-  )
+  return content.some((block) => block.type === 'text' && block.text.startsWith(PROMPT_TOO_LONG_ERROR_MESSAGE))
 }
 
 /**
@@ -86,9 +53,7 @@ export function parsePromptTooLongTokenCounts(rawMessage: string): {
   actualTokens: number | undefined
   limitTokens: number | undefined
 } {
-  const match = rawMessage.match(
-    /prompt is too long[^0-9]*(\d+)\s*tokens?\s*>\s*(\d+)/i,
-  )
+  const match = rawMessage.match(/prompt is too long[^0-9]*(\d+)\s*tokens?\s*>\s*(\d+)/i)
   return {
     actualTokens: match ? parseInt(match[1]!, 10) : undefined,
     limitTokens: match ? parseInt(match[2]!, 10) : undefined,
@@ -101,15 +66,11 @@ export function parsePromptTooLongTokenCounts(rawMessage: string): {
  * Reactive compact uses this gap to jump past multiple groups in one retry
  * instead of peeling one-at-a-time.
  */
-export function getPromptTooLongTokenGap(
-  msg: AssistantMessage,
-): number | undefined {
+export function getPromptTooLongTokenGap(msg: AssistantMessage): number | undefined {
   if (!isPromptTooLongMessage(msg) || !msg.errorDetails) {
     return undefined
   }
-  const { actualTokens, limitTokens } = parsePromptTooLongTokenCounts(
-    msg.errorDetails,
-  )
+  const { actualTokens, limitTokens } = parsePromptTooLongTokenCounts(msg.errorDetails)
   if (actualTokens === undefined || limitTokens === undefined) {
     return undefined
   }
@@ -145,27 +106,19 @@ export function isMediaSizeError(raw: string): boolean {
  * rather than content text, since media errors have per-variant content strings.
  */
 export function isMediaSizeErrorMessage(msg: AssistantMessage): boolean {
-  return (
-    msg.isApiErrorMessage === true &&
-    msg.errorDetails !== undefined &&
-    isMediaSizeError(msg.errorDetails)
-  )
+  return msg.isApiErrorMessage === true && msg.errorDetails !== undefined && isMediaSizeError(msg.errorDetails)
 }
 export const CREDIT_BALANCE_TOO_LOW_ERROR_MESSAGE = 'Credit balance is too low'
 export const INVALID_API_KEY_ERROR_MESSAGE = 'Not logged in · Please run /login'
-export const INVALID_API_KEY_ERROR_MESSAGE_EXTERNAL =
-  'Invalid API key · Fix external API key'
+export const INVALID_API_KEY_ERROR_MESSAGE_EXTERNAL = 'Invalid API key · Fix external API key'
 export const ORG_DISABLED_ERROR_MESSAGE_ENV_KEY_WITH_OAUTH =
   'Your ANTHROPIC_API_KEY belongs to a disabled organization · Unset the environment variable to use your subscription instead'
 export const ORG_DISABLED_ERROR_MESSAGE_ENV_KEY =
   'Your ANTHROPIC_API_KEY belongs to a disabled organization · Update or unset the environment variable'
-export const TOKEN_REVOKED_ERROR_MESSAGE =
-  'OAuth token revoked · Please run /login'
-export const CCR_AUTH_ERROR_MESSAGE =
-  'Authentication error · This may be a temporary network issue, please try again'
+export const TOKEN_REVOKED_ERROR_MESSAGE = 'OAuth token revoked · Please run /login'
+export const CCR_AUTH_ERROR_MESSAGE = 'Authentication error · This may be a temporary network issue, please try again'
 export const REPEATED_529_ERROR_MESSAGE = 'Repeated 529 Overloaded errors'
-export const CUSTOM_OFF_SWITCH_MESSAGE =
-  'Opus is experiencing high load, please use /model to switch to Sonnet'
+export const CUSTOM_OFF_SWITCH_MESSAGE = 'Opus is experiencing high load, please use /model to switch to Sonnet'
 export const API_TIMEOUT_ERROR_MESSAGE = 'Request timed out'
 export function getPdfTooLargeErrorMessage(): string {
   const limits = `max ${API_PDF_MAX_PAGES} pages, ${formatFileSize(PDF_TARGET_RAW_SIZE)}`
@@ -233,11 +186,7 @@ function logToolUseToolResultMismatch(
       const content = msg.message.content
       if (Array.isArray(content)) {
         for (const block of content) {
-          if (
-            block.type === 'tool_use' &&
-            'id' in block &&
-            block.id === toolUseId
-          ) {
+          if (block.type === 'tool_use' && 'id' in block && block.id === toolUseId) {
             normalizedIndex = i
             break
           }
@@ -255,11 +204,7 @@ function logToolUseToolResultMismatch(
         const content = msg.message.content
         if (Array.isArray(content)) {
           for (const block of content) {
-            if (
-              block.type === 'tool_use' &&
-              'id' in block &&
-              block.id === toolUseId
-            ) {
+            if (block.type === 'tool_use' && 'id' in block && block.id === toolUseId) {
               originalIndex = i
               break
             }
@@ -313,13 +258,8 @@ function logToolUseToolResultMismatch(
                 const role = msg.message.role
                 if (block.type === 'tool_use' && 'id' in block) {
                   preNormalizedSeq.push(`${role}:tool_use:${block.id}`)
-                } else if (
-                  block.type === 'tool_result' &&
-                  'tool_use_id' in block
-                ) {
-                  preNormalizedSeq.push(
-                    `${role}:tool_result:${block.tool_use_id}`,
-                  )
+                } else if (block.type === 'tool_result' && 'tool_use_id' in block) {
+                  preNormalizedSeq.push(`${role}:tool_result:${block.tool_use_id}`)
                 } else if (block.type === 'text') {
                   preNormalizedSeq.push(`${role}:text`)
                 } else if (block.type === 'thinking') {
@@ -347,12 +287,7 @@ function logToolUseToolResultMismatch(
           }
           break
         case 'progress':
-          if (
-            'progress' in msg &&
-            msg.progress &&
-            typeof msg.progress === 'object' &&
-            'type' in msg.progress
-          ) {
+          if ('progress' in msg && msg.progress && typeof msg.progress === 'object' && 'type' in msg.progress) {
             preNormalizedSeq.push(`progress:${msg.progress.type ?? 'unknown'}`)
           } else {
             preNormalizedSeq.push('progress:unknown')
@@ -363,14 +298,9 @@ function logToolUseToolResultMismatch(
 
     // Log to Statsig
     logEvent('tengu_tool_use_tool_result_mismatch_error', {
-      toolUseId:
-        toolUseId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      normalizedSequence: normalizedSeq.join(
-        ', ',
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      preNormalizedSequence: preNormalizedSeq.join(
-        ', ',
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      toolUseId: toolUseId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      normalizedSequence: normalizedSeq.join(', ') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      preNormalizedSequence: preNormalizedSeq.join(', ') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       normalizedMessageCount: messagesForAPI.length,
       originalMessageCount: messages.length,
       normalizedToolUseIndex: normalizedIndex,
@@ -433,8 +363,7 @@ export function getAssistantMessageFromError(
   // Check for SDK timeout errors
   if (
     error instanceof APIConnectionTimeoutError ||
-    (error instanceof APIConnectionError &&
-      error.message.toLowerCase().includes('timeout'))
+    (error instanceof APIConnectionError && error.message.toLowerCase().includes('timeout'))
   ) {
     return createAssistantAPIErrorMessage({
       content: API_TIMEOUT_ERROR_MESSAGE,
@@ -452,29 +381,26 @@ export function getAssistantMessageFromError(
   }
 
   // Check for emergency capacity off switch for Opus PAYG users
-  if (
-    error instanceof Error &&
-    error.message.includes(CUSTOM_OFF_SWITCH_MESSAGE)
-  ) {
+  if (error instanceof Error && error.message.includes(CUSTOM_OFF_SWITCH_MESSAGE)) {
     return createAssistantAPIErrorMessage({
       content: CUSTOM_OFF_SWITCH_MESSAGE,
       error: 'rate_limit',
     })
   }
 
-  if (
-    error instanceof APIError &&
-    error.status === 429 &&
-    shouldProcessRateLimits(isClaudeAISubscriber())
-  ) {
+  if (error instanceof APIError && error.status === 429 && shouldProcessRateLimits(isClaudeAISubscriber())) {
     // Check if this is the new API with multiple rate limit headers
-    const rateLimitType = error.headers?.get?.(
-      'anthropic-ratelimit-unified-representative-claim',
-    ) as 'five_hour' | 'seven_day' | 'seven_day_opus' | null
+    const rateLimitType = error.headers?.get?.('anthropic-ratelimit-unified-representative-claim') as
+      | 'five_hour'
+      | 'seven_day'
+      | 'seven_day_opus'
+      | null
 
-    const overageStatus = error.headers?.get?.(
-      'anthropic-ratelimit-unified-overage-status',
-    ) as 'allowed' | 'allowed_warning' | 'rejected' | null
+    const overageStatus = error.headers?.get?.('anthropic-ratelimit-unified-overage-status') as
+      | 'allowed'
+      | 'allowed_warning'
+      | 'rejected'
+      | null
 
     // If we have the new headers, use the new message generation
     if (rateLimitType || overageStatus) {
@@ -486,9 +412,7 @@ export function getAssistantMessageFromError(
       }
 
       // Extract rate limit information from headers
-      const resetHeader = error.headers?.get?.(
-        'anthropic-ratelimit-unified-reset',
-      )
+      const resetHeader = error.headers?.get?.('anthropic-ratelimit-unified-reset')
       if (resetHeader) {
         limits.resetsAt = Number(resetHeader)
       }
@@ -501,9 +425,7 @@ export function getAssistantMessageFromError(
         limits.overageStatus = overageStatus
       }
 
-      const overageResetHeader = error.headers?.get?.(
-        'anthropic-ratelimit-unified-overage-reset',
-      )
+      const overageResetHeader = error.headers?.get?.('anthropic-ratelimit-unified-overage-reset')
       if (overageResetHeader) {
         limits.overageResetsAt = Number(overageResetHeader)
       }
@@ -559,10 +481,7 @@ export function getAssistantMessageFromError(
 
   // Handle prompt too long errors (Vertex returns 413, direct API returns 400)
   // Use case-insensitive check since Vertex returns "Prompt is too long" (capitalized)
-  if (
-    error instanceof Error &&
-    error.message.toLowerCase().includes('prompt is too long')
-  ) {
+  if (error instanceof Error && error.message.toLowerCase().includes('prompt is too long')) {
     // Content stays generic (UI matches on exact string). The raw error with
     // token counts goes into errorDetails — reactive compact's retry loop
     // parses the gap from there via getPromptTooLongTokenGap.
@@ -574,10 +493,7 @@ export function getAssistantMessageFromError(
   }
 
   // Check for PDF page limit errors
-  if (
-    error instanceof Error &&
-    /maximum of \d+ PDF pages/.test(error.message)
-  ) {
+  if (error instanceof Error && /maximum of \d+ PDF pages/.test(error.message)) {
     return createAssistantAPIErrorMessage({
       content: getPdfTooLargeErrorMessage(),
       error: 'invalid_request',
@@ -586,10 +502,7 @@ export function getAssistantMessageFromError(
   }
 
   // Check for password-protected PDF errors
-  if (
-    error instanceof Error &&
-    error.message.includes('The PDF specified is password protected')
-  ) {
+  if (error instanceof Error && error.message.includes('The PDF specified is password protected')) {
     return createAssistantAPIErrorMessage({
       content: getPdfPasswordProtectedErrorMessage(),
       error: 'invalid_request',
@@ -599,10 +512,7 @@ export function getAssistantMessageFromError(
   // Check for invalid PDF errors (e.g., HTML file renamed to .pdf)
   // Without this handler, invalid PDF document blocks persist in conversation
   // context and cause every subsequent API call to fail with 400.
-  if (
-    error instanceof Error &&
-    error.message.includes('The PDF specified was not valid')
-  ) {
+  if (error instanceof Error && error.message.includes('The PDF specified was not valid')) {
     return createAssistantAPIErrorMessage({
       content: getPdfInvalidErrorMessage(),
       error: 'invalid_request',
@@ -667,37 +577,27 @@ export function getAssistantMessageFromError(
   if (
     error instanceof APIError &&
     error.status === 400 &&
-    error.message.includes(
-      '`tool_use` ids were found without `tool_result` blocks immediately after',
-    )
+    error.message.includes('`tool_use` ids were found without `tool_result` blocks immediately after')
   ) {
     // Log to Statsig if we have the message context
     if (options?.messages && options?.messagesForAPI) {
       const toolUseIdMatch = error.message.match(/toolu_[a-zA-Z0-9]+/)
       const toolUseId = toolUseIdMatch ? toolUseIdMatch[0] : null
       if (toolUseId) {
-        logToolUseToolResultMismatch(
-          toolUseId,
-          options.messages,
-          options.messagesForAPI,
-        )
+        logToolUseToolResultMismatch(toolUseId, options.messages, options.messagesForAPI)
       }
     }
 
     if (process.env.USER_TYPE === 'ant') {
       const baseMessage = `API Error: 400 ${error.message}\n\nRun /share and post the JSON file to ${MACRO.FEEDBACK_CHANNEL}.`
-      const rewindInstruction = getIsNonInteractiveSession()
-        ? ''
-        : ' Then, use /rewind to recover the conversation.'
+      const rewindInstruction = getIsNonInteractiveSession() ? '' : ' Then, use /rewind to recover the conversation.'
       return createAssistantAPIErrorMessage({
         content: baseMessage + rewindInstruction,
         error: 'invalid_request',
       })
     } else {
       const baseMessage = 'API Error: 400 due to tool use concurrency issues.'
-      const rewindInstruction = getIsNonInteractiveSession()
-        ? ''
-        : ' Run /rewind to recover the conversation.'
+      const rewindInstruction = getIsNonInteractiveSession() ? '' : ' Run /rewind to recover the conversation.'
       return createAssistantAPIErrorMessage({
         content: baseMessage + rewindInstruction,
         error: 'invalid_request',
@@ -716,15 +616,9 @@ export function getAssistantMessageFromError(
   // Duplicate tool_use IDs (CC-1212). ensureToolResultPairing strips these
   // before send, so hitting this means a new corruption path slipped through.
   // Log for root-causing, and give users a recovery path instead of deadlock.
-  if (
-    error instanceof APIError &&
-    error.status === 400 &&
-    error.message.includes('`tool_use` ids must be unique')
-  ) {
+  if (error instanceof APIError && error.status === 400 && error.message.includes('`tool_use` ids must be unique')) {
     logEvent('tengu_duplicate_tool_use_id', {})
-    const rewindInstruction = getIsNonInteractiveSession()
-      ? ''
-      : ' Run /rewind to recover the conversation.'
+    const rewindInstruction = getIsNonInteractiveSession() ? '' : ' Run /rewind to recover the conversation.'
     return createAssistantAPIErrorMessage({
       content: `API Error: 400 duplicate tool_use ID in conversation history.${rewindInstruction}`,
       error: 'invalid_request',
@@ -769,10 +663,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  if (
-    error instanceof Error &&
-    error.message.includes('Your credit balance is too low')
-  ) {
+  if (error instanceof Error && error.message.includes('Your credit balance is too low')) {
     return createAssistantAPIErrorMessage({
       content: CREDIT_BALANCE_TOO_LOW_ERROR_MESSAGE,
       error: 'billing_error',
@@ -792,28 +683,19 @@ export function getAssistantMessageFromError(
     // under the same source value, and in CCR mode OAuth stays active despite
     // the env var. The three guards ensure we only blame the env var when it's
     // actually set and actually on the wire.
-    if (
-      source === 'ANTHROPIC_API_KEY' &&
-      process.env.ANTHROPIC_API_KEY &&
-      !isClaudeAISubscriber()
-    ) {
+    if (source === 'ANTHROPIC_API_KEY' && process.env.ANTHROPIC_API_KEY && !isClaudeAISubscriber()) {
       const hasStoredOAuth = getClaudeAIOAuthTokens()?.accessToken != null
       // Not 'authentication_failed' — that triggers VS Code's showLogin(), but
       // login can't fix this (approved env var keeps overriding OAuth). The fix
       // is configuration-based (unset the var), so invalid_request is correct.
       return createAssistantAPIErrorMessage({
         error: 'invalid_request',
-        content: hasStoredOAuth
-          ? ORG_DISABLED_ERROR_MESSAGE_ENV_KEY_WITH_OAUTH
-          : ORG_DISABLED_ERROR_MESSAGE_ENV_KEY,
+        content: hasStoredOAuth ? ORG_DISABLED_ERROR_MESSAGE_ENV_KEY_WITH_OAUTH : ORG_DISABLED_ERROR_MESSAGE_ENV_KEY,
       })
     }
   }
 
-  if (
-    error instanceof Error &&
-    error.message.toLowerCase().includes('x-api-key')
-  ) {
+  if (error instanceof Error && error.message.toLowerCase().includes('x-api-key')) {
     // In CCR mode, auth is via JWTs - this is likely a transient network issue
     if (isCCRMode()) {
       return createAssistantAPIErrorMessage({
@@ -824,23 +706,16 @@ export function getAssistantMessageFromError(
 
     // Check if the API key is from an external source
     const { source } = getAnthropicApiKeyWithSource()
-    const isExternalSource =
-      source === 'ANTHROPIC_API_KEY' || source === 'apiKeyHelper'
+    const isExternalSource = source === 'ANTHROPIC_API_KEY' || source === 'apiKeyHelper'
 
     return createAssistantAPIErrorMessage({
       error: 'authentication_failed',
-      content: isExternalSource
-        ? INVALID_API_KEY_ERROR_MESSAGE_EXTERNAL
-        : INVALID_API_KEY_ERROR_MESSAGE,
+      content: isExternalSource ? INVALID_API_KEY_ERROR_MESSAGE_EXTERNAL : INVALID_API_KEY_ERROR_MESSAGE,
     })
   }
 
   // Check for OAuth token revocation error
-  if (
-    error instanceof APIError &&
-    error.status === 403 &&
-    error.message.includes('OAuth token has been revoked')
-  ) {
+  if (error instanceof APIError && error.status === 403 && error.message.includes('OAuth token has been revoked')) {
     return createAssistantAPIErrorMessage({
       error: 'authentication_failed',
       content: getTokenRevokedErrorMessage(),
@@ -851,9 +726,7 @@ export function getAssistantMessageFromError(
   if (
     error instanceof APIError &&
     (error.status === 401 || error.status === 403) &&
-    error.message.includes(
-      'OAuth authentication is currently not allowed for this organization',
-    )
+    error.message.includes('OAuth authentication is currently not allowed for this organization')
   ) {
     return createAssistantAPIErrorMessage({
       error: 'authentication_failed',
@@ -862,10 +735,7 @@ export function getAssistantMessageFromError(
   }
 
   // Generic handler for other 401/403 authentication errors
-  if (
-    error instanceof APIError &&
-    (error.status === 401 || error.status === 403)
-  ) {
+  if (error instanceof APIError && (error.status === 401 || error.status === 403)) {
     // In CCR mode, auth is via JWTs - this is likely a transient network issue
     if (isCCRMode()) {
       return createAssistantAPIErrorMessage({
@@ -971,25 +841,18 @@ export function classifyAPIError(error: unknown): string {
   // Timeout errors
   if (
     error instanceof APIConnectionTimeoutError ||
-    (error instanceof APIConnectionError &&
-      error.message.toLowerCase().includes('timeout'))
+    (error instanceof APIConnectionError && error.message.toLowerCase().includes('timeout'))
   ) {
     return 'api_timeout'
   }
 
   // Check for repeated 529 errors
-  if (
-    error instanceof Error &&
-    error.message.includes(REPEATED_529_ERROR_MESSAGE)
-  ) {
+  if (error instanceof Error && error.message.includes(REPEATED_529_ERROR_MESSAGE)) {
     return 'repeated_529'
   }
 
   // Check for emergency capacity off switch
-  if (
-    error instanceof Error &&
-    error.message.includes(CUSTOM_OFF_SWITCH_MESSAGE)
-  ) {
+  if (error instanceof Error && error.message.includes(CUSTOM_OFF_SWITCH_MESSAGE)) {
     return 'capacity_off_switch'
   }
 
@@ -999,36 +862,21 @@ export function classifyAPIError(error: unknown): string {
   }
 
   // Server overload (529)
-  if (
-    error instanceof APIError &&
-    (error.status === 529 ||
-      error.message?.includes('"type":"overloaded_error"'))
-  ) {
+  if (error instanceof APIError && (error.status === 529 || error.message?.includes('"type":"overloaded_error"'))) {
     return 'server_overload'
   }
 
   // Prompt/content size errors
-  if (
-    error instanceof Error &&
-    error.message
-      .toLowerCase()
-      .includes(PROMPT_TOO_LONG_ERROR_MESSAGE.toLowerCase())
-  ) {
+  if (error instanceof Error && error.message.toLowerCase().includes(PROMPT_TOO_LONG_ERROR_MESSAGE.toLowerCase())) {
     return 'prompt_too_long'
   }
 
   // PDF errors
-  if (
-    error instanceof Error &&
-    /maximum of \d+ PDF pages/.test(error.message)
-  ) {
+  if (error instanceof Error && /maximum of \d+ PDF pages/.test(error.message)) {
     return 'pdf_too_large'
   }
 
-  if (
-    error instanceof Error &&
-    error.message.includes('The PDF specified is password protected')
-  ) {
+  if (error instanceof Error && error.message.includes('The PDF specified is password protected')) {
     return 'pdf_password_protected'
   }
 
@@ -1056,9 +904,7 @@ export function classifyAPIError(error: unknown): string {
   if (
     error instanceof APIError &&
     error.status === 400 &&
-    error.message.includes(
-      '`tool_use` ids were found without `tool_result` blocks immediately after',
-    )
+    error.message.includes('`tool_use` ids were found without `tool_result` blocks immediately after')
   ) {
     return 'tool_use_mismatch'
   }
@@ -1071,64 +917,42 @@ export function classifyAPIError(error: unknown): string {
     return 'unexpected_tool_result'
   }
 
-  if (
-    error instanceof APIError &&
-    error.status === 400 &&
-    error.message.includes('`tool_use` ids must be unique')
-  ) {
+  if (error instanceof APIError && error.status === 400 && error.message.includes('`tool_use` ids must be unique')) {
     return 'duplicate_tool_use_id'
   }
 
   // Invalid model errors (400)
-  if (
-    error instanceof APIError &&
-    error.status === 400 &&
-    error.message.toLowerCase().includes('invalid model name')
-  ) {
+  if (error instanceof APIError && error.status === 400 && error.message.toLowerCase().includes('invalid model name')) {
     return 'invalid_model'
   }
 
   // Credit/billing errors
   if (
     error instanceof Error &&
-    error.message
-      .toLowerCase()
-      .includes(CREDIT_BALANCE_TOO_LOW_ERROR_MESSAGE.toLowerCase())
+    error.message.toLowerCase().includes(CREDIT_BALANCE_TOO_LOW_ERROR_MESSAGE.toLowerCase())
   ) {
     return 'credit_balance_low'
   }
 
   // Authentication errors
-  if (
-    error instanceof Error &&
-    error.message.toLowerCase().includes('x-api-key')
-  ) {
+  if (error instanceof Error && error.message.toLowerCase().includes('x-api-key')) {
     return 'invalid_api_key'
   }
 
-  if (
-    error instanceof APIError &&
-    error.status === 403 &&
-    error.message.includes('OAuth token has been revoked')
-  ) {
+  if (error instanceof APIError && error.status === 403 && error.message.includes('OAuth token has been revoked')) {
     return 'token_revoked'
   }
 
   if (
     error instanceof APIError &&
     (error.status === 401 || error.status === 403) &&
-    error.message.includes(
-      'OAuth authentication is currently not allowed for this organization',
-    )
+    error.message.includes('OAuth authentication is currently not allowed for this organization')
   ) {
     return 'oauth_org_not_allowed'
   }
 
   // Generic auth errors
-  if (
-    error instanceof APIError &&
-    (error.status === 401 || error.status === 403)
-  ) {
+  if (error instanceof APIError && (error.status === 401 || error.status === 403)) {
     return 'auth_error'
   }
 
@@ -1160,13 +984,8 @@ export function classifyAPIError(error: unknown): string {
   return 'unknown'
 }
 
-export function categorizeRetryableAPIError(
-  error: APIError,
-): SDKAssistantMessageError {
-  if (
-    error.status === 529 ||
-    error.message?.includes('"type":"overloaded_error"')
-  ) {
+export function categorizeRetryableAPIError(error: APIError): SDKAssistantMessageError {
+  if (error.status === 529 || error.message?.includes('"type":"overloaded_error"')) {
     return 'rate_limit'
   }
   if (error.status === 429) {

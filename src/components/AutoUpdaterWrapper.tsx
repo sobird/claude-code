@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
+
 import type { AutoUpdaterResult } from '../utils/autoUpdater.js'
 import { isAutoUpdaterDisabled } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
@@ -25,31 +27,20 @@ export function AutoUpdaterWrapper({
   showSuccessMessage,
   verbose,
 }: Props): React.ReactNode {
-  const [useNativeInstaller, setUseNativeInstaller] = React.useState<
-    boolean | null
-  >(null)
-  const [isPackageManager, setIsPackageManager] = React.useState<
-    boolean | null
-  >(null)
+  const [useNativeInstaller, setUseNativeInstaller] = React.useState<boolean | null>(null)
+  const [isPackageManager, setIsPackageManager] = React.useState<boolean | null>(null)
 
   React.useEffect(() => {
     async function checkInstallation() {
       // Skip installation type detection if auto-updates are disabled (ant-only)
       // This avoids potentially slow package manager detection (spawnSync calls)
-      if (
-        feature('SKIP_DETECTION_WHEN_AUTOUPDATES_DISABLED') &&
-        isAutoUpdaterDisabled()
-      ) {
-        logForDebugging(
-          'AutoUpdaterWrapper: Skipping detection, auto-updates disabled',
-        )
+      if (feature('SKIP_DETECTION_WHEN_AUTOUPDATES_DISABLED') && isAutoUpdaterDisabled()) {
+        logForDebugging('AutoUpdaterWrapper: Skipping detection, auto-updates disabled')
         return
       }
 
       const installationType = await getCurrentInstallationType()
-      logForDebugging(
-        `AutoUpdaterWrapper: Installation type: ${installationType}`,
-      )
+      logForDebugging(`AutoUpdaterWrapper: Installation type: ${installationType}`)
       setUseNativeInstaller(installationType === 'native')
       setIsPackageManager(installationType === 'package-manager')
     }

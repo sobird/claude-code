@@ -1,15 +1,13 @@
 import type { UUID } from 'crypto'
+
 import React, { useCallback } from 'react'
+
 import { Box, Text } from '../ink.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
 import { getAllBaseTools } from '../tools.js'
 import type { LogOption } from '../types/logs.js'
 import { formatRelativeTimeAgo } from '../utils/format.js'
-import {
-  getSessionIdFromLog,
-  isLiteLog,
-  loadFullLog,
-} from '../utils/sessionStorage.js'
+import { getSessionIdFromLog, isLiteLog, loadFullLog } from '../utils/sessionStorage.js'
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint.js'
 import { Byline } from './design-system/Byline.js'
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js'
@@ -22,11 +20,7 @@ type Props = {
   onSelect: (log: LogOption) => void
 }
 
-export function SessionPreview({
-  log,
-  onExit,
-  onSelect,
-}: Props): React.ReactNode {
+export function SessionPreview({ log, onExit, onSelect }: Props): React.ReactNode {
   // fullLog holds the complete log with messages loaded.
   // The input `log` may be a "lite log" (empty messages array),
   // so we load the full messages on mount and store them here.
@@ -63,12 +57,7 @@ export function SessionPreview({
         <LoadingState message="Loading session…" />
         <Text dimColor>
           <Byline>
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline>
         </Text>
       </Box>
@@ -103,19 +92,13 @@ export function SessionPreview({
         paddingLeft={2}
       >
         <Text>
-          {formatRelativeTimeAgo(displayLog.modified)} ·{' '}
-          {displayLog.messageCount} messages
+          {formatRelativeTimeAgo(displayLog.modified)} · {displayLog.messageCount} messages
           {displayLog.gitBranch ? ` · ${displayLog.gitBranch}` : ''}
         </Text>
         <Text dimColor>
           <Byline>
             <KeyboardShortcutHint shortcut="Enter" action="resume" />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline>
         </Text>
       </Box>

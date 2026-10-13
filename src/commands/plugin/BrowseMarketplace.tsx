@@ -1,27 +1,19 @@
 import figures from 'figures'
 import * as React from 'react'
 import { useEffect, useState } from 'react'
+
 import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint.js'
 import { Byline } from '../../components/design-system/Byline.js'
 import { Box, Text } from '../../ink.js'
-import {
-  useKeybinding,
-  useKeybindings,
-} from '../../keybindings/useKeybinding.js'
+import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { LoadedPlugin } from '../../types/plugin.js'
 import { count } from '../../utils/array.js'
 import { openBrowser } from '../../utils/browser.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
 import { clearAllCaches } from '../../utils/plugins/cacheUtils.js'
-import {
-  formatInstallCount,
-  getInstallCounts,
-} from '../../utils/plugins/installCounts.js'
-import {
-  isPluginGloballyInstalled,
-  isPluginInstalled,
-} from '../../utils/plugins/installedPluginsManager.js'
+import { formatInstallCount, getInstallCounts } from '../../utils/plugins/installCounts.js'
+import { isPluginGloballyInstalled, isPluginInstalled } from '../../utils/plugins/installedPluginsManager.js'
 import {
   createPluginId,
   formatFailureDetails,
@@ -29,26 +21,20 @@ import {
   getMarketplaceSourceDisplay,
   loadMarketplacesWithGracefulDegradation,
 } from '../../utils/plugins/marketplaceHelpers.js'
-import {
-  getMarketplace,
-  loadKnownMarketplacesConfig,
-} from '../../utils/plugins/marketplaceManager.js'
+import { getMarketplace, loadKnownMarketplacesConfig } from '../../utils/plugins/marketplaceManager.js'
 import { OFFICIAL_MARKETPLACE_NAME } from '../../utils/plugins/officialMarketplace.js'
 import { installPluginFromMarketplace } from '../../utils/plugins/pluginInstallationHelpers.js'
 import { isPluginBlockedByPolicy } from '../../utils/plugins/pluginPolicy.js'
 import { plural } from '../../utils/stringUtils.js'
 import { truncateToWidth } from '../../utils/truncate.js'
 import {
-  findPluginOptionsTarget,
-  PluginOptionsFlow,
-} from './PluginOptionsFlow.js'
-import { PluginTrustWarning } from './PluginTrustWarning.js'
-import {
   buildPluginDetailsMenuOptions,
   extractGitHubRepo,
   type InstallablePlugin,
   PluginSelectionKeyHint,
 } from './pluginDetailsHelpers.js'
+import { findPluginOptionsTarget, PluginOptionsFlow } from './PluginOptionsFlow.js'
+import { PluginTrustWarning } from './PluginTrustWarning.js'
 import type { ViewState as ParentViewState } from './types.js'
 import { usePagination } from './usePagination.js'
 
@@ -88,31 +74,19 @@ export function BrowseMarketplace({
 }: Props): React.ReactNode {
   // View state
   const [viewState, setViewState] = useState<ViewState>('marketplace-list')
-  const [selectedMarketplace, setSelectedMarketplace] = useState<string | null>(
-    null,
-  )
-  const [selectedPlugin, setSelectedPlugin] =
-    useState<InstallablePlugin | null>(null)
+  const [selectedMarketplace, setSelectedMarketplace] = useState<string | null>(null)
+  const [selectedPlugin, setSelectedPlugin] = useState<InstallablePlugin | null>(null)
 
   // Data state
   const [marketplaces, setMarketplaces] = useState<MarketplaceInfo[]>([])
-  const [availablePlugins, setAvailablePlugins] = useState<InstallablePlugin[]>(
-    [],
-  )
+  const [availablePlugins, setAvailablePlugins] = useState<InstallablePlugin[]>([])
   const [loading, setLoading] = useState(true)
-  const [installCounts, setInstallCounts] = useState<Map<
-    string,
-    number
-  > | null>(null)
+  const [installCounts, setInstallCounts] = useState<Map<string, number> | null>(null)
 
   // Selection state
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [selectedForInstall, setSelectedForInstall] = useState<Set<string>>(
-    new Set(),
-  )
-  const [installingPlugins, setInstallingPlugins] = useState<Set<string>>(
-    new Set(),
-  )
+  const [selectedForInstall, setSelectedForInstall] = useState<Set<string>>(new Set())
+  const [installingPlugins, setInstallingPlugins] = useState<Set<string>>(new Set())
 
   // Pagination for plugin list (continuous scrolling)
   const pagination = usePagination<InstallablePlugin>({
@@ -165,20 +139,14 @@ export function BrowseMarketplace({
         const config = await loadKnownMarketplacesConfig()
 
         // Load marketplaces with graceful degradation
-        const { marketplaces, failures } =
-          await loadMarketplacesWithGracefulDegradation(config)
+        const { marketplaces, failures } = await loadMarketplacesWithGracefulDegradation(config)
 
         const marketplaceInfos: MarketplaceInfo[] = []
-        for (const {
-          name,
-          config: marketplaceConfig,
-          data: marketplace,
-        } of marketplaces) {
+        for (const { name, config: marketplaceConfig, data: marketplace } of marketplaces) {
           if (marketplace) {
             // Count how many plugins from this marketplace are installed
-            const installedFromThisMarketplace = count(
-              marketplace.plugins,
-              plugin => isPluginInstalled(createPluginId(plugin.name, name)),
+            const installedFromThisMarketplace = count(marketplace.plugins, (plugin) =>
+              isPluginInstalled(createPluginId(plugin.name, name)),
             )
 
             marketplaceInfos.push({
@@ -200,27 +168,18 @@ export function BrowseMarketplace({
         setMarketplaces(marketplaceInfos)
 
         // Handle marketplace loading errors/warnings
-        const successCount = count(marketplaces, m => m.data !== null)
-        const errorResult = formatMarketplaceLoadingErrors(
-          failures,
-          successCount,
-        )
+        const successCount = count(marketplaces, (m) => m.data !== null)
+        const errorResult = formatMarketplaceLoadingErrors(failures, successCount)
         if (errorResult) {
           if (errorResult.type === 'warning') {
-            setWarning(
-              errorResult.message + '. Showing available marketplaces.',
-            )
+            setWarning(errorResult.message + '. Showing available marketplaces.')
           } else {
             throw new Error(errorResult.message)
           }
         }
 
         // Skip marketplace selection if there's only one marketplace
-        if (
-          marketplaceInfos.length === 1 &&
-          !targetMarketplace &&
-          !targetPlugin
-        ) {
+        if (marketplaceInfos.length === 1 && !targetMarketplace && !targetPlugin) {
           const singleMarketplace = marketplaceInfos[0]
           if (singleMarketplace) {
             setSelectedMarketplace(singleMarketplace.name)
@@ -237,9 +196,7 @@ export function BrowseMarketplace({
           for (const [name] of Object.entries(config)) {
             const marketplace = await getMarketplace(name)
             if (marketplace) {
-              const plugin = marketplace.plugins.find(
-                p => p.name === targetPlugin,
-              )
+              const plugin = marketplace.plugins.find((p) => p.name === targetPlugin)
               if (plugin) {
                 const pluginId = createPluginId(plugin.name, name)
                 foundPlugin = {
@@ -268,9 +225,7 @@ export function BrowseMarketplace({
             const globallyInstalled = isPluginGloballyInstalled(pluginId)
 
             if (globallyInstalled) {
-              setError(
-                `Plugin '${pluginId}' is already installed globally. Use '/plugin' to manage existing plugins.`,
-              )
+              setError(`Plugin '${pluginId}' is already installed globally. Use '/plugin' to manage existing plugins.`)
             } else {
               // Navigate to the plugin details view
               setSelectedMarketplace(foundMarketplace)
@@ -282,9 +237,7 @@ export function BrowseMarketplace({
           }
         } else if (targetMarketplace) {
           // Navigate directly to the specified marketplace
-          const marketplaceExists = marketplaceInfos.some(
-            m => m.name === targetMarketplace,
-          )
+          const marketplaceExists = marketplaceInfos.some((m) => m.name === targetMarketplace)
           if (marketplaceExists) {
             setSelectedMarketplace(targetMarketplace)
             setViewState('plugin-list')
@@ -293,9 +246,7 @@ export function BrowseMarketplace({
           }
         }
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load marketplaces',
-        )
+        setError(err instanceof Error ? err.message : 'Failed to load marketplaces')
       } finally {
         setLoading(false)
       }
@@ -350,19 +301,13 @@ export function BrowseMarketplace({
             })
           } else {
             // No counts available - sort alphabetically
-            installablePlugins.sort((a, b) =>
-              a.entry.name.localeCompare(b.entry.name),
-            )
+            installablePlugins.sort((a, b) => a.entry.name.localeCompare(b.entry.name))
           }
         } catch (error) {
           if (cancelled) return
           // Log the error, then gracefully degrade to alphabetical sort
-          logForDebugging(
-            `Failed to fetch install counts: ${errorMessage(error)}`,
-          )
-          installablePlugins.sort((a, b) =>
-            a.entry.name.localeCompare(b.entry.name),
-          )
+          logForDebugging(`Failed to fetch install counts: ${errorMessage(error)}`)
+          installablePlugins.sort((a, b) => a.entry.name.localeCompare(b.entry.name))
         }
 
         setAvailablePlugins(installablePlugins)
@@ -386,11 +331,9 @@ export function BrowseMarketplace({
   const installSelectedPlugins = async () => {
     if (selectedForInstall.size === 0) return
 
-    const pluginsToInstall = availablePlugins.filter(p =>
-      selectedForInstall.has(p.pluginId),
-    )
+    const pluginsToInstall = availablePlugins.filter((p) => selectedForInstall.has(p.pluginId))
 
-    setInstallingPlugins(new Set(pluginsToInstall.map(p => p.pluginId)))
+    setInstallingPlugins(new Set(pluginsToInstall.map((p) => p.pluginId)))
 
     let successCount = 0
     let failureCount = 0
@@ -423,15 +366,12 @@ export function BrowseMarketplace({
     if (failureCount === 0) {
       // All succeeded
       const message =
-        `✓ Installed ${successCount} ${plural(successCount, 'plugin')}. ` +
-        `Run /reload-plugins to activate.`
+        `✓ Installed ${successCount} ${plural(successCount, 'plugin')}. ` + `Run /reload-plugins to activate.`
 
       setResult(message)
     } else if (successCount === 0) {
       // All failed - show error with reasons
-      setError(
-        `Failed to install: ${formatFailureDetails(newFailedPlugins, true)}`,
-      )
+      setError(`Failed to install: ${formatFailureDetails(newFailedPlugins, true)}`)
     } else {
       // Mixed results - show partial success
       const message =
@@ -453,10 +393,7 @@ export function BrowseMarketplace({
   }
 
   // Install single plugin from details view
-  const handleSinglePluginInstall = async (
-    plugin: InstallablePlugin,
-    scope: 'user' | 'project' | 'local' = 'user',
-  ) => {
+  const handleSinglePluginInstall = async (plugin: InstallablePlugin, scope: 'user' | 'project' | 'local' = 'user') => {
     setIsInstalling(true)
     setInstallError(null)
 
@@ -534,10 +471,7 @@ export function BrowseMarketplace({
         }
       },
       'select:accept': () => {
-        if (
-          selectedIndex === availablePlugins.length &&
-          selectedForInstall.size > 0
-        ) {
+        if (selectedIndex === availablePlugins.length && selectedForInstall.size > 0) {
           void installSelectedPlugins()
         } else if (selectedIndex < availablePlugins.length) {
           const plugin = availablePlugins[selectedIndex]
@@ -649,14 +583,10 @@ export function BrowseMarketplace({
         onDone={(outcome, detail) => {
           switch (outcome) {
             case 'configured':
-              finish(
-                `✓ Installed and configured ${plugin.name}. Run /reload-plugins to apply.`,
-              )
+              finish(`✓ Installed and configured ${plugin.name}. Run /reload-plugins to apply.`)
               break
             case 'skipped':
-              finish(
-                `✓ Installed ${plugin.name}. Run /reload-plugins to apply.`,
-              )
+              finish(`✓ Installed ${plugin.name}. Run /reload-plugins to apply.`)
               break
             case 'error':
               finish(`Installed but failed to save config: ${detail}`)
@@ -686,9 +616,7 @@ export function BrowseMarketplace({
             <Text bold>Select marketplace</Text>
           </Box>
           <Text>No marketplaces configured.</Text>
-          <Text dimColor>
-            Add a marketplace first using {"'Add marketplace'"}.
-          </Text>
+          <Text dimColor>Add a marketplace first using {"'Add marketplace'"}.</Text>
           <Box marginTop={1} paddingLeft={1}>
             <Text dimColor>
               <ConfigurableShortcutHint
@@ -718,23 +646,16 @@ export function BrowseMarketplace({
           </Box>
         )}
         {marketplaces.map((marketplace, index) => (
-          <Box
-            key={marketplace.name}
-            flexDirection="column"
-            marginBottom={index < marketplaces.length - 1 ? 1 : 0}
-          >
+          <Box key={marketplace.name} flexDirection="column" marginBottom={index < marketplaces.length - 1 ? 1 : 0}>
             <Box>
               <Text color={selectedIndex === index ? 'suggestion' : undefined}>
-                {selectedIndex === index ? figures.pointer : ' '}{' '}
-                {marketplace.name}
+                {selectedIndex === index ? figures.pointer : ' '} {marketplace.name}
               </Text>
             </Box>
             <Box marginLeft={2}>
               <Text dimColor>
-                {marketplace.totalPlugins}{' '}
-                {plural(marketplace.totalPlugins, 'plugin')} available
-                {marketplace.installedCount > 0 &&
-                  ` · ${marketplace.installedCount} already installed`}
+                {marketplace.totalPlugins} {plural(marketplace.totalPlugins, 'plugin')} available
+                {marketplace.installedCount > 0 && ` · ${marketplace.installedCount} already installed`}
                 {marketplace.source && ` · ${marketplace.source}`}
               </Text>
             </Box>
@@ -744,12 +665,7 @@ export function BrowseMarketplace({
         <Box marginTop={1}>
           <Text dimColor italic>
             <Byline>
-              <ConfigurableShortcutHint
-                action="select:accept"
-                context="Select"
-                fallback="Enter"
-                description="select"
-              />
+              <ConfigurableShortcutHint action="select:accept" context="Select" fallback="Enter" description="select" />
               <ConfigurableShortcutHint
                 action="confirm:no"
                 context="Confirmation"
@@ -779,9 +695,7 @@ export function BrowseMarketplace({
         {/* Plugin metadata */}
         <Box flexDirection="column" marginBottom={1}>
           <Text bold>{selectedPlugin.entry.name}</Text>
-          {selectedPlugin.entry.version && (
-            <Text dimColor>Version: {selectedPlugin.entry.version}</Text>
-          )}
+          {selectedPlugin.entry.version && <Text dimColor>Version: {selectedPlugin.entry.version}</Text>}
           {selectedPlugin.entry.description && (
             <Box marginTop={1}>
               <Text>{selectedPlugin.entry.description}</Text>
@@ -819,9 +733,7 @@ export function BrowseMarketplace({
             </Text>
           )}
           {selectedPlugin.entry.hooks && (
-            <Text dimColor>
-              · Hooks: {Object.keys(selectedPlugin.entry.hooks).join(', ')}
-            </Text>
+            <Text dimColor>· Hooks: {Object.keys(selectedPlugin.entry.hooks).join(', ')}</Text>
           )}
           {selectedPlugin.entry.mcpServers && (
             <Text dimColor>
@@ -844,9 +756,7 @@ export function BrowseMarketplace({
                   selectedPlugin.entry.source.source === 'url' ||
                   selectedPlugin.entry.source.source === 'npm' ||
                   selectedPlugin.entry.source.source === 'pip') ? (
-                  <Text dimColor>
-                    · Component summary not available for remote plugin
-                  </Text>
+                  <Text dimColor>· Component summary not available for remote plugin</Text>
                 ) : (
                   // TODO: Actually scan local plugin directories to show real components
                   // This would require accessing the filesystem to check for:
@@ -854,9 +764,7 @@ export function BrowseMarketplace({
                   // - agents/ directory and list files
                   // - hooks/ directory and list files
                   // - .mcp.json or mcp-servers.json files
-                  <Text dimColor>
-                    · Components will be discovered at installation
-                  </Text>
+                  <Text dimColor>· Components will be discovered at installation</Text>
                 )}
               </>
             )}
@@ -878,9 +786,7 @@ export function BrowseMarketplace({
               {detailsMenuIndex === index && <Text>{'> '}</Text>}
               {detailsMenuIndex !== index && <Text>{'  '}</Text>}
               <Text bold={detailsMenuIndex === index}>
-                {isInstalling && option.action === 'install'
-                  ? 'Installing…'
-                  : option.label}
+                {isInstalling && option.action === 'install' ? 'Installing…' : option.label}
               </Text>
             </Box>
           ))}
@@ -889,18 +795,8 @@ export function BrowseMarketplace({
         <Box marginTop={1} paddingLeft={1}>
           <Text dimColor>
             <Byline>
-              <ConfigurableShortcutHint
-                action="select:accept"
-                context="Select"
-                fallback="Enter"
-                description="select"
-              />
-              <ConfigurableShortcutHint
-                action="confirm:no"
-                context="Confirmation"
-                fallback="Esc"
-                description="back"
-              />
+              <ConfigurableShortcutHint action="select:accept" context="Select" fallback="Enter" description="select" />
+              <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />
             </Byline>
           </Text>
         </Box>
@@ -916,17 +812,10 @@ export function BrowseMarketplace({
           <Text bold>Install plugins</Text>
         </Box>
         <Text dimColor>No new plugins available to install.</Text>
-        <Text dimColor>
-          All plugins from this marketplace are already installed.
-        </Text>
+        <Text dimColor>All plugins from this marketplace are already installed.</Text>
         <Box marginLeft={3}>
           <Text dimColor italic>
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="go back"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="go back" />
           </Text>
         </Box>
       </Box>
@@ -958,15 +847,9 @@ export function BrowseMarketplace({
         const isLast = visibleIndex === visiblePlugins.length - 1
 
         return (
-          <Box
-            key={plugin.pluginId}
-            flexDirection="column"
-            marginBottom={isLast && !error ? 0 : 1}
-          >
+          <Box key={plugin.pluginId} flexDirection="column" marginBottom={isLast && !error ? 0 : 1}>
             <Box>
-              <Text color={isSelected ? 'suggestion' : undefined}>
-                {isSelected ? figures.pointer : ' '}{' '}
-              </Text>
+              <Text color={isSelected ? 'suggestion' : undefined}>{isSelected ? figures.pointer : ' '} </Text>
               <Text color={plugin.isInstalled ? 'success' : undefined}>
                 {plugin.isInstalled
                   ? figures.tick
@@ -976,33 +859,21 @@ export function BrowseMarketplace({
                       ? figures.radioOn
                       : figures.radioOff}{' '}
                 {plugin.entry.name}
-                {plugin.entry.category && (
-                  <Text dimColor> [{plugin.entry.category}]</Text>
-                )}
-                {plugin.entry.tags?.includes('community-managed') && (
-                  <Text dimColor> [Community Managed]</Text>
-                )}
+                {plugin.entry.category && <Text dimColor> [{plugin.entry.category}]</Text>}
+                {plugin.entry.tags?.includes('community-managed') && <Text dimColor> [Community Managed]</Text>}
                 {plugin.isInstalled && <Text dimColor> (installed)</Text>}
-                {installCounts &&
-                  selectedMarketplace === OFFICIAL_MARKETPLACE_NAME && (
-                    <Text dimColor>
-                      {' · '}
-                      {formatInstallCount(
-                        installCounts.get(plugin.pluginId) ?? 0,
-                      )}{' '}
-                      installs
-                    </Text>
-                  )}
+                {installCounts && selectedMarketplace === OFFICIAL_MARKETPLACE_NAME && (
+                  <Text dimColor>
+                    {' · '}
+                    {formatInstallCount(installCounts.get(plugin.pluginId) ?? 0)} installs
+                  </Text>
+                )}
               </Text>
             </Box>
             {plugin.entry.description && (
               <Box marginLeft={4}>
-                <Text dimColor>
-                  {truncateToWidth(plugin.entry.description, 60)}
-                </Text>
-                {plugin.entry.version && (
-                  <Text dimColor> · v{plugin.entry.version}</Text>
-                )}
+                <Text dimColor>{truncateToWidth(plugin.entry.description, 60)}</Text>
+                {plugin.entry.version && <Text dimColor> · v{plugin.entry.version}</Text>}
               </Box>
             )}
           </Box>

@@ -1,12 +1,13 @@
 import * as React from 'react'
 import { useMemo } from 'react'
+
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { Ansi, Text } from '../../ink.js'
 import { createHyperlink } from '../../utils/hyperlink.js'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import { renderTruncatedContent } from '../../utils/terminal.js'
-import { MessageResponse } from '../MessageResponse.js'
 import { InVirtualListContext } from '../messageActions.js'
+import { MessageResponse } from '../MessageResponse.js'
 import { useExpandShellOutput } from './ExpandShellOutputContext.js'
 
 export function tryFormatJson(line: string): string {
@@ -47,7 +48,7 @@ export function tryJsonFormatContent(content: string): string {
 const URL_IN_JSON = /https?:\/\/[^\s"'<>\\]+/g
 
 export function linkifyUrlsInText(content: string): string {
-  return content.replace(URL_IN_JSON, url => createHyperlink(url))
+  return content.replace(URL_IN_JSON, (url) => createHyperlink(url))
 }
 
 export function OutputLine({
@@ -79,9 +80,7 @@ export function OutputLine({
     if (shouldShowFull) {
       return stripUnderlineAnsi(formatted)
     }
-    return stripUnderlineAnsi(
-      renderTruncatedContent(formatted, columns, inVirtualList),
-    )
+    return stripUnderlineAnsi(renderTruncatedContent(formatted, columns, inVirtualList))
   }, [content, shouldShowFull, columns, linkifyUrls, inVirtualList])
 
   const color = isError ? 'error' : isWarning ? 'warning' : undefined

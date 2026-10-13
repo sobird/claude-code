@@ -1,5 +1,6 @@
 import { useContext, useEffect } from 'react'
 import stripAnsi from 'strip-ansi'
+
 import { OSC, osc } from '../termio/osc.js'
 import { TerminalWriteContext } from '../useTerminalNotification.js'
 

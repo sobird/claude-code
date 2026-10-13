@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
+
 import { Box } from '../../ink.js'
 import { getInitialSettings } from '../../utils/settings/settings.js'
 import { Clawd, type ClawdPose } from './Clawd.js'
@@ -66,16 +67,13 @@ function useClawdAnimation(): {
 } {
   // Read once at mount — no useSettings() subscription, since that would
   // re-render on any settings change.
-  const [reducedMotion] = useState(
-    () => getInitialSettings().prefersReducedMotion ?? false,
-  )
+  const [reducedMotion] = useState(() => getInitialSettings().prefersReducedMotion ?? false)
   const [frameIndex, setFrameIndex] = useState(-1)
   const sequenceRef = useRef<readonly Frame[]>(JUMP_WAVE)
 
   const onClick = () => {
     if (reducedMotion || frameIndex !== -1) return
-    sequenceRef.current =
-      CLICK_ANIMATIONS[Math.floor(Math.random() * CLICK_ANIMATIONS.length)]!
+    sequenceRef.current = CLICK_ANIMATIONS[Math.floor(Math.random() * CLICK_ANIMATIONS.length)]!
     setFrameIndex(0)
   }
 
@@ -90,7 +88,6 @@ function useClawdAnimation(): {
   }, [frameIndex])
 
   const seq = sequenceRef.current
-  const current =
-    frameIndex >= 0 && frameIndex < seq.length ? seq[frameIndex]! : IDLE
+  const current = frameIndex >= 0 && frameIndex < seq.length ? seq[frameIndex]! : IDLE
   return { pose: current.pose, bounceOffset: current.offset, onClick }
 }

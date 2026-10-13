@@ -3,22 +3,17 @@ import figures from 'figures'
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppState, useSetAppState } from 'src/state/AppState.js'
-import {
-  applyPermissionUpdate,
-  persistPermissionUpdate,
-} from 'src/utils/permissions/PermissionUpdate.js'
+import { applyPermissionUpdate, persistPermissionUpdate } from 'src/utils/permissions/PermissionUpdate.js'
 import type { PermissionUpdateDestination } from 'src/utils/permissions/PermissionUpdateSchema.js'
+
 import type { CommandResultDisplay } from '../../../commands.js'
 import { Select } from '../../../components/CustomSelect/select.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { useSearchInput } from '../../../hooks/useSearchInput.js'
-import type { KeyboardEvent } from '../../../ink/events/keyboard-event.js'
 import { Box, Text, useTerminalFocus } from '../../../ink.js'
+import type { KeyboardEvent } from '../../../ink/events/keyboard-event.js'
 import { useKeybinding } from '../../../keybindings/useKeybinding.js'
-import {
-  type AutoModeDenial,
-  getAutoModeDenials,
-} from '../../../utils/autoModeDenials.js'
+import { type AutoModeDenial, getAutoModeDenials } from '../../../utils/autoModeDenials.js'
 import type {
   PermissionBehavior,
   PermissionRule,
@@ -35,12 +30,7 @@ import {
 import type { UnreachableRule } from '../../../utils/permissions/shadowedRuleDetection.js'
 import { jsonStringify } from '../../../utils/slowOperations.js'
 import { Pane } from '../../design-system/Pane.js'
-import {
-  Tab,
-  Tabs,
-  useTabHeaderFocus,
-  useTabsWidth,
-} from '../../design-system/Tabs.js'
+import { Tab, Tabs, useTabHeaderFocus, useTabsWidth } from '../../design-system/Tabs.js'
 import { SearchBox } from '../../SearchBox.js'
 import type { Option } from '../../ui/option.js'
 import { AddPermissionRules } from './AddPermissionRules.js'
@@ -57,11 +47,7 @@ type RuleSourceTextProps = {
   rule: PermissionRule
 }
 function RuleSourceText({ rule }: RuleSourceTextProps): React.ReactNode {
-  return (
-    <Text
-      dimColor
-    >{`From ${permissionRuleSourceDisplayString(rule.source)}`}</Text>
-  )
+  return <Text dimColor>{`From ${permissionRuleSourceDisplayString(rule.source)}`}</Text>
 }
 
 // Helper function to get the appropriate label for rule behavior
@@ -137,21 +123,14 @@ function RuleDetails({
 
   return (
     <>
-      <Box
-        flexDirection="column"
-        gap={1}
-        borderStyle="round"
-        paddingLeft={1}
-        paddingRight={1}
-        borderColor="error"
-      >
+      <Box flexDirection="column" gap={1} borderStyle="round" paddingLeft={1} paddingRight={1} borderColor="error">
         <Text bold color="error">
           Delete {getRuleBehaviorLabel(rule.ruleBehavior)} tool?
         </Text>
         {ruleDescription}
         <Text>Are you sure you want to delete this permission rule?</Text>
         <Select
-          onChange={_ => (_ === 'yes' ? onDelete() : onCancel())}
+          onChange={(_) => (_ === 'yes' ? onDelete() : onCancel())}
           onCancel={onCancel}
           options={[
             { label: 'Yes', value: 'yes' },
@@ -245,7 +224,7 @@ function PermissionRulesTab({
       </Text>
       <RulesTabContent
         options={getRulesOptions(tab, rulesProps.searchQuery).options}
-        onSelect={v => handleToolSelect(v, tab)}
+        onSelect={(v) => handleToolSelect(v, tab)}
         {...rulesProps}
       />
     </Box>
@@ -265,15 +244,11 @@ type Props = {
   onRetryDenials?: (commands: string[]) => void
 }
 
-export function PermissionRuleList({
-  onExit,
-  initialTab,
-  onRetryDenials,
-}: Props): React.ReactNode {
+export function PermissionRuleList({ onExit, initialTab, onRetryDenials }: Props): React.ReactNode {
   const hasDenials = getAutoModeDenials().length > 0
   const defaultTab: TabType = initialTab ?? (hasDenials ? 'recent' : 'allow')
   const [changes, setChanges] = useState<string[]>([])
-  const toolPermissionContext = useAppState(s => s.toolPermissionContext)
+  const toolPermissionContext = useAppState((s) => s.toolPermissionContext)
   const setAppState = useSetAppState()
   const isTerminalFocused = useTerminalFocus()
 
@@ -285,28 +260,20 @@ export function PermissionRuleList({
     retry: Set<number>
     denials: readonly AutoModeDenial[]
   }>({ approved: new Set(), retry: new Set(), denials: [] })
-  const handleDenialStateChange = useCallback(
-    (s: typeof denialStateRef.current) => {
-      denialStateRef.current = s
-    },
-    [],
-  )
+  const handleDenialStateChange = useCallback((s: typeof denialStateRef.current) => {
+    denialStateRef.current = s
+  }, [])
 
   const [selectedRule, setSelectedRule] = useState<PermissionRule | undefined>()
   // Track the key of the last focused rule to restore position after deletion
-  const [lastFocusedRuleKey, setLastFocusedRuleKey] = useState<
-    string | undefined
-  >()
+  const [lastFocusedRuleKey, setLastFocusedRuleKey] = useState<string | undefined>()
   const [addingRuleToTab, setAddingRuleToTab] = useState<TabType | null>(null)
   const [validatedRule, setValidatedRule] = useState<{
     ruleBehavior: PermissionBehavior
     ruleValue: PermissionRuleValue
   } | null>(null)
-  const [isAddingWorkspaceDirectory, setIsAddingWorkspaceDirectory] =
-    useState(false)
-  const [removingDirectory, setRemovingDirectory] = useState<string | null>(
-    null,
-  )
+  const [isAddingWorkspaceDirectory, setIsAddingWorkspaceDirectory] = useState(false)
+  const [removingDirectory, setRemovingDirectory] = useState<string | null>(null)
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [headerFocused, setHeaderFocused] = useState(true)
   const handleHeaderFocusChange = useCallback((focused: boolean) => {
@@ -315,7 +282,7 @@ export function PermissionRuleList({
 
   const allowRulesByKey = useMemo(() => {
     const map = new Map<string, PermissionRule>()
-    getAllowRules(toolPermissionContext).forEach(rule => {
+    getAllowRules(toolPermissionContext).forEach((rule) => {
       map.set(jsonStringify(rule), rule)
     })
     return map
@@ -323,7 +290,7 @@ export function PermissionRuleList({
 
   const denyRulesByKey = useMemo(() => {
     const map = new Map<string, PermissionRule>()
-    getDenyRules(toolPermissionContext).forEach(rule => {
+    getDenyRules(toolPermissionContext).forEach((rule) => {
       map.set(jsonStringify(rule), rule)
     })
     return map
@@ -331,7 +298,7 @@ export function PermissionRuleList({
 
   const askRulesByKey = useMemo(() => {
     const map = new Map<string, PermissionRule>()
-    getAskRules(toolPermissionContext).forEach(rule => {
+    getAskRules(toolPermissionContext).forEach((rule) => {
       map.set(jsonStringify(rule), rule)
     })
     return map
@@ -368,12 +335,8 @@ export function PermissionRuleList({
         const ruleA = rulesByKey.get(a)
         const ruleB = rulesByKey.get(b)
         if (ruleA && ruleB) {
-          const ruleAString = permissionRuleValueToString(
-            ruleA.ruleValue,
-          ).toLowerCase()
-          const ruleBString = permissionRuleValueToString(
-            ruleB.ruleValue,
-          ).toLowerCase()
+          const ruleAString = permissionRuleValueToString(ruleA.ruleValue).toLowerCase()
+          const ruleBString = permissionRuleValueToString(ruleB.ruleValue).toLowerCase()
           return ruleAString.localeCompare(ruleBString)
         }
         return 0
@@ -404,11 +367,7 @@ export function PermissionRuleList({
   const exitState = useExitOnCtrlCDWithKeybindings()
 
   const isSearchModeActive =
-    !selectedRule &&
-    !addingRuleToTab &&
-    !validatedRule &&
-    !isAddingWorkspaceDirectory &&
-    !removingDirectory
+    !selectedRule && !addingRuleToTab && !validatedRule && !isAddingWorkspaceDirectory && !removingDirectory
 
   const {
     query: searchQuery,
@@ -472,64 +431,50 @@ export function PermissionRuleList({
     setAddingRuleToTab(null)
   }, [])
 
-  const handleRuleInputSubmit = useCallback(
-    (ruleValue: PermissionRuleValue, ruleBehavior: PermissionBehavior) => {
-      setValidatedRule({ ruleValue, ruleBehavior })
-      setAddingRuleToTab(null)
-    },
-    [],
-  )
+  const handleRuleInputSubmit = useCallback((ruleValue: PermissionRuleValue, ruleBehavior: PermissionBehavior) => {
+    setValidatedRule({ ruleValue, ruleBehavior })
+    setAddingRuleToTab(null)
+  }, [])
 
-  const handleAddRulesSuccess = useCallback(
-    (rules: PermissionRule[], unreachable?: UnreachableRule[]) => {
-      setValidatedRule(null)
-      for (const rule of rules) {
-        setChanges(prev => [
+  const handleAddRulesSuccess = useCallback((rules: PermissionRule[], unreachable?: UnreachableRule[]) => {
+    setValidatedRule(null)
+    for (const rule of rules) {
+      setChanges((prev) => [
+        ...prev,
+        `Added ${rule.ruleBehavior} rule ${chalk.bold(permissionRuleValueToString(rule.ruleValue))}`,
+      ])
+    }
+
+    // Show warnings for any unreachable rules we just added
+    if (unreachable && unreachable.length > 0) {
+      for (const u of unreachable) {
+        const severity = u.shadowType === 'deny' ? 'blocked' : 'shadowed'
+        setChanges((prev) => [
           ...prev,
-          `Added ${rule.ruleBehavior} rule ${chalk.bold(permissionRuleValueToString(rule.ruleValue))}`,
+          chalk.yellow(`${figures.warning} Warning: ${permissionRuleValueToString(u.rule.ruleValue)} is ${severity}`),
+          chalk.dim(`  ${u.reason}`),
+          chalk.dim(`  Fix: ${u.fix}`),
         ])
       }
-
-      // Show warnings for any unreachable rules we just added
-      if (unreachable && unreachable.length > 0) {
-        for (const u of unreachable) {
-          const severity = u.shadowType === 'deny' ? 'blocked' : 'shadowed'
-          setChanges(prev => [
-            ...prev,
-            chalk.yellow(
-              `${figures.warning} Warning: ${permissionRuleValueToString(u.rule.ruleValue)} is ${severity}`,
-            ),
-            chalk.dim(`  ${u.reason}`),
-            chalk.dim(`  Fix: ${u.fix}`),
-          ])
-        }
-      }
-    },
-    [],
-  )
+    }
+  }, [])
 
   const handleAddRuleCancel = useCallback(() => {
     setValidatedRule(null)
   }, [])
 
-  const handleRequestAddDirectory = useCallback(
-    () => setIsAddingWorkspaceDirectory(true),
-    [],
-  )
-  const handleRequestRemoveDirectory = useCallback(
-    (path: string) => setRemovingDirectory(path),
-    [],
-  )
+  const handleRequestAddDirectory = useCallback(() => setIsAddingWorkspaceDirectory(true), [])
+  const handleRequestRemoveDirectory = useCallback((path: string) => setRemovingDirectory(path), [])
   const handleRulesCancel = useCallback(() => {
     const s = denialStateRef.current
     const denialsFor = (set: Set<number>) =>
       Array.from(set)
-        .map(idx => s.denials[idx])
+        .map((idx) => s.denials[idx])
         .filter((d): d is AutoModeDenial => d !== undefined)
 
     const retryDenials = denialsFor(s.retry)
     if (retryDenials.length > 0) {
-      const commands = retryDenials.map(d => d.display)
+      const commands = retryDenials.map((d) => d.display)
       onRetryDenials?.(commands)
       onExit(undefined, {
         shouldQuery: true,
@@ -543,11 +488,7 @@ export function PermissionRuleList({
     const approvedDenials = denialsFor(s.approved)
     if (approvedDenials.length > 0 || changes.length > 0) {
       const approvedMsg =
-        approvedDenials.length > 0
-          ? [
-              `Approved ${approvedDenials.map(d => chalk.bold(d.display)).join(', ')}`,
-            ]
-          : []
+        approvedDenials.length > 0 ? [`Approved ${approvedDenials.map((d) => chalk.bold(d.display)).join(', ')}`] : []
       onExit([...approvedMsg, ...changes].join('\n'))
     } else {
       onExit('Permissions dialog dismissed', {
@@ -570,9 +511,7 @@ export function PermissionRuleList({
     // Find the adjacent rule to focus on after deletion
     const { options } = getRulesOptions(selectedRule.ruleBehavior as TabType)
     const selectedKey = jsonStringify(selectedRule)
-    const ruleKeys = options
-      .filter(opt => opt.value !== 'add-new-rule')
-      .map(opt => opt.value)
+    const ruleKeys = options.filter((opt) => opt.value !== 'add-new-rule').map((opt) => opt.value)
     const currentIndex = ruleKeys.indexOf(selectedKey)
 
     // Try to focus on the next rule, or the previous if deleting the last one
@@ -592,14 +531,14 @@ export function PermissionRuleList({
       rule: selectedRule,
       initialContext: toolPermissionContext,
       setToolPermissionContext(toolPermissionContext) {
-        setAppState(prev => ({
+        setAppState((prev) => ({
           ...prev,
           toolPermissionContext,
         }))
       },
     })
 
-    setChanges(prev => [
+    setChanges((prev) => [
       ...prev,
       `Deleted ${selectedRule.ruleBehavior} rule ${chalk.bold(permissionRuleValueToString(selectedRule.ruleValue))}`,
     ])
@@ -607,20 +546,10 @@ export function PermissionRuleList({
   }
 
   if (selectedRule) {
-    return (
-      <RuleDetails
-        rule={selectedRule}
-        onDelete={handleDeleteRule}
-        onCancel={() => setSelectedRule(undefined)}
-      />
-    )
+    return <RuleDetails rule={selectedRule} onDelete={handleDeleteRule} onCancel={() => setSelectedRule(undefined)} />
   }
 
-  if (
-    addingRuleToTab &&
-    addingRuleToTab !== 'workspace' &&
-    addingRuleToTab !== 'recent'
-  ) {
+  if (addingRuleToTab && addingRuleToTab !== 'workspace' && addingRuleToTab !== 'recent') {
     return (
       <PermissionRuleInput
         onCancel={handleRuleInputCancel}
@@ -638,8 +567,8 @@ export function PermissionRuleList({
         ruleValues={[validatedRule.ruleValue]}
         ruleBehavior={validatedRule.ruleBehavior}
         initialContext={toolPermissionContext}
-        setToolPermissionContext={toolPermissionContext => {
-          setAppState(prev => ({
+        setToolPermissionContext={(toolPermissionContext) => {
+          setAppState((prev) => ({
             ...prev,
             toolPermissionContext,
           }))
@@ -653,9 +582,7 @@ export function PermissionRuleList({
       <AddWorkspaceDirectory
         onAddDirectory={(path, remember) => {
           // Apply the permission update to add the directory
-          const destination: PermissionUpdateDestination = remember
-            ? 'localSettings'
-            : 'session'
+          const destination: PermissionUpdateDestination = remember ? 'localSettings' : 'session'
 
           const permissionUpdate = {
             type: 'addDirectories' as const,
@@ -663,11 +590,8 @@ export function PermissionRuleList({
             destination,
           }
 
-          const updatedContext = applyPermissionUpdate(
-            toolPermissionContext,
-            permissionUpdate,
-          )
-          setAppState(prev => ({
+          const updatedContext = applyPermissionUpdate(toolPermissionContext, permissionUpdate)
+          setAppState((prev) => ({
             ...prev,
             toolPermissionContext: updatedContext,
           }))
@@ -677,7 +601,7 @@ export function PermissionRuleList({
             persistPermissionUpdate(permissionUpdate)
           }
 
-          setChanges(prev => [
+          setChanges((prev) => [
             ...prev,
             `Added directory ${chalk.bold(path)} to workspace${remember ? ' and saved to local settings' : ' for this session'}`,
           ])
@@ -694,16 +618,13 @@ export function PermissionRuleList({
       <RemoveWorkspaceDirectory
         directoryPath={removingDirectory}
         onRemove={() => {
-          setChanges(prev => [
-            ...prev,
-            `Removed directory ${chalk.bold(removingDirectory)} from workspace`,
-          ])
+          setChanges((prev) => [...prev, `Removed directory ${chalk.bold(removingDirectory)} from workspace`])
           setRemovingDirectory(null)
         }}
         onCancel={() => setRemovingDirectory(null)}
         permissionContext={toolPermissionContext}
-        setPermissionContext={toolPermissionContext => {
-          setAppState(prev => ({
+        setPermissionContext={(toolPermissionContext) => {
+          setAppState((prev) => ({
             ...prev,
             toolPermissionContext,
           }))
@@ -725,11 +646,7 @@ export function PermissionRuleList({
   }
 
   const isHidden =
-    !!selectedRule ||
-    !!addingRuleToTab ||
-    !!validatedRule ||
-    isAddingWorkspaceDirectory ||
-    !!removingDirectory
+    !!selectedRule || !!addingRuleToTab || !!validatedRule || isAddingWorkspaceDirectory || !!removingDirectory
 
   return (
     <Box flexDirection="column" onKeyDown={handleKeyDown}>
@@ -743,10 +660,7 @@ export function PermissionRuleList({
           navFromContent={!isSearchMode}
         >
           <Tab id="recent" title="Recently denied">
-            <RecentDenialsTab
-              onHeaderFocusChange={handleHeaderFocusChange}
-              onStateChange={handleDenialStateChange}
-            />
+            <RecentDenialsTab onHeaderFocusChange={handleHeaderFocusChange} onStateChange={handleDenialStateChange} />
           </Tab>
           <Tab id="allow" title="Allow">
             <PermissionRulesTab tab="allow" {...sharedRulesProps} />
@@ -759,10 +673,7 @@ export function PermissionRuleList({
           </Tab>
           <Tab id="workspace" title="Workspace">
             <Box flexDirection="column">
-              <Text>
-                Claude Code can read files in the workspace, and make edits when
-                auto-accept edits is on.
-              </Text>
+              <Text>Claude Code can read files in the workspace, and make edits when auto-accept edits is on.</Text>
               <WorkspaceTab
                 onExit={onExit}
                 toolPermissionContext={toolPermissionContext}
@@ -782,14 +693,9 @@ export function PermissionRuleList({
             ) : isSearchMode ? (
               <>Type to filter · Enter/↓ select · ↑ tabs · Esc clear</>
             ) : hasDenials && defaultTab === 'recent' ? (
-              <>
-                Enter approve · r retry · ↑↓ navigate · ←/→ switch · Esc cancel
-              </>
+              <>Enter approve · r retry · ↑↓ navigate · ←/→ switch · Esc cancel</>
             ) : (
-              <>
-                ↑↓ navigate · Enter select · Type to search · ←/→ switch · Esc
-                cancel
-              </>
+              <>↑↓ navigate · Enter select · Type to search · ←/→ switch · Esc cancel</>
             )}
           </Text>
         </Box>

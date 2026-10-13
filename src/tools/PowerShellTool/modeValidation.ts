@@ -9,11 +9,7 @@
 import type { ToolPermissionContext } from '../../Tool.js'
 import type { PermissionResult } from '../../utils/permissions/PermissionResult.js'
 import type { ParsedPowerShellCommand } from '../../utils/powershell/parser.js'
-import {
-  deriveSecurityFlags,
-  getPipelineSegments,
-  PS_TOKENIZER_DASH_CHARS,
-} from '../../utils/powershell/parser.js'
+import { deriveSecurityFlags, getPipelineSegments, PS_TOKENIZER_DASH_CHARS } from '../../utils/powershell/parser.js'
 import {
   argLeaksValue,
   isAllowlistedPipelineTail,
@@ -30,12 +26,7 @@ import {
  * 'ask'. Only simple write cmdlets (first positional = -Path) are auto-allowed
  * here, and they get path validation via CMDLET_PATH_CONFIG in pathValidation.ts.
  */
-const ACCEPT_EDITS_ALLOWED_CMDLETS = new Set([
-  'set-content',
-  'add-content',
-  'remove-item',
-  'clear-content',
-])
+const ACCEPT_EDITS_ALLOWED_CMDLETS = new Set(['set-content', 'add-content', 'remove-item', 'clear-content'])
 
 function isAcceptEditsAllowedCmdlet(name: string): boolean {
   // resolveToCanonical handles aliases via COMMON_ALIASES, so e.g. 'rm' → 'remove-item',
@@ -62,10 +53,7 @@ const LINK_ITEM_TYPES = new Set(['symboliclink', 'junction', 'hardlink'])
  * (avoids `-t` colliding with `-Target`).
  */
 function isItemTypeParamAbbrev(p: string): boolean {
-  return (
-    (p.length >= 3 && '-itemtype'.startsWith(p)) ||
-    (p.length >= 3 && '-type'.startsWith(p))
-  )
+  return (p.length >= 3 && '-itemtype'.startsWith(p)) || (p.length >= 3 && '-type'.startsWith(p))
 }
 
 /**
@@ -79,10 +67,7 @@ function isItemTypeParamAbbrev(p: string): boolean {
  * `-typ`, `-type`), unicode dash prefixes (en-dash/em-dash/horizontal-bar),
  * and colon-bound values (`-it:Junction`).
  */
-export function isSymlinkCreatingCommand(cmd: {
-  name: string
-  args: string[]
-}): boolean {
+export function isSymlinkCreatingCommand(cmd: { name: string; args: string[] }): boolean {
   const canonical = resolveToCanonical(cmd.name)
   if (canonical !== 'new-item') return false
   for (let i = 0; i < cmd.args.length; i++) {
@@ -91,10 +76,7 @@ export function isSymlinkCreatingCommand(cmd: {
     // Normalize unicode dash prefixes (–, —, ―) and forward-slash (PS 5.1
     // parameter prefix) → ASCII `-` so prefix comparison works. PS tokenizer
     // treats all four dash chars plus `/` as parameter markers. (bug #26)
-    const normalized =
-      PS_TOKENIZER_DASH_CHARS.has(raw[0]!) || raw[0] === '/'
-        ? '-' + raw.slice(1)
-        : raw
+    const normalized = PS_TOKENIZER_DASH_CHARS.has(raw[0]!) || raw[0] === '/' ? '-' + raw.slice(1) : raw
     const lower = normalized.toLowerCase()
     // Split colon-bound value: -it:SymbolicLink → param='-it', val='symboliclink'
     const colonIdx = lower.indexOf(':', 1)
@@ -102,10 +84,7 @@ export function isSymlinkCreatingCommand(cmd: {
     // Strip backtick escapes: -Item`Type → -ItemType (bug #22)
     const param = paramRaw.replace(/`/g, '')
     if (!isItemTypeParamAbbrev(param)) continue
-    const rawVal =
-      colonIdx > 0
-        ? lower.slice(colonIdx + 1)
-        : (cmd.args[i + 1]?.toLowerCase() ?? '')
+    const rawVal = colonIdx > 0 ? lower.slice(colonIdx + 1) : (cmd.args[i + 1]?.toLowerCase() ?? '')
     // Strip backtick escapes from colon-bound value: -it:Sym`bolicLink → symboliclink
     // Mirrors the param-name strip at L103. Space-separated args use .value
     // (backtick-resolved by .NET parser), but colon-bound uses .text (raw source).
@@ -135,10 +114,7 @@ export function checkPermissionMode(
   toolPermissionContext: ToolPermissionContext,
 ): PermissionResult {
   // Skip bypass and dontAsk modes (handled elsewhere)
-  if (
-    toolPermissionContext.mode === 'bypassPermissions' ||
-    toolPermissionContext.mode === 'dontAsk'
-  ) {
+  if (toolPermissionContext.mode === 'bypassPermissions' || toolPermissionContext.mode === 'dontAsk') {
     return {
       behavior: 'passthrough',
       message: 'Mode is handled in main permission flow',
@@ -174,8 +150,7 @@ export function checkPermissionMode(
   ) {
     return {
       behavior: 'passthrough',
-      message:
-        'Command contains subexpressions, script blocks, or member invocations that require approval',
+      message: 'Command contains subexpressions, script blocks, or member invocations that require approval',
     }
   }
 
@@ -199,10 +174,7 @@ export function checkPermissionMode(
   // /project/.claude/settings.json. Refuse to auto-allow any write operation in a
   // compound that contains a cwd-changing command. This matches BashTool's
   // compoundCommandHasCd guard (BashTool/pathValidation.ts:630-655).
-  const totalCommands = segments.reduce(
-    (sum, seg) => sum + seg.commands.length,
-    0,
-  )
+  const totalCommands = segments.reduce((sum, seg) => sum + seg.commands.length, 0)
   if (totalCommands > 1) {
     let hasCdCommand = false
     let hasSymlinkCreate = false
@@ -310,8 +282,7 @@ export function checkPermissionMode(
             if (colonIdx > 0 && /[$(@{[]/.test(arg.slice(colonIdx + 1))) {
               return {
                 behavior: 'passthrough',
-                message:
-                  'Colon-bound parameter contains an expression that cannot be statically validated',
+                message: 'Colon-bound parameter contains an expression that cannot be statically validated',
               }
             }
           }
@@ -324,10 +295,7 @@ export function checkPermissionMode(
       // auto-allows the same as the bare write cmdlet. isAllowlistedPipelineTail
       // is the narrow fallback for cmdlets moved from SAFE_OUTPUT_CMDLETS to
       // CMDLET_ALLOWLIST (argLeaksValue validates their args).
-      if (
-        isSafeOutputCommand(cmd.name) ||
-        isAllowlistedPipelineTail(cmd, input.command)
-      ) {
+      if (isSafeOutputCommand(cmd.name) || isAllowlistedPipelineTail(cmd, input.command)) {
         continue
       }
       if (!isAcceptEditsAllowedCmdlet(cmd.name)) {
@@ -369,10 +337,7 @@ export function checkPermissionMode(
             message: `Nested command '${cmd.name}' resolved from a path-like name and requires approval`,
           }
         }
-        if (
-          isSafeOutputCommand(cmd.name) ||
-          isAllowlistedPipelineTail(cmd, input.command)
-        ) {
+        if (isSafeOutputCommand(cmd.name) || isAllowlistedPipelineTail(cmd, input.command)) {
           continue
         }
         if (!isAcceptEditsAllowedCmdlet(cmd.name)) {

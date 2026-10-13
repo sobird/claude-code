@@ -4,6 +4,7 @@ import { logEvent } from 'src/services/analytics/index.js'
 import { logForDebugging } from 'src/utils/debug.js'
 import { logError } from 'src/utils/log.js'
 import { useInterval } from 'usehooks-ts'
+
 import { useUpdateNotification } from '../hooks/useUpdateNotification.js'
 import { Box, Text } from '../ink.js'
 import type { AutoUpdaterResult } from '../utils/autoUpdater.js'
@@ -35,11 +36,7 @@ function getErrorType(errorMessage: string): string {
   if (errorMessage.includes('npm')) {
     return 'npm_error'
   }
-  if (
-    errorMessage.includes('network') ||
-    errorMessage.includes('ECONNREFUSED') ||
-    errorMessage.includes('ENOTFOUND')
-  ) {
+  if (errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ENOTFOUND')) {
     return 'network_error'
   }
   return 'unknown'
@@ -82,13 +79,8 @@ export function NativeAutoUpdater({
       return
     }
 
-    if (
-      process.env.NODE_ENV === 'test' ||
-      process.env.NODE_ENV === 'development'
-    ) {
-      logForDebugging(
-        'NativeAutoUpdater: Skipping update check in test/dev environment',
-      )
+    if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
+      logForDebugging('NativeAutoUpdater: Skipping update check in test/dev environment')
       return
     }
 
@@ -142,8 +134,7 @@ export function NativeAutoUpdater({
       }
     } catch (error) {
       const latencyMs = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : String(error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
       logError(error)
 
       const errorType = getErrorType(errorMessage)
@@ -186,8 +177,7 @@ export function NativeAutoUpdater({
   // - warning banner needed (above max version), or
   // - there's an update result to display (success/error), or
   // - actively checking and we have version info to show
-  const shouldRender =
-    !!maxVersionIssue || hasUpdateResult || (isUpdating && hasVersionInfo)
+  const shouldRender = !!maxVersionIssue || hasUpdateResult || (isUpdating && hasVersionInfo)
 
   if (!shouldRender) {
     return null
@@ -222,8 +212,7 @@ export function NativeAutoUpdater({
       )}
       {maxVersionIssue && process.env.USER_TYPE === 'ant' && (
         <Text color="warning">
-          ⚠ Known issue: {maxVersionIssue} &middot; Run{' '}
-          <Text bold>claude rollback --safe</Text> to downgrade
+          ⚠ Known issue: {maxVersionIssue} &middot; Run <Text bold>claude rollback --safe</Text> to downgrade
         </Text>
       )}
     </Box>

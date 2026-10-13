@@ -1,10 +1,8 @@
 import React, { useCallback, useState } from 'react'
+
 import { Box, Text } from '../ink.js'
 import { getDisplayPath } from '../utils/file.js'
-import {
-  removePathFromRepo,
-  validateRepoAtPath,
-} from '../utils/githubRepoPathMapping.js'
+import { removePathFromRepo, validateRepoAtPath } from '../utils/githubRepoPathMapping.js'
 import { Select } from './CustomSelect/index.js'
 import { Dialog } from './design-system/Dialog.js'
 import { Spinner } from './Spinner.js'
@@ -45,19 +43,17 @@ export function TeleportRepoMismatchDialog({
 
       // Path is invalid - remove it from config and update state
       removePathFromRepo(targetRepo, value)
-      const updatedPaths = availablePaths.filter(p => p !== value)
+      const updatedPaths = availablePaths.filter((p) => p !== value)
       setAvailablePaths(updatedPaths)
       setValidating(false)
 
-      setErrorMessage(
-        `${getDisplayPath(value)} no longer contains the correct repository. Select another path.`,
-      )
+      setErrorMessage(`${getDisplayPath(value)} no longer contains the correct repository. Select another path.`)
     },
     [targetRepo, availablePaths, onSelectPath, onCancel],
   )
 
   const options = [
-    ...availablePaths.map(path => ({
+    ...availablePaths.map((path) => ({
       label: (
         <Text>
           Use <Text bold>{getDisplayPath(path)}</Text>
@@ -85,18 +81,13 @@ export function TeleportRepoMismatchDialog({
               <Text> Validating repository…</Text>
             </Box>
           ) : (
-            <Select
-              options={options}
-              onChange={value => void handleChange(value)}
-            />
+            <Select options={options} onChange={(value) => void handleChange(value)} />
           )}
         </>
       ) : (
         <Box flexDirection="column" gap={1}>
           {errorMessage && <Text color="error">{errorMessage}</Text>}
-          <Text dimColor>
-            Run claude --teleport from a checkout of {targetRepo}
-          </Text>
+          <Text dimColor>Run claude --teleport from a checkout of {targetRepo}</Text>
         </Box>
       )}
     </Dialog>

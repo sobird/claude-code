@@ -1,11 +1,9 @@
 import React, { useMemo } from 'react'
+
 import { Box, Text, useTheme } from '../../../ink.js'
 import { WebFetchTool } from '../../../tools/WebFetchTool/WebFetchTool.js'
 import { shouldShowAlwaysAllowOptions } from '../../../utils/permissions/permissionsLoader.js'
-import {
-  type OptionWithDescription,
-  Select,
-} from '../../CustomSelect/select.js'
+import { type OptionWithDescription, Select } from '../../CustomSelect/select.js'
 import { type UnaryEvent, usePermissionRequestLogging } from '../hooks.js'
 import { PermissionDialog } from '../PermissionDialog.js'
 import type { PermissionRequestProps } from '../PermissionRequest.js'
@@ -40,10 +38,7 @@ export function WebFetchPermissionRequest({
   // Extract hostname from URL
   const hostname = new URL(url).hostname
 
-  const unaryEvent = useMemo<UnaryEvent>(
-    () => ({ completion_type: 'tool_use_single', language_name: 'none' }),
-    [],
-  )
+  const unaryEvent = useMemo<UnaryEvent>(() => ({ completion_type: 'tool_use_single', language_name: 'none' }), [])
 
   usePermissionRequestLogging(toolUseConfirm, unaryEvent)
 
@@ -120,28 +115,18 @@ export function WebFetchPermissionRequest({
     <PermissionDialog title="Fetch" workerBadge={workerBadge}>
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Text>
-          {WebFetchTool.renderToolUseMessage(
-            toolUseConfirm.input as { url: string; prompt: string },
-            {
-              theme,
-              verbose,
-            },
-          )}
+          {WebFetchTool.renderToolUseMessage(toolUseConfirm.input as { url: string; prompt: string }, {
+            theme,
+            verbose,
+          })}
         </Text>
         <Text dimColor>{toolUseConfirm.description}</Text>
       </Box>
 
       <Box flexDirection="column">
-        <PermissionRuleExplanation
-          permissionResult={toolUseConfirm.permissionResult}
-          toolType="tool"
-        />
+        <PermissionRuleExplanation permissionResult={toolUseConfirm.permissionResult} toolType="tool" />
         <Text>Do you want to allow Claude to fetch this content?</Text>
-        <Select
-          options={options}
-          onChange={onChange}
-          onCancel={() => onChange('no')}
-        />
+        <Select options={options} onChange={onChange} onCancel={() => onChange('no')} />
       </Box>
     </PermissionDialog>
   )

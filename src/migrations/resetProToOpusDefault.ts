@@ -1,4 +1,5 @@
 import { logEvent } from 'src/services/analytics/index.js'
+
 import { isProSubscriber } from '../utils/auth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
 import { getAPIProvider } from '../utils/model/providers.js'
@@ -15,7 +16,7 @@ export function resetProToOpusDefault(): void {
 
   // Pro users on firstParty get auto-migrated to Opus 4.5 default
   if (apiProvider !== 'firstParty' || !isProSubscriber()) {
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       opusProMigrationComplete: true,
     }))
@@ -28,7 +29,7 @@ export function resetProToOpusDefault(): void {
   // Only show notification if user was on default (no custom model setting)
   if (settings?.model === undefined) {
     const opusProMigrationTimestamp = Date.now()
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       opusProMigrationComplete: true,
       opusProMigrationTimestamp,
@@ -39,7 +40,7 @@ export function resetProToOpusDefault(): void {
     })
   } else {
     // User has a custom model setting, just mark migration complete
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       opusProMigrationComplete: true,
     }))

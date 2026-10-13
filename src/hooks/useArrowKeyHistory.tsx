@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react'
 import { getModeFromInput } from 'src/components/PromptInput/inputModes.js'
 import { useNotifications } from 'src/context/notifications.js'
+
 import { ConfigurableShortcutHint } from '../components/ConfigurableShortcutHint.js'
 import { FOOTER_TEMPORARY_STATUS_TIMEOUT } from '../components/PromptInput/Notifications.js'
 import { getHistory } from '../history.js'
@@ -19,19 +20,12 @@ let pendingLoad: Promise<HistoryEntry[]> | null = null
 let pendingLoadTarget = 0
 let pendingLoadModeFilter: HistoryMode | undefined = undefined
 
-async function loadHistoryEntries(
-  minCount: number,
-  modeFilter?: HistoryMode,
-): Promise<HistoryEntry[]> {
+async function loadHistoryEntries(minCount: number, modeFilter?: HistoryMode): Promise<HistoryEntry[]> {
   // Round up to next chunk to avoid repeated small reads
   const target = Math.ceil(minCount / HISTORY_CHUNK_SIZE) * HISTORY_CHUNK_SIZE
 
   // If a load is already pending with the same mode filter and will satisfy our needs, wait for it
-  if (
-    pendingLoad &&
-    pendingLoadTarget >= target &&
-    pendingLoadModeFilter === modeFilter
-  ) {
+  if (pendingLoad && pendingLoadTarget >= target && pendingLoadModeFilter === modeFilter) {
     return pendingLoad
   }
 
@@ -72,11 +66,7 @@ async function loadHistoryEntries(
 }
 
 export function useArrowKeyHistory(
-  onSetInput: (
-    value: string,
-    mode: HistoryMode,
-    pastedContents: Record<number, PastedContent>,
-  ) => void,
+  onSetInput: (value: string, mode: HistoryMode, pastedContents: Record<number, PastedContent>) => void,
   currentInput: string,
   pastedContents: Record<number, PastedContent>,
   setCursorOffset?: (offset: number) => void,
@@ -121,12 +111,7 @@ export function useArrowKeyHistory(
   currentModeRef.current = currentMode
 
   const setInputWithCursor = useCallback(
-    (
-      value: string,
-      mode: HistoryMode,
-      contents: Record<number, PastedContent>,
-      cursorToStart = false,
-    ): void => {
+    (value: string, mode: HistoryMode, contents: Record<number, PastedContent>, cursorToStart = false): void => {
       onSetInput(value, mode, contents)
       setCursorOffset?.(cursorToStart ? 0 : value.length)
     },
@@ -173,8 +158,7 @@ export function useArrowKeyHistory(
     const modeAtPress = currentModeRef.current
 
     if (targetIndex === 0) {
-      initialModeFilterRef.current =
-        modeAtPress === 'bash' ? modeAtPress : undefined
+      initialModeFilterRef.current = modeAtPress === 'bash' ? modeAtPress : undefined
 
       // Save draft synchronously using refs for the latest values
       // This ensures we capture the draft before any async operations or re-renders
@@ -247,11 +231,7 @@ export function useArrowKeyHistory(
         // Restore the draft with its saved mode if available
         const savedMode = lastShownHistoryEntry.mode
         if (savedMode) {
-          setInputWithCursor(
-            lastShownHistoryEntry.display,
-            savedMode,
-            lastShownHistoryEntry.pastedContents ?? {},
-          )
+          setInputWithCursor(lastShownHistoryEntry.display, savedMode, lastShownHistoryEntry.pastedContents ?? {})
         } else {
           updateInput(lastShownHistoryEntry)
         }

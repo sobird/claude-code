@@ -1,8 +1,10 @@
-import * as React from 'react'
 import { pathToFileURL } from 'url'
+
+import * as React from 'react'
+
+import { Text } from '../ink.js'
 import Link from '../ink/components/Link.js'
 import { supportsHyperlinks } from '../ink/supports-hyperlinks.js'
-import { Text } from '../ink.js'
 import { getStoredImagePath } from '../utils/imageStore.js'
 import type { Theme } from '../utils/theme.js'
 
@@ -20,11 +22,7 @@ type Props = {
  * - Terminal doesn't support hyperlinks
  * - Image file is not found in the store
  */
-export function ClickableImageRef({
-  imageId,
-  backgroundColor,
-  isSelected = false,
-}: Props): React.ReactNode {
+export function ClickableImageRef({ imageId, backgroundColor, isSelected = false }: Props): React.ReactNode {
   const imagePath = getStoredImagePath(imageId)
   const displayText = `[Image #${imageId}]`
 
@@ -41,11 +39,7 @@ export function ClickableImageRef({
           </Text>
         }
       >
-        <Text
-          backgroundColor={backgroundColor}
-          inverse={isSelected}
-          bold={isSelected}
-        >
+        <Text backgroundColor={backgroundColor} inverse={isSelected} bold={isSelected}>
           {displayText}
         </Text>
       </Link>

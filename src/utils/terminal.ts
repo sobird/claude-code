@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+
 import { ctrlOToExpand } from '../components/CtrlOToExpand.js'
 import { stringWidth } from '../ink/stringWidth.js'
 import sliceAnsi from './sliceAnsi.js'
@@ -16,10 +17,7 @@ const PADDING_TO_PREVENT_OVERFLOW = 10
  * @param wrapWidth The width at which to wrap lines (in visible characters).
  * @returns The wrapped text.
  */
-function wrapText(
-  text: string,
-  wrapWidth: number,
-): { aboveTheFold: string; remainingLines: number } {
+function wrapText(text: string, wrapWidth: number): { aboveTheFold: string; remainingLines: number } {
   const lines = text.split('\n')
   const wrappedLines: string[] = []
 
@@ -68,11 +66,7 @@ function wrapText(
  * @param terminalWidth Terminal width for wrapping lines.
  * @returns The rendered content with truncation if needed.
  */
-export function renderTruncatedContent(
-  content: string,
-  terminalWidth: number,
-  suppressExpandHint = false,
-): string {
+export function renderTruncatedContent(content: string, terminalWidth: number, suppressExpandHint = false): string {
   const trimmedContent = content.trimEnd()
   if (!trimmedContent) {
     return ''
@@ -84,28 +78,18 @@ export function renderTruncatedContent(
   // on huge outputs (e.g. 64MB binary dumps that cause 382K-row screens).
   const maxChars = MAX_LINES_TO_SHOW * wrapWidth * 4
   const preTruncated = trimmedContent.length > maxChars
-  const contentForWrapping = preTruncated
-    ? trimmedContent.slice(0, maxChars)
-    : trimmedContent
+  const contentForWrapping = preTruncated ? trimmedContent.slice(0, maxChars) : trimmedContent
 
-  const { aboveTheFold, remainingLines } = wrapText(
-    contentForWrapping,
-    wrapWidth,
-  )
+  const { aboveTheFold, remainingLines } = wrapText(contentForWrapping, wrapWidth)
 
   const estimatedRemaining = preTruncated
-    ? Math.max(
-        remainingLines,
-        Math.ceil(trimmedContent.length / wrapWidth) - MAX_LINES_TO_SHOW,
-      )
+    ? Math.max(remainingLines, Math.ceil(trimmedContent.length / wrapWidth) - MAX_LINES_TO_SHOW)
     : remainingLines
 
   return [
     aboveTheFold,
     estimatedRemaining > 0
-      ? chalk.dim(
-          `… +${estimatedRemaining} lines${suppressExpandHint ? '' : ` ${ctrlOToExpand()}`}`,
-        )
+      ? chalk.dim(`… +${estimatedRemaining} lines${suppressExpandHint ? '' : ` ${ctrlOToExpand()}`}`)
       : '',
   ]
     .filter(Boolean)

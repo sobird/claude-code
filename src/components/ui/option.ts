@@ -1,2 +1,2 @@
 // Auto-generated stub — replace with real implementation
-export type Option = unknown;
+export type Option = unknown

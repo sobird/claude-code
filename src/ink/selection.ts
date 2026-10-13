@@ -76,11 +76,7 @@ export function createSelectionState(): SelectionState {
   }
 }
 
-export function startSelection(
-  s: SelectionState,
-  col: number,
-  row: number,
-): void {
+export function startSelection(s: SelectionState, col: number, row: number): void {
   s.anchor = { col, row }
   // Focus is not set until the first drag motion. A click-release with no
   // drag leaves focus null → hasSelection/selectionBounds return false/null
@@ -97,19 +93,14 @@ export function startSelection(
   s.lastPressHadAlt = false
 }
 
-export function updateSelection(
-  s: SelectionState,
-  col: number,
-  row: number,
-): void {
+export function updateSelection(s: SelectionState, col: number, row: number): void {
   if (!s.isDragging) return
   // First motion at the same cell as anchor is a no-op. Terminals in mode
   // 1002 can fire a drag event at the anchor cell (sub-pixel tremor, or a
   // motion-release pair). Setting focus here would turn a bare click into
   // a 1-cell selection and clobber the clipboard via useCopyOnSelect. Once
   // focus is set (real drag), we track normally including back to anchor.
-  if (!s.focus && s.anchor && s.anchor.col === col && s.anchor.row === row)
-    return
+  if (!s.focus && s.anchor && s.anchor.col === col && s.anchor.row === row) return
   s.focus = { col, row }
 }
 
@@ -159,11 +150,7 @@ function charClass(c: string): 0 | 1 | 2 {
  * null if the click is out of bounds or lands on a noSelect cell. Used by
  * selectWordAt (initial double-click) and extendWordSelection (drag).
  */
-function wordBoundsAt(
-  screen: Screen,
-  col: number,
-  row: number,
-): { lo: number; hi: number } | null {
+function wordBoundsAt(screen: Screen, col: number, row: number): { lo: number; hi: number } | null {
   if (row < 0 || row >= screen.height) return null
   const width = screen.width
   const noSelect = screen.noSelect
@@ -237,12 +224,7 @@ function comparePoints(a: Point, b: Point): number {
  * Sets isDragging=true and anchorSpan so a subsequent drag extends the
  * selection word-by-word (native macOS behavior).
  */
-export function selectWordAt(
-  s: SelectionState,
-  screen: Screen,
-  col: number,
-  row: number,
-): void {
+export function selectWordAt(s: SelectionState, screen: Screen, col: number, row: number): void {
   const b = wordBoundsAt(screen, col, row)
   if (!b) return
   const lo = { col: b.lo, row }
@@ -269,11 +251,7 @@ function isUrlChar(c: string): boolean {
  * tracking intercepts. Called from getHyperlinkAt as a fallback when the
  * cell has no OSC 8 hyperlink.
  */
-export function findPlainTextUrlAt(
-  screen: Screen,
-  col: number,
-  row: number,
-): string | undefined {
+export function findPlainTextUrlAt(screen: Screen, col: number, row: number): string | undefined {
   if (row < 0 || row >= screen.height) return undefined
   const width = screen.width
   const noSelect = screen.noSelect
@@ -365,11 +343,7 @@ export function findPlainTextUrlAt(
  * and trailing-whitespace trimming so the copied text is just the visible
  * line content.
  */
-export function selectLineAt(
-  s: SelectionState,
-  screen: Screen,
-  row: number,
-): void {
+export function selectLineAt(s: SelectionState, screen: Screen, row: number): void {
   if (row < 0 || row >= screen.height) return
   const lo = { col: 0, row }
   const hi = { col: screen.width - 1, row }
@@ -386,12 +360,7 @@ export function selectLineAt(
  * position. Word mode falls back to the raw cell when the mouse is over a
  * noSelect cell or out of bounds, so dragging into gutters still extends.
  */
-export function extendSelection(
-  s: SelectionState,
-  screen: Screen,
-  col: number,
-  row: number,
-): void {
+export function extendSelection(s: SelectionState, screen: Screen, col: number, row: number): void {
   if (!s.isDragging || !s.anchorSpan) return
   const span = s.anchorSpan
   let mLo: Point
@@ -422,13 +391,7 @@ export function extendSelection(
 
 /** Semantic keyboard focus moves. See moveSelectionFocus in ink.tsx for
  *  how screen bounds + row-wrap are applied. */
-export type FocusMove =
-  | 'left'
-  | 'right'
-  | 'up'
-  | 'down'
-  | 'lineStart'
-  | 'lineEnd'
+export type FocusMove = 'left' | 'right' | 'up' | 'down' | 'lineStart' | 'lineEnd'
 
 /**
  * Set focus to (col, row) for keyboard selection extension (shift+arrow).
@@ -467,37 +430,22 @@ export function moveFocus(s: SelectionState, col: number, row: number): void {
  * with shiftSelectionForFollow's top-edge check, but bidirectional: keyboard
  * scroll can jump either way.
  */
-export function shiftSelection(
-  s: SelectionState,
-  dRow: number,
-  minRow: number,
-  maxRow: number,
-  width: number,
-): void {
+export function shiftSelection(s: SelectionState, dRow: number, minRow: number, maxRow: number, width: number): void {
   if (!s.anchor || !s.focus) return
   // Virtual rows track pre-clamp positions so reverse scrolls restore
   // correctly. Without this, clamp(5→0) + shift(+10) = 10, not the true 5,
   // and scrolledOffAbove stays stale (highlight ≠ copy).
   const vAnchor = (s.virtualAnchorRow ?? s.anchor.row) + dRow
   const vFocus = (s.virtualFocusRow ?? s.focus.row) + dRow
-  if (
-    (vAnchor < minRow && vFocus < minRow) ||
-    (vAnchor > maxRow && vFocus > maxRow)
-  ) {
+  if ((vAnchor < minRow && vFocus < minRow) || (vAnchor > maxRow && vFocus > maxRow)) {
     clearSelection(s)
     return
   }
   // Debt = how far the nearer endpoint overshoots each edge. When debt
   // shrinks (reverse scroll), those rows are back on-screen — pop from
   // the accumulator so getSelectedText doesn't double-count them.
-  const oldMin = Math.min(
-    s.virtualAnchorRow ?? s.anchor.row,
-    s.virtualFocusRow ?? s.focus.row,
-  )
-  const oldMax = Math.max(
-    s.virtualAnchorRow ?? s.anchor.row,
-    s.virtualFocusRow ?? s.focus.row,
-  )
+  const oldMin = Math.min(s.virtualAnchorRow ?? s.anchor.row, s.virtualFocusRow ?? s.focus.row)
+  const oldMax = Math.max(s.virtualAnchorRow ?? s.anchor.row, s.virtualFocusRow ?? s.focus.row)
   const oldAboveDebt = Math.max(0, minRow - oldMin)
   const oldBelowDebt = Math.max(0, oldMax - maxRow)
   const newAboveDebt = Math.max(0, minRow - Math.min(vAnchor, vFocus))
@@ -524,10 +472,8 @@ export function shiftSelection(
   // that's the normal establish-debt path, not stale.
   if (s.scrolledOffAbove.length > newAboveDebt) {
     // Above pushes newest at END → keep END.
-    s.scrolledOffAbove =
-      newAboveDebt > 0 ? s.scrolledOffAbove.slice(-newAboveDebt) : []
-    s.scrolledOffAboveSW =
-      newAboveDebt > 0 ? s.scrolledOffAboveSW.slice(-newAboveDebt) : []
+    s.scrolledOffAbove = newAboveDebt > 0 ? s.scrolledOffAbove.slice(-newAboveDebt) : []
+    s.scrolledOffAboveSW = newAboveDebt > 0 ? s.scrolledOffAboveSW.slice(-newAboveDebt) : []
   }
   if (s.scrolledOffBelow.length > newBelowDebt) {
     // Below unshifts newest at FRONT → keep FRONT.
@@ -544,8 +490,7 @@ export function shiftSelection(
   }
   s.anchor = shift(s.anchor, vAnchor)
   s.focus = shift(s.focus, vFocus)
-  s.virtualAnchorRow =
-    vAnchor < minRow || vAnchor > maxRow ? vAnchor : undefined
+  s.virtualAnchorRow = vAnchor < minRow || vAnchor > maxRow ? vAnchor : undefined
   s.virtualFocusRow = vFocus < minRow || vFocus > maxRow ? vFocus : undefined
   // anchorSpan not virtual-tracked: it's for word/line extend-on-drag,
   // irrelevant to the keyboard-scroll round-trip case.
@@ -570,12 +515,7 @@ export function shiftSelection(
  * was under the anchor is now at a different viewport row, so the anchor
  * must follow it. Focus is left unchanged (it stays at the mouse position).
  */
-export function shiftAnchor(
-  s: SelectionState,
-  dRow: number,
-  minRow: number,
-  maxRow: number,
-): void {
+export function shiftAnchor(s: SelectionState, dRow: number, minRow: number, maxRow: number): void {
   if (!s.anchor) return
   // Same virtual-row tracking as shiftSelection/shiftSelectionForFollow: the
   // drag→follow transition hands off to shiftSelectionForFollow, which reads
@@ -622,12 +562,7 @@ export function shiftAnchor(
  * (useHasSelection) — the caller is inside onRender so it can't use
  * notifySelectionChange (recursion), must fire listeners directly.
  */
-export function shiftSelectionForFollow(
-  s: SelectionState,
-  dRow: number,
-  minRow: number,
-  maxRow: number,
-): boolean {
+export function shiftSelectionForFollow(s: SelectionState, dRow: number, minRow: number, maxRow: number): boolean {
   if (!s.anchor) return false
   // Mirror shiftSelection: compute raw (unclamped) positions from virtual
   // if set, else current. This handles BOTH the update path (virtual already
@@ -638,9 +573,7 @@ export function shiftSelectionForFollow(
   // clamped row instead of the true pre-clamp row and never pops the
   // accumulator — getSelectedText double-counts the off-screen rows.
   const rawAnchor = (s.virtualAnchorRow ?? s.anchor.row) + dRow
-  const rawFocus = s.focus
-    ? (s.virtualFocusRow ?? s.focus.row) + dRow
-    : undefined
+  const rawFocus = s.focus ? (s.virtualFocusRow ?? s.focus.row) + dRow : undefined
   if (rawAnchor < minRow && rawFocus !== undefined && rawFocus < minRow) {
     clearSelection(s)
     return true
@@ -651,12 +584,8 @@ export function shiftSelectionForFollow(
   if (s.focus && rawFocus !== undefined) {
     s.focus = { col: s.focus.col, row: clamp(rawFocus, minRow, maxRow) }
   }
-  s.virtualAnchorRow =
-    rawAnchor < minRow || rawAnchor > maxRow ? rawAnchor : undefined
-  s.virtualFocusRow =
-    rawFocus !== undefined && (rawFocus < minRow || rawFocus > maxRow)
-      ? rawFocus
-      : undefined
+  s.virtualAnchorRow = rawAnchor < minRow || rawAnchor > maxRow ? rawAnchor : undefined
+  s.virtualFocusRow = rawFocus !== undefined && (rawFocus < minRow || rawFocus > maxRow) ? rawFocus : undefined
   // anchorSpan not virtual-tracked (word/line extend, irrelevant to
   // keyboard-scroll round-trip) — plain clamp from current row.
   if (s.anchorSpan) {
@@ -686,20 +615,14 @@ export function selectionBounds(s: SelectionState): {
   end: { col: number; row: number }
 } | null {
   if (!s.anchor || !s.focus) return null
-  return comparePoints(s.anchor, s.focus) <= 0
-    ? { start: s.anchor, end: s.focus }
-    : { start: s.focus, end: s.anchor }
+  return comparePoints(s.anchor, s.focus) <= 0 ? { start: s.anchor, end: s.focus } : { start: s.focus, end: s.anchor }
 }
 
 /**
  * Check if a cell at (col, row) is within the current selection range.
  * Used by the renderer to apply inverse style.
  */
-export function isCellSelected(
-  s: SelectionState,
-  col: number,
-  row: number,
-): boolean {
+export function isCellSelected(s: SelectionState, col: number, row: number): boolean {
   const b = selectionBounds(s)
   if (!b) return false
   const { start, end } = b
@@ -713,12 +636,7 @@ export function isCellSelected(
  *  continuation (screen.softWrap[row+1]>0), clamp to that content-end
  *  column and skip the trailing trim so the word-separator space survives
  *  the join. See Screen.softWrap for why the clamp is necessary. */
-function extractRowText(
-  screen: Screen,
-  row: number,
-  colStart: number,
-  colEnd: number,
-): string {
+function extractRowText(screen: Screen, row: number, colStart: number, colEnd: number): string {
   const noSelect = screen.noSelect
   const rowOff = row * screen.width
   const contentEnd = row + 1 < screen.height ? screen.softWrap[row + 1]! : 0
@@ -732,10 +650,7 @@ function extractRowText(
     if (!cell) continue
     // Skip spacer tails (second half of wide chars) — the head already
     // contains the full grapheme. SpacerHead is a blank at line-end.
-    if (
-      cell.width === CellWidth.SpacerTail ||
-      cell.width === CellWidth.SpacerHead
-    ) {
+    if (cell.width === CellWidth.SpacerTail || cell.width === CellWidth.SpacerHead) {
       continue
     }
     line += cell.char
@@ -747,11 +662,7 @@ function extractRowText(
  *  into logical lines. push(text, sw) appends a newline before text
  *  only when sw=false (i.e. the row starts a new logical line). Rows
  *  with sw=true are concatenated onto the previous row. */
-function joinRows(
-  lines: string[],
-  text: string,
-  sw: boolean | undefined,
-): void {
+function joinRows(lines: string[], text: string, sw: boolean | undefined): void {
   if (sw && lines.length > 0) {
     lines[lines.length - 1] += text
   } else {
@@ -890,11 +801,7 @@ export function captureScrolledRows(
  * Uses StylePool caches so on drag the only work per cell is a Map
  * lookup + packed-int write.
  */
-export function applySelectionOverlay(
-  screen: Screen,
-  selection: SelectionState,
-  stylePool: StylePool,
-): void {
+export function applySelectionOverlay(screen: Screen, selection: SelectionState, stylePool: StylePool): void {
   const b = selectionBounds(selection)
   if (!b) return
   const { start, end } = b

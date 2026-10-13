@@ -11,11 +11,7 @@ import { addFunctionHook } from '../hooks/sessionHooks.js'
 import { applyPermissionUpdate } from '../permissions/PermissionUpdate.js'
 import { jsonStringify } from '../slowOperations.js'
 import { getTeammateColor } from '../teammate.js'
-import {
-  createIdleNotification,
-  getLastPeerDmSummary,
-  writeToMailbox,
-} from '../teammateMailbox.js'
+import { createIdleNotification, getLastPeerDmSummary, writeToMailbox } from '../teammateMailbox.js'
 import { readTeamFile, setMemberActive } from './teamHelpers.js'
 
 /**
@@ -43,56 +39,45 @@ export function initializeTeammateHooks(
 
   // Apply team-wide allowed paths if any exist
   if (teamFile.teamAllowedPaths && teamFile.teamAllowedPaths.length > 0) {
-    logForDebugging(
-      `[TeammateInit] Found ${teamFile.teamAllowedPaths.length} team-wide allowed path(s)`,
-    )
+    logForDebugging(`[TeammateInit] Found ${teamFile.teamAllowedPaths.length} team-wide allowed path(s)`)
 
     for (const allowedPath of teamFile.teamAllowedPaths) {
       // For absolute paths (starting with /), prepend one / to create //path/** pattern
       // For relative paths, just use path/**
-      const ruleContent = allowedPath.path.startsWith('/')
-        ? `/${allowedPath.path}/**`
-        : `${allowedPath.path}/**`
+      const ruleContent = allowedPath.path.startsWith('/') ? `/${allowedPath.path}/**` : `${allowedPath.path}/**`
 
       logForDebugging(
         `[TeammateInit] Applying team permission: ${allowedPath.toolName} allowed in ${allowedPath.path} (rule: ${ruleContent})`,
       )
 
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
-        toolPermissionContext: applyPermissionUpdate(
-          prev.toolPermissionContext,
-          {
-            type: 'addRules',
-            rules: [
-              {
-                toolName: allowedPath.toolName,
-                ruleContent,
-              },
-            ],
-            behavior: 'allow',
-            destination: 'session',
-          },
-        ),
+        toolPermissionContext: applyPermissionUpdate(prev.toolPermissionContext, {
+          type: 'addRules',
+          rules: [
+            {
+              toolName: allowedPath.toolName,
+              ruleContent,
+            },
+          ],
+          behavior: 'allow',
+          destination: 'session',
+        }),
       }))
     }
   }
 
   // Find the leader's name from the members array
-  const leadMember = teamFile.members.find(m => m.agentId === leadAgentId)
+  const leadMember = teamFile.members.find((m) => m.agentId === leadAgentId)
   const leadAgentName = leadMember?.name || 'team-lead'
 
   // Don't register hook if this agent is the leader
   if (agentId === leadAgentId) {
-    logForDebugging(
-      '[TeammateInit] This agent is the team leader - skipping idle notification hook',
-    )
+    logForDebugging('[TeammateInit] This agent is the team leader - skipping idle notification hook')
     return
   }
 
-  logForDebugging(
-    `[TeammateInit] Registering Stop hook for teammate ${agentName} to notify leader ${leadAgentName}`,
-  )
+  logForDebugging(`[TeammateInit] Registering Stop hook for teammate ${agentName} to notify leader ${leadAgentName}`)
 
   // Register Stop hook to notify leader when this teammate stops
   addFunctionHook(
@@ -116,9 +101,7 @@ export function initializeTeammateHooks(
         timestamp: new Date().toISOString(),
         color: getTeammateColor(),
       })
-      logForDebugging(
-        `[TeammateInit] Sent idle notification to leader ${leadAgentName}`,
-      )
+      logForDebugging(`[TeammateInit] Sent idle notification to leader ${leadAgentName}`)
       return true // Don't block the Stop
     },
     'Failed to send idle notification to team leader',

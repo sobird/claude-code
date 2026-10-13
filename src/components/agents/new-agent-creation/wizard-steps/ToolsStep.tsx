@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react'
+
 import type { Tools } from '../../../../Tool.js'
 import { ConfigurableShortcutHint } from '../../../ConfigurableShortcutHint.js'
 import { Byline } from '../../../design-system/Byline.js'
@@ -13,8 +14,7 @@ type Props = {
 }
 
 export function ToolsStep({ tools }: Props): ReactNode {
-  const { goNext, goBack, updateWizardData, wizardData } =
-    useWizard<AgentWizardData>()
+  const { goNext, goBack, updateWizardData, wizardData } = useWizard<AgentWizardData>()
 
   const handleComplete = (selectedTools: string[] | undefined): void => {
     updateWizardData({ selectedTools })
@@ -32,21 +32,11 @@ export function ToolsStep({ tools }: Props): ReactNode {
         <Byline>
           <KeyboardShortcutHint shortcut="Enter" action="toggle selection" />
           <KeyboardShortcutHint shortcut="↑↓" action="navigate" />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="go back"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="go back" />
         </Byline>
       }
     >
-      <ToolSelector
-        tools={tools}
-        initialTools={initialTools}
-        onComplete={handleComplete}
-        onCancel={goBack}
-      />
+      <ToolSelector tools={tools} initialTools={initialTools} onComplete={handleComplete} onCancel={goBack} />
     </WizardDialogLayout>
   )
 }

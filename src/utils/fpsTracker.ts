@@ -18,11 +18,7 @@ export class FpsTracker {
   }
 
   getMetrics(): FpsMetrics | undefined {
-    if (
-      this.frameDurations.length === 0 ||
-      this.firstRenderTime === undefined ||
-      this.lastRenderTime === undefined
-    ) {
+    if (this.frameDurations.length === 0 || this.firstRenderTime === undefined || this.lastRenderTime === undefined) {
       return undefined
     }
 

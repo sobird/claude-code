@@ -1,17 +1,12 @@
 import figures from 'figures'
 import React, { useState } from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { Box, color, Text, useTheme } from '../../ink.js'
 import { getMcpConfigByName } from '../../services/mcp/config.js'
-import {
-  useMcpReconnect,
-  useMcpToggleEnabled,
-} from '../../services/mcp/MCPConnectionManager.js'
-import {
-  describeMcpConfigFilePath,
-  filterMcpPromptsByServer,
-} from '../../services/mcp/utils.js'
+import { useMcpReconnect, useMcpToggleEnabled } from '../../services/mcp/MCPConnectionManager.js'
+import { describeMcpConfigFilePath, filterMcpPromptsByServer } from '../../services/mcp/utils.js'
 import { useAppState } from '../../state/AppState.js'
 import { errorMessage } from '../../utils/errors.js'
 import { capitalize } from '../../utils/stringUtils.js'
@@ -22,20 +17,14 @@ import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint.js'
 import { Spinner } from '../Spinner.js'
 import { CapabilitiesSection } from './CapabilitiesSection.js'
 import type { StdioServerInfo } from './types.js'
-import {
-  handleReconnectError,
-  handleReconnectResult,
-} from './utils/reconnectHelpers.js'
+import { handleReconnectError, handleReconnectResult } from './utils/reconnectHelpers.js'
 
 type Props = {
   server: StdioServerInfo
   serverToolsCount: number
   onViewTools: () => void
   onCancel: () => void
-  onComplete: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onComplete: (result?: string, options?: { display?: CommandResultDisplay }) => void
   borderless?: boolean
 }
 
@@ -49,7 +38,7 @@ export function MCPStdioServerMenu({
 }: Props): React.ReactNode {
   const [theme] = useTheme()
   const exitState = useExitOnCtrlCDWithKeybindings()
-  const mcp = useAppState(s => s.mcp)
+  const mcp = useAppState((s) => s.mcp)
   const reconnectMcpServer = useMcpReconnect()
   const toggleMcpServer = useMcpToggleEnabled()
   const [isReconnecting, setIsReconnecting] = useState(false)
@@ -63,19 +52,14 @@ export function MCPStdioServerMenu({
       onCancel()
     } catch (err) {
       const action = wasEnabled ? 'disable' : 'enable'
-      onComplete(
-        `Failed to ${action} MCP server '${server.name}': ${errorMessage(err)}`,
-      )
+      onComplete(`Failed to ${action} MCP server '${server.name}': ${errorMessage(err)}`)
     }
   }, [server.client.type, server.name, toggleMcpServer, onCancel, onComplete])
 
   const capitalizedServerName = capitalize(String(server.name))
 
   // Count MCP prompts for this server (skills are shown in /skills, not here)
-  const serverCommandsCount = filterMcpPromptsByServer(
-    mcp.commands,
-    server.name,
-  ).length
+  const serverCommandsCount = filterMcpPromptsByServer(mcp.commands, server.name).length
 
   const menuOptions = []
 
@@ -125,11 +109,7 @@ export function MCPStdioServerMenu({
 
   return (
     <Box flexDirection="column">
-      <Box
-        flexDirection="column"
-        paddingX={1}
-        borderStyle={borderless ? undefined : 'round'}
-      >
+      <Box flexDirection="column" paddingX={1} borderStyle={borderless ? undefined : 'round'}>
         <Box marginBottom={1}>
           <Text bold>{capitalizedServerName} MCP Server</Text>
         </Box>
@@ -165,11 +145,7 @@ export function MCPStdioServerMenu({
 
           <Box>
             <Text bold>Config location: </Text>
-            <Text dimColor>
-              {describeMcpConfigFilePath(
-                getMcpConfigByName(server.name)?.scope ?? 'dynamic',
-              )}
-            </Text>
+            <Text dimColor>{describeMcpConfigFilePath(getMcpConfigByName(server.name)?.scope ?? 'dynamic')}</Text>
           </Box>
 
           {server.client.type === 'connected' && (
@@ -192,17 +168,14 @@ export function MCPStdioServerMenu({
           <Box marginTop={1}>
             <Select
               options={menuOptions}
-              onChange={async value => {
+              onChange={async (value) => {
                 if (value === 'tools') {
                   onViewTools()
                 } else if (value === 'reconnectMcpServer') {
                   setIsReconnecting(true)
                   try {
                     const result = await reconnectMcpServer(server.name)
-                    const { message } = handleReconnectResult(
-                      result,
-                      server.name,
-                    )
+                    const { message } = handleReconnectResult(result, server.name)
                     onComplete?.(message)
                   } catch (err) {
                     onComplete?.(handleReconnectError(err, server.name))
@@ -229,12 +202,7 @@ export function MCPStdioServerMenu({
             <Byline>
               <KeyboardShortcutHint shortcut="↑↓" action="navigate" />
               <KeyboardShortcutHint shortcut="Enter" action="select" />
-              <ConfigurableShortcutHint
-                action="confirm:no"
-                context="Confirmation"
-                fallback="Esc"
-                description="back"
-              />
+              <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />
             </Byline>
           )}
         </Text>

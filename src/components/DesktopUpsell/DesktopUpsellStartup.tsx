@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useEffect, useState } from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { getDynamicConfig_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { logEvent } from '../../services/analytics/index.js'
@@ -19,17 +20,11 @@ const DESKTOP_UPSELL_DEFAULT: DesktopUpsellConfig = {
 }
 
 export function getDesktopUpsellConfig(): DesktopUpsellConfig {
-  return getDynamicConfig_CACHED_MAY_BE_STALE(
-    'tengu_desktop_upsell',
-    DESKTOP_UPSELL_DEFAULT,
-  )
+  return getDynamicConfig_CACHED_MAY_BE_STALE('tengu_desktop_upsell', DESKTOP_UPSELL_DEFAULT)
 }
 
 function isSupportedPlatform(): boolean {
-  return (
-    process.platform === 'darwin' ||
-    (process.platform === 'win32' && process.arch === 'x64')
-  )
+  return process.platform === 'darwin' || (process.platform === 'win32' && process.arch === 'x64')
 }
 
 export function shouldShowDesktopUpsellStartup(): boolean {
@@ -53,7 +48,7 @@ export function DesktopUpsellStartup({ onDone }: Props): React.ReactNode {
   // Increment seen count on mount (guard in updater for StrictMode safety)
   useEffect(() => {
     const newCount = (getGlobalConfig().desktopUpsellSeenCount ?? 0) + 1
-    saveGlobalConfig(prev => {
+    saveGlobalConfig((prev) => {
       if ((prev.desktopUpsellSeenCount ?? 0) >= newCount) return prev
       return { ...prev, desktopUpsellSeenCount: newCount }
     })
@@ -70,7 +65,7 @@ export function DesktopUpsellStartup({ onDone }: Props): React.ReactNode {
         setShowHandoff(true)
         return
       case 'never':
-        saveGlobalConfig(prev => {
+        saveGlobalConfig((prev) => {
           if (prev.desktopUpsellDismissed) return prev
           return { ...prev, desktopUpsellDismissed: true }
         })
@@ -92,16 +87,9 @@ export function DesktopUpsellStartup({ onDone }: Props): React.ReactNode {
     <PermissionDialog title="Try Claude Code Desktop">
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Box marginBottom={1}>
-          <Text>
-            Same Claude Code with visual diffs, live app preview, parallel
-            sessions, and more.
-          </Text>
+          <Text>Same Claude Code with visual diffs, live app preview, parallel sessions, and more.</Text>
         </Box>
-        <Select
-          options={options}
-          onChange={handleSelect}
-          onCancel={() => handleSelect('not-now')}
-        />
+        <Select options={options} onChange={handleSelect} onCancel={() => handleSelect('not-now')} />
       </Box>
     </PermissionDialog>
   )

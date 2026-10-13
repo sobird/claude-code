@@ -1,13 +1,11 @@
 import { isInputModeCharacter } from 'src/components/PromptInput/inputModes.js'
 import { useNotifications } from 'src/context/notifications.js'
 import stripAnsi from 'strip-ansi'
+
 import { markBackslashReturnUsed } from '../commands/terminalSetup/terminalSetup.js'
 import { addToHistory } from '../history.js'
 import type { Key } from '../ink.js'
-import type {
-  InlineGhostText,
-  TextInputState,
-} from '../types/textInputTypes.js'
+import type { InlineGhostText, TextInputState } from '../types/textInputTypes.js'
 import {
   Cursor,
   getLastKill,
@@ -106,7 +104,7 @@ export function useTextInput({
   const { addNotification, removeNotification } = useNotifications()
 
   const handleCtrlC = useDoublePress(
-    show => {
+    (show) => {
       onExitMessage?.(show, 'Ctrl-C')
     },
     () => onExit?.(),
@@ -153,7 +151,7 @@ export function useTextInput({
   )
 
   const handleEmptyCtrlD = useDoublePress(
-    show => {
+    (show) => {
       if (originalValue !== '') {
         return
       }
@@ -245,11 +243,7 @@ export function useTextInput({
   ])
 
   function handleEnter(key: Key) {
-    if (
-      multiline &&
-      cursor.offset > 0 &&
-      cursor.text[cursor.offset - 1] === '\\'
-    ) {
+    if (multiline && cursor.offset > 0 && cursor.text[cursor.offset - 1] === '\\') {
       // Track that the user has used backslash+return
       markBackslashReturnUsed()
       return cursor.backspace().insert('\n')
@@ -334,9 +328,7 @@ export function useTextInput({
       case key.rightArrow && (key.ctrl || key.meta || key.fn):
         return () => cursor.nextWord()
       case key.backspace:
-        return key.meta || key.ctrl
-          ? killWordBefore
-          : () => cursor.deleteTokenBefore() ?? cursor.backspace()
+        return key.meta || key.ctrl ? killWordBefore : () => cursor.deleteTokenBefore() ?? cursor.backspace()
       case key.delete:
         return key.meta ? killToLineEnd : () => cursor.del()
       case key.ctrl:
@@ -448,8 +440,7 @@ export function useTextInput({
       // Try to delete tokens first, fall back to character backspace
       let currentCursor = cursor
       for (let i = 0; i < delCount; i++) {
-        currentCursor =
-          currentCursor.deleteTokenBefore() ?? currentCursor.backspace()
+        currentCursor = currentCursor.deleteTokenBefore() ?? currentCursor.backspace()
       }
 
       // Update state once with the final result
@@ -512,13 +503,7 @@ export function useTextInput({
 
   return {
     onInput,
-    renderedValue: cursor.render(
-      cursorChar,
-      mask,
-      invert,
-      ghostTextForRender,
-      maxVisibleLines,
-    ),
+    renderedValue: cursor.render(cursorChar, mask, invert, ghostTextForRender, maxVisibleLines),
     offset,
     setOffset,
     cursorLine: cursorPos.line - cursor.getViewportStartLine(maxVisibleLines),

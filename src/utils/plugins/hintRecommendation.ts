@@ -16,19 +16,12 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
   logEvent,
 } from '../../services/analytics/index.js'
-import {
-  type ClaudeCodeHint,
-  hasShownHintThisSession,
-  setPendingHint,
-} from '../claudeCodeHints.js'
+import { type ClaudeCodeHint, hasShownHintThisSession, setPendingHint } from '../claudeCodeHints.js'
 import { getGlobalConfig, saveGlobalConfig } from '../config.js'
 import { logForDebugging } from '../debug.js'
 import { isPluginInstalled } from './installedPluginsManager.js'
 import { getPluginById } from './marketplaceManager.js'
-import {
-  isOfficialMarketplaceName,
-  parsePluginIdentifier,
-} from './pluginIdentifier.js'
+import { isOfficialMarketplaceName, parsePluginIdentifier } from './pluginIdentifier.js'
 import { isPluginBlockedByPolicy } from './pluginPolicy.js'
 
 /**
@@ -100,28 +93,20 @@ export function _resetHintRecommendationForTesting(): void {
  * marketplace lookup that the sync pre-store gate skipped. Returns null if
  * the plugin isn't in the marketplace cache — the hint is discarded.
  */
-export async function resolvePluginHint(
-  hint: ClaudeCodeHint,
-): Promise<PluginHintRecommendation | null> {
+export async function resolvePluginHint(hint: ClaudeCodeHint): Promise<PluginHintRecommendation | null> {
   const pluginId = hint.value
   const { name, marketplace } = parsePluginIdentifier(pluginId)
 
   const pluginData = await getPluginById(pluginId)
 
   logEvent('tengu_plugin_hint_detected', {
-    _PROTO_plugin_name: (name ??
-      '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
-    _PROTO_marketplace_name: (marketplace ??
-      '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
-    result: (pluginData
-      ? 'passed'
-      : 'not_in_cache') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    _PROTO_plugin_name: (name ?? '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+    _PROTO_marketplace_name: (marketplace ?? '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+    result: (pluginData ? 'passed' : 'not_in_cache') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 
   if (!pluginData) {
-    logForDebugging(
-      `[hintRecommendation] ${pluginId} not found in marketplace cache`,
-    )
+    logForDebugging(`[hintRecommendation] ${pluginId} not found in marketplace cache`)
     return null
   }
 
@@ -139,7 +124,7 @@ export async function resolvePluginHint(
  * the user's yes/no response — show-once semantics.
  */
 export function markHintPluginShown(pluginId: string): void {
-  saveGlobalConfig(current => {
+  saveGlobalConfig((current) => {
     const existing = current.claudeCodeHints?.plugin ?? []
     if (existing.includes(pluginId)) return current
     return {
@@ -154,7 +139,7 @@ export function markHintPluginShown(pluginId: string): void {
 
 /** Called when the user picks "don't show plugin installation hints again". */
 export function disableHintRecommendations(): void {
-  saveGlobalConfig(current => {
+  saveGlobalConfig((current) => {
     if (current.claudeCodeHints?.disabled) return current
     return {
       ...current,

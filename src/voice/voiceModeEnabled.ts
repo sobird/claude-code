@@ -1,9 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
-import {
-  getClaudeAIOAuthTokens,
-  isAnthropicAuthEnabled,
-} from '../utils/auth.js'
+import { getClaudeAIOAuthTokens, isAnthropicAuthEnabled } from '../utils/auth.js'
 
 /**
  * Kill-switch check for voice mode. Returns true unless the
@@ -17,9 +15,7 @@ export function isVoiceGrowthBookEnabled(): boolean {
   // Positive ternary pattern — see docs/feature-gating.md.
   // Negative pattern (if (!feature(...)) return) does not eliminate
   // inline string literals from external builds.
-  return feature('VOICE_MODE')
-    ? !getFeatureValue_CACHED_MAY_BE_STALE('tengu_amber_quartz_disabled', false)
-    : false
+  return feature('VOICE_MODE') ? !getFeatureValue_CACHED_MAY_BE_STALE('tengu_amber_quartz_disabled', false) : false
 }
 
 /**

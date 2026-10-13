@@ -47,6 +47,7 @@ import teleport from './commands/teleport/index.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const agentsPlatform = process.env.USER_TYPE === 'ant' ? require('./commands/agents-platform/index.js').default : null
 import { feature } from 'bun:bundle'
+
 import bughunter from './commands/bughunter/index.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import securityReview from './commands/security-review.js'
@@ -87,6 +88,7 @@ const buddy = feature('BUDDY')
   ? (require('./commands/buddy/index.js') as typeof import('./commands/buddy/index.js')).default
   : null
 import memoize from 'lodash-es/memoize.js'
+
 import advisor from './commands/advisor.js'
 import agents from './commands/agents/index.js'
 import antTrace from './commands/ant-trace/index.js'

@@ -1,11 +1,10 @@
-import chalk from 'chalk'
 import * as path from 'path'
+
+import chalk from 'chalk'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
-import type {
-  CommandResultDisplay,
-  LocalJSXCommandContext,
-} from '../../commands.js'
+
+import type { CommandResultDisplay, LocalJSXCommandContext } from '../../commands.js'
 import { Select } from '../../components/CustomSelect/index.js'
 import { Dialog } from '../../components/design-system/Dialog.js'
 import {
@@ -47,12 +46,9 @@ function IDEScreen({
   onClose,
   onSelect,
 }: IDEScreenProps): React.ReactNode {
-  const [selectedValue, setSelectedValue] = useState(
-    selectedIDE?.port?.toString() ?? 'None',
-  )
+  const [selectedValue, setSelectedValue] = useState(selectedIDE?.port?.toString() ?? 'None')
   const [showAutoConnectDialog, setShowAutoConnectDialog] = useState(false)
-  const [showDisableAutoConnectDialog, setShowDisableAutoConnectDialog] =
-    useState(false)
+  const [showDisableAutoConnectDialog, setShowDisableAutoConnectDialog] = useState(false)
 
   const handleSelectIDE = useCallback(
     (value: string) => {
@@ -61,7 +57,7 @@ function IDEScreen({
       } else if (value === 'None' && shouldShowDisableAutoConnectDialog()) {
         setShowDisableAutoConnectDialog(true)
       } else {
-        onSelect(availableIDEs.find(ide => ide.port === parseInt(value)))
+        onSelect(availableIDEs.find((ide) => ide.port === parseInt(value)))
       }
     },
     [availableIDEs, onSelect],
@@ -73,25 +69,20 @@ function IDEScreen({
   }, {})
 
   const options = availableIDEs
-    .map(ide => {
+    .map((ide) => {
       const hasMultipleInstances = (ideCounts[ide.name] || 0) > 1
-      const showWorkspace =
-        hasMultipleInstances && ide.workspaceFolders.length > 0
+      const showWorkspace = hasMultipleInstances && ide.workspaceFolders.length > 0
 
       return {
         label: ide.name,
         value: ide.port.toString(),
-        description: showWorkspace
-          ? formatWorkspaceFolders(ide.workspaceFolders)
-          : undefined,
+        description: showWorkspace ? formatWorkspaceFolders(ide.workspaceFolders) : undefined,
       }
     })
     .concat([{ label: 'None', value: 'None', description: undefined }])
 
   if (showAutoConnectDialog) {
-    return (
-      <IdeAutoConnectDialog onComplete={() => handleSelectIDE(selectedValue)} />
-    )
+    return <IdeAutoConnectDialog onComplete={() => handleSelectIDE(selectedValue)} />
   }
 
   if (showDisableAutoConnectDialog) {
@@ -128,37 +119,29 @@ function IDEScreen({
             defaultValue={selectedValue}
             defaultFocusValue={selectedValue}
             options={options}
-            onChange={value => {
+            onChange={(value) => {
               setSelectedValue(value)
               handleSelectIDE(value)
             }}
           />
         )}
         {availableIDEs.length !== 0 &&
-          availableIDEs.some(
-            ide => ide.name === 'VS Code' || ide.name === 'Visual Studio Code',
-          ) && (
+          availableIDEs.some((ide) => ide.name === 'VS Code' || ide.name === 'Visual Studio Code') && (
             <Box marginTop={1}>
-              <Text color="warning">
-                Note: Only one Claude Code instance can be connected to VS Code
-                at a time.
-              </Text>
+              <Text color="warning">Note: Only one Claude Code instance can be connected to VS Code at a time.</Text>
             </Box>
           )}
         {availableIDEs.length !== 0 && !isSupportedTerminal() && (
           <Box marginTop={1}>
-            <Text dimColor>
-              Tip: You can enable auto-connect to IDE in /config or with the
-              --ide flag
-            </Text>
+            <Text dimColor>Tip: You can enable auto-connect to IDE in /config or with the --ide flag</Text>
           </Box>
         )}
 
         {unavailableIDEs.length > 0 && (
           <Box marginTop={1} flexDirection="column">
             <Text dimColor>
-              Found {unavailableIDEs.length} other running IDE(s). However,
-              their workspace/project directories do not match the current cwd.
+              Found {unavailableIDEs.length} other running IDE(s). However, their workspace/project directories do not
+              match the current cwd.
             </Text>
             <Box marginTop={1} flexDirection="column">
               {unavailableIDEs.map((ide, index) => (
@@ -181,10 +164,7 @@ async function findCurrentIDE(
   dynamicMcpConfig?: Record<string, ScopedMcpServerConfig>,
 ): Promise<DetectedIDEInfo | null> {
   const currentConfig = dynamicMcpConfig?.ide
-  if (
-    !currentConfig ||
-    (currentConfig.type !== 'sse-ide' && currentConfig.type !== 'ws-ide')
-  ) {
+  if (!currentConfig || (currentConfig.type !== 'sse-ide' && currentConfig.type !== 'ws-ide')) {
     return null
   }
   for (const ide of availableIDEs) {
@@ -198,32 +178,21 @@ async function findCurrentIDE(
 type IDEOpenSelectionProps = {
   availableIDEs: DetectedIDEInfo[]
   onSelectIDE: (ide?: DetectedIDEInfo) => void
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
-function IDEOpenSelection({
-  availableIDEs,
-  onSelectIDE,
-  onDone,
-}: IDEOpenSelectionProps): React.ReactNode {
-  const [selectedValue, setSelectedValue] = useState(
-    availableIDEs[0]?.port?.toString() ?? '',
-  )
+function IDEOpenSelection({ availableIDEs, onSelectIDE, onDone }: IDEOpenSelectionProps): React.ReactNode {
+  const [selectedValue, setSelectedValue] = useState(availableIDEs[0]?.port?.toString() ?? '')
 
   const handleSelectIDE = useCallback(
     (value: string) => {
-      const selectedIDE = availableIDEs.find(
-        ide => ide.port === parseInt(value),
-      )
+      const selectedIDE = availableIDEs.find((ide) => ide.port === parseInt(value))
       onSelectIDE(selectedIDE)
     },
     [availableIDEs, onSelectIDE],
   )
 
-  const options = availableIDEs.map(ide => ({
+  const options = availableIDEs.map((ide) => ({
     label: ide.name,
     value: ide.port.toString(),
   }))
@@ -233,16 +202,12 @@ function IDEOpenSelection({
   }
 
   return (
-    <Dialog
-      title="Select an IDE to open the project"
-      onCancel={handleCancel}
-      color="ide"
-    >
+    <Dialog title="Select an IDE to open the project" onCancel={handleCancel} color="ide">
       <Select
         defaultValue={selectedValue}
         defaultFocusValue={selectedValue}
         options={options}
-        onChange={value => {
+        onChange={(value) => {
           setSelectedValue(value)
           handleSelectIDE(value)
         }}
@@ -258,10 +223,7 @@ function RunningIDESelector({
 }: {
   runningIDEs: IdeType[]
   onSelectIDE: (ide: IdeType) => void
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }): React.ReactNode {
   const [selectedValue, setSelectedValue] = useState(runningIDEs[0] ?? '')
 
@@ -272,7 +234,7 @@ function RunningIDESelector({
     [onSelectIDE],
   )
 
-  const options = runningIDEs.map(ide => ({
+  const options = runningIDEs.map((ide) => ({
     label: toIDEDisplayName(ide),
     value: ide,
   }))
@@ -282,15 +244,11 @@ function RunningIDESelector({
   }
 
   return (
-    <Dialog
-      title="Select IDE to install extension"
-      onCancel={handleCancel}
-      color="ide"
-    >
+    <Dialog title="Select IDE to install extension" onCancel={handleCancel} color="ide">
       <Select
         defaultFocusValue={selectedValue}
         options={options}
-        onChange={value => {
+        onChange={(value) => {
           setSelectedValue(value)
           handleSelectIDE(value)
         }}
@@ -299,13 +257,7 @@ function RunningIDESelector({
   )
 }
 
-function InstallOnMount({
-  ide,
-  onInstall,
-}: {
-  ide: IdeType
-  onInstall: (ide: IdeType) => void
-}): React.ReactNode {
+function InstallOnMount({ ide, onInstall }: { ide: IdeType; onInstall: (ide: IdeType) => void }): React.ReactNode {
   useEffect(() => {
     onInstall(ide)
   }, [ide, onInstall])
@@ -313,10 +265,7 @@ function InstallOnMount({
 }
 
 export async function call(
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void,
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void,
   context: LocalJSXCommandContext,
   args: string,
 ): Promise<React.ReactNode | null> {
@@ -333,7 +282,7 @@ export async function call(
 
     // Detect available IDEs
     const detectedIDEs = await detectIDEs(true)
-    const availableIDEs = detectedIDEs.filter(ide => ide.isValid)
+    const availableIDEs = detectedIDEs.filter((ide) => ide.isValid)
 
     if (availableIDEs.length === 0) {
       onDone('No IDEs with Claude Code extension detected.')
@@ -359,13 +308,9 @@ export async function call(
             // VS Code-based IDEs
             const { code } = await execFileNoThrow('code', [targetPath])
             if (code === 0) {
-              onDone(
-                `Opened ${worktreeSession ? 'worktree' : 'project'} in ${chalk.bold(selectedIDE.name)}`,
-              )
+              onDone(`Opened ${worktreeSession ? 'worktree' : 'project'} in ${chalk.bold(selectedIDE.name)}`)
             } else {
-              onDone(
-                `Failed to open in ${selectedIDE.name}. Try opening manually: ${targetPath}`,
-              )
+              onDone(`Failed to open in ${selectedIDE.name}. Try opening manually: ${targetPath}`)
             }
           } else if (isSupportedJetBrainsTerminal()) {
             // JetBrains IDEs - they usually open via their CLI tools
@@ -388,11 +333,7 @@ export async function call(
   const detectedIDEs = await detectIDEs(true)
 
   // If no IDEs with extensions detected, check for running IDEs and offer to install
-  if (
-    detectedIDEs.length === 0 &&
-    context.onInstallIDEExtension &&
-    !isSupportedTerminal()
-  ) {
+  if (detectedIDEs.length === 0 && context.onInstallIDEExtension && !isSupportedTerminal()) {
     const runningIDEs = await detectRunningIDEs()
 
     const onInstall = (ide: IdeType) => {
@@ -426,8 +367,8 @@ export async function call(
     }
   }
 
-  const availableIDEs = detectedIDEs.filter(ide => ide.isValid)
-  const unavailableIDEs = detectedIDEs.filter(ide => !ide.isValid)
+  const availableIDEs = detectedIDEs.filter((ide) => ide.isValid)
+  const unavailableIDEs = detectedIDEs.filter((ide) => !ide.isValid)
 
   const currentIDE = await findCurrentIDE(availableIDEs, dynamicMcpConfig)
 
@@ -451,13 +392,8 @@ type IDECommandFlowProps = {
   unavailableIDEs: DetectedIDEInfo[]
   currentIDE: DetectedIDEInfo | null
   dynamicMcpConfig?: Record<string, ScopedMcpServerConfig>
-  onChangeDynamicMcpConfig?: (
-    config: Record<string, ScopedMcpServerConfig>,
-  ) => void
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onChangeDynamicMcpConfig?: (config: Record<string, ScopedMcpServerConfig>) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
 function IDECommandFlow({
@@ -468,10 +404,8 @@ function IDECommandFlow({
   onChangeDynamicMcpConfig,
   onDone,
 }: IDECommandFlowProps): React.ReactNode {
-  const [connectingIDE, setConnectingIDE] = useState<DetectedIDEInfo | null>(
-    null,
-  )
-  const ideClient = useAppState(s => s.mcp.clients.find(c => c.name === 'ide'))
+  const [connectingIDE, setConnectingIDE] = useState<DetectedIDEInfo | null>(null)
+  const ideClient = useAppState((s) => s.mcp.clients.find((c) => c.name === 'ide'))
   const setAppState = useSetAppState()
   const isFirstCheckRef = useRef(true)
 
@@ -495,11 +429,7 @@ function IDECommandFlow({
   // Timeout fallback
   useEffect(() => {
     if (!connectingIDE) return
-    const timer = setTimeout(
-      onDone,
-      IDE_CONNECTION_TIMEOUT_MS,
-      `Connection to ${connectingIDE.name} timed out.`,
-    )
+    const timer = setTimeout(onDone, IDE_CONNECTION_TIMEOUT_MS, `Connection to ${connectingIDE.name} timed out.`)
     return () => clearTimeout(timer)
   }, [connectingIDE, onDone])
 
@@ -519,26 +449,18 @@ function IDECommandFlow({
           // Null out onclose to prevent auto-reconnection
           ideClient.client.onclose = () => {}
           void clearServerCache('ide', ideClient.config)
-          setAppState(prev => ({
+          setAppState((prev) => ({
             ...prev,
             mcp: {
               ...prev.mcp,
-              clients: prev.mcp.clients.filter(c => c.name !== 'ide'),
-              tools: prev.mcp.tools.filter(
-                t => !t.name?.startsWith('mcp__ide__'),
-              ),
-              commands: prev.mcp.commands.filter(
-                c => !c.name?.startsWith('mcp__ide__'),
-              ),
+              clients: prev.mcp.clients.filter((c) => c.name !== 'ide'),
+              tools: prev.mcp.tools.filter((t) => !t.name?.startsWith('mcp__ide__')),
+              commands: prev.mcp.commands.filter((c) => !c.name?.startsWith('mcp__ide__')),
             },
           }))
         }
         onChangeDynamicMcpConfig(newConfig)
-        onDone(
-          currentIDE
-            ? `Disconnected from ${currentIDE.name}.`
-            : 'No IDE selected.',
-        )
+        onDone(currentIDE ? `Disconnected from ${currentIDE.name}.` : 'No IDE selected.')
         return
       }
       const url = selectedIDE.url
@@ -554,14 +476,7 @@ function IDECommandFlow({
       setConnectingIDE(selectedIDE)
       onChangeDynamicMcpConfig(newConfig)
     },
-    [
-      dynamicMcpConfig,
-      currentIDE,
-      ideClient,
-      setAppState,
-      onChangeDynamicMcpConfig,
-      onDone,
-    ],
+    [dynamicMcpConfig, currentIDE, ideClient, setAppState, onChangeDynamicMcpConfig, onDone],
   )
 
   if (connectingIDE) {
@@ -585,10 +500,7 @@ function IDECommandFlow({
  * @param maxLength Maximum total length of the formatted string
  * @returns Formatted string with folder paths
  */
-export function formatWorkspaceFolders(
-  folders: string[],
-  maxLength: number = 100,
-): string {
+export function formatWorkspaceFolders(folders: string[], maxLength: number = 100): string {
   if (folders.length === 0) return ''
 
   const cwd = getCwd()
@@ -607,7 +519,7 @@ export function formatWorkspaceFolders(
   const maxLengthPerPath = Math.floor(availableLength / foldersToShow.length)
 
   const cwdNFC = cwd.normalize('NFC')
-  const formattedFolders = foldersToShow.map(folder => {
+  const formattedFolders = foldersToShow.map((folder) => {
     // Strip cwd from the beginning if present
     // Normalize both to NFC for consistent comparison (macOS uses NFD paths)
     const folderNFC = folder.normalize('NFC')

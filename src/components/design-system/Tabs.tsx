@@ -1,19 +1,11 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from 'react'
-import {
-  useIsInsideModal,
-  useModalScrollRef,
-} from '../../context/modalContext.js'
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+
+import { useIsInsideModal, useModalScrollRef } from '../../context/modalContext.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
+import { Box, Text } from '../../ink.js'
 import ScrollBox from '../../ink/components/ScrollBox.js'
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { stringWidth } from '../../ink/stringWidth.js'
-import { Box, Text } from '../../ink.js'
 import { useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { Theme } from '../../utils/theme.js'
 
@@ -91,29 +83,16 @@ export function Tabs({
   navFromContent = false,
 }: TabsProps): React.ReactNode {
   const { columns: terminalWidth } = useTerminalSize()
-  const tabs = children.map(child => [
-    child.props.id ?? child.props.title,
-    child.props.title,
-  ])
-  const defaultTabIndex = defaultTab
-    ? tabs.findIndex(tab => defaultTab === tab[0])
-    : 0
+  const tabs = children.map((child) => [child.props.id ?? child.props.title, child.props.title])
+  const defaultTabIndex = defaultTab ? tabs.findIndex((tab) => defaultTab === tab[0]) : 0
 
   // Support both controlled and uncontrolled modes
   const isControlled = controlledSelectedTab !== undefined
-  const [internalSelectedTab, setInternalSelectedTab] = useState(
-    defaultTabIndex !== -1 ? defaultTabIndex : 0,
-  )
+  const [internalSelectedTab, setInternalSelectedTab] = useState(defaultTabIndex !== -1 ? defaultTabIndex : 0)
 
   // In controlled mode, find the index of the controlled tab
-  const controlledTabIndex = isControlled
-    ? tabs.findIndex(tab => tab[0] === controlledSelectedTab)
-    : -1
-  const selectedTabIndex = isControlled
-    ? controlledTabIndex !== -1
-      ? controlledTabIndex
-      : 0
-    : internalSelectedTab
+  const controlledTabIndex = isControlled ? tabs.findIndex((tab) => tab[0] === controlledSelectedTab) : -1
+  const selectedTabIndex = isControlled ? (controlledTabIndex !== -1 ? controlledTabIndex : 0) : internalSelectedTab
 
   const modalScrollRef = useModalScrollRef()
 
@@ -130,8 +109,8 @@ export function Tabs({
   // pressing down on a legacy tab would strand the user with nav disabled.
   const [optInCount, setOptInCount] = useState(0)
   const registerOptIn = useCallback(() => {
-    setOptInCount(n => n + 1)
-    return () => setOptInCount(n => n - 1)
+    setOptInCount((n) => n + 1)
+    return () => setOptInCount((n) => n - 1)
   }, [])
   const optedIn = optInCount > 0
 
@@ -186,12 +165,7 @@ export function Tabs({
     },
     {
       context: 'Tabs',
-      isActive:
-        navFromContent &&
-        !headerFocused &&
-        optedIn &&
-        !hidden &&
-        !disableNavigation,
+      isActive: navFromContent && !headerFocused && optedIn && !hidden && !disableNavigation,
     },
   )
 
@@ -230,11 +204,7 @@ export function Tabs({
         flexShrink={modalScrollRef ? 0 : undefined}
       >
         {!hidden && (
-          <Box
-            flexDirection="row"
-            gap={1}
-            flexShrink={modalScrollRef ? 0 : undefined}
-          >
+          <Box flexDirection="row" gap={1} flexShrink={modalScrollRef ? 0 : undefined}>
             {title !== undefined && (
               <Text bold color={color}>
                 {title}
@@ -267,12 +237,7 @@ export function Tabs({
           // ModalContext. Keyed by selectedTabIndex → remounts on tab
           // switch, resetting scrollTop to 0 without scrollTo() timing games.
           <Box width={contentWidth} marginTop={hidden ? 0 : 1} flexShrink={0}>
-            <ScrollBox
-              key={selectedTabIndex}
-              ref={modalScrollRef}
-              flexDirection="column"
-              flexShrink={0}
-            >
+            <ScrollBox key={selectedTabIndex} ref={modalScrollRef} flexDirection="column" flexShrink={0}>
               {children}
             </ScrollBox>
           </Box>
@@ -332,8 +297,7 @@ export function useTabHeaderFocus(): {
   focusHeader: () => void
   blurHeader: () => void
 } {
-  const { headerFocused, focusHeader, blurHeader, registerOptIn } =
-    useContext(TabsContext)
+  const { headerFocused, focusHeader, blurHeader, registerOptIn } = useContext(TabsContext)
   useEffect(registerOptIn, [registerOptIn])
   return { headerFocused, focusHeader, blurHeader }
 }

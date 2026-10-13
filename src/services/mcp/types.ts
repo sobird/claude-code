@@ -1,28 +1,16 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import type {
-  Resource,
-  ServerCapabilities,
-} from '@modelcontextprotocol/sdk/types.js'
+import type { Resource, ServerCapabilities } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod/v4'
+
 import { lazySchema } from '../../utils/lazySchema.js'
 
 // Configuration schemas and types
 export const ConfigScopeSchema = lazySchema(() =>
-  z.enum([
-    'local',
-    'user',
-    'project',
-    'dynamic',
-    'enterprise',
-    'claudeai',
-    'managed',
-  ]),
+  z.enum(['local', 'user', 'project', 'dynamic', 'enterprise', 'claudeai', 'managed']),
 )
 export type ConfigScope = z.infer<ReturnType<typeof ConfigScopeSchema>>
 
-export const TransportSchema = lazySchema(() =>
-  z.enum(['stdio', 'sse', 'sse-ide', 'http', 'ws', 'sdk']),
-)
+export const TransportSchema = lazySchema(() => z.enum(['stdio', 'sse', 'sse-ide', 'http', 'ws', 'sdk']))
 export type Transport = z.infer<ReturnType<typeof TransportSchema>>
 
 export const McpStdioServerConfigSchema = lazySchema(() =>
@@ -134,30 +122,14 @@ export const McpServerConfigSchema = lazySchema(() =>
   ]),
 )
 
-export type McpStdioServerConfig = z.infer<
-  ReturnType<typeof McpStdioServerConfigSchema>
->
-export type McpSSEServerConfig = z.infer<
-  ReturnType<typeof McpSSEServerConfigSchema>
->
-export type McpSSEIDEServerConfig = z.infer<
-  ReturnType<typeof McpSSEIDEServerConfigSchema>
->
-export type McpWebSocketIDEServerConfig = z.infer<
-  ReturnType<typeof McpWebSocketIDEServerConfigSchema>
->
-export type McpHTTPServerConfig = z.infer<
-  ReturnType<typeof McpHTTPServerConfigSchema>
->
-export type McpWebSocketServerConfig = z.infer<
-  ReturnType<typeof McpWebSocketServerConfigSchema>
->
-export type McpSdkServerConfig = z.infer<
-  ReturnType<typeof McpSdkServerConfigSchema>
->
-export type McpClaudeAIProxyServerConfig = z.infer<
-  ReturnType<typeof McpClaudeAIProxyServerConfigSchema>
->
+export type McpStdioServerConfig = z.infer<ReturnType<typeof McpStdioServerConfigSchema>>
+export type McpSSEServerConfig = z.infer<ReturnType<typeof McpSSEServerConfigSchema>>
+export type McpSSEIDEServerConfig = z.infer<ReturnType<typeof McpSSEIDEServerConfigSchema>>
+export type McpWebSocketIDEServerConfig = z.infer<ReturnType<typeof McpWebSocketIDEServerConfigSchema>>
+export type McpHTTPServerConfig = z.infer<ReturnType<typeof McpHTTPServerConfigSchema>>
+export type McpWebSocketServerConfig = z.infer<ReturnType<typeof McpWebSocketServerConfigSchema>>
+export type McpSdkServerConfig = z.infer<ReturnType<typeof McpSdkServerConfigSchema>>
+export type McpClaudeAIProxyServerConfig = z.infer<ReturnType<typeof McpClaudeAIProxyServerConfigSchema>>
 export type McpServerConfig = z.infer<ReturnType<typeof McpServerConfigSchema>>
 
 export type ScopedMcpServerConfig = McpServerConfig & {

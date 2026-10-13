@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto'
+
 import type { AppState } from './state/AppState.js'
 import type { AgentId } from './types/ids.js'
 import { getTaskOutputPath } from './utils/task/diskOutput.js'
@@ -12,12 +13,7 @@ export type TaskType =
   | 'monitor_mcp'
   | 'dream'
 
-export type TaskStatus =
-  | 'pending'
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'killed'
+export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'killed'
 
 /**
  * True when a task is in a terminal state and will not transition further.

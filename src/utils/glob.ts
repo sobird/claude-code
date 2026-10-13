@@ -1,10 +1,8 @@
 import { basename, dirname, isAbsolute, join, sep } from 'path'
+
 import type { ToolPermissionContext } from '../Tool.js'
 import { isEnvTruthy } from './envUtils.js'
-import {
-  getFileReadIgnorePatterns,
-  normalizePatternsToPath,
-} from './permissions/filesystem.js'
+import { getFileReadIgnorePatterns, normalizePatternsToPath } from './permissions/filesystem.js'
 import { getPlatform } from './platform.js'
 import { getGlobExclusionsForPluginCache } from './plugins/orphanedPluginFilter.js'
 import { ripGrep } from './ripgrep.js'
@@ -34,10 +32,7 @@ export function extractGlobBaseDirectory(pattern: string): {
   const staticPrefix = pattern.slice(0, match.index)
 
   // Find the last path separator in the static prefix
-  const lastSepIndex = Math.max(
-    staticPrefix.lastIndexOf('/'),
-    staticPrefix.lastIndexOf(sep),
-  )
+  const lastSepIndex = Math.max(staticPrefix.lastIndexOf('/'), staticPrefix.lastIndexOf(sep))
 
   if (lastSepIndex === -1) {
     // No path separator before the glob - pattern is relative to cwd
@@ -83,10 +78,7 @@ export async function glob(
     }
   }
 
-  const ignorePatterns = normalizePatternsToPath(
-    getFileReadIgnorePatterns(toolPermissionContext),
-    searchDir,
-  )
+  const ignorePatterns = normalizePatternsToPath(getFileReadIgnorePatterns(toolPermissionContext), searchDir)
 
   // Use ripgrep for better memory performance
   // --files: list files instead of searching content
@@ -119,9 +111,7 @@ export async function glob(
   const allPaths = await ripGrep(args, searchDir, abortSignal)
 
   // ripgrep returns relative paths, convert to absolute
-  const absolutePaths = allPaths.map(p =>
-    isAbsolute(p) ? p : join(searchDir, p),
-  )
+  const absolutePaths = allPaths.map((p) => (isAbsolute(p) ? p : join(searchDir, p)))
 
   const truncated = absolutePaths.length > offset + limit
   const files = absolutePaths.slice(offset, offset + limit)

@@ -1,6 +1,8 @@
 import { feature } from 'bun:bundle'
+
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
+
 import { NO_CONTENT_MESSAGE } from '../../constants/messages.js'
 import {
   COMMAND_MESSAGE_TAG,
@@ -10,11 +12,7 @@ import {
   TICK_TAG,
 } from '../../constants/xml.js'
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
-import {
-  extractTag,
-  INTERRUPT_MESSAGE,
-  INTERRUPT_MESSAGE_FOR_TOOL_USE,
-} from '../../utils/messages.js'
+import { extractTag, INTERRUPT_MESSAGE, INTERRUPT_MESSAGE_FOR_TOOL_USE } from '../../utils/messages.js'
 import { InterruptedByUser } from '../InterruptedByUser.js'
 import { MessageResponse } from '../MessageResponse.js'
 import { UserAgentNotificationMessage } from './UserAgentNotificationMessage.js'
@@ -64,26 +62,17 @@ export function UserTextMessage({
   }
 
   // Show bash output
-  if (
-    param.text.startsWith('<bash-stdout') ||
-    param.text.startsWith('<bash-stderr')
-  ) {
+  if (param.text.startsWith('<bash-stdout') || param.text.startsWith('<bash-stderr')) {
     return <UserBashOutputMessage content={param.text} verbose={verbose} />
   }
 
   // Show command output
-  if (
-    param.text.startsWith('<local-command-stdout') ||
-    param.text.startsWith('<local-command-stderr')
-  ) {
+  if (param.text.startsWith('<local-command-stdout') || param.text.startsWith('<local-command-stderr')) {
     return <UserLocalCommandOutputMessage content={param.text} />
   }
 
   // Handle interruption messages specially
-  if (
-    param.text === INTERRUPT_MESSAGE ||
-    param.text === INTERRUPT_MESSAGE_FOR_TOOL_USE
-  ) {
+  if (param.text === INTERRUPT_MESSAGE || param.text === INTERRUPT_MESSAGE_FOR_TOOL_USE) {
     return (
       <MessageResponse height={1}>
         <InterruptedByUser />
@@ -122,17 +111,8 @@ export function UserTextMessage({
   }
 
   // Teammate messages - only check when swarms enabled
-  if (
-    isAgentSwarmsEnabled() &&
-    param.text.includes(`<${TEAMMATE_MESSAGE_TAG}`)
-  ) {
-    return (
-      <UserTeammateMessage
-        addMargin={addMargin}
-        param={param}
-        isTranscriptMode={isTranscriptMode}
-      />
-    )
+  if (isAgentSwarmsEnabled() && param.text.includes(`<${TEAMMATE_MESSAGE_TAG}`)) {
+    return <UserTeammateMessage addMargin={addMargin} param={param} isTranscriptMode={isTranscriptMode} />
   }
 
   // Task notifications (agent completions, bash completions, etc.)
@@ -141,10 +121,7 @@ export function UserTextMessage({
   }
 
   // MCP resource and polling update notifications
-  if (
-    param.text.includes('<mcp-resource-update') ||
-    param.text.includes('<mcp-polling-update')
-  ) {
+  if (param.text.includes('<mcp-resource-update') || param.text.includes('<mcp-polling-update')) {
     return <UserResourceUpdateMessage addMargin={addMargin} param={param} />
   }
 
@@ -178,8 +155,7 @@ export function UserTextMessage({
   if (feature('KAIROS') || feature('KAIROS_CHANNELS')) {
     if (param.text.includes('<channel source="')) {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const { UserChannelMessage } =
-        require('./UserChannelMessage.js') as typeof import('./UserChannelMessage.js')
+      const { UserChannelMessage } = require('./UserChannelMessage.js') as typeof import('./UserChannelMessage.js')
       /* eslint-enable @typescript-eslint/no-require-imports */
       return <UserChannelMessage addMargin={addMargin} param={param} />
     }
@@ -187,11 +163,6 @@ export function UserTextMessage({
 
   // User prompts>
   return (
-    <UserPromptMessage
-      addMargin={addMargin}
-      param={param}
-      isTranscriptMode={isTranscriptMode}
-      timestamp={timestamp}
-    />
+    <UserPromptMessage addMargin={addMargin} param={param} isTranscriptMode={isTranscriptMode} timestamp={timestamp} />
   )
 }

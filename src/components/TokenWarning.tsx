@@ -1,6 +1,8 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
 import { useSyncExternalStore } from 'react'
+
 import { Box, Text } from '../ink.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import {
@@ -22,11 +24,7 @@ type Props = {
  * (hooks-in-conditionals would violate React rules). The parent only
  * renders this when feature('CONTEXT_COLLAPSE') + isContextCollapseEnabled().
  */
-function CollapseLabel({
-  upgradeMessage,
-}: {
-  upgradeMessage: string | null
-}): React.ReactNode {
+function CollapseLabel({ upgradeMessage }: { upgradeMessage: string | null }): React.ReactNode {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const { getStats, subscribe } =
     require('../services/contextCollapse/index.js') as typeof import('../services/contextCollapse/index.js')
@@ -41,22 +39,21 @@ function CollapseLabel({
     return `${s.collapsedSpans}|${s.stagedSpans}|${s.health.totalErrors}|${s.health.totalEmptySpawns}|${idleWarn}`
   })
 
-  const [collapsed, staged, errors, emptySpawns, idleWarn] = snapshot
-    .split('|')
-    .map(Number) as [number, number, number, number, number]
+  const [collapsed, staged, errors, emptySpawns, idleWarn] = snapshot.split('|').map(Number) as [
+    number,
+    number,
+    number,
+    number,
+    number,
+  ]
   const total = collapsed + staged
 
   // Show error indicator when ctx-agent is failing silently
   if (errors > 0 || idleWarn) {
-    const problem =
-      errors > 0
-        ? `collapse errors: ${errors}`
-        : `collapse idle (${emptySpawns} empty runs)`
+    const problem = errors > 0 ? `collapse errors: ${errors}` : `collapse idle (${emptySpawns} empty runs)`
     return (
       <Text color="warning" wrap="truncate">
-        {total > 0
-          ? `${collapsed} / ${total} summarized \u00b7 ${problem}`
-          : problem}
+        {total > 0 ? `${collapsed} / ${total} summarized \u00b7 ${problem}` : problem}
       </Text>
     )
   }
@@ -72,8 +69,7 @@ function CollapseLabel({
 }
 
 export function TokenWarning({ tokenUsage, model }: Props): React.ReactNode {
-  const { percentLeft, isAboveWarningThreshold, isAboveErrorThreshold } =
-    calculateTokenWarningState(tokenUsage, model)
+  const { percentLeft, isAboveWarningThreshold, isAboveErrorThreshold } = calculateTokenWarningState(tokenUsage, model)
 
   // Use reactive hook to check if warning should be suppressed
   const suppressWarning = useCompactWarningSuppression()
@@ -111,10 +107,7 @@ export function TokenWarning({ tokenUsage, model }: Props): React.ReactNode {
   }
   if (reactiveOnlyMode || collapseMode) {
     const effectiveWindow = getEffectiveContextWindowSize(model)
-    displayPercentLeft = Math.max(
-      0,
-      Math.round(((effectiveWindow - tokenUsage) / effectiveWindow) * 100),
-    )
+    displayPercentLeft = Math.max(0, Math.round(((effectiveWindow - tokenUsage) / effectiveWindow) * 100))
   }
 
   // Collapse mode: delegate to the subscribing sub-component so the
@@ -136,15 +129,10 @@ export function TokenWarning({ tokenUsage, model }: Props): React.ReactNode {
     <Box flexDirection="row">
       {showAutoCompactWarning ? (
         <Text dimColor wrap="truncate">
-          {upgradeMessage
-            ? `${autocompactLabel} \u00b7 ${upgradeMessage}`
-            : autocompactLabel}
+          {upgradeMessage ? `${autocompactLabel} \u00b7 ${upgradeMessage}` : autocompactLabel}
         </Text>
       ) : (
-        <Text
-          color={isAboveErrorThreshold ? 'error' : 'warning'}
-          wrap="truncate"
-        >
+        <Text color={isAboveErrorThreshold ? 'error' : 'warning'} wrap="truncate">
           {upgradeMessage
             ? `Context low (${percentLeft}% remaining) \u00b7 ${upgradeMessage}`
             : `Context low (${percentLeft}% remaining) \u00b7 Run /compact to compact & continue`}

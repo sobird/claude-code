@@ -12,9 +12,11 @@
  * - API returns empty settings for users without managed settings
  */
 
-import axios from 'axios'
 import { createHash } from 'crypto'
 import { open, unlink } from 'fs/promises'
+
+import axios from 'axios'
+
 import { getOauthConfig, OAUTH_BETA_HEADER } from '../../constants/oauth.js'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
@@ -25,28 +27,15 @@ import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { classifyAxiosError, getErrnoCode } from '../../utils/errors.js'
 import { settingsChangeDetector } from '../../utils/settings/changeDetector.js'
-import {
-  type SettingsJson,
-  SettingsSchema,
-} from '../../utils/settings/types.js'
+import { type SettingsJson, SettingsSchema } from '../../utils/settings/types.js'
 import { sleep } from '../../utils/sleep.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
 import { getRetryDelay } from '../api/withRetry.js'
-import {
-  checkManagedSettingsSecurity,
-  handleSecurityCheckResult,
-} from './securityCheck.jsx'
+import { checkManagedSettingsSecurity, handleSecurityCheckResult } from './securityCheck.jsx'
 import { isRemoteManagedSettingsEligible, resetSyncCache } from './syncCache.js'
-import {
-  getRemoteManagedSettingsSyncFromCache,
-  getSettingsPath,
-  setSessionCache,
-} from './syncCacheState.js'
-import {
-  type RemoteManagedSettingsFetchResult,
-  RemoteManagedSettingsResponseSchema,
-} from './types.js'
+import { getRemoteManagedSettingsSyncFromCache, getSettingsPath, setSessionCache } from './syncCacheState.js'
+import { type RemoteManagedSettingsFetchResult, RemoteManagedSettingsResponseSchema } from './types.js'
 
 // Constants
 const SETTINGS_TIMEOUT_MS = 10000 // 10 seconds for settings fetch
@@ -80,16 +69,14 @@ export function initializeRemoteManagedSettingsLoadingPromise(): void {
   }
 
   if (isRemoteManagedSettingsEligible()) {
-    loadingCompletePromise = new Promise(resolve => {
+    loadingCompletePromise = new Promise((resolve) => {
       loadingCompleteResolve = resolve
 
       // Set a timeout to resolve the promise even if loadRemoteManagedSettings() is never called
       // This prevents deadlocks in Agent SDK tests and other non-CLI contexts
       setTimeout(() => {
         if (loadingCompleteResolve) {
-          logForDebugging(
-            'Remote settings: Loading promise timed out, resolving anyway',
-          )
+          logForDebugging('Remote settings: Loading promise timed out, resolving anyway')
           loadingCompleteResolve()
           loadingCompleteResolve = null
         }
@@ -206,9 +193,7 @@ function getRemoteSettingsAuthHeaders(): {
  * Fetch remote settings with retry logic and exponential backoff
  * Uses existing codebase retry utilities for consistency
  */
-async function fetchWithRetry(
-  cachedChecksum?: string,
-): Promise<RemoteManagedSettingsFetchResult> {
+async function fetchWithRetry(cachedChecksum?: string): Promise<RemoteManagedSettingsFetchResult> {
   let lastResult: RemoteManagedSettingsFetchResult | null = null
 
   for (let attempt = 1; attempt <= DEFAULT_MAX_RETRIES + 1; attempt++) {
@@ -231,9 +216,7 @@ async function fetchWithRetry(
 
     // Calculate delay and wait before next retry
     const delayMs = getRetryDelay(attempt)
-    logForDebugging(
-      `Remote settings: Retry ${attempt}/${DEFAULT_MAX_RETRIES} after ${delayMs}ms`,
-    )
+    logForDebugging(`Remote settings: Retry ${attempt}/${DEFAULT_MAX_RETRIES} after ${delayMs}ms`)
     await sleep(delayMs)
   }
 
@@ -245,9 +228,7 @@ async function fetchWithRetry(
  * Fetch the full remote settings (single attempt, no retries)
  * Optionally pass a cached checksum for ETag-based caching
  */
-async function fetchRemoteManagedSettings(
-  cachedChecksum?: string,
-): Promise<RemoteManagedSettingsFetchResult> {
+async function fetchRemoteManagedSettings(cachedChecksum?: string): Promise<RemoteManagedSettingsFetchResult> {
   try {
     // Ensure OAuth token is fresh before fetching settings
     // This prevents 401 errors from stale cached tokens
@@ -280,8 +261,7 @@ async function fetchRemoteManagedSettings(
       timeout: SETTINGS_TIMEOUT_MS,
       // Allow 204, 304, and 404 responses without treating them as errors.
       // 204/404 are returned when no settings exist for the user or the feature flag is off.
-      validateStatus: status =>
-        status === 200 || status === 204 || status === 304 || status === 404,
+      validateStatus: (status) => status === 200 || status === 204 || status === 304 || status === 404,
     })
 
     // Handle 304 Not Modified - cached version is still valid
@@ -305,13 +285,9 @@ async function fetchRemoteManagedSettings(
       }
     }
 
-    const parsed = RemoteManagedSettingsResponseSchema().safeParse(
-      response.data,
-    )
+    const parsed = RemoteManagedSettingsResponseSchema().safeParse(response.data)
     if (!parsed.success) {
-      logForDebugging(
-        `Remote settings: Invalid response format - ${parsed.error.message}`,
-      )
+      logForDebugging(`Remote settings: Invalid response format - ${parsed.error.message}`)
       return {
         success: false,
         error: 'Invalid remote settings format',
@@ -321,9 +297,7 @@ async function fetchRemoteManagedSettings(
     // Full validation of settings structure
     const settingsValidation = SettingsSchema().safeParse(parsed.data.settings)
     if (!settingsValidation.success) {
-      logForDebugging(
-        `Remote settings: Settings validation failed - ${settingsValidation.error.message}`,
-      )
+      logForDebugging(`Remote settings: Settings validation failed - ${settingsValidation.error.message}`)
       return {
         success: false,
         error: 'Invalid settings structure',
@@ -378,9 +352,7 @@ async function saveSettings(settings: SettingsJson): Promise<void> {
     }
     logForDebugging(`Remote settings: Saved to ${path}`)
   } catch (error) {
-    logForDebugging(
-      `Remote settings: Failed to save - ${error instanceof Error ? error.message : 'unknown error'}`,
-    )
+    logForDebugging(`Remote settings: Failed to save - ${error instanceof Error ? error.message : 'unknown error'}`)
     // Ignore save errors - we'll refetch on next startup
   }
 }
@@ -421,9 +393,7 @@ async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null>
   const cachedSettings = getRemoteManagedSettingsSyncFromCache()
 
   // Compute checksum locally from cached settings for HTTP caching validation
-  const cachedChecksum = cachedSettings
-    ? computeChecksumFromSettings(cachedSettings)
-    : undefined
+  const cachedChecksum = cachedSettings ? computeChecksumFromSettings(cachedSettings) : undefined
 
   try {
     // Fetch settings from API with retry logic
@@ -432,9 +402,7 @@ async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null>
     if (!result.success) {
       // On fetch failure, use stale file if available (graceful degradation)
       if (cachedSettings) {
-        logForDebugging(
-          'Remote settings: Using stale cache after fetch failure',
-        )
+        logForDebugging('Remote settings: Using stale cache after fetch failure')
         setSessionCache(cachedSettings)
         return cachedSettings
       }
@@ -455,15 +423,10 @@ async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null>
 
     if (hasContent) {
       // Check for dangerous settings changes before applying
-      const securityResult = await checkManagedSettingsSecurity(
-        cachedSettings,
-        newSettings,
-      )
+      const securityResult = await checkManagedSettingsSecurity(cachedSettings, newSettings)
       if (!handleSecurityCheckResult(securityResult)) {
         // User rejected - don't apply settings, return cached or null
-        logForDebugging(
-          'Remote settings: User rejected new settings, using cached settings',
-        )
+        logForDebugging('Remote settings: User rejected new settings, using cached settings')
         return cachedSettings
       }
 
@@ -516,7 +479,7 @@ export async function loadRemoteManagedSettings(): Promise<void> {
   // Only if the user is eligible for remote settings AND promise not already set up
   // (initializeRemoteManagedSettingsLoadingPromise may have been called earlier)
   if (isRemoteManagedSettingsEligible() && !loadingCompletePromise) {
-    loadingCompletePromise = new Promise(resolve => {
+    loadingCompletePromise = new Promise((resolve) => {
       loadingCompleteResolve = resolve
     })
   }

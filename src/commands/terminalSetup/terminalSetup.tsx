@@ -1,18 +1,17 @@
-import chalk from 'chalk'
 import { randomBytes } from 'crypto'
 import { copyFile, mkdir, readFile, writeFile } from 'fs/promises'
 import { homedir, platform } from 'os'
 import { dirname, join } from 'path'
-import type { ThemeName } from 'src/utils/theme.js'
 import { pathToFileURL } from 'url'
-import { supportsHyperlinks } from '../../ink/supports-hyperlinks.js'
+
+import chalk from 'chalk'
+import type { ThemeName } from 'src/utils/theme.js'
+
 import { color } from '../../ink.js'
+import { supportsHyperlinks } from '../../ink/supports-hyperlinks.js'
 import { maybeMarkProjectOnboardingComplete } from '../../projectOnboardingState.js'
 import type { ToolUseContext } from '../../Tool.js'
-import type {
-  LocalJSXCommandContext,
-  LocalJSXCommandOnDone,
-} from '../../types/command.js'
+import type { LocalJSXCommandContext, LocalJSXCommandOnDone } from '../../types/command.js'
 import {
   backupTerminalPreferences,
   checkAndRestoreTerminalBackup,
@@ -128,12 +127,8 @@ export async function setupTerminal(theme: ThemeName): Promise<string> {
       break
   }
 
-  saveGlobalConfig(current => {
-    if (
-      ['vscode', 'cursor', 'windsurf', 'alacritty', 'zed'].includes(
-        env.terminal ?? '',
-      )
-    ) {
+  saveGlobalConfig((current) => {
+    if (['vscode', 'cursor', 'windsurf', 'alacritty', 'zed'].includes(env.terminal ?? '')) {
       if (current.shiftEnterKeyBindingInstalled === true) return current
       return { ...current, shiftEnterKeyBindingInstalled: true }
     } else if (env.terminal === 'Apple_Terminal') {
@@ -164,7 +159,7 @@ export function hasUsedBackslashReturn(): boolean {
 export function markBackslashReturnUsed(): void {
   const config = getGlobalConfig()
   if (!config.hasUsedBackslashReturn) {
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       hasUsedBackslashReturn: true,
     }))
@@ -295,7 +290,7 @@ async function installBindingsForVSCodeTerminal(
 
     // Check if keybinding already exists
     const existingBinding = keybindings.find(
-      binding =>
+      (binding) =>
         binding.key === 'shift+enter' &&
         binding.command === 'workbench.action.terminal.sendSequence' &&
         binding.when === 'terminalFocus',
@@ -331,15 +326,11 @@ async function installBindingsForVSCodeTerminal(
     )}${EOL}${chalk.dim(`See ${formatPathLink(keybindingsPath)}`)}${EOL}`
   } catch (error) {
     logError(error)
-    throw new Error(
-      `Failed to install ${editor} terminal Shift+Enter key binding`,
-    )
+    throw new Error(`Failed to install ${editor} terminal Shift+Enter key binding`)
   }
 }
 
-async function enableOptionAsMetaForProfile(
-  profileName: string,
-): Promise<boolean> {
+async function enableOptionAsMetaForProfile(profileName: string): Promise<boolean> {
   // First try to add the property (in case it doesn't exist)
   // Quote the profile name to handle names with spaces (e.g., "Man Page", "Red Sands")
   const { code: addCode } = await execFileNoThrow('/usr/libexec/PlistBuddy', [
@@ -357,11 +348,7 @@ async function enableOptionAsMetaForProfile(
     ])
 
     if (setCode !== 0) {
-      logError(
-        new Error(
-          `Failed to enable Option as Meta key for Terminal.app profile: ${profileName}`,
-        ),
-      )
+      logError(new Error(`Failed to enable Option as Meta key for Terminal.app profile: ${profileName}`))
       return false
     }
   }
@@ -369,9 +356,7 @@ async function enableOptionAsMetaForProfile(
   return true
 }
 
-async function disableAudioBellForProfile(
-  profileName: string,
-): Promise<boolean> {
+async function disableAudioBellForProfile(profileName: string): Promise<boolean> {
   // First try to add the property (in case it doesn't exist)
   // Quote the profile name to handle names with spaces (e.g., "Man Page", "Red Sands")
   const { code: addCode } = await execFileNoThrow('/usr/libexec/PlistBuddy', [
@@ -389,11 +374,7 @@ async function disableAudioBellForProfile(
     ])
 
     if (setCode !== 0) {
-      logError(
-        new Error(
-          `Failed to disable audio bell for Terminal.app profile: ${profileName}`,
-        ),
-      )
+      logError(new Error(`Failed to disable audio bell for Terminal.app profile: ${profileName}`))
       return false
     }
   }
@@ -402,32 +383,30 @@ async function disableAudioBellForProfile(
 }
 
 // Enable Option as Meta key for Terminal.app
-async function enableOptionAsMetaForTerminal(
-  theme: ThemeName,
-): Promise<string> {
+async function enableOptionAsMetaForTerminal(theme: ThemeName): Promise<string> {
   try {
     // Create a backup of the current plist file
     const backupPath = await backupTerminalPreferences()
     if (!backupPath) {
-      throw new Error(
-        'Failed to create backup of Terminal.app preferences, bailing out',
-      )
+      throw new Error('Failed to create backup of Terminal.app preferences, bailing out')
     }
 
     // Read the current default profile from the plist
-    const { stdout: defaultProfile, code: readCode } = await execFileNoThrow(
-      'defaults',
-      ['read', 'com.apple.Terminal', 'Default Window Settings'],
-    )
+    const { stdout: defaultProfile, code: readCode } = await execFileNoThrow('defaults', [
+      'read',
+      'com.apple.Terminal',
+      'Default Window Settings',
+    ])
 
     if (readCode !== 0 || !defaultProfile.trim()) {
       throw new Error('Failed to read default Terminal.app profile')
     }
 
-    const { stdout: startupProfile, code: startupCode } = await execFileNoThrow(
-      'defaults',
-      ['read', 'com.apple.Terminal', 'Startup Window Settings'],
-    )
+    const { stdout: startupProfile, code: startupCode } = await execFileNoThrow('defaults', [
+      'read',
+      'com.apple.Terminal',
+      'Startup Window Settings',
+    ])
     if (startupCode !== 0 || !startupProfile.trim()) {
       throw new Error('Failed to read startup Terminal.app profile')
     }
@@ -435,10 +414,8 @@ async function enableOptionAsMetaForTerminal(
     let wasAnyProfileUpdated = false
 
     const defaultProfileName = defaultProfile.trim()
-    const optionAsMetaEnabled =
-      await enableOptionAsMetaForProfile(defaultProfileName)
-    const audioBellDisabled =
-      await disableAudioBellForProfile(defaultProfileName)
+    const optionAsMetaEnabled = await enableOptionAsMetaForProfile(defaultProfileName)
+    const audioBellDisabled = await disableAudioBellForProfile(defaultProfileName)
 
     if (optionAsMetaEnabled || audioBellDisabled) {
       wasAnyProfileUpdated = true
@@ -448,10 +425,8 @@ async function enableOptionAsMetaForTerminal(
 
     // Only proceed if the startup profile is different from the default profile
     if (startupProfileName !== defaultProfileName) {
-      const startupOptionAsMetaEnabled =
-        await enableOptionAsMetaForProfile(startupProfileName)
-      const startupAudioBellDisabled =
-        await disableAudioBellForProfile(startupProfileName)
+      const startupOptionAsMetaEnabled = await enableOptionAsMetaForProfile(startupProfileName)
+      const startupAudioBellDisabled = await disableAudioBellForProfile(startupProfileName)
 
       if (startupOptionAsMetaEnabled || startupAudioBellDisabled) {
         wasAnyProfileUpdated = true
@@ -459,9 +434,7 @@ async function enableOptionAsMetaForTerminal(
     }
 
     if (!wasAnyProfileUpdated) {
-      throw new Error(
-        'Failed to enable Option as Meta key or disable audio bell for any Terminal.app profile',
-      )
+      throw new Error('Failed to enable Option as Meta key or disable audio bell for any Terminal.app profile')
     }
 
     // Flush the preferences cache
@@ -483,17 +456,13 @@ async function enableOptionAsMetaForTerminal(
 
     const errorMessage = 'Failed to enable Option as Meta key for Terminal.app.'
     if (restoreResult.status === 'restored') {
-      throw new Error(
-        `${errorMessage} Your settings have been restored from backup.`,
-      )
+      throw new Error(`${errorMessage} Your settings have been restored from backup.`)
     } else if (restoreResult.status === 'failed') {
       throw new Error(
         `${errorMessage} Restoring from backup failed, try manually with: defaults import com.apple.Terminal ${restoreResult.backupPath}`,
       )
     } else {
-      throw new Error(
-        `${errorMessage} No backup was available to restore from.`,
-      )
+      throw new Error(`${errorMessage} No backup was available to restore from.`)
     }
   }
 }
@@ -552,10 +521,7 @@ chars = "\\u001B\\r"`
   try {
     if (configExists) {
       // Check if keybinding already exists (look for Shift+Return binding)
-      if (
-        configContent.includes('mods = "Shift"') &&
-        configContent.includes('key = "Return"')
-      ) {
+      if (configContent.includes('mods = "Shift"') && configContent.includes('key = "Return"')) {
         return `${color(
           'warning',
           theme,
@@ -592,10 +558,7 @@ chars = "\\u001B\\r"`
     // Write the updated config
     await writeFile(configPath, updatedContent, { encoding: 'utf-8' })
 
-    return `${color(
-      'success',
-      theme,
-    )('Installed Alacritty Shift+Enter key binding')}${EOL}${color(
+    return `${color('success', theme)('Installed Alacritty Shift+Enter key binding')}${EOL}${color(
       'success',
       theme,
     )(
@@ -682,9 +645,7 @@ async function installBindingsForZed(theme: ThemeName): Promise<string> {
     return `${color(
       'success',
       theme,
-    )(
-      'Installed Zed Shift+Enter key binding',
-    )}${EOL}${chalk.dim(`See ${formatPathLink(keymapPath)}`)}${EOL}`
+    )('Installed Zed Shift+Enter key binding')}${EOL}${chalk.dim(`See ${formatPathLink(keymapPath)}`)}${EOL}`
   } catch (error) {
     logError(error)
     throw new Error('Failed to install Zed Shift+Enter key binding')

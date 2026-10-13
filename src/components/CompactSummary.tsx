@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { BLACK_CIRCLE } from '../constants/figures.js'
 import { Box, Text } from '../ink.js'
 import type { Screen } from '../screens/REPL.js'
@@ -32,9 +33,7 @@ export function CompactSummary({ message, screen }: Props): React.ReactNode {
                 <Box flexDirection="column">
                   <Text dimColor>
                     Summarized {metadata.messagesSummarized} messages{' '}
-                    {metadata.direction === 'up_to'
-                      ? 'up to this point'
-                      : 'from this point'}
+                    {metadata.direction === 'up_to' ? 'up to this point' : 'from this point'}
                   </Text>
                   {metadata.userContext && (
                     <Text dimColor>

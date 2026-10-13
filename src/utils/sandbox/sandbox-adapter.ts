@@ -4,6 +4,10 @@
  * settings system, tool integration, and additional features.
  */
 
+import { rmSync, statSync } from 'fs'
+import { readFile } from 'fs/promises'
+import { join, resolve, sep } from 'path'
+
 import type {
   FsReadRestrictionConfig,
   FsWriteRestrictionConfig,
@@ -20,18 +24,23 @@ import {
   SandboxRuntimeConfigSchema,
   SandboxViolationStore,
 } from '@anthropic-ai/sandbox-runtime'
-import { rmSync, statSync } from 'fs'
-import { readFile } from 'fs/promises'
 import { memoize } from 'lodash-es'
-import { join, resolve, sep } from 'path'
-import {
-  getAdditionalDirectoriesForClaudeMd,
-  getCwdState,
-  getOriginalCwd,
-} from '../../bootstrap/state.js'
+import { BASH_TOOL_NAME } from 'src/tools/BashTool/toolName.js'
+import { FILE_EDIT_TOOL_NAME } from 'src/tools/FileEditTool/constants.js'
+import { FILE_READ_TOOL_NAME } from 'src/tools/FileReadTool/prompt.js'
+import { WEB_FETCH_TOOL_NAME } from 'src/tools/WebFetchTool/prompt.js'
+
+import { getAdditionalDirectoriesForClaudeMd, getCwdState, getOriginalCwd } from '../../bootstrap/state.js'
 import { logForDebugging } from '../debug.js'
+import { errorMessage } from '../errors.js'
 import { expandPath } from '../path.js'
+import { getClaudeTempDir } from '../permissions/filesystem.js'
+// ============================================================================
+// Settings Converter
+// ============================================================================
+import type { PermissionRuleValue } from '../permissions/PermissionRule.js'
 import { getPlatform, type Platform } from '../platform.js'
+import { ripgrepCommand } from '../ripgrep.js'
 import { settingsChangeDetector } from '../settings/changeDetector.js'
 import { SETTING_SOURCES, type SettingSource } from '../settings/constants.js'
 import { getManagedSettingsDropInDir } from '../settings/managedPath.js'
@@ -45,24 +54,9 @@ import {
 } from '../settings/settings.js'
 import type { SettingsJson } from '../settings/types.js'
 
-// ============================================================================
-// Settings Converter
-// ============================================================================
-
-import { BASH_TOOL_NAME } from 'src/tools/BashTool/toolName.js'
-import { FILE_EDIT_TOOL_NAME } from 'src/tools/FileEditTool/constants.js'
-import { FILE_READ_TOOL_NAME } from 'src/tools/FileReadTool/prompt.js'
-import { WEB_FETCH_TOOL_NAME } from 'src/tools/WebFetchTool/prompt.js'
-import { errorMessage } from '../errors.js'
-import { getClaudeTempDir } from '../permissions/filesystem.js'
-import type { PermissionRuleValue } from '../permissions/PermissionRule.js'
-import { ripgrepCommand } from '../ripgrep.js'
-
 // Local copies to avoid circular dependency
 // (permissions.ts imports SandboxManager, bashPermissions.ts imports permissions.ts)
-function permissionRuleValueFromString(
-  ruleString: string,
-): PermissionRuleValue {
+function permissionRuleValueFromString(ruleString: string): PermissionRuleValue {
   const matches = ruleString.match(/^([^(]+)\(([^)]+)\)$/)
   if (!matches) {
     return { toolName: ruleString }
@@ -96,10 +90,7 @@ function permissionRuleExtractPrefix(permissionRule: string): string | null {
  * @param pattern The path pattern from a permission rule
  * @param source The settings source this pattern came from (needed to resolve `/path` patterns)
  */
-export function resolvePathPatternForSandbox(
-  pattern: string,
-  source: SettingSource,
-): string {
+export function resolvePathPatternForSandbox(pattern: string, source: SettingSource): string {
   // Handle // prefix - absolute from root (CC-specific convention)
   if (pattern.startsWith('//')) {
     return pattern.slice(1) // "//.aws/**" → "/.aws/**"
@@ -135,10 +126,7 @@ export function resolvePathPatternForSandbox(
  * sandbox-runtime's getFsWriteConfig() does not call normalizePathForSandbox
  * on allowWrite paths (it only strips trailing glob suffixes).
  */
-export function resolveSandboxFilesystemPath(
-  pattern: string,
-  source: SettingSource,
-): string {
+export function resolveSandboxFilesystemPath(pattern: string, source: SettingSource): string {
   // Legacy permission-rule escape: //path → /path. Kept for compat with
   // users who worked around #30067 by writing //Users/foo/.cargo in config.
   if (pattern.startsWith('//')) return pattern.slice(1)
@@ -150,17 +138,11 @@ export function resolveSandboxFilesystemPath(
  * This is true when policySettings has sandbox.network.allowManagedDomainsOnly: true
  */
 export function shouldAllowManagedSandboxDomainsOnly(): boolean {
-  return (
-    getSettingsForSource('policySettings')?.sandbox?.network
-      ?.allowManagedDomainsOnly === true
-  )
+  return getSettingsForSource('policySettings')?.sandbox?.network?.allowManagedDomainsOnly === true
 }
 
 function shouldAllowManagedReadPathsOnly(): boolean {
-  return (
-    getSettingsForSource('policySettings')?.sandbox?.filesystem
-      ?.allowManagedReadPathsOnly === true
-  )
+  return getSettingsForSource('policySettings')?.sandbox?.filesystem?.allowManagedReadPathsOnly === true
 }
 
 /**
@@ -169,9 +151,7 @@ function shouldAllowManagedReadPathsOnly(): boolean {
  *
  * @param settings Merged settings (used for sandbox config like network, ripgrep, etc.)
  */
-export function convertToSandboxRuntimeConfig(
-  settings: SettingsJson,
-): SandboxRuntimeConfig {
+export function convertToSandboxRuntimeConfig(settings: SettingsJson): SandboxRuntimeConfig {
   const permissions = settings.permissions || {}
 
   // Extract network domains from WebFetch rules
@@ -181,16 +161,12 @@ export function convertToSandboxRuntimeConfig(
   // When allowManagedSandboxDomainsOnly is enabled, only use domains from policy settings
   if (shouldAllowManagedSandboxDomainsOnly()) {
     const policySettings = getSettingsForSource('policySettings')
-    for (const domain of policySettings?.sandbox?.network?.allowedDomains ||
-      []) {
+    for (const domain of policySettings?.sandbox?.network?.allowedDomains || []) {
       allowedDomains.push(domain)
     }
     for (const ruleString of policySettings?.permissions?.allow || []) {
       const rule = permissionRuleValueFromString(ruleString)
-      if (
-        rule.toolName === WEB_FETCH_TOOL_NAME &&
-        rule.ruleContent?.startsWith('domain:')
-      ) {
+      if (rule.toolName === WEB_FETCH_TOOL_NAME && rule.ruleContent?.startsWith('domain:')) {
         allowedDomains.push(rule.ruleContent.substring('domain:'.length))
       }
     }
@@ -200,10 +176,7 @@ export function convertToSandboxRuntimeConfig(
     }
     for (const ruleString of permissions.allow || []) {
       const rule = permissionRuleValueFromString(ruleString)
-      if (
-        rule.toolName === WEB_FETCH_TOOL_NAME &&
-        rule.ruleContent?.startsWith('domain:')
-      ) {
+      if (rule.toolName === WEB_FETCH_TOOL_NAME && rule.ruleContent?.startsWith('domain:')) {
         allowedDomains.push(rule.ruleContent.substring('domain:'.length))
       }
     }
@@ -211,10 +184,7 @@ export function convertToSandboxRuntimeConfig(
 
   for (const ruleString of permissions.deny || []) {
     const rule = permissionRuleValueFromString(ruleString)
-    if (
-      rule.toolName === WEB_FETCH_TOOL_NAME &&
-      rule.ruleContent?.startsWith('domain:')
-    ) {
+    if (rule.toolName === WEB_FETCH_TOOL_NAME && rule.ruleContent?.startsWith('domain:')) {
       deniedDomains.push(rule.ruleContent.substring('domain:'.length))
     }
   }
@@ -229,9 +199,9 @@ export function convertToSandboxRuntimeConfig(
 
   // Always deny writes to settings.json files to prevent sandbox escape
   // This blocks settings in the original working directory (where Claude Code started)
-  const settingsPaths = SETTING_SOURCES.map(source =>
-    getSettingsFilePathForSource(source),
-  ).filter((p): p is string => p !== undefined)
+  const settingsPaths = SETTING_SOURCES.map((source) => getSettingsFilePathForSource(source)).filter(
+    (p): p is string => p !== undefined,
+  )
   denyWrite.push(...settingsPaths)
   denyWrite.push(getManagedSettingsDropInDir())
 
@@ -309,9 +279,7 @@ export function convertToSandboxRuntimeConfig(
       for (const ruleString of sourceSettings.permissions.allow || []) {
         const rule = permissionRuleValueFromString(ruleString)
         if (rule.toolName === FILE_EDIT_TOOL_NAME && rule.ruleContent) {
-          allowWrite.push(
-            resolvePathPatternForSandbox(rule.ruleContent, source),
-          )
+          allowWrite.push(resolvePathPatternForSandbox(rule.ruleContent, source))
         }
       }
 
@@ -374,8 +342,7 @@ export function convertToSandboxRuntimeConfig(
     },
     ignoreViolations: settings.sandbox?.ignoreViolations,
     enableWeakerNestedSandbox: settings.sandbox?.enableWeakerNestedSandbox,
-    enableWeakerNetworkIsolation:
-      settings.sandbox?.enableWeakerNetworkIsolation,
+    enableWeakerNetworkIsolation: settings.sandbox?.enableWeakerNetworkIsolation,
     ripgrep: ripgrepConfig,
   }
 }
@@ -478,10 +445,7 @@ function areUnsandboxedCommandsAllowed(): boolean {
 
 function isSandboxRequired(): boolean {
   const settings = getSettings_DEPRECATED()
-  return (
-    getSandboxEnabledSetting() &&
-    (settings?.sandbox?.failIfUnavailable ?? false)
-  )
+  return getSandboxEnabledSetting() && (settings?.sandbox?.failIfUnavailable ?? false)
 }
 
 /**
@@ -505,9 +469,7 @@ const isSupportedPlatform = memoize((): boolean => {
 function isPlatformInEnabledList(): boolean {
   try {
     const settings = getInitialSettings()
-    const enabledPlatforms = (
-      settings?.sandbox as { enabledPlatforms?: Platform[] } | undefined
-    )?.enabledPlatforms
+    const enabledPlatforms = (settings?.sandbox as { enabledPlatforms?: Platform[] } | undefined)?.enabledPlatforms
 
     if (enabledPlatforms === undefined) {
       return true
@@ -619,14 +581,10 @@ function getLinuxGlobPatternWarnings(): string[] {
     }
 
     // Check all permission rules
-    for (const ruleString of [
-      ...(permissions.allow || []),
-      ...(permissions.deny || []),
-    ]) {
+    for (const ruleString of [...(permissions.allow || []), ...(permissions.deny || [])]) {
       const rule = permissionRuleValueFromString(ruleString)
       if (
-        (rule.toolName === FILE_EDIT_TOOL_NAME ||
-          rule.toolName === FILE_READ_TOOL_NAME) &&
+        (rule.toolName === FILE_EDIT_TOOL_NAME || rule.toolName === FILE_READ_TOOL_NAME) &&
         rule.ruleContent &&
         hasGlobs(rule.ruleContent)
       ) {
@@ -716,20 +674,13 @@ async function wrapWithSandbox(
     }
   }
 
-  return BaseSandboxManager.wrapWithSandbox(
-    command,
-    binShell,
-    customConfig,
-    abortSignal,
-  )
+  return BaseSandboxManager.wrapWithSandbox(command, binShell, customConfig, abortSignal)
 }
 
 /**
  * Initialize sandbox with log monitoring enabled by default
  */
-async function initialize(
-  sandboxAskCallback?: SandboxAskCallback,
-): Promise<void> {
+async function initialize(sandboxAskCallback?: SandboxAskCallback): Promise<void> {
   // If already initializing or initialized, return the promise
   if (initializationPromise) {
     return initializationPromise
@@ -745,9 +696,7 @@ async function initialize(
   const wrappedCallback: SandboxAskCallback | undefined = sandboxAskCallback
     ? async (hostPattern: NetworkHostPattern) => {
         if (shouldAllowManagedSandboxDomainsOnly()) {
-          logForDebugging(
-            `[sandbox] Blocked network request to ${hostPattern.host} (allowManagedDomainsOnly)`,
-          )
+          logForDebugging(`[sandbox] Blocked network request to ${hostPattern.host} (allowManagedDomainsOnly)`)
           return false
         }
         return sandboxAskCallback(hostPattern)
@@ -833,8 +782,7 @@ export function addToExcludedCommands(
   }>,
 ): string {
   const existingSettings = getSettingsForSource('localSettings')
-  const existingExcludedCommands =
-    existingSettings?.sandbox?.excludedCommands || []
+  const existingExcludedCommands = existingSettings?.sandbox?.excludedCommands || []
 
   // Determine the command pattern to add
   // If there are suggestions with Bash rules, extract the pattern (e.g., "npm run test" from "npm run test:*")
@@ -843,15 +791,11 @@ export function addToExcludedCommands(
 
   if (permissionUpdates) {
     const bashSuggestions = permissionUpdates.filter(
-      update =>
-        update.type === 'addRules' &&
-        update.rules.some(rule => rule.toolName === BASH_TOOL_NAME),
+      (update) => update.type === 'addRules' && update.rules.some((rule) => rule.toolName === BASH_TOOL_NAME),
     )
 
     if (bashSuggestions.length > 0 && bashSuggestions[0]!.type === 'addRules') {
-      const firstBashRule = bashSuggestions[0]!.rules.find(
-        rule => rule.toolName === BASH_TOOL_NAME,
-      )
+      const firstBashRule = bashSuggestions[0]!.rules.find((rule) => rule.toolName === BASH_TOOL_NAME)
       if (firstBashRule?.ruleContent) {
         // Extract pattern from Bash(command) or Bash(command:*) format
         const prefix = permissionRuleExtractPrefix(firstBashRule.ruleContent)
@@ -958,8 +902,7 @@ export const SandboxManager: ISandboxManager = {
   getLinuxSocksSocketPath: BaseSandboxManager.getLinuxSocksSocketPath,
   waitForNetworkInitialization: BaseSandboxManager.waitForNetworkInitialization,
   getSandboxViolationStore: BaseSandboxManager.getSandboxViolationStore,
-  annotateStderrWithSandboxFailures:
-    BaseSandboxManager.annotateStderrWithSandboxFailures,
+  annotateStderrWithSandboxFailures: BaseSandboxManager.annotateStderrWithSandboxFailures,
   cleanupAfterCommand: (): void => {
     BaseSandboxManager.cleanupAfterCommand()
     scrubBareGitRepoFiles()

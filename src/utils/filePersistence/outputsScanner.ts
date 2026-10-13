@@ -9,6 +9,7 @@
 
 import * as fs from 'fs/promises'
 import * as path from 'path'
+
 import { logForDebugging } from '../debug.js'
 import type { EnvironmentKind } from '../teleport/environments.js'
 import type { TurnStartTime } from './types.js'
@@ -30,9 +31,7 @@ export function getEnvironmentKind(): EnvironmentKind | null {
   return null
 }
 
-function hasParentPath(
-  entry: object,
-): entry is { parentPath: string; name: string } {
+function hasParentPath(entry: object): entry is { parentPath: string; name: string } {
   return 'parentPath' in entry && typeof entry.parentPath === 'string'
 }
 
@@ -59,10 +58,7 @@ function getEntryParentPath(entry: object, fallback: string): string {
  * @param turnStartTime - The timestamp when the turn started
  * @param outputsDir - The directory to scan for modified files
  */
-export async function findModifiedFiles(
-  turnStartTime: TurnStartTime,
-  outputsDir: string,
-): Promise<string[]> {
+export async function findModifiedFiles(turnStartTime: TurnStartTime, outputsDir: string): Promise<string[]> {
   // Use recursive flag to get all entries in one call
   let entries: Awaited<ReturnType<typeof fs.readdir>>
   try {
@@ -95,7 +91,7 @@ export async function findModifiedFiles(
 
   // Parallelize stat calls for all files
   const statResults = await Promise.all(
-    filePaths.map(async filePath => {
+    filePaths.map(async (filePath) => {
       try {
         const stat = await fs.lstat(filePath)
         // Skip if it became a symlink between readdir and stat (race condition)
@@ -118,9 +114,7 @@ export async function findModifiedFiles(
     }
   }
 
-  logDebug(
-    `Found ${modifiedFiles.length} modified files since turn start (scanned ${filePaths.length} total)`,
-  )
+  logDebug(`Found ${modifiedFiles.length} modified files since turn start (scanned ${filePaths.length} total)`)
 
   return modifiedFiles
 }

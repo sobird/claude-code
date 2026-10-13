@@ -1,14 +1,10 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
+
 import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
-import {
-  Box,
-  Text,
-  usePreviewTheme,
-  useTheme,
-  useThemeSetting,
-} from '../ink.js'
+import { Box, Text, usePreviewTheme, useTheme, useThemeSetting } from '../ink.js'
 import { useRegisterKeybindingContext } from '../keybindings/KeybindingContext.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js'
@@ -19,11 +15,8 @@ import type { ThemeSetting } from '../utils/theme.js'
 import { Select } from './CustomSelect/index.js'
 import { Byline } from './design-system/Byline.js'
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js'
-import {
-  getColorModuleUnavailableReason,
-  getSyntaxTheme,
-} from './StructuredDiff/colorDiff.js'
 import { StructuredDiff } from './StructuredDiff.js'
+import { getColorModuleUnavailableReason, getSyntaxTheme } from './StructuredDiff/colorDiff.js'
 
 export type ThemePickerProps = {
   onThemeSelect: (setting: ThemeSetting) => void
@@ -50,21 +43,15 @@ export function ThemePicker({
   const themeSetting = useThemeSetting()
   const { columns } = useTerminalSize()
   const colorModuleUnavailableReason = getColorModuleUnavailableReason()
-  const syntaxTheme =
-    colorModuleUnavailableReason === null ? getSyntaxTheme(theme) : null
+  const syntaxTheme = colorModuleUnavailableReason === null ? getSyntaxTheme(theme) : null
   const { setPreviewTheme, savePreview, cancelPreview } = usePreviewTheme()
-  const syntaxHighlightingDisabled =
-    useAppState(s => s.settings.syntaxHighlightingDisabled) ?? false
+  const syntaxHighlightingDisabled = useAppState((s) => s.settings.syntaxHighlightingDisabled) ?? false
   const setAppState = useSetAppState()
 
   // Register ThemePicker context so its keybindings take precedence over Global
   useRegisterKeybindingContext('ThemePicker')
 
-  const syntaxToggleShortcut = useShortcutDisplay(
-    'theme:toggleSyntaxHighlighting',
-    'ThemePicker',
-    'ctrl+t',
-  )
+  const syntaxToggleShortcut = useShortcutDisplay('theme:toggleSyntaxHighlighting', 'ThemePicker', 'ctrl+t')
 
   useKeybinding(
     'theme:toggleSyntaxHighlighting',
@@ -74,7 +61,7 @@ export function ThemePicker({
         updateSettingsForSource('userSettings', {
           syntaxHighlightingDisabled: newValue,
         })
-        setAppState(prev => ({
+        setAppState((prev) => ({
           ...prev,
           settings: { ...prev.settings, syntaxHighlightingDisabled: newValue },
         }))
@@ -83,14 +70,10 @@ export function ThemePicker({
     { context: 'ThemePicker' },
   )
   // Always call the hook to follow React rules, but conditionally assign the exit handler
-  const exitState = useExitOnCtrlCDWithKeybindings(
-    skipExitHandling ? () => {} : undefined,
-  )
+  const exitState = useExitOnCtrlCDWithKeybindings(skipExitHandling ? () => {} : undefined)
 
   const themeOptions: { label: string; value: ThemeSetting }[] = [
-    ...(feature('AUTO_THEME')
-      ? [{ label: 'Auto (match terminal)', value: 'auto' as const }]
-      : []),
+    ...(feature('AUTO_THEME') ? [{ label: 'Auto (match terminal)', value: 'auto' as const }] : []),
     { label: 'Dark mode', value: 'dark' },
     { label: 'Light mode', value: 'light' },
     {
@@ -122,14 +105,12 @@ export function ThemePicker({
           </Text>
         )}
         <Box flexDirection="column">
-          <Text bold>
-            Choose the text style that looks best with your terminal
-          </Text>
+          <Text bold>Choose the text style that looks best with your terminal</Text>
           {helpText && !showHelpTextBelow && <Text dimColor>{helpText}</Text>}
         </Box>
         <Select
           options={themeOptions}
-          onFocus={setting => {
+          onFocus={(setting) => {
             setPreviewTheme(setting as ThemeSetting)
           }}
           onChange={(setting: string) => {

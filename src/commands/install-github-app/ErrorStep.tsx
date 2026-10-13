@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app.js'
 import { Box, Text } from '../../ink.js'
 
@@ -8,11 +9,7 @@ interface ErrorStepProps {
   errorInstructions?: string[]
 }
 
-export function ErrorStep({
-  error,
-  errorReason,
-  errorInstructions,
-}: ErrorStepProps) {
+export function ErrorStep({ error, errorReason, errorInstructions }: ErrorStepProps) {
   return (
     <>
       <Box flexDirection="column" borderStyle="round" paddingX={1}>
@@ -38,8 +35,7 @@ export function ErrorStep({
         )}
         <Box marginTop={1}>
           <Text dimColor>
-            For manual setup instructions, see:{' '}
-            <Text color="claude">{GITHUB_ACTION_SETUP_DOCS_URL}</Text>
+            For manual setup instructions, see: <Text color="claude">{GITHUB_ACTION_SETUP_DOCS_URL}</Text>
           </Text>
         </Box>
       </Box>

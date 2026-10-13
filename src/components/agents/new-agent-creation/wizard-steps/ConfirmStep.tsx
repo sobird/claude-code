@@ -1,6 +1,7 @@
 import React, { type ReactNode } from 'react'
-import type { KeyboardEvent } from '../../../../ink/events/keyboard-event.js'
+
 import { Box, Text } from '../../../../ink.js'
+import type { KeyboardEvent } from '../../../../ink/events/keyboard-event.js'
 import { useKeybinding } from '../../../../keybindings/useKeybinding.js'
 import { isAutoMemoryEnabled } from '../../../../memdir/paths.js'
 import type { Tools } from '../../../../Tool.js'
@@ -25,13 +26,7 @@ type Props = {
   error?: string | null
 }
 
-export function ConfirmStep({
-  tools,
-  existingAgents,
-  onSave,
-  onSaveAndEdit,
-  error,
-}: Props): ReactNode {
+export function ConfirmStep({ tools, existingAgents, onSave, onSaveAndEdit, error }: Props): ReactNode {
   const { goBack, wizardData } = useWizard<AgentWizardData>()
 
   useKeybinding('confirm:no', goBack, { context: 'Confirmation' })
@@ -75,21 +70,11 @@ export function ConfirmStep({
         <Byline>
           <KeyboardShortcutHint shortcut="s/Enter" action="save" />
           <KeyboardShortcutHint shortcut="e" action="edit in your editor" />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="cancel"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
         </Byline>
       }
     >
-      <Box
-        flexDirection="column"
-        tabIndex={0}
-        autoFocus
-        onKeyDown={handleKeyDown}
-      >
+      <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
         <Text>
           <Text bold>Name</Text>: {agent.agentType}
         </Text>
@@ -158,8 +143,7 @@ export function ConfirmStep({
 
         <Box marginTop={2}>
           <Text color="success">
-            Press <Text bold>s</Text> or <Text bold>Enter</Text> to save,{' '}
-            <Text bold>e</Text> to save and edit
+            Press <Text bold>s</Text> or <Text bold>Enter</Text> to save, <Text bold>e</Text> to save and edit
           </Text>
         </Box>
       </Box>

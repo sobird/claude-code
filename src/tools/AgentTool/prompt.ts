@@ -20,7 +20,7 @@ function getToolsDescription(agent: AgentDefinition): string {
   if (hasAllowlist && hasDenylist) {
     // Both defined: filter allowlist by denylist to match runtime behavior
     const denySet = new Set(disallowedTools)
-    const effectiveTools = tools.filter(t => !denySet.has(t))
+    const effectiveTools = tools.filter((t) => !denySet.has(t))
     if (effectiveTools.length === 0) {
       return 'None'
     }
@@ -58,8 +58,7 @@ export function formatAgentLine(agent: AgentDefinition): string {
  */
 export function shouldInjectAgentListInMessages(): boolean {
   if (isEnvTruthy(process.env.CLAUDE_CODE_AGENT_LIST_IN_MESSAGES)) return true
-  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_AGENT_LIST_IN_MESSAGES))
-    return false
+  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_AGENT_LIST_IN_MESSAGES)) return false
   return getFeatureValue_CACHED_MAY_BE_STALE('tengu_agent_list_attach', false)
 }
 
@@ -70,7 +69,7 @@ export async function getPrompt(
 ): Promise<string> {
   // Filter agents by allowed types when Agent(x,y) restricts which agents can be spawned
   const effectiveAgents = allowedAgentTypes
-    ? agentDefinitions.filter(a => allowedAgentTypes.includes(a.agentType))
+    ? agentDefinitions.filter((a) => allowedAgentTypes.includes(a.agentType))
     : agentDefinitions
 
   // Fork subagent feature: when enabled, insert the "When to fork" section
@@ -196,7 +195,7 @@ assistant: "I'm going to use the ${AGENT_TOOL_NAME} tool to launch the greeting-
   const agentListSection = listViaAttachment
     ? `Available agent types are listed in <system-reminder> messages in the conversation.`
     : `Available agent types and the tools they have access to:
-${effectiveAgents.map(agent => formatAgentLine(agent)).join('\n')}`
+${effectiveAgents.map((agent) => formatAgentLine(agent)).join('\n')}`
 
   // Shared core prompt used by both coordinator and non-coordinator modes
   const shared = `Launch a new agent to handle complex, multi-step tasks autonomously.
@@ -220,15 +219,11 @@ ${
   // Ant-native builds alias find/grep to embedded bfs/ugrep and remove the
   // dedicated Glob/Grep tools, so point at find via Bash instead.
   const embedded = hasEmbeddedSearchTools()
-  const fileSearchHint = embedded
-    ? '`find` via the Bash tool'
-    : `the ${GLOB_TOOL_NAME} tool`
+  const fileSearchHint = embedded ? '`find` via the Bash tool' : `the ${GLOB_TOOL_NAME} tool`
   // The "class Foo" example is about content search. Non-embedded stays Glob
   // (original intent: find-the-file-containing). Embedded gets grep because
   // find -name doesn't look at file contents.
-  const contentSearchHint = embedded
-    ? '`grep` via the Bash tool'
-    : `the ${GLOB_TOOL_NAME} tool`
+  const contentSearchHint = embedded ? '`grep` via the Bash tool' : `the ${GLOB_TOOL_NAME} tool`
   const whenNotToUseSection = forkEnabled
     ? ''
     : `
@@ -256,9 +251,7 @@ Usage notes:
 - Always include a short description (3-5 words) summarizing what the agent will do${concurrencyNote}
 - When the agent is done, it will return a single message back to you. The result returned by the agent is not visible to the user. To show the user the result, you should send a text message back to the user with a concise summary of the result.${
     // eslint-disable-next-line custom-rules/no-process-env-top-level
-    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS) &&
-    !isInProcessTeammate() &&
-    !forkEnabled
+    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS) && !isInProcessTeammate() && !forkEnabled
       ? `
 - You can optionally run agents in the background using the run_in_background parameter. When an agent runs in the background, you will be automatically notified when it completes — do NOT sleep, poll, or proactively check on its progress. Continue with other work or respond to the user instead.
 - **Foreground vs background**: Use foreground (default) when you need the agent's results before you can proceed — e.g., research agents whose findings inform your next steps. Use background when you have genuinely independent work to do in parallel.`

@@ -1,11 +1,10 @@
 import { relative } from 'path'
+
 import * as React from 'react'
 import { Suspense, use, useMemo } from 'react'
+
 import { Box, NoSelect, Text } from '../../../ink.js'
-import type {
-  NotebookCellType,
-  NotebookContent,
-} from '../../../types/notebook.js'
+import type { NotebookCellType, NotebookContent } from '../../../types/notebook.js'
 import { intersperse } from '../../../utils/array.js'
 import { getCwd } from '../../../utils/cwd.js'
 import { getPatchForDisplay } from '../../../utils/diff.js'
@@ -43,7 +42,7 @@ export function NotebookEditToolDiff(props: Props): React.ReactNode {
     () =>
       getFsImplementation()
         .readFile(props.notebook_path, { encoding: 'utf-8' })
-        .then(content => safeParseJSON(content) as NotebookContent | null)
+        .then((content) => safeParseJSON(content) as NotebookContent | null)
         .catch(() => null),
     [props.notebook_path],
   )
@@ -79,7 +78,7 @@ function NotebookEditToolDiffInner({
       }
       return ''
     }
-    const cell = notebookData.cells.find(cell => cell.id === cell_id)
+    const cell = notebookData.cells.find((cell) => cell.id === cell_id)
     if (!cell) {
       return ''
     }
@@ -122,9 +121,7 @@ function NotebookEditToolDiffInner({
     <Box flexDirection="column">
       <Box borderStyle="round" flexDirection="column" paddingX={1}>
         <Box paddingBottom={1} flexDirection="column">
-          <Text bold>
-            {verbose ? notebook_path : relative(getCwd(), notebook_path)}
-          </Text>
+          <Text bold>{verbose ? notebook_path : relative(getCwd(), notebook_path)}</Text>
           <Text dimColor>
             {editTypeDescription} for cell {cell_id}
             {cell_type ? ` (${cell_type})` : ''}
@@ -136,14 +133,11 @@ function NotebookEditToolDiffInner({
           </Box>
         ) : edit_mode === 'insert' ? (
           <Box flexDirection="column" paddingLeft={2}>
-            <HighlightedCode
-              code={new_source}
-              filePath={cell_type === 'markdown' ? 'file.md' : notebook_path}
-            />
+            <HighlightedCode code={new_source} filePath={cell_type === 'markdown' ? 'file.md' : notebook_path} />
           </Box>
         ) : hunks ? (
           intersperse(
-            hunks.map(_ => (
+            hunks.map((_) => (
               <StructuredDiff
                 key={_.newStart}
                 patch={_}
@@ -154,17 +148,14 @@ function NotebookEditToolDiffInner({
                 fileContent={oldSource}
               />
             )),
-            i => (
+            (i) => (
               <NoSelect fromLeftEdge key={`ellipsis-${i}`}>
                 <Text dimColor>...</Text>
               </NoSelect>
             ),
           )
         ) : (
-          <HighlightedCode
-            code={new_source}
-            filePath={cell_type === 'markdown' ? 'file.md' : notebook_path}
-          />
+          <HighlightedCode code={new_source} filePath={cell_type === 'markdown' ? 'file.md' : notebook_path} />
         )}
       </Box>
     </Box>

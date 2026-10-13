@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { PromptInputHelpMenu } from '../PromptInput/PromptInputHelpMenu.js'
 
@@ -7,8 +8,8 @@ export function General(): React.ReactNode {
     <Box flexDirection="column" paddingY={1} gap={1}>
       <Box>
         <Text>
-          Claude understands your codebase, makes edits with your permission,
-          and executes commands — right from your terminal.
+          Claude understands your codebase, makes edits with your permission, and executes commands — right from your
+          terminal.
         </Text>
       </Box>
       <Box flexDirection="column">

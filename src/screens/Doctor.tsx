@@ -1,18 +1,13 @@
-import figures from 'figures'
 import { join } from 'path'
-import React, {
-  Suspense,
-  use,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+
+import figures from 'figures'
+import React, { Suspense, use, useCallback, useEffect, useMemo, useState } from 'react'
 import { KeybindingWarnings } from 'src/components/KeybindingWarnings.js'
 import { McpParsingWarnings } from 'src/components/mcp/McpParsingWarnings.js'
 import { getModelMaxOutputTokens } from 'src/utils/context.js'
 import { getClaudeConfigHomeDir } from 'src/utils/envUtils.js'
 import type { SettingSource } from 'src/utils/settings/constants.js'
+
 import { getOriginalCwd } from '../bootstrap/state.js'
 import type { CommandResultDisplay } from '../commands.js'
 import { Pane } from '../components/design-system/Pane.js'
@@ -25,19 +20,9 @@ import { Box, Text } from '../ink.js'
 import { useKeybindings } from '../keybindings/useKeybinding.js'
 import { useAppState } from '../state/AppState.js'
 import { getPluginErrorMessage } from '../types/plugin.js'
-import {
-  getGcsDistTags,
-  getNpmDistTags,
-  type NpmDistTags,
-} from '../utils/autoUpdater.js'
-import {
-  type ContextWarnings,
-  checkContextWarnings,
-} from '../utils/doctorContextWarnings.js'
-import {
-  type DiagnosticInfo,
-  getDoctorDiagnostic,
-} from '../utils/doctorDiagnostic.js'
+import { getGcsDistTags, getNpmDistTags, type NpmDistTags } from '../utils/autoUpdater.js'
+import { type ContextWarnings, checkContextWarnings } from '../utils/doctorContextWarnings.js'
+import { type DiagnosticInfo, getDoctorDiagnostic } from '../utils/doctorDiagnostic.js'
 import { validateBoundedIntEnvVar } from '../utils/envValidation.js'
 import { pathExists } from '../utils/file.js'
 import {
@@ -47,21 +32,12 @@ import {
   type LockInfo,
 } from '../utils/nativeInstaller/pidLock.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
-import {
-  BASH_MAX_OUTPUT_DEFAULT,
-  BASH_MAX_OUTPUT_UPPER_LIMIT,
-} from '../utils/shell/outputLimits.js'
-import {
-  TASK_MAX_OUTPUT_DEFAULT,
-  TASK_MAX_OUTPUT_UPPER_LIMIT,
-} from '../utils/task/outputFormatting.js'
+import { BASH_MAX_OUTPUT_DEFAULT, BASH_MAX_OUTPUT_UPPER_LIMIT } from '../utils/shell/outputLimits.js'
+import { TASK_MAX_OUTPUT_DEFAULT, TASK_MAX_OUTPUT_UPPER_LIMIT } from '../utils/task/outputFormatting.js'
 import { getXDGStateHome } from '../utils/xdg.js'
 
 type Props = {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
 type AgentInfo = {
@@ -83,11 +59,7 @@ type VersionLockInfo = {
   staleLocksCleaned: number
 }
 
-function DistTagsDisplay({
-  promise,
-}: {
-  promise: Promise<NpmDistTags>
-}): React.ReactNode {
+function DistTagsDisplay({ promise }: { promise: Promise<NpmDistTags> }): React.ReactNode {
   const distTags = use(promise)
   if (!distTags.latest) {
     return <Text dimColor>└ Failed to fetch versions</Text>
@@ -101,10 +73,10 @@ function DistTagsDisplay({
 }
 
 export function Doctor({ onDone }: Props): React.ReactNode {
-  const agentDefinitions = useAppState(s => s.agentDefinitions)
-  const mcpTools = useAppState(s => s.mcp.tools)
-  const toolPermissionContext = useAppState(s => s.toolPermissionContext)
-  const pluginsErrors = useAppState(s => s.plugins.errors)
+  const agentDefinitions = useAppState((s) => s.agentDefinitions)
+  const mcpTools = useAppState((s) => s.mcp.tools)
+  const toolPermissionContext = useAppState((s) => s.toolPermissionContext)
+  const pluginsErrors = useAppState((s) => s.plugins.errors)
   useExitOnCtrlCDWithKeybindings()
 
   const tools = useMemo(() => {
@@ -113,28 +85,22 @@ export function Doctor({ onDone }: Props): React.ReactNode {
 
   const [diagnostic, setDiagnostic] = useState<DiagnosticInfo | null>(null)
   const [agentInfo, setAgentInfo] = useState<AgentInfo | null>(null)
-  const [contextWarnings, setContextWarnings] =
-    useState<ContextWarnings | null>(null)
-  const [versionLockInfo, setVersionLockInfo] =
-    useState<VersionLockInfo | null>(null)
+  const [contextWarnings, setContextWarnings] = useState<ContextWarnings | null>(null)
+  const [versionLockInfo, setVersionLockInfo] = useState<VersionLockInfo | null>(null)
   const validationErrors = useSettingsErrors()
 
   // Create promise once for dist-tags fetch (depends on diagnostic)
   const distTagsPromise = useMemo(
     () =>
-      getDoctorDiagnostic().then(diag => {
-        const fetchDistTags =
-          diag.installationType === 'native' ? getGcsDistTags : getNpmDistTags
+      getDoctorDiagnostic().then((diag) => {
+        const fetchDistTags = diag.installationType === 'native' ? getGcsDistTags : getNpmDistTags
         return fetchDistTags().catch(() => ({ latest: null, stable: null }))
       }),
     [],
   )
-  const autoUpdatesChannel =
-    getInitialSettings()?.autoUpdatesChannel ?? 'latest'
+  const autoUpdatesChannel = getInitialSettings()?.autoUpdatesChannel ?? 'latest'
 
-  const errorsExcludingMcp = validationErrors.filter(
-    error => error.mcpErrorMetadata === undefined,
-  )
+  const errorsExcludingMcp = validationErrors.filter((error) => error.mcpErrorMetadata === undefined)
 
   const envValidationErrors = useMemo(() => {
     const envVars = [
@@ -155,17 +121,12 @@ export function Doctor({ onDone }: Props): React.ReactNode {
       },
     ]
     return envVars
-      .map(v => {
+      .map((v) => {
         const value = process.env[v.name]
-        const result = validateBoundedIntEnvVar(
-          v.name,
-          value,
-          v.default,
-          v.upperLimit,
-        )
+        const result = validateBoundedIntEnvVar(v.name, value, v.default, v.upperLimit)
         return { name: v.name, ...result }
       })
-      .filter(v => v.status !== 'valid')
+      .filter((v) => v.status !== 'valid')
   }, [])
 
   useEffect(() => {
@@ -183,7 +144,7 @@ export function Doctor({ onDone }: Props): React.ReactNode {
       ])
 
       const agentInfoData = {
-        activeAgents: activeAgents.map(a => ({
+        activeAgents: activeAgents.map((a) => ({
           agentType: a.agentType,
           source: a.source,
         })),
@@ -256,12 +217,9 @@ export function Doctor({ onDone }: Props): React.ReactNode {
       <Box flexDirection="column">
         <Text bold>Diagnostics</Text>
         <Text>
-          └ Currently running: {diagnostic.installationType} (
-          {diagnostic.version})
+          └ Currently running: {diagnostic.installationType} ({diagnostic.version})
         </Text>
-        {diagnostic.packageManager && (
-          <Text>└ Package manager: {diagnostic.packageManager}</Text>
-        )}
+        {diagnostic.packageManager && <Text>└ Package manager: {diagnostic.packageManager}</Text>}
         <Text>└ Path: {diagnostic.installationPath}</Text>
         <Text>└ Invoked: {diagnostic.invokedBinary}</Text>
         <Text>└ Config install method: {diagnostic.configInstallMethod}</Text>
@@ -279,9 +237,7 @@ export function Doctor({ onDone }: Props): React.ReactNode {
         {diagnostic.recommendation && (
           <>
             <Text></Text>
-            <Text color="warning">
-              Recommendation: {diagnostic.recommendation.split('\n')[0]}
-            </Text>
+            <Text color="warning">Recommendation: {diagnostic.recommendation.split('\n')[0]}</Text>
             <Text dimColor>{diagnostic.recommendation.split('\n')[1]}</Text>
           </>
         )}
@@ -324,17 +280,9 @@ export function Doctor({ onDone }: Props): React.ReactNode {
       {/* Updates section */}
       <Box flexDirection="column">
         <Text bold>Updates</Text>
-        <Text>
-          └ Auto-updates:{' '}
-          {diagnostic.packageManager
-            ? 'Managed by package manager'
-            : diagnostic.autoUpdates}
-        </Text>
+        <Text>└ Auto-updates: {diagnostic.packageManager ? 'Managed by package manager' : diagnostic.autoUpdates}</Text>
         {diagnostic.hasUpdatePermissions !== null && (
-          <Text>
-            └ Update permissions:{' '}
-            {diagnostic.hasUpdatePermissions ? 'Yes' : 'No (requires sudo)'}
-          </Text>
+          <Text>└ Update permissions: {diagnostic.hasUpdatePermissions ? 'Yes' : 'No (requires sudo)'}</Text>
         )}
         <Text>└ Auto-update channel: {autoUpdatesChannel}</Text>
         <Suspense fallback={null}>
@@ -355,11 +303,7 @@ export function Doctor({ onDone }: Props): React.ReactNode {
           {envValidationErrors.map((validation, i) => (
             <Text key={i}>
               └ {validation.name}:{' '}
-              <Text
-                color={validation.status === 'capped' ? 'warning' : 'error'}
-              >
-                {validation.message}
-              </Text>
+              <Text color={validation.status === 'capped' ? 'warning' : 'error'}>{validation.message}</Text>
             </Text>
           ))}
         </Box>
@@ -370,9 +314,7 @@ export function Doctor({ onDone }: Props): React.ReactNode {
         <Box flexDirection="column">
           <Text bold>Version Locks</Text>
           {versionLockInfo.staleLocksCleaned > 0 && (
-            <Text dimColor>
-              └ Cleaned {versionLockInfo.staleLocksCleaned} stale lock(s)
-            </Text>
+            <Text dimColor>└ Cleaned {versionLockInfo.staleLocksCleaned} stale lock(s)</Text>
           )}
           {versionLockInfo.locks.length === 0 ? (
             <Text dimColor>└ No active version locks</Text>
@@ -380,11 +322,7 @@ export function Doctor({ onDone }: Props): React.ReactNode {
             versionLockInfo.locks.map((lock, i) => (
               <Text key={i}>
                 └ {lock.version}: PID {lock.pid}{' '}
-                {lock.isProcessRunning ? (
-                  <Text>(running)</Text>
-                ) : (
-                  <Text color="warning">(stale)</Text>
-                )}
+                {lock.isProcessRunning ? <Text>(running)</Text> : <Text color="warning">(stale)</Text>}
               </Text>
             ))
           )}
@@ -396,9 +334,7 @@ export function Doctor({ onDone }: Props): React.ReactNode {
           <Text bold color="error">
             Agent Parse Errors
           </Text>
-          <Text color="error">
-            └ Failed to parse {agentInfo.failedFiles.length} agent file(s):
-          </Text>
+          <Text color="error">└ Failed to parse {agentInfo.failedFiles.length} agent file(s):</Text>
           {agentInfo.failedFiles.map((file, i) => (
             <Text key={i} dimColor>
               {'  '}└ {file.path}: {file.error}
@@ -413,14 +349,11 @@ export function Doctor({ onDone }: Props): React.ReactNode {
           <Text bold color="error">
             Plugin Errors
           </Text>
-          <Text color="error">
-            └ {pluginsErrors.length} plugin error(s) detected:
-          </Text>
+          <Text color="error">└ {pluginsErrors.length} plugin error(s) detected:</Text>
           {pluginsErrors.map((error, i) => (
             <Text key={i} dimColor>
               {'  '}└ {error.source || 'unknown'}
-              {'plugin' in error && error.plugin ? ` [${error.plugin}]` : ''}:{' '}
-              {getPluginErrorMessage(error)}
+              {'plugin' in error && error.plugin ? ` [${error.plugin}]` : ''}: {getPluginErrorMessage(error)}
             </Text>
           ))}
         </Box>
@@ -435,8 +368,7 @@ export function Doctor({ onDone }: Props): React.ReactNode {
           <Text>
             └{' '}
             <Text color="warning">
-              {figures.warning}{' '}
-              {contextWarnings.unreachableRulesWarning.message}
+              {figures.warning} {contextWarnings.unreachableRulesWarning.message}
             </Text>
           </Text>
           {contextWarnings.unreachableRulesWarning.details.map((detail, i) => (
@@ -449,9 +381,7 @@ export function Doctor({ onDone }: Props): React.ReactNode {
 
       {/* Context Usage Warnings */}
       {contextWarnings &&
-        (contextWarnings.claudeMdWarning ||
-          contextWarnings.agentWarning ||
-          contextWarnings.mcpWarning) && (
+        (contextWarnings.claudeMdWarning || contextWarnings.agentWarning || contextWarnings.mcpWarning) && (
           <Box flexDirection="column">
             <Text bold>Context Usage Warnings</Text>
 

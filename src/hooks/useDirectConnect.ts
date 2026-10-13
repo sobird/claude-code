@@ -1,18 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+
 import type { ToolUseConfirm } from '../components/permissions/PermissionRequest.js'
+import { createSyntheticAssistantMessage, createToolStub } from '../remote/remotePermissionBridge.js'
 import type { RemotePermissionResponse } from '../remote/RemoteSessionManager.js'
-import {
-  createSyntheticAssistantMessage,
-  createToolStub,
-} from '../remote/remotePermissionBridge.js'
-import {
-  convertSDKMessage,
-  isSessionEndMessage,
-} from '../remote/sdkMessageAdapter.js'
-import {
-  type DirectConnectConfig,
-  DirectConnectSessionManager,
-} from '../server/directConnectManager.js'
+import { convertSDKMessage, isSessionEndMessage } from '../remote/sdkMessageAdapter.js'
+import { type DirectConnectConfig, DirectConnectSessionManager } from '../server/directConnectManager.js'
 import type { Tool } from '../Tool.js'
 import { findToolByName } from '../Tool.js'
 import type { Message as MessageType } from '../types/message.js'
@@ -64,7 +56,7 @@ export function useDirectConnect({
     logForDebugging(`[useDirectConnect] Connecting to ${config.wsUrl}`)
 
     const manager = new DirectConnectSessionManager(config, {
-      onMessage: sdkMessage => {
+      onMessage: (sdkMessage) => {
         if (isSessionEndMessage(sdkMessage)) {
           setIsLoading(false)
         }
@@ -81,27 +73,19 @@ export function useDirectConnect({
           convertToolResults: true,
         })
         if (converted.type === 'message') {
-          setMessages(prev => [...prev, converted.message])
+          setMessages((prev) => [...prev, converted.message])
         }
       },
       onPermissionRequest: (request, requestId) => {
-        logForDebugging(
-          `[useDirectConnect] Permission request for tool: ${request.tool_name}`,
-        )
+        logForDebugging(`[useDirectConnect] Permission request for tool: ${request.tool_name}`)
 
-        const tool =
-          findToolByName(toolsRef.current, request.tool_name) ??
-          createToolStub(request.tool_name)
+        const tool = findToolByName(toolsRef.current, request.tool_name) ?? createToolStub(request.tool_name)
 
-        const syntheticMessage = createSyntheticAssistantMessage(
-          request,
-          requestId,
-        )
+        const syntheticMessage = createSyntheticAssistantMessage(request, requestId)
 
         const permissionResult: PermissionAskDecision = {
           behavior: 'ask',
-          message:
-            request.description ?? `${request.tool_name} requires permission`,
+          message: request.description ?? `${request.tool_name} requires permission`,
           suggestions: request.permission_suggestions,
           blockedPath: request.blocked_path,
         }
@@ -109,8 +93,7 @@ export function useDirectConnect({
         const toolUseConfirm: ToolUseConfirm = {
           assistantMessage: syntheticMessage,
           tool,
-          description:
-            request.description ?? `${request.tool_name} requires permission`,
+          description: request.description ?? `${request.tool_name} requires permission`,
           input: request.input,
           toolUseContext: {} as ToolUseConfirm['toolUseContext'],
           toolUseID: request.tool_use_id,
@@ -125,9 +108,7 @@ export function useDirectConnect({
               message: 'User aborted',
             }
             manager.respondToPermissionRequest(requestId, response)
-            setToolUseConfirmQueue(queue =>
-              queue.filter(item => item.toolUseID !== request.tool_use_id),
-            )
+            setToolUseConfirmQueue((queue) => queue.filter((item) => item.toolUseID !== request.tool_use_id))
           },
           onAllow(updatedInput, _permissionUpdates, _feedback) {
             const response: RemotePermissionResponse = {
@@ -135,9 +116,7 @@ export function useDirectConnect({
               updatedInput,
             }
             manager.respondToPermissionRequest(requestId, response)
-            setToolUseConfirmQueue(queue =>
-              queue.filter(item => item.toolUseID !== request.tool_use_id),
-            )
+            setToolUseConfirmQueue((queue) => queue.filter((item) => item.toolUseID !== request.tool_use_id))
             setIsLoading(true)
           },
           onReject(feedback?: string) {
@@ -146,16 +125,14 @@ export function useDirectConnect({
               message: feedback ?? 'User denied permission',
             }
             manager.respondToPermissionRequest(requestId, response)
-            setToolUseConfirmQueue(queue =>
-              queue.filter(item => item.toolUseID !== request.tool_use_id),
-            )
+            setToolUseConfirmQueue((queue) => queue.filter((item) => item.toolUseID !== request.tool_use_id))
           },
           async recheckPermission() {
             // No-op for remote
           },
         }
 
-        setToolUseConfirmQueue(queue => [...queue, toolUseConfirm])
+        setToolUseConfirmQueue((queue) => [...queue, toolUseConfirm])
         setIsLoading(false)
       },
       onConnected: () => {
@@ -166,9 +143,7 @@ export function useDirectConnect({
         logForDebugging('[useDirectConnect] Disconnected')
         if (!isConnectedRef.current) {
           // Never connected — connection failure (e.g. auth rejected)
-          process.stderr.write(
-            `\nFailed to connect to server at ${config.wsUrl}\n`,
-          )
+          process.stderr.write(`\nFailed to connect to server at ${config.wsUrl}\n`)
         } else {
           // Was connected then lost — server process exited or network dropped
           process.stderr.write('\nServer disconnected.\n')
@@ -177,7 +152,7 @@ export function useDirectConnect({
         void gracefulShutdown(1)
         setIsLoading(false)
       },
-      onError: error => {
+      onError: (error) => {
         logForDebugging(`[useDirectConnect] Error: ${error.message}`)
       },
     })

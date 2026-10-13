@@ -1,4 +1,5 @@
 import React, { type ReactNode, useState } from 'react'
+
 import { Box, Text } from '../../../../ink.js'
 import { useKeybinding } from '../../../../keybindings/useKeybinding.js'
 import type { AgentDefinition } from '../../../../tools/AgentTool/loadAgentsDir.js'
@@ -16,8 +17,7 @@ type Props = {
 }
 
 export function TypeStep(_props: Props): ReactNode {
-  const { goNext, goBack, updateWizardData, wizardData } =
-    useWizard<AgentWizardData>()
+  const { goNext, goBack, updateWizardData, wizardData } = useWizard<AgentWizardData>()
   const [agentType, setAgentType] = useState(wizardData.agentType || '')
   const [error, setError] = useState<string | null>(null)
   const [cursorOffset, setCursorOffset] = useState(agentType.length)
@@ -47,12 +47,7 @@ export function TypeStep(_props: Props): ReactNode {
         <Byline>
           <KeyboardShortcutHint shortcut="Type" action="enter text" />
           <KeyboardShortcutHint shortcut="Enter" action="continue" />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Settings"
-            fallback="Esc"
-            description="go back"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="go back" />
         </Byline>
       }
     >

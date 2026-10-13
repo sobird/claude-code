@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box } from '../../ink.js'
 import type { Theme } from '../../utils/theme.js'
 import { PermissionRequestTitle } from './PermissionRequestTitle.js'
@@ -37,12 +38,7 @@ export function PermissionDialog({
     >
       <Box paddingX={1} flexDirection="column">
         <Box justifyContent="space-between">
-          <PermissionRequestTitle
-            title={title}
-            subtitle={subtitle}
-            color={titleColor}
-            workerBadge={workerBadge}
-          />
+          <PermissionRequestTitle title={title} subtitle={subtitle} color={titleColor} workerBadge={workerBadge} />
           {titleRight}
         </Box>
       </Box>

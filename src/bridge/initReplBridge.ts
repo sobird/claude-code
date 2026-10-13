@@ -15,55 +15,34 @@
 
 import { feature } from 'bun:bundle'
 import { hostname } from 'os'
+
 import { getOriginalCwd, getSessionId } from '../bootstrap/state.js'
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
 import type { SDKControlResponse } from '../entrypoints/sdk/controlTypes.js'
 import { getFeatureValue_CACHED_WITH_REFRESH } from '../services/analytics/growthbook.js'
 import { getOrganizationUUID } from '../services/oauth/client.js'
-import {
-  isPolicyAllowed,
-  waitForPolicyLimitsToLoad,
-} from '../services/policyLimits/index.js'
+import { isPolicyAllowed, waitForPolicyLimitsToLoad } from '../services/policyLimits/index.js'
 import type { Message } from '../types/message.js'
-import {
-  checkAndRefreshOAuthTokenIfNeeded,
-  getClaudeAIOAuthTokens,
-  handleOAuth401Error,
-} from '../utils/auth.js'
+import { checkAndRefreshOAuthTokenIfNeeded, getClaudeAIOAuthTokens, handleOAuth401Error } from '../utils/auth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
 import { stripDisplayTagsAllowEmpty } from '../utils/displayTags.js'
 import { errorMessage } from '../utils/errors.js'
 import { getBranch, getRemoteUrl } from '../utils/git.js'
+import { getContentText, getMessagesAfterCompactBoundary, isSyntheticMessage } from '../utils/messages.js'
 import { toSDKMessages } from '../utils/messages/mappers.js'
-import {
-  getContentText,
-  getMessagesAfterCompactBoundary,
-  isSyntheticMessage,
-} from '../utils/messages.js'
 import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
 import { getCurrentSessionTitle } from '../utils/sessionStorage.js'
-import {
-  extractConversationText,
-  generateSessionTitle,
-} from '../utils/sessionTitle.js'
+import { extractConversationText, generateSessionTitle } from '../utils/sessionTitle.js'
 import { generateShortWordSlug } from '../utils/words.js'
-import {
-  getBridgeAccessToken,
-  getBridgeBaseUrl,
-  getBridgeTokenOverride,
-} from './bridgeConfig.js'
+import { getBridgeAccessToken, getBridgeBaseUrl, getBridgeTokenOverride } from './bridgeConfig.js'
 import {
   checkBridgeMinVersion,
   isBridgeEnabledBlocking,
   isCseShimEnabled,
   isEnvLessBridgeEnabled,
 } from './bridgeEnabled.js'
-import {
-  archiveBridgeSession,
-  createBridgeSession,
-  updateBridgeSessionTitle,
-} from './createSession.js'
+import { archiveBridgeSession, createBridgeSession, updateBridgeSessionTitle } from './createSession.js'
 import { logBridgeSkip } from './debugUtils.js'
 import { checkEnvLessBridgeMinVersion } from './envLessBridgeConfig.js'
 import { getPollIntervalConfig } from './pollConfig.js'
@@ -78,9 +57,7 @@ export type InitBridgeOptions = {
   onInterrupt?: () => void
   onSetModel?: (model: string | undefined) => void
   onSetMaxThinkingTokens?: (maxTokens: number | null) => void
-  onSetPermissionMode?: (
-    mode: PermissionMode,
-  ) => { ok: true } | { ok: false; error: string }
+  onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
   onStateChange?: (state: BridgeState, detail?: string) => void
   initialMessages?: Message[]
   // Explicit session name from `/remote-control <name>`. When set, overrides
@@ -107,9 +84,7 @@ export type InitBridgeOptions = {
   tags?: string[]
 }
 
-export async function initReplBridge(
-  options?: InitBridgeOptions,
-): Promise<ReplBridgeHandle | null> {
+export async function initReplBridge(options?: InitBridgeOptions): Promise<ReplBridgeHandle | null> {
   const {
     onInboundMessage,
     onPermissionResponse,
@@ -153,10 +128,7 @@ export async function initReplBridge(
   // 3. Check organization policy — remote control may be disabled
   await waitForPolicyLimitsToLoad()
   if (!isPolicyAllowed('allow_remote_control')) {
-    logBridgeSkip(
-      'policy_denied',
-      '[bridge:repl] Skipping: allow_remote_control policy not allowed',
-    )
+    logBridgeSkip('policy_denied', '[bridge:repl] Skipping: allow_remote_control policy not allowed')
     onStateChange?.('failed', "disabled by your organization's policy")
     return null
   }
@@ -228,13 +200,11 @@ export async function initReplBridge(
       // is never reached again — writes are capped at 3 per dead token.
       // Local const captures the narrowed type (closure loses !==null narrowing).
       const deadExpiresAt = tokens.expiresAt
-      saveGlobalConfig(c => ({
+      saveGlobalConfig((c) => ({
         ...c,
         bridgeOauthDeadExpiresAt: deadExpiresAt,
         bridgeOauthDeadFailCount:
-          c.bridgeOauthDeadExpiresAt === deadExpiresAt
-            ? (c.bridgeOauthDeadFailCount ?? 0) + 1
-            : 1,
+          c.bridgeOauthDeadExpiresAt === deadExpiresAt ? (c.bridgeOauthDeadFailCount ?? 0) + 1 : 1,
       }))
       return null
     }
@@ -264,9 +234,7 @@ export async function initReplBridge(
     hasExplicitTitle = true
   } else {
     const sessionId = getSessionId()
-    const customTitle = sessionId
-      ? getCurrentSessionTitle(sessionId)
-      : undefined
+    const customTitle = sessionId ? getCurrentSessionTitle(sessionId) : undefined
     if (customTitle) {
       title = customTitle
       hasTitle = true
@@ -311,16 +279,10 @@ export async function initReplBridge(
   let userMessageCount = 0
   let lastBridgeSessionId: string | undefined
   let genSeq = 0
-  const patch = (
-    derived: string,
-    bridgeSessionId: string,
-    atCount: number,
-  ): void => {
+  const patch = (derived: string, bridgeSessionId: string, atCount: number): void => {
     hasTitle = true
     title = derived
-    logForDebugging(
-      `[bridge:repl] derived title from message ${atCount}: ${derived}`,
-    )
+    logForDebugging(`[bridge:repl] derived title from message ${atCount}: ${derived}`)
     void updateBridgeSessionTitle(bridgeSessionId, derived, {
       baseUrl,
       getAccessToken: getBridgeAccessToken,
@@ -333,18 +295,16 @@ export async function initReplBridge(
   const generateAndPatch = (input: string, bridgeSessionId: string): void => {
     const gen = ++genSeq
     const atCount = userMessageCount
-    void generateSessionTitle(input, AbortSignal.timeout(15_000)).then(
-      generated => {
-        if (
-          generated &&
-          gen === genSeq &&
-          lastBridgeSessionId === bridgeSessionId &&
-          !getCurrentSessionTitle(getSessionId())
-        ) {
-          patch(generated, bridgeSessionId, atCount)
-        }
-      },
-    )
+    void generateSessionTitle(input, AbortSignal.timeout(15_000)).then((generated) => {
+      if (
+        generated &&
+        gen === genSeq &&
+        lastBridgeSessionId === bridgeSessionId &&
+        !getCurrentSessionTitle(getSessionId())
+      ) {
+        patch(generated, bridgeSessionId, atCount)
+      }
+    })
   }
   const onUserMessage = (text: string, bridgeSessionId: string): boolean => {
     if (hasExplicitTitle || getCurrentSessionTitle(getSessionId())) {
@@ -354,10 +314,7 @@ export async function initReplBridge(
     // the new session gets its own count-3 derivation; hasTitle stays true
     // (new session was created via getCurrentTitle(), which reads the count-1
     // title from this closure), so count-1 of the fresh cycle correctly skips.
-    if (
-      lastBridgeSessionId !== undefined &&
-      lastBridgeSessionId !== bridgeSessionId
-    ) {
+    if (lastBridgeSessionId !== undefined && lastBridgeSessionId !== bridgeSessionId) {
       userMessageCount = 0
     }
     lastBridgeSessionId = bridgeSessionId
@@ -368,20 +325,14 @@ export async function initReplBridge(
       generateAndPatch(text, bridgeSessionId)
     } else if (userMessageCount === 3) {
       const msgs = getMessages?.()
-      const input = msgs
-        ? extractConversationText(getMessagesAfterCompactBoundary(msgs))
-        : text
+      const input = msgs ? extractConversationText(getMessagesAfterCompactBoundary(msgs)) : text
       generateAndPatch(input, bridgeSessionId)
     }
     // Also re-latches if v1 env-lost resets the transport's done flag past 3.
     return userMessageCount >= 3
   }
 
-  const initialHistoryCap = getFeatureValue_CACHED_WITH_REFRESH(
-    'tengu_bridge_initial_history_cap',
-    200,
-    5 * 60 * 1000,
-  )
+  const initialHistoryCap = getFeatureValue_CACHED_WITH_REFRESH('tengu_bridge_initial_history_cap', 200, 5 * 60 * 1000)
 
   // Fetch orgUUID before the v1/v2 branch — both paths need it. v1 for
   // environment registration; v2 for archive (which lives at the compat
@@ -410,17 +361,11 @@ export async function initReplBridge(
   if (isEnvLessBridgeEnabled() && !perpetual) {
     const versionError = await checkEnvLessBridgeMinVersion()
     if (versionError) {
-      logBridgeSkip(
-        'version_too_old',
-        `[bridge:repl] Skipping: ${versionError}`,
-        true,
-      )
+      logBridgeSkip('version_too_old', `[bridge:repl] Skipping: ${versionError}`, true)
       onStateChange?.('failed', 'run `claude update` to upgrade')
       return null
     }
-    logForDebugging(
-      '[bridge:repl] Using env-less bridge path (tengu_bridge_repl_v2)',
-    )
+    logForDebugging('[bridge:repl] Using env-less bridge path (tengu_bridge_repl_v2)')
     const { initEnvLessBridgeCore } = await import('./remoteBridgeCore.js')
     return initEnvLessBridgeCore({
       baseUrl,
@@ -465,8 +410,7 @@ export async function initReplBridge(
   const branch = await getBranch()
   const gitRepoUrl = await getRemoteUrl()
   const sessionIngressUrl =
-    process.env.USER_TYPE === 'ant' &&
-    process.env.CLAUDE_BRIDGE_SESSION_INGRESS_URL
+    process.env.USER_TYPE === 'ant' && process.env.CLAUDE_BRIDGE_SESSION_INGRESS_URL
       ? process.env.CLAUDE_BRIDGE_SESSION_INGRESS_URL
       : baseUrl
 
@@ -476,8 +420,7 @@ export async function initReplBridge(
   let workerType: BridgeWorkerType = 'claude_code'
   if (feature('KAIROS')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const { isAssistantMode } =
-      require('../assistant/index.js') as typeof import('../assistant/index.js')
+    const { isAssistantMode } = require('../assistant/index.js') as typeof import('../assistant/index.js')
     /* eslint-enable @typescript-eslint/no-require-imports */
     if (isAssistantMode()) {
       workerType = 'claude_code_assistant'
@@ -497,14 +440,14 @@ export async function initReplBridge(
     sessionIngressUrl,
     workerType,
     getAccessToken: getBridgeAccessToken,
-    createSession: opts =>
+    createSession: (opts) =>
       createBridgeSession({
         ...opts,
         events: [],
         baseUrl,
         getAccessToken: getBridgeAccessToken,
       }),
-    archiveSession: sessionId =>
+    archiveSession: (sessionId) =>
       archiveBridgeSession(sessionId, {
         baseUrl,
         getAccessToken: getBridgeAccessToken,
@@ -517,10 +460,7 @@ export async function initReplBridge(
         // archiveBridgeSession has no try/catch — 5xx/timeout/network throw
         // straight through. Previously swallowed silently, making archive
         // failures BQ-invisible and undiagnosable from debug logs.
-        logForDebugging(
-          `[bridge:repl] archiveBridgeSession threw: ${errorMessage(err)}`,
-          { level: 'error' },
-        )
+        logForDebugging(`[bridge:repl] archiveBridgeSession threw: ${errorMessage(err)}`, { level: 'error' })
       }),
     // getCurrentTitle is read on reconnect-after-env-lost to re-title the new
     // session. /rename writes to session storage; onUserMessage mutates
@@ -563,7 +503,5 @@ function deriveTitle(raw: string): string | undefined {
   // Collapse newlines/tabs — titles are single-line in the claude.ai list.
   const flat = firstSentence.replace(/\s+/g, ' ').trim()
   if (!flat) return undefined
-  return flat.length > TITLE_MAX_LEN
-    ? flat.slice(0, TITLE_MAX_LEN - 1) + '\u2026'
-    : flat
+  return flat.length > TITLE_MAX_LEN ? flat.slice(0, TITLE_MAX_LEN - 1) + '\u2026' : flat
 }

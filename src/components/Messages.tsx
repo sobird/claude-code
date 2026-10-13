@@ -1,17 +1,19 @@
 import { feature } from 'bun:bundle'
-import chalk from 'chalk'
 import type { UUID } from 'crypto'
+
+import chalk from 'chalk'
 import type { RefObject } from 'react'
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { every } from 'src/utils/set.js'
+
 import { getIsRemoteMode } from '../bootstrap/state.js'
 import type { Command } from '../commands.js'
 import { BLACK_CIRCLE } from '../constants/figures.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
+import { Box, Text } from '../ink.js'
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox.js'
 import { useTerminalNotification } from '../ink/useTerminalNotification.js'
-import { Box, Text } from '../ink.js'
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js'
 import type { Screen } from '../screens/REPL.js'
 import type { Tools } from '../Tool.js'
@@ -53,13 +55,13 @@ import { Divider } from './design-system/Divider.js'
 import type { UnseenDivider } from './FullscreenLayout.js'
 import { LogoV2 } from './LogoV2/LogoV2.js'
 import { StreamingMarkdown } from './Markdown.js'
-import { hasContentAfterIndex, MessageRow } from './MessageRow.js'
 import {
   InVirtualListContext,
   type MessageActionsNav,
   MessageActionsSelectedContext,
   type MessageActionsState,
 } from './messageActions.js'
+import { hasContentAfterIndex, MessageRow } from './MessageRow.js'
 import { AssistantThinkingMessage } from './messages/AssistantThinkingMessage.js'
 import { isNullRenderingAttachment } from './messages/nullRenderingAttachments.js'
 import { OffscreenFreeze } from './OffscreenFreeze.js'
@@ -97,20 +99,14 @@ const LogoHeader = React.memo(function LogoHeader({
 
 // Dead code elimination: conditional import for proactive mode
 /* eslint-disable @typescript-eslint/no-require-imports */
-const proactiveModule =
-  feature('PROACTIVE') || feature('KAIROS')
-    ? require('../proactive/index.js')
-    : null
+const proactiveModule = feature('PROACTIVE') || feature('KAIROS') ? require('../proactive/index.js') : null
 const BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
-    ? (
-        require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')
-      ).BRIEF_TOOL_NAME
+    ? (require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')).BRIEF_TOOL_NAME
     : null
 const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS')
-  ? (
-      require('../tools/SendUserFileTool/prompt.js') as typeof import('../tools/SendUserFileTool/prompt.js')
-    ).SEND_USER_FILE_TOOL_NAME
+  ? (require('../tools/SendUserFileTool/prompt.js') as typeof import('../tools/SendUserFileTool/prompt.js'))
+      .SEND_USER_FILE_TOOL_NAME
   : null
 
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -147,7 +143,7 @@ export function filterForBriefTool<
   // tool_use always precedes its tool_result in the array, so we can collect
   // IDs and match against them in a single pass.
   const briefToolUseIDs = new Set<string>()
-  return messages.filter(msg => {
+  return messages.filter((msg) => {
     // System messages (attach confirmation, remote errors, compact boundaries)
     // must stay visible — dropping them leaves the viewer with no feedback.
     // Exception: api_metrics is per-turn debug noise (TTFT, config writes,
@@ -170,10 +166,7 @@ export function filterForBriefTool<
     }
     if (msg.type === 'user') {
       if (block?.type === 'tool_result') {
-        return (
-          block.tool_use_id !== undefined &&
-          briefToolUseIDs.has(block.tool_use_id)
-        )
+        return block.tool_use_id !== undefined && briefToolUseIDs.has(block.tool_use_id)
       }
       // Real user input only — drop meta/tick messages.
       return !msg.isMeta
@@ -186,12 +179,7 @@ export function filterForBriefTool<
       // mode: 'task-notification' but not origin/isMeta, so the positive
       // commandMode check is required to exclude them.
       const att = msg.attachment
-      return (
-        att?.type === 'queued_command' &&
-        att.commandMode === 'prompt' &&
-        !att.isMeta &&
-        att.origin === undefined
-      )
+      return att?.type === 'queued_command' && att.commandMode === 'prompt' && !att.isMeta && att.origin === undefined
     }
     return false
   })
@@ -229,11 +217,7 @@ export function dropTextInBriefTurns<
     if (msg.type === 'assistant') {
       if (block?.type === 'text') {
         textIndexToTurn[i] = turn
-      } else if (
-        block?.type === 'tool_use' &&
-        block.name &&
-        nameSet.has(block.name)
-      ) {
+      } else if (block?.type === 'tool_use' && block.name && nameSet.has(block.name)) {
         turnsWithBrief.add(turn)
       }
     }
@@ -290,9 +274,7 @@ type Props = {
   onSearchMatchesChange?: (count: number, current: number) => void
   /** Paint an existing DOM subtree to fresh Screen, scan. Element comes
    *  from the main tree (all real providers). Message-relative positions. */
-  scanElement?: (
-    el: import('../ink/dom.js').DOMElement,
-  ) => import('../ink/render-to-screen.js').MatchPosition[]
+  scanElement?: (el: import('../ink/dom.js').DOMElement) => import('../ink/render-to-screen.js').MatchPosition[]
   /** Position-based CURRENT highlight. positions stable (msg-relative),
    *  rowOffset tracks scroll. null clears. */
   setPositions?: (
@@ -364,27 +346,17 @@ export function computeSliceStart(
   step = MESSAGE_CAP_STEP,
 ): number {
   const anchor = anchorRef.current
-  const anchorIdx = anchor
-    ? collapsed.findIndex(m => m.uuid === anchor.uuid)
-    : -1
+  const anchorIdx = anchor ? collapsed.findIndex((m) => m.uuid === anchor.uuid) : -1
   // Anchor found → use it. Anchor lost → fall back to stored index
   // (clamped) so collapse-regrouping uuid churn doesn't reset to 0.
-  let start =
-    anchorIdx >= 0
-      ? anchorIdx
-      : anchor
-        ? Math.min(anchor.idx, Math.max(0, collapsed.length - cap))
-        : 0
+  let start = anchorIdx >= 0 ? anchorIdx : anchor ? Math.min(anchor.idx, Math.max(0, collapsed.length - cap)) : 0
   if (collapsed.length - start > cap + step) {
     start = collapsed.length - cap
   }
   // Refresh anchor from whatever lives at the current start — heals a
   // stale uuid after fallback and captures a new one after advancement.
   const msgAtStart = collapsed[start]
-  if (
-    msgAtStart &&
-    (anchor?.uuid !== msgAtStart.uuid || anchor.idx !== start)
-  ) {
+  if (msgAtStart && (anchor?.uuid !== msgAtStart.uuid || anchor.idx !== start)) {
     anchorRef.current = { uuid: msgAtStart.uuid, idx: start }
   } else if (!msgAtStart && anchor) {
     anchorRef.current = null
@@ -427,16 +399,9 @@ const MessagesImpl = ({
   renderRange,
 }: Props): React.ReactNode => {
   const { columns } = useTerminalSize()
-  const toggleShowAllShortcut = useShortcutDisplay(
-    'transcript:toggleShowAll',
-    'Transcript',
-    'Ctrl+E',
-  )
+  const toggleShowAllShortcut = useShortcutDisplay('transcript:toggleShowAll', 'Transcript', 'Ctrl+E')
 
-  const normalizedMessages = useMemo(
-    () => normalizeMessages(messages).filter(isNotEmptyMessage),
-    [messages],
-  )
+  const normalizedMessages = useMemo(() => normalizeMessages(messages).filter(isNotEmptyMessage), [messages])
 
   // Check if streaming thinking should be visible (streaming or within 30s timeout)
   const isStreamingThinkingVisible = useMemo(() => {
@@ -468,9 +433,7 @@ const MessagesImpl = ({
           }
         }
       } else if (msg?.type === 'user') {
-        const hasToolResult = msg.message.content.some(
-          block => block.type === 'tool_result',
-        )
+        const hasToolResult = msg.message.content.some((block) => block.type === 'tool_result')
         if (!hasToolResult) {
           // Reached a previous user turn so don't show stale thinking from before
           return 'no-thinking'
@@ -492,10 +455,7 @@ const MessagesImpl = ({
         for (const block of content) {
           if (block.type === 'text') {
             const text = block.text
-            if (
-              text.startsWith('<bash-stdout') ||
-              text.startsWith('<bash-stderr')
-            ) {
+            if (text.startsWith('<bash-stdout') || text.startsWith('<bash-stderr')) {
               return msg.uuid
             }
           }
@@ -507,24 +467,19 @@ const MessagesImpl = ({
 
   // streamingToolUses updates on every input_json_delta while normalizedMessages
   // stays stable — precompute the Set so the filter is O(k) not O(n×k) per chunk.
-  const normalizedToolUseIDs = useMemo(
-    () => getToolUseIDs(normalizedMessages),
-    [normalizedMessages],
-  )
+  const normalizedToolUseIDs = useMemo(() => getToolUseIDs(normalizedMessages), [normalizedMessages])
 
   const streamingToolUsesWithoutInProgress = useMemo(
     () =>
       streamingToolUses.filter(
-        stu =>
-          !inProgressToolUseIDs.has(stu.contentBlock.id) &&
-          !normalizedToolUseIDs.has(stu.contentBlock.id),
+        (stu) => !inProgressToolUseIDs.has(stu.contentBlock.id) && !normalizedToolUseIDs.has(stu.contentBlock.id),
       ),
     [streamingToolUses, inProgressToolUseIDs, normalizedToolUseIDs],
   )
 
   const syntheticStreamingToolUseMessages = useMemo(
     () =>
-      streamingToolUsesWithoutInProgress.flatMap(streamingToolUse => {
+      streamingToolUsesWithoutInProgress.flatMap((streamingToolUse) => {
         const msg = createAssistantMessage({
           content: [streamingToolUse.contentBlock],
         })
@@ -541,17 +496,13 @@ const MessagesImpl = ({
 
   const isTranscriptMode = screen === 'transcript'
   // Hoisted to mount-time — this component re-renders on every scroll.
-  const disableVirtualScroll = useMemo(
-    () => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL),
-    [],
-  )
+  const disableVirtualScroll = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL), [])
   // Virtual scroll replaces the transcript cap: everything is scrollable and
   // memory is bounded by the mounted-item count, not the total. scrollRef is
   // only passed when isFullscreenEnvEnabled() is true (REPL.tsx gates it),
   // so scrollRef's presence is the signal.
   const virtualScrollRuntimeGate = scrollRef != null && !disableVirtualScroll
-  const shouldTruncate =
-    isTranscriptMode && !showAllInTranscript && !virtualScrollRuntimeGate
+  const shouldTruncate = isTranscriptMode && !showAllInTranscript && !virtualScrollRuntimeGate
 
   // Anchor for the first rendered message in the non-virtualized cap slice.
   // Monotonic advance only — mutation during render is idempotent (safe
@@ -565,107 +516,84 @@ const MessagesImpl = ({
   // useMemo included renderRange → every scroll rebuilt 6 Maps over 27k
   // messages + 4 filter/map passes = ~50ms alloc per scroll → GC pressure →
   // 100-173ms stop-the-world pauses on the 1GB heap.
-  const { collapsed, lookups, hasTruncatedMessages, hiddenMessageCount } =
-    useMemo(() => {
-      // In fullscreen mode the alt buffer has no native scrollback, so the
-      // compact-boundary filter just hides history the ScrollBox could
-      // otherwise scroll to. Main-screen mode keeps the filter — pre-compact
-      // rows live above the viewport in native scrollback there, and
-      // re-rendering them triggers full resets.
-      // includeSnipped: UI rendering keeps snipped messages for scrollback
-      // (this PR's core goal — full history in UI, filter only for the model).
-      // Also avoids a UUID mismatch: normalizeMessages derives new UUIDs, so
-      // projectSnippedView's check against original removedUuids would fail.
-      const compactAwareMessages =
-        verbose || isFullscreenEnvEnabled()
-          ? normalizedMessages
-          : getMessagesAfterCompactBoundary(normalizedMessages, {
-              includeSnipped: true,
-            })
+  const { collapsed, lookups, hasTruncatedMessages, hiddenMessageCount } = useMemo(() => {
+    // In fullscreen mode the alt buffer has no native scrollback, so the
+    // compact-boundary filter just hides history the ScrollBox could
+    // otherwise scroll to. Main-screen mode keeps the filter — pre-compact
+    // rows live above the viewport in native scrollback there, and
+    // re-rendering them triggers full resets.
+    // includeSnipped: UI rendering keeps snipped messages for scrollback
+    // (this PR's core goal — full history in UI, filter only for the model).
+    // Also avoids a UUID mismatch: normalizeMessages derives new UUIDs, so
+    // projectSnippedView's check against original removedUuids would fail.
+    const compactAwareMessages =
+      verbose || isFullscreenEnvEnabled()
+        ? normalizedMessages
+        : getMessagesAfterCompactBoundary(normalizedMessages, {
+            includeSnipped: true,
+          })
 
-      const messagesToShowNotTruncated = reorderMessagesInUI(
-        compactAwareMessages
-          .filter(
-            (msg): msg is Exclude<NormalizedMessage, ProgressMessageType> =>
-              msg.type !== 'progress',
-          )
-          // CC-724: drop attachment messages that AttachmentMessage renders as
-          // null (hook_success, hook_additional_context, hook_cancelled, etc.)
-          // BEFORE counting/slicing so they don't inflate the "N messages"
-          // count in ctrl-o or consume slots in the 200-message render cap.
-          .filter(msg => !isNullRenderingAttachment(msg))
-          .filter(_ => shouldShowUserMessage(_, isTranscriptMode)),
-        syntheticStreamingToolUseMessages,
-      )
-      // Three-tier filtering. Transcript mode (ctrl+o screen) is truly unfiltered.
-      // Brief-only: SendUserMessage + user input only. Default: drop redundant
-      // assistant text in turns where SendUserMessage was called (the model's
-      // text is working-notes that duplicate the SendUserMessage content).
-      const briefToolNames = [BRIEF_TOOL_NAME, SEND_USER_FILE_TOOL_NAME].filter(
-        (n): n is string => n !== null,
-      )
-      // dropTextInBriefTurns should only trigger on SendUserMessage turns —
-      // SendUserFile delivers a file without replacement text, so dropping
-      // assistant text for file-only turns would leave the user with no context.
-      const dropTextToolNames = [BRIEF_TOOL_NAME].filter(
-        (n): n is string => n !== null,
-      )
-      const briefFiltered =
-        briefToolNames.length > 0 && !isTranscriptMode
-          ? isBriefOnly
-            ? filterForBriefTool(messagesToShowNotTruncated, briefToolNames)
-            : dropTextToolNames.length > 0
-              ? dropTextInBriefTurns(
-                  messagesToShowNotTruncated,
-                  dropTextToolNames,
-                )
-              : messagesToShowNotTruncated
-          : messagesToShowNotTruncated
-
-      const messagesToShow = shouldTruncate
-        ? briefFiltered.slice(-MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE)
-        : briefFiltered
-
-      const hasTruncatedMessages =
-        shouldTruncate &&
-        briefFiltered.length > MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE
-
-      const { messages: groupedMessages } = applyGrouping(
-        messagesToShow,
-        tools,
-        verbose,
-      )
-
-      const collapsed = collapseBackgroundBashNotifications(
-        collapseHookSummaries(
-          collapseTeammateShutdowns(
-            collapseReadSearchGroups(groupedMessages, tools),
-          ),
-        ),
-        verbose,
-      )
-
-      const lookups = buildMessageLookups(normalizedMessages, messagesToShow)
-
-      const hiddenMessageCount =
-        messagesToShowNotTruncated.length -
-        MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE
-
-      return {
-        collapsed,
-        lookups,
-        hasTruncatedMessages,
-        hiddenMessageCount,
-      }
-    }, [
-      verbose,
-      normalizedMessages,
-      isTranscriptMode,
+    const messagesToShowNotTruncated = reorderMessagesInUI(
+      compactAwareMessages
+        .filter((msg): msg is Exclude<NormalizedMessage, ProgressMessageType> => msg.type !== 'progress')
+        // CC-724: drop attachment messages that AttachmentMessage renders as
+        // null (hook_success, hook_additional_context, hook_cancelled, etc.)
+        // BEFORE counting/slicing so they don't inflate the "N messages"
+        // count in ctrl-o or consume slots in the 200-message render cap.
+        .filter((msg) => !isNullRenderingAttachment(msg))
+        .filter((_) => shouldShowUserMessage(_, isTranscriptMode)),
       syntheticStreamingToolUseMessages,
-      shouldTruncate,
-      tools,
-      isBriefOnly,
-    ])
+    )
+    // Three-tier filtering. Transcript mode (ctrl+o screen) is truly unfiltered.
+    // Brief-only: SendUserMessage + user input only. Default: drop redundant
+    // assistant text in turns where SendUserMessage was called (the model's
+    // text is working-notes that duplicate the SendUserMessage content).
+    const briefToolNames = [BRIEF_TOOL_NAME, SEND_USER_FILE_TOOL_NAME].filter((n): n is string => n !== null)
+    // dropTextInBriefTurns should only trigger on SendUserMessage turns —
+    // SendUserFile delivers a file without replacement text, so dropping
+    // assistant text for file-only turns would leave the user with no context.
+    const dropTextToolNames = [BRIEF_TOOL_NAME].filter((n): n is string => n !== null)
+    const briefFiltered =
+      briefToolNames.length > 0 && !isTranscriptMode
+        ? isBriefOnly
+          ? filterForBriefTool(messagesToShowNotTruncated, briefToolNames)
+          : dropTextToolNames.length > 0
+            ? dropTextInBriefTurns(messagesToShowNotTruncated, dropTextToolNames)
+            : messagesToShowNotTruncated
+        : messagesToShowNotTruncated
+
+    const messagesToShow = shouldTruncate
+      ? briefFiltered.slice(-MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE)
+      : briefFiltered
+
+    const hasTruncatedMessages = shouldTruncate && briefFiltered.length > MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE
+
+    const { messages: groupedMessages } = applyGrouping(messagesToShow, tools, verbose)
+
+    const collapsed = collapseBackgroundBashNotifications(
+      collapseHookSummaries(collapseTeammateShutdowns(collapseReadSearchGroups(groupedMessages, tools))),
+      verbose,
+    )
+
+    const lookups = buildMessageLookups(normalizedMessages, messagesToShow)
+
+    const hiddenMessageCount = messagesToShowNotTruncated.length - MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE
+
+    return {
+      collapsed,
+      lookups,
+      hasTruncatedMessages,
+      hiddenMessageCount,
+    }
+  }, [
+    verbose,
+    normalizedMessages,
+    isTranscriptMode,
+    syntheticStreamingToolUseMessages,
+    shouldTruncate,
+    tools,
+    isBriefOnly,
+  ])
 
   // Cheap slice — only runs when scroll range or slice config changes.
   const renderableMessages = useMemo(() => {
@@ -677,9 +605,7 @@ const MessagesImpl = ({
     // renderRange is first: the chunked export path slices the
     // post-grouping array so each chunk gets correct tool-call grouping.
     const capApplies = !virtualScrollRuntimeGate && !disableRenderCap
-    const sliceStart = capApplies
-      ? computeSliceStart(collapsed, sliceAnchorRef)
-      : 0
+    const sliceStart = capApplies ? computeSliceStart(collapsed, sliceAnchorRef) : 0
     return renderRange
       ? collapsed.slice(renderRange[0], renderRange[1])
       : sliceStart > 0
@@ -688,7 +614,7 @@ const MessagesImpl = ({
   }, [collapsed, renderRange, virtualScrollRuntimeGate, disableRenderCap])
 
   const streamingToolUseIDs = useMemo(
-    () => new Set(streamingToolUses.map(_ => _.contentBlock.id)),
+    () => new Set(streamingToolUses.map((_) => _.contentBlock.id)),
     [streamingToolUses],
   )
 
@@ -698,24 +624,22 @@ const MessagesImpl = ({
   const dividerBeforeIndex = useMemo(() => {
     if (!unseenDivider) return -1
     const prefix = unseenDivider.firstUnseenUuid.slice(0, 24)
-    return renderableMessages.findIndex(m => m.uuid.slice(0, 24) === prefix)
+    return renderableMessages.findIndex((m) => m.uuid.slice(0, 24) === prefix)
   }, [unseenDivider, renderableMessages])
 
   const selectedIdx = useMemo(() => {
     if (!cursor) return -1
-    return renderableMessages.findIndex(m => m.uuid === cursor.uuid)
+    return renderableMessages.findIndex((m) => m.uuid === cursor.uuid)
   }, [cursor, renderableMessages])
 
   // Fullscreen: click a message to toggle verbose rendering for it. Keyed by
   // tool_use_id where available so a tool_use and its tool_result (separate
   // rows) expand together; falls back to uuid for groups/thinking. Stale keys
   // are harmless — they never match anything in renderableMessages.
-  const [expandedKeys, setExpandedKeys] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  )
+  const [expandedKeys, setExpandedKeys] = useState<ReadonlySet<string>>(() => new Set())
   const onItemClick = useCallback((msg: RenderableMessage) => {
     const k = expandKey(msg)
-    setExpandedKeys(prev => {
+    setExpandedKeys((prev) => {
       const next = new Set(prev)
       if (next.has(k)) next.delete(k)
       else next.add(k)
@@ -723,8 +647,7 @@ const MessagesImpl = ({
     })
   }, [])
   const isItemExpanded = useCallback(
-    (msg: RenderableMessage) =>
-      expandedKeys.size > 0 && expandedKeys.has(expandKey(msg)),
+    (msg: RenderableMessage) => expandedKeys.size > 0 && expandedKeys.has(expandKey(msg)),
     [expandedKeys],
   )
   // Only hover/click messages where the verbose toggle reveals more:
@@ -741,20 +664,12 @@ const MessagesImpl = ({
       if (msg.type === 'collapsed_read_search') return true
       if (msg.type === 'assistant') {
         const b = msg.message.content[0] as unknown as AdvisorBlock | undefined
-        return (
-          b != null &&
-          isAdvisorBlock(b) &&
-          b.type === 'advisor_tool_result' &&
-          b.content.type === 'advisor_result'
-        )
+        return b != null && isAdvisorBlock(b) && b.type === 'advisor_tool_result' && b.content.type === 'advisor_result'
       }
       if (msg.type !== 'user') return false
       const b = msg.message.content[0]
-      if (b?.type !== 'tool_result' || b.is_error || !msg.toolUseResult)
-        return false
-      const name = lookupsRef.current.toolUseByToolUseID.get(
-        b.tool_use_id,
-      )?.name
+      if (b?.type !== 'tool_result' || b.is_error || !msg.toolUseResult) return false
+      const name = lookupsRef.current.toolUseByToolUseID.get(b.tool_use_id)?.name
       const tool = name ? findToolByName(tools, name) : undefined
       return tool?.isResultTruncated?.(msg.toolUseResult as never) ?? false
     },
@@ -762,9 +677,7 @@ const MessagesImpl = ({
   )
 
   const canAnimate =
-    (!toolJSX || !!toolJSX.shouldContinueAnimation) &&
-    !toolUseConfirmQueue.length &&
-    !isMessageSelectorVisible
+    (!toolJSX || !!toolJSX.shouldContinueAnimation) && !toolUseConfirmQueue.length && !isMessageSelectorVisible
 
   const hasToolsInProgress = inProgressToolUseIDs.size > 0
 
@@ -776,11 +689,7 @@ const MessagesImpl = ({
     !getIsRemoteMode() &&
     !(proactiveModule?.isProactiveActive() ?? false)
   useEffect(() => {
-    const state = progressEnabled
-      ? hasToolsInProgress
-        ? 'indeterminate'
-        : 'completed'
-      : null
+    const state = progressEnabled ? (hasToolsInProgress ? 'indeterminate' : 'completed') : null
     if (prevProgressState.current === state) return
     prevProgressState.current = state
     progress(state)
@@ -789,10 +698,7 @@ const MessagesImpl = ({
     return () => progress(null)
   }, [progress])
 
-  const messageKey = useCallback(
-    (msg: RenderableMessage) => `${msg.uuid}-${conversationId}`,
-    [conversationId],
-  )
+  const messageKey = useCallback((msg: RenderableMessage) => `${msg.uuid}-${conversationId}`, [conversationId])
 
   const renderMessageRow = (msg: RenderableMessage, index: number) => {
     const prevType = index > 0 ? renderableMessages[index - 1]?.type : undefined
@@ -804,13 +710,7 @@ const MessagesImpl = ({
     // streaming instead of waiting for the block to finalize.
     const hasContentAfter =
       msg.type === 'collapsed_read_search' &&
-      (!!streamingText ||
-        hasContentAfterIndex(
-          renderableMessages,
-          index,
-          tools,
-          streamingToolUseIDs,
-        ))
+      (!!streamingText || hasContentAfterIndex(renderableMessages, index, tools, streamingToolUseIDs))
 
     const k = messageKey(msg)
     const row = (
@@ -821,11 +721,7 @@ const MessagesImpl = ({
         hasContentAfter={hasContentAfter}
         tools={tools}
         commands={commands}
-        verbose={
-          verbose ||
-          isItemExpanded(msg) ||
-          (cursor?.expanded === true && index === selectedIdx)
-        }
+        verbose={verbose || isItemExpanded(msg) || (cursor?.expanded === true && index === selectedIdx)}
         inProgressToolUseIDs={inProgressToolUseIDs}
         streamingToolUseIDs={streamingToolUseIDs}
         screen={screen}
@@ -842,10 +738,7 @@ const MessagesImpl = ({
     // Per-row Provider — only 2 rows re-render on selection change.
     // Wrapped BEFORE divider branch so both return paths get it.
     const wrapped = (
-      <MessageActionsSelectedContext.Provider
-        key={k}
-        value={index === selectedIdx}
-      >
+      <MessageActionsSelectedContext.Provider key={k} value={index === selectedIdx}>
         {row}
       </MessageActionsSelectedContext.Provider>
     )
@@ -884,18 +777,12 @@ const MessagesImpl = ({
       // If this is a tool_result message and the tool implements
       // extractSearchText, prefer that — it's precise (tool-owned)
       // vs renderableSearchText's field-name heuristic.
-      if (
-        msg.type === 'user' &&
-        msg.toolUseResult &&
-        Array.isArray(msg.message.content)
-      ) {
-        const tr = msg.message.content.find(b => b.type === 'tool_result')
+      if (msg.type === 'user' && msg.toolUseResult && Array.isArray(msg.message.content)) {
+        const tr = msg.message.content.find((b) => b.type === 'tool_result')
         if (tr && 'tool_use_id' in tr) {
           const tu = lookups.toolUseByToolUseID.get(tr.tool_use_id)
           const tool = tu && findToolByName(tools, tu.name)
-          const extracted = tool?.extractSearchText?.(
-            msg.toolUseResult as never,
-          )
+          const extracted = tool?.extractSearchText?.(msg.toolUseResult as never)
           // undefined = tool didn't implement → keep heuristic. Empty
           // string = tool says "nothing to index" → respect that.
           if (extracted !== undefined) text = extracted
@@ -916,9 +803,7 @@ const MessagesImpl = ({
   return (
     <>
       {/* Logo */}
-      {!hideLogo && !(renderRange && renderRange[0] > 0) && (
-        <LogoHeader agentDefinitions={agentDefinitions} />
-      )}
+      {!hideLogo && !(renderRange && renderRange[0] > 0) && <LogoHeader agentDefinitions={agentDefinitions} />}
 
       {/* Truncation indicator */}
       {hasTruncatedMessages && (
@@ -977,12 +862,7 @@ const MessagesImpl = ({
       )}
 
       {streamingText && !isBriefOnly && (
-        <Box
-          alignItems="flex-start"
-          flexDirection="row"
-          marginTop={1}
-          width="100%"
-        >
+        <Box alignItems="flex-start" flexDirection="row" marginTop={1} width="100%">
           <Box flexDirection="row">
             <Box minWidth={2}>
               <Text color="text">{BLACK_CIRCLE}</Text>
@@ -1015,11 +895,7 @@ const MessagesImpl = ({
 /** Key for click-to-expand: tool_use_id where available (so tool_use + its
  *  tool_result expand together), else uuid for groups/thinking. */
 function expandKey(msg: RenderableMessage): string {
-  return (
-    (msg.type === 'assistant' || msg.type === 'user'
-      ? getToolUseID(msg)
-      : null) ?? msg.uuid
-  )
+  return (msg.type === 'assistant' || msg.type === 'user' ? getToolUseID(msg) : null) ?? msg.uuid
 }
 
 // Custom comparator to prevent unnecessary re-renders during streaming.
@@ -1054,10 +930,7 @@ export const Messages = React.memo(MessagesImpl, (prev, next) => {
       if (key === 'streamingToolUses') {
         const p = prev.streamingToolUses
         const n = next.streamingToolUses
-        if (
-          p.length === n.length &&
-          p.every((item, i) => item.contentBlock === n[i]?.contentBlock)
-        ) {
+        if (p.length === n.length && p.every((item, i) => item.contentBlock === n[i]?.contentBlock)) {
           continue
         }
       }
@@ -1069,20 +942,14 @@ export const Messages = React.memo(MessagesImpl, (prev, next) => {
       if (key === 'unseenDivider') {
         const p = prev.unseenDivider
         const n = next.unseenDivider
-        if (
-          p?.firstUnseenUuid === n?.firstUnseenUuid &&
-          p?.count === n?.count
-        ) {
+        if (p?.firstUnseenUuid === n?.firstUnseenUuid && p?.count === n?.count) {
           continue
         }
       }
       if (key === 'tools') {
         const p = prev.tools
         const n = next.tools
-        if (
-          p.length === n.length &&
-          p.every((tool, i) => tool.name === n[i]?.name)
-        ) {
+        if (p.length === n.length && p.every((tool, i) => tool.name === n[i]?.name)) {
           continue
         }
       }
@@ -1140,12 +1007,9 @@ export function shouldRenderStatically(
       return message.subtype !== 'api_error'
     }
     case 'grouped_tool_use': {
-      const allResolved = message.messages.every(msg => {
+      const allResolved = message.messages.every((msg) => {
         const content = msg.message.content[0]
-        return (
-          content?.type === 'tool_use' &&
-          lookups.resolvedToolUseIDs.has(content.id)
-        )
+        return content?.type === 'tool_use' && lookups.resolvedToolUseIDs.has(content.id)
       })
       return allResolved
     }

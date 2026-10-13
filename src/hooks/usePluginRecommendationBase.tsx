@@ -6,6 +6,7 @@
 
 import figures from 'figures'
 import * as React from 'react'
+
 import { getIsRemoteMode } from '../bootstrap/state.js'
 import type { useNotifications } from '../context/notifications.js'
 import { Text } from '../ink.js'
@@ -37,7 +38,7 @@ export function usePluginRecommendationBase<T>(): {
 
       isCheckingRef.current = true
       void resolve()
-        .then(rec => {
+        .then((rec) => {
           if (rec) setRecommendation(rec)
         })
         .catch(logError)
@@ -48,10 +49,7 @@ export function usePluginRecommendationBase<T>(): {
     [recommendation],
   )
 
-  const clearRecommendation = React.useCallback(
-    () => setRecommendation(null),
-    [],
-  )
+  const clearRecommendation = React.useCallback(() => setRecommendation(null), [])
 
   return { recommendation, clearRecommendation, tryResolve }
 }

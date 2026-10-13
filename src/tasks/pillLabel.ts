@@ -9,29 +9,20 @@ import type { BackgroundTaskState } from './types.js'
  */
 export function getPillLabel(tasks: BackgroundTaskState[]): string {
   const n = tasks.length
-  const allSameType = tasks.every(t => t.type === tasks[0]!.type)
+  const allSameType = tasks.every((t) => t.type === tasks[0]!.type)
 
   if (allSameType) {
     switch (tasks[0]!.type) {
       case 'local_bash': {
-        const monitors = count(
-          tasks,
-          t => t.type === 'local_bash' && t.kind === 'monitor',
-        )
+        const monitors = count(tasks, (t) => t.type === 'local_bash' && t.kind === 'monitor')
         const shells = n - monitors
         const parts: string[] = []
-        if (shells > 0)
-          parts.push(shells === 1 ? '1 shell' : `${shells} shells`)
-        if (monitors > 0)
-          parts.push(monitors === 1 ? '1 monitor' : `${monitors} monitors`)
+        if (shells > 0) parts.push(shells === 1 ? '1 shell' : `${shells} shells`)
+        if (monitors > 0) parts.push(monitors === 1 ? '1 monitor' : `${monitors} monitors`)
         return parts.join(', ')
       }
       case 'in_process_teammate': {
-        const teamCount = new Set(
-          tasks.map(t =>
-            t.type === 'in_process_teammate' ? t.identity.teamName : '',
-          ),
-        ).size
+        const teamCount = new Set(tasks.map((t) => (t.type === 'in_process_teammate' ? t.identity.teamName : ''))).size
         return teamCount === 1 ? '1 team' : `${teamCount} teams`
       }
       case 'local_agent':
@@ -50,9 +41,7 @@ export function getPillLabel(tasks: BackgroundTaskState[]): string {
               return `${DIAMOND_OPEN} ultraplan`
           }
         }
-        return n === 1
-          ? `${DIAMOND_OPEN} 1 cloud session`
-          : `${DIAMOND_OPEN} ${n} cloud sessions`
+        return n === 1 ? `${DIAMOND_OPEN} 1 cloud session` : `${DIAMOND_OPEN} ${n} cloud sessions`
       }
       case 'local_workflow':
         return n === 1 ? '1 background workflow' : `${n} background workflows`
@@ -74,9 +63,5 @@ export function getPillLabel(tasks: BackgroundTaskState[]): string {
 export function pillNeedsCta(tasks: BackgroundTaskState[]): boolean {
   if (tasks.length !== 1) return false
   const t = tasks[0]!
-  return (
-    t.type === 'remote_agent' &&
-    t.isUltraplan === true &&
-    t.ultraplanPhase !== undefined
-  )
+  return t.type === 'remote_agent' && t.isUltraplan === true && t.ultraplanPhase !== undefined
 }

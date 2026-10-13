@@ -1,10 +1,8 @@
 import React, { type ReactNode, useEffect, useRef, useState } from 'react'
+
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- UP arrow exit not in Attachments bindings
 import { Box, Text, useInput } from '../../ink.js'
-import {
-  useKeybinding,
-  useKeybindings,
-} from '../../keybindings/useKeybinding.js'
+import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { PastedContent } from '../../utils/config.js'
 import { getImageFromClipboard } from '../../utils/imagePaste.js'
 import type { ImageDimensions } from '../../utils/imageResizer.js'
@@ -12,8 +10,8 @@ import { ClickableImageRef } from '../ClickableImageRef.js'
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js'
 import { Byline } from '../design-system/Byline.js'
 import TextInput from '../TextInput.js'
-import type { OptionWithDescription } from './select.js'
 import { SelectOption } from './select-option.js'
+import type { OptionWithDescription } from './select.js'
 
 type Props<T> = {
   option: Extract<OptionWithDescription<T>, { type: 'input' }>
@@ -39,10 +37,7 @@ type Props<T> = {
    * When provided, ctrl+g will trigger this callback with the current value
    * and a setter function to update the internal state.
    */
-  onOpenEditor?: (
-    currentValue: string,
-    setValue: (value: string) => void,
-  ) => void
+  onOpenEditor?: (currentValue: string, setValue: (value: string) => void) => void
   /**
    * When true, automatically reset cursor to end of line when:
    * - Option becomes focused
@@ -111,9 +106,7 @@ export function SelectInputOption<T>({
   onImagesSelectedChange,
   onSelectedImageIndexChange,
 }: Props<T>): React.ReactNode {
-  const imageAttachments = pastedContents
-    ? Object.values(pastedContents).filter(c => c.type === 'image')
-    : []
+  const imageAttachments = pastedContents ? Object.values(pastedContents).filter((c) => c.type === 'image') : []
 
   // Allow individual options to force showing the label via showLabelWithValue
   const showLabel = showLabelProp || option.showLabelWithValue === true
@@ -152,14 +145,9 @@ export function SelectInputOption<T>({
     'chat:imagePaste',
     () => {
       if (!onImagePaste) return
-      void getImageFromClipboard().then(imageData => {
+      void getImageFromClipboard().then((imageData) => {
         if (imageData) {
-          onImagePaste(
-            imageData.base64,
-            imageData.mediaType,
-            undefined,
-            imageData.dimensions,
-          )
+          onImagePaste(imageData.base64, imageData.mediaType, undefined, imageData.dimensions)
         }
       })
     },
@@ -176,12 +164,7 @@ export function SelectInputOption<T>({
     },
     {
       context: 'Attachments',
-      isActive:
-        isFocused &&
-        !imagesSelected &&
-        inputValue === '' &&
-        imageAttachments.length > 0 &&
-        !!onRemoveImage,
+      isActive: isFocused && !imagesSelected && inputValue === '' && imageAttachments.length > 0 && !!onRemoveImage,
     },
   )
 
@@ -190,17 +173,12 @@ export function SelectInputOption<T>({
     {
       'attachments:next': () => {
         if (imageAttachments.length > 1) {
-          onSelectedImageIndexChange?.(
-            (selectedImageIndex + 1) % imageAttachments.length,
-          )
+          onSelectedImageIndexChange?.((selectedImageIndex + 1) % imageAttachments.length)
         }
       },
       'attachments:previous': () => {
         if (imageAttachments.length > 1) {
-          onSelectedImageIndexChange?.(
-            (selectedImageIndex - 1 + imageAttachments.length) %
-              imageAttachments.length,
-          )
+          onSelectedImageIndexChange?.((selectedImageIndex - 1 + imageAttachments.length) % imageAttachments.length)
         }
       },
       'attachments:remove': () => {
@@ -212,9 +190,7 @@ export function SelectInputOption<T>({
             onImagesSelectedChange?.(false)
           } else {
             // Adjust index if we deleted the last image
-            onSelectedImageIndexChange?.(
-              Math.min(selectedImageIndex, imageAttachments.length - 2),
-            )
+            onSelectedImageIndexChange?.(Math.min(selectedImageIndex, imageAttachments.length - 2))
           }
         }
       },
@@ -242,8 +218,7 @@ export function SelectInputOption<T>({
     }
   }, [isFocused, imagesSelected, onImagesSelectedChange])
 
-  const descriptionPaddingLeft =
-    layout === 'expanded' ? maxIndexWidth + 3 : maxIndexWidth + 4
+  const descriptionPaddingLeft = layout === 'expanded' ? maxIndexWidth + 3 : maxIndexWidth + 4
 
   return (
     <Box flexDirection="column" flexShrink={0}>
@@ -254,25 +229,18 @@ export function SelectInputOption<T>({
         shouldShowUpArrow={shouldShowUpArrow}
         declareCursor={false}
       >
-        <Box
-          flexDirection="row"
-          flexShrink={layout === 'compact' ? 0 : undefined}
-        >
+        <Box flexDirection="row" flexShrink={layout === 'compact' ? 0 : undefined}>
           <Text dimColor>{`${index}.`.padEnd(maxIndexWidth + 2)}</Text>
           {children}
           {showLabel ? (
             <>
-              <Text color={isFocused ? 'suggestion' : undefined}>
-                {option.label}
-              </Text>
+              <Text color={isFocused ? 'suggestion' : undefined}>{option.label}</Text>
               {isFocused ? (
                 <>
-                  <Text color="suggestion">
-                    {option.labelValueSeparator ?? ', '}
-                  </Text>
+                  <Text color="suggestion">{option.labelValueSeparator ?? ', '}</Text>
                   <TextInput
                     value={inputValue}
-                    onChange={value => {
+                    onChange={(value) => {
                       isUserEditing.current = true
                       onInputChange(value)
                       option.onChange(value)
@@ -310,17 +278,14 @@ export function SelectInputOption<T>({
           ) : isFocused ? (
             <TextInput
               value={inputValue}
-              onChange={value => {
+              onChange={(value) => {
                 isUserEditing.current = true
                 onInputChange(value)
                 option.onChange(value)
               }}
               onSubmit={onSubmit}
               onExit={onExit}
-              placeholder={
-                option.placeholder ||
-                (typeof option.label === 'string' ? option.label : undefined)
-              }
+              placeholder={option.placeholder || (typeof option.label === 'string' ? option.label : undefined)}
               focus={!imagesSelected}
               showCursor={true}
               multiline={true}
@@ -339,9 +304,7 @@ export function SelectInputOption<T>({
               }}
             />
           ) : (
-            <Text color={inputValue ? undefined : 'inactive'}>
-              {inputValue || option.placeholder || option.label}
-            </Text>
+            <Text color={inputValue ? undefined : 'inactive'}>{inputValue || option.placeholder || option.label}</Text>
           )}
         </Box>
       </SelectOption>
@@ -349,9 +312,7 @@ export function SelectInputOption<T>({
         <Box paddingLeft={descriptionPaddingLeft}>
           <Text
             dimColor={option.dimDescription !== false}
-            color={
-              isSelected ? 'success' : isFocused ? 'suggestion' : undefined
-            }
+            color={isSelected ? 'success' : isFocused ? 'suggestion' : undefined}
           >
             {option.description}
           </Text>

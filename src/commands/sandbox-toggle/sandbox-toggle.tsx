@@ -1,17 +1,13 @@
 import { relative } from 'path'
+
 import React from 'react'
+
 import { getCwdState } from '../../bootstrap/state.js'
 import { SandboxSettings } from '../../components/sandbox/SandboxSettings.js'
 import { color } from '../../ink.js'
 import { getPlatform } from '../../utils/platform.js'
-import {
-  addToExcludedCommands,
-  SandboxManager,
-} from '../../utils/sandbox/sandbox-adapter.js'
-import {
-  getSettings_DEPRECATED,
-  getSettingsFilePathForSource,
-} from '../../utils/settings/settings.js'
+import { addToExcludedCommands, SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
+import { getSettings_DEPRECATED, getSettingsFilePathForSource } from '../../utils/settings/settings.js'
 import type { ThemeName } from '../../utils/theme.js'
 
 export async function call(
@@ -43,9 +39,7 @@ export async function call(
     const message = color(
       'error',
       themeName,
-    )(
-      `Error: Sandboxing is disabled for this platform (${platform}) via the enabledPlatforms setting.`,
-    )
+    )(`Error: Sandboxing is disabled for this platform (${platform}) via the enabledPlatforms setting.`)
     onDone(message)
     return null
   }
@@ -55,9 +49,7 @@ export async function call(
     const message = color(
       'error',
       themeName,
-    )(
-      'Error: Sandbox settings are overridden by a higher-priority configuration and cannot be changed locally.',
-    )
+    )('Error: Sandbox settings are overridden by a higher-priority configuration and cannot be changed locally.')
     onDone(message)
     return null
   }
@@ -83,9 +75,7 @@ export async function call(
         const message = color(
           'error',
           themeName,
-        )(
-          'Error: Please provide a command pattern to exclude (e.g., /sandbox exclude "npm run test:*")',
-        )
+        )('Error: Please provide a command pattern to exclude (e.g., /sandbox exclude "npm run test:*")')
         onDone(message)
         return null
       }
@@ -102,10 +92,7 @@ export async function call(
         ? relative(getCwdState(), localSettingsPath)
         : '.claude/settings.local.json'
 
-      const message = color(
-        'success',
-        themeName,
-      )(`Added "${cleanPattern}" to excluded commands in ${relativePath}`)
+      const message = color('success', themeName)(`Added "${cleanPattern}" to excluded commands in ${relativePath}`)
 
       onDone(message)
       return null
@@ -114,9 +101,7 @@ export async function call(
       const message = color(
         'error',
         themeName,
-      )(
-        `Error: Unknown subcommand "${subcommand}". Available subcommand: exclude`,
-      )
+      )(`Error: Unknown subcommand "${subcommand}". Available subcommand: exclude`)
       onDone(message)
       return null
     }

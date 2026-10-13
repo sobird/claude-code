@@ -1,5 +1,6 @@
 import type { ConfigScope } from 'src/services/mcp/types.js'
 import type { ZodError, ZodIssue } from 'zod/v4'
+
 import { jsonParse } from '../slowOperations.js'
 import { plural } from '../stringUtils.js'
 import { validatePermissionRule } from './permissionValidation.js'
@@ -28,9 +29,7 @@ function isInvalidValueIssue(issue: ZodIssue): issue is ZodIssue & {
   return issue.code === 'invalid_value'
 }
 
-function isUnrecognizedKeysIssue(
-  issue: ZodIssue,
-): issue is ZodIssue & { code: 'unrecognized_keys'; keys: string[] } {
+function isUnrecognizedKeysIssue(issue: ZodIssue): issue is ZodIssue & { code: 'unrecognized_keys'; keys: string[] } {
   return issue.code === 'unrecognized_keys'
 }
 
@@ -94,10 +93,7 @@ function extractReceivedFromMessage(msg: string): string | undefined {
   return match ? match[1] : undefined
 }
 
-export function formatZodError(
-  error: ZodError,
-  filePath: string,
-): ValidationError[] {
+export function formatZodError(error: ZodError, filePath: string): ValidationError[] {
   return error.issues.map((issue): ValidationError => {
     const path = issue.path.map(String).join('.')
     let message = issue.message
@@ -109,7 +105,7 @@ export function formatZodError(
     let invalidValue: unknown
 
     if (isInvalidValueIssue(issue)) {
-      enumValues = issue.values.map(v => String(v))
+      enumValues = issue.values.map((v) => String(v))
       expectedValue = enumValues.join(' | ')
       receivedValue = undefined
       invalidValue = undefined
@@ -137,17 +133,11 @@ export function formatZodError(
     })
 
     if (isInvalidValueIssue(issue)) {
-      expected = enumValues?.map(v => `"${v}"`).join(', ')
+      expected = enumValues?.map((v) => `"${v}"`).join(', ')
       message = `Invalid value. Expected one of: ${expected}`
     } else if (isInvalidTypeIssue(issue)) {
-      const receivedType =
-        extractReceivedFromMessage(issue.message) ??
-        getReceivedType(issue.input)
-      if (
-        issue.expected === 'object' &&
-        receivedType === 'null' &&
-        path === ''
-      ) {
+      const receivedType = extractReceivedFromMessage(issue.message) ?? getReceivedType(issue.input)
+      if (issue.expected === 'object' && receivedType === 'null' && path === '') {
         message = 'Invalid or malformed JSON'
       } else {
         message = `Expected ${issue.expected}, but received ${receivedType}`
@@ -199,8 +189,7 @@ export function validateSettingsFileContent(content: string):
     // Format the validation error in a helpful way
     const errors = formatZodError(result.error, 'settings')
     const errorMessage =
-      'Settings validation failed:\n' +
-      errors.map(err => `- ${err.path}: ${err.message}`).join('\n')
+      'Settings validation failed:\n' + errors.map((err) => `- ${err.path}: ${err.message}`).join('\n')
 
     return {
       isValid: false,
@@ -221,10 +210,7 @@ export function validateSettingsFileContent(content: string):
  * This prevents one bad rule from poisoning the entire settings file.
  * Returns warnings for each filtered rule.
  */
-export function filterInvalidPermissionRules(
-  data: unknown,
-  filePath: string,
-): ValidationError[] {
+export function filterInvalidPermissionRules(data: unknown, filePath: string): ValidationError[] {
   if (!data || typeof data !== 'object') return []
   const obj = data as Record<string, unknown>
   if (!obj.permissions || typeof obj.permissions !== 'object') return []
@@ -235,7 +221,7 @@ export function filterInvalidPermissionRules(
     const rules = perms[key]
     if (!Array.isArray(rules)) continue
 
-    perms[key] = rules.filter(rule => {
+    perms[key] = rules.filter((rule) => {
       if (typeof rule !== 'string') {
         warnings.push({
           file: filePath,

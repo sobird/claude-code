@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import type { ToolProgressData } from '../../Tool.js'
 import type { ProgressMessage } from '../../types/message.js'
@@ -14,8 +15,7 @@ export function renderToolResultMessage(
   _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
   _options: { theme: ThemeName },
 ): React.ReactNode {
-  const actionLabel =
-    output.action === 'keep' ? 'Kept worktree' : 'Removed worktree'
+  const actionLabel = output.action === 'keep' ? 'Kept worktree' : 'Removed worktree'
   return (
     <Box flexDirection="column">
       <Text>

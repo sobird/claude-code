@@ -39,14 +39,14 @@ Read both. If they disagree, that's a finding.
 The surface is where a user — human or programmatic — meets the
 change. That's where you observe.
 
-| Change reaches | Surface | You |
-|---|---|---|
-| CLI / TUI | terminal | type the command, capture the pane — [example](examples/cli.md) |
-| Server / API | socket | send the request, capture the response — [example](examples/server.md) |
-| GUI | pixels | drive it under xvfb/Playwright, screenshot |
-| Library | package boundary | sample code through the public export — `import pkg`, not `import ./src/...` |
-| Prompt / agent config | the agent | run the agent, capture its behavior |
-| CI workflow | Actions | dispatch it, read the run |
+| Change reaches        | Surface          | You                                                                          |
+| --------------------- | ---------------- | ---------------------------------------------------------------------------- |
+| CLI / TUI             | terminal         | type the command, capture the pane — [example](examples/cli.md)              |
+| Server / API          | socket           | send the request, capture the response — [example](examples/server.md)       |
+| GUI                   | pixels           | drive it under xvfb/Playwright, screenshot                                   |
+| Library               | package boundary | sample code through the public export — `import pkg`, not `import ./src/...` |
+| Prompt / agent config | the agent        | run the agent, capture its behavior                                          |
+| CI workflow           | Actions          | dispatch it, read the run                                                    |
 
 **Internal function? Not a surface.** Something in the repo calls it
 and that caller ends at one of the rows above. Follow it there. A
@@ -145,6 +145,7 @@ near the change.>
 ```
 
 **Verdicts:**
+
 - **PASS** — you ran the app, the change did what it should at its
   surface. Not: tests pass, builds clean, code looks right.
 - **FAIL** — you ran it and it doesn't. Or it breaks something else.

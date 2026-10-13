@@ -5,11 +5,13 @@ OTEL 是 OpenTelemetry 的缩写。它是一个开源的**可观测性（Observa
 简单来说，它的目的是为软件的可观测性提供一套统一的标准、API 和工具，让你能够以相同的方式收集应用程序生成的各种数据
 
 ## 1. 核心解决什么问题？
+
 在 OTEL 出现之前，如果你想监控代码，不同的工具（如 Prometheus, Jaeger, Datadog）都有自己的 SDK 和数据格式。如果你想换掉监控服务，可能需要重写大量的监控代码。
 
 OpenTelemetry 的出现是为了实现“观测数据采集的标准化”。它将数据采集层（SDKs）与后端存储层（Databases/Tools）解耦。
 
 ## 2. 观测的三大支柱
+
 OTEL 主要处理三类关键数据：
 
 - Traces（链路追踪）： 记录一个请求从客户端到后端，再到数据库的完整路径。这对于调试微服务中的性能瓶颈非常有用。
@@ -17,6 +19,7 @@ OTEL 主要处理三类关键数据：
 - Logs（日志）： 带有时间戳的结构化或非结构化文本记录，用于了解系统内发生的具体事件。
 
 ### 3. 主要组件
+
 OpenTelemetry 并不是一个像 Grafana 那样的展示面板，也不是像 Prometheus 那样的数据库，它由以下部分组成：
 
 - **API & SDKs**： 针对各种语言（TypeScript, Go, Java, Python 等）的标准库，用于在代码中生成数据。
@@ -24,6 +27,7 @@ OpenTelemetry 并不是一个像 Grafana 那样的展示面板，也不是像 Pr
 - **OTLP（协议）**： 一种基于 gRPC 和 HTTP 的高性能传输协议，定义了数据如何传输。
 
 ### 4. 为什么现在很火？
+
 - **厂商中立**： 你可以今天用 Jaeger 看 Traces，明天无缝切换到 Honeycomb，而不需要改动一行业务代码。
 - **自动打桩（Auto-instrumentation）**： 许多库（如 Node.js 的 http, mysql）支持自动注入监控代码，无需手动埋点。
 - **云原生标准**： 它是继 Kubernetes 之后，CNCF 中最活跃的项目之一，几乎已成为工业界的事实标准。

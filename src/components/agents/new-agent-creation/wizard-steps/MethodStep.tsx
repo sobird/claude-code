@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react'
+
 import { Box } from '../../../../ink.js'
 import { ConfigurableShortcutHint } from '../../../ConfigurableShortcutHint.js'
 import { Select } from '../../../CustomSelect/select.js'
@@ -9,8 +10,7 @@ import { WizardDialogLayout } from '../../../wizard/WizardDialogLayout.js'
 import type { AgentWizardData } from '../types.js'
 
 export function MethodStep(): ReactNode {
-  const { goNext, goBack, updateWizardData, goToStep } =
-    useWizard<AgentWizardData>()
+  const { goNext, goBack, updateWizardData, goToStep } = useWizard<AgentWizardData>()
 
   const methodOptions = [
     {
@@ -30,12 +30,7 @@ export function MethodStep(): ReactNode {
         <Byline>
           <KeyboardShortcutHint shortcut="↑↓" action="navigate" />
           <KeyboardShortcutHint shortcut="Enter" action="select" />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="go back"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="go back" />
         </Byline>
       }
     >

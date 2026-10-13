@@ -1,4 +1,5 @@
 import React, { type ReactNode, useCallback, useState } from 'react'
+
 import { Box, Text } from '../../../../ink.js'
 import { useKeybinding } from '../../../../keybindings/useKeybinding.js'
 import { editPromptInEditor } from '../../../../utils/promptEditor.js'
@@ -11,11 +12,8 @@ import { WizardDialogLayout } from '../../../wizard/WizardDialogLayout.js'
 import type { AgentWizardData } from '../types.js'
 
 export function PromptStep(): ReactNode {
-  const { goNext, goBack, updateWizardData, wizardData } =
-    useWizard<AgentWizardData>()
-  const [systemPrompt, setSystemPrompt] = useState(
-    wizardData.systemPrompt || '',
-  )
+  const { goNext, goBack, updateWizardData, wizardData } = useWizard<AgentWizardData>()
+  const [systemPrompt, setSystemPrompt] = useState(wizardData.systemPrompt || '')
   const [cursorOffset, setCursorOffset] = useState(systemPrompt.length)
   const [error, setError] = useState<string | null>(null)
 
@@ -59,12 +57,7 @@ export function PromptStep(): ReactNode {
             fallback="ctrl+g"
             description="open in editor"
           />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Settings"
-            fallback="Esc"
-            description="go back"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="go back" />
         </Byline>
       }
     >

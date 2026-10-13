@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+
 import type { SDKControlPermissionRequest } from '../entrypoints/sdk/controlTypes.js'
 import type { Tool } from '../Tool.js'
 import type { AssistantMessage } from '../types/message.js'
@@ -62,8 +63,7 @@ export function createToolStub(toolName: string): Tool {
       return entries
         .slice(0, 3)
         .map(([key, value]) => {
-          const valueStr =
-            typeof value === 'string' ? value : jsonStringify(value)
+          const valueStr = typeof value === 'string' ? value : jsonStringify(value)
           return `${key}: ${valueStr}`
         })
         .join(', ')

@@ -1,13 +1,11 @@
 import * as React from 'react'
 import { use } from 'react'
+
 import { Box } from '../ink.js'
 import type { AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir.js'
 import { getMemoryFiles } from '../utils/claudemd.js'
 import { getGlobalConfig } from '../utils/config.js'
-import {
-  getActiveNotices,
-  type StatusNoticeContext,
-} from '../utils/statusNoticeDefinitions.js'
+import { getActiveNotices, type StatusNoticeContext } from '../utils/statusNoticeDefinitions.js'
 
 type Props = {
   agentDefinitions?: AgentDefinitionsResult
@@ -18,9 +16,7 @@ type Props = {
  * moved neutral or positive status to src/components/Status.tsx instead, which
  * users can access through /status.
  */
-export function StatusNotices({
-  agentDefinitions,
-}: Props = {}): React.ReactNode {
+export function StatusNotices({ agentDefinitions }: Props = {}): React.ReactNode {
   const context: StatusNoticeContext = {
     config: getGlobalConfig(),
     agentDefinitions,
@@ -33,10 +29,8 @@ export function StatusNotices({
 
   return (
     <Box flexDirection="column" paddingLeft={1}>
-      {activeNotices.map(notice => (
-        <React.Fragment key={notice.id}>
-          {notice.render(context)}
-        </React.Fragment>
+      {activeNotices.map((notice) => (
+        <React.Fragment key={notice.id}>{notice.render(context)}</React.Fragment>
       ))}
     </Box>
   )

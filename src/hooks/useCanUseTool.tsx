@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import { APIUserAbortError } from '@anthropic-ai/sdk'
 import * as React from 'react'
 import { useCallback } from 'react'
@@ -7,17 +8,11 @@ import {
   logEvent,
 } from 'src/services/analytics/index.js'
 import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js'
+
 import type { ToolUseConfirm } from '../components/permissions/PermissionRequest.js'
 import { Text } from '../ink.js'
-import type {
-  ToolPermissionContext,
-  Tool as ToolType,
-  ToolUseContext,
-} from '../Tool.js'
-import {
-  consumeSpeculativeClassifierCheck,
-  peekSpeculativeClassifierCheck,
-} from '../tools/BashTool/bashPermissions.js'
+import type { ToolPermissionContext, Tool as ToolType, ToolUseContext } from '../Tool.js'
+import { consumeSpeculativeClassifierCheck, peekSpeculativeClassifierCheck } from '../tools/BashTool/bashPermissions.js'
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
 import type { AssistantMessage } from '../types/message.js'
 import { recordAutoModeDenial } from '../utils/autoModeDenials.js'
@@ -35,15 +30,10 @@ import { jsonStringify } from '../utils/slowOperations.js'
 import { handleCoordinatorPermission } from './toolPermission/handlers/coordinatorHandler.js'
 import { handleInteractivePermission } from './toolPermission/handlers/interactiveHandler.js'
 import { handleSwarmWorkerPermission } from './toolPermission/handlers/swarmWorkerHandler.js'
-import {
-  createPermissionContext,
-  createPermissionQueueOps,
-} from './toolPermission/PermissionContext.js'
+import { createPermissionContext, createPermissionQueueOps } from './toolPermission/PermissionContext.js'
 import { logPermissionDecision } from './toolPermission/permissionLogging.js'
 
-export type CanUseToolFn<
-  Input extends Record<string, unknown> = Record<string, unknown>,
-> = (
+export type CanUseToolFn<Input extends Record<string, unknown> = Record<string, unknown>> = (
   tool: ToolType,
   input: Input,
   toolUseContext: ToolUseContext,
@@ -53,21 +43,12 @@ export type CanUseToolFn<
 ) => Promise<PermissionDecision<Input>>
 
 function useCanUseTool(
-  setToolUseConfirmQueue: React.Dispatch<
-    React.SetStateAction<ToolUseConfirm[]>
-  >,
+  setToolUseConfirmQueue: React.Dispatch<React.SetStateAction<ToolUseConfirm[]>>,
   setToolPermissionContext: (context: ToolPermissionContext) => void,
 ): CanUseToolFn {
   return useCallback<CanUseToolFn>(
-    async (
-      tool,
-      input,
-      toolUseContext,
-      assistantMessage,
-      toolUseID,
-      forceDecision,
-    ) => {
-      return new Promise(resolve => {
+    async (tool, input, toolUseContext, assistantMessage, toolUseID, forceDecision) => {
+      return new Promise((resolve) => {
         const ctx = createPermissionContext(
           tool,
           input,
@@ -83,28 +64,18 @@ function useCanUseTool(
         const decisionPromise =
           forceDecision !== undefined
             ? Promise.resolve(forceDecision)
-            : hasPermissionsToUseTool(
-                tool,
-                input,
-                toolUseContext,
-                assistantMessage,
-                toolUseID,
-              )
+            : hasPermissionsToUseTool(tool, input, toolUseContext, assistantMessage, toolUseID)
 
         return decisionPromise
-          .then(async result => {
+          .then(async (result) => {
             // [ANT-ONLY] Log all tool permission decisions with tool name and args
             if (process.env.USER_TYPE === 'ant') {
               logEvent('tengu_internal_tool_permission_decision', {
                 toolName: sanitizeToolNameForAnalytics(tool.name),
-                behavior:
-                  result.behavior as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                behavior: result.behavior as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 // Note: input contains code/filepaths, only log for ants
-                input: jsonStringify(
-                  input,
-                ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                messageID:
-                  ctx.messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                input: jsonStringify(input) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                messageID: ctx.messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 isMcp: tool.isMcp ?? false,
               })
             }
@@ -118,10 +89,7 @@ function useCanUseTool(
                 result.decisionReason?.type === 'classifier' &&
                 result.decisionReason.classifier === 'auto-mode'
               ) {
-                setYoloClassifierApproval(
-                  toolUseID,
-                  result.decisionReason.reason,
-                )
+                setYoloClassifierApproval(toolUseID, result.decisionReason.reason)
               }
 
               ctx.logDecision({ decision: 'accept', source: 'config' })
@@ -136,8 +104,7 @@ function useCanUseTool(
 
             const appState = toolUseContext.getAppState()
             const description = await tool.description(input as never, {
-              isNonInteractiveSession:
-                toolUseContext.options.isNonInteractiveSession,
+              isNonInteractiveSession: toolUseContext.options.isNonInteractiveSession,
               toolPermissionContext: appState.toolPermissionContext,
               tools: toolUseContext.options.tools,
             })
@@ -173,10 +140,7 @@ function useCanUseTool(
                     priority: 'immediate',
                     jsx: (
                       <>
-                        <Text color="error">
-                          {tool.userFacingName(input).toLowerCase()} denied by
-                          auto mode
-                        </Text>
+                        <Text color="error">{tool.userFacingName(input).toLowerCase()} denied by auto mode</Text>
                         <Text dimColor> · /permissions</Text>
                       </>
                     ),
@@ -189,24 +153,18 @@ function useCanUseTool(
               case 'ask': {
                 // For coordinator workers, await automated checks before showing dialog.
                 // Background workers should only interrupt the user when automated checks can't decide.
-                if (
-                  appState.toolPermissionContext
-                    .awaitAutomatedChecksBeforeDialog
-                ) {
-                  const coordinatorDecision = await handleCoordinatorPermission(
-                    {
-                      ctx,
-                      ...(feature('BASH_CLASSIFIER')
-                        ? {
-                            pendingClassifierCheck:
-                              result.pendingClassifierCheck,
-                          }
-                        : {}),
-                      updatedInput: result.updatedInput,
-                      suggestions: result.suggestions,
-                      permissionMode: appState.toolPermissionContext.mode,
-                    },
-                  )
+                if (appState.toolPermissionContext.awaitAutomatedChecksBeforeDialog) {
+                  const coordinatorDecision = await handleCoordinatorPermission({
+                    ctx,
+                    ...(feature('BASH_CLASSIFIER')
+                      ? {
+                          pendingClassifierCheck: result.pendingClassifierCheck,
+                        }
+                      : {}),
+                    updatedInput: result.updatedInput,
+                    suggestions: result.suggestions,
+                    permissionMode: appState.toolPermissionContext.mode,
+                  })
                   if (coordinatorDecision) {
                     resolve(coordinatorDecision)
                     return
@@ -243,19 +201,16 @@ function useCanUseTool(
                   feature('BASH_CLASSIFIER') &&
                   result.pendingClassifierCheck &&
                   tool.name === BASH_TOOL_NAME &&
-                  !appState.toolPermissionContext
-                    .awaitAutomatedChecksBeforeDialog
+                  !appState.toolPermissionContext.awaitAutomatedChecksBeforeDialog
                 ) {
-                  const speculativePromise = peekSpeculativeClassifierCheck(
-                    (input as { command: string }).command,
-                  )
+                  const speculativePromise = peekSpeculativeClassifierCheck((input as { command: string }).command)
                   if (speculativePromise) {
                     const raceResult = await Promise.race([
-                      speculativePromise.then(r => ({
+                      speculativePromise.then((r) => ({
                         type: 'result' as const,
                         result: r,
                       })),
-                      new Promise<{ type: 'timeout' }>(res =>
+                      new Promise<{ type: 'timeout' }>((res) =>
                         // eslint-disable-next-line no-restricted-syntax -- resolves with a value, not void
                         setTimeout(res, 2000, { type: 'timeout' as const }),
                       ),
@@ -270,12 +225,9 @@ function useCanUseTool(
                       feature('BASH_CLASSIFIER')
                     ) {
                       // Classifier approved within grace period — skip dialog
-                      void consumeSpeculativeClassifierCheck(
-                        (input as { command: string }).command,
-                      )
+                      void consumeSpeculativeClassifierCheck((input as { command: string }).command)
 
-                      const matchedRule =
-                        raceResult.result.matchedDescription ?? undefined
+                      const matchedRule = raceResult.result.matchedDescription ?? undefined
                       if (matchedRule) {
                         setClassifierApproval(toolUseID, matchedRule)
                       }
@@ -285,17 +237,13 @@ function useCanUseTool(
                         source: { type: 'classifier' },
                       })
                       resolve(
-                        ctx.buildAllow(
-                          result.updatedInput ??
-                            (input as Record<string, unknown>),
-                          {
-                            decisionReason: {
-                              type: 'classifier' as const,
-                              classifier: 'bash_allow' as const,
-                              reason: `Allowed by prompt rule: "${raceResult.result.matchedDescription}"`,
-                            },
+                        ctx.buildAllow(result.updatedInput ?? (input as Record<string, unknown>), {
+                          decisionReason: {
+                            type: 'classifier' as const,
+                            classifier: 'bash_allow' as const,
+                            reason: `Allowed by prompt rule: "${raceResult.result.matchedDescription}"`,
                           },
-                        ),
+                        }),
                       )
                       return
                     }
@@ -309,16 +257,10 @@ function useCanUseTool(
                     ctx,
                     description,
                     result,
-                    awaitAutomatedChecksBeforeDialog:
-                      appState.toolPermissionContext
-                        .awaitAutomatedChecksBeforeDialog,
-                    bridgeCallbacks: feature('BRIDGE_MODE')
-                      ? appState.replBridgePermissionCallbacks
-                      : undefined,
+                    awaitAutomatedChecksBeforeDialog: appState.toolPermissionContext.awaitAutomatedChecksBeforeDialog,
+                    bridgeCallbacks: feature('BRIDGE_MODE') ? appState.replBridgePermissionCallbacks : undefined,
                     channelCallbacks:
-                      feature('KAIROS') || feature('KAIROS_CHANNELS')
-                        ? appState.channelPermissionCallbacks
-                        : undefined,
+                      feature('KAIROS') || feature('KAIROS_CHANNELS') ? appState.channelPermissionCallbacks : undefined,
                   },
                   resolve,
                 )
@@ -327,11 +269,8 @@ function useCanUseTool(
               }
             }
           })
-          .catch(error => {
-            if (
-              error instanceof AbortError ||
-              error instanceof APIUserAbortError
-            ) {
+          .catch((error) => {
+            if (error instanceof AbortError || error instanceof APIUserAbortError) {
               logForDebugging(
                 `Permission check threw ${error.constructor.name} for tool=${tool.name}: ${error.message}`,
               )

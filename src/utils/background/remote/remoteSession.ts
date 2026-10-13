@@ -1,4 +1,5 @@
 import type { SDKMessage } from 'src/entrypoints/agentSdkTypes.js'
+
 import { checkGate_CACHED_OR_BLOCKING } from '../../../services/analytics/growthbook.js'
 import { isPolicyAllowed } from '../../../services/policyLimits/index.js'
 import { detectCurrentRepositoryWithHost } from '../../detectRepository.js'
@@ -85,10 +86,7 @@ export async function checkBackgroundRemoteSessionEligibility({
   } else if (repository === null) {
     errors.push({ type: 'no_git_remote' })
   } else if (repository.host === 'github.com') {
-    const hasGithubApp = await checkGithubAppInstalled(
-      repository.owner,
-      repository.name,
-    )
+    const hasGithubApp = await checkGithubAppInstalled(repository.owner, repository.name)
     if (!hasGithubApp) {
       errors.push({ type: 'github_app_not_installed' })
     }

@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
+
 import { resetCostState } from '../../bootstrap/state.js'
 import { clearTrustedDeviceToken, enrollTrustedDevice } from '../../bridge/trustedDevice.js'
 import type { LocalJSXCommandContext } from '../../commands.js'

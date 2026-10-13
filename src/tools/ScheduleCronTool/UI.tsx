@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { MessageResponse } from '../../components/MessageResponse.js'
 import { Text } from '../../ink.js'
 import { truncate } from '../../utils/format.js'
@@ -8,20 +9,15 @@ import type { ListOutput } from './CronListTool.js'
 
 // --- CronCreate -------------------------------------------------------------
 
-export function renderCreateToolUseMessage(
-  input: Partial<{ cron: string; prompt: string }>,
-): React.ReactNode {
+export function renderCreateToolUseMessage(input: Partial<{ cron: string; prompt: string }>): React.ReactNode {
   return `${input.cron ?? ''}${input.prompt ? `: ${truncate(input.prompt, 60, true)}` : ''}`
 }
 
-export function renderCreateResultMessage(
-  output: CreateOutput,
-): React.ReactNode {
+export function renderCreateResultMessage(output: CreateOutput): React.ReactNode {
   return (
     <MessageResponse>
       <Text>
-        Scheduled <Text bold>{output.id}</Text>{' '}
-        <Text dimColor>({output.humanSchedule})</Text>
+        Scheduled <Text bold>{output.id}</Text> <Text dimColor>({output.humanSchedule})</Text>
       </Text>
     </MessageResponse>
   )
@@ -29,15 +25,11 @@ export function renderCreateResultMessage(
 
 // --- CronDelete -------------------------------------------------------------
 
-export function renderDeleteToolUseMessage(
-  input: Partial<{ id: string }>,
-): React.ReactNode {
+export function renderDeleteToolUseMessage(input: Partial<{ id: string }>): React.ReactNode {
   return input.id ?? ''
 }
 
-export function renderDeleteResultMessage(
-  output: DeleteOutput,
-): React.ReactNode {
+export function renderDeleteResultMessage(output: DeleteOutput): React.ReactNode {
   return (
     <MessageResponse>
       <Text>
@@ -63,7 +55,7 @@ export function renderListResultMessage(output: ListOutput): React.ReactNode {
   }
   return (
     <MessageResponse>
-      {output.jobs.map(j => (
+      {output.jobs.map((j) => (
         <Text key={j.id}>
           <Text bold>{j.id}</Text> <Text dimColor>{j.humanSchedule}</Text>
         </Text>

@@ -95,8 +95,7 @@ export function getErrorGuidance(error: PluginError): string | null {
       // users can't remove plugin-provided servers from their MCP config,
       // so point them at the winning plugin instead.
       if (error.duplicateOf.startsWith('plugin:')) {
-        const winningPlugin =
-          error.duplicateOf.split(':')[1] ?? 'the other plugin'
+        const winningPlugin = error.duplicateOf.split(':')[1] ?? 'the other plugin'
         return `Disable plugin "${winningPlugin}" if you want this plugin's version instead`
       }
       return `Remove "${error.duplicateOf}" from your MCP config if you want the plugin's version instead`

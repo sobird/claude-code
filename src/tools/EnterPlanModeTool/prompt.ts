@@ -16,9 +16,7 @@ In plan mode, you'll:
 function getEnterPlanModeToolPromptExternal(): string {
   // When interview phase is enabled, omit the "What Happens" section —
   // detailed workflow instructions arrive via the plan_mode attachment (messages.ts).
-  const whatHappens = isPlanModeInterviewPhaseEnabled()
-    ? ''
-    : WHAT_HAPPENS_SECTION
+  const whatHappens = isPlanModeInterviewPhaseEnabled() ? '' : WHAT_HAPPENS_SECTION
 
   return `Use this tool proactively when you're about to start a non-trivial implementation task. Getting user sign-off on your approach before writing code prevents wasted effort and ensures alignment. This tool transitions you into plan mode where you can explore the codebase and design an implementation approach for user approval.
 
@@ -101,9 +99,7 @@ User: "What files handle routing?"
 function getEnterPlanModeToolPromptAnt(): string {
   // When interview phase is enabled, omit the "What Happens" section —
   // detailed workflow instructions arrive via the plan_mode attachment (messages.ts).
-  const whatHappens = isPlanModeInterviewPhaseEnabled()
-    ? ''
-    : WHAT_HAPPENS_SECTION
+  const whatHappens = isPlanModeInterviewPhaseEnabled() ? '' : WHAT_HAPPENS_SECTION
 
   return `Use this tool when a task has genuine ambiguity about the right approach and getting user input before coding would prevent significant rework. This tool transitions you into plan mode where you can explore the codebase and design an implementation approach for user approval.
 
@@ -164,7 +160,5 @@ User: "Fix the typo in the README"
 }
 
 export function getEnterPlanModeToolPrompt(): string {
-  return process.env.USER_TYPE === 'ant'
-    ? getEnterPlanModeToolPromptAnt()
-    : getEnterPlanModeToolPromptExternal()
+  return process.env.USER_TYPE === 'ant' ? getEnterPlanModeToolPromptAnt() : getEnterPlanModeToolPromptExternal()
 }

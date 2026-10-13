@@ -1,23 +1,15 @@
-// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import { z } from 'zod/v4'
-import { lazySchema } from '../utils/lazySchema.js'
-import {
-  type HookEvent,
-  HOOK_EVENTS,
-  type HookInput,
-  type PermissionUpdate,
-} from 'src/entrypoints/agentSdkTypes.js'
-import type {
-  HookJSONOutput,
-  AsyncHookJSONOutput,
-  SyncHookJSONOutput,
-} from 'src/entrypoints/agentSdkTypes.js'
+import { type HookEvent, HOOK_EVENTS, type HookInput, type PermissionUpdate } from 'src/entrypoints/agentSdkTypes.js'
+import type { HookJSONOutput, AsyncHookJSONOutput, SyncHookJSONOutput } from 'src/entrypoints/agentSdkTypes.js'
 import type { Message } from 'src/types/message.js'
 import type { PermissionResult } from 'src/utils/permissions/PermissionResult.js'
 import { permissionBehaviorSchema } from 'src/utils/permissions/PermissionRule.js'
 import { permissionUpdateSchema } from 'src/utils/permissions/PermissionUpdateSchema.js'
+// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
+import { z } from 'zod/v4'
+
 import type { AppState } from '../state/AppState.js'
 import type { AttributionState } from '../utils/commitAttribution.js'
+import { lazySchema } from '../utils/lazySchema.js'
 
 export function isHookEvent(value: string): value is HookEvent {
   return HOOK_EVENTS.includes(value as HookEvent)
@@ -49,24 +41,12 @@ export type PromptResponse = {
 // Sync hook response schema
 export const syncHookResponseSchema = lazySchema(() =>
   z.object({
-    continue: z
-      .boolean()
-      .describe('Whether Claude should continue after hook (default: true)')
-      .optional(),
-    suppressOutput: z
-      .boolean()
-      .describe('Hide stdout from transcript (default: false)')
-      .optional(),
-    stopReason: z
-      .string()
-      .describe('Message shown when continue is false')
-      .optional(),
+    continue: z.boolean().describe('Whether Claude should continue after hook (default: true)').optional(),
+    suppressOutput: z.boolean().describe('Hide stdout from transcript (default: false)').optional(),
+    stopReason: z.string().describe('Message shown when continue is false').optional(),
     decision: z.enum(['approve', 'block']).optional(),
     reason: z.string().describe('Explanation for the decision').optional(),
-    systemMessage: z
-      .string()
-      .describe('Warning message shown to the user')
-      .optional(),
+    systemMessage: z.string().describe('Warning message shown to the user').optional(),
     hookSpecificOutput: z
       .union([
         z.object({
@@ -84,10 +64,7 @@ export const syncHookResponseSchema = lazySchema(() =>
           hookEventName: z.literal('SessionStart'),
           additionalContext: z.string().optional(),
           initialUserMessage: z.string().optional(),
-          watchPaths: z
-            .array(z.string())
-            .describe('Absolute paths to watch for FileChanged hooks')
-            .optional(),
+          watchPaths: z.array(z.string()).describe('Absolute paths to watch for FileChanged hooks').optional(),
         }),
         z.object({
           hookEventName: z.literal('Setup'),
@@ -100,10 +77,7 @@ export const syncHookResponseSchema = lazySchema(() =>
         z.object({
           hookEventName: z.literal('PostToolUse'),
           additionalContext: z.string().optional(),
-          updatedMCPToolOutput: z
-            .unknown()
-            .describe('Updates the output for MCP tools')
-            .optional(),
+          updatedMCPToolOutput: z.unknown().describe('Updates the output for MCP tools').optional(),
         }),
         z.object({
           hookEventName: z.literal('PostToolUseFailure'),
@@ -144,17 +118,11 @@ export const syncHookResponseSchema = lazySchema(() =>
         }),
         z.object({
           hookEventName: z.literal('CwdChanged'),
-          watchPaths: z
-            .array(z.string())
-            .describe('Absolute paths to watch for FileChanged hooks')
-            .optional(),
+          watchPaths: z.array(z.string()).describe('Absolute paths to watch for FileChanged hooks').optional(),
         }),
         z.object({
           hookEventName: z.literal('FileChanged'),
-          watchPaths: z
-            .array(z.string())
-            .describe('Absolute paths to watch for FileChanged hooks')
-            .optional(),
+          watchPaths: z.array(z.string()).describe('Absolute paths to watch for FileChanged hooks').optional(),
         }),
         z.object({
           hookEventName: z.literal('WorktreeCreate'),
@@ -179,32 +147,24 @@ export const hookJSONOutputSchema = lazySchema(() => {
 type SchemaHookJSONOutput = z.infer<ReturnType<typeof hookJSONOutputSchema>>
 
 // Type guard function to check if response is sync
-export function isSyncHookJSONOutput(
-  json: HookJSONOutput,
-): json is SyncHookJSONOutput {
+export function isSyncHookJSONOutput(json: HookJSONOutput): json is SyncHookJSONOutput {
   return !('async' in json && json.async === true)
 }
 
 // Type guard function to check if response is async
-export function isAsyncHookJSONOutput(
-  json: HookJSONOutput,
-): json is AsyncHookJSONOutput {
+export function isAsyncHookJSONOutput(json: HookJSONOutput): json is AsyncHookJSONOutput {
   return 'async' in json && json.async === true
 }
 
 // Compile-time assertion that SDK and Zod types match
 import type { IsEqual } from 'type-fest'
 type Assert<T extends true> = T
-type _assertSDKTypesMatch = Assert<
-  IsEqual<SchemaHookJSONOutput, HookJSONOutput>
->
+type _assertSDKTypesMatch = Assert<IsEqual<SchemaHookJSONOutput, HookJSONOutput>>
 
 /** Context passed to callback hooks for state access */
 export type HookCallbackContext = {
   getAppState: () => AppState
-  updateAttributionState: (
-    updater: (prev: AttributionState) => AttributionState,
-  ) => void
+  updateAttributionState: (updater: (prev: AttributionState) => AttributionState) => void
 }
 
 /** Hook that is a callback. */

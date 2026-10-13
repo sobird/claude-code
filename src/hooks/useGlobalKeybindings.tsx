@@ -5,7 +5,9 @@
  * This component renders nothing - it just registers the keybinding handlers.
  */
 import { feature } from 'bun:bundle'
+
 import { useCallback } from 'react'
+
 import instances from '../ink/instances.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
 import type { Screen } from '../screens/REPL.js'
@@ -48,7 +50,7 @@ export function GlobalKeybindingHandlers({
   virtualScrollActive,
   searchBarOpen = false,
 }: Props): null {
-  const expandedView = useAppState(s => s.expandedView)
+  const expandedView = useAppState((s) => s.expandedView)
   const setAppState = useSetAppState()
 
   // Toggle todo list (ctrl+t) - cycles through views
@@ -56,15 +58,11 @@ export function GlobalKeybindingHandlers({
     logEvent('tengu_toggle_todos', {
       is_expanded: expandedView === 'tasks',
     })
-    setAppState(prev => {
+    setAppState((prev) => {
       const { getAllInProcessTeammateTasks } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('../tasks/InProcessTeammateTask/InProcessTeammateTask.js') as typeof import('../tasks/InProcessTeammateTask/InProcessTeammateTask.js')
-      const hasTeammates =
-        count(
-          getAllInProcessTeammateTasks(prev.tasks),
-          t => t.status === 'running',
-        ) > 0
+      const hasTeammates = count(getAllInProcessTeammateTasks(prev.tasks), (t) => t.status === 'running') > 0
 
       if (hasTeammates) {
         // Both exist: none → tasks → teammates → none
@@ -80,10 +78,7 @@ export function GlobalKeybindingHandlers({
       // Only tasks: none ↔ tasks
       return {
         ...prev,
-        expandedView:
-          prev.expandedView === 'tasks'
-            ? ('none' as const)
-            : ('tasks' as const),
+        expandedView: prev.expandedView === 'tasks' ? ('none' as const) : ('tasks' as const),
       }
     })
   }, [expandedView, setAppState])
@@ -93,7 +88,7 @@ export function GlobalKeybindingHandlers({
   const isBriefOnly =
     feature('KAIROS') || feature('KAIROS_BRIEF')
       ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-        useAppState(s => s.isBriefOnly)
+        useAppState((s) => s.isBriefOnly)
       : false
   const handleToggleTranscript = useCallback(() => {
     if (feature('KAIROS') || feature('KAIROS_BRIEF')) {
@@ -107,7 +102,7 @@ export function GlobalKeybindingHandlers({
         require('../tools/BriefTool/BriefTool.js') as typeof import('../tools/BriefTool/BriefTool.js')
       /* eslint-enable @typescript-eslint/no-require-imports */
       if (!isBriefEnabled() && isBriefOnly && screen !== 'transcript') {
-        setAppState(prev => {
+        setAppState((prev) => {
           if (!prev.isBriefOnly) return prev
           return { ...prev, isBriefOnly: false }
         })
@@ -121,7 +116,7 @@ export function GlobalKeybindingHandlers({
       show_all: showAllInTranscript,
       message_count: messageCount,
     })
-    setScreen(s => (s === 'transcript' ? 'prompt' : 'transcript'))
+    setScreen((s) => (s === 'transcript' ? 'prompt' : 'transcript'))
     setShowAllInTranscript(false)
     if (isEnteringTranscript && onEnterTranscript) {
       onEnterTranscript()
@@ -147,7 +142,7 @@ export function GlobalKeybindingHandlers({
       is_expanding: !showAllInTranscript,
       message_count: messageCount,
     })
-    setShowAllInTranscript(prev => !prev)
+    setShowAllInTranscript((prev) => !prev)
   }, [showAllInTranscript, setShowAllInTranscript, messageCount])
 
   // Exit transcript mode (ctrl+c or escape)
@@ -161,13 +156,7 @@ export function GlobalKeybindingHandlers({
     if (onExitTranscript) {
       onExitTranscript()
     }
-  }, [
-    setScreen,
-    showAllInTranscript,
-    setShowAllInTranscript,
-    messageCount,
-    onExitTranscript,
-  ])
+  }, [setScreen, showAllInTranscript, setShowAllInTranscript, messageCount, onExitTranscript])
 
   // Toggle brief-only view (ctrl+shift+b). Pure display filter toggle —
   // does not touch opt-in state. Asymmetric gate (mirrors /brief): OFF
@@ -184,10 +173,9 @@ export function GlobalKeybindingHandlers({
       logEvent('tengu_brief_mode_toggled', {
         enabled: next,
         gated: false,
-        source:
-          'keybinding' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        source: 'keybinding' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
-      setAppState(prev => {
+      setAppState((prev) => {
         if (prev.isBriefOnly === next) return prev
         return { ...prev, isBriefOnly: next }
       })
@@ -212,7 +200,7 @@ export function GlobalKeybindingHandlers({
   useKeybinding(
     'app:toggleTeammatePreview',
     () => {
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
         showTeammateMessagePreview: !prev.showTeammateMessagePreview,
       }))

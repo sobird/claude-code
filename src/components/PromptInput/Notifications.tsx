@@ -1,12 +1,11 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
-import {
-  type Notification,
-  useNotifications,
-} from 'src/context/notifications.js'
+import { type Notification, useNotifications } from 'src/context/notifications.js'
 import { logEvent } from 'src/services/analytics/index.js'
 import { useAppState } from 'src/state/AppState.js'
+
 import { useVoiceState } from '../../context/voice.js'
 import type { VerificationStatus } from '../../hooks/useApiKeyVerification.js'
 import { useIdeConnectionStatus } from '../../hooks/useIdeConnectionStatus.js'
@@ -18,11 +17,7 @@ import { useClaudeAiLimits } from '../../services/claudeAiLimitsHook.js'
 import { calculateTokenWarningState } from '../../services/compact/autoCompact.js'
 import type { MCPServerConnection } from '../../services/mcp/types.js'
 import type { Message } from '../../types/message.js'
-import {
-  getApiKeyHelperElapsedMs,
-  getConfiguredApiKeyHelper,
-  getSubscriptionType,
-} from '../../utils/auth.js'
+import { getApiKeyHelperElapsedMs, getConfiguredApiKeyHelper, getSubscriptionType } from '../../utils/auth.js'
 import type { AutoUpdaterResult } from '../../utils/autoUpdater.js'
 import { getExternalEditor } from '../../utils/editor.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
@@ -40,10 +35,9 @@ import { TokenWarning } from '../TokenWarning.js'
 import { SandboxPromptFooterHint } from './SandboxPromptFooterHint.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const VoiceIndicator: typeof import('./VoiceIndicator.js').VoiceIndicator =
-  feature('VOICE_MODE')
-    ? require('./VoiceIndicator.js').VoiceIndicator
-    : () => null
+const VoiceIndicator: typeof import('./VoiceIndicator.js').VoiceIndicator = feature('VOICE_MODE')
+  ? require('./VoiceIndicator.js').VoiceIndicator
+  : () => null
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 export const FOOTER_TEMPORARY_STATUS_TIMEOUT = 5000
@@ -86,12 +80,9 @@ export function Notifications({
   // re-reads settings.json on every call, so another session's /model write
   // would leak into this session's display (anthropics/claude-code#37596).
   const mainLoopModel = useMainLoopModel()
-  const isShowingCompactMessage = calculateTokenWarningState(
-    tokenUsage,
-    mainLoopModel,
-  ).isAboveWarningThreshold
+  const isShowingCompactMessage = calculateTokenWarningState(tokenUsage, mainLoopModel).isAboveWarningThreshold
   const { status: ideStatus } = useIdeConnectionStatus(mcpClients)
-  const notifications = useAppState(s => s.notifications)
+  const notifications = useAppState((s) => s.notifications)
   const { addNotification, removeNotification } = useNotifications()
   const claudeAiLimits = useClaudeAiLimits()
 
@@ -111,21 +102,15 @@ export function Notifications({
 
   // Check if we should show the IDE selection indicator
   const shouldShowIdeSelection =
-    ideStatus === 'connected' &&
-    (ideSelection?.filePath ||
-      (ideSelection?.text && ideSelection.lineCount > 0))
+    ideStatus === 'connected' && (ideSelection?.filePath || (ideSelection?.text && ideSelection.lineCount > 0))
 
   // Hide update installed message when showing IDE selection
-  const shouldShowAutoUpdater =
-    !shouldShowIdeSelection ||
-    isAutoUpdating ||
-    autoUpdaterResult?.status !== 'success'
+  const shouldShowAutoUpdater = !shouldShowIdeSelection || isAutoUpdating || autoUpdaterResult?.status !== 'success'
 
   // Check if we're in overage mode for UI indicators
   const isInOverageMode = claudeAiLimits.isUsingOverage
   const subscriptionType = getSubscriptionType()
-  const isTeamOrEnterprise =
-    subscriptionType === 'team' || subscriptionType === 'enterprise'
+  const isTeamOrEnterprise = subscriptionType === 'team' || subscriptionType === 'enterprise'
 
   // Check if the external editor hint should be shown
   const editor = getExternalEditor()
@@ -158,21 +143,11 @@ export function Notifications({
     } else {
       removeNotification('external-editor-hint')
     }
-  }, [
-    shouldShowExternalEditorHint,
-    editor,
-    addNotification,
-    removeNotification,
-  ])
+  }, [shouldShowExternalEditorHint, editor, addNotification, removeNotification])
 
   return (
     <SentryErrorBoundary>
-      <Box
-        flexDirection="column"
-        alignItems={isNarrow ? 'flex-start' : 'flex-end'}
-        flexShrink={0}
-        overflowX="hidden"
-      >
+      <Box flexDirection="column" alignItems={isNarrow ? 'flex-start' : 'flex-end'} flexShrink={0} overflowX="hidden">
         <NotificationContent
           ideSelection={ideSelection}
           mcpClients={mcpClients}
@@ -244,7 +219,7 @@ function NotificationContent({
       (setSlow: React.Dispatch<React.SetStateAction<string | null>>) => {
         const ms = getApiKeyHelperElapsedMs()
         const next = ms >= 10_000 ? formatDuration(ms) : null
-        setSlow(prev => (next === prev ? prev : next))
+        setSlow((prev) => (next === prev ? prev : next))
       },
       1000,
       setApiKeyHelperSlow,
@@ -255,27 +230,23 @@ function NotificationContent({
   // Voice state (VOICE_MODE builds only, runtime-gated by GrowthBook)
   const voiceState = feature('VOICE_MODE')
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-      useVoiceState(s => s.voiceState)
+      useVoiceState((s) => s.voiceState)
     : ('idle' as const)
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
   const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false
   const voiceError = feature('VOICE_MODE')
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-      useVoiceState(s => s.voiceError)
+      useVoiceState((s) => s.voiceError)
     : null
   const isBriefOnly =
     feature('KAIROS') || feature('KAIROS_BRIEF')
       ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-        useAppState(s => s.isBriefOnly)
+        useAppState((s) => s.isBriefOnly)
       : false
 
   // When voice is actively recording or processing, replace all
   // notifications with just the voice indicator.
-  if (
-    feature('VOICE_MODE') &&
-    voiceEnabled &&
-    (voiceState === 'recording' || voiceState === 'processing')
-  ) {
+  if (feature('VOICE_MODE') && voiceEnabled && (voiceState === 'recording' || voiceState === 'processing')) {
     return <VoiceIndicator voiceState={voiceState} />
   }
 
@@ -288,11 +259,7 @@ function NotificationContent({
             {notifications.current.jsx}
           </Text>
         ) : (
-          <Text
-            color={notifications.current.color}
-            dimColor={!notifications.current.color}
-            wrap="truncate"
-          >
+          <Text color={notifications.current.color} dimColor={!notifications.current.color} wrap="truncate">
             {notifications.current.text}
           </Text>
         ))}
@@ -336,9 +303,7 @@ function NotificationContent({
           </Text>
         </Box>
       )}
-      {!isBriefOnly && (
-        <TokenWarning tokenUsage={tokenUsage} model={mainLoopModel} />
-      )}
+      {!isBriefOnly && <TokenWarning tokenUsage={tokenUsage} model={mainLoopModel} />}
       {shouldShowAutoUpdater && (
         <AutoUpdaterWrapper
           verbose={verbose}

@@ -2,16 +2,12 @@ import React, { useEffect, useState } from 'react'
 import type { CommandResultDisplay } from 'src/commands.js'
 import { logEvent } from 'src/services/analytics/index.js'
 import { logForDebugging } from 'src/utils/debug.js'
+
 import { Box, Text } from '../ink.js'
 import { execFileNoThrow } from '../utils/execFileNoThrow.js'
 import { getPlansDirectory } from '../utils/plans.js'
 import { setCwd } from '../utils/Shell.js'
-import {
-  cleanupWorktree,
-  getCurrentWorktreeSession,
-  keepWorktree,
-  killTmuxSession,
-} from '../utils/worktree.js'
+import { cleanupWorktree, getCurrentWorktreeSession, keepWorktree, killTmuxSession } from '../utils/worktree.js'
 import { Select } from './CustomSelect/select.js'
 import { Dialog } from './design-system/Dialog.js'
 import { Spinner } from './Spinner.js'
@@ -21,27 +17,17 @@ import { Spinner } from './Spinner.js'
 // are inside callbacks, so the lazy require never sees an undefined import.
 function recordWorktreeExit(): void {
   /* eslint-disable @typescript-eslint/no-require-imports */
-  ;(
-    require('../utils/sessionStorage.js') as typeof import('../utils/sessionStorage.js')
-  ).saveWorktreeState(null)
+  ;(require('../utils/sessionStorage.js') as typeof import('../utils/sessionStorage.js')).saveWorktreeState(null)
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
 type Props = {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
   onCancel?: () => void
 }
 
-export function WorktreeExitDialog({
-  onDone,
-  onCancel,
-}: Props): React.ReactNode {
-  const [status, setStatus] = useState<
-    'loading' | 'asking' | 'keeping' | 'removing' | 'done'
-  >('loading')
+export function WorktreeExitDialog({ onDone, onCancel }: Props): React.ReactNode {
+  const [status, setStatus] = useState<'loading' | 'asking' | 'keeping' | 'removing' | 'done'>('loading')
   const [changes, setChanges] = useState<string[]>([])
   const [commitCount, setCommitCount] = useState<number>(0)
   const [resultMessage, setResultMessage] = useState<string | undefined>()
@@ -52,7 +38,7 @@ export function WorktreeExitDialog({
       let changeLines: string[] = []
       const gitStatus = await execFileNoThrow('git', ['status', '--porcelain'])
       if (gitStatus.stdout) {
-        changeLines = gitStatus.stdout.split('\n').filter(_ => _.trim() !== '')
+        changeLines = gitStatus.stdout.split('\n').filter((_) => _.trim() !== '')
         setChanges(changeLines)
       }
 
@@ -78,7 +64,7 @@ export function WorktreeExitDialog({
               getPlansDirectory.cache.clear?.()
               setResultMessage('Worktree removed (no changes)')
             })
-            .catch(error => {
+            .catch((error) => {
               logForDebugging(`Failed to clean up worktree: ${error}`, {
                 level: 'error',
               })
@@ -190,9 +176,7 @@ export function WorktreeExitDialog({
           `Worktree removed. ${commitCount} ${commitCount === 1 ? 'commit' : 'commits'} on ${worktreeSession.worktreeBranch} ${commitCount === 1 ? 'was' : 'were'} discarded.${tmuxNote}`,
         )
       } else if (changes.length > 0) {
-        setResultMessage(
-          `Worktree removed. Uncommitted changes were discarded.${tmuxNote}`,
-        )
+        setResultMessage(`Worktree removed. Uncommitted changes were discarded.${tmuxNote}`)
       } else {
         setResultMessage(`Worktree removed.${tmuxNote}`)
       }
@@ -230,8 +214,7 @@ export function WorktreeExitDialog({
   } else if (hasCommits) {
     subtitle = `You have ${commitCount} ${commitCount === 1 ? 'commit' : 'commits'} on ${branchName}. The branch will be deleted if you remove the worktree.`
   } else {
-    subtitle =
-      'You are working in a worktree. Keep it to continue working there, or remove it to clean up.'
+    subtitle = 'You are working in a worktree. Keep it to continue working there, or remove it to clean up.'
   }
 
   function handleCancel() {
@@ -245,9 +228,7 @@ export function WorktreeExitDialog({
   }
 
   const removeDescription =
-    hasUncommitted || hasCommits
-      ? 'All changes and commits will be lost.'
-      : 'Clean up the worktree directory.'
+    hasUncommitted || hasCommits ? 'All changes and commits will be lost.' : 'Clean up the worktree directory.'
 
   const hasTmuxSession = Boolean(worktreeSession.tmuxSessionName)
 
@@ -285,16 +266,8 @@ export function WorktreeExitDialog({
   const defaultValue = hasTmuxSession ? 'keep-with-tmux' : 'keep'
 
   return (
-    <Dialog
-      title="Exiting worktree session"
-      subtitle={subtitle}
-      onCancel={handleCancel}
-    >
-      <Select
-        defaultFocusValue={defaultValue}
-        options={options}
-        onChange={handleSelect}
-      />
+    <Dialog title="Exiting worktree session" subtitle={subtitle} onCancel={handleCancel}>
+      <Select defaultFocusValue={defaultValue} options={options} onChange={handleSelect} />
     </Dialog>
   )
 }

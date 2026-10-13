@@ -1,9 +1,7 @@
 import { feature } from 'bun:bundle'
-import type {
-  ContentBlockParam,
-  TextBlockParam,
-} from '@anthropic-ai/sdk/resources'
 import { randomUUID } from 'crypto'
+
+import type { ContentBlockParam, TextBlockParam } from '@anthropic-ai/sdk/resources'
 import { setPromptId } from 'src/bootstrap/state.js'
 import {
   builtInCommandNames,
@@ -25,6 +23,7 @@ import type {
   ProgressMessage,
   UserMessage,
 } from 'src/types/message.js'
+
 import { addInvokedSkill, getSessionId } from '../../bootstrap/state.js'
 import { COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG } from '../../constants/xml.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
@@ -42,18 +41,12 @@ import { renderToolUseProgressMessage } from '../../tools/AgentTool/UI.js'
 import type { CommandResultDisplay } from '../../types/command.js'
 import { createAbortController } from '../abortController.js'
 import { getAgentContext } from '../agentContext.js'
-import {
-  createAttachmentMessage,
-  getAttachmentMessages,
-} from '../attachments.js'
+import { createAttachmentMessage, getAttachmentMessages } from '../attachments.js'
 import { logForDebugging } from '../debug.js'
 import { isEnvTruthy } from '../envUtils.js'
 import { AbortError, MalformedCommandError } from '../errors.js'
 import { getDisplayPath } from '../file.js'
-import {
-  extractResultText,
-  prepareForkedCommandContext,
-} from '../forkedAgent.js'
+import { extractResultText, prepareForkedCommandContext } from '../forkedAgent.js'
 import { getFsImplementation } from '../fsOperations.js'
 import { isFullscreenEnvEnabled } from '../fullscreen.js'
 import { toArray } from '../generators.js'
@@ -73,16 +66,10 @@ import {
   prepareUserContent,
 } from '../messages.js'
 import type { ModelAlias } from '../model/aliases.js'
-import { parseToolListFromCLI } from '../permissions/permissionSetup.js'
 import { hasPermissionsToUseTool } from '../permissions/permissions.js'
-import {
-  isOfficialMarketplaceName,
-  parsePluginIdentifier,
-} from '../plugins/pluginIdentifier.js'
-import {
-  isRestrictedToPluginOnly,
-  isSourceAdminTrusted,
-} from '../settings/pluginOnlyPolicy.js'
+import { parseToolListFromCLI } from '../permissions/permissionSetup.js'
+import { isOfficialMarketplaceName, parsePluginIdentifier } from '../plugins/pluginIdentifier.js'
+import { isRestrictedToPluginOnly, isSourceAdminTrusted } from '../settings/pluginOnlyPolicy.js'
 import { parseSlashCommand } from '../slashCommandParsing.js'
 import { sleep } from '../sleep.js'
 import { recordSkillUsage } from '../suggestions/skillUsageTracking.js'
@@ -91,10 +78,7 @@ import { buildPluginCommandTelemetryFields } from '../telemetry/pluginTelemetry.
 import { getAssistantMessageContentLength } from '../tokens.js'
 import { createAgentId } from '../uuid.js'
 import { getWorkload } from '../workloadContext.js'
-import type {
-  ProcessUserInputBaseResult,
-  ProcessUserInputContext,
-} from './processUserInput.js'
+import type { ProcessUserInputBaseResult, ProcessUserInputContext } from './processUserInput.js'
 
 type SlashCommandResult = ProcessUserInputBaseResult & {
   command: Command
@@ -123,33 +107,27 @@ async function executeForkedSlashCommand(
     ? parsePluginIdentifier(command.pluginInfo.repository).marketplace
     : undefined
   logEvent('tengu_slash_command_forked', {
-    command_name:
-      command.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    invocation_trigger:
-      'user-slash' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    command_name: command.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    invocation_trigger: 'user-slash' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     ...(command.pluginInfo && {
-      _PROTO_plugin_name: command.pluginInfo.pluginManifest
-        .name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+      _PROTO_plugin_name: command.pluginInfo.pluginManifest.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
       ...(pluginMarketplace && {
-        _PROTO_marketplace_name:
-          pluginMarketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        _PROTO_marketplace_name: pluginMarketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
       }),
       ...buildPluginCommandTelemetryFields(command.pluginInfo),
     }),
   })
 
-  const { skillContent, modifiedGetAppState, baseAgent, promptMessages } =
-    await prepareForkedCommandContext(command, args, context)
+  const { skillContent, modifiedGetAppState, baseAgent, promptMessages } = await prepareForkedCommandContext(
+    command,
+    args,
+    context,
+  )
 
   // Merge skill's effort into the agent definition so runAgent applies it
-  const agentDefinition =
-    command.effort !== undefined
-      ? { ...baseAgent, effort: command.effort }
-      : baseAgent
+  const agentDefinition = command.effort !== undefined ? { ...baseAgent, effort: command.effort } : baseAgent
 
-  logForDebugging(
-    `Executing forked slash command /${command.name} with agent ${agentDefinition.agentType}`,
-  )
+  logForDebugging(`Executing forked slash command /${command.name} with agent ${agentDefinition.agentType}`)
 
   // Assistant mode: fire-and-forget. Launch subagent in background, return
   // immediately, re-enqueue the result as an isMeta prompt when done.
@@ -207,11 +185,10 @@ async function executeForkedSlashCommand(
       const deadline = Date.now() + MCP_SETTLE_TIMEOUT_MS
       while (Date.now() < deadline) {
         const s = context.getAppState()
-        if (!s.mcp.clients.some(c => c.type === 'pending')) break
+        if (!s.mcp.clients.some((c) => c.type === 'pending')) break
         await sleep(MCP_SETTLE_POLL_MS)
       }
-      const freshTools =
-        context.options.refreshTools?.() ?? context.options.tools
+      const freshTools = context.options.refreshTools?.() ?? context.options.tools
 
       const agentMessages: Message[] = []
       for await (const message of runAgent({
@@ -232,13 +209,9 @@ async function executeForkedSlashCommand(
         agentMessages.push(message)
       }
       const resultText = extractResultText(agentMessages, 'Command completed')
-      logForDebugging(
-        `Background forked command /${commandName} completed (agent ${agentId})`,
-      )
-      enqueueResult(
-        `<scheduled-task-result command="/${commandName}">\n${resultText}\n</scheduled-task-result>`,
-      )
-    })().catch(err => {
+      logForDebugging(`Background forked command /${commandName} completed (agent ${agentId})`)
+      enqueueResult(`<scheduled-task-result command="/${commandName}">\n${resultText}\n</scheduled-task-result>`)
+    })().catch((err) => {
       logError(err)
       enqueueResult(
         `<scheduled-task-result command="/${commandName}" status="failed">\n${err instanceof Error ? err.message : String(err)}\n</scheduled-task-result>`,
@@ -259,9 +232,7 @@ async function executeForkedSlashCommand(
   let toolUseCounter = 0
 
   // Helper to create a progress message from an agent message
-  const createProgressMessage = (
-    message: AssistantMessage | NormalizedUserMessage,
-  ): ProgressMessage<AgentProgress> => {
+  const createProgressMessage = (message: AssistantMessage | NormalizedUserMessage): ProgressMessage<AgentProgress> => {
     toolUseCounter++
     return {
       type: 'progress',
@@ -317,7 +288,7 @@ async function executeForkedSlashCommand(
         // Increment token count in spinner for assistant messages
         const contentLength = getAssistantMessageContentLength(message)
         if (contentLength > 0) {
-          context.setResponseLength(len => len + contentLength)
+          context.setResponseLength((len) => len + contentLength)
         }
 
         const normalizedMsg = normalizedNew[0]
@@ -343,9 +314,7 @@ async function executeForkedSlashCommand(
 
   let resultText = extractResultText(agentMessages, 'Command completed')
 
-  logForDebugging(
-    `Forked slash command /${command.name} completed with agent ${agentId}`,
-  )
+  logForDebugging(`Forked slash command /${command.name} completed with agent ${agentId}`)
 
   // Prepend debug log for ant users so it appears inside the command output
   if (process.env.USER_TYPE === 'ant') {
@@ -419,11 +388,7 @@ export async function processSlashCommand(
 
   const { commandName, args: parsedArgs, isMcp } = parsed
 
-  const sanitizedCommandName = isMcp
-    ? 'mcp'
-    : !builtInCommandNames().has(commandName)
-      ? 'custom'
-      : commandName
+  const sanitizedCommandName = isMcp ? 'mcp' : !builtInCommandNames().has(commandName) ? 'custom' : commandName
 
   // Check if it's a real command before processing
   if (!hasCommand(commandName, context.options.commands)) {
@@ -438,8 +403,7 @@ export async function processSlashCommand(
     }
     if (looksLikeCommand(commandName) && !isFilePath) {
       logEvent('tengu_input_slash_invalid', {
-        input:
-          commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        input: commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
 
       const unknownMessage = `Unknown skill: ${commandName}`
@@ -455,14 +419,7 @@ export async function processSlashCommand(
           }),
           // gh-32591: preserve args so the user can copy/resubmit without
           // retyping. System warning is UI-only (filtered before API).
-          ...(parsedArgs
-            ? [
-                createSystemMessage(
-                  `Args from unknown skill: ${parsedArgs}`,
-                  'warning',
-                ),
-              ]
-            : []),
+          ...(parsedArgs ? [createSystemMessage(`Args from unknown skill: ${parsedArgs}`, 'warning')] : []),
         ],
         shouldQuery: false,
         resultText: unknownMessage,
@@ -517,8 +474,7 @@ export async function processSlashCommand(
   // Local slash commands that skip messages
   if (newMessages.length === 0) {
     const eventData: Record<string, boolean | number | undefined> = {
-      input:
-        sanitizedCommandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      input: sanitizedCommandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     }
 
     // Add plugin metadata if this is a plugin command
@@ -529,11 +485,9 @@ export async function processSlashCommand(
       // _PROTO_* routes to PII-tagged plugin_name/marketplace_name BQ columns
       // (unredacted, all users); plugin_name/plugin_repository stay in
       // additional_metadata as redacted variants for general-access dashboards.
-      eventData._PROTO_plugin_name =
-        pluginManifest.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED
+      eventData._PROTO_plugin_name = pluginManifest.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED
       if (marketplace) {
-        eventData._PROTO_marketplace_name =
-          marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED
+        eventData._PROTO_marketplace_name = marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED
       }
       eventData.plugin_repository = (
         isOfficial ? repository : 'third-party'
@@ -542,33 +496,24 @@ export async function processSlashCommand(
         isOfficial ? pluginManifest.name : 'third-party'
       ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
       if (isOfficial && pluginManifest.version) {
-        eventData.plugin_version =
-          pluginManifest.version as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        eventData.plugin_version = pluginManifest.version as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
       }
-      Object.assign(
-        eventData,
-        buildPluginCommandTelemetryFields(returnedCommand.pluginInfo),
-      )
+      Object.assign(eventData, buildPluginCommandTelemetryFields(returnedCommand.pluginInfo))
     }
 
     logEvent('tengu_input_command', {
       ...eventData,
-      invocation_trigger:
-        'user-slash' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      invocation_trigger: 'user-slash' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       ...(process.env.USER_TYPE === 'ant' && {
-        skill_name:
-          commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        skill_name: commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         ...(returnedCommand.type === 'prompt' && {
-          skill_source:
-            returnedCommand.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          skill_source: returnedCommand.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
         ...(returnedCommand.loadedFrom && {
-          skill_loaded_from:
-            returnedCommand.loadedFrom as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          skill_loaded_from: returnedCommand.loadedFrom as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
         ...(returnedCommand.kind && {
-          skill_kind:
-            returnedCommand.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          skill_kind: returnedCommand.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
       }),
     })
@@ -591,14 +536,11 @@ export async function processSlashCommand(
   ) {
     // Don't log as invalid if it looks like a common file path
     const looksLikeFilePath =
-      inputString.startsWith('/var') ||
-      inputString.startsWith('/tmp') ||
-      inputString.startsWith('/private')
+      inputString.startsWith('/var') || inputString.startsWith('/tmp') || inputString.startsWith('/private')
 
     if (!looksLikeFilePath) {
       logEvent('tengu_input_slash_invalid', {
-        input:
-          commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        input: commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
     }
 
@@ -613,8 +555,7 @@ export async function processSlashCommand(
 
   // A valid command
   const eventData: Record<string, boolean | number | undefined> = {
-    input:
-      sanitizedCommandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    input: sanitizedCommandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   }
 
   // Add plugin metadata if this is a plugin command
@@ -622,11 +563,9 @@ export async function processSlashCommand(
     const { pluginManifest, repository } = returnedCommand.pluginInfo
     const { marketplace } = parsePluginIdentifier(repository)
     const isOfficial = isOfficialMarketplaceName(marketplace)
-    eventData._PROTO_plugin_name =
-      pluginManifest.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED
+    eventData._PROTO_plugin_name = pluginManifest.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED
     if (marketplace) {
-      eventData._PROTO_marketplace_name =
-        marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED
+      eventData._PROTO_marketplace_name = marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED
     }
     eventData.plugin_repository = (
       isOfficial ? repository : 'third-party'
@@ -635,48 +574,34 @@ export async function processSlashCommand(
       isOfficial ? pluginManifest.name : 'third-party'
     ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
     if (isOfficial && pluginManifest.version) {
-      eventData.plugin_version =
-        pluginManifest.version as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      eventData.plugin_version = pluginManifest.version as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
     }
-    Object.assign(
-      eventData,
-      buildPluginCommandTelemetryFields(returnedCommand.pluginInfo),
-    )
+    Object.assign(eventData, buildPluginCommandTelemetryFields(returnedCommand.pluginInfo))
   }
 
   logEvent('tengu_input_command', {
     ...eventData,
-    invocation_trigger:
-      'user-slash' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    invocation_trigger: 'user-slash' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     ...(process.env.USER_TYPE === 'ant' && {
-      skill_name:
-        commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      skill_name: commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       ...(returnedCommand.type === 'prompt' && {
-        skill_source:
-          returnedCommand.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        skill_source: returnedCommand.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(returnedCommand.loadedFrom && {
-        skill_loaded_from:
-          returnedCommand.loadedFrom as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        skill_loaded_from: returnedCommand.loadedFrom as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(returnedCommand.kind && {
-        skill_kind:
-          returnedCommand.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        skill_kind: returnedCommand.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
     }),
   })
 
   // Check if this is a compact result which handle their own synthetic caveat message ordering
-  const isCompactResult =
-    newMessages.length > 0 &&
-    newMessages[0] &&
-    isCompactBoundaryMessage(newMessages[0])
+  const isCompactResult = newMessages.length > 0 && newMessages[0] && isCompactBoundaryMessage(newMessages[0])
 
   return {
     messages:
-      messageShouldQuery ||
-      newMessages.every(isSystemLocalCommandMessage) ||
-      isCompactResult
+      messageShouldQuery || newMessages.every(isSystemLocalCommandMessage) || isCompactResult
         ? newMessages
         : [createSyntheticUserCaveatMessage(), ...newMessages],
     shouldQuery: messageShouldQuery,
@@ -730,7 +655,7 @@ async function getMessagesForSlashCommand(
   try {
     switch (command.type) {
       case 'local-jsx': {
-        return new Promise<SlashCommandResult>(resolve => {
+        return new Promise<SlashCommandResult>((resolve) => {
           let doneWasCalled = false
           const onDone = (
             result?: string,
@@ -756,8 +681,8 @@ async function getMessagesForSlashCommand(
             }
 
             // Meta messages are model-visible but hidden from the user
-            const metaMessages = (options?.metaMessages ?? []).map(
-              (content: string) => createUserMessage({ content, isMeta: true }),
+            const metaMessages = (options?.metaMessages ?? []).map((content: string) =>
+              createUserMessage({ content, isMeta: true }),
             )
 
             // In fullscreen the command just showed as a centered modal
@@ -771,9 +696,7 @@ async function getMessagesForSlashCommand(
             // usage, /rename, /proactive) use display:system for actual
             // output that must reach the transcript.
             const skipTranscript =
-              isFullscreenEnvEnabled() &&
-              typeof result === 'string' &&
-              result.endsWith(' dismissed')
+              isFullscreenEnvEnabled() && typeof result === 'string' && result.endsWith(' dismissed')
 
             void resolve({
               messages:
@@ -781,12 +704,8 @@ async function getMessagesForSlashCommand(
                   ? skipTranscript
                     ? metaMessages
                     : [
-                        createCommandInputMessage(
-                          formatCommandInput(command, args),
-                        ),
-                        createCommandInputMessage(
-                          `<local-command-stdout>${result}</local-command-stdout>`,
-                        ),
+                        createCommandInputMessage(formatCommandInput(command, args)),
+                        createCommandInputMessage(`<local-command-stdout>${result}</local-command-stdout>`),
                         ...metaMessages,
                       ]
                   : [
@@ -814,8 +733,8 @@ async function getMessagesForSlashCommand(
 
           void command
             .load()
-            .then(mod => mod.call(onDone, { ...context, canUseTool }, args))
-            .then(jsx => {
+            .then((mod) => mod.call(onDone, { ...context, canUseTool }, args))
+            .then((jsx) => {
               if (jsx == null) return
               if (context.options.isNonInteractiveSession) {
                 void resolve({
@@ -841,7 +760,7 @@ async function getMessagesForSlashCommand(
                 isImmediate: command.immediate === true,
               })
             })
-            .catch(e => {
+            .catch((e) => {
               // If load()/call() throws and onDone never fired, the outer
               // Promise hangs forever, leaving queryGuard stuck in
               // 'dispatching' and deadlocking the queue processor.
@@ -902,10 +821,7 @@ async function getMessagesForSlashCommand(
             ]
             const compactionResultWithSlashMessages = {
               ...result.compactionResult,
-              messagesToKeep: [
-                ...(result.compactionResult.messagesToKeep ?? []),
-                ...slashCommandMessages,
-              ],
+              messagesToKeep: [...(result.compactionResult.messagesToKeep ?? []), ...slashCommandMessages],
             }
             // Reset microcompact state since full compact replaces all
             // messages — old tool IDs are no longer relevant. Budget state
@@ -913,9 +829,7 @@ async function getMessagesForSlashCommand(
             // (UUIDs never repeat, so they're never looked up).
             resetMicrocompactState()
             return {
-              messages: buildPostCompactMessages(
-                compactionResultWithSlashMessages,
-              ),
+              messages: buildPostCompactMessages(compactionResultWithSlashMessages),
               shouldQuery: false,
               command,
             }
@@ -925,9 +839,7 @@ async function getMessagesForSlashCommand(
           return {
             messages: [
               userMessage,
-              createCommandInputMessage(
-                `<local-command-stdout>${result.value}</local-command-stdout>`,
-              ),
+              createCommandInputMessage(`<local-command-stdout>${result.value}</local-command-stdout>`),
             ],
             shouldQuery: false,
             command,
@@ -938,9 +850,7 @@ async function getMessagesForSlashCommand(
           return {
             messages: [
               userMessage,
-              createCommandInputMessage(
-                `<local-command-stderr>${String(e)}</local-command-stderr>`,
-              ),
+              createCommandInputMessage(`<local-command-stderr>${String(e)}</local-command-stderr>`),
             ],
             shouldQuery: false,
             command,
@@ -1031,10 +941,7 @@ function formatCommandInput(command: CommandBase, args: string): string {
  * Formats the metadata for a skill loading message.
  * Used by the Skill tool and for subagent skill preloading.
  */
-export function formatSkillLoadingMetadata(
-  skillName: string,
-  _progressMessage: string = 'loading',
-): string {
+export function formatSkillLoadingMetadata(skillName: string, _progressMessage: string = 'loading'): string {
   // Use skill name only - UserCommandMessage renders as "Skill(name)"
   return [
     `<${COMMAND_MESSAGE_TAG}>${skillName}</${COMMAND_MESSAGE_TAG}>`,
@@ -1046,10 +953,7 @@ export function formatSkillLoadingMetadata(
 /**
  * Formats the metadata for a slash command loading message.
  */
-function formatSlashCommandLoadingMetadata(
-  commandName: string,
-  args?: string,
-): string {
+function formatSlashCommandLoadingMetadata(commandName: string, args?: string): string {
   return [
     `<${COMMAND_MESSAGE_TAG}>${commandName}</${COMMAND_MESSAGE_TAG}>`,
     `<${COMMAND_NAME_TAG}>/${commandName}</${COMMAND_NAME_TAG}>`,
@@ -1064,10 +968,7 @@ function formatSlashCommandLoadingMetadata(
  * User-invocable skills use slash command format (/name), while model-only
  * skills use the skill format ("The X skill is running").
  */
-function formatCommandLoadingMetadata(
-  command: CommandBase & PromptCommand,
-  args?: string,
-): string {
+function formatCommandLoadingMetadata(command: CommandBase & PromptCommand, args?: string): string {
   // Use command.name (the qualified name including plugin prefix, e.g.
   // "product-management:feature-spec") instead of userFacingName() which may
   // strip the plugin prefix via displayName fallback.
@@ -1076,11 +977,7 @@ function formatCommandLoadingMetadata(
     return formatSlashCommandLoadingMetadata(command.name, args)
   }
   // Model-only skills (userInvocable: false) show as "The X skill is running"
-  if (
-    command.loadedFrom === 'skills' ||
-    command.loadedFrom === 'plugin' ||
-    command.loadedFrom === 'mcp'
-  ) {
+  if (command.loadedFrom === 'skills' || command.loadedFrom === 'plugin' || command.loadedFrom === 'mcp') {
     return formatSkillLoadingMetadata(command.name, command.progressMessage)
   }
   return formatSlashCommandLoadingMetadata(command.name, args)
@@ -1102,13 +999,7 @@ export async function processPromptSlashCommand(
       `Unexpected ${command.type} command. Expected 'prompt' command. Use /${commandName} directly in the main conversation.`,
     )
   }
-  return getMessagesForPromptSlashCommand(
-    command,
-    args,
-    context,
-    [],
-    imageContentBlocks,
-  )
+  return getMessagesForPromptSlashCommand(command, args, context, [], imageContentBlocks)
 }
 
 async function getMessagesForPromptSlashCommand(
@@ -1128,15 +1019,9 @@ async function getMessagesForPromptSlashCommand(
   // parent env, so we also check !context.agentId: agentId is only set for
   // subagents, letting workers fall through to getPromptForCommand and receive
   // the real skill content when they invoke the Skill tool.
-  if (
-    feature('COORDINATOR_MODE') &&
-    isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) &&
-    !context.agentId
-  ) {
+  if (feature('COORDINATOR_MODE') && isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) && !context.agentId) {
     const metadata = formatCommandLoadingMetadata(command, args)
-    const parts: string[] = [
-      `Skill "/${command.name}" is available for workers.`,
-    ]
+    const parts: string[] = [`Skill "/${command.name}" is available for workers.`]
     if (command.description) {
       parts.push(`Description: ${command.description}`)
     }
@@ -1145,16 +1030,12 @@ async function getMessagesForPromptSlashCommand(
     }
     const skillAllowedTools = command.allowedTools ?? []
     if (skillAllowedTools.length > 0) {
-      parts.push(
-        `This skill grants workers additional tool permissions: ${skillAllowedTools.join(', ')}`,
-      )
+      parts.push(`This skill grants workers additional tool permissions: ${skillAllowedTools.join(', ')}`)
     }
     parts.push(
       `\nInstruct a worker to use this skill by including "Use the /${command.name} skill" in your Agent prompt. The worker has access to the Skill tool and will receive the skill's content and permissions when it invokes it.`,
     )
-    const summaryContent: ContentBlockParam[] = [
-      { type: 'text', text: parts.join('\n') },
-    ]
+    const summaryContent: ContentBlockParam[] = [{ type: 'text', text: parts.join('\n') }]
     return {
       messages: [
         createUserMessage({ content: metadata, uuid }),
@@ -1172,8 +1053,7 @@ async function getMessagesForPromptSlashCommand(
   // Register skill hooks if defined. Under ["hooks"]-only (skills not locked),
   // user skills still load and reach this point — block hook REGISTRATION here
   // where source is known. Mirrors the agent frontmatter gate in runAgent.ts.
-  const hooksAllowedForThisSkill =
-    !isRestrictedToPluginOnly('hooks') || isSourceAdminTrusted(command.source)
+  const hooksAllowedForThisSkill = !isRestrictedToPluginOnly('hooks') || isSourceAdminTrusted(command.source)
   if (command.hooks && hooksAllowedForThisSkill) {
     const sessionId = getSessionId()
     registerSkillHooks(
@@ -1188,25 +1068,16 @@ async function getMessagesForPromptSlashCommand(
   // Record skill invocation for compaction preservation, scoped by agent context.
   // Skills are tagged with their agentId so only skills belonging to the current
   // agent are restored during compaction (preventing cross-agent leaks).
-  const skillPath = command.source
-    ? `${command.source}:${command.name}`
-    : command.name
+  const skillPath = command.source ? `${command.source}:${command.name}` : command.name
   const skillContent = result
     .filter((b): b is TextBlockParam => b.type === 'text')
-    .map(b => b.text)
+    .map((b) => b.text)
     .join('\n\n')
-  addInvokedSkill(
-    command.name,
-    skillPath,
-    skillContent,
-    getAgentContext()?.agentId ?? null,
-  )
+  addInvokedSkill(command.name, skillPath, skillContent, getAgentContext()?.agentId ?? null)
 
   const metadata = formatCommandLoadingMetadata(command, args)
 
-  const additionalAllowedTools = parseToolListFromCLI(
-    command.allowedTools ?? [],
-  )
+  const additionalAllowedTools = parseToolListFromCLI(command.allowedTools ?? [])
 
   // Create content for the main message, including any pasted images
   const mainMessageContent: ContentBlockParam[] =
@@ -1223,7 +1094,7 @@ async function getMessagesForPromptSlashCommand(
     getAttachmentMessages(
       result
         .filter((block): block is TextBlockParam => block.type === 'text')
-        .map(block => block.text)
+        .map((block) => block.text)
         .join(' '),
       context,
       null,

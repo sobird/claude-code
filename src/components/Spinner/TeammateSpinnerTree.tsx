@@ -1,11 +1,12 @@
 import figures from 'figures'
 import * as React from 'react'
+
 import { Box, Text, type TextProps } from '../../ink.js'
 import { useAppState } from '../../state/AppState.js'
 import { getRunningTeammatesSorted } from '../../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
 import { formatNumber } from '../../utils/format.js'
-import { TeammateSpinnerLine } from './TeammateSpinnerLine.js'
 import { TEAMMATE_SELECT_HINT } from './teammateSelectHint.js'
+import { TeammateSpinnerLine } from './TeammateSpinnerLine.js'
 
 type Props = {
   selectedIndex?: number
@@ -27,11 +28,9 @@ export function TeammateSpinnerTree({
   leaderTokenCount,
   leaderIdleText,
 }: Props): React.ReactNode {
-  const tasks = useAppState(s => s.tasks)
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId)
-  const showTeammateMessagePreview = useAppState(
-    s => s.showTeammateMessagePreview,
-  )
+  const tasks = useAppState((s) => s.tasks)
+  const viewingAgentTaskId = useAppState((s) => s.viewingAgentTaskId)
+  const showTeammateMessagePreview = useAppState((s) => s.showTeammateMessagePreview)
 
   const teammateTasks = getRunningTeammatesSorted(tasks)
 
@@ -48,51 +47,33 @@ export function TeammateSpinnerTree({
   const leaderColor: TextProps['color'] = 'cyan_FOR_SUBAGENTS_ONLY'
 
   // Is the "hide" row selected? (index === teammateCount in selection mode)
-  const isHideSelected =
-    isInSelectionMode === true && selectedIndex === teammateTasks.length
+  const isHideSelected = isInSelectionMode === true && selectedIndex === teammateTasks.length
 
   return (
     <Box flexDirection="column" marginTop={1}>
       {/* Leader row - always visible, uses ┌─ to enclose the tree */}
       {
         <Box paddingLeft={3}>
-          <Text
-            color={isLeaderSelected ? 'suggestion' : undefined}
-            bold={isLeaderHighlighted}
-          >
+          <Text color={isLeaderSelected ? 'suggestion' : undefined} bold={isLeaderHighlighted}>
             {isLeaderSelected ? figures.pointer : ' '}
           </Text>
           <Text dimColor={!isLeaderHighlighted} bold={isLeaderHighlighted}>
             {isLeaderHighlighted ? '╒═' : '┌─'}{' '}
           </Text>
-          <Text
-            bold={isLeaderHighlighted}
-            color={isLeaderSelected ? 'suggestion' : leaderColor}
-          >
+          <Text bold={isLeaderHighlighted} color={isLeaderSelected ? 'suggestion' : leaderColor}>
             team-lead
           </Text>
           {/* When backgrounded and active: show spinner + verb */}
-          {!isLeaderForegrounded && leaderVerb && (
-            <Text dimColor>: {leaderVerb}…</Text>
-          )}
+          {!isLeaderForegrounded && leaderVerb && <Text dimColor>: {leaderVerb}…</Text>}
           {/* When backgrounded and idle: show idle text */}
-          {!isLeaderForegrounded && !leaderVerb && leaderIdleText && (
-            <Text dimColor>: {leaderIdleText}</Text>
-          )}
+          {!isLeaderForegrounded && !leaderVerb && leaderIdleText && <Text dimColor>: {leaderIdleText}</Text>}
           {/* Stats (tokens) - same dimColor logic as teammates */}
           {leaderTokenCount !== undefined && leaderTokenCount > 0 && (
-            <Text dimColor={!isLeaderHighlighted}>
-              {' '}
-              · {formatNumber(leaderTokenCount)} tokens
-            </Text>
+            <Text dimColor={!isLeaderHighlighted}> · {formatNumber(leaderTokenCount)} tokens</Text>
           )}
           {/* Hints - select hint when highlighted, view hint when selected but not foregrounded */}
-          {isLeaderHighlighted && (
-            <Text dimColor> · {TEAMMATE_SELECT_HINT}</Text>
-          )}
-          {isLeaderSelected && !isLeaderForegrounded && (
-            <Text dimColor> · enter to view</Text>
-          )}
+          {isLeaderHighlighted && <Text dimColor> · {TEAMMATE_SELECT_HINT}</Text>}
+          {isLeaderSelected && !isLeaderForegrounded && <Text dimColor> · enter to view</Text>}
         </Box>
       }
       {teammateTasks.map((teammate, index) => (

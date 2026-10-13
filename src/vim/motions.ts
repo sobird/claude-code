@@ -10,11 +10,7 @@ import type { Cursor } from '../utils/Cursor.js'
  * Resolve a motion to a target cursor position.
  * Does not modify anything - pure calculation.
  */
-export function resolveMotion(
-  key: string,
-  cursor: Cursor,
-  count: number,
-): Cursor {
+export function resolveMotion(key: string, cursor: Cursor, count: number): Cursor {
   let result = cursor
   for (let i = 0; i < count; i++) {
     const next = applySingleMotion(key, result)

@@ -4,10 +4,7 @@ import { env } from '../utils/env.js'
 import { execFileNoThrow } from '../utils/execFileNoThrow.js'
 import { executeNotificationHooks } from '../utils/hooks.js'
 import { logError } from '../utils/log.js'
-import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  logEvent,
-} from './analytics/index.js'
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './analytics/index.js'
 
 export type NotificationOptions = {
   message: string
@@ -15,10 +12,7 @@ export type NotificationOptions = {
   notificationType: string
 }
 
-export async function sendNotification(
-  notif: NotificationOptions,
-  terminal: TerminalNotification,
-): Promise<void> {
+export async function sendNotification(notif: NotificationOptions, terminal: TerminalNotification): Promise<void> {
   const config = getGlobalConfig()
   const channel = config.preferredNotifChannel
 
@@ -27,10 +21,8 @@ export async function sendNotification(
   const methodUsed = await sendToChannel(channel, notif, terminal)
 
   logEvent('tengu_notification_method_used', {
-    configured_channel:
-      channel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    method_used:
-      methodUsed as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    configured_channel: channel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    method_used: methodUsed as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     term: env.terminal as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 }
@@ -74,10 +66,7 @@ async function sendToChannel(
   }
 }
 
-async function sendAuto(
-  opts: NotificationOptions,
-  terminal: TerminalNotification,
-): Promise<string> {
+async function sendAuto(opts: NotificationOptions, terminal: TerminalNotification): Promise<string> {
   const title = opts.title || DEFAULT_TITLE
 
   switch (env.terminal) {
@@ -123,11 +112,7 @@ async function isAppleTerminalBellDisabled(): Promise<boolean> {
       return false
     }
 
-    const defaultsOutput = await execFileNoThrow('defaults', [
-      'export',
-      'com.apple.Terminal',
-      '-',
-    ])
+    const defaultsOutput = await execFileNoThrow('defaults', ['export', 'com.apple.Terminal', '-'])
 
     if (defaultsOutput.code !== 0) {
       return false
@@ -137,12 +122,8 @@ async function isAppleTerminalBellDisabled(): Promise<boolean> {
     // Apple_Terminal with auto-channel, which is a small fraction of users.
     const plist = await import('plist')
     const parsed: Record<string, unknown> = plist.parse(defaultsOutput.stdout)
-    const windowSettings = parsed?.['Window Settings'] as
-      | Record<string, unknown>
-      | undefined
-    const profileSettings = windowSettings?.[currentProfile] as
-      | Record<string, unknown>
-      | undefined
+    const windowSettings = parsed?.['Window Settings'] as Record<string, unknown> | undefined
+    const profileSettings = windowSettings?.[currentProfile] as Record<string, unknown> | undefined
 
     if (!profileSettings) {
       return false

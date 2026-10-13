@@ -20,11 +20,7 @@ import type { BridgeApiClient } from './types.js'
 
 /** One-shot fault to inject on the next matching api call. */
 type BridgeFault = {
-  method:
-    | 'pollForWork'
-    | 'registerBridgeEnvironment'
-    | 'reconnectSession'
-    | 'heartbeatWork'
+  method: 'pollForWork' | 'registerBridgeEnvironment' | 'reconnectSession' | 'heartbeatWork'
   /** Fatal errors go through handleErrorStatus → BridgeFatalError. Transient
    *  errors surface as plain axios rejections (5xx / network). Recovery code
    *  distinguishes the two: fatal → teardown, transient → retry/backoff. */
@@ -81,11 +77,9 @@ export function injectBridgeFault(fault: BridgeFault): void {
  *
  * Only called when USER_TYPE === 'ant' — zero overhead in external builds.
  */
-export function wrapApiForFaultInjection(
-  api: BridgeApiClient,
-): BridgeApiClient {
+export function wrapApiForFaultInjection(api: BridgeApiClient): BridgeApiClient {
   function consume(method: BridgeFault['method']): BridgeFault | null {
-    const idx = faultQueue.findIndex(f => f.method === method)
+    const idx = faultQueue.findIndex((f) => f.method === method)
     if (idx === -1) return null
     const fault = faultQueue[idx]!
     fault.count--
@@ -98,11 +92,7 @@ export function wrapApiForFaultInjection(
       `[bridge:debug] Injecting ${fault.kind} fault into ${context}: status=${fault.status} errorType=${fault.errorType ?? 'none'}`,
     )
     if (fault.kind === 'fatal') {
-      throw new BridgeFatalError(
-        `[injected] ${context} ${fault.status}`,
-        fault.status,
-        fault.errorType,
-      )
+      throw new BridgeFatalError(`[injected] ${context} ${fault.status}`, fault.status, fault.errorType)
     }
     // Transient: mimic an axios rejection (5xx / network). No .status on
     // the error itself — that's how the catch blocks distinguish.

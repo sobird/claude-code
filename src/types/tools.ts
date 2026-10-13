@@ -18,7 +18,7 @@ export type HookEvent =
   | 'pre_file_write'
   | 'post_file_write'
   | 'pre_bash'
-  | 'post_bash';
+  | 'post_bash'
 
 /**
  * Bash command execution progress

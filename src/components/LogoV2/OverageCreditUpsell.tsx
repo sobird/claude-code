@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useState } from 'react'
+
 import { Text } from '../../ink.js'
 import { logEvent } from '../../services/analytics/index.js'
 import {
@@ -39,8 +40,7 @@ export function shouldShowOverageCreditUpsell(): boolean {
 
   const config = getGlobalConfig()
   if (config.hasVisitedExtraUsage) return false
-  if ((config.overageCreditUpsellSeenCount ?? 0) >= MAX_IMPRESSIONS)
-    return false
+  if ((config.overageCreditUpsellSeenCount ?? 0) >= MAX_IMPRESSIONS) return false
 
   return true
 }
@@ -64,7 +64,7 @@ export function useShowOverageCreditUpsell(): boolean {
 
 export function incrementOverageCreditUpsellSeenCount(): void {
   let newCount = 0
-  saveGlobalConfig(prev => {
+  saveGlobalConfig((prev) => {
     newCount = (prev.overageCreditUpsellSeenCount ?? 0) + 1
     return {
       ...prev,
@@ -89,10 +89,7 @@ function getFeedTitle(amount: string): string {
 
 type Props = { maxWidth?: number; twoLine?: boolean }
 
-export function OverageCreditUpsell({
-  maxWidth,
-  twoLine,
-}: Props): React.ReactNode {
+export function OverageCreditUpsell({ maxWidth, twoLine }: Props): React.ReactNode {
   const info = getCachedOverageCreditGrant()
   if (!info) return null
   const amount = formatGrantAmount(info)
@@ -102,12 +99,8 @@ export function OverageCreditUpsell({
     const title = getFeedTitle(amount)
     return (
       <>
-        <Text color="claude">
-          {maxWidth ? truncate(title, maxWidth) : title}
-        </Text>
-        <Text dimColor>
-          {maxWidth ? truncate(FEED_SUBTITLE, maxWidth) : FEED_SUBTITLE}
-        </Text>
+        <Text color="claude">{maxWidth ? truncate(title, maxWidth) : title}</Text>
+        <Text dimColor>{maxWidth ? truncate(FEED_SUBTITLE, maxWidth) : FEED_SUBTITLE}</Text>
       </>
     )
   }

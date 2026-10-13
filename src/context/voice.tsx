@@ -1,9 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useSyncExternalStore,
-} from 'react'
+import React, { createContext, useContext, useState, useSyncExternalStore } from 'react'
+
 import { createStore, type Store } from '../state/store.js'
 
 export type VoiceState = {
@@ -60,9 +56,7 @@ export function useVoiceState<T>(selector: (state: VoiceState) => T): T {
  * store.setState is synchronous: callers can read getVoiceState() immediately
  * after to observe the new value (VoiceKeybindingHandler relies on this).
  */
-export function useSetVoiceState(): (
-  updater: (prev: VoiceState) => VoiceState,
-) => void {
+export function useSetVoiceState(): (updater: (prev: VoiceState) => VoiceState) => void {
   return useVoiceStore().setState
 }
 

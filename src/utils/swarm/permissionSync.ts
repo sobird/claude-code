@@ -20,7 +20,9 @@
 
 import { mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
+
 import { z } from 'zod/v4'
+
 import { logForDebugging } from '../debug.js'
 import { getErrnoCode } from '../errors.js'
 import { lazySchema } from '../lazySchema.js'
@@ -28,12 +30,7 @@ import * as lockfile from '../lockfile.js'
 import { logError } from '../log.js'
 import type { PermissionUpdate } from '../permissions/PermissionUpdateSchema.js'
 import { jsonParse, jsonStringify } from '../slowOperations.js'
-import {
-  getAgentId,
-  getAgentName,
-  getTeammateColor,
-  getTeamName,
-} from '../teammate.js'
+import { getAgentId, getAgentName, getTeammateColor, getTeamName } from '../teammate.js'
 import {
   createPermissionRequestMessage,
   createPermissionResponseMessage,
@@ -85,9 +82,7 @@ export const SwarmPermissionRequestSchema = lazySchema(() =>
   }),
 )
 
-export type SwarmPermissionRequest = z.infer<
-  ReturnType<typeof SwarmPermissionRequestSchema>
->
+export type SwarmPermissionRequest = z.infer<ReturnType<typeof SwarmPermissionRequestSchema>>
 
 /**
  * Resolution data returned when leader/worker resolves a request
@@ -212,9 +207,7 @@ export function createPermissionRequest(params: {
  *
  * @returns The written request
  */
-export async function writePermissionRequest(
-  request: SwarmPermissionRequest,
-): Promise<SwarmPermissionRequest> {
+export async function writePermissionRequest(request: SwarmPermissionRequest): Promise<SwarmPermissionRequest> {
   await ensurePermissionDirsAsync(request.teamName)
 
   const pendingPath = getPendingRequestPath(request.teamName, request.id)
@@ -237,9 +230,7 @@ export async function writePermissionRequest(
 
     return request
   } catch (error) {
-    logForDebugging(
-      `[PermissionSync] Failed to write permission request: ${error}`,
-    )
+    logForDebugging(`[PermissionSync] Failed to write permission request: ${error}`)
     logError(error)
     throw error
   } finally {
@@ -253,9 +244,7 @@ export async function writePermissionRequest(
  * Read all pending permission requests for a team
  * Called by the team leader to see what requests need attention
  */
-export async function readPendingPermissions(
-  teamName?: string,
-): Promise<SwarmPermissionRequest[]> {
+export async function readPendingPermissions(teamName?: string): Promise<SwarmPermissionRequest[]> {
   const team = teamName || getTeamName()
   if (!team) {
     logForDebugging('[PermissionSync] No team name available')
@@ -277,33 +266,27 @@ export async function readPendingPermissions(
     return []
   }
 
-  const jsonFiles = files.filter(f => f.endsWith('.json') && f !== '.lock')
+  const jsonFiles = files.filter((f) => f.endsWith('.json') && f !== '.lock')
 
   const results = await Promise.all(
-    jsonFiles.map(async file => {
+    jsonFiles.map(async (file) => {
       const filePath = join(pendingDir, file)
       try {
         const content = await readFile(filePath, 'utf-8')
-        const parsed = SwarmPermissionRequestSchema().safeParse(
-          jsonParse(content),
-        )
+        const parsed = SwarmPermissionRequestSchema().safeParse(jsonParse(content))
         if (parsed.success) {
           return parsed.data
         }
-        logForDebugging(
-          `[PermissionSync] Invalid request file ${file}: ${parsed.error.message}`,
-        )
+        logForDebugging(`[PermissionSync] Invalid request file ${file}: ${parsed.error.message}`)
         return null
       } catch (err) {
-        logForDebugging(
-          `[PermissionSync] Failed to read request file ${file}: ${err}`,
-        )
+        logForDebugging(`[PermissionSync] Failed to read request file ${file}: ${err}`)
         return null
       }
     }),
   )
 
-  const requests = results.filter(r => r !== null)
+  const requests = results.filter((r) => r !== null)
 
   // Sort by creation time (oldest first)
   requests.sort((a, b) => a.createdAt - b.createdAt)
@@ -334,18 +317,14 @@ export async function readResolvedPermission(
     if (parsed.success) {
       return parsed.data
     }
-    logForDebugging(
-      `[PermissionSync] Invalid resolved request ${requestId}: ${parsed.error.message}`,
-    )
+    logForDebugging(`[PermissionSync] Invalid resolved request ${requestId}: ${parsed.error.message}`)
     return null
   } catch (e: unknown) {
     const code = getErrnoCode(e)
     if (code === 'ENOENT') {
       return null
     }
-    logForDebugging(
-      `[PermissionSync] Failed to read resolved request ${requestId}: ${e}`,
-    )
+    logForDebugging(`[PermissionSync] Failed to read resolved request ${requestId}: ${e}`)
     logError(e)
     return null
   }
@@ -387,9 +366,7 @@ export async function resolvePermission(
     } catch (e: unknown) {
       const code = getErrnoCode(e)
       if (code === 'ENOENT') {
-        logForDebugging(
-          `[PermissionSync] Pending request not found: ${requestId}`,
-        )
+        logForDebugging(`[PermissionSync] Pending request not found: ${requestId}`)
         return false
       }
       throw e
@@ -397,9 +374,7 @@ export async function resolvePermission(
 
     const parsed = SwarmPermissionRequestSchema().safeParse(jsonParse(content))
     if (!parsed.success) {
-      logForDebugging(
-        `[PermissionSync] Invalid pending request ${requestId}: ${parsed.error.message}`,
-      )
+      logForDebugging(`[PermissionSync] Invalid pending request ${requestId}: ${parsed.error.message}`)
       return false
     }
 
@@ -417,18 +392,12 @@ export async function resolvePermission(
     }
 
     // Write to resolved directory
-    await writeFile(
-      resolvedPath,
-      jsonStringify(resolvedRequest, null, 2),
-      'utf-8',
-    )
+    await writeFile(resolvedPath, jsonStringify(resolvedRequest, null, 2), 'utf-8')
 
     // Remove from pending directory
     await unlink(pendingPath)
 
-    logForDebugging(
-      `[PermissionSync] Resolved request ${requestId} with ${resolution.decision}`,
-    )
+    logForDebugging(`[PermissionSync] Resolved request ${requestId} with ${resolution.decision}`)
 
     return true
   } catch (error) {
@@ -449,10 +418,7 @@ export async function resolvePermission(
  * @param teamName - Team name
  * @param maxAgeMs - Maximum age in milliseconds (default: 1 hour)
  */
-export async function cleanupOldResolutions(
-  teamName?: string,
-  maxAgeMs = 3600000,
-): Promise<number> {
+export async function cleanupOldResolutions(teamName?: string, maxAgeMs = 3600000): Promise<number> {
   const team = teamName || getTeamName()
   if (!team) {
     return 0
@@ -474,10 +440,10 @@ export async function cleanupOldResolutions(
   }
 
   const now = Date.now()
-  const jsonFiles = files.filter(f => f.endsWith('.json'))
+  const jsonFiles = files.filter((f) => f.endsWith('.json'))
 
   const cleanupResults = await Promise.all(
-    jsonFiles.map(async file => {
+    jsonFiles.map(async (file) => {
       const filePath = join(resolvedDir, file)
       try {
         const content = await readFile(filePath, 'utf-8')
@@ -508,9 +474,7 @@ export async function cleanupOldResolutions(
   const cleanedCount = cleanupResults.reduce<number>((sum, n) => sum + n, 0)
 
   if (cleanedCount > 0) {
-    logForDebugging(
-      `[PermissionSync] Cleaned up ${cleanedCount} old resolutions`,
-    )
+    logForDebugging(`[PermissionSync] Cleaned up ${cleanedCount} old resolutions`)
   }
 
   return cleanedCount
@@ -567,11 +531,7 @@ export async function pollForResponse(
  * Remove a worker's response after processing
  * This is an alias for deleteResolvedPermission for backward compatibility
  */
-export async function removeWorkerResponse(
-  requestId: string,
-  _agentName?: string,
-  teamName?: string,
-): Promise<void> {
+export async function removeWorkerResponse(requestId: string, _agentName?: string, teamName?: string): Promise<void> {
   await deleteResolvedPermission(requestId, teamName)
 }
 
@@ -604,10 +564,7 @@ export function isSwarmWorker(): boolean {
  * Delete a resolved permission file
  * Called after a worker has processed the resolution
  */
-export async function deleteResolvedPermission(
-  requestId: string,
-  teamName?: string,
-): Promise<boolean> {
+export async function deleteResolvedPermission(requestId: string, teamName?: string): Promise<boolean> {
   const team = teamName || getTeamName()
   if (!team) {
     return false
@@ -617,18 +574,14 @@ export async function deleteResolvedPermission(
 
   try {
     await unlink(resolvedPath)
-    logForDebugging(
-      `[PermissionSync] Deleted resolved permission: ${requestId}`,
-    )
+    logForDebugging(`[PermissionSync] Deleted resolved permission: ${requestId}`)
     return true
   } catch (e: unknown) {
     const code = getErrnoCode(e)
     if (code === 'ENOENT') {
       return false
     }
-    logForDebugging(
-      `[PermissionSync] Failed to delete resolved permission: ${e}`,
-    )
+    logForDebugging(`[PermissionSync] Failed to delete resolved permission: ${e}`)
     logError(e)
     return false
   }
@@ -660,9 +613,7 @@ export async function getLeaderName(teamName?: string): Promise<string | null> {
     return null
   }
 
-  const leadMember = teamFile.members.find(
-    m => m.agentId === teamFile.leadAgentId,
-  )
+  const leadMember = teamFile.members.find((m) => m.agentId === teamFile.leadAgentId)
   return leadMember?.name || 'team-lead'
 }
 
@@ -673,14 +624,10 @@ export async function getLeaderName(teamName?: string): Promise<string | null> {
  * @param request - The permission request to send
  * @returns true if the message was sent successfully
  */
-export async function sendPermissionRequestViaMailbox(
-  request: SwarmPermissionRequest,
-): Promise<boolean> {
+export async function sendPermissionRequestViaMailbox(request: SwarmPermissionRequest): Promise<boolean> {
   const leaderName = await getLeaderName(request.teamName)
   if (!leaderName) {
-    logForDebugging(
-      `[PermissionSync] Cannot send permission request: leader name not found`,
-    )
+    logForDebugging(`[PermissionSync] Cannot send permission request: leader name not found`)
     return false
   }
 
@@ -708,14 +655,10 @@ export async function sendPermissionRequestViaMailbox(
       request.teamName,
     )
 
-    logForDebugging(
-      `[PermissionSync] Sent permission request ${request.id} to leader ${leaderName} via mailbox`,
-    )
+    logForDebugging(`[PermissionSync] Sent permission request ${request.id} to leader ${leaderName} via mailbox`)
     return true
   } catch (error) {
-    logForDebugging(
-      `[PermissionSync] Failed to send permission request via mailbox: ${error}`,
-    )
+    logForDebugging(`[PermissionSync] Failed to send permission request via mailbox: ${error}`)
     logError(error)
     return false
   }
@@ -739,9 +682,7 @@ export async function sendPermissionResponseViaMailbox(
 ): Promise<boolean> {
   const team = teamName || getTeamName()
   if (!team) {
-    logForDebugging(
-      `[PermissionSync] Cannot send permission response: team name not found`,
-    )
+    logForDebugging(`[PermissionSync] Cannot send permission response: team name not found`)
     return false
   }
 
@@ -769,14 +710,10 @@ export async function sendPermissionResponseViaMailbox(
       team,
     )
 
-    logForDebugging(
-      `[PermissionSync] Sent permission response for ${requestId} to worker ${workerName} via mailbox`,
-    )
+    logForDebugging(`[PermissionSync] Sent permission response for ${requestId} to worker ${workerName} via mailbox`)
     return true
   } catch (error) {
-    logForDebugging(
-      `[PermissionSync] Failed to send permission response via mailbox: ${error}`,
-    )
+    logForDebugging(`[PermissionSync] Failed to send permission response via mailbox: ${error}`)
     logError(error)
     return false
   }
@@ -809,17 +746,13 @@ export async function sendSandboxPermissionRequestViaMailbox(
 ): Promise<boolean> {
   const team = teamName || getTeamName()
   if (!team) {
-    logForDebugging(
-      `[PermissionSync] Cannot send sandbox permission request: team name not found`,
-    )
+    logForDebugging(`[PermissionSync] Cannot send sandbox permission request: team name not found`)
     return false
   }
 
   const leaderName = await getLeaderName(team)
   if (!leaderName) {
-    logForDebugging(
-      `[PermissionSync] Cannot send sandbox permission request: leader name not found`,
-    )
+    logForDebugging(`[PermissionSync] Cannot send sandbox permission request: leader name not found`)
     return false
   }
 
@@ -828,9 +761,7 @@ export async function sendSandboxPermissionRequestViaMailbox(
   const workerColor = getTeammateColor()
 
   if (!workerId || !workerName) {
-    logForDebugging(
-      `[PermissionSync] Cannot send sandbox permission request: worker ID or name not found`,
-    )
+    logForDebugging(`[PermissionSync] Cannot send sandbox permission request: worker ID or name not found`)
     return false
   }
 
@@ -860,9 +791,7 @@ export async function sendSandboxPermissionRequestViaMailbox(
     )
     return true
   } catch (error) {
-    logForDebugging(
-      `[PermissionSync] Failed to send sandbox permission request via mailbox: ${error}`,
-    )
+    logForDebugging(`[PermissionSync] Failed to send sandbox permission request via mailbox: ${error}`)
     logError(error)
     return false
   }
@@ -888,9 +817,7 @@ export async function sendSandboxPermissionResponseViaMailbox(
 ): Promise<boolean> {
   const team = teamName || getTeamName()
   if (!team) {
-    logForDebugging(
-      `[PermissionSync] Cannot send sandbox permission response: team name not found`,
-    )
+    logForDebugging(`[PermissionSync] Cannot send sandbox permission response: team name not found`)
     return false
   }
 
@@ -919,9 +846,7 @@ export async function sendSandboxPermissionResponseViaMailbox(
     )
     return true
   } catch (error) {
-    logForDebugging(
-      `[PermissionSync] Failed to send sandbox permission response via mailbox: ${error}`,
-    )
+    logForDebugging(`[PermissionSync] Failed to send sandbox permission response via mailbox: ${error}`)
     logError(error)
     return false
   }

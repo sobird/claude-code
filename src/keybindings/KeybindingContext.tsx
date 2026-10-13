@@ -1,21 +1,8 @@
-import React, {
-  createContext,
-  type RefObject,
-  useContext,
-  useLayoutEffect,
-  useMemo,
-} from 'react'
+import React, { createContext, type RefObject, useContext, useLayoutEffect, useMemo } from 'react'
+
 import type { Key } from '../ink.js'
-import {
-  type ChordResolveResult,
-  getBindingDisplayText,
-  resolveKeyWithChordState,
-} from './resolver.js'
-import type {
-  KeybindingContextName,
-  ParsedBinding,
-  ParsedKeystroke,
-} from './types.js'
+import { type ChordResolveResult, getBindingDisplayText, resolveKeyWithChordState } from './resolver.js'
+import type { KeybindingContextName, ParsedBinding, ParsedKeystroke } from './types.js'
 
 /** Handler registration for action callbacks */
 type HandlerRegistration = {
@@ -26,20 +13,13 @@ type HandlerRegistration = {
 
 type KeybindingContextValue = {
   /** Resolve a key input to an action name (with chord support) */
-  resolve: (
-    input: string,
-    key: Key,
-    activeContexts: KeybindingContextName[],
-  ) => ChordResolveResult
+  resolve: (input: string, key: Key, activeContexts: KeybindingContextName[]) => ChordResolveResult
 
   /** Update the pending chord state */
   setPendingChord: (pending: ParsedKeystroke[] | null) => void
 
   /** Get display text for an action (e.g., "ctrl+t") */
-  getDisplayText: (
-    action: string,
-    context: KeybindingContextName,
-  ) => string | undefined
+  getDisplayText: (action: string, context: KeybindingContextName) => string | undefined
 
   /** All parsed bindings (for help display) */
   bindings: ParsedBinding[]
@@ -140,13 +120,7 @@ export function KeybindingProvider({
       // This is critical for chord sequences where the second key might be pressed
       // before React re-renders with the updated pendingChord state
       resolve: (input, key, contexts) =>
-        resolveKeyWithChordState(
-          input,
-          key,
-          contexts,
-          bindings,
-          pendingChordRef.current,
-        ),
+        resolveKeyWithChordState(input, key, contexts, bindings, pendingChordRef.current),
       setPendingChord,
       getDisplayText: getDisplay,
       bindings,
@@ -168,19 +142,13 @@ export function KeybindingProvider({
     handlerRegistryRef,
   ])
 
-  return (
-    <KeybindingContext.Provider value={value}>
-      {children}
-    </KeybindingContext.Provider>
-  )
+  return <KeybindingContext.Provider value={value}>{children}</KeybindingContext.Provider>
 }
 
 export function useKeybindingContext(): KeybindingContextValue {
   const ctx = useContext(KeybindingContext)
   if (!ctx) {
-    throw new Error(
-      'useKeybindingContext must be used within KeybindingProvider',
-    )
+    throw new Error('useKeybindingContext must be used within KeybindingProvider')
   }
   return ctx
 }
@@ -208,10 +176,7 @@ export function useOptionalKeybindingContext(): KeybindingContextValue | null {
  * }
  * ```
  */
-export function useRegisterKeybindingContext(
-  context: KeybindingContextName,
-  isActive: boolean = true,
-): void {
+export function useRegisterKeybindingContext(context: KeybindingContextName, isActive: boolean = true): void {
   const keybindingContext = useOptionalKeybindingContext()
 
   useLayoutEffect(() => {

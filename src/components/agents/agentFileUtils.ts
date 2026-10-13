@@ -1,13 +1,11 @@
 import { mkdir, open, unlink } from 'fs/promises'
 import { join } from 'path'
+
 import type { SettingSource } from 'src/utils/settings/constants.js'
 import { getManagedFilePath } from 'src/utils/settings/managedPath.js'
+
 import type { AgentMemoryScope } from '../../tools/AgentTool/agentMemory.js'
-import {
-  type AgentDefinition,
-  isBuiltInAgent,
-  isPluginAgent,
-} from '../../tools/AgentTool/loadAgentsDir.js'
+import { type AgentDefinition, isBuiltInAgent, isPluginAgent } from '../../tools/AgentTool/loadAgentsDir.js'
 import { getCwd } from '../../utils/cwd.js'
 import type { EffortValue } from '../../utils/effort.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
@@ -37,8 +35,7 @@ export function formatAgentAsMarkdown(
     .replace(/\n/g, '\\\\n') // Escape newlines as \\n so yaml preserves them as \n
 
   // Omit tools field entirely when tools is undefined or ['*'] (all tools allowed)
-  const isAllTools =
-    tools === undefined || (tools.length === 1 && tools[0] === '*')
+  const isAllTools = tools === undefined || (tools.length === 1 && tools[0] === '*')
   const toolsLine = isAllTools ? '' : `\ntools: ${tools.join(', ')}`
   const modelLine = model ? `\nmodel: ${model}` : ''
   const effortLine = effort !== undefined ? `\neffort: ${effort}` : ''
@@ -66,11 +63,7 @@ function getAgentDirectoryPath(location: SettingSource): string {
     case 'projectSettings':
       return join(getCwd(), AGENT_PATHS.FOLDER_NAME, AGENT_PATHS.AGENTS_DIR)
     case 'policySettings':
-      return join(
-        getManagedFilePath(),
-        AGENT_PATHS.FOLDER_NAME,
-        AGENT_PATHS.AGENTS_DIR,
-      )
+      return join(getManagedFilePath(), AGENT_PATHS.FOLDER_NAME, AGENT_PATHS.AGENTS_DIR)
     case 'localSettings':
       return join(getCwd(), AGENT_PATHS.FOLDER_NAME, AGENT_PATHS.AGENTS_DIR)
   }
@@ -89,10 +82,7 @@ function getRelativeAgentDirectoryPath(location: SettingSource): string {
  * Gets the file path for a new agent based on its name
  * Used when creating new agent files
  */
-export function getNewAgentFilePath(agent: {
-  source: SettingSource
-  agentType: string
-}): string {
+export function getNewAgentFilePath(agent: { source: SettingSource; agentType: string }): string {
   const dirPath = getAgentDirectoryPath(agent.source)
   return join(dirPath, `${agent.agentType}.md`)
 }
@@ -118,10 +108,7 @@ export function getActualAgentFilePath(agent: AgentDefinition): string {
  * Gets the relative file path for a new agent based on its name
  * Used for displaying where new agent files will be created
  */
-export function getNewRelativeAgentFilePath(agent: {
-  source: SettingSource | 'built-in'
-  agentType: string
-}): string {
+export function getNewRelativeAgentFilePath(agent: { source: SettingSource | 'built-in'; agentType: string }): string {
   if (agent.source === 'built-in') {
     return 'Built-in'
   }
@@ -151,9 +138,7 @@ export function getActualRelativeAgentFilePath(agent: AgentDefinition): string {
 /**
  * Ensures the directory for an agent location exists
  */
-async function ensureAgentDirectoryExists(
-  source: SettingSource,
-): Promise<string> {
+async function ensureAgentDirectoryExists(source: SettingSource): Promise<string> {
   const dirPath = getAgentDirectoryPath(source)
   await mkdir(dirPath, { recursive: true })
   return dirPath
@@ -182,16 +167,7 @@ export async function saveAgentToFile(
   await ensureAgentDirectoryExists(source)
   const filePath = getNewAgentFilePath({ source, agentType })
 
-  const content = formatAgentAsMarkdown(
-    agentType,
-    whenToUse,
-    tools,
-    systemPrompt,
-    color,
-    model,
-    memory,
-    effort,
-  )
+  const content = formatAgentAsMarkdown(agentType, whenToUse, tools, systemPrompt, color, model, memory, effort)
   try {
     await writeFileAndFlush(filePath, content, checkExists ? 'wx' : 'w')
   } catch (e: unknown) {
@@ -238,9 +214,7 @@ export async function updateAgentFile(
 /**
  * Deletes an agent file
  */
-export async function deleteAgentFromFile(
-  agent: AgentDefinition,
-): Promise<void> {
+export async function deleteAgentFromFile(agent: AgentDefinition): Promise<void> {
   if (agent.source === 'built-in') {
     throw new Error('Cannot delete built-in agents')
   }
@@ -257,11 +231,7 @@ export async function deleteAgentFromFile(
   }
 }
 
-async function writeFileAndFlush(
-  filePath: string,
-  content: string,
-  flag: 'w' | 'wx' = 'w',
-): Promise<void> {
+async function writeFileAndFlush(filePath: string, content: string, flag: 'w' | 'wx' = 'w'): Promise<void> {
   const handle = await open(filePath, flag)
   try {
     await handle.writeFile(content, { encoding: 'utf-8' })

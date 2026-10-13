@@ -1,4 +1,5 @@
 import { unlink } from 'fs/promises'
+
 import { CircularBuffer } from '../CircularBuffer.js'
 import { logForDebugging } from '../debug.js'
 import { readFileRange, tailFile } from '../fsOperations.js'
@@ -142,19 +143,10 @@ export class TaskOutput {
           const totalLines =
             bytesRead >= bytesTotal
               ? lineCount
-              : Math.max(
-                  entry.#totalLines,
-                  Math.round((bytesTotal / bytesRead) * lineCount),
-                )
+              : Math.max(entry.#totalLines, Math.round((bytesTotal / bytesRead) * lineCount))
           entry.#totalLines = totalLines
           entry.#totalBytes = bytesTotal
-          entry.#onProgress(
-            content.slice(n5),
-            content.slice(n100),
-            totalLines,
-            bytesTotal,
-            bytesRead < bytesTotal,
-          )
+          entry.#onProgress(content.slice(n5), content.slice(n100), totalLines, bytesTotal, bytesRead < bytesTotal)
         },
         () => {
           // File may not exist yet
@@ -185,8 +177,7 @@ export class TaskOutput {
     }
 
     // Check if this chunk would exceed the in-memory limit
-    const totalMem =
-      this.#stdoutBuffer.length + this.#stderrBuffer.length + data.length
+    const totalMem = this.#stdoutBuffer.length + this.#stderrBuffer.length + data.length
     if (totalMem > this.#maxMemory) {
       this.#spillToDisk(isStderr ? data : null, isStderr ? null : data)
       return
@@ -219,10 +210,7 @@ export class TaskOutput {
         break
       }
       lineCount++
-      if (
-        lines.length < MAX_PROGRESS_LINES &&
-        extractedBytes < MAX_PROGRESS_BYTES
-      ) {
+      if (lines.length < MAX_PROGRESS_LINES && extractedBytes < MAX_PROGRESS_BYTES) {
         const lineLen = pos - prev - 1
         if (lineLen > 0 && lineLen <= MAX_PROGRESS_BYTES - extractedBytes) {
           const line = data.slice(prev + 1, pos)
@@ -316,11 +304,8 @@ export class TaskOutput {
       // Returning a diagnostic string keeps the tool_result non-empty, which
       // avoids reminder-only-at-tail confusion downstream and tells the model
       // (and us, via the transcript) what actually happened.
-      const code =
-        err instanceof Error && 'code' in err ? String(err.code) : 'unknown'
-      logForDebugging(
-        `TaskOutput.#readStdoutFromFile: failed to read ${this.path} (${code}): ${err}`,
-      )
+      const code = err instanceof Error && 'code' in err ? String(err.code) : 'unknown'
+      logForDebugging(`TaskOutput.#readStdoutFromFile: failed to read ${this.path} (${code}): ${err}`)
       return `<bash output unavailable: output file ${this.path} could not be read (${code}). This usually means another Claude Code process in the same project deleted it during startup cleanup.>`
     }
   }

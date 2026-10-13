@@ -1,36 +1,23 @@
 import * as React from 'react'
-import {
-  type GroveDecision,
-  GroveDialog,
-  PrivacySettingsDialog,
-} from '../../components/grove/Grove.js'
+
+import { type GroveDecision, GroveDialog, PrivacySettingsDialog } from '../../components/grove/Grove.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../../services/analytics/index.js'
-import {
-  getGroveNoticeConfig,
-  getGroveSettings,
-  isQualifiedForGrove,
-} from '../../services/api/grove.js'
+import { getGroveNoticeConfig, getGroveSettings, isQualifiedForGrove } from '../../services/api/grove.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
 
-const FALLBACK_MESSAGE =
-  'Review and manage your privacy settings at https://claude.ai/settings/data-privacy-controls'
+const FALLBACK_MESSAGE = 'Review and manage your privacy settings at https://claude.ai/settings/data-privacy-controls'
 
-export async function call(
-  onDone: LocalJSXCommandOnDone,
-): Promise<React.ReactNode | null> {
+export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNode | null> {
   const qualified = await isQualifiedForGrove()
   if (!qualified) {
     onDone(FALLBACK_MESSAGE)
     return null
   }
 
-  const [settingsResult, configResult] = await Promise.all([
-    getGroveSettings(),
-    getGroveNoticeConfig(),
-  ])
+  const [settingsResult, configResult] = await Promise.all([getGroveSettings(), getGroveNoticeConfig()])
   // Hide dialog on API failure (after retry)
   if (!settingsResult.success) {
     onDone(FALLBACK_MESSAGE)
@@ -60,15 +47,10 @@ export async function call(
     const updatedSettings = updatedSettingsResult.data
     const groveStatus = updatedSettings.grove_enabled ? 'true' : 'false'
     onDone(`"Help improve Claude" set to ${groveStatus}.`)
-    if (
-      settings.grove_enabled !== null &&
-      settings.grove_enabled !== updatedSettings.grove_enabled
-    ) {
+    if (settings.grove_enabled !== null && settings.grove_enabled !== updatedSettings.grove_enabled) {
       logEvent('tengu_grove_policy_toggled', {
-        state:
-          updatedSettings.grove_enabled as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        location:
-          'settings' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        state: updatedSettings.grove_enabled as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        location: 'settings' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
     }
   }
@@ -86,11 +68,5 @@ export async function call(
   }
 
   // Show the GroveDialog for users who haven't accepted terms yet
-  return (
-    <GroveDialog
-      showIfAlreadyViewed={true}
-      onDone={onDoneWithDecision}
-      location={'settings'}
-    />
-  )
+  return <GroveDialog showIfAlreadyViewed={true} onDone={onDoneWithDecision} location={'settings'} />
 }

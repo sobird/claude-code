@@ -1,18 +1,13 @@
-import type {
-  ThinkingBlock,
-  ThinkingBlockParam,
-} from '@anthropic-ai/sdk/resources/index.mjs'
+import type { ThinkingBlock, ThinkingBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { CtrlOToExpand } from '../CtrlOToExpand.js'
 import { Markdown } from '../Markdown.js'
 
 type Props = {
   // Accept either full ThinkingBlock/ThinkingBlockParam or a minimal shape with just type and thinking
-  param:
-    | ThinkingBlock
-    | ThinkingBlockParam
-    | { type: 'thinking'; thinking: string }
+  param: ThinkingBlock | ThinkingBlockParam | { type: 'thinking'; thinking: string }
   addMargin: boolean
   isTranscriptMode: boolean
   verbose: boolean
@@ -49,12 +44,7 @@ export function AssistantThinkingMessage({
   }
 
   return (
-    <Box
-      flexDirection="column"
-      gap={1}
-      marginTop={addMargin ? 1 : 0}
-      width="100%"
-    >
+    <Box flexDirection="column" gap={1} marginTop={addMargin ? 1 : 0} width="100%">
       <Text dimColor italic>
         {label}…
       </Text>

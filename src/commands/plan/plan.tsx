@@ -1,12 +1,13 @@
 import * as React from 'react'
+
 import { handlePlanModeTransition } from '../../bootstrap/state.js'
 import type { LocalJSXCommandContext } from '../../commands.js'
 import { Box, Text } from '../../ink.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
 import { getExternalEditor } from '../../utils/editor.js'
 import { toIDEDisplayName } from '../../utils/ide.js'
-import { applyPermissionUpdate } from '../../utils/permissions/PermissionUpdate.js'
 import { prepareContextForPlanMode } from '../../utils/permissions/permissionSetup.js'
+import { applyPermissionUpdate } from '../../utils/permissions/PermissionUpdate.js'
 import { getPlan, getPlanFilePath } from '../../utils/plans.js'
 import { editFileInEditor } from '../../utils/promptEditor.js'
 import { renderToString } from '../../utils/staticRender.js'
@@ -52,12 +53,13 @@ export async function call(
   // If not in plan mode, enable it
   if (currentMode !== 'plan') {
     handlePlanModeTransition(currentMode, 'plan')
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
-      toolPermissionContext: applyPermissionUpdate(
-        prepareContextForPlanMode(prev.toolPermissionContext),
-        { type: 'setMode', mode: 'plan', destination: 'session' },
-      ),
+      toolPermissionContext: applyPermissionUpdate(prepareContextForPlanMode(prev.toolPermissionContext), {
+        type: 'setMode',
+        mode: 'plan',
+        destination: 'session',
+      }),
     }))
     const description = args.trim()
     if (description && description !== 'open') {
@@ -92,13 +94,7 @@ export async function call(
   const editor = getExternalEditor()
   const editorName = editor ? toIDEDisplayName(editor) : undefined
 
-  const display = (
-    <PlanDisplay
-      planContent={planContent}
-      planPath={planPath}
-      editorName={editorName}
-    />
-  )
+  const display = <PlanDisplay planContent={planContent} planPath={planPath} editorName={editorName} />
 
   // Render to string and pass to onDone like local commands do
   const output = await renderToString(display)

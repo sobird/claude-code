@@ -13,9 +13,7 @@ export function PromptInputStashNotice({ hasStash }: Props): React.ReactNode {
 
   return (
     <Box paddingLeft={2}>
-      <Text dimColor>
-        {figures.pointerSmall} Stashed (auto-restores after submit)
-      </Text>
+      <Text dimColor>{figures.pointerSmall} Stashed (auto-restores after submit)</Text>
     </Box>
   )
 }

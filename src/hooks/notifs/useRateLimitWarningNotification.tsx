@@ -2,13 +2,11 @@ import * as React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNotifications } from 'src/context/notifications.js'
 import { Text } from 'src/ink.js'
-import {
-  getRateLimitWarning,
-  getUsingOverageText,
-} from 'src/services/claudeAiLimits.js'
+import { getRateLimitWarning, getUsingOverageText } from 'src/services/claudeAiLimits.js'
 import { useClaudeAiLimits } from 'src/services/claudeAiLimitsHook.js'
 import { getSubscriptionType } from 'src/utils/auth.js'
 import { hasClaudeAiBillingAccess } from 'src/utils/billing.js'
+
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 
 export function useRateLimitWarningNotification(model: string): void {
@@ -16,32 +14,20 @@ export function useRateLimitWarningNotification(model: string): void {
   const claudeAiLimits = useClaudeAiLimits()
   // claudeAiLimits reference is stable until statusListeners fire (API
   // response), so these skip the Intl formatting work on most REPL renders.
-  const rateLimitWarning = useMemo(
-    () => getRateLimitWarning(claudeAiLimits, model),
-    [claudeAiLimits, model],
-  )
-  const usingOverageText = useMemo(
-    () => getUsingOverageText(claudeAiLimits),
-    [claudeAiLimits],
-  )
+  const rateLimitWarning = useMemo(() => getRateLimitWarning(claudeAiLimits, model), [claudeAiLimits, model])
+  const usingOverageText = useMemo(() => getUsingOverageText(claudeAiLimits), [claudeAiLimits])
   const shownWarningRef = useRef<string | null>(null)
   const subscriptionType = getSubscriptionType()
   const hasBillingAccess = hasClaudeAiBillingAccess()
-  const isTeamOrEnterprise =
-    subscriptionType === 'team' || subscriptionType === 'enterprise'
+  const isTeamOrEnterprise = subscriptionType === 'team' || subscriptionType === 'enterprise'
 
   // Track overage mode transitions
-  const [hasShownOverageNotification, setHasShownOverageNotification] =
-    useState(false)
+  const [hasShownOverageNotification, setHasShownOverageNotification] = useState(false)
 
   // Show immediate notification when entering overage mode
   useEffect(() => {
     if (getIsRemoteMode()) return
-    if (
-      claudeAiLimits.isUsingOverage &&
-      !hasShownOverageNotification &&
-      (!isTeamOrEnterprise || hasBillingAccess)
-    ) {
+    if (claudeAiLimits.isUsingOverage && !hasShownOverageNotification && (!isTeamOrEnterprise || hasBillingAccess)) {
       addNotification({
         key: 'limit-reached',
         text: usingOverageText,

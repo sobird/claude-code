@@ -1,4 +1,5 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+
 import { SocketConnectionError } from './mcpSocketClient.js'
 import type { ClaudeForChromeContext, PermissionMode, PermissionOverrides, SocketClient } from './types.js'
 

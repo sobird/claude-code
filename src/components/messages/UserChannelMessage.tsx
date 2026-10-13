@@ -1,5 +1,6 @@
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
+
 import { CHANNEL_ARROW } from '../../constants/figures.js'
 import { CHANNEL_TAG } from '../../constants/xml.js'
 import { Box, Text } from '../../ink.js'
@@ -12,9 +13,7 @@ type Props = {
 
 // <channel source="..." user="..." chat_id="...">content</channel>
 // source is always first (wrapChannelMessage writes it), user is optional.
-const CHANNEL_RE = new RegExp(
-  `<${CHANNEL_TAG}\\s+source="([^"]+)"([^>]*)>\\n?([\\s\\S]*?)\\n?</${CHANNEL_TAG}>`,
-)
+const CHANNEL_RE = new RegExp(`<${CHANNEL_TAG}\\s+source="([^"]+)"([^>]*)>\\n?([\\s\\S]*?)\\n?</${CHANNEL_TAG}>`)
 const USER_ATTR_RE = /\buser="([^"]+)"/
 
 // Plugin-provided servers get names like plugin:slack-channel:slack via
@@ -27,10 +26,7 @@ function displayServerName(name: string): string {
 
 const TRUNCATE_AT = 60
 
-export function UserChannelMessage({
-  addMargin,
-  param: { text },
-}: Props): React.ReactNode {
+export function UserChannelMessage({ addMargin, param: { text } }: Props): React.ReactNode {
   const m = CHANNEL_RE.exec(text)
   if (!m) return null
   const [, source, attrs, content] = m

@@ -1,18 +1,14 @@
 import { homedir } from 'os'
 import { isAbsolute, resolve } from 'path'
+
 import type { z } from 'zod/v4'
+
 import type { ToolPermissionContext } from '../../Tool.js'
 import type { Redirect, SimpleCommand } from '../../utils/bash/ast.js'
-import {
-  extractOutputRedirections,
-  splitCommand_DEPRECATED,
-} from '../../utils/bash/commands.js'
+import { extractOutputRedirections, splitCommand_DEPRECATED } from '../../utils/bash/commands.js'
 import { tryParseShellCommand } from '../../utils/bash/shellQuote.js'
 import { getDirectoryForPath } from '../../utils/path.js'
 import { allWorkingDirectories } from '../../utils/permissions/filesystem.js'
-import type { PermissionResult } from '../../utils/permissions/PermissionResult.js'
-import { createReadRuleSuggestion } from '../../utils/permissions/PermissionUpdate.js'
-import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js'
 import {
   expandTilde,
   type FileOperationType,
@@ -20,8 +16,11 @@ import {
   isDangerousRemovalPath,
   validatePath,
 } from '../../utils/permissions/pathValidation.js'
-import type { BashTool } from './BashTool.js'
+import type { PermissionResult } from '../../utils/permissions/PermissionResult.js'
+import { createReadRuleSuggestion } from '../../utils/permissions/PermissionUpdate.js'
+import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js'
 import { stripSafeWrappers } from './bashPermissions.js'
+import type { BashTool } from './BashTool.js'
 import { sedCommandIsAllowedByAllowlist } from './sedValidation.js'
 
 export type PathCommand =
@@ -67,11 +66,7 @@ export type PathCommand =
  * require explicit user approval, even if allowlist rules exist.
  * This prevents catastrophic data loss from commands like `rm -rf /`.
  */
-function checkDangerousRemovalPaths(
-  command: 'rm' | 'rmdir',
-  args: string[],
-  cwd: string,
-): PermissionResult {
+function checkDangerousRemovalPaths(command: 'rm' | 'rmdir', args: string[], cwd: string): PermissionResult {
   // Extract paths using the existing path extractor
   const extractor = PATH_EXTRACTORS[command]
   const paths = extractor(args)
@@ -81,9 +76,7 @@ function checkDangerousRemovalPaths(
     // NOTE: We check the path WITHOUT resolving symlinks, because dangerous paths
     // like /tmp should be caught even though /tmp is a symlink to /private/tmp on macOS
     const cleanPath = expandTilde(path.replace(/^['"]|['"]$/g, ''))
-    const absolutePath = isAbsolute(cleanPath)
-      ? cleanPath
-      : resolve(cwd, cleanPath)
+    const absolutePath = isAbsolute(cleanPath) ? cleanPath : resolve(cwd, cleanPath)
 
     // Check if this is a dangerous path (using the non-symlink-resolved path)
     if (isDangerousRemovalPath(absolutePath)) {
@@ -139,11 +132,7 @@ function filterOutFlags(args: string[]): string[] {
 }
 
 // Helper: Parse grep/rg style commands (pattern then paths)
-function parsePatternCommand(
-  args: string[],
-  flagsWithArgs: Set<string>,
-  defaults: string[] = [],
-): string[] {
+function parsePatternCommand(args: string[], flagsWithArgs: Set<string>, defaults: string[] = []): string[] {
   const paths: string[] = []
   let patternFound = false
   // SECURITY: Track `--` end-of-options delimiter. After `--`, all args are
@@ -187,15 +176,12 @@ function parsePatternCommand(
  * Extracts paths from command arguments for different path commands.
  * Each command has specific logic for how it handles paths and flags.
  */
-export const PATH_EXTRACTORS: Record<
-  PathCommand,
-  (args: string[]) => string[]
-> = {
+export const PATH_EXTRACTORS: Record<PathCommand, (args: string[]) => string[]> = {
   // cd: special case - all args form one path
-  cd: args => (args.length === 0 ? [homedir()] : [args.join(' ')]),
+  cd: (args) => (args.length === 0 ? [homedir()] : [args.join(' ')]),
 
   // ls: filter flags, default to current dir
-  ls: args => {
+  ls: (args) => {
     const paths = filterOutFlags(args)
     return paths.length > 0 ? paths : ['.']
   },
@@ -208,7 +194,7 @@ export const PATH_EXTRACTORS: Record<
   // predicates resolve to paths within cwd (allowed), so no false blocks for
   // legitimate use. The over-inclusion ensures attack paths like
   // `find -- -/../../etc` are caught.
-  find: args => {
+  find: (args) => {
     const paths: string[] = []
     const pathFlags = new Set([
       '-newer',
@@ -298,19 +284,14 @@ export const PATH_EXTRACTORS: Record<
   md5sum: filterOutFlags,
 
   // tr: special case - skip character sets
-  tr: args => {
-    const hasDelete = args.some(
-      a =>
-        a === '-d' ||
-        a === '--delete' ||
-        (a.startsWith('-') && a.includes('d')),
-    )
+  tr: (args) => {
+    const hasDelete = args.some((a) => a === '-d' || a === '--delete' || (a.startsWith('-') && a.includes('d')))
     const nonFlags = filterOutFlags(args)
     return nonFlags.slice(hasDelete ? 1 : 2) // Skip SET1 or SET1+SET2
   },
 
   // grep: pattern then paths, defaults to stdin
-  grep: args => {
+  grep: (args) => {
     const flags = new Set([
       '-e',
       '--regexp',
@@ -331,17 +312,14 @@ export const PATH_EXTRACTORS: Record<
     ])
     const paths = parsePatternCommand(args, flags)
     // Special: if -r/-R flag present and no paths, use current dir
-    if (
-      paths.length === 0 &&
-      args.some(a => ['-r', '-R', '--recursive'].includes(a))
-    ) {
+    if (paths.length === 0 && args.some((a) => ['-r', '-R', '--recursive'].includes(a))) {
       return ['.']
     }
     return paths
   },
 
   // rg: pattern then paths, defaults to current dir
-  rg: args => {
+  rg: (args) => {
     const flags = new Set([
       '-e',
       '--regexp',
@@ -369,7 +347,7 @@ export const PATH_EXTRACTORS: Record<
   },
 
   // sed: processes files in-place or reads from stdin
-  sed: args => {
+  sed: (args) => {
     const paths: string[] = []
     let skipNext = false
     let scriptFound = false
@@ -430,7 +408,7 @@ export const PATH_EXTRACTORS: Record<
   // jq: filter then file paths (similar to grep)
   // The jq command structure is: jq [flags] filter [files...]
   // If no files are provided, jq reads from stdin
-  jq: args => {
+  jq: (args) => {
     const paths: string[] = []
     const flagsWithArgs = new Set([
       '-e',
@@ -488,7 +466,7 @@ export const PATH_EXTRACTORS: Record<
   },
 
   // git: handle subcommands that access arbitrary files outside the repository
-  git: args => {
+  git: (args) => {
     // git diff --no-index is special - it explicitly compares files outside git's control
     // This flag allows git diff to compare any two files on the filesystem, not just
     // files within the repository, which is why it needs path validation
@@ -593,11 +571,9 @@ export const COMMAND_OPERATION_TYPE: Record<PathCommand, FileOperationType> = {
  * Returns true if the command is valid, false if it should be rejected.
  * Used to block commands with flags that could bypass path validation.
  */
-const COMMAND_VALIDATOR: Partial<
-  Record<PathCommand, (args: string[]) => boolean>
-> = {
-  mv: (args: string[]) => !args.some(arg => arg?.startsWith('-')),
-  cp: (args: string[]) => !args.some(arg => arg?.startsWith('-')),
+const COMMAND_VALIDATOR: Partial<Record<PathCommand, (args: string[]) => boolean>> = {
+  mv: (args: string[]) => !args.some((arg) => arg?.startsWith('-')),
+  cp: (args: string[]) => !args.some((arg) => arg?.startsWith('-')),
 }
 
 function validateCommandPaths(
@@ -655,24 +631,16 @@ function validateCommandPaths(
   }
 
   for (const path of paths) {
-    const { allowed, resolvedPath, decisionReason } = validatePath(
-      path,
-      cwd,
-      toolPermissionContext,
-      operationType,
-    )
+    const { allowed, resolvedPath, decisionReason } = validatePath(path, cwd, toolPermissionContext, operationType)
 
     if (!allowed) {
-      const workingDirs = Array.from(
-        allWorkingDirectories(toolPermissionContext),
-      )
+      const workingDirs = Array.from(allWorkingDirectories(toolPermissionContext))
       const dirListStr = formatDirectoryList(workingDirs)
 
       // Use security check's custom reason if available (type: 'other' or 'safetyCheck')
       // Otherwise use the standard "was blocked" message
       const message =
-        decisionReason?.type === 'other' ||
-        decisionReason?.type === 'safetyCheck'
+        decisionReason?.type === 'other' || decisionReason?.type === 'safetyCheck'
           ? decisionReason.reason
           : `${command} in '${resolvedPath}' was blocked. For security, Claude Code may only ${ACTION_VERBS[command]} the allowed working directories for this session: ${dirListStr}.`
 
@@ -700,10 +668,7 @@ function validateCommandPaths(
   }
 }
 
-export function createPathChecker(
-  command: PathCommand,
-  operationTypeOverride?: FileOperationType,
-) {
+export function createPathChecker(command: PathCommand, operationTypeOverride?: FileOperationType) {
   return (
     args: string[],
     cwd: string,
@@ -711,14 +676,7 @@ export function createPathChecker(
     compoundCommandHasCd?: boolean,
   ): PermissionResult => {
     // First check normal path validation (which includes explicit deny rules)
-    const result = validateCommandPaths(
-      command,
-      args,
-      cwd,
-      context,
-      compoundCommandHasCd,
-      operationTypeOverride,
-    )
+    const result = validateCommandPaths(command, args, cwd, context, compoundCommandHasCd, operationTypeOverride)
 
     // If explicitly denied, respect that (don't override with dangerous path message)
     if (result.behavior === 'deny') {
@@ -743,8 +701,7 @@ export function createPathChecker(
 
     // If it's an ask decision, add suggestions based on the operation type
     if (result.behavior === 'ask') {
-      const operationType =
-        operationTypeOverride ?? COMMAND_OPERATION_TYPE[command]
+      const operationType = operationTypeOverride ?? COMMAND_OPERATION_TYPE[command]
       const suggestions: PermissionUpdate[] = []
 
       // Only suggest adding directory/rules if we have a blocked path
@@ -789,7 +746,7 @@ export function createPathChecker(
  * but we need them as strings for path validation.
  */
 function parseCommandArguments(cmd: string): string[] {
-  const parseResult = tryParseShellCommand(cmd, env => `$${env}`)
+  const parseResult = tryParseShellCommand(cmd, (env) => `$${env}`)
   if (!parseResult.success) {
     // Malformed shell syntax, return empty array
     return []
@@ -801,13 +758,7 @@ function parseCommandArguments(cmd: string): string[] {
     if (typeof arg === 'string') {
       // Include empty strings - they're valid arguments (e.g., grep "" /tmp/t)
       extractedArgs.push(arg)
-    } else if (
-      typeof arg === 'object' &&
-      arg !== null &&
-      'op' in arg &&
-      arg.op === 'glob' &&
-      'pattern' in arg
-    ) {
+    } else if (typeof arg === 'object' && arg !== null && 'op' in arg && arg.op === 'glob' && 'pattern' in arg) {
       // shell-quote parses glob patterns as objects, but we need them as strings for validation
       extractedArgs.push(String(arg.pattern))
     }
@@ -867,15 +818,10 @@ function validateSinglePathCommand(
   // sed is normally classified as 'write' for path validation, but when the
   // command is purely reading (line printing with -n), file args are read-only.
   const operationTypeOverride =
-    baseCmd === 'sed' && sedCommandIsAllowedByAllowlist(strippedCmd)
-      ? ('read' as FileOperationType)
-      : undefined
+    baseCmd === 'sed' && sedCommandIsAllowedByAllowlist(strippedCmd) ? ('read' as FileOperationType) : undefined
 
   // Validate all paths are within allowed directories
-  const pathChecker = createPathChecker(
-    baseCmd as PathCommand,
-    operationTypeOverride,
-  )
+  const pathChecker = createPathChecker(baseCmd as PathCommand, operationTypeOverride)
   return pathChecker(args, cwd, toolPermissionContext, compoundCommandHasCd)
 }
 
@@ -910,14 +856,10 @@ function validateSinglePathCommandArgv(
   // wrapper-stripped but .text is raw tree-sitter span (includes
   // `timeout 5 ` prefix), so strip here too.
   const operationTypeOverride =
-    baseCmd === 'sed' &&
-    sedCommandIsAllowedByAllowlist(stripSafeWrappers(cmd.text))
+    baseCmd === 'sed' && sedCommandIsAllowedByAllowlist(stripSafeWrappers(cmd.text))
       ? ('read' as FileOperationType)
       : undefined
-  const pathChecker = createPathChecker(
-    baseCmd as PathCommand,
-    operationTypeOverride,
-  )
+  const pathChecker = createPathChecker(baseCmd as PathCommand, operationTypeOverride)
   return pathChecker(args, cwd, toolPermissionContext, compoundCommandHasCd)
 }
 
@@ -956,16 +898,13 @@ function validateOutputRedirections(
     )
 
     if (!allowed) {
-      const workingDirs = Array.from(
-        allWorkingDirectories(toolPermissionContext),
-      )
+      const workingDirs = Array.from(allWorkingDirectories(toolPermissionContext))
       const dirListStr = formatDirectoryList(workingDirs)
 
       // Use security check's custom reason if available (type: 'other' or 'safetyCheck')
       // Otherwise use the standard message for deny rules or working directory restrictions
       const message =
-        decisionReason?.type === 'other' ||
-        decisionReason?.type === 'safetyCheck'
+        decisionReason?.type === 'other' || decisionReason?.type === 'safetyCheck'
           ? decisionReason.reason
           : decisionReason?.type === 'rule'
             ? `Output redirection to '${resolvedPath}' was blocked by a deny rule.`
@@ -1028,8 +967,7 @@ export function checkPathConstraints(
   if (!astCommands && />>\s*>\s*\(|>\s*>\s*\(|<\s*\(/.test(input.command)) {
     return {
       behavior: 'ask',
-      message:
-        'Process substitution (>(...) or <(...)) can execute arbitrary commands and requires manual approval',
+      message: 'Process substitution (>(...) or <(...)) can execute arbitrary commands and requires manual approval',
       decisionReason: {
         type: 'other',
         reason: 'Process substitution requires manual approval',
@@ -1059,12 +997,7 @@ export function checkPathConstraints(
       },
     }
   }
-  const redirectionResult = validateOutputRedirections(
-    redirections,
-    cwd,
-    toolPermissionContext,
-    compoundCommandHasCd,
-  )
+  const redirectionResult = validateOutputRedirections(redirections, cwd, toolPermissionContext, compoundCommandHasCd)
   if (redirectionResult.behavior !== 'passthrough') {
     return redirectionResult
   }
@@ -1076,12 +1009,7 @@ export function checkPathConstraints(
   // (isDangerousRemovalPath etc). The AST already resolved argv correctly.
   if (astCommands) {
     for (const cmd of astCommands) {
-      const result = validateSinglePathCommandArgv(
-        cmd,
-        cwd,
-        toolPermissionContext,
-        compoundCommandHasCd,
-      )
+      const result = validateSinglePathCommandArgv(cmd, cwd, toolPermissionContext, compoundCommandHasCd)
       if (result.behavior === 'ask' || result.behavior === 'deny') {
         return result
       }
@@ -1089,12 +1017,7 @@ export function checkPathConstraints(
   } else {
     const commands = splitCommand_DEPRECATED(input.command)
     for (const cmd of commands) {
-      const result = validateSinglePathCommand(
-        cmd,
-        cwd,
-        toolPermissionContext,
-        compoundCommandHasCd,
-      )
+      const result = validateSinglePathCommand(cmd, cwd, toolPermissionContext, compoundCommandHasCd)
       if (result.behavior === 'ask' || result.behavior === 'deny') {
         return result
       }
@@ -1185,31 +1108,16 @@ function skipTimeoutFlags(a: readonly string[]): number {
   while (i < a.length) {
     const arg = a[i]!
     const next = a[i + 1]
-    if (
-      arg === '--foreground' ||
-      arg === '--preserve-status' ||
-      arg === '--verbose'
-    )
-      i++
+    if (arg === '--foreground' || arg === '--preserve-status' || arg === '--verbose') i++
     else if (/^--(?:kill-after|signal)=[A-Za-z0-9_.+-]+$/.test(arg)) i++
-    else if (
-      (arg === '--kill-after' || arg === '--signal') &&
-      next &&
-      TIMEOUT_FLAG_VALUE_RE.test(next)
-    )
-      i += 2
+    else if ((arg === '--kill-after' || arg === '--signal') && next && TIMEOUT_FLAG_VALUE_RE.test(next)) i += 2
     else if (arg === '--') {
       i++
       break
     } // end-of-options marker
     else if (arg.startsWith('--')) return -1
     else if (arg === '-v') i++
-    else if (
-      (arg === '-k' || arg === '-s') &&
-      next &&
-      TIMEOUT_FLAG_VALUE_RE.test(next)
-    )
-      i += 2
+    else if ((arg === '-k' || arg === '-s') && next && TIMEOUT_FLAG_VALUE_RE.test(next)) i += 2
     else if (/^-[ks][A-Za-z0-9_.+-]+$/.test(arg)) i++
     else if (arg.startsWith('-')) return -1
     else break
@@ -1278,8 +1186,7 @@ export function stripWrappersFromArgv(argv: string[]): string[] {
       // `nice cmd` and legacy `nice -N cmd`, not just `nice -n N cmd`.
       // Previously only `-n N` was stripped: `nice rm /outside` →
       // baseCmd='nice' → passthrough → /outside never path-validated.
-      if (a[1] === '-n' && a[2] && /^-?\d+$/.test(a[2]))
-        a = a.slice(a[3] === '--' ? 4 : 3)
+      if (a[1] === '-n' && a[2] && /^-?\d+$/.test(a[2])) a = a.slice(a[3] === '--' ? 4 : 3)
       else if (a[1] && /^-\d+$/.test(a[1])) a = a.slice(a[2] === '--' ? 3 : 2)
       else a = a.slice(a[1] === '--' ? 2 : 1)
     } else if (a[0] === 'stdbuf') {

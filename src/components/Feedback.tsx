@@ -1,5 +1,6 @@
-import axios from 'axios'
 import { readFile, stat } from 'fs/promises'
+
+import axios from 'axios'
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { getLastAPIRequest } from 'src/bootstrap/state.js'
@@ -8,10 +9,8 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
-import {
-  getLastAssistantMessage,
-  normalizeMessagesForAPI,
-} from 'src/utils/messages.js'
+import { getLastAssistantMessage, normalizeMessagesForAPI } from 'src/utils/messages.js'
+
 import type { CommandResultDisplay } from '../commands.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { Box, Text, useInput } from '../ink.js'
@@ -93,10 +92,7 @@ export function redactSensitiveInfo(text: string): string {
   )
 
   // AWS keys - AWSXXXX format - add the pattern we need for the test
-  redacted = redacted.replace(
-    /AWS key: "(AWS[A-Z0-9]{20,})"/g,
-    'AWS key: "[REDACTED_AWS_KEY]"',
-  )
+  redacted = redacted.replace(/AWS key: "(AWS[A-Z0-9]{20,})"/g, 'AWS key: "[REDACTED_AWS_KEY]"')
 
   // AWS AKIAXXX keys
   redacted = redacted.replace(/(AKIA[A-Z0-9]{16})/g, '[REDACTED_AWS_KEY]')
@@ -116,10 +112,7 @@ export function redactSensitiveInfo(text: string): string {
   )
 
   // Generic API keys in headers
-  redacted = redacted.replace(
-    /(["']?x-api-key["']?\s*[:=]\s*["']?)[^"',\s)}\]]+/gi,
-    '$1[REDACTED_API_KEY]',
-  )
+  redacted = redacted.replace(/(["']?x-api-key["']?\s*[:=]\s*["']?)[^"',\s)}\]]+/gi, '$1[REDACTED_API_KEY]')
 
   // Authorization headers and Bearer tokens
   redacted = redacted.replace(
@@ -128,16 +121,10 @@ export function redactSensitiveInfo(text: string): string {
   )
 
   // AWS environment variables
-  redacted = redacted.replace(
-    /(AWS[_-][A-Za-z0-9_]+\s*[=:]\s*)["']?[^"',\s)}\]]+["']?/gi,
-    '$1[REDACTED_AWS_VALUE]',
-  )
+  redacted = redacted.replace(/(AWS[_-][A-Za-z0-9_]+\s*[=:]\s*)["']?[^"',\s)}\]]+["']?/gi, '$1[REDACTED_AWS_VALUE]')
 
   // GCP environment variables
-  redacted = redacted.replace(
-    /(GOOGLE[_-][A-Za-z0-9_]+\s*[=:]\s*)["']?[^"',\s)}\]]+["']?/gi,
-    '$1[REDACTED_GCP_VALUE]',
-  )
+  redacted = redacted.replace(/(GOOGLE[_-][A-Za-z0-9_]+\s*[=:]\s*)["']?[^"',\s)}\]]+["']?/gi, '$1[REDACTED_GCP_VALUE]')
 
   // Environment variables with keys
   redacted = redacted.replace(
@@ -154,7 +141,7 @@ function getSanitizedErrorLogs(): Array<{
   timestamp?: string
 }> {
   // Sanitize error logs to remove any API keys
-  return getInMemoryErrors().map(errorInfo => {
+  return getInMemoryErrors().map((errorInfo) => {
     // Create a copy of the error info to avoid modifying the original
     const errorCopy = { ...errorInfo } as { error?: string; timestamp?: string }
 
@@ -172,10 +159,7 @@ async function loadRawTranscriptJsonl(): Promise<string | null> {
     const transcriptPath = getTranscriptPath()
     const { size } = await stat(transcriptPath)
     if (size > MAX_TRANSCRIPT_READ_BYTES) {
-      logForDebugging(
-        `Skipping raw transcript read: file too large (${size} bytes)`,
-        { level: 'warn' },
-      )
+      logForDebugging(`Skipping raw transcript read: file too large (${size} bytes)`, { level: 'warn' })
       return null
     }
     return await readFile(transcriptPath, 'utf-8')
@@ -231,8 +215,7 @@ export function Feedback({
       loadAllSubagentTranscriptsFromDisk(),
       loadRawTranscriptJsonl(),
     ])
-    const teammateTranscripts =
-      extractTeammateTranscriptsFromTasks(backgroundTasks)
+    const teammateTranscripts = extractTeammateTranscriptsFromTasks(backgroundTasks)
     const subagentTranscripts = { ...diskTranscripts, ...teammateTranscripts }
 
     const reportData = {
@@ -264,26 +247,20 @@ export function Feedback({
       if (result.feedbackId) {
         setFeedbackId(result.feedbackId)
         logEvent('tengu_bug_report_submitted', {
-          feedback_id:
-            result.feedbackId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          feedback_id: result.feedbackId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           last_assistant_message_id:
             lastAssistantMessageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
         // 1P-only: freeform text approved for BQ. Join on feedback_id.
         logEventTo1P('tengu_bug_report_description', {
-          feedback_id:
-            result.feedbackId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          description: redactSensitiveInfo(
-            description,
-          ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          feedback_id: result.feedbackId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          description: redactSensitiveInfo(description) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
       }
       setStep('done')
     } else {
       if (result.isZdrOrg) {
-        setError(
-          'Feedback collection is not available for organizations with custom data retention policies.',
-        )
+        setError('Feedback collection is not available for organizations with custom data retention policies.')
       } else {
         setError('Could not submit feedback. Please try again later.')
       }
@@ -320,12 +297,7 @@ export function Feedback({
     if (step === 'done') {
       if (key.return && title) {
         // Open GitHub issue URL when Enter is pressed
-        const issueUrl = createGitHubIssueUrl(
-          feedbackId ?? '',
-          title,
-          description,
-          getSanitizedErrorLogs(),
-        )
+        const issueUrl = createGitHubIssueUrl(feedbackId ?? '', title, description, getSanitizedErrorLogs())
         void openBrowser(issueUrl)
       }
       if (error) {
@@ -357,28 +329,18 @@ export function Feedback({
       title="Submit Feedback / Bug Report"
       onCancel={handleCancel}
       isCancelActive={step !== 'userInput'}
-      inputGuide={exitState =>
+      inputGuide={(exitState) =>
         exitState.pending ? (
           <Text>Press {exitState.keyName} again to exit</Text>
         ) : step === 'userInput' ? (
           <Byline>
             <KeyboardShortcutHint shortcut="Enter" action="continue" />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline>
         ) : step === 'consent' ? (
           <Byline>
             <KeyboardShortcutHint shortcut="Enter" action="submit" />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline>
         ) : null
       }
@@ -388,7 +350,7 @@ export function Feedback({
           <Text>Describe the issue below:</Text>
           <TextInput
             value={description}
-            onChange={value => {
+            onChange={(value) => {
               setDescription(value)
               // Clear error when user starts editing to allow retry
               if (error) {
@@ -397,9 +359,7 @@ export function Feedback({
             }}
             columns={textInputColumns}
             onSubmit={() => setStep('consent')}
-            onExitMessage={() =>
-              onDone('Feedback cancelled', { display: 'system' })
-            }
+            onExitMessage={() => onDone('Feedback cancelled', { display: 'system' })}
             cursorOffset={cursorOffset}
             onChangeCursorOffset={setCursorOffset}
             showCursor
@@ -407,9 +367,7 @@ export function Feedback({
           {error && (
             <Box flexDirection="column" gap={1}>
               <Text color="error">{error}</Text>
-              <Text dimColor>
-                Edit and press Enter to retry, or Esc to cancel
-              </Text>
+              <Text dimColor>Edit and press Enter to retry, or Esc to cancel</Text>
             </Box>
           )}
         </Box>
@@ -420,8 +378,7 @@ export function Feedback({
           <Text>This report will include:</Text>
           <Box marginLeft={2} flexDirection="column">
             <Text>
-              - Your feedback / bug description:{' '}
-              <Text dimColor>{description}</Text>
+              - Your feedback / bug description: <Text dimColor>{description}</Text>
             </Text>
             <Text>
               - Environment info:{' '}
@@ -434,12 +391,8 @@ export function Feedback({
                 - Git repo metadata:{' '}
                 <Text dimColor>
                   {envInfo.gitState.branchName}
-                  {envInfo.gitState.commitHash
-                    ? `, ${envInfo.gitState.commitHash.slice(0, 7)}`
-                    : ''}
-                  {envInfo.gitState.remoteUrl
-                    ? ` @ ${envInfo.gitState.remoteUrl}`
-                    : ''}
+                  {envInfo.gitState.commitHash ? `, ${envInfo.gitState.commitHash.slice(0, 7)}` : ''}
+                  {envInfo.gitState.remoteUrl ? ` @ ${envInfo.gitState.remoteUrl}` : ''}
                   {!envInfo.gitState.isHeadOnRemote && ', not synced'}
                   {!envInfo.gitState.isClean && ', has local changes'}
                 </Text>
@@ -449,9 +402,8 @@ export function Feedback({
           </Box>
           <Box marginTop={1}>
             <Text wrap="wrap" dimColor>
-              We will use your feedback to debug related issues or to improve{' '}
-              Claude Code&apos;s functionality (eg. to reduce the risk of bugs
-              occurring in the future).
+              We will use your feedback to debug related issues or to improve Claude Code&apos;s functionality (eg. to
+              reduce the risk of bugs occurring in the future).
             </Text>
           </Box>
           <Box marginTop={1}>
@@ -470,19 +422,12 @@ export function Feedback({
 
       {step === 'done' && (
         <Box flexDirection="column">
-          {error ? (
-            <Text color="error">{error}</Text>
-          ) : (
-            <Text color="success">Thank you for your report!</Text>
-          )}
+          {error ? <Text color="error">{error}</Text> : <Text color="success">Thank you for your report!</Text>}
           {feedbackId && <Text dimColor>Feedback ID: {feedbackId}</Text>}
           <Box marginTop={1}>
             <Text>Press </Text>
             <Text bold>Enter </Text>
-            <Text>
-              to open your browser and draft a GitHub issue, or any other key to
-              close.
-            </Text>
+            <Text>to open your browser and draft a GitHub issue, or any other key to close.</Text>
           </Box>
         </Box>
       )}
@@ -523,22 +468,13 @@ export function createGitHubIssueUrl(
 
   // Calculate space available for errors
   const spaceForErrors =
-    GITHUB_URL_LIMIT -
-    baseUrl.length -
-    encodedPrefix.length -
-    encodedSuffix.length -
-    encodedNote.length
+    GITHUB_URL_LIMIT - baseUrl.length - encodedPrefix.length - encodedSuffix.length - encodedNote.length
 
   // If description alone exceeds limit, truncate everything
   if (spaceForErrors <= 0) {
     const ellipsis = encodeURIComponent('…')
     const buffer = 50 // Extra safety margin
-    const maxEncodedLength =
-      GITHUB_URL_LIMIT -
-      baseUrl.length -
-      ellipsis.length -
-      encodedNote.length -
-      buffer
+    const maxEncodedLength = GITHUB_URL_LIMIT - baseUrl.length - ellipsis.length - encodedNote.length - buffer
     const fullBody = bodyPrefix + errorsJson + errorSuffix
     let encodedFullBody = encodeURIComponent(fullBody)
 
@@ -563,30 +499,17 @@ export function createGitHubIssueUrl(
   // Slice encoded errors directly, then trim to avoid cutting %XX sequences
   const ellipsis = encodeURIComponent('…')
   const buffer = 50 // Extra safety margin
-  let truncatedEncodedErrors = encodedErrors.slice(
-    0,
-    spaceForErrors - ellipsis.length - buffer,
-  )
+  let truncatedEncodedErrors = encodedErrors.slice(0, spaceForErrors - ellipsis.length - buffer)
   // If we cut in middle of %XX, back up to before the %
   const lastPercent = truncatedEncodedErrors.lastIndexOf('%')
   if (lastPercent >= truncatedEncodedErrors.length - 2) {
     truncatedEncodedErrors = truncatedEncodedErrors.slice(0, lastPercent)
   }
 
-  return (
-    baseUrl +
-    encodedPrefix +
-    truncatedEncodedErrors +
-    ellipsis +
-    encodedSuffix +
-    encodedNote
-  )
+  return baseUrl + encodedPrefix + truncatedEncodedErrors + ellipsis + encodedSuffix + encodedNote
 }
 
-async function generateTitle(
-  description: string,
-  abortSignal: AbortSignal,
-): Promise<string> {
+async function generateTitle(description: string, abortSignal: AbortSignal): Promise<string> {
   try {
     const response = await queryHaiku({
       systemPrompt: asSystemPrompt([
@@ -615,10 +538,7 @@ async function generateTitle(
       },
     })
 
-    const title =
-      response.message.content[0]?.type === 'text'
-        ? response.message.content[0].text
-        : 'Bug Report'
+    const title = response.message.content[0]?.type === 'text' ? response.message.content[0].text : 'Bug Report'
 
     // Check if the title contains an API error message
     if (startsWithApiErrorPrefix(title)) {
@@ -720,17 +640,11 @@ async function submitFeedback(
       if (result?.feedback_id) {
         return { success: true, feedbackId: result.feedback_id }
       }
-      sanitizeAndLogError(
-        new Error(
-          'Failed to submit feedback: request did not return feedback_id',
-        ),
-      )
+      sanitizeAndLogError(new Error('Failed to submit feedback: request did not return feedback_id'))
       return { success: false }
     }
 
-    sanitizeAndLogError(
-      new Error('Failed to submit feedback:' + response.status),
-    )
+    sanitizeAndLogError(new Error('Failed to submit feedback:' + response.status))
     return { success: false }
   } catch (err) {
     // Handle cancellation/abort - don't log as error
@@ -744,11 +658,7 @@ async function submitFeedback(
         errorData?.error?.type === 'permission_error' &&
         errorData?.error?.message?.includes('Custom data retention settings')
       ) {
-        sanitizeAndLogError(
-          new Error(
-            'Cannot submit feedback because custom data retention settings are enabled',
-          ),
-        )
+        sanitizeAndLogError(new Error('Cannot submit feedback because custom data retention settings are enabled'))
         return { success: false, isZdrOrg: true }
       }
     }

@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { Select } from '../CustomSelect/select.js'
 import { PermissionDialog } from '../permissions/PermissionDialog.js'
@@ -24,11 +25,7 @@ export function LspRecommendationMenu({
 
   // 30-second auto-dismiss timer - counts as ignored (no)
   React.useEffect(() => {
-    const timeoutId = setTimeout(
-      ref => ref.current('no'),
-      AUTO_DISMISS_MS,
-      onResponseRef,
-    )
+    const timeoutId = setTimeout((ref) => ref.current('no'), AUTO_DISMISS_MS, onResponseRef)
     return () => clearTimeout(timeoutId)
   }, [])
 
@@ -80,10 +77,7 @@ export function LspRecommendationMenu({
     <PermissionDialog title="LSP Plugin Recommendation">
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Box marginBottom={1}>
-          <Text dimColor>
-            LSP provides code intelligence like go-to-definition and error
-            checking
-          </Text>
+          <Text dimColor>LSP provides code intelligence like go-to-definition and error checking</Text>
         </Box>
         <Box>
           <Text dimColor>Plugin:</Text>
@@ -102,11 +96,7 @@ export function LspRecommendationMenu({
           <Text>Would you like to install this LSP plugin?</Text>
         </Box>
         <Box>
-          <Select
-            options={options}
-            onChange={onSelect}
-            onCancel={() => onResponse('no')}
-          />
+          <Select options={options} onChange={onSelect} onCancel={() => onResponse('no')} />
         </Box>
       </Box>
     </PermissionDialog>

@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useContext } from 'react'
+
 import { Box, NoSelect, Text } from '../ink.js'
 import { Ratchet } from './design-system/Ratchet.js'
 
@@ -36,14 +37,6 @@ export function MessageResponse({ children, height }: Props): React.ReactNode {
 // to avoid rendering nested ⎿ characters.
 const MessageResponseContext = React.createContext(false)
 
-function MessageResponseProvider({
-  children,
-}: {
-  children: React.ReactNode
-}): React.ReactNode {
-  return (
-    <MessageResponseContext.Provider value={true}>
-      {children}
-    </MessageResponseContext.Provider>
-  )
+function MessageResponseProvider({ children }: { children: React.ReactNode }): React.ReactNode {
+  return <MessageResponseContext.Provider value={true}>{children}</MessageResponseContext.Provider>
 }

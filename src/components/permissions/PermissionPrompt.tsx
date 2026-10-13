@@ -1,4 +1,5 @@
 import React, { type ReactNode, useCallback, useMemo, useState } from 'react'
+
 import { Box, Text } from '../../ink.js'
 import type { KeybindingAction } from '../../keybindings/types.js'
 import { useKeybindings } from '../../keybindings/useKeybinding.js'
@@ -63,23 +64,20 @@ export function PermissionPrompt<T extends string>({
   const [rejectInputMode, setRejectInputMode] = useState(false)
   const [focusedValue, setFocusedValue] = useState<T | null>(null)
   // Track whether user ever entered feedback mode (persists after collapse)
-  const [acceptFeedbackModeEntered, setAcceptFeedbackModeEntered] =
-    useState(false)
-  const [rejectFeedbackModeEntered, setRejectFeedbackModeEntered] =
-    useState(false)
+  const [acceptFeedbackModeEntered, setAcceptFeedbackModeEntered] = useState(false)
+  const [rejectFeedbackModeEntered, setRejectFeedbackModeEntered] = useState(false)
 
   // Find which option is focused and whether it has feedback config
-  const focusedOption = options.find(opt => opt.value === focusedValue)
+  const focusedOption = options.find((opt) => opt.value === focusedValue)
   const focusedFeedbackType = focusedOption?.feedbackConfig?.type
 
   // Show Tab hint when focused on a feedback-enabled option that's not already in input mode
   const showTabHint =
-    (focusedFeedbackType === 'accept' && !acceptInputMode) ||
-    (focusedFeedbackType === 'reject' && !rejectInputMode)
+    (focusedFeedbackType === 'accept' && !acceptInputMode) || (focusedFeedbackType === 'reject' && !rejectInputMode)
 
   // Transform options to Select-compatible format
   const selectOptions = useMemo((): OptionWithDescription<T>[] => {
-    return options.map(opt => {
+    return options.map((opt) => {
       const { value, label, feedbackConfig } = opt
 
       // No feedback config = simple option
@@ -118,13 +116,12 @@ export function PermissionPrompt<T extends string>({
   // Handle Tab key to toggle input mode
   const handleInputModeToggle = useCallback(
     (value: T) => {
-      const option = options.find(opt => opt.value === value)
+      const option = options.find((opt) => opt.value === value)
       if (!option?.feedbackConfig) return
 
       const { type } = option.feedbackConfig
       const analyticsProps = {
-        toolName:
-          toolAnalyticsContext?.toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        toolName: toolAnalyticsContext?.toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         isMcp: toolAnalyticsContext?.isMcp ?? false,
       }
 
@@ -154,16 +151,13 @@ export function PermissionPrompt<T extends string>({
   // Handle selection
   const handleSelect = useCallback(
     (value: T) => {
-      const option = options.find(opt => opt.value === value)
+      const option = options.find((opt) => opt.value === value)
       if (!option) return
 
       // Get feedback if applicable
       let feedback: string | undefined
       if (option.feedbackConfig) {
-        const rawFeedback =
-          option.feedbackConfig.type === 'accept'
-            ? acceptFeedback
-            : rejectFeedback
+        const rawFeedback = option.feedbackConfig.type === 'accept' ? acceptFeedback : rejectFeedback
         const trimmedFeedback = rawFeedback.trim()
 
         if (trimmedFeedback) {
@@ -172,15 +166,12 @@ export function PermissionPrompt<T extends string>({
 
         // Log accept/reject submission with feedback context
         const analyticsProps = {
-          toolName:
-            toolAnalyticsContext?.toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          toolName: toolAnalyticsContext?.toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           isMcp: toolAnalyticsContext?.isMcp ?? false,
           has_instructions: !!trimmedFeedback,
           instructions_length: trimmedFeedback?.length ?? 0,
           entered_feedback_mode:
-            option.feedbackConfig.type === 'accept'
-              ? acceptFeedbackModeEntered
-              : rejectFeedbackModeEntered,
+            option.feedbackConfig.type === 'accept' ? acceptFeedbackModeEntered : rejectFeedbackModeEntered,
         }
 
         if (option.feedbackConfig.type === 'accept') {
@@ -220,7 +211,7 @@ export function PermissionPrompt<T extends string>({
   const handleCancel = useCallback(() => {
     logEvent('tengu_permission_request_escape', {})
     // Increment escape count for attribution tracking
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
       attribution: {
         ...prev.attribution,
@@ -238,21 +229,13 @@ export function PermissionPrompt<T extends string>({
         inlineDescriptions
         onChange={handleSelect}
         onCancel={handleCancel}
-        onFocus={value => {
+        onFocus={(value) => {
           // Reset input mode when navigating away, but only if no text typed
-          const newOption = options.find(opt => opt.value === value)
-          if (
-            newOption?.feedbackConfig?.type !== 'accept' &&
-            acceptInputMode &&
-            !acceptFeedback.trim()
-          ) {
+          const newOption = options.find((opt) => opt.value === value)
+          if (newOption?.feedbackConfig?.type !== 'accept' && acceptInputMode && !acceptFeedback.trim()) {
             setAcceptInputMode(false)
           }
-          if (
-            newOption?.feedbackConfig?.type !== 'reject' &&
-            rejectInputMode &&
-            !rejectFeedback.trim()
-          ) {
+          if (newOption?.feedbackConfig?.type !== 'reject' && rejectInputMode && !rejectFeedback.trim()) {
             setRejectInputMode(false)
           }
           setFocusedValue(value)

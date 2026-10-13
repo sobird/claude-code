@@ -1,5 +1,6 @@
 import figures from 'figures'
 import React, { useState } from 'react'
+
 import { Box, Text } from '../ink.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
 import TextInput from './TextInput.js'
@@ -10,15 +11,9 @@ type Props = {
   onCancel: () => void
 }
 
-export function LanguagePicker({
-  initialLanguage,
-  onComplete,
-  onCancel,
-}: Props): React.ReactNode {
+export function LanguagePicker({ initialLanguage, onComplete, onCancel }: Props): React.ReactNode {
   const [language, setLanguage] = useState(initialLanguage)
-  const [cursorOffset, setCursorOffset] = useState(
-    (initialLanguage ?? '').length,
-  )
+  const [cursorOffset, setCursorOffset] = useState((initialLanguage ?? '').length)
 
   // Use configurable keybinding for ESC to cancel
   // Use Settings context so 'n' key doesn't trigger cancel (allows typing 'n' in input)

@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
@@ -22,10 +23,7 @@ export function areExplorePlanAgentsEnabled(): boolean {
 export function getBuiltInAgents(): AgentDefinition[] {
   // Allow disabling all built-in agents via env var (useful for SDK users who want a blank slate)
   // Only applies in noninteractive mode (SDK/API usage)
-  if (
-    isEnvTruthy(process.env.CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS) &&
-    getIsNonInteractiveSession()
-  ) {
+  if (isEnvTruthy(process.env.CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS) && getIsNonInteractiveSession()) {
     return []
   }
 
@@ -42,10 +40,7 @@ export function getBuiltInAgents(): AgentDefinition[] {
     }
   }
 
-  const agents: AgentDefinition[] = [
-    GENERAL_PURPOSE_AGENT,
-    STATUSLINE_SETUP_AGENT,
-  ]
+  const agents: AgentDefinition[] = [GENERAL_PURPOSE_AGENT, STATUSLINE_SETUP_AGENT]
 
   if (areExplorePlanAgentsEnabled()) {
     agents.push(EXPLORE_AGENT, PLAN_AGENT)
@@ -61,10 +56,7 @@ export function getBuiltInAgents(): AgentDefinition[] {
     agents.push(CLAUDE_CODE_GUIDE_AGENT)
   }
 
-  if (
-    feature('VERIFICATION_AGENT') &&
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_hive_evidence', false)
-  ) {
+  if (feature('VERIFICATION_AGENT') && getFeatureValue_CACHED_MAY_BE_STALE('tengu_hive_evidence', false)) {
     agents.push(VERIFICATION_AGENT)
   }
 

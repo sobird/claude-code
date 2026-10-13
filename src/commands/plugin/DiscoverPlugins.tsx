@@ -1,6 +1,7 @@
 import figures from 'figures'
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+
 import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint.js'
 import { Byline } from '../../components/design-system/Byline.js'
 import { SearchBox } from '../../components/SearchBox.js'
@@ -8,20 +9,14 @@ import { useSearchInput } from '../../hooks/useSearchInput.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- useInput needed for raw search mode text input
 import { Box, Text, useInput, useTerminalFocus } from '../../ink.js'
-import {
-  useKeybinding,
-  useKeybindings,
-} from '../../keybindings/useKeybinding.js'
+import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { LoadedPlugin } from '../../types/plugin.js'
 import { count } from '../../utils/array.js'
 import { openBrowser } from '../../utils/browser.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
 import { clearAllCaches } from '../../utils/plugins/cacheUtils.js'
-import {
-  formatInstallCount,
-  getInstallCounts,
-} from '../../utils/plugins/installCounts.js'
+import { formatInstallCount, getInstallCounts } from '../../utils/plugins/installCounts.js'
 import { isPluginGloballyInstalled } from '../../utils/plugins/installedPluginsManager.js'
 import {
   createPluginId,
@@ -37,16 +32,9 @@ import { installPluginFromMarketplace } from '../../utils/plugins/pluginInstalla
 import { isPluginBlockedByPolicy } from '../../utils/plugins/pluginPolicy.js'
 import { plural } from '../../utils/stringUtils.js'
 import { truncateToWidth } from '../../utils/truncate.js'
-import {
-  findPluginOptionsTarget,
-  PluginOptionsFlow,
-} from './PluginOptionsFlow.js'
+import { buildPluginDetailsMenuOptions, extractGitHubRepo, type InstallablePlugin } from './pluginDetailsHelpers.js'
+import { findPluginOptionsTarget, PluginOptionsFlow } from './PluginOptionsFlow.js'
 import { PluginTrustWarning } from './PluginTrustWarning.js'
-import {
-  buildPluginDetailsMenuOptions,
-  extractGitHubRepo,
-  type InstallablePlugin,
-} from './pluginDetailsHelpers.js'
 import type { ViewState as ParentViewState } from './types.js'
 import { usePagination } from './usePagination.js'
 
@@ -61,10 +49,7 @@ type Props = {
   targetPlugin?: string
 }
 
-type ViewState =
-  | 'plugin-list'
-  | 'plugin-details'
-  | { type: 'plugin-options'; plugin: LoadedPlugin; pluginId: string }
+type ViewState = 'plugin-list' | 'plugin-details' | { type: 'plugin-options'; plugin: LoadedPlugin; pluginId: string }
 
 export function DiscoverPlugins({
   error,
@@ -78,18 +63,12 @@ export function DiscoverPlugins({
 }: Props): React.ReactNode {
   // View state
   const [viewState, setViewState] = useState<ViewState>('plugin-list')
-  const [selectedPlugin, setSelectedPlugin] =
-    useState<InstallablePlugin | null>(null)
+  const [selectedPlugin, setSelectedPlugin] = useState<InstallablePlugin | null>(null)
 
   // Data state
-  const [availablePlugins, setAvailablePlugins] = useState<InstallablePlugin[]>(
-    [],
-  )
+  const [availablePlugins, setAvailablePlugins] = useState<InstallablePlugin[]>([])
   const [loading, setLoading] = useState(true)
-  const [installCounts, setInstallCounts] = useState<Map<
-    string,
-    number
-  > | null>(null)
+  const [installCounts, setInstallCounts] = useState<Map<string, number> | null>(null)
 
   // Search state
   const [isSearchMode, setIsSearchModeRaw] = useState(false)
@@ -118,7 +97,7 @@ export function DiscoverPlugins({
     if (!searchQuery) return availablePlugins
     const lowerQuery = searchQuery.toLowerCase()
     return availablePlugins.filter(
-      plugin =>
+      (plugin) =>
         plugin.entry.name.toLowerCase().includes(lowerQuery) ||
         plugin.entry.description?.toLowerCase().includes(lowerQuery) ||
         plugin.marketplaceName.toLowerCase().includes(lowerQuery),
@@ -127,12 +106,8 @@ export function DiscoverPlugins({
 
   // Selection state
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [selectedForInstall, setSelectedForInstall] = useState<Set<string>>(
-    new Set(),
-  )
-  const [installingPlugins, setInstallingPlugins] = useState<Set<string>>(
-    new Set(),
-  )
+  const [selectedForInstall, setSelectedForInstall] = useState<Set<string>>(new Set())
+  const [installingPlugins, setInstallingPlugins] = useState<Set<string>>(new Set())
 
   // Pagination for plugin list (continuous scrolling)
   const pagination = usePagination<InstallablePlugin>({
@@ -154,9 +129,7 @@ export function DiscoverPlugins({
   const [warning, setWarning] = useState<string | null>(null)
 
   // Empty state reason
-  const [emptyReason, setEmptyReason] = useState<EmptyMarketplaceReason | null>(
-    null,
-  )
+  const [emptyReason, setEmptyReason] = useState<EmptyMarketplaceReason | null>(null)
 
   // Load all plugins from all marketplaces
   useEffect(() => {
@@ -165,8 +138,7 @@ export function DiscoverPlugins({
         const config = await loadKnownMarketplacesConfig()
 
         // Load marketplaces with graceful degradation
-        const { marketplaces, failures } =
-          await loadMarketplacesWithGracefulDegradation(config)
+        const { marketplaces, failures } = await loadMarketplacesWithGracefulDegradation(config)
 
         // Collect all plugins from all marketplaces
         const allPlugins: InstallablePlugin[] = []
@@ -189,9 +161,7 @@ export function DiscoverPlugins({
         }
 
         // Filter out installed and policy-blocked plugins
-        const uninstalledPlugins = allPlugins.filter(
-          p => !p.isInstalled && !isPluginBlockedByPolicy(p.pluginId),
-        )
+        const uninstalledPlugins = allPlugins.filter((p) => !p.isInstalled && !isPluginBlockedByPolicy(p.pluginId))
 
         // Fetch install counts and sort by popularity
         try {
@@ -208,18 +178,12 @@ export function DiscoverPlugins({
             })
           } else {
             // No counts available - sort alphabetically
-            uninstalledPlugins.sort((a, b) =>
-              a.entry.name.localeCompare(b.entry.name),
-            )
+            uninstalledPlugins.sort((a, b) => a.entry.name.localeCompare(b.entry.name))
           }
         } catch (error) {
           // Log the error, then gracefully degrade to alphabetical sort
-          logForDebugging(
-            `Failed to fetch install counts: ${errorMessage(error)}`,
-          )
-          uninstalledPlugins.sort((a, b) =>
-            a.entry.name.localeCompare(b.entry.name),
-          )
+          logForDebugging(`Failed to fetch install counts: ${errorMessage(error)}`)
+          uninstalledPlugins.sort((a, b) => a.entry.name.localeCompare(b.entry.name))
         }
 
         setAvailablePlugins(uninstalledPlugins)
@@ -235,11 +199,8 @@ export function DiscoverPlugins({
         }
 
         // Handle marketplace loading errors/warnings
-        const successCount = count(marketplaces, m => m.data !== null)
-        const errorResult = formatMarketplaceLoadingErrors(
-          failures,
-          successCount,
-        )
+        const successCount = count(marketplaces, (m) => m.data !== null)
+        const errorResult = formatMarketplaceLoadingErrors(failures, successCount)
         if (errorResult) {
           if (errorResult.type === 'warning') {
             setWarning(errorResult.message + '. Showing available plugins.')
@@ -251,9 +212,7 @@ export function DiscoverPlugins({
         // Handle targetPlugin - navigate directly to plugin details
         // Search in allPlugins (before filtering) to handle installed plugins gracefully
         if (targetPlugin) {
-          const foundPlugin = allPlugins.find(
-            p => p.entry.name === targetPlugin,
-          )
+          const foundPlugin = allPlugins.find((p) => p.entry.name === targetPlugin)
 
           if (foundPlugin) {
             if (foundPlugin.isInstalled) {
@@ -281,11 +240,9 @@ export function DiscoverPlugins({
   const installSelectedPlugins = async () => {
     if (selectedForInstall.size === 0) return
 
-    const pluginsToInstall = availablePlugins.filter(p =>
-      selectedForInstall.has(p.pluginId),
-    )
+    const pluginsToInstall = availablePlugins.filter((p) => selectedForInstall.has(p.pluginId))
 
-    setInstallingPlugins(new Set(pluginsToInstall.map(p => p.pluginId)))
+    setInstallingPlugins(new Set(pluginsToInstall.map((p) => p.pluginId)))
 
     let successCount = 0
     let failureCount = 0
@@ -317,13 +274,10 @@ export function DiscoverPlugins({
     // Handle installation results
     if (failureCount === 0) {
       const message =
-        `✓ Installed ${successCount} ${plural(successCount, 'plugin')}. ` +
-        `Run /reload-plugins to activate.`
+        `✓ Installed ${successCount} ${plural(successCount, 'plugin')}. ` + `Run /reload-plugins to activate.`
       setResult(message)
     } else if (successCount === 0) {
-      setError(
-        `Failed to install: ${formatFailureDetails(newFailedPlugins, true)}`,
-      )
+      setError(`Failed to install: ${formatFailureDetails(newFailedPlugins, true)}`)
     } else {
       const message =
         `✓ Installed ${successCount} of ${successCount + failureCount} plugins. ` +
@@ -342,10 +296,7 @@ export function DiscoverPlugins({
   }
 
   // Install single plugin from details view
-  const handleSinglePluginInstall = async (
-    plugin: InstallablePlugin,
-    scope: 'user' | 'project' | 'local' = 'user',
-  ) => {
+  const handleSinglePluginInstall = async (plugin: InstallablePlugin, scope: 'user' | 'project' | 'local' = 'user') => {
     setIsInstalling(true)
     setInstallError(null)
 
@@ -452,10 +403,7 @@ export function DiscoverPlugins({
         }
       },
       'select:accept': () => {
-        if (
-          selectedIndex === filteredPlugins.length &&
-          selectedForInstall.size > 0
-        ) {
+        if (selectedIndex === filteredPlugins.length && selectedForInstall.size > 0) {
           void installSelectedPlugins()
         } else if (selectedIndex < filteredPlugins.length) {
           const plugin = filteredPlugins[selectedIndex]
@@ -573,14 +521,10 @@ export function DiscoverPlugins({
         onDone={(outcome, detail) => {
           switch (outcome) {
             case 'configured':
-              finish(
-                `✓ Installed and configured ${plugin.name}. Run /reload-plugins to apply.`,
-              )
+              finish(`✓ Installed and configured ${plugin.name}. Run /reload-plugins to apply.`)
               break
             case 'skipped':
-              finish(
-                `✓ Installed ${plugin.name}. Run /reload-plugins to apply.`,
-              )
+              finish(`✓ Installed ${plugin.name}. Run /reload-plugins to apply.`)
               break
             case 'error':
               finish(`Installed but failed to save config: ${detail}`)
@@ -617,9 +561,7 @@ export function DiscoverPlugins({
         <Box flexDirection="column" marginBottom={1}>
           <Text bold>{selectedPlugin.entry.name}</Text>
           <Text dimColor>from {selectedPlugin.marketplaceName}</Text>
-          {selectedPlugin.entry.version && (
-            <Text dimColor>Version: {selectedPlugin.entry.version}</Text>
-          )}
+          {selectedPlugin.entry.version && <Text dimColor>Version: {selectedPlugin.entry.version}</Text>}
           {selectedPlugin.entry.description && (
             <Box marginTop={1}>
               <Text>{selectedPlugin.entry.description}</Text>
@@ -651,9 +593,7 @@ export function DiscoverPlugins({
               {detailsMenuIndex === index && <Text>{'> '}</Text>}
               {detailsMenuIndex !== index && <Text>{'  '}</Text>}
               <Text bold={detailsMenuIndex === index}>
-                {isInstalling && option.action.startsWith('install-')
-                  ? 'Installing…'
-                  : option.label}
+                {isInstalling && option.action.startsWith('install-') ? 'Installing…' : option.label}
               </Text>
             </Box>
           ))}
@@ -662,18 +602,8 @@ export function DiscoverPlugins({
         <Box marginTop={1}>
           <Text dimColor>
             <Byline>
-              <ConfigurableShortcutHint
-                action="select:accept"
-                context="Select"
-                fallback="Enter"
-                description="select"
-              />
-              <ConfigurableShortcutHint
-                action="confirm:no"
-                context="Confirmation"
-                fallback="Esc"
-                description="back"
-              />
+              <ConfigurableShortcutHint action="select:accept" context="Select" fallback="Enter" description="select" />
+              <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />
             </Byline>
           </Text>
         </Box>
@@ -708,8 +638,7 @@ export function DiscoverPlugins({
         {pagination.needsPagination && (
           <Text dimColor>
             {' '}
-            ({pagination.scrollPosition.current}/
-            {pagination.scrollPosition.total})
+            ({pagination.scrollPosition.current}/{pagination.scrollPosition.total})
           </Text>
         )}
       </Box>
@@ -763,39 +692,25 @@ export function DiscoverPlugins({
             marginBottom={isLast && !error ? 0 : 1}
           >
             <Box>
-              <Text
-                color={isSelected && !isSearchMode ? 'suggestion' : undefined}
-              >
+              <Text color={isSelected && !isSearchMode ? 'suggestion' : undefined}>
                 {isSelected && !isSearchMode ? figures.pointer : ' '}{' '}
               </Text>
               <Text>
-                {isInstallingThis
-                  ? figures.ellipsis
-                  : isSelectedForInstall
-                    ? figures.radioOn
-                    : figures.radioOff}{' '}
+                {isInstallingThis ? figures.ellipsis : isSelectedForInstall ? figures.radioOn : figures.radioOff}{' '}
                 {plugin.entry.name}
                 <Text dimColor> · {plugin.marketplaceName}</Text>
-                {plugin.entry.tags?.includes('community-managed') && (
-                  <Text dimColor> [Community Managed]</Text>
+                {plugin.entry.tags?.includes('community-managed') && <Text dimColor> [Community Managed]</Text>}
+                {installCounts && plugin.marketplaceName === OFFICIAL_MARKETPLACE_NAME && (
+                  <Text dimColor>
+                    {' · '}
+                    {formatInstallCount(installCounts.get(plugin.pluginId) ?? 0)} installs
+                  </Text>
                 )}
-                {installCounts &&
-                  plugin.marketplaceName === OFFICIAL_MARKETPLACE_NAME && (
-                    <Text dimColor>
-                      {' · '}
-                      {formatInstallCount(
-                        installCounts.get(plugin.pluginId) ?? 0,
-                      )}{' '}
-                      installs
-                    </Text>
-                  )}
               </Text>
             </Box>
             {plugin.entry.description && (
               <Box marginLeft={4}>
-                <Text dimColor>
-                  {truncateToWidth(plugin.entry.description, 60)}
-                </Text>
+                <Text dimColor>{truncateToWidth(plugin.entry.description, 60)}</Text>
               </Box>
             )}
           </Box>
@@ -820,10 +735,7 @@ export function DiscoverPlugins({
 
       <DiscoverPluginsKeyHint
         hasSelection={selectedForInstall.size > 0}
-        canToggle={
-          selectedIndex < filteredPlugins.length &&
-          !filteredPlugins[selectedIndex]?.isInstalled
-        }
+        canToggle={selectedIndex < filteredPlugins.length && !filteredPlugins[selectedIndex]?.isInstalled}
       />
     </Box>
   )
@@ -851,25 +763,10 @@ function DiscoverPluginsKeyHint({
           )}
           <Text>type to search</Text>
           {canToggle && (
-            <ConfigurableShortcutHint
-              action="plugin:toggle"
-              context="Plugin"
-              fallback="Space"
-              description="toggle"
-            />
+            <ConfigurableShortcutHint action="plugin:toggle" context="Plugin" fallback="Space" description="toggle" />
           )}
-          <ConfigurableShortcutHint
-            action="select:accept"
-            context="Select"
-            fallback="Enter"
-            description="details"
-          />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="back"
-          />
+          <ConfigurableShortcutHint action="select:accept" context="Select" fallback="Enter" description="details" />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />
         </Byline>
       </Text>
     </Box>
@@ -879,11 +776,7 @@ function DiscoverPluginsKeyHint({
 /**
  * Context-aware empty state message for the Discover screen
  */
-function EmptyStateMessage({
-  reason,
-}: {
-  reason: EmptyMarketplaceReason | null
-}): React.ReactNode {
+function EmptyStateMessage({ reason }: { reason: EmptyMarketplaceReason | null }): React.ReactNode {
   switch (reason) {
     case 'git-not-installed':
       return (
@@ -895,21 +788,15 @@ function EmptyStateMessage({
     case 'all-blocked-by-policy':
       return (
         <>
-          <Text dimColor>
-            Your organization policy does not allow any external marketplaces.
-          </Text>
+          <Text dimColor>Your organization policy does not allow any external marketplaces.</Text>
           <Text dimColor>Contact your administrator.</Text>
         </>
       )
     case 'policy-restricts-sources':
       return (
         <>
-          <Text dimColor>
-            Your organization restricts which marketplaces can be added.
-          </Text>
-          <Text dimColor>
-            Switch to the Marketplaces tab to view allowed sources.
-          </Text>
+          <Text dimColor>Your organization restricts which marketplaces can be added.</Text>
+          <Text dimColor>Switch to the Marketplaces tab to view allowed sources.</Text>
         </>
       )
     case 'all-marketplaces-failed':
@@ -923,9 +810,7 @@ function EmptyStateMessage({
       return (
         <>
           <Text dimColor>All available plugins are already installed.</Text>
-          <Text dimColor>
-            Check for new plugins later or add more marketplaces.
-          </Text>
+          <Text dimColor>Check for new plugins later or add more marketplaces.</Text>
         </>
       )
     case 'no-marketplaces-configured':
@@ -933,9 +818,7 @@ function EmptyStateMessage({
       return (
         <>
           <Text dimColor>No plugins available.</Text>
-          <Text dimColor>
-            Add a marketplace first using the Marketplaces tab.
-          </Text>
+          <Text dimColor>Add a marketplace first using the Marketplaces tab.</Text>
         </>
       )
   }

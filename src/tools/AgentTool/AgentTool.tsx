@@ -1,20 +1,13 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
 import { buildTool, type ToolDef, toolMatchesName } from 'src/Tool.js'
-import type {
-  Message as MessageType,
-  NormalizedUserMessage,
-} from 'src/types/message.js'
+import type { Message as MessageType, NormalizedUserMessage } from 'src/types/message.js'
 import { getQuerySourceForAgent } from 'src/utils/promptCategory.js'
 import { z } from 'zod/v4'
-import {
-  clearInvokedSkillsForAgent,
-  getSdkAgentProgressSummariesEnabled,
-} from '../../bootstrap/state.js'
-import {
-  enhanceSystemPromptWithEnvDetails,
-  getSystemPrompt,
-} from '../../constants/prompts.js'
+
+import { clearInvokedSkillsForAgent, getSdkAgentProgressSummariesEnabled } from '../../bootstrap/state.js'
+import { enhanceSystemPromptWithEnvDetails, getSystemPrompt } from '../../constants/prompts.js'
 import { isCoordinatorMode } from '../../coordinator/coordinatorMode.js'
 import { startAgentSummarization } from '../../services/AgentSummary/agentSummary.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
@@ -55,19 +48,11 @@ import { isEnvTruthy } from '../../utils/envUtils.js'
 import { AbortError, errorMessage, toError } from '../../utils/errors.js'
 import type { CacheSafeParams } from '../../utils/forkedAgent.js'
 import { lazySchema } from '../../utils/lazySchema.js'
-import {
-  createUserMessage,
-  extractTextContent,
-  isSyntheticMessage,
-  normalizeMessages,
-} from '../../utils/messages.js'
+import { createUserMessage, extractTextContent, isSyntheticMessage, normalizeMessages } from '../../utils/messages.js'
 import { getAgentModel } from '../../utils/model/agent.js'
 import { permissionModeSchema } from '../../utils/permissions/PermissionMode.js'
 import type { PermissionResult } from '../../utils/permissions/PermissionResult.js'
-import {
-  filterDeniedAgents,
-  getDenyRuleForAgent,
-} from '../../utils/permissions/permissions.js'
+import { filterDeniedAgents, getDenyRuleForAgent } from '../../utils/permissions/permissions.js'
 import { enqueueSdkEvent } from '../../utils/sdkEventQueue.js'
 import { writeAgentMetadata } from '../../utils/sessionStorage.js'
 import { sleep } from '../../utils/sleep.js'
@@ -79,11 +64,7 @@ import { isInProcessTeammate } from '../../utils/teammateContext.js'
 import { teleportToRemote } from '../../utils/teleport.js'
 import { getAssistantMessageContentLength } from '../../utils/tokens.js'
 import { createAgentId } from '../../utils/uuid.js'
-import {
-  createAgentWorktree,
-  hasWorktreeChanges,
-  removeAgentWorktree,
-} from '../../utils/worktree.js'
+import { createAgentWorktree, hasWorktreeChanges, removeAgentWorktree } from '../../utils/worktree.js'
 import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
 import { BackgroundHint } from '../BashTool/UI.js'
 import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt.js'
@@ -99,11 +80,7 @@ import {
   runAsyncAgentLifecycle,
 } from './agentToolUtils.js'
 import { GENERAL_PURPOSE_AGENT } from './built-in/generalPurposeAgent.js'
-import {
-  AGENT_TOOL_NAME,
-  LEGACY_AGENT_TOOL_NAME,
-  ONE_SHOT_BUILTIN_AGENT_TYPES,
-} from './constants.js'
+import { AGENT_TOOL_NAME, LEGACY_AGENT_TOOL_NAME, ONE_SHOT_BUILTIN_AGENT_TYPES } from './constants.js'
 import {
   buildForkedMessages,
   buildWorktreeNotice,
@@ -112,11 +89,7 @@ import {
   isInForkChild,
 } from './forkSubagent.js'
 import type { AgentDefinition } from './loadAgentsDir.js'
-import {
-  filterAgentsByMcpRequirements,
-  hasRequiredMcpServers,
-  isBuiltInAgent,
-} from './loadAgentsDir.js'
+import { filterAgentsByMcpRequirements, hasRequiredMcpServers, isBuiltInAgent } from './loadAgentsDir.js'
 import { getPrompt } from './prompt.js'
 import { runAgent } from './runAgent.js'
 import {
@@ -163,14 +136,9 @@ function getAutoBackgroundMs(): number {
 // Base input schema without multi-agent parameters
 const baseInputSchema = lazySchema(() =>
   z.object({
-    description: z
-      .string()
-      .describe('A short (3-5 word) description of the task'),
+    description: z.string().describe('A short (3-5 word) description of the task'),
     prompt: z.string().describe('The task for the agent to perform'),
-    subagent_type: z
-      .string()
-      .optional()
-      .describe('The type of specialized agent to use for this task'),
+    subagent_type: z.string().optional().describe('The type of specialized agent to use for this task'),
     model: z
       .enum(['sonnet', 'opus', 'haiku'])
       .optional()
@@ -180,9 +148,7 @@ const baseInputSchema = lazySchema(() =>
     run_in_background: z
       .boolean()
       .optional()
-      .describe(
-        'Set to true to run this agent in the background. You will be notified when it completes.',
-      ),
+      .describe('Set to true to run this agent in the background. You will be notified when it completes.'),
   }),
 )
 
@@ -193,29 +159,17 @@ const fullInputSchema = lazySchema(() => {
     name: z
       .string()
       .optional()
-      .describe(
-        'Name for the spawned agent. Makes it addressable via SendMessage({to: name}) while running.',
-      ),
-    team_name: z
-      .string()
-      .optional()
-      .describe(
-        'Team name for spawning. Uses current team context if omitted.',
-      ),
+      .describe('Name for the spawned agent. Makes it addressable via SendMessage({to: name}) while running.'),
+    team_name: z.string().optional().describe('Team name for spawning. Uses current team context if omitted.'),
     mode: permissionModeSchema()
       .optional()
-      .describe(
-        'Permission mode for spawned teammate (e.g., "plan" to require plan approval).',
-      ),
+      .describe('Permission mode for spawned teammate (e.g., "plan" to require plan approval).'),
   })
 
   return baseInputSchema()
     .merge(multiAgentInputSchema)
     .extend({
-      isolation: (process.env.USER_TYPE === 'ant'
-        ? z.enum(['worktree', 'remote'])
-        : z.enum(['worktree'])
-      )
+      isolation: (process.env.USER_TYPE === 'ant' ? z.enum(['worktree', 'remote']) : z.enum(['worktree']))
         .optional()
         .describe(
           process.env.USER_TYPE === 'ant'
@@ -238,9 +192,7 @@ const fullInputSchema = lazySchema(() => {
 // type, but call() destructures via the explicit AgentToolInput type below
 // which always includes all optional fields.
 export const inputSchema = lazySchema(() => {
-  const schema = feature('KAIROS')
-    ? fullInputSchema()
-    : fullInputSchema().omit({ cwd: true })
+  const schema = feature('KAIROS') ? fullInputSchema() : fullInputSchema().omit({ cwd: true })
 
   // GrowthBook-in-lazySchema is acceptable here (unlike subagent_type, which
   // was removed in 906da6c723): the divergence window is one-session-per-
@@ -249,9 +201,7 @@ export const inputSchema = lazySchema(() => {
   // by forceAsync) or "schema hides a param that would've worked" (gate
   // flips off mid-session: everything still runs async via memoized
   // forceAsync). No Zod rejection, no crash — unlike required→optional.
-  return isBackgroundTasksDisabled || isForkSubagentEnabled()
-    ? schema.omit({ run_in_background: true })
-    : schema
+  return isBackgroundTasksDisabled || isForkSubagentEnabled() ? schema.omit({ run_in_background: true }) : schema
 })
 type InputSchema = ReturnType<typeof inputSchema>
 
@@ -279,15 +229,11 @@ export const outputSchema = lazySchema(() => {
     agentId: z.string().describe('The ID of the async agent'),
     description: z.string().describe('The description of the task'),
     prompt: z.string().describe('The prompt for the agent'),
-    outputFile: z
-      .string()
-      .describe('Path to the output file for checking agent progress'),
+    outputFile: z.string().describe('Path to the output file for checking agent progress'),
     canReadOutputFile: z
       .boolean()
       .optional()
-      .describe(
-        'Whether the calling agent has Read/Bash tools to check progress',
-      ),
+      .describe('Whether the calling agent has Read/Bash tools to check progress'),
   })
 
   return z.union([syncOutputSchema, asyncOutputSchema])
@@ -352,21 +298,12 @@ export const AgentTool = buildTool({
     }
 
     // Filter agents: first by MCP requirements, then by permission rules
-    const agentsWithMcpRequirementsMet = filterAgentsByMcpRequirements(
-      agents,
-      mcpServersWithTools,
-    )
-    const filteredAgents = filterDeniedAgents(
-      agentsWithMcpRequirementsMet,
-      toolPermissionContext,
-      AGENT_TOOL_NAME,
-    )
+    const agentsWithMcpRequirementsMet = filterAgentsByMcpRequirements(agents, mcpServersWithTools)
+    const filteredAgents = filterDeniedAgents(agentsWithMcpRequirementsMet, toolPermissionContext, AGENT_TOOL_NAME)
 
     // Use inline env check instead of coordinatorModule to avoid circular
     // dependency issues during test module loading.
-    const isCoordinator = feature('COORDINATOR_MODE')
-      ? isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
-      : false
+    const isCoordinator = feature('COORDINATOR_MODE') ? isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) : false
     return await getPrompt(filteredAgents, isCoordinator, allowedAgentTypes)
   },
   name: AGENT_TOOL_NAME,
@@ -408,8 +345,7 @@ export const AgentTool = buildTool({
     const permissionMode = appState.toolPermissionContext.mode
     // In-process teammates get a no-op setAppState; setAppStateForTasks
     // reaches the root store so task registration/progress/kill stay visible.
-    const rootSetAppState =
-      toolUseContext.setAppStateForTasks ?? toolUseContext.setAppState
+    const rootSetAppState = toolUseContext.setAppStateForTasks ?? toolUseContext.setAppState
 
     // Check if user is trying to use agent teams without access
     if (team_name && !isAgentSwarmsEnabled()) {
@@ -439,9 +375,7 @@ export const AgentTool = buildTool({
     if (teamName && name) {
       // Set agent definition color for grouped UI display before spawning
       const agentDef = subagent_type
-        ? toolUseContext.options.agentDefinitions.activeAgents.find(
-            a => a.agentType === subagent_type,
-          )
+        ? toolUseContext.options.agentDefinitions.activeAgents.find((a) => a.agentType === subagent_type)
         : undefined
       if (agentDef?.color) {
         setAgentColor(subagent_type!, agentDef.color)
@@ -477,9 +411,7 @@ export const AgentTool = buildTool({
     // - subagent_type set: use it (explicit wins)
     // - subagent_type omitted, gate on: fork path (undefined)
     // - subagent_type omitted, gate off: default general-purpose
-    const effectiveType =
-      subagent_type ??
-      (isForkSubagentEnabled() ? undefined : GENERAL_PURPOSE_AGENT.agentType)
+    const effectiveType = subagent_type ?? (isForkSubagentEnabled() ? undefined : GENERAL_PURPOSE_AGENT.agentType)
     const isForkPath = effectiveType === undefined
 
     let selectedAgent: AgentDefinition
@@ -491,13 +423,10 @@ export const AgentTool = buildTool({
       // rewrite). Message-scan fallback catches any path where querySource
       // wasn't threaded.
       if (
-        toolUseContext.options.querySource ===
-          `agent:builtin:${FORK_AGENT.agentType}` ||
+        toolUseContext.options.querySource === `agent:builtin:${FORK_AGENT.agentType}` ||
         isInForkChild(toolUseContext.messages)
       ) {
-        throw new Error(
-          'Fork is not available inside a forked worker. Complete your task directly using your tools.',
-        )
+        throw new Error('Fork is not available inside a forked worker. Complete your task directly using your tools.')
       }
       selectedAgent = FORK_AGENT
     } else {
@@ -506,33 +435,23 @@ export const AgentTool = buildTool({
       const { allowedAgentTypes } = toolUseContext.options.agentDefinitions
       const agents = filterDeniedAgents(
         // When allowedAgentTypes is set (from Agent(x,y) tool spec), restrict to those types
-        allowedAgentTypes
-          ? allAgents.filter(a => allowedAgentTypes.includes(a.agentType))
-          : allAgents,
+        allowedAgentTypes ? allAgents.filter((a) => allowedAgentTypes.includes(a.agentType)) : allAgents,
         appState.toolPermissionContext,
         AGENT_TOOL_NAME,
       )
 
-      const found = agents.find(agent => agent.agentType === effectiveType)
+      const found = agents.find((agent) => agent.agentType === effectiveType)
       if (!found) {
         // Check if the agent exists but is denied by permission rules
-        const agentExistsButDenied = allAgents.find(
-          agent => agent.agentType === effectiveType,
-        )
+        const agentExistsButDenied = allAgents.find((agent) => agent.agentType === effectiveType)
         if (agentExistsButDenied) {
-          const denyRule = getDenyRuleForAgent(
-            appState.toolPermissionContext,
-            AGENT_TOOL_NAME,
-            effectiveType,
-          )
+          const denyRule = getDenyRuleForAgent(appState.toolPermissionContext, AGENT_TOOL_NAME, effectiveType)
           throw new Error(
             `Agent type '${effectiveType}' has been denied by permission rule '${AGENT_TOOL_NAME}(${effectiveType})' from ${denyRule?.source ?? 'settings'}.`,
           )
         }
         throw new Error(
-          `Agent type '${effectiveType}' not found. Available agents: ${agents
-            .map(a => a.agentType)
-            .join(', ')}`,
+          `Agent type '${effectiveType}' not found. Available agents: ${agents.map((a) => a.agentType).join(', ')}`,
         )
       }
       selectedAgent = found
@@ -541,11 +460,7 @@ export const AgentTool = buildTool({
     // Same lifecycle constraint as the run_in_background guard above, but for
     // agent definitions that force background via `background: true`. Checked
     // here because selectedAgent is only now resolved.
-    if (
-      isInProcessTeammate() &&
-      teamName &&
-      selectedAgent.background === true
-    ) {
+    if (isInProcessTeammate() && teamName && selectedAgent.background === true) {
       throw new Error(
         `In-process teammates cannot spawn background agents. Agent '${selectedAgent.agentType}' has background: true in its definition.`,
       )
@@ -562,11 +477,9 @@ export const AgentTool = buildTool({
       // before checking tool availability. This avoids a race condition where
       // the agent is invoked before MCP servers finish connecting.
       const hasPendingRequiredServers = appState.mcp.clients.some(
-        c =>
+        (c) =>
           c.type === 'pending' &&
-          requiredMcpServers.some(pattern =>
-            c.name.toLowerCase().includes(pattern.toLowerCase()),
-          ),
+          requiredMcpServers.some((pattern) => c.name.toLowerCase().includes(pattern.toLowerCase())),
       )
 
       let currentAppState = appState
@@ -582,20 +495,16 @@ export const AgentTool = buildTool({
           // Early exit: if any required server has already failed, no point
           // waiting for other pending servers — the check will fail regardless.
           const hasFailedRequiredServer = currentAppState.mcp.clients.some(
-            c =>
+            (c) =>
               c.type === 'failed' &&
-              requiredMcpServers.some(pattern =>
-                c.name.toLowerCase().includes(pattern.toLowerCase()),
-              ),
+              requiredMcpServers.some((pattern) => c.name.toLowerCase().includes(pattern.toLowerCase())),
           )
           if (hasFailedRequiredServer) break
 
           const stillPending = currentAppState.mcp.clients.some(
-            c =>
+            (c) =>
               c.type === 'pending' &&
-              requiredMcpServers.some(pattern =>
-                c.name.toLowerCase().includes(pattern.toLowerCase()),
-              ),
+              requiredMcpServers.some((pattern) => c.name.toLowerCase().includes(pattern.toLowerCase())),
           )
           if (!stillPending) break
         }
@@ -616,10 +525,7 @@ export const AgentTool = buildTool({
 
       if (!hasRequiredMcpServers(selectedAgent, serversWithTools)) {
         const missing = requiredMcpServers.filter(
-          pattern =>
-            !serversWithTools.some(server =>
-              server.toLowerCase().includes(pattern.toLowerCase()),
-            ),
+          (pattern) => !serversWithTools.some((server) => server.toLowerCase().includes(pattern.toLowerCase())),
         )
         throw new Error(
           `Agent '${selectedAgent.agentType}' requires MCP servers matching: ${missing.join(', ')}. ` +
@@ -643,19 +549,13 @@ export const AgentTool = buildTool({
     )
 
     logEvent('tengu_agent_tool_selected', {
-      agent_type:
-        selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      model:
-        resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      source:
-        selectedAgent.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      color:
-        selectedAgent.color as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      agent_type: selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      model: resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      source: selectedAgent.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      color: selectedAgent.color as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       is_built_in_agent: isBuiltInAgent(selectedAgent),
       is_resume: false,
-      is_async:
-        (run_in_background === true || selectedAgent.background === true) &&
-        !isBackgroundTasksDisabled,
+      is_async: (run_in_background === true || selectedAgent.background === true) && !isBackgroundTasksDisabled,
       is_fork: isForkPath,
     })
 
@@ -667,9 +567,7 @@ export const AgentTool = buildTool({
     if (process.env.USER_TYPE === 'ant' && effectiveIsolation === 'remote') {
       const eligibility = await checkRemoteAgentEligibility()
       if (!eligibility.eligible) {
-        const reasons = eligibility.errors
-          .map(formatPreconditionError)
-          .join('\n')
+        const reasons = eligibility.errors.map(formatPreconditionError).join('\n')
         throw new Error(`Cannot launch remote agent:\n${reasons}`)
       }
 
@@ -678,7 +576,7 @@ export const AgentTool = buildTool({
         initialMessage: prompt,
         description,
         signal: toolUseContext.abortController.signal,
-        onBundleFail: msg => {
+        onBundleFail: (msg) => {
           bundleFailHint = msg
         },
       })
@@ -695,8 +593,7 @@ export const AgentTool = buildTool({
       })
 
       logEvent('tengu_agent_tool_remote_launched', {
-        agent_type:
-          selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        agent_type: selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
 
       const remoteResult: RemoteLaunchedOutput = {
@@ -719,9 +616,7 @@ export const AgentTool = buildTool({
     // Normal path: build the selected agent's own system prompt with env
     // details, and use a simple user message for the prompt.
     let enhancedSystemPrompt: string[] | undefined
-    let forkParentSystemPrompt:
-      | ReturnType<typeof buildEffectiveSystemPrompt>
-      | undefined
+    let forkParentSystemPrompt: ReturnType<typeof buildEffectiveSystemPrompt> | undefined
     let promptMessages: MessageType[]
 
     if (isForkPath) {
@@ -731,9 +626,7 @@ export const AgentTool = buildTool({
         // Fallback: recompute. May diverge from parent's cached bytes if
         // GrowthBook state changed between parent turn-start and fork spawn.
         const mainThreadAgentDefinition = appState.agent
-          ? appState.agentDefinitions.activeAgents.find(
-              a => a.agentType === appState.agent,
-            )
+          ? appState.agentDefinitions.activeAgents.find((a) => a.agentType === appState.agent)
           : undefined
         const additionalWorkingDirectories = Array.from(
           appState.toolPermissionContext.additionalWorkingDirectories.keys(),
@@ -766,13 +659,10 @@ export const AgentTool = buildTool({
         if (selectedAgent.memory) {
           logEvent('tengu_agent_memory_loaded', {
             ...(process.env.USER_TYPE === 'ant' && {
-              agent_type:
-                selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              agent_type: selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
             }),
-            scope:
-              selectedAgent.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-            source:
-              'subagent' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            scope: selectedAgent.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            source: 'subagent' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           })
         }
 
@@ -783,9 +673,7 @@ export const AgentTool = buildTool({
           additionalWorkingDirectories,
         )
       } catch (error) {
-        logForDebugging(
-          `Failed to get system prompt for agent ${selectedAgent.agentType}: ${errorMessage(error)}`,
-        )
+        logForDebugging(`Failed to get system prompt for agent ${selectedAgent.agentType}: ${errorMessage(error)}`)
       }
       promptMessages = [createUserMessage({ content: prompt })]
     }
@@ -796,16 +684,12 @@ export const AgentTool = buildTool({
       isBuiltInAgent: isBuiltInAgent(selectedAgent),
       startTime,
       agentType: selectedAgent.agentType,
-      isAsync:
-        (run_in_background === true || selectedAgent.background === true) &&
-        !isBackgroundTasksDisabled,
+      isAsync: (run_in_background === true || selectedAgent.background === true) && !isBackgroundTasksDisabled,
     }
 
     // Use inline env check instead of coordinatorModule to avoid circular
     // dependency issues during test module loading.
-    const isCoordinator = feature('COORDINATOR_MODE')
-      ? isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
-      : false
+    const isCoordinator = feature('COORDINATOR_MODE') ? isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) : false
 
     // Fork subagent experiment: force ALL spawns async for a unified
     // <task-notification> interaction model (not just fork spawns — all of them).
@@ -818,9 +702,7 @@ export const AgentTool = buildTool({
     // executeForkedSlashCommand's fire-and-forget path; the
     // <task-notification> re-entry there is handled by the else branch
     // below (registerAsyncAgentTask + notifyOnCompletion).
-    const assistantForceAsync = feature('KAIROS')
-      ? appState.kairosEnabled
-      : false
+    const assistantForceAsync = feature('KAIROS') ? appState.kairosEnabled : false
 
     const shouldRunAsync =
       (run_in_background === true ||
@@ -839,10 +721,7 @@ export const AgentTool = buildTool({
       ...appState.toolPermissionContext,
       mode: selectedAgent.permissionMode ?? 'acceptEdits',
     }
-    const workerTools = assembleToolPool(
-      workerPermissionContext,
-      appState.mcp.tools,
-    )
+    const workerTools = assembleToolPool(workerPermissionContext, appState.mcp.tools)
 
     // Create a stable agent ID early so it can be used for worktree slug
     const earlyAgentId = createAgentId()
@@ -880,10 +759,7 @@ export const AgentTool = buildTool({
       isAsync: shouldRunAsync,
       querySource:
         toolUseContext.options.querySource ??
-        getQuerySourceForAgent(
-          selectedAgent.agentType,
-          isBuiltInAgent(selectedAgent),
-        ),
+        getQuerySourceForAgent(selectedAgent.agentType, isBuiltInAgent(selectedAgent)),
       model: isForkPath ? undefined : model,
       // Fork path: pass parent's system prompt AND parent's exact tool
       // array (cache-identical prefix). workerTools is rebuilt under
@@ -913,8 +789,7 @@ export const AgentTool = buildTool({
     // Helper to wrap execution with a cwd override: explicit cwd arg (KAIROS)
     // takes precedence over worktree isolation path.
     const cwdOverridePath = cwd ?? worktreeInfo?.worktreePath
-    const wrapWithCwd = <T,>(fn: () => T): T =>
-      cwdOverridePath ? runWithCwdOverride(cwdOverridePath, fn) : fn()
+    const wrapWithCwd = <T,>(fn: () => T): T => (cwdOverridePath ? runWithCwdOverride(cwdOverridePath, fn) : fn())
 
     // Helper to clean up worktree after agent completes
     const cleanupWorktreeIfNeeded = async (): Promise<{
@@ -922,8 +797,7 @@ export const AgentTool = buildTool({
       worktreeBranch?: string
     }> => {
       if (!worktreeInfo) return {}
-      const { worktreePath, worktreeBranch, headCommit, gitRoot, hookBased } =
-        worktreeInfo
+      const { worktreePath, worktreeBranch, headCommit, gitRoot, hookBased } = worktreeInfo
       // Null out to make idempotent — guards against double-call if code
       // between cleanup and end of try throws into catch
       worktreeInfo = null
@@ -942,9 +816,7 @@ export const AgentTool = buildTool({
           void writeAgentMetadata(asAgentId(earlyAgentId), {
             agentType: selectedAgent.agentType,
             description,
-          }).catch(_err =>
-            logForDebugging(`Failed to clear worktree metadata: ${_err}`),
-          )
+          }).catch((_err) => logForDebugging(`Failed to clear worktree metadata: ${_err}`))
           return {}
         }
       }
@@ -970,7 +842,7 @@ export const AgentTool = buildTool({
       // so we don't leave a stale entry if spawn fails. Sync agents skipped —
       // coordinator is blocked, so SendMessage routing doesn't apply.
       if (name) {
-        rootSetAppState(prev => {
+        rootSetAppState((prev) => {
           const next = new Map(prev.agentNameRegistry)
           next.set(name, asAgentId(asyncAgentId))
           return { ...prev, agentNameRegistry: next }
@@ -1001,7 +873,7 @@ export const AgentTool = buildTool({
           runAsyncAgentLifecycle({
             taskId: agentBackgroundTask.agentId,
             abortController: agentBackgroundTask.abortController!,
-            makeStream: onCacheSafeParams =>
+            makeStream: (onCacheSafeParams) =>
               runAgent({
                 ...runAgentParams,
                 override: {
@@ -1016,19 +888,14 @@ export const AgentTool = buildTool({
             toolUseContext,
             rootSetAppState,
             agentIdForCleanup: asyncAgentId,
-            enableSummarization:
-              isCoordinator ||
-              isForkSubagentEnabled() ||
-              getSdkAgentProgressSummariesEnabled(),
+            enableSummarization: isCoordinator || isForkSubagentEnabled() || getSdkAgentProgressSummariesEnabled(),
             getWorktreeResult: cleanupWorktreeIfNeeded,
           }),
         ),
       )
 
       const canReadOutputFile = toolUseContext.options.tools.some(
-        t =>
-          toolMatchesName(t, FILE_READ_TOOL_NAME) ||
-          toolMatchesName(t, BASH_TOOL_NAME),
+        (t) => toolMatchesName(t, FILE_READ_TOOL_NAME) || toolMatchesName(t, BASH_TOOL_NAME),
       )
       return {
         data: {
@@ -1066,9 +933,7 @@ export const AgentTool = buildTool({
           const agentMessages: MessageType[] = []
           const agentStartTime = Date.now()
           const syncTracker = createProgressTracker()
-          const syncResolveActivity = createActivityDescriptionResolver(
-            toolUseContext.options.tools,
-          )
+          const syncResolveActivity = createActivityDescriptionResolver(toolUseContext.options.tools)
 
           // Yield initial progress message to carry metadata (prompt)
           if (promptMessages.length > 0) {
@@ -1076,11 +941,7 @@ export const AgentTool = buildTool({
             const normalizedFirstMessage = normalizedPromptMessages.find(
               (m): m is NormalizedUserMessage => m.type === 'user',
             )
-            if (
-              normalizedFirstMessage &&
-              normalizedFirstMessage.type === 'user' &&
-              onProgress
-            ) {
+            if (normalizedFirstMessage && normalizedFirstMessage.type === 'user' && onProgress) {
               onProgress({
                 toolUseID: `agent_${assistantMessage.message.id}`,
                 data: {
@@ -1138,12 +999,7 @@ export const AgentTool = buildTool({
             onCacheSafeParams:
               summaryTaskId && getSdkAgentProgressSummariesEnabled()
                 ? (params: CacheSafeParams) => {
-                    const { stop } = startAgentSummarization(
-                      summaryTaskId,
-                      syncAgentId,
-                      params,
-                      rootSetAppState,
-                    )
+                    const { stop } = startAgentSummarization(summaryTaskId, syncAgentId, params, rootSetAppState)
                     stopForegroundSummarization = stop
                   }
                 : undefined,
@@ -1183,7 +1039,7 @@ export const AgentTool = buildTool({
               const nextMessagePromise = agentIterator.next()
               const raceResult = backgroundPromise
                 ? await Promise.race([
-                    nextMessagePromise.then(r => ({
+                    nextMessagePromise.then((r) => ({
                       type: 'message' as const,
                       result: r,
                     })),
@@ -1218,23 +1074,12 @@ export const AgentTool = buildTool({
                       // (releases MCP connections, session hooks, prompt cache tracking, etc.)
                       // Timeout prevents blocking if MCP server cleanup hangs.
                       // .catch() prevents unhandled rejection if timeout wins the race.
-                      await Promise.race([
-                        agentIterator.return(undefined).catch(() => {}),
-                        sleep(1000),
-                      ])
+                      await Promise.race([agentIterator.return(undefined).catch(() => {}), sleep(1000)])
                       // Initialize progress tracking from existing messages
                       const tracker = createProgressTracker()
-                      const resolveActivity2 =
-                        createActivityDescriptionResolver(
-                          toolUseContext.options.tools,
-                        )
+                      const resolveActivity2 = createActivityDescriptionResolver(toolUseContext.options.tools)
                       for (const existingMsg of agentMessages) {
-                        updateProgressFromMessage(
-                          tracker,
-                          existingMsg,
-                          resolveActivity2,
-                          toolUseContext.options.tools,
-                        )
+                        updateProgressFromMessage(tracker, existingMsg, resolveActivity2, toolUseContext.options.tools)
                       }
                       for await (const msg of runAgent({
                         ...runAgentParams,
@@ -1259,17 +1104,8 @@ export const AgentTool = buildTool({
                         agentMessages.push(msg)
 
                         // Track progress for backgrounded agents
-                        updateProgressFromMessage(
-                          tracker,
-                          msg,
-                          resolveActivity2,
-                          toolUseContext.options.tools,
-                        )
-                        updateAsyncAgentProgress(
-                          backgroundedTaskId,
-                          getProgressUpdate(tracker),
-                          rootSetAppState,
-                        )
+                        updateProgressFromMessage(tracker, msg, resolveActivity2, toolUseContext.options.tools)
+                        updateAsyncAgentProgress(backgroundedTaskId, getProgressUpdate(tracker), rootSetAppState)
 
                         const lastToolName = getLastToolUseName(msg)
                         if (lastToolName) {
@@ -1283,11 +1119,7 @@ export const AgentTool = buildTool({
                           )
                         }
                       }
-                      const agentResult = finalizeAgentTool(
-                        agentMessages,
-                        backgroundedTaskId,
-                        metadata,
-                      )
+                      const agentResult = finalizeAgentTool(agentMessages, backgroundedTaskId, metadata)
 
                       // Mark task completed FIRST so TaskOutput(block=true)
                       // unblocks immediately. classifyHandoffIfNeeded and
@@ -1296,19 +1128,14 @@ export const AgentTool = buildTool({
                       completeAsyncAgent(agentResult, rootSetAppState)
 
                       // Extract text from agent result content for the notification
-                      let finalMessage = extractTextContent(
-                        agentResult.content,
-                        '\n',
-                      )
+                      let finalMessage = extractTextContent(agentResult.content, '\n')
 
                       if (feature('TRANSCRIPT_CLASSIFIER')) {
-                        const backgroundedAppState =
-                          toolUseContext.getAppState()
+                        const backgroundedAppState = toolUseContext.getAppState()
                         const handoffWarning = await classifyHandoffIfNeeded({
                           agentMessages,
                           tools: toolUseContext.options.tools,
-                          toolPermissionContext:
-                            backgroundedAppState.toolPermissionContext,
+                          toolPermissionContext: backgroundedAppState.toolPermissionContext,
                           abortSignal: task.abortController!.signal,
                           subagentType: selectedAgent.agentType,
                           totalToolUseCount: agentResult.totalToolUseCount,
@@ -1341,8 +1168,7 @@ export const AgentTool = buildTool({
                         // TaskOutput unblocks even if git hangs (gh-20236).
                         killAsyncAgent(backgroundedTaskId, rootSetAppState)
                         logEvent('tengu_agent_tool_terminated', {
-                          agent_type:
-                            metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                          agent_type: metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                           model:
                             metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                           duration_ms: Date.now() - metadata.startTime,
@@ -1352,8 +1178,7 @@ export const AgentTool = buildTool({
                             'user_cancel_background' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                         })
                         const worktreeResult = await cleanupWorktreeIfNeeded()
-                        const partialResult =
-                          extractPartialResult(agentMessages)
+                        const partialResult = extractPartialResult(agentMessages)
                         enqueueAgentNotification({
                           taskId: backgroundedTaskId,
                           description,
@@ -1366,11 +1191,7 @@ export const AgentTool = buildTool({
                         return
                       }
                       const errMsg = errorMessage(error)
-                      failAsyncAgent(
-                        backgroundedTaskId,
-                        errMsg,
-                        rootSetAppState,
-                      )
+                      failAsyncAgent(backgroundedTaskId, errMsg, rootSetAppState)
                       const worktreeResult = await cleanupWorktreeIfNeeded()
                       enqueueAgentNotification({
                         taskId: backgroundedTaskId,
@@ -1392,9 +1213,7 @@ export const AgentTool = buildTool({
 
                   // Return async_launched result immediately
                   const canReadOutputFile = toolUseContext.options.tools.some(
-                    t =>
-                      toolMatchesName(t, FILE_READ_TOOL_NAME) ||
-                      toolMatchesName(t, BASH_TOOL_NAME),
+                    (t) => toolMatchesName(t, FILE_READ_TOOL_NAME) || toolMatchesName(t, BASH_TOOL_NAME),
                   )
                   return {
                     data: {
@@ -1422,12 +1241,7 @@ export const AgentTool = buildTool({
               agentMessages.push(message)
 
               // Emit task_progress for the VS Code subagent panel
-              updateProgressFromMessage(
-                syncTracker,
-                message,
-                syncResolveActivity,
-                toolUseContext.options.tools,
-              )
+              updateProgressFromMessage(syncTracker, message, syncResolveActivity, toolUseContext.options.tools)
               if (foregroundTaskId) {
                 const lastToolName = getLastToolUseName(message)
                 if (lastToolName) {
@@ -1443,11 +1257,7 @@ export const AgentTool = buildTool({
                   // enabled, so updateAgentSummary reads correct token/tool counts
                   // instead of zeros.
                   if (getSdkAgentProgressSummariesEnabled()) {
-                    updateAsyncAgentProgress(
-                      foregroundTaskId,
-                      getProgressUpdate(syncTracker),
-                      rootSetAppState,
-                    )
+                    updateAsyncAgentProgress(foregroundTaskId, getProgressUpdate(syncTracker), rootSetAppState)
                   }
                 }
               }
@@ -1456,8 +1266,7 @@ export const AgentTool = buildTool({
               // receives tool_progress events just as it does for the main agent.
               if (
                 message.type === 'progress' &&
-                (message.data.type === 'bash_progress' ||
-                  message.data.type === 'powershell_progress') &&
+                (message.data.type === 'bash_progress' || message.data.type === 'powershell_progress') &&
                 onProgress
               ) {
                 onProgress({
@@ -1476,17 +1285,14 @@ export const AgentTool = buildTool({
               if (message.type === 'assistant') {
                 const contentLength = getAssistantMessageContentLength(message)
                 if (contentLength > 0) {
-                  toolUseContext.setResponseLength(len => len + contentLength)
+                  toolUseContext.setResponseLength((len) => len + contentLength)
                 }
               }
 
               const normalizedNew = normalizeMessages([message])
               for (const m of normalizedNew) {
                 for (const content of m.message.content) {
-                  if (
-                    content.type !== 'tool_use' &&
-                    content.type !== 'tool_result'
-                  ) {
+                  if (content.type !== 'tool_use' && content.type !== 'tool_result') {
                     continue
                   }
 
@@ -1513,15 +1319,12 @@ export const AgentTool = buildTool({
             if (error instanceof AbortError) {
               wasAborted = true
               logEvent('tengu_agent_tool_terminated', {
-                agent_type:
-                  metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                model:
-                  metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                agent_type: metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                model: metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 duration_ms: Date.now() - metadata.startTime,
                 is_async: false,
                 is_built_in_agent: metadata.isBuiltInAgent,
-                reason:
-                  'user_cancel_sync' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                reason: 'user_cancel_sync' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               })
               throw error
             }
@@ -1557,11 +1360,7 @@ export const AgentTool = buildTool({
                   subtype: 'task_notification',
                   task_id: foregroundTaskId,
                   tool_use_id: toolUseContext.toolUseId,
-                  status: syncAgentError
-                    ? 'failed'
-                    : wasAborted
-                      ? 'stopped'
-                      : 'completed',
+                  status: syncAgentError ? 'failed' : wasAborted ? 'stopped' : 'completed',
                   output_file: '',
                   summary: description,
                   usage: {
@@ -1594,20 +1393,15 @@ export const AgentTool = buildTool({
 
           // Re-throw abort errors
           // TODO: Find a cleaner way to express this
-          const lastMessage = agentMessages.findLast(
-            _ => _.type !== 'system' && _.type !== 'progress',
-          )
+          const lastMessage = agentMessages.findLast((_) => _.type !== 'system' && _.type !== 'progress')
           if (lastMessage && isSyntheticMessage(lastMessage)) {
             logEvent('tengu_agent_tool_terminated', {
-              agent_type:
-                metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-              model:
-                metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              agent_type: metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              model: metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               duration_ms: Date.now() - metadata.startTime,
               is_async: false,
               is_built_in_agent: metadata.isBuiltInAgent,
-              reason:
-                'user_cancel_sync' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              reason: 'user_cancel_sync' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
             })
             throw new AbortError()
           }
@@ -1617,9 +1411,7 @@ export const AgentTool = buildTool({
           // re-throw the error so it's properly handled by the tool framework.
           if (syncAgentError) {
             // Check if we have any assistant messages to return
-            const hasAssistantMessages = agentMessages.some(
-              msg => msg.type === 'assistant',
-            )
+            const hasAssistantMessages = agentMessages.some((msg) => msg.type === 'assistant')
 
             if (!hasAssistantMessages) {
               // No messages collected, re-throw the error
@@ -1628,16 +1420,10 @@ export const AgentTool = buildTool({
 
             // We have some messages, try to finalize and return them
             // This allows the parent agent to see partial progress even after an error
-            logForDebugging(
-              `Sync agent recovering from error with ${agentMessages.length} messages`,
-            )
+            logForDebugging(`Sync agent recovering from error with ${agentMessages.length} messages`)
           }
 
-          const agentResult = finalizeAgentTool(
-            agentMessages,
-            syncAgentId,
-            metadata,
-          )
+          const agentResult = finalizeAgentTool(agentMessages, syncAgentId, metadata)
 
           if (feature('TRANSCRIPT_CLASSIFIER')) {
             const currentAppState = toolUseContext.getAppState()
@@ -1650,10 +1436,7 @@ export const AgentTool = buildTool({
               totalToolUseCount: agentResult.totalToolUseCount,
             })
             if (handoffWarning) {
-              agentResult.content = [
-                { type: 'text' as const, text: handoffWarning },
-                ...agentResult.content,
-              ]
+              agentResult.content = [{ type: 'text' as const, text: handoffWarning }, ...agentResult.content]
             }
           }
 
@@ -1674,10 +1457,7 @@ export const AgentTool = buildTool({
   },
   toAutoClassifierInput(input) {
     const i = input as AgentToolInput
-    const tags = [
-      i.subagent_type,
-      i.mode ? `mode=${i.mode}` : undefined,
-    ].filter((t): t is string => t !== undefined)
+    const tags = [i.subagent_type, i.mode ? `mode=${i.mode}` : undefined].filter((t): t is string => t !== undefined)
     const prefix = tags.length > 0 ? `(${tags.join(', ')}): ` : ': '
     return `${prefix}${i.prompt}`
   },
@@ -1695,10 +1475,7 @@ export const AgentTool = buildTool({
     // Only route through auto mode classifier when in auto mode
     // In all other modes, auto-approve sub-agent generation
     // Note: process.env.USER_TYPE === 'ant' guard enables dead code elimination for external builds
-    if (
-      process.env.USER_TYPE === 'ant' &&
-      appState.toolPermissionContext.mode === 'auto'
-    ) {
+    if (process.env.USER_TYPE === 'ant' && appState.toolPermissionContext.mode === 'auto') {
       return {
         behavior: 'passthrough',
         message: 'Agent tool requires permission to spawn sub-agents.',
@@ -1785,11 +1562,7 @@ The agent is now running and will receive instructions via mailbox.`,
       // 34M Explore runs/week ≈ 1-2 Gtok/week). Telemetry doesn't parse this
       // block (it uses logEvent in finalizeAgentTool), so dropping is safe.
       // agentType is optional for resume compat — missing means show trailer.
-      if (
-        data.agentType &&
-        ONE_SHOT_BUILTIN_AGENT_TYPES.has(data.agentType) &&
-        !worktreeInfoText
-      ) {
+      if (data.agentType && ONE_SHOT_BUILTIN_AGENT_TYPES.has(data.agentType) && !worktreeInfoText) {
         return {
           tool_use_id: toolUseID,
           type: 'tool_result',
@@ -1812,9 +1585,7 @@ duration_ms: ${data.totalDurationMs}</usage>`,
       }
     }
     data satisfies never
-    throw new Error(
-      `Unexpected agent tool result status: ${(data as { status: string }).status}`,
-    )
+    throw new Error(`Unexpected agent tool result status: ${(data as { status: string }).status}`)
   },
   renderToolResultMessage,
   renderToolUseMessage,

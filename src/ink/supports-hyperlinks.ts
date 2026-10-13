@@ -2,14 +2,7 @@ import supportsHyperlinksLib from 'supports-hyperlinks'
 
 // Additional terminals that support OSC 8 hyperlinks but aren't detected by supports-hyperlinks.
 // Checked against both TERM_PROGRAM and LC_TERMINAL (the latter is preserved inside tmux).
-export const ADDITIONAL_HYPERLINK_TERMINALS = [
-  'ghostty',
-  'Hyper',
-  'kitty',
-  'alacritty',
-  'iTerm.app',
-  'iTerm2',
-]
+export const ADDITIONAL_HYPERLINK_TERMINALS = ['ghostty', 'Hyper', 'kitty', 'alacritty', 'iTerm.app', 'iTerm2']
 
 type EnvLike = Record<string, string | undefined>
 
@@ -23,11 +16,8 @@ type SupportsHyperlinksOptions = {
  * Extends the supports-hyperlinks library with additional terminal detection.
  * @param options Optional overrides for testing (env, stdoutSupported)
  */
-export function supportsHyperlinks(
-  options?: SupportsHyperlinksOptions,
-): boolean {
-  const stdoutSupported =
-    options?.stdoutSupported ?? supportsHyperlinksLib.stdout
+export function supportsHyperlinks(options?: SupportsHyperlinksOptions): boolean {
+  const stdoutSupported = options?.stdoutSupported ?? supportsHyperlinksLib.stdout
   if (stdoutSupported) {
     return true
   }

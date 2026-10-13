@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+
 import TextInput from '../../components/TextInput.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { Box, color, Text, useTheme } from '../../ink.js'
@@ -23,11 +24,7 @@ export function ApiKeyStep({
   onSubmit,
   onToggleUseExistingKey,
   onCreateOAuthToken,
-  selectedOption = existingApiKey
-    ? 'existing'
-    : onCreateOAuthToken
-      ? 'oauth'
-      : 'new',
+  selectedOption = existingApiKey ? 'existing' : onCreateOAuthToken ? 'oauth' : 'new',
   onSelectOption,
 }: ApiKeyStepProps) {
   const [cursorOffset, setCursorOffset] = useState(0)
@@ -43,13 +40,7 @@ export function ApiKeyStep({
       onSelectOption?.('existing')
       onToggleUseExistingKey(true)
     }
-  }, [
-    selectedOption,
-    onCreateOAuthToken,
-    existingApiKey,
-    onSelectOption,
-    onToggleUseExistingKey,
-  ])
+  }, [selectedOption, onCreateOAuthToken, existingApiKey, onSelectOption, onToggleUseExistingKey])
 
   const handleNext = useCallback(() => {
     if (selectedOption === 'existing') {
@@ -60,12 +51,7 @@ export function ApiKeyStep({
       // From 'oauth' go down to 'new'
       onSelectOption?.('new')
     }
-  }, [
-    selectedOption,
-    onCreateOAuthToken,
-    onSelectOption,
-    onToggleUseExistingKey,
-  ])
+  }, [selectedOption, onCreateOAuthToken, onSelectOption, onToggleUseExistingKey])
 
   const handleConfirm = useCallback(() => {
     if (selectedOption === 'oauth' && onCreateOAuthToken) {
@@ -105,9 +91,7 @@ export function ApiKeyStep({
         {existingApiKey && (
           <Box marginBottom={1}>
             <Text>
-              {selectedOption === 'existing'
-                ? color('success', theme)('> ')
-                : '  '}
+              {selectedOption === 'existing' ? color('success', theme)('> ') : '  '}
               Use your existing Claude Code API key
             </Text>
           </Box>
@@ -115,9 +99,7 @@ export function ApiKeyStep({
         {onCreateOAuthToken && (
           <Box marginBottom={1}>
             <Text>
-              {selectedOption === 'oauth'
-                ? color('success', theme)('> ')
-                : '  '}
+              {selectedOption === 'oauth' ? color('success', theme)('> ') : '  '}
               Create a long-lived token with your Claude subscription
             </Text>
           </Box>

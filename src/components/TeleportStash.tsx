@@ -1,5 +1,6 @@
 import figures from 'figures'
 import React, { useEffect, useState } from 'react'
+
 import { Box, Text } from '../ink.js'
 import { logForDebugging } from '../utils/debug.js'
 import type { GitFileStatus } from '../utils/git.js'
@@ -13,15 +14,9 @@ type TeleportStashProps = {
   onCancel: () => void
 }
 
-export function TeleportStash({
-  onStashAndContinue,
-  onCancel,
-}: TeleportStashProps): React.ReactNode {
+export function TeleportStash({ onStashAndContinue, onCancel }: TeleportStashProps): React.ReactNode {
   const [gitFileStatus, setGitFileStatus] = useState<GitFileStatus | null>(null)
-  const changedFiles =
-    gitFileStatus !== null
-      ? [...gitFileStatus.tracked, ...gitFileStatus.untracked]
-      : []
+  const changedFiles = gitFileStatus !== null ? [...gitFileStatus.tracked, ...gitFileStatus.untracked] : []
   const [loading, setLoading] = useState(true)
   const [stashing, setStashing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -107,27 +102,21 @@ export function TeleportStash({
 
   return (
     <Dialog title="Working Directory Has Changes" onCancel={onCancel}>
-      <Text>
-        Teleport will switch git branches. The following changes were found:
-      </Text>
+      <Text>Teleport will switch git branches. The following changes were found:</Text>
 
       <Box flexDirection="column" paddingLeft={2}>
         {changedFiles.length > 0 ? (
           showFileCount ? (
             <Text>{changedFiles.length} files changed</Text>
           ) : (
-            changedFiles.map((file: string, index: number) => (
-              <Text key={index}>{file}</Text>
-            ))
+            changedFiles.map((file: string, index: number) => <Text key={index}>{file}</Text>)
           )
         ) : (
           <Text dimColor>No changes detected</Text>
         )}
       </Box>
 
-      <Text>
-        Would you like to stash these changes and continue with teleport?
-      </Text>
+      <Text>Would you like to stash these changes and continue with teleport?</Text>
 
       {stashing ? (
         <Box>

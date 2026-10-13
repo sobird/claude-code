@@ -13,6 +13,7 @@
  */
 
 import { z } from 'zod/v4'
+
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
 import { logEvent } from '../services/analytics/index.js'
 import { queryHaiku } from '../services/api/claude.js'
@@ -48,9 +49,7 @@ export function extractConversationText(messages: Message[]): string {
     }
   }
   const text = parts.join('\n')
-  return text.length > MAX_CONVERSATION_TEXT
-    ? text.slice(-MAX_CONVERSATION_TEXT)
-    : text
+  return text.length > MAX_CONVERSATION_TEXT ? text.slice(-MAX_CONVERSATION_TEXT) : text
 }
 
 const SESSION_TITLE_PROMPT = `Generate a concise, sentence-case title (3-7 words) that captures the main topic or goal of this coding session. The title should be clear enough that the user recognizes the session in a list. Use sentence case: capitalize only the first word and proper nouns.
@@ -76,10 +75,7 @@ const titleSchema = lazySchema(() => z.object({ title: z.string() }))
  * @param description - The user's first message or a description of the session
  * @param signal - Abort signal for cancellation
  */
-export async function generateSessionTitle(
-  description: string,
-  signal: AbortSignal,
-): Promise<string | null> {
+export async function generateSessionTitle(description: string, signal: AbortSignal): Promise<string | null> {
   const trimmed = description.trim()
   if (!trimmed) return null
 

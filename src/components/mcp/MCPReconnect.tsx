@@ -1,5 +1,6 @@
 import figures from 'figures'
 import React, { useEffect, useState } from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { Box, color, Text, useTheme } from '../../ink.js'
 import { useMcpReconnect } from '../../services/mcp/MCPConnectionManager.js'
@@ -8,16 +9,10 @@ import { Spinner } from '../Spinner.js'
 
 type Props = {
   serverName: string
-  onComplete: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onComplete: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
-export function MCPReconnect({
-  serverName,
-  onComplete,
-}: Props): React.ReactNode {
+export function MCPReconnect({ serverName, onComplete }: Props): React.ReactNode {
   const [theme] = useTheme()
   const store = useAppStateStore()
   const reconnectMcpServer = useMcpReconnect()
@@ -30,9 +25,7 @@ export function MCPReconnect({
         // Check if server exists. Read via store.getState() instead of a
         // reactive selector so this effect does not re-fire when
         // reconnectMcpServer updates mcp.clients via onConnectionAttempt.
-        const server = store
-          .getState()
-          .mcp.clients.find(c => c.name === serverName)
+        const server = store.getState().mcp.clients.find((c) => c.name === serverName)
         if (!server) {
           setError(`MCP server "${serverName}" not found`)
           setIsReconnecting(false)
@@ -51,9 +44,7 @@ export function MCPReconnect({
           case 'needs-auth':
             setError(`${serverName} requires authentication`)
             setIsReconnecting(false)
-            onComplete(
-              `${serverName} requires authentication. Use /mcp to authenticate.`,
-            )
+            onComplete(`${serverName} requires authentication. Use /mcp to authenticate.`)
             break
           case 'pending':
           case 'failed':

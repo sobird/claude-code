@@ -1,6 +1,7 @@
 import emojiRegex from 'emoji-regex'
 import { eastAsianWidth } from 'get-east-asian-width'
 import stripAnsi from 'strip-ansi'
+
 import { getGraphemeSegmenter } from '../utils/intl.js'
 
 const EMOJI_REGEX = emojiRegex()
@@ -115,10 +116,7 @@ function getEmojiWidth(grapheme: string): number {
   // Incomplete keycap: digit/symbol + VS16 without U+20E3
   if (grapheme.length === 2) {
     const second = grapheme.codePointAt(1)
-    if (
-      second === 0xfe0f &&
-      ((first >= 0x30 && first <= 0x39) || first === 0x23 || first === 0x2a)
-    ) {
+    if (second === 0xfe0f && ((first >= 0x30 && first <= 0x39) || first === 0x23 || first === 0x2a)) {
       return 1
     }
   }
@@ -144,10 +142,7 @@ function isZeroWidth(codePoint: number): boolean {
   }
 
   // Variation selectors
-  if (
-    (codePoint >= 0xfe00 && codePoint <= 0xfe0f) ||
-    (codePoint >= 0xe0100 && codePoint <= 0xe01ef)
-  ) {
+  if ((codePoint >= 0xfe00 && codePoint <= 0xfe0f) || (codePoint >= 0xe0100 && codePoint <= 0xe01ef)) {
     return true
   }
 
@@ -210,13 +205,10 @@ function isZeroWidth(codePoint: number): boolean {
 //
 // Bun.stringWidth is resolved once at module scope rather than checked on every
 // call — typeof guards deopt property access and this is a hot path (~100k calls/frame).
-const bunStringWidth =
-  typeof Bun !== 'undefined' && typeof Bun.stringWidth === 'function'
-    ? Bun.stringWidth
-    : null
+const bunStringWidth = typeof Bun !== 'undefined' && typeof Bun.stringWidth === 'function' ? Bun.stringWidth : null
 
 const BUN_STRING_WIDTH_OPTS = { ambiguousIsNarrow: true } as const
 
 export const stringWidth: (str: string) => number = bunStringWidth
-  ? str => bunStringWidth(str, BUN_STRING_WIDTH_OPTS)
+  ? (str) => bunStringWidth(str, BUN_STRING_WIDTH_OPTS)
   : stringWidthJavaScript

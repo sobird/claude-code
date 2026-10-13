@@ -1,7 +1,9 @@
 import { feature } from 'bun:bundle'
 import type { UUID } from 'crypto'
 import { relative } from 'path'
+
 import { getCwd } from 'src/utils/cwd.js'
+
 import { addInvokedSkill } from '../bootstrap/state.js'
 import { asSessionId } from '../types/ids.js'
 import type {
@@ -12,17 +14,10 @@ import type {
   PersistedWorktreeSession,
   SerializedMessage,
 } from '../types/logs.js'
-import type {
-  Message,
-  NormalizedMessage,
-  NormalizedUserMessage,
-} from '../types/message.js'
+import type { Message, NormalizedMessage, NormalizedUserMessage } from '../types/message.js'
 import { PERMISSION_MODES } from '../types/permissions.js'
 import { suppressNextSkillListing } from './attachments.js'
-import {
-  copyFileHistoryForResume,
-  type FileHistorySnapshot,
-} from './fileHistory.js'
+import { copyFileHistoryForResume, type FileHistorySnapshot } from './fileHistory.js'
 import { logError } from './log.js'
 import {
   createAssistantMessage,
@@ -54,20 +49,15 @@ import type { ContentReplacementRecord } from './toolResultStorage.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
-    ? (
-        require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')
-      ).BRIEF_TOOL_NAME
+    ? (require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')).BRIEF_TOOL_NAME
     : null
 const LEGACY_BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
-    ? (
-        require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')
-      ).LEGACY_BRIEF_TOOL_NAME
+    ? (require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')).LEGACY_BRIEF_TOOL_NAME
     : null
 const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS')
-  ? (
-      require('../tools/SendUserFileTool/prompt.js') as typeof import('../tools/SendUserFileTool/prompt.js')
-    ).SEND_USER_FILE_TOOL_NAME
+  ? (require('../tools/SendUserFileTool/prompt.js') as typeof import('../tools/SendUserFileTool/prompt.js'))
+      .SEND_USER_FILE_TOOL_NAME
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -136,9 +126,7 @@ export type TeleportRemoteResponse = {
   branch?: string
 }
 
-export type TurnInterruptionState =
-  | { kind: 'none' }
-  | { kind: 'interrupted_prompt'; message: NormalizedUserMessage }
+export type TurnInterruptionState = { kind: 'none' } | { kind: 'interrupted_prompt'; message: NormalizedUserMessage }
 
 export type DeserializeResult = {
   messages: Message[]
@@ -161,45 +149,31 @@ export function deserializeMessages(serializedMessages: Message[]): Message[] {
  * interrupted turns after a gateway-triggered restart.
  * @internal Exported for testing
  */
-export function deserializeMessagesWithInterruptDetection(
-  serializedMessages: Message[],
-): DeserializeResult {
+export function deserializeMessagesWithInterruptDetection(serializedMessages: Message[]): DeserializeResult {
   try {
     // Transform legacy attachment types before processing
-    const migratedMessages = serializedMessages.map(
-      migrateLegacyAttachmentTypes,
-    )
+    const migratedMessages = serializedMessages.map(migrateLegacyAttachmentTypes)
 
     // Strip invalid permissionMode values from deserialized user messages.
     // The field is unvalidated JSON from disk and may contain modes from a different build.
     const validModes = new Set<string>(PERMISSION_MODES)
     for (const msg of migratedMessages) {
-      if (
-        msg.type === 'user' &&
-        msg.permissionMode !== undefined &&
-        !validModes.has(msg.permissionMode)
-      ) {
+      if (msg.type === 'user' && msg.permissionMode !== undefined && !validModes.has(msg.permissionMode)) {
         msg.permissionMode = undefined
       }
     }
 
     // Filter out unresolved tool uses and any synthetic messages that follow them
-    const filteredToolUses = filterUnresolvedToolUses(
-      migratedMessages,
-    ) as NormalizedMessage[]
+    const filteredToolUses = filterUnresolvedToolUses(migratedMessages) as NormalizedMessage[]
 
     // Filter out orphaned thinking-only assistant messages that can cause API errors
     // during resume. These occur when streaming yields separate messages per content
     // block and interleaved user messages prevent proper merging by message.id.
-    const filteredThinking = filterOrphanedThinkingOnlyMessages(
-      filteredToolUses,
-    ) as NormalizedMessage[]
+    const filteredThinking = filterOrphanedThinkingOnlyMessages(filteredToolUses) as NormalizedMessage[]
 
     // Filter out assistant messages with only whitespace text content.
     // This can happen when model outputs "\n\n" before thinking, user cancels mid-stream.
-    const filteredMessages = filterWhitespaceOnlyAssistantMessages(
-      filteredThinking,
-    ) as NormalizedMessage[]
+    const filteredMessages = filterWhitespaceOnlyAssistantMessages(filteredThinking) as NormalizedMessage[]
 
     const internalState = detectTurnInterruption(filteredMessages)
 
@@ -228,13 +202,8 @@ export function deserializeMessagesWithInterruptDetection(
     // trailing system/progress messages and insert right after the user
     // message so removeInterruptedMessage's splice(idx, 2) removes the
     // correct pair.
-    const lastRelevantIdx = filteredMessages.findLastIndex(
-      m => m.type !== 'system' && m.type !== 'progress',
-    )
-    if (
-      lastRelevantIdx !== -1 &&
-      filteredMessages[lastRelevantIdx]!.type === 'user'
-    ) {
+    const lastRelevantIdx = filteredMessages.findLastIndex((m) => m.type !== 'system' && m.type !== 'progress')
+    if (lastRelevantIdx !== -1 && filteredMessages[lastRelevantIdx]!.type === 'user') {
       filteredMessages.splice(
         lastRelevantIdx + 1,
         0,
@@ -255,9 +224,7 @@ export function deserializeMessagesWithInterruptDetection(
  * Internal 3-way result from detection, before transforming interrupted_turn
  * into interrupted_prompt with a synthetic continuation message.
  */
-type InternalInterruptionState =
-  | TurnInterruptionState
-  | { kind: 'interrupted_turn' }
+type InternalInterruptionState = TurnInterruptionState | { kind: 'interrupted_turn' }
 
 /**
  * Determines whether the conversation was interrupted mid-turn based on the
@@ -269,9 +236,7 @@ type InternalInterruptionState =
  * message — they are bookkeeping artifacts that should not mask a genuine
  * interruption. Attachments are kept as part of the turn.
  */
-function detectTurnInterruption(
-  messages: NormalizedMessage[],
-): InternalInterruptionState {
+function detectTurnInterruption(messages: NormalizedMessage[]): InternalInterruptionState {
   if (messages.length === 0) {
     return { kind: 'none' }
   }
@@ -282,13 +247,9 @@ function detectTurnInterruption(
   // auto-resume fire after retry exhaustion instead of reading the error as
   // a completed turn.
   const lastMessageIdx = messages.findLastIndex(
-    m =>
-      m.type !== 'system' &&
-      m.type !== 'progress' &&
-      !(m.type === 'assistant' && m.isApiErrorMessage),
+    (m) => m.type !== 'system' && m.type !== 'progress' && !(m.type === 'assistant' && m.isApiErrorMessage),
   )
-  const lastMessage =
-    lastMessageIdx !== -1 ? messages[lastMessageIdx] : undefined
+  const lastMessage = lastMessageIdx !== -1 ? messages[lastMessageIdx] : undefined
 
   if (!lastMessage) {
     return { kind: 'none' }
@@ -361,11 +322,7 @@ function isTerminalToolResult(
     if (msg.type !== 'assistant') continue
     for (const b of msg.message.content) {
       if (b.type === 'tool_use' && b.id === toolUseId) {
-        return (
-          b.name === BRIEF_TOOL_NAME ||
-          b.name === LEGACY_BRIEF_TOOL_NAME ||
-          b.name === SEND_USER_FILE_TOOL_NAME
-        )
+        return b.name === BRIEF_TOOL_NAME || b.name === LEGACY_BRIEF_TOOL_NAME || b.name === SEND_USER_FILE_TOOL_NAME
       }
     }
   }
@@ -493,20 +450,14 @@ export async function loadConversationForResume(
         try {
           const { listAllLiveSessions } = await import('./udsClient.js')
           const live = await listAllLiveSessions()
-          skip = new Set(
-            live.flatMap(s =>
-              s.kind && s.kind !== 'interactive' && s.sessionId
-                ? [s.sessionId]
-                : [],
-            ),
-          )
+          skip = new Set(live.flatMap((s) => (s.kind && s.kind !== 'interactive' && s.sessionId ? [s.sessionId] : [])))
         } catch {
           // UDS unavailable — treat all sessions as continuable
         }
       }
       const logs = await logsPromise
       log =
-        logs.find(l => {
+        logs.find((l) => {
           const id = getSessionIdFromLog(l)
           return !id || !skip.has(id)
         }) ?? null

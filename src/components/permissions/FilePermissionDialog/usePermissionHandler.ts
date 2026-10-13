@@ -12,15 +12,9 @@ import {
 import { env } from '../../../utils/env.js'
 import { generateSuggestions } from '../../../utils/permissions/filesystem.js'
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
-import {
-  type CompletionType,
-  logUnaryEvent,
-} from '../../../utils/unaryLogging.js'
+import { type CompletionType, logUnaryEvent } from '../../../utils/unaryLogging.js'
 import type { ToolUseConfirm } from '../PermissionRequest.js'
-import type {
-  FileOperationType,
-  PermissionOption,
-} from './permissionOptions.js'
+import type { FileOperationType, PermissionOption } from './permissionOptions.js'
 
 function logPermissionEvent(
   event: 'accept' | 'reject',
@@ -60,12 +54,8 @@ export type PermissionHandlerOptions = {
   scope?: 'claude-folder' | 'global-claude-folder'
 }
 
-function handleAcceptOnce(
-  params: PermissionHandlerParams,
-  options?: PermissionHandlerOptions,
-): void {
-  const { messageId, toolUseConfirm, onDone, completionType, languageName } =
-    params
+function handleAcceptOnce(params: PermissionHandlerParams, options?: PermissionHandlerOptions): void {
+  const { messageId, toolUseConfirm, onDone, completionType, languageName } = params
 
   logPermissionEvent('accept', completionType, languageName, messageId)
 
@@ -84,10 +74,7 @@ function handleAcceptOnce(
   toolUseConfirm.onAllow(toolUseConfirm.input, [], options?.feedback)
 }
 
-function handleAcceptSession(
-  params: PermissionHandlerParams,
-  options?: PermissionHandlerOptions,
-): void {
+function handleAcceptSession(params: PermissionHandlerParams, options?: PermissionHandlerOptions): void {
   const {
     messageId,
     path,
@@ -102,10 +89,7 @@ function handleAcceptSession(
   logPermissionEvent('accept', completionType, languageName, messageId)
 
   // For claude-folder scope, grant session-level access to all .claude/ files
-  if (
-    options?.scope === 'claude-folder' ||
-    options?.scope === 'global-claude-folder'
-  ) {
+  if (options?.scope === 'claude-folder' || options?.scope === 'global-claude-folder') {
     const pattern =
       options.scope === 'global-claude-folder'
         ? GLOBAL_CLAUDE_FOLDER_PERMISSION_PATTERN
@@ -129,35 +113,17 @@ function handleAcceptSession(
   }
 
   // Generate permission updates if path is provided
-  const suggestions = path
-    ? generateSuggestions(path, operationType, toolPermissionContext)
-    : []
+  const suggestions = path ? generateSuggestions(path, operationType, toolPermissionContext) : []
 
   onDone()
   // Pass permission updates directly to onAllow
   toolUseConfirm.onAllow(toolUseConfirm.input, suggestions)
 }
 
-function handleReject(
-  params: PermissionHandlerParams,
-  options?: PermissionHandlerOptions,
-): void {
-  const {
-    messageId,
-    toolUseConfirm,
-    onDone,
-    onReject,
-    completionType,
-    languageName,
-  } = params
+function handleReject(params: PermissionHandlerParams, options?: PermissionHandlerOptions): void {
+  const { messageId, toolUseConfirm, onDone, onReject, completionType, languageName } = params
 
-  logPermissionEvent(
-    'reject',
-    completionType,
-    languageName,
-    messageId,
-    options?.hasFeedback,
-  )
+  logPermissionEvent('reject', completionType, languageName, messageId, options?.hasFeedback)
 
   // Log reject submission with feedback context
   logEvent('tengu_reject_submitted', {

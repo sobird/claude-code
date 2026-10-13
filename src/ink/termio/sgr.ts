@@ -27,14 +27,7 @@ const NAMED_COLORS: NamedColor[] = [
   'brightWhite',
 ]
 
-const UNDERLINE_STYLES: UnderlineStyle[] = [
-  'none',
-  'single',
-  'double',
-  'curly',
-  'dotted',
-  'dashed',
-]
+const UNDERLINE_STYLES: UnderlineStyle[] = ['none', 'single', 'double', 'curly', 'dotted', 'dashed']
 
 type Param = { value: number | null; subparams: number[]; colon: boolean }
 
@@ -99,25 +92,14 @@ function parseExtendedColor(
 
   const next = params[idx + 1]
   if (!next) return null
-  if (
-    next.value === 5 &&
-    params[idx + 2]?.value !== null &&
-    params[idx + 2]?.value !== undefined
-  ) {
+  if (next.value === 5 && params[idx + 2]?.value !== null && params[idx + 2]?.value !== undefined) {
     return { index: params[idx + 2]!.value! }
   }
   if (next.value === 2) {
     const r = params[idx + 2]?.value
     const g = params[idx + 3]?.value
     const b = params[idx + 4]?.value
-    if (
-      r !== null &&
-      r !== undefined &&
-      g !== null &&
-      g !== undefined &&
-      b !== null &&
-      b !== undefined
-    ) {
+    if (r !== null && r !== undefined && g !== null && g !== undefined && b !== null && b !== undefined) {
       return { r, g, b }
     }
   }
@@ -154,9 +136,7 @@ export function applySGR(paramStr: string, style: TextStyle): TextStyle {
       continue
     }
     if (code === 4) {
-      s.underline = p.colon
-        ? (UNDERLINE_STYLES[p.subparams[0]!] ?? 'single')
-        : 'single'
+      s.underline = p.colon ? (UNDERLINE_STYLES[p.subparams[0]!] ?? 'single') : 'single'
       i++
       continue
     }
@@ -266,10 +246,7 @@ export function applySGR(paramStr: string, style: TextStyle): TextStyle {
     if (code === 38) {
       const c = parseExtendedColor(params, i)
       if (c) {
-        s.fg =
-          'index' in c
-            ? { type: 'indexed', index: c.index }
-            : { type: 'rgb', ...c }
+        s.fg = 'index' in c ? { type: 'indexed', index: c.index } : { type: 'rgb', ...c }
         i += p.colon ? 1 : 'index' in c ? 3 : 5
         continue
       }
@@ -277,10 +254,7 @@ export function applySGR(paramStr: string, style: TextStyle): TextStyle {
     if (code === 48) {
       const c = parseExtendedColor(params, i)
       if (c) {
-        s.bg =
-          'index' in c
-            ? { type: 'indexed', index: c.index }
-            : { type: 'rgb', ...c }
+        s.bg = 'index' in c ? { type: 'indexed', index: c.index } : { type: 'rgb', ...c }
         i += p.colon ? 1 : 'index' in c ? 3 : 5
         continue
       }
@@ -288,10 +262,7 @@ export function applySGR(paramStr: string, style: TextStyle): TextStyle {
     if (code === 58) {
       const c = parseExtendedColor(params, i)
       if (c) {
-        s.underlineColor =
-          'index' in c
-            ? { type: 'indexed', index: c.index }
-            : { type: 'rgb', ...c }
+        s.underlineColor = 'index' in c ? { type: 'indexed', index: c.index } : { type: 'rgb', ...c }
         i += p.colon ? 1 : 'index' in c ? 3 : 5
         continue
       }

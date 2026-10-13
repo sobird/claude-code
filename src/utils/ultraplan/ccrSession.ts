@@ -4,19 +4,14 @@
 // Plan mode is set via set_permission_mode control_request in
 // teleportToRemote's CreateSession events array.
 
-import type {
-  ToolResultBlockParam,
-  ToolUseBlock,
-} from '@anthropic-ai/sdk/resources'
+import type { ToolResultBlockParam, ToolUseBlock } from '@anthropic-ai/sdk/resources'
+
 import type { SDKMessage } from '../../entrypoints/agentSdkTypes.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../tools/ExitPlanModeTool/constants.js'
 import { logForDebugging } from '../debug.js'
 import { sleep } from '../sleep.js'
+import { type PollRemoteSessionResponse, pollRemoteSessionEvents } from '../teleport.js'
 import { isTransientNetworkError } from '../teleport/api.js'
-import {
-  type PollRemoteSessionResponse,
-  pollRemoteSessionEvents,
-} from '../teleport.js'
 
 const POLL_INTERVAL_MS = 3000
 // pollRemoteSessionEvents doesn't retry. A 30min poll makes ~600 calls;
@@ -94,7 +89,7 @@ export class ExitPlanModeScanner {
    * the remote is showing the approval dialog in the browser.
    */
   get hasPendingPlan(): boolean {
-    const id = this.exitPlanCalls.findLast(c => !this.rejectedIds.has(c))
+    const id = this.exitPlanCalls.findLast((c) => !this.rejectedIds.has(c))
     return id !== undefined && !this.results.has(id)
   }
 
@@ -147,10 +142,7 @@ export class ExitPlanModeScanner {
           found = { kind: 'pending' }
         } else if (tr.is_error === true) {
           const teleportPlan = extractTeleportPlan(tr.content)
-          found =
-            teleportPlan !== null
-              ? { kind: 'teleport', plan: teleportPlan }
-              : { kind: 'rejected', id }
+          found = teleportPlan !== null ? { kind: 'teleport', plan: teleportPlan } : { kind: 'rejected', id }
         } else {
           found = { kind: 'approved', plan: extractApprovedPlan(tr.content) }
         }
@@ -209,11 +201,7 @@ export async function pollForApprovedExitPlanMode(
 
   while (Date.now() < deadline) {
     if (shouldStop?.()) {
-      throw new UltraplanPollError(
-        'poll stopped by caller',
-        'stopped',
-        scanner.rejectCount,
-      )
+      throw new UltraplanPollError('poll stopped by caller', 'stopped', scanner.rejectCount)
     }
     let newEvents: SDKMessage[]
     let sessionStatus: PollRemoteSessionResponse['sessionStatus']
@@ -280,14 +268,8 @@ export async function pollForApprovedExitPlanMode(
     // events flowing means the session is working regardless of the status
     // snapshot. This also makes needs_input → running snap back on the first
     // poll that sees the user's reply event, even if session_status lags.
-    const quietIdle =
-      (sessionStatus === 'idle' || sessionStatus === 'requires_action') &&
-      newEvents.length === 0
-    const phase: UltraplanPhase = scanner.hasPendingPlan
-      ? 'plan_ready'
-      : quietIdle
-        ? 'needs_input'
-        : 'running'
+    const quietIdle = (sessionStatus === 'idle' || sessionStatus === 'requires_action') && newEvents.length === 0
+    const phase: UltraplanPhase = scanner.hasPendingPlan ? 'plan_ready' : quietIdle ? 'needs_input' : 'running'
     if (phase !== lastPhase) {
       logForDebugging(`[ultraplan] phase ${lastPhase} → ${phase}`)
       lastPhase = phase
@@ -311,16 +293,14 @@ function contentToText(content: ToolResultBlockParam['content']): string {
   return typeof content === 'string'
     ? content
     : Array.isArray(content)
-      ? content.map(b => ('text' in b ? b.text : '')).join('')
+      ? content.map((b) => ('text' in b ? b.text : '')).join('')
       : ''
 }
 
 // Extracts the plan text after the ULTRAPLAN_TELEPORT_SENTINEL marker.
 // Returns null when the sentinel is absent — callers treat null as a normal
 // user rejection (scanner falls through to { kind: 'rejected' }).
-function extractTeleportPlan(
-  content: ToolResultBlockParam['content'],
-): string | null {
+function extractTeleportPlan(content: ToolResultBlockParam['content']): string | null {
   const text = contentToText(content)
   const marker = `${ULTRAPLAN_TELEPORT_SENTINEL}\n`
   const idx = text.indexOf(marker)
@@ -333,10 +313,7 @@ function extractTeleportPlan(
 function extractApprovedPlan(content: ToolResultBlockParam['content']): string {
   const text = contentToText(content)
   // Try both markers — edited plans use a different label.
-  const markers = [
-    '## Approved Plan (edited by user):\n',
-    '## Approved Plan:\n',
-  ]
+  const markers = ['## Approved Plan (edited by user):\n', '## Approved Plan:\n']
   for (const marker of markers) {
     const idx = text.indexOf(marker)
     if (idx !== -1) {

@@ -1,5 +1,6 @@
-import { Text, Link } from '../../ink.js'
 import figures from 'figures'
+
+import { Text, Link } from '../../ink.js'
 
 type Props = {
   key?: string

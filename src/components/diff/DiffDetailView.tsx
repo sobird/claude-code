@@ -1,6 +1,8 @@
-import type { StructuredPatchHunk } from 'diff'
 import { resolve } from 'path'
+
+import type { StructuredPatchHunk } from 'diff'
 import React, { useMemo } from 'react'
+
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { Box, Text } from '../../ink.js'
 import { getCwd } from '../../utils/cwd.js'

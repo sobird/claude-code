@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { MessageResponse } from '../../components/MessageResponse.js'
 import { Text } from '../../ink.js'
 import { truncateToWidth } from '../format.js'
@@ -43,10 +44,7 @@ const RESULT_SUMMARY: Readonly<Partial<Record<string, string>>> = {
  */
 export function getComputerUseMCPRenderingOverrides(toolName: string): {
   userFacingName: () => string
-  renderToolUseMessage: (
-    input: Record<string, unknown>,
-    options: { verbose: boolean },
-  ) => React.ReactNode
+  renderToolUseMessage: (input: Record<string, unknown>, options: { verbose: boolean }) => React.ReactNode
   renderToolResultMessage: (
     output: MCPToolResult,
     progressMessages: unknown[],
@@ -85,9 +83,7 @@ export function getComputerUseMCPRenderingOverrides(toolName: string): {
             : `to ${fmtCoord(input.coordinate)}`
 
         case 'type':
-          return typeof input.text === 'string'
-            ? `"${truncateToWidth(input.text, 40)}"`
-            : ''
+          return typeof input.text === 'string' ? `"${truncateToWidth(input.text, 40)}"` : ''
 
         case 'key':
         case 'hold_key':
@@ -104,30 +100,22 @@ export function getComputerUseMCPRenderingOverrides(toolName: string): {
 
         case 'zoom': {
           const r = input.region
-          return Array.isArray(r) && r.length === 4
-            ? `[${r[0]}, ${r[1]}, ${r[2]}, ${r[3]}]`
-            : ''
+          return Array.isArray(r) && r.length === 4 ? `[${r[0]}, ${r[1]}, ${r[2]}, ${r[3]}]` : ''
         }
 
         case 'wait':
           return typeof input.duration === 'number' ? `${input.duration}s` : ''
 
         case 'write_clipboard':
-          return typeof input.text === 'string'
-            ? `"${truncateToWidth(input.text, 40)}"`
-            : ''
+          return typeof input.text === 'string' ? `"${truncateToWidth(input.text, 40)}"` : ''
 
         case 'open_application':
-          return typeof input.bundle_id === 'string'
-            ? String(input.bundle_id)
-            : ''
+          return typeof input.bundle_id === 'string' ? String(input.bundle_id) : ''
 
         case 'request_access': {
           const apps = input.apps
           if (!Array.isArray(apps)) return ''
-          const names = apps
-            .map(a => (typeof a?.displayName === 'string' ? a.displayName : ''))
-            .filter(Boolean)
+          const names = apps.map((a) => (typeof a?.displayName === 'string' ? a.displayName : '')).filter(Boolean)
           return names.join(', ')
         }
 

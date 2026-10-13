@@ -200,13 +200,7 @@ export type Styles = {
    * It defines the alignment along the main axis.
    * See [justify-content](https://css-tricks.com/almanac/properties/j/justify-content/).
    */
-  readonly justifyContent?:
-    | 'flex-start'
-    | 'flex-end'
-    | 'space-between'
-    | 'space-around'
-    | 'space-evenly'
-    | 'center'
+  readonly justifyContent?: 'flex-start' | 'flex-end' | 'space-between' | 'space-around' | 'space-evenly' | 'center'
 
   /**
    * Width of the element in spaces.
@@ -405,11 +399,7 @@ export type Styles = {
 
 const applyPositionStyles = (node: LayoutNode, style: Styles): void => {
   if ('position' in style) {
-    node.setPositionType(
-      style.position === 'absolute'
-        ? LayoutPositionType.Absolute
-        : LayoutPositionType.Relative,
-    )
+    node.setPositionType(style.position === 'absolute' ? LayoutPositionType.Absolute : LayoutPositionType.Relative)
   }
   if ('top' in style) applyPositionEdge(node, 'top', style.top)
   if ('bottom' in style) applyPositionEdge(node, 'bottom', style.bottom)
@@ -442,11 +432,7 @@ const applyOverflowStyles = (node: LayoutNode, style: Styles): void => {
     node.setOverflow(LayoutOverflow.Scroll)
   } else if (y === 'hidden' || x === 'hidden') {
     node.setOverflow(LayoutOverflow.Hidden)
-  } else if (
-    'overflow' in style ||
-    'overflowX' in style ||
-    'overflowY' in style
-  ) {
+  } else if ('overflow' in style || 'overflowX' in style || 'overflowY' in style) {
     node.setOverflow(LayoutOverflow.Visible)
   }
 }
@@ -517,9 +503,7 @@ const applyFlexStyles = (node: LayoutNode, style: Styles): void => {
   }
 
   if ('flexShrink' in style) {
-    node.setFlexShrink(
-      typeof style.flexShrink === 'number' ? style.flexShrink : 1,
-    )
+    node.setFlexShrink(typeof style.flexShrink === 'number' ? style.flexShrink : 1)
   }
 
   if ('flexWrap' in style) {
@@ -683,17 +667,11 @@ const applyDimensionStyles = (node: LayoutNode, style: Styles): void => {
 
 const applyDisplayStyles = (node: LayoutNode, style: Styles): void => {
   if ('display' in style) {
-    node.setDisplay(
-      style.display === 'flex' ? LayoutDisplay.Flex : LayoutDisplay.None,
-    )
+    node.setDisplay(style.display === 'flex' ? LayoutDisplay.Flex : LayoutDisplay.None)
   }
 }
 
-const applyBorderStyles = (
-  node: LayoutNode,
-  style: Styles,
-  resolvedStyle?: Styles,
-): void => {
+const applyBorderStyles = (node: LayoutNode, style: Styles, resolvedStyle?: Styles): void => {
   // resolvedStyle is the full current style (already set on the DOM node).
   // style may be a diff with only changed properties. For border side props,
   // we need the resolved value because `borderStyle` in a diff may not include
@@ -703,22 +681,10 @@ const applyBorderStyles = (
   if ('borderStyle' in style) {
     const borderWidth = style.borderStyle ? 1 : 0
 
-    node.setBorder(
-      LayoutEdge.Top,
-      resolved.borderTop !== false ? borderWidth : 0,
-    )
-    node.setBorder(
-      LayoutEdge.Bottom,
-      resolved.borderBottom !== false ? borderWidth : 0,
-    )
-    node.setBorder(
-      LayoutEdge.Left,
-      resolved.borderLeft !== false ? borderWidth : 0,
-    )
-    node.setBorder(
-      LayoutEdge.Right,
-      resolved.borderRight !== false ? borderWidth : 0,
-    )
+    node.setBorder(LayoutEdge.Top, resolved.borderTop !== false ? borderWidth : 0)
+    node.setBorder(LayoutEdge.Bottom, resolved.borderBottom !== false ? borderWidth : 0)
+    node.setBorder(LayoutEdge.Left, resolved.borderLeft !== false ? borderWidth : 0)
+    node.setBorder(LayoutEdge.Right, resolved.borderRight !== false ? borderWidth : 0)
   } else {
     // Handle individual border property changes (when only borderX changes without borderStyle).
     // Skip undefined values — they mean the prop was removed or never set,
@@ -752,11 +718,7 @@ const applyGapStyles = (node: LayoutNode, style: Styles): void => {
   }
 }
 
-const styles = (
-  node: LayoutNode,
-  style: Styles = {},
-  resolvedStyle?: Styles,
-): void => {
+const styles = (node: LayoutNode, style: Styles = {}, resolvedStyle?: Styles): void => {
   applyPositionStyles(node, style)
   applyOverflowStyles(node, style)
   applyMarginStyles(node, style)

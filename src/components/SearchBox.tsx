@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Box, Text } from '../ink.js'
 
 type Props = {
@@ -41,12 +42,8 @@ export function SearchBox({
               isTerminalFocused ? (
                 <>
                   <Text>{query.slice(0, offset)}</Text>
-                  <Text inverse>
-                    {offset < query.length ? query[offset] : ' '}
-                  </Text>
-                  {offset < query.length && (
-                    <Text>{query.slice(offset + 1)}</Text>
-                  )}
+                  <Text inverse>{offset < query.length ? query[offset] : ' '}</Text>
+                  {offset < query.length && <Text>{query.slice(offset + 1)}</Text>}
                 </>
               ) : (
                 <Text>{query}</Text>

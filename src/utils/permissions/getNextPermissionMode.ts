@@ -1,12 +1,9 @@
 import { feature } from 'bun:bundle'
+
 import type { ToolPermissionContext } from '../../Tool.js'
 import { logForDebugging } from '../debug.js'
 import type { PermissionMode } from './PermissionMode.js'
-import {
-  getAutoModeUnavailableReason,
-  isAutoModeGateEnabled,
-  transitionPermissionMode,
-} from './permissionSetup.js'
+import { getAutoModeUnavailableReason, isAutoModeGateEnabled, transitionPermissionMode } from './permissionSetup.js'
 
 // Checks both the cached isAutoModeAvailable (set at startup by
 // verifyAutoModeGateAccess) and the live isAutoModeGateEnabled() — these can
@@ -71,7 +68,6 @@ export function getNextPermissionMode(
       // Not exposed in UI cycle yet, but return default if somehow reached
       return 'default'
 
-
     default:
       // Covers auto (when TRANSCRIPT_CLASSIFIER is enabled) and any future modes — always fall back to default
       return 'default'
@@ -92,10 +88,6 @@ export function cyclePermissionMode(
   const nextMode = getNextPermissionMode(toolPermissionContext, teamContext)
   return {
     nextMode,
-    context: transitionPermissionMode(
-      toolPermissionContext.mode,
-      nextMode,
-      toolPermissionContext,
-    ),
+    context: transitionPermissionMode(toolPermissionContext.mode, nextMode, toolPermissionContext),
   }
 }

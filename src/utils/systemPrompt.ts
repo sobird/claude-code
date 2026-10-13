@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -68,10 +69,7 @@ export function buildEffectiveSystemPrompt({
     const { getCoordinatorSystemPrompt } =
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('../coordinator/coordinatorMode.js') as typeof import('../coordinator/coordinatorMode.js')
-    return asSystemPrompt([
-      getCoordinatorSystemPrompt(),
-      ...(appendSystemPrompt ? [appendSystemPrompt] : []),
-    ])
+    return asSystemPrompt([getCoordinatorSystemPrompt(), ...(appendSystemPrompt ? [appendSystemPrompt] : [])])
   }
 
   const agentSystemPrompt = mainThreadAgentDefinition
@@ -86,13 +84,10 @@ export function buildEffectiveSystemPrompt({
   if (mainThreadAgentDefinition?.memory) {
     logEvent('tengu_agent_memory_loaded', {
       ...(process.env.USER_TYPE === 'ant' && {
-        agent_type:
-          mainThreadAgentDefinition.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        agent_type: mainThreadAgentDefinition.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
-      scope:
-        mainThreadAgentDefinition.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      source:
-        'main-thread' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      scope: mainThreadAgentDefinition.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      source: 'main-thread' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
   }
 
@@ -100,11 +95,7 @@ export function buildEffectiveSystemPrompt({
   // rather than replacing it. The proactive default prompt is already lean
   // (autonomous agent identity + memory + env + proactive section), and agents
   // add domain-specific behavior on top — same pattern as teammates.
-  if (
-    agentSystemPrompt &&
-    (feature('PROACTIVE') || feature('KAIROS')) &&
-    isProactiveActive_SAFE_TO_CALL_ANYWHERE()
-  ) {
+  if (agentSystemPrompt && (feature('PROACTIVE') || feature('KAIROS')) && isProactiveActive_SAFE_TO_CALL_ANYWHERE()) {
     return asSystemPrompt([
       ...defaultSystemPrompt,
       `\n# Custom Agent Instructions\n${agentSystemPrompt}`,
@@ -113,11 +104,7 @@ export function buildEffectiveSystemPrompt({
   }
 
   return asSystemPrompt([
-    ...(agentSystemPrompt
-      ? [agentSystemPrompt]
-      : customSystemPrompt
-        ? [customSystemPrompt]
-        : defaultSystemPrompt),
+    ...(agentSystemPrompt ? [agentSystemPrompt] : customSystemPrompt ? [customSystemPrompt] : defaultSystemPrompt),
     ...(appendSystemPrompt ? [appendSystemPrompt] : []),
   ])
 }

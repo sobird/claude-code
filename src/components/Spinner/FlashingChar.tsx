@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Text, useTheme } from '../../ink.js'
 import { getTheme, type Theme } from '../../utils/theme.js'
 import { interpolateColor, parseRGB, toRGBColor } from './utils.js'
@@ -10,12 +11,7 @@ type Props = {
   shimmerColor: keyof Theme
 }
 
-export function FlashingChar({
-  char,
-  flashOpacity,
-  messageColor,
-  shimmerColor,
-}: Props): React.ReactNode {
+export function FlashingChar({ char, flashOpacity, messageColor, shimmerColor }: Props): React.ReactNode {
   const [themeName] = useTheme()
   const theme = getTheme(themeName)
 
@@ -33,7 +29,5 @@ export function FlashingChar({
 
   // Fallback for ANSI themes: binary switch
   const shouldUseShimmer = flashOpacity > 0.5
-  return (
-    <Text color={shouldUseShimmer ? shimmerColor : messageColor}>{char}</Text>
-  )
+  return <Text color={shouldUseShimmer ? shimmerColor : messageColor}>{char}</Text>
 }

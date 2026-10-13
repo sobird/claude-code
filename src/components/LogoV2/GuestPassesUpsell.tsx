@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useState } from 'react'
+
 import { Text } from '../../ink.js'
 import { logEvent } from '../../services/analytics/index.js'
 import {
@@ -16,7 +17,7 @@ function resetIfPassesRefreshed(): void {
   const config = getGlobalConfig()
   const lastSeen = config.passesLastSeenRemaining ?? 0
   if (remaining > lastSeen) {
-    saveGlobalConfig(prev => ({
+    saveGlobalConfig((prev) => ({
       ...prev,
       passesUpsellSeenCount: 0,
       hasVisitedPasses: false,
@@ -46,7 +47,7 @@ export function useShowGuestPassesUpsell(): boolean {
 
 export function incrementGuestPassesSeenCount(): void {
   let newCount = 0
-  saveGlobalConfig(prev => {
+  saveGlobalConfig((prev) => {
     newCount = (prev.passesUpsellSeenCount ?? 0) + 1
     return {
       ...prev,
@@ -63,8 +64,7 @@ export function GuestPassesUpsell(): React.ReactNode {
   const reward = getCachedReferrerReward()
   return (
     <Text dimColor>
-      <Text color="claude">[✻]</Text> <Text color="claude">[✻]</Text>{' '}
-      <Text color="claude">[✻]</Text> ·{' '}
+      <Text color="claude">[✻]</Text> <Text color="claude">[✻]</Text> <Text color="claude">[✻]</Text> ·{' '}
       {reward
         ? `Share Claude Code and earn ${formatCreditAmount(reward)} of extra usage · /passes`
         : '3 guest passes at /passes'}

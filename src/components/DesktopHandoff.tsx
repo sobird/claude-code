@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react'
+
 import type { CommandResultDisplay } from '../commands.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- raw input for "any key" dismiss and y/n prompt
 import { Box, Text, useInput } from '../ink.js'
 import { openBrowser } from '../utils/browser.js'
-import {
-  getDesktopInstallStatus,
-  openCurrentSessionInDesktop,
-} from '../utils/desktopDeepLink.js'
+import { getDesktopInstallStatus, openCurrentSessionInDesktop } from '../utils/desktopDeepLink.js'
 import { errorMessage } from '../utils/errors.js'
 import { gracefulShutdown } from '../utils/gracefulShutdown.js'
 import { flushSessionStorage } from '../utils/sessionStorage.js'
@@ -23,19 +21,10 @@ export function getDownloadUrl(): string {
   }
 }
 
-type DesktopHandoffState =
-  | 'checking'
-  | 'prompt-download'
-  | 'flushing'
-  | 'opening'
-  | 'success'
-  | 'error'
+type DesktopHandoffState = 'checking' | 'prompt-download' | 'flushing' | 'opening' | 'success' | 'error'
 
 type Props = {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
 export function DesktopHandoff({ onDone }: Props): React.ReactNode {
@@ -44,7 +33,7 @@ export function DesktopHandoff({ onDone }: Props): React.ReactNode {
   const [downloadMessage, setDownloadMessage] = useState<string>('')
 
   // Handle keyboard input for error and prompt-download states
-  useInput(input => {
+  useInput((input) => {
     if (state === 'error') {
       onDone(error ?? 'Unknown error', { display: 'system' })
       return
@@ -57,10 +46,7 @@ export function DesktopHandoff({ onDone }: Props): React.ReactNode {
           { display: 'system' },
         )
       } else if (input === 'n' || input === 'N') {
-        onDone(
-          `The desktop app is required for /desktop. Learn more at ${DESKTOP_DOCS_URL}`,
-          { display: 'system' },
-        )
+        onDone(`The desktop app is required for /desktop. Learn more at ${DESKTOP_DOCS_URL}`, { display: 'system' })
       }
     }
   })
@@ -78,9 +64,7 @@ export function DesktopHandoff({ onDone }: Props): React.ReactNode {
       }
 
       if (installStatus.status === 'version-too-old') {
-        setDownloadMessage(
-          `Claude Desktop needs to be updated (found v${installStatus.version}, need v1.1.2396+).`,
-        )
+        setDownloadMessage(`Claude Desktop needs to be updated (found v${installStatus.version}, need v1.1.2396+).`)
         setState('prompt-download')
         return
       }
@@ -113,7 +97,7 @@ export function DesktopHandoff({ onDone }: Props): React.ReactNode {
       )
     }
 
-    performHandoff().catch(err => {
+    performHandoff().catch((err) => {
       setError(errorMessage(err))
       setState('error')
     })
@@ -137,10 +121,7 @@ export function DesktopHandoff({ onDone }: Props): React.ReactNode {
     )
   }
 
-  const messages: Record<
-    Exclude<DesktopHandoffState, 'error' | 'prompt-download'>,
-    string
-  > = {
+  const messages: Record<Exclude<DesktopHandoffState, 'error' | 'prompt-download'>, string> = {
     checking: 'Checking for Claude Desktop…',
     flushing: 'Saving session…',
     opening: 'Opening Claude Desktop…',

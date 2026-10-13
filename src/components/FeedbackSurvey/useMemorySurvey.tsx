@@ -5,6 +5,7 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
+
 import { isAutoMemoryEnabled } from '../../memdir/paths.js'
 import { isPolicyAllowed } from '../../services/policyLimits/index.js'
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
@@ -12,10 +13,7 @@ import type { Message } from '../../types/message.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { isAutoManagedMemoryFile } from '../../utils/memoryFileDetection.js'
-import {
-  extractTextContent,
-  getLastAssistantMessage,
-} from '../../utils/messages.js'
+import { extractTextContent, getLastAssistantMessage } from '../../utils/messages.js'
 import { logOTelEvent } from '../../utils/telemetry/events.js'
 import { submitTranscriptShare } from './submitTranscriptShare.js'
 import type { TranscriptShareResponse } from './TranscriptSharePrompt.js'
@@ -44,10 +42,7 @@ function hasMemoryFileRead(messages: Message[]): boolean {
         continue
       }
       const input = block.input as { file_path?: unknown }
-      if (
-        typeof input.file_path === 'string' &&
-        isAutoManagedMemoryFile(input.file_path)
-      ) {
+      if (typeof input.file_path === 'string' && isAutoManagedMemoryFile(input.file_path)) {
         return true
       }
     }
@@ -61,13 +56,7 @@ export function useMemorySurvey(
   hasActivePrompt = false,
   { enabled = true }: { enabled?: boolean } = {},
 ): {
-  state:
-    | 'closed'
-    | 'open'
-    | 'thanks'
-    | 'transcript_prompt'
-    | 'submitting'
-    | 'submitted'
+  state: 'closed' | 'open' | 'thanks' | 'transcript_prompt' | 'submitting' | 'submitted'
   lastResponse: FeedbackSurveyResponse | null
   handleSelect: (selected: FeedbackSurveyResponse) => void
   handleTranscriptSelect: (selected: TranscriptShareResponse) => void
@@ -83,10 +72,8 @@ export function useMemorySurvey(
 
   const onOpen = useCallback((appearanceId: string) => {
     logEvent(MEMORY_SURVEY_EVENT, {
-      event_type:
-        'appeared' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      appearance_id:
-        appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      event_type: 'appeared' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      appearance_id: appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     void logOTelEvent('feedback_survey', {
       event_type: 'appeared',
@@ -95,53 +82,41 @@ export function useMemorySurvey(
     })
   }, [])
 
-  const onSelect = useCallback(
-    (appearanceId: string, selected: FeedbackSurveyResponse) => {
-      logEvent(MEMORY_SURVEY_EVENT, {
-        event_type:
-          'responded' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        appearance_id:
-          appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        response:
-          selected as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      })
-      void logOTelEvent('feedback_survey', {
-        event_type: 'responded',
-        appearance_id: appearanceId,
-        response: selected,
-        survey_type: 'memory',
-      })
-    },
-    [],
-  )
+  const onSelect = useCallback((appearanceId: string, selected: FeedbackSurveyResponse) => {
+    logEvent(MEMORY_SURVEY_EVENT, {
+      event_type: 'responded' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      appearance_id: appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      response: selected as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    })
+    void logOTelEvent('feedback_survey', {
+      event_type: 'responded',
+      appearance_id: appearanceId,
+      response: selected,
+      survey_type: 'memory',
+    })
+  }, [])
 
-  const shouldShowTranscriptPrompt = useCallback(
-    (selected: FeedbackSurveyResponse) => {
-      if (process.env.USER_TYPE !== 'ant') {
-        return false
-      }
-      if (selected !== 'bad' && selected !== 'good') {
-        return false
-      }
-      if (getGlobalConfig().transcriptShareDismissed) {
-        return false
-      }
-      if (!isPolicyAllowed('allow_product_feedback')) {
-        return false
-      }
-      return true
-    },
-    [],
-  )
+  const shouldShowTranscriptPrompt = useCallback((selected: FeedbackSurveyResponse) => {
+    if (process.env.USER_TYPE !== 'ant') {
+      return false
+    }
+    if (selected !== 'bad' && selected !== 'good') {
+      return false
+    }
+    if (getGlobalConfig().transcriptShareDismissed) {
+      return false
+    }
+    if (!isPolicyAllowed('allow_product_feedback')) {
+      return false
+    }
+    return true
+  }, [])
 
   const onTranscriptPromptShown = useCallback((appearanceId: string) => {
     logEvent(MEMORY_SURVEY_EVENT, {
-      event_type:
-        'transcript_prompt_appeared' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      appearance_id:
-        appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      trigger:
-        TRANSCRIPT_SHARE_TRIGGER as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      event_type: 'transcript_prompt_appeared' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      appearance_id: appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      trigger: TRANSCRIPT_SHARE_TRIGGER as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     void logOTelEvent('feedback_survey', {
       event_type: 'transcript_prompt_appeared',
@@ -151,40 +126,28 @@ export function useMemorySurvey(
   }, [])
 
   const onTranscriptSelect = useCallback(
-    async (
-      appearanceId: string,
-      selected: TranscriptShareResponse,
-    ): Promise<boolean> => {
+    async (appearanceId: string, selected: TranscriptShareResponse): Promise<boolean> => {
       logEvent(MEMORY_SURVEY_EVENT, {
-        event_type:
-          `transcript_share_${selected}` as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        appearance_id:
-          appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        trigger:
-          TRANSCRIPT_SHARE_TRIGGER as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        event_type: `transcript_share_${selected}` as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        appearance_id: appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        trigger: TRANSCRIPT_SHARE_TRIGGER as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
 
       if (selected === 'dont_ask_again') {
-        saveGlobalConfig(current => ({
+        saveGlobalConfig((current) => ({
           ...current,
           transcriptShareDismissed: true,
         }))
       }
 
       if (selected === 'yes') {
-        const result = await submitTranscriptShare(
-          messagesRef.current,
-          TRANSCRIPT_SHARE_TRIGGER,
-          appearanceId,
-        )
+        const result = await submitTranscriptShare(messagesRef.current, TRANSCRIPT_SHARE_TRIGGER, appearanceId)
         logEvent(MEMORY_SURVEY_EVENT, {
           event_type: (result.success
             ? 'transcript_share_submitted'
             : 'transcript_share_failed') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          appearance_id:
-            appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          trigger:
-            TRANSCRIPT_SHARE_TRIGGER as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          appearance_id: appearanceId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          trigger: TRANSCRIPT_SHARE_TRIGGER as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
         return result.success
       }
@@ -194,20 +157,16 @@ export function useMemorySurvey(
     [],
   )
 
-  const { state, lastResponse, open, handleSelect, handleTranscriptSelect } =
-    useSurveyState({
-      hideThanksAfterMs: HIDE_THANKS_AFTER_MS,
-      onOpen,
-      onSelect,
-      shouldShowTranscriptPrompt,
-      onTranscriptPromptShown,
-      onTranscriptSelect,
-    })
+  const { state, lastResponse, open, handleSelect, handleTranscriptSelect } = useSurveyState({
+    hideThanksAfterMs: HIDE_THANKS_AFTER_MS,
+    onOpen,
+    onSelect,
+    shouldShowTranscriptPrompt,
+    onTranscriptPromptShown,
+    onTranscriptSelect,
+  })
 
-  const lastAssistant = useMemo(
-    () => getLastAssistantMessage(messages),
-    [messages],
-  )
+  const lastAssistant = useMemo(() => getLastAssistantMessage(messages), [messages])
 
   useEffect(() => {
     if (!enabled) return
@@ -269,15 +228,7 @@ export function useMemorySurvey(
     if (Math.random() < SURVEY_PROBABILITY) {
       open()
     }
-  }, [
-    enabled,
-    state,
-    isLoading,
-    hasActivePrompt,
-    lastAssistant,
-    messages,
-    open,
-  ])
+  }, [enabled, state, isLoading, hasActivePrompt, lastAssistant, messages, open])
 
   return { state, lastResponse, handleSelect, handleTranscriptSelect }
 }

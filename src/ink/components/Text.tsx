@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import React from 'react'
+
 import type { Color, Styles, TextStyles } from '../styles.js'
 
 type BaseProps = {
@@ -47,10 +48,7 @@ type BaseProps = {
  * Bold and dim are mutually exclusive in terminals.
  * This type ensures you can use one or the other, but not both.
  */
-type WeightProps =
-  | { bold?: never; dim?: never }
-  | { bold: boolean; dim?: never }
-  | { dim: boolean; bold?: never }
+type WeightProps = { bold?: never; dim?: never } | { bold: boolean; dim?: never } | { dim: boolean; bold?: never }
 
 export type Props = BaseProps & WeightProps
 

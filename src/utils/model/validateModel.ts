@@ -1,15 +1,11 @@
+import { NotFoundError, APIError, APIConnectionError, AuthenticationError } from '@anthropic-ai/sdk'
+
+import { sideQuery } from '../sideQuery.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { MODEL_ALIASES } from './aliases.js'
 import { isModelAllowed } from './modelAllowlist.js'
-import { getAPIProvider } from './providers.js'
-import { sideQuery } from '../sideQuery.js'
-import {
-  NotFoundError,
-  APIError,
-  APIConnectionError,
-  AuthenticationError,
-} from '@anthropic-ai/sdk'
 import { getModelStrings } from './modelStrings.js'
+import { getAPIProvider } from './providers.js'
 
 // Cache valid models to avoid repeated API calls
 const validModelCache = new Map<string, boolean>()
@@ -17,9 +13,7 @@ const validModelCache = new Map<string, boolean>()
 /**
  * Validates a model by attempting an actual API call.
  */
-export async function validateModel(
-  model: string,
-): Promise<{ valid: boolean; error?: string }> {
+export async function validateModel(model: string): Promise<{ valid: boolean; error?: string }> {
   const normalizedModel = model.trim()
 
   // Empty model is invalid
@@ -51,7 +45,6 @@ export async function validateModel(
     return { valid: true }
   }
 
-
   // Try to make an actual API call with minimal parameters
   try {
     await sideQuery({
@@ -81,10 +74,7 @@ export async function validateModel(
   }
 }
 
-function handleValidationError(
-  error: unknown,
-  modelName: string,
-): { valid: boolean; error: string } {
+function handleValidationError(error: unknown, modelName: string): { valid: boolean; error: string } {
   // NotFoundError (404) means the model doesn't exist
   if (error instanceof NotFoundError) {
     const fallback = get3PFallbackSuggestion(modelName)

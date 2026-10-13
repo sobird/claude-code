@@ -2,8 +2,9 @@ import { diffWordsWithSpace, type StructuredPatchHunk } from 'diff'
 import * as React from 'react'
 import { useMemo } from 'react'
 import type { ThemeName } from 'src/utils/theme.js'
-import { stringWidth } from '../../ink/stringWidth.js'
+
 import { Box, NoSelect, Text, useTheme, wrapText } from '../../ink.js'
+import { stringWidth } from '../../ink/stringWidth.js'
 
 /*
  * StructuredDiffFallback Component: Word-Level Diff Highlighting Example
@@ -79,11 +80,7 @@ type Props = {
 // Threshold for when we show a full-line diff instead of word-level diffing
 const CHANGE_THRESHOLD = 0.4
 
-export function StructuredDiffFallback({
-  patch,
-  dim,
-  width,
-}: Props): React.ReactNode {
+export function StructuredDiffFallback({ patch, dim, width }: Props): React.ReactNode {
   const [theme] = useTheme()
   const diff = useMemo(
     () => formatDiff(patch.lines, patch.oldStart, width, dim, theme),
@@ -101,7 +98,7 @@ export function StructuredDiffFallback({
 
 // Transform lines to line objects with type information
 export function transformLinesToObjects(lines: string[]): LineObject[] {
-  return lines.map(code => {
+  return lines.map((code) => {
     if (code.startsWith('+')) {
       return {
         code: code.slice(1),
@@ -206,10 +203,7 @@ export function processAdjacentLines(lineObjects: LineObject[]): LineObject[] {
 }
 
 // Calculate word-level diffs between two text strings
-export function calculateWordDiffs(
-  oldText: string,
-  newText: string,
-): DiffPart[] {
+export function calculateWordDiffs(oldText: string, newText: string): DiffPart[] {
   // Use diffWordsWithSpace instead of diffWords to preserve whitespace
   // This ensures spaces between tokens like > and { are preserved
   const result = diffWordsWithSpace(oldText, newText, { ignoreCase: false })
@@ -231,17 +225,15 @@ function generateWordDiffElements(
     return null // This function only handles word-level diff rendering
   }
 
-  const removedLineText =
-    type === 'remove' ? originalCode : matchedLine.originalCode
-  const addedLineText =
-    type === 'remove' ? matchedLine.originalCode : originalCode
+  const removedLineText = type === 'remove' ? originalCode : matchedLine.originalCode
+  const addedLineText = type === 'remove' ? matchedLine.originalCode : originalCode
 
   const wordDiffs = calculateWordDiffs(removedLineText, addedLineText)
 
   // Check if we should use word-level diffing
   const totalLength = removedLineText.length + addedLineText.length
   const changedLength = wordDiffs
-    .filter(part => part.added || part.removed)
+    .filter((part) => part.added || part.removed)
     .reduce((sum, part) => sum + part.value.length, 0)
   const changeRatio = changedLength / totalLength
 
@@ -252,14 +244,10 @@ function generateWordDiffElements(
   // Calculate available width for content
   const diffPrefix = type === 'add' ? '+' : '-'
   const diffPrefixWidth = diffPrefix.length
-  const availableContentWidth = Math.max(
-    1,
-    width - maxWidth - 1 - diffPrefixWidth,
-  )
+  const availableContentWidth = Math.max(1, width - maxWidth - 1 - diffPrefixWidth)
 
   // Manually wrap the word diff parts with better space efficiency
-  const wrappedLines: { content: React.ReactNode[]; contentWidth: number }[] =
-    []
+  const wrappedLines: { content: React.ReactNode[]; contentWidth: number }[] = []
   let currentLine: React.ReactNode[] = []
   let currentLineWidth = 0
 
@@ -294,10 +282,7 @@ function generateWordDiffElements(
       if (!partLine) return
 
       // Check if we need to start a new line
-      if (
-        lineIdx > 0 ||
-        currentLineWidth + stringWidth(partLine) > availableContentWidth
-      ) {
+      if (lineIdx > 0 || currentLineWidth + stringWidth(partLine) > availableContentWidth) {
         if (currentLine.length > 0) {
           wrappedLines.push({
             content: [...currentLine],
@@ -309,10 +294,7 @@ function generateWordDiffElements(
       }
 
       currentLine.push(
-        <Text
-          key={`part-${partIndex}-${lineIdx}`}
-          backgroundColor={partBgColor}
-        >
+        <Text key={`part-${partIndex}-${lineIdx}`} backgroundColor={partBgColor}>
           {partLine}
         </Text>,
       )
@@ -329,18 +311,9 @@ function generateWordDiffElements(
   return wrappedLines.map(({ content, contentWidth }, lineIndex) => {
     const key = `${type}-${i}-${lineIndex}`
     const lineBgColor =
-      type === 'add'
-        ? dim
-          ? 'diffAddedDimmed'
-          : 'diffAdded'
-        : dim
-          ? 'diffRemovedDimmed'
-          : 'diffRemoved'
+      type === 'add' ? (dim ? 'diffAddedDimmed' : 'diffAdded') : dim ? 'diffRemovedDimmed' : 'diffRemoved'
     const lineNum = lineIndex === 0 ? i : undefined
-    const lineNumStr =
-      (lineNum !== undefined
-        ? lineNum.toString().padStart(maxWidth)
-        : ' '.repeat(maxWidth)) + ' '
+    const lineNumStr = (lineNum !== undefined ? lineNum.toString().padStart(maxWidth) : ' '.repeat(maxWidth)) + ' '
     // Calculate padding to fill the entire terminal width
     const usedWidth = lineNumStr.length + diffPrefixWidth + contentWidth
     const padding = Math.max(0, width - usedWidth)
@@ -348,20 +321,12 @@ function generateWordDiffElements(
     return (
       <Box key={key} flexDirection="row">
         <NoSelect fromLeftEdge>
-          <Text
-            color={overrideTheme ? 'text' : undefined}
-            backgroundColor={lineBgColor}
-            dimColor={dim}
-          >
+          <Text color={overrideTheme ? 'text' : undefined} backgroundColor={lineBgColor} dimColor={dim}>
             {lineNumStr}
             {diffPrefix}
           </Text>
         </NoSelect>
-        <Text
-          color={overrideTheme ? 'text' : undefined}
-          backgroundColor={lineBgColor}
-          dimColor={dim}
-        >
+        <Text color={overrideTheme ? 'text' : undefined} backgroundColor={lineBgColor} dimColor={dim}>
           {content}
           {' '.repeat(padding)}
         </Text>
@@ -399,13 +364,7 @@ function formatDiff(
 
     // Handle word-level diffing for add/remove pairs
     if (wordDiff && matchedLine) {
-      const wordDiffElements = generateWordDiffElements(
-        item,
-        safeWidth,
-        maxWidth,
-        dim,
-        overrideTheme,
-      )
+      const wordDiffElements = generateWordDiffElements(item, safeWidth, maxWidth, dim, overrideTheme)
 
       // word-diff might refuse (e.g. due to lines being substantially different) in which
       // case we'll fall through to normal renderin gbelow
@@ -417,20 +376,14 @@ function formatDiff(
     // Standard rendering for lines without word diffing or as fallback
     // Calculate available width accounting for line number + space + diff prefix
     const diffPrefixWidth = 2 // "  " for unchanged, "+ " or "- " for changes
-    const availableContentWidth = Math.max(
-      1,
-      safeWidth - maxWidth - 1 - diffPrefixWidth,
-    ) // -1 for space after line number
+    const availableContentWidth = Math.max(1, safeWidth - maxWidth - 1 - diffPrefixWidth) // -1 for space after line number
     const wrappedText = wrapText(code, availableContentWidth, 'wrap')
     const wrappedLines = wrappedText.split('\n')
 
     return wrappedLines.map((line, lineIndex) => {
       const key = `${type}-${i}-${lineIndex}`
       const lineNum = lineIndex === 0 ? i : undefined
-      const lineNumStr =
-        (lineNum !== undefined
-          ? lineNum.toString().padStart(maxWidth)
-          : ' '.repeat(maxWidth)) + ' '
+      const lineNumStr = (lineNum !== undefined ? lineNum.toString().padStart(maxWidth) : ' '.repeat(maxWidth)) + ' '
       const sigil = type === 'add' ? '+' : type === 'remove' ? '-' : ' '
       // Calculate padding to fill the entire terminal width
       const contentWidth = lineNumStr.length + 1 + stringWidth(line) // lineNum + sigil + code
@@ -462,11 +415,7 @@ function formatDiff(
               {sigil}
             </Text>
           </NoSelect>
-          <Text
-            color={overrideTheme ? 'text' : undefined}
-            backgroundColor={bgColor}
-            dimColor={dim}
-          >
+          <Text color={overrideTheme ? 'text' : undefined} backgroundColor={bgColor} dimColor={dim}>
             {line}
             {' '.repeat(padding)}
           </Text>
@@ -476,10 +425,7 @@ function formatDiff(
   })
 }
 
-export function numberDiffLines(
-  diff: LineObject[],
-  startLine: number,
-): DiffLine[] {
+export function numberDiffLines(diff: LineObject[], startLine: number): DiffLine[] {
   let i = startLine
   const result: DiffLine[] = []
   const queue = [...diff]

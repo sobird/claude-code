@@ -1,5 +1,6 @@
 import type { Attributes } from '@opentelemetry/api'
 import { getEventLogger, getPromptId } from 'src/bootstrap/state.js'
+
 import { logForDebugging } from '../debug.js'
 import { isEnvTruthy } from '../envUtils.js'
 import { getTelemetryAttributes } from '../telemetryAttributes.js'
@@ -26,10 +27,7 @@ export async function logOTelEvent(
   if (!eventLogger) {
     if (!hasWarnedNoEventLogger) {
       hasWarnedNoEventLogger = true
-      logForDebugging(
-        `[3P telemetry] Event dropped (no event logger initialized): ${eventName}`,
-        { level: 'warn' },
-      )
+      logForDebugging(`[3P telemetry] Event dropped (no event logger initialized): ${eventName}`, { level: 'warn' })
     }
     return
   }

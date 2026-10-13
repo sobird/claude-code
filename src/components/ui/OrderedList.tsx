@@ -1,9 +1,5 @@
-import React, {
-  createContext,
-  isValidElement,
-  type ReactNode,
-  useContext,
-} from 'react'
+import React, { createContext, isValidElement, type ReactNode, useContext } from 'react'
+
 import { Box } from '../../ink.js'
 import { OrderedListItem, OrderedListItemContext } from './OrderedListItem.js'
 
@@ -38,9 +34,7 @@ function OrderedListComponent({ children }: OrderedListProps): React.ReactNode {
 
         return (
           <OrderedListContext.Provider value={{ marker }}>
-            <OrderedListItemContext.Provider value={{ marker }}>
-              {child}
-            </OrderedListItemContext.Provider>
+            <OrderedListItemContext.Provider value={{ marker }}>{child}</OrderedListItemContext.Provider>
           </OrderedListContext.Provider>
         )
       })}

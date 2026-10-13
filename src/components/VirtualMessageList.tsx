@@ -1,19 +1,12 @@
 import type { RefObject } from 'react'
 import * as React from 'react'
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react'
+import { useCallback, useContext, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from 'react'
+
 import { useVirtualScroll } from '../hooks/useVirtualScroll.js'
+import { Box } from '../ink.js'
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox.js'
 import type { DOMElement } from '../ink/dom.js'
 import type { MatchPosition } from '../ink/render-to-screen.js'
-import { Box } from '../ink.js'
 import type { RenderableMessage } from '../types/message.js'
 import { TextHoverColorContext } from './design-system/ThemedText.js'
 import { ScrollChromeContext } from './FullscreenLayout.js'
@@ -175,10 +168,7 @@ function computeStickyPromptText(msg: RenderableMessage): string | null {
     !msg.attachment.isMeta
   ) {
     const p = msg.attachment.prompt
-    raw =
-      typeof p === 'string'
-        ? p
-        : p.flatMap(b => (b.type === 'text' ? [b.text] : [])).join('\n')
+    raw = typeof p === 'string' ? p : p.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n')
   }
   if (raw === null) return null
 
@@ -244,13 +234,11 @@ function VirtualItem({
       // don't move to the margined Box inside. paddingBottom mirrors the
       // tinted marginTop.
       paddingBottom={expanded ? 1 : undefined}
-      onClick={clickable ? e => onClickK(msg, e.cellIsBlank) : undefined}
+      onClick={clickable ? (e) => onClickK(msg, e.cellIsBlank) : undefined}
       onMouseEnter={clickable ? () => onEnterK(k) : undefined}
       onMouseLeave={clickable ? () => onLeaveK(k) : undefined}
     >
-      <TextHoverColorContext.Provider
-        value={hovered && !expanded ? 'text' : undefined}
-      >
+      <TextHoverColorContext.Provider value={hovered && !expanded ? 'text' : undefined}>
         {renderItem(msg, idx)}
       </TextHoverColorContext.Provider>
     </Box>
@@ -288,7 +276,7 @@ export function VirtualMessageList({
     messages.length < keysRef.current.length ||
     messages[0] !== prevMessagesRef.current[0]
   ) {
-    keysRef.current = messages.map(m => itemKey(m))
+    keysRef.current = messages.map((m) => itemKey(m))
   } else {
     for (let i = keysRef.current.length; i < messages.length; i++) {
       keysRef.current.push(itemKey(messages[i]!))
@@ -329,11 +317,7 @@ export function VirtualMessageList({
         toolName: toolCallOf(m)?.name,
       })
     const selIdx = selectedIndex ?? -1
-    const scan = (
-      from: number,
-      dir: 1 | -1,
-      pred: (i: number) => boolean = isVisible,
-    ) => {
+    const scan = (from: number, dir: 1 | -1, pred: (i: number) => boolean = isVisible) => {
       for (let i = from; i >= 0 && i < messages.length; i += dir) {
         if (pred(i)) {
           select(messages[i]!)
@@ -510,7 +494,7 @@ export function VirtualMessageList({
   // Dep is ONLY seekGen — effect doesn't re-run on random renders
   // (onSearchMatchesChange churn during incsearch).
   const [seekGen, setSeekGen] = useState(0)
-  const bumpSeek = useCallback(() => setSeekGen(g => g + 1), [])
+  const bumpSeek = useCallback(() => setSeekGen((g) => g + 1), [])
 
   useEffect(() => {
     const req = scanRequestRef.current
@@ -630,9 +614,7 @@ export function VirtualMessageList({
     if (ptr === startPtrRef.current) {
       setPositions?.(null)
       startPtrRef.current = -1
-      logForDebugging(
-        `step: wraparound at ptr=${ptr}, all ${matches.length} msgs phantoms`,
-      )
+      logForDebugging(`step: wraparound at ptr=${ptr}, all ${matches.length} msgs phantoms`)
       return
     }
     st.ptr = ptr
@@ -642,8 +624,7 @@ export function VirtualMessageList({
     // for n (first pos), prefixSum[ptr+1] for N (last pos = count-1).
     // The scan-effect's highlight will be the real value; this is a
     // pre-scan placeholder so the badge updates immediately.
-    const placeholder =
-      delta < 0 ? (prefixSum[ptr + 1] ?? total) : prefixSum[ptr]! + 1
+    const placeholder = delta < 0 ? (prefixSum[ptr + 1] ?? total) : prefixSum[ptr]! + 1
     onSearchMatchesChange?.(total, placeholder)
   }
   stepRef.current = step
@@ -695,8 +676,7 @@ export function VirtualMessageList({
         const firstTop = getItemTop(start)
         const origin = firstTop >= 0 ? firstTop - offsets[start]! : 0
         if (matches.length > 0 && s) {
-          const curTop =
-            searchAnchor.current >= 0 ? searchAnchor.current : s.getScrollTop()
+          const curTop = searchAnchor.current >= 0 ? searchAnchor.current : s.getScrollTop()
           let best = Infinity
           for (let k = 0; k < matches.length; k++) {
             const d = Math.abs(origin + offsets[matches[k]!]! - curTop)
@@ -725,10 +705,7 @@ export function VirtualMessageList({
         // scan will land on the last occurrence in matches[ptr]. Placeholder
         // = prefixSum[ptr+1] (count through this msg). highlight() updates
         // to the exact value after scan completes.
-        onSearchMatchesChange?.(
-          total,
-          matches.length > 0 ? (prefixSum[ptr + 1] ?? total) : 0,
-        )
+        onSearchMatchesChange?.(total, matches.length > 0 ? (prefixSum[ptr + 1] ?? total) : 0)
       },
       nextMatch: () => step(1),
       prevMatch: () => step(-1),
@@ -790,18 +767,15 @@ export function VirtualMessageList({
   // unchanged items, only ~25 fresh items pay createElement cost.
   const handlersRef = useRef({ onItemClick, setHoveredKey })
   handlersRef.current = { onItemClick, setHoveredKey }
-  const onClickK = useCallback(
-    (msg: RenderableMessage, cellIsBlank: boolean) => {
-      const h = handlersRef.current
-      if (!cellIsBlank && h.onItemClick) h.onItemClick(msg)
-    },
-    [],
-  )
+  const onClickK = useCallback((msg: RenderableMessage, cellIsBlank: boolean) => {
+    const h = handlersRef.current
+    if (!cellIsBlank && h.onItemClick) h.onItemClick(msg)
+  }, [])
   const onEnterK = useCallback((k: string) => {
     handlersRef.current.setHoveredKey(k)
   }, [])
   const onLeaveK = useCallback((k: string) => {
-    handlersRef.current.setHoveredKey(prev => (prev === k ? null : prev))
+    handlersRef.current.setHoveredKey((prev) => (prev === k ? null : prev))
   }, [])
 
   return (
@@ -890,8 +864,7 @@ function StickyTracker({
   // THIS component only. Sticky bit folded into the sign so sticky→broken
   // also triggers (scrollToBottom sets sticky without moving scrollTop).
   const subscribe = useCallback(
-    (listener: () => void) =>
-      scrollRef.current?.subscribe(listener) ?? NOOP_UNSUB,
+    (listener: () => void) => scrollRef.current?.subscribe(listener) ?? NOOP_UNSUB,
     [scrollRef],
   )
   useSyncExternalStore(subscribe, () => {
@@ -903,11 +876,7 @@ function StickyTracker({
 
   // Read live scroll state on every render.
   const isSticky = scrollRef.current?.isSticky() ?? true
-  const target = Math.max(
-    0,
-    (scrollRef.current?.getScrollTop() ?? 0) +
-      (scrollRef.current?.getPendingDelta() ?? 0),
-  )
+  const target = Math.max(0, (scrollRef.current?.getScrollTop() ?? 0) + (scrollRef.current?.getPendingDelta() ?? 0))
 
   // Walk the mounted range to find the first item at-or-below the viewport
   // top. `range` is from the parent's coarse-quantum render (may be slightly
@@ -946,8 +915,7 @@ function StickyTracker({
     }
   }
 
-  const baseOffset =
-    firstVisibleTop >= 0 ? firstVisibleTop - offsets[firstVisible]! : 0
+  const baseOffset = firstVisibleTop >= 0 ? firstVisibleTop - offsets[firstVisible]! : 0
   const estimate = idx >= 0 ? Math.max(0, baseOffset + offsets[idx]!) : -1
 
   // For click-jumps to items not yet mounted (user scrolled far past,

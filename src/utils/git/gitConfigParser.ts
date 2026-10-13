@@ -195,22 +195,12 @@ function trimTrailingWhitespace(s: string): string {
  * Check if a config line like `[remote "origin"]` matches the given section/subsection.
  * Section matching is case-insensitive; subsection matching is case-sensitive.
  */
-function matchesSectionHeader(
-  line: string,
-  sectionLower: string,
-  subsection: string | null,
-): boolean {
+function matchesSectionHeader(line: string, sectionLower: string, subsection: string | null): boolean {
   // line starts with '['
   let i = 1
 
   // Read section name
-  while (
-    i < line.length &&
-    line[i] !== ']' &&
-    line[i] !== ' ' &&
-    line[i] !== '\t' &&
-    line[i] !== '"'
-  ) {
+  while (i < line.length && line[i] !== ']' && line[i] !== ' ' && line[i] !== '\t' && line[i] !== '"') {
     i++
   }
   const foundSection = line.slice(1, i).toLowerCase()
@@ -268,10 +258,5 @@ function matchesSectionHeader(
 }
 
 function isKeyChar(ch: string): boolean {
-  return (
-    (ch >= 'a' && ch <= 'z') ||
-    (ch >= 'A' && ch <= 'Z') ||
-    (ch >= '0' && ch <= '9') ||
-    ch === '-'
-  )
+  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch === '-'
 }

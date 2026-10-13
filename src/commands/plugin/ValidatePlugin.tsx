@@ -1,6 +1,7 @@
 import figures from 'figures'
 import * as React from 'react'
 import { useEffect } from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { errorMessage } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'
@@ -44,7 +45,7 @@ export function ValidatePlugin({ onComplete, path }: Props): React.ReactNode {
         if (result.errors.length > 0) {
           output += `${figures.cross} Found ${result.errors.length} ${plural(result.errors.length, 'error')}:\n\n`
 
-          result.errors.forEach(error => {
+          result.errors.forEach((error) => {
             output += `  ${figures.pointer} ${error.path}: ${error.message}\n`
           })
 
@@ -55,7 +56,7 @@ export function ValidatePlugin({ onComplete, path }: Props): React.ReactNode {
         if (result.warnings.length > 0) {
           output += `${figures.warning} Found ${result.warnings.length} ${plural(result.warnings.length, 'warning')}:\n\n`
 
-          result.warnings.forEach(warning => {
+          result.warnings.forEach((warning) => {
             output += `  ${figures.pointer} ${warning.path}: ${warning.message}\n`
           })
 
@@ -86,9 +87,7 @@ export function ValidatePlugin({ onComplete, path }: Props): React.ReactNode {
 
         logError(error)
 
-        onComplete(
-          `${figures.cross} Unexpected error during validation: ${errorMessage(error)}`,
-        )
+        onComplete(`${figures.cross} Unexpected error during validation: ${errorMessage(error)}`)
       }
     }
 

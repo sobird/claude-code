@@ -1,8 +1,5 @@
 import type { Command } from '../../../commands.js'
-import type {
-  MCPServerConnection,
-  ServerResource,
-} from '../../../services/mcp/types.js'
+import type { MCPServerConnection, ServerResource } from '../../../services/mcp/types.js'
 import type { Tool } from '../../../Tool.js'
 
 export interface ReconnectResult {
@@ -52,10 +49,7 @@ export function handleReconnectResult(
 /**
  * Handles errors from reconnect attempts
  */
-export function handleReconnectError(
-  error: unknown,
-  serverName: string,
-): string {
+export function handleReconnectError(error: unknown, serverName: string): string {
   const errorMessage = error instanceof Error ? error.message : String(error)
   return `Error reconnecting to ${serverName}: ${errorMessage}`
 }

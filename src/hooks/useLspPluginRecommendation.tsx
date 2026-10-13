@@ -11,30 +11,19 @@
  */
 
 import { extname, join } from 'path'
+
 import * as React from 'react'
-import {
-  hasShownLspRecommendationThisSession,
-  setLspRecommendationShownThisSession,
-} from '../bootstrap/state.js'
+
+import { hasShownLspRecommendationThisSession, setLspRecommendationShownThisSession } from '../bootstrap/state.js'
 import { useNotifications } from '../context/notifications.js'
 import { useAppState } from '../state/AppState.js'
 import { saveGlobalConfig } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
 import { logError } from '../utils/log.js'
-import {
-  addToNeverSuggest,
-  getMatchingLspPlugins,
-  incrementIgnoredCount,
-} from '../utils/plugins/lspRecommendation.js'
+import { addToNeverSuggest, getMatchingLspPlugins, incrementIgnoredCount } from '../utils/plugins/lspRecommendation.js'
 import { cacheAndRegisterPlugin } from '../utils/plugins/pluginInstallationHelpers.js'
-import {
-  getSettingsForSource,
-  updateSettingsForSource,
-} from '../utils/settings/settings.js'
-import {
-  installPluginAndNotify,
-  usePluginRecommendationBase,
-} from './usePluginRecommendationBase.js'
+import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings.js'
+import { installPluginAndNotify, usePluginRecommendationBase } from './usePluginRecommendationBase.js'
 
 // Threshold for detecting timeout vs explicit dismiss (ms)
 // Menu auto-dismisses at 30s, so anything over 28s is likely timeout
@@ -54,7 +43,7 @@ type UseLspPluginRecommendationResult = {
 }
 
 export function useLspPluginRecommendation(): UseLspPluginRecommendationResult {
-  const trackedFiles = useAppState(s => s.fileHistory.trackedFiles)
+  const trackedFiles = useAppState((s) => s.fileHistory.trackedFiles)
   const { addNotification } = useNotifications()
   const checkedFilesRef = React.useRef<Set<string>>(new Set())
   const { recommendation, clearRecommendation, tryResolve } =
@@ -77,9 +66,7 @@ export function useLspPluginRecommendation(): UseLspPluginRecommendationResult {
           const matches = await getMatchingLspPlugins(filePath)
           const match = matches[0] // official plugins prioritized
           if (match) {
-            logForDebugging(
-              `[useLspPluginRecommendation] Found match: ${match.pluginName} for ${filePath}`,
-            )
+            logForDebugging(`[useLspPluginRecommendation] Found match: ${match.pluginName} for ${filePath}`)
             setLspRecommendationShownThisSession(true)
             return {
               pluginId: match.pluginId,
@@ -103,56 +90,39 @@ export function useLspPluginRecommendation(): UseLspPluginRecommendationResult {
 
       const { pluginId, pluginName, shownAt } = recommendation
 
-      logForDebugging(
-        `[useLspPluginRecommendation] User response: ${response} for ${pluginName}`,
-      )
+      logForDebugging(`[useLspPluginRecommendation] User response: ${response} for ${pluginName}`)
 
       switch (response) {
         case 'yes':
-          void installPluginAndNotify(
-            pluginId,
-            pluginName,
-            'lsp-plugin',
-            addNotification,
-            async pluginData => {
-              logForDebugging(
-                `[useLspPluginRecommendation] Installing plugin: ${pluginId}`,
-              )
-              const localSourcePath =
-                typeof pluginData.entry.source === 'string'
-                  ? join(
-                      pluginData.marketplaceInstallLocation,
-                      pluginData.entry.source,
-                    )
-                  : undefined
-              await cacheAndRegisterPlugin(
-                pluginId,
-                pluginData.entry,
-                'user',
-                undefined, // projectPath - not needed for user scope
-                localSourcePath,
-              )
-              // Enable in user settings so it loads on restart
-              const settings = getSettingsForSource('userSettings')
-              updateSettingsForSource('userSettings', {
-                enabledPlugins: {
-                  ...settings?.enabledPlugins,
-                  [pluginId]: true,
-                },
-              })
-              logForDebugging(
-                `[useLspPluginRecommendation] Plugin installed: ${pluginId}`,
-              )
-            },
-          )
+          void installPluginAndNotify(pluginId, pluginName, 'lsp-plugin', addNotification, async (pluginData) => {
+            logForDebugging(`[useLspPluginRecommendation] Installing plugin: ${pluginId}`)
+            const localSourcePath =
+              typeof pluginData.entry.source === 'string'
+                ? join(pluginData.marketplaceInstallLocation, pluginData.entry.source)
+                : undefined
+            await cacheAndRegisterPlugin(
+              pluginId,
+              pluginData.entry,
+              'user',
+              undefined, // projectPath - not needed for user scope
+              localSourcePath,
+            )
+            // Enable in user settings so it loads on restart
+            const settings = getSettingsForSource('userSettings')
+            updateSettingsForSource('userSettings', {
+              enabledPlugins: {
+                ...settings?.enabledPlugins,
+                [pluginId]: true,
+              },
+            })
+            logForDebugging(`[useLspPluginRecommendation] Plugin installed: ${pluginId}`)
+          })
           break
 
         case 'no': {
           const elapsed = Date.now() - shownAt
           if (elapsed >= TIMEOUT_THRESHOLD_MS) {
-            logForDebugging(
-              `[useLspPluginRecommendation] Timeout detected (${elapsed}ms), incrementing ignored count`,
-            )
+            logForDebugging(`[useLspPluginRecommendation] Timeout detected (${elapsed}ms), incrementing ignored count`)
             incrementIgnoredCount()
           }
           break
@@ -163,7 +133,7 @@ export function useLspPluginRecommendation(): UseLspPluginRecommendationResult {
           break
 
         case 'disable':
-          saveGlobalConfig(current => {
+          saveGlobalConfig((current) => {
             if (current.lspRecommendationDisabled) return current
             return { ...current, lspRecommendationDisabled: true }
           })

@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import { z } from 'zod/v4'
+
 import { getSessionId } from '../../bootstrap/state.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
@@ -66,7 +68,7 @@ export const TodoWriteTool = buildTool({
     const appState = context.getAppState()
     const todoKey = context.agentId ?? getSessionId()
     const oldTodos = appState.todos[todoKey] ?? []
-    const allDone = todos.every(_ => _.status === 'completed')
+    const allDone = todos.every((_) => _.status === 'completed')
     const newTodos = allDone ? [] : todos
 
     // Structural nudge: if the main-thread agent is closing out a 3+ item
@@ -80,12 +82,12 @@ export const TodoWriteTool = buildTool({
       !context.agentId &&
       allDone &&
       todos.length >= 3 &&
-      !todos.some(t => /verif/i.test(t.content))
+      !todos.some((t) => /verif/i.test(t.content))
     ) {
       verificationNudgeNeeded = true
     }
 
-    context.setAppState(prev => ({
+    context.setAppState((prev) => ({
       ...prev,
       todos: {
         ...prev.todos,

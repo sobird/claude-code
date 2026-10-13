@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { ClaudeAuthProvider } from '../../services/mcp/auth.js'
 import type {
@@ -7,10 +8,7 @@ import type {
   McpSSEServerConfig,
   McpStdioServerConfig,
 } from '../../services/mcp/types.js'
-import {
-  extractAgentMcpServers,
-  filterToolsByServer,
-} from '../../services/mcp/utils.js'
+import { extractAgentMcpServers, filterToolsByServer } from '../../services/mcp/utils.js'
 import { useAppState } from '../../state/AppState.js'
 import { getSessionIngressAuthToken } from '../../utils/sessionIngressAuth.js'
 import { MCPAgentServerMenu } from './MCPAgentServerMenu.js'
@@ -22,15 +20,12 @@ import { MCPToolListView } from './MCPToolListView.js'
 import type { AgentMcpServerInfo, MCPViewState, ServerInfo } from './types.js'
 
 type Props = {
-  onComplete: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onComplete: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
 export function MCPSettings({ onComplete }: Props): React.ReactNode {
-  const mcp = useAppState(s => s.mcp)
-  const agentDefinitions = useAppState(s => s.agentDefinitions)
+  const mcp = useAppState((s) => s.mcp)
+  const agentDefinitions = useAppState((s) => s.agentDefinitions)
   const mcpClients = mcp.clients
   const [viewState, setViewState] = React.useState<MCPViewState>({
     type: 'list',
@@ -44,10 +39,7 @@ export function MCPSettings({ onComplete }: Props): React.ReactNode {
   )
 
   const filteredClients = React.useMemo(
-    () =>
-      mcpClients
-        .filter(client => client.name !== 'ide')
-        .sort((a, b) => a.name.localeCompare(b.name)),
+    () => mcpClients.filter((client) => client.name !== 'ide').sort((a, b) => a.name.localeCompare(b.name)),
     [mcpClients],
   )
 
@@ -55,7 +47,7 @@ export function MCPSettings({ onComplete }: Props): React.ReactNode {
     let cancelled = false
     async function prepareServers() {
       const serverInfos = await Promise.all(
-        filteredClients.map(async client => {
+        filteredClients.map(async (client) => {
           const scope = client.config.scope
           const isSSE = client.config.type === 'sse'
           const isHTTP = client.config.type === 'http'
@@ -72,14 +64,10 @@ export function MCPSettings({ onComplete }: Props): React.ReactNode {
             // 1. It has OAuth tokens, OR
             // 2. It's connected via session auth (has session token and is connected), OR
             // 3. It's connected and has tools (meaning it's working, regardless of auth method)
-            const hasSessionAuth =
-              getSessionIngressAuthToken() !== null &&
-              client.type === 'connected'
+            const hasSessionAuth = getSessionIngressAuthToken() !== null && client.type === 'connected'
             const hasToolsAndConnected =
-              client.type === 'connected' &&
-              filterToolsByServer(mcp.tools, client.name).length > 0
-            isAuthenticated =
-              Boolean(tokens) || hasSessionAuth || hasToolsAndConnected
+              client.type === 'connected' && filterToolsByServer(mcp.tools, client.name).length > 0
+            isAuthenticated = Boolean(tokens) || hasSessionAuth || hasToolsAndConnected
           }
 
           const baseInfo = {
@@ -141,12 +129,7 @@ export function MCPSettings({ onComplete }: Props): React.ReactNode {
         'No MCP servers configured. Please run /doctor if this is unexpected. Otherwise, run `claude mcp --help` or visit https://code.claude.com/docs/en/mcp to learn more.',
       )
     }
-  }, [
-    servers.length,
-    filteredClients.length,
-    agentMcpServers.length,
-    onComplete,
-  ])
+  }, [servers.length, filteredClients.length, agentMcpServers.length, onComplete])
 
   switch (viewState.type) {
     case 'list':
@@ -154,9 +137,7 @@ export function MCPSettings({ onComplete }: Props): React.ReactNode {
         <MCPListPanel
           servers={servers}
           agentServers={agentMcpServers}
-          onSelectServer={server =>
-            setViewState({ type: 'server-menu', server })
-          }
+          onSelectServer={(server) => setViewState({ type: 'server-menu', server })}
           onSelectAgentServer={(agentServer: AgentMcpServerInfo) =>
             setViewState({ type: 'agent-server-menu', agentServer })
           }
@@ -168,19 +149,14 @@ export function MCPSettings({ onComplete }: Props): React.ReactNode {
     case 'server-menu': {
       const serverTools = filterToolsByServer(mcp.tools, viewState.server.name)
 
-      const defaultTab =
-        viewState.server.transport === 'claudeai-proxy'
-          ? 'claude.ai'
-          : 'Claude Code'
+      const defaultTab = viewState.server.transport === 'claudeai-proxy' ? 'claude.ai' : 'Claude Code'
 
       if (viewState.server.transport === 'stdio') {
         return (
           <MCPStdioServerMenu
             server={viewState.server}
             serverToolsCount={serverTools.length}
-            onViewTools={() =>
-              setViewState({ type: 'server-tools', server: viewState.server })
-            }
+            onViewTools={() => setViewState({ type: 'server-tools', server: viewState.server })}
             onCancel={() => setViewState({ type: 'list', defaultTab })}
             onComplete={onComplete}
           />
@@ -190,9 +166,7 @@ export function MCPSettings({ onComplete }: Props): React.ReactNode {
           <MCPRemoteServerMenu
             server={viewState.server}
             serverToolsCount={serverTools.length}
-            onViewTools={() =>
-              setViewState({ type: 'server-tools', server: viewState.server })
-            }
+            onViewTools={() => setViewState({ type: 'server-tools', server: viewState.server })}
             onCancel={() => setViewState({ type: 'list', defaultTab })}
             onComplete={onComplete}
           />
@@ -211,9 +185,7 @@ export function MCPSettings({ onComplete }: Props): React.ReactNode {
               toolIndex: index,
             })
           }
-          onBack={() =>
-            setViewState({ type: 'server-menu', server: viewState.server })
-          }
+          onBack={() => setViewState({ type: 'server-menu', server: viewState.server })}
         />
       )
 
@@ -228,9 +200,7 @@ export function MCPSettings({ onComplete }: Props): React.ReactNode {
         <MCPToolDetailView
           tool={tool}
           server={viewState.server}
-          onBack={() =>
-            setViewState({ type: 'server-tools', server: viewState.server })
-          }
+          onBack={() => setViewState({ type: 'server-tools', server: viewState.server })}
         />
       )
     }

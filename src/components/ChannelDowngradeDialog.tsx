@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Text } from '../ink.js'
 import { Select } from './CustomSelect/index.js'
 import { Dialog } from './design-system/Dialog.js'
@@ -14,10 +15,7 @@ type Props = {
  * Dialog shown when switching from latest to stable channel.
  * Allows user to choose whether to downgrade or stay on current version.
  */
-export function ChannelDowngradeDialog({
-  currentVersion,
-  onChoice,
-}: Props): React.ReactNode {
+export function ChannelDowngradeDialog({ currentVersion, onChoice }: Props): React.ReactNode {
   function handleSelect(value: ChannelDowngradeChoice): void {
     onChoice(value)
   }
@@ -27,16 +25,9 @@ export function ChannelDowngradeDialog({
   }
 
   return (
-    <Dialog
-      title="Switch to Stable Channel"
-      onCancel={handleCancel}
-      color="permission"
-      hideBorder
-      hideInputGuide
-    >
+    <Dialog title="Switch to Stable Channel" onCancel={handleCancel} color="permission" hideBorder hideInputGuide>
       <Text>
-        The stable channel may have an older version than what you&apos;re
-        currently running ({currentVersion}).
+        The stable channel may have an older version than what you&apos;re currently running ({currentVersion}).
       </Text>
       <Text dimColor>How would you like to handle this?</Text>
       <Select

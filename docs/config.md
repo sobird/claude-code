@@ -38,8 +38,8 @@ if (!config.hasCompletedOnboarding) {
 }
 
 // 标记 onboarding 完成
-saveGlobalConfig(current => ({
+saveGlobalConfig((current) => ({
   ...current,
-  hasCompletedOnboarding: true
-}));
+  hasCompletedOnboarding: true,
+}))
 ```

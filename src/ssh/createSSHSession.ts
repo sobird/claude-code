@@ -1,5 +1,6 @@
 // Auto-generated stub — replace with real implementation
 import type { Subprocess } from 'bun'
+
 import type { SSHSessionManager, SSHSessionManagerOptions } from './SSHSessionManager.js'
 
 export interface SSHAuthProxy {

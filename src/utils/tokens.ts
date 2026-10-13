@@ -1,4 +1,5 @@
 import type { BetaUsage as Usage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+
 import { roughTokenCountEstimationForMessages } from '../services/tokenEstimation.js'
 import type { AssistantMessage, Message } from '../types/message.js'
 import { SYNTHETIC_MESSAGES, SYNTHETIC_MODEL } from './messages.js'
@@ -8,10 +9,7 @@ export function getTokenUsage(message: Message): Usage | undefined {
   if (
     message?.type === 'assistant' &&
     'usage' in message.message &&
-    !(
-      message.message.content[0]?.type === 'text' &&
-      SYNTHETIC_MESSAGES.has(message.message.content[0].text)
-    ) &&
+    !(message.message.content[0]?.type === 'text' && SYNTHETIC_MESSAGES.has(message.message.content[0].text)) &&
     message.message.model !== SYNTHETIC_MODEL
   ) {
     return message.message.usage
@@ -26,11 +24,7 @@ export function getTokenUsage(message: Message): Usage | undefined {
  * AssistantMessage record, but they all share the same message.id.
  */
 function getAssistantMessageId(message: Message): string | undefined {
-  if (
-    message?.type === 'assistant' &&
-    'id' in message.message &&
-    message.message.model !== SYNTHETIC_MODEL
-  ) {
+  if (message?.type === 'assistant' && 'id' in message.message && message.message.model !== SYNTHETIC_MODEL) {
     return message.message.id
   }
   return undefined
@@ -76,9 +70,7 @@ export function tokenCountFromLastAPIResponse(messages: Message[]): number {
  * absent (no server-side tool loops, so top-level usage IS the final window).
  * Both paths exclude cache tokens to match #304930's formula.
  */
-export function finalContextTokensFromLastResponse(
-  messages: Message[],
-): number {
+export function finalContextTokensFromLastResponse(messages: Message[]): number {
   let i = messages.length - 1
   while (i >= 0) {
     const message = messages[i]
@@ -120,9 +112,7 @@ export function finalContextTokensFromLastResponse(
  * This function is only useful for measuring how many tokens Claude generated
  * in a single response, not how full the context window is.
  */
-export function messageTokenCountFromLastAPIResponse(
-  messages: Message[],
-): number {
+export function messageTokenCountFromLastAPIResponse(messages: Message[]): number {
   let i = messages.length - 1
   while (i >= 0) {
     const message = messages[i]
@@ -156,12 +146,10 @@ export function getCurrentUsage(messages: Message[]): {
   return null
 }
 
-export function doesMostRecentAssistantMessageExceed200k(
-  messages: Message[],
-): boolean {
+export function doesMostRecentAssistantMessageExceed200k(messages: Message[]): boolean {
   const THRESHOLD = 200_000
 
-  const lastAsst = messages.findLast(m => m.type === 'assistant')
+  const lastAsst = messages.findLast((m) => m.type === 'assistant')
   if (!lastAsst) return false
   const usage = getTokenUsage(lastAsst)
   return usage ? getTokenCountFromUsage(usage) > THRESHOLD : false
@@ -180,9 +168,7 @@ export function doesMostRecentAssistantMessageExceed200k(
  * - tool_use input (input_json_delta)
  * Note: signature_delta is excluded from streaming counts (not model output).
  */
-export function getAssistantMessageContentLength(
-  message: AssistantMessage,
-): number {
+export function getAssistantMessageContentLength(message: AssistantMessage): number {
   let contentLength = 0
   for (const block of message.message.content) {
     if (block.type === 'text') {
@@ -250,10 +236,7 @@ export function tokenCountWithEstimation(messages: readonly Message[]): number {
           j--
         }
       }
-      return (
-        getTokenCountFromUsage(usage) +
-        roughTokenCountEstimationForMessages(messages.slice(i + 1))
-      )
+      return getTokenCountFromUsage(usage) + roughTokenCountEstimationForMessages(messages.slice(i + 1))
     }
     i--
   }

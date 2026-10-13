@@ -1,38 +1,25 @@
 import { posix } from 'path'
+
 import type { ToolPermissionContext } from '../../Tool.js'
 // Types extracted to src/types/permissions.ts to break import cycles
-import type {
-  AdditionalWorkingDirectory,
-  WorkingDirectorySource,
-} from '../../types/permissions.js'
+import type { AdditionalWorkingDirectory, WorkingDirectorySource } from '../../types/permissions.js'
 import { logForDebugging } from '../debug.js'
 import type { EditableSettingSource } from '../settings/constants.js'
-import {
-  getSettingsForSource,
-  updateSettingsForSource,
-} from '../settings/settings.js'
+import { getSettingsForSource, updateSettingsForSource } from '../settings/settings.js'
 import { jsonStringify } from '../slowOperations.js'
 import { toPosixPath } from './filesystem.js'
 import type { PermissionRuleValue } from './PermissionRule.js'
-import type {
-  PermissionUpdate,
-  PermissionUpdateDestination,
-} from './PermissionUpdateSchema.js'
-import {
-  permissionRuleValueFromString,
-  permissionRuleValueToString,
-} from './permissionRuleParser.js'
+import { permissionRuleValueFromString, permissionRuleValueToString } from './permissionRuleParser.js'
 import { addPermissionRulesToSettings } from './permissionsLoader.js'
+import type { PermissionUpdate, PermissionUpdateDestination } from './PermissionUpdateSchema.js'
 
 // Re-export for backwards compatibility
 export type { AdditionalWorkingDirectory, WorkingDirectorySource }
 
-export function extractRules(
-  updates: PermissionUpdate[] | undefined,
-): PermissionRuleValue[] {
+export function extractRules(updates: PermissionUpdate[] | undefined): PermissionRuleValue[] {
   if (!updates) return []
 
-  return updates.flatMap(update => {
+  return updates.flatMap((update) => {
     switch (update.type) {
       case 'addRules':
         return update.rules
@@ -52,24 +39,17 @@ export function hasRules(updates: PermissionUpdate[] | undefined): boolean {
  * @param update The permission update to apply
  * @returns The updated permission context
  */
-export function applyPermissionUpdate(
-  context: ToolPermissionContext,
-  update: PermissionUpdate,
-): ToolPermissionContext {
+export function applyPermissionUpdate(context: ToolPermissionContext, update: PermissionUpdate): ToolPermissionContext {
   switch (update.type) {
     case 'setMode':
-      logForDebugging(
-        `Applying permission update: Setting mode to '${update.mode}'`,
-      )
+      logForDebugging(`Applying permission update: Setting mode to '${update.mode}'`)
       return {
         ...context,
         mode: update.mode,
       }
 
     case 'addRules': {
-      const ruleStrings = update.rules.map(rule =>
-        permissionRuleValueToString(rule),
-      )
+      const ruleStrings = update.rules.map((rule) => permissionRuleValueToString(rule))
       logForDebugging(
         `Applying permission update: Adding ${update.rules.length} ${update.behavior} rule(s) to destination '${update.destination}': ${jsonStringify(ruleStrings)}`,
       )
@@ -86,18 +66,13 @@ export function applyPermissionUpdate(
         ...context,
         [ruleKind]: {
           ...context[ruleKind],
-          [update.destination]: [
-            ...(context[ruleKind][update.destination] || []),
-            ...ruleStrings,
-          ],
+          [update.destination]: [...(context[ruleKind][update.destination] || []), ...ruleStrings],
         },
       }
     }
 
     case 'replaceRules': {
-      const ruleStrings = update.rules.map(rule =>
-        permissionRuleValueToString(rule),
-      )
+      const ruleStrings = update.rules.map((rule) => permissionRuleValueToString(rule))
       logForDebugging(
         `Replacing all ${update.behavior} rules for destination '${update.destination}' with ${update.rules.length} rule(s): ${jsonStringify(ruleStrings)}`,
       )
@@ -137,9 +112,7 @@ export function applyPermissionUpdate(
     }
 
     case 'removeRules': {
-      const ruleStrings = update.rules.map(rule =>
-        permissionRuleValueToString(rule),
-      )
+      const ruleStrings = update.rules.map((rule) => permissionRuleValueToString(rule))
       logForDebugging(
         `Applying permission update: Removing ${update.rules.length} ${update.behavior} rule(s) from source '${update.destination}': ${jsonStringify(ruleStrings)}`,
       )
@@ -155,9 +128,7 @@ export function applyPermissionUpdate(
       // Filter out the rules to be removed
       const existingRules = context[ruleKind][update.destination] || []
       const rulesToRemove = new Set(ruleStrings)
-      const filteredRules = existingRules.filter(
-        rule => !rulesToRemove.has(rule),
-      )
+      const filteredRules = existingRules.filter((rule) => !rulesToRemove.has(rule))
 
       return {
         ...context,
@@ -205,14 +176,8 @@ export function applyPermissionUpdates(
   return updatedContext
 }
 
-export function supportsPersistence(
-  destination: PermissionUpdateDestination,
-): destination is EditableSettingSource {
-  return (
-    destination === 'localSettings' ||
-    destination === 'userSettings' ||
-    destination === 'projectSettings'
-  )
+export function supportsPersistence(destination: PermissionUpdateDestination): destination is EditableSettingSource {
+  return destination === 'localSettings' || destination === 'userSettings' || destination === 'projectSettings'
 }
 
 /**
@@ -222,15 +187,11 @@ export function supportsPersistence(
 export function persistPermissionUpdate(update: PermissionUpdate): void {
   if (!supportsPersistence(update.destination)) return
 
-  logForDebugging(
-    `Persisting permission update: ${update.type} to source '${update.destination}'`,
-  )
+  logForDebugging(`Persisting permission update: ${update.type} to source '${update.destination}'`)
 
   switch (update.type) {
     case 'addRules': {
-      logForDebugging(
-        `Persisting ${update.rules.length} ${update.behavior} rule(s) to ${update.destination}`,
-      )
+      logForDebugging(`Persisting ${update.rules.length} ${update.behavior} rule(s) to ${update.destination}`)
       addPermissionRulesToSettings(
         {
           ruleValues: update.rules,
@@ -246,13 +207,10 @@ export function persistPermissionUpdate(update: PermissionUpdate): void {
         `Persisting ${update.directories.length} director${update.directories.length === 1 ? 'y' : 'ies'} to ${update.destination}`,
       )
       const existingSettings = getSettingsForSource(update.destination)
-      const existingDirs =
-        existingSettings?.permissions?.additionalDirectories || []
+      const existingDirs = existingSettings?.permissions?.additionalDirectories || []
 
       // Add new directories, avoiding duplicates
-      const dirsToAdd = update.directories.filter(
-        dir => !existingDirs.includes(dir),
-      )
+      const dirsToAdd = update.directories.filter((dir) => !existingDirs.includes(dir))
 
       if (dirsToAdd.length > 0) {
         const updatedDirs = [...existingDirs, ...dirsToAdd]
@@ -267,22 +225,16 @@ export function persistPermissionUpdate(update: PermissionUpdate): void {
 
     case 'removeRules': {
       // Handle rule removal
-      logForDebugging(
-        `Removing ${update.rules.length} ${update.behavior} rule(s) from ${update.destination}`,
-      )
+      logForDebugging(`Removing ${update.rules.length} ${update.behavior} rule(s) from ${update.destination}`)
       const existingSettings = getSettingsForSource(update.destination)
       const existingPermissions = existingSettings?.permissions || {}
       const existingRules = existingPermissions[update.behavior] || []
 
       // Convert rules to normalized strings for comparison
       // Normalize via parse→serialize roundtrip so "Bash(*)" and "Bash" match
-      const rulesToRemove = new Set(
-        update.rules.map(permissionRuleValueToString),
-      )
-      const filteredRules = existingRules.filter(rule => {
-        const normalized = permissionRuleValueToString(
-          permissionRuleValueFromString(rule),
-        )
+      const rulesToRemove = new Set(update.rules.map(permissionRuleValueToString))
+      const filteredRules = existingRules.filter((rule) => {
+        const normalized = permissionRuleValueToString(permissionRuleValueFromString(rule))
         return !rulesToRemove.has(normalized)
       })
 
@@ -299,12 +251,11 @@ export function persistPermissionUpdate(update: PermissionUpdate): void {
         `Removing ${update.directories.length} director${update.directories.length === 1 ? 'y' : 'ies'} from ${update.destination}`,
       )
       const existingSettings = getSettingsForSource(update.destination)
-      const existingDirs =
-        existingSettings?.permissions?.additionalDirectories || []
+      const existingDirs = existingSettings?.permissions?.additionalDirectories || []
 
       // Remove specified directories
       const dirsToRemove = new Set(update.directories)
-      const filteredDirs = existingDirs.filter(dir => !dirsToRemove.has(dir))
+      const filteredDirs = existingDirs.filter((dir) => !dirsToRemove.has(dir))
 
       updateSettingsForSource(update.destination, {
         permissions: {
@@ -315,9 +266,7 @@ export function persistPermissionUpdate(update: PermissionUpdate): void {
     }
 
     case 'setMode': {
-      logForDebugging(
-        `Persisting mode '${update.mode}' to ${update.destination}`,
-      )
+      logForDebugging(`Persisting mode '${update.mode}' to ${update.destination}`)
       updateSettingsForSource(update.destination, {
         permissions: {
           defaultMode: update.mode,
@@ -371,9 +320,7 @@ export function createReadRuleSuggestion(
   }
 
   // For absolute paths, prepend an extra / to create //path/** pattern
-  const ruleContent = posix.isAbsolute(pathForPattern)
-    ? `/${pathForPattern}/**`
-    : `${pathForPattern}/**`
+  const ruleContent = posix.isAbsolute(pathForPattern) ? `/${pathForPattern}/**` : `${pathForPattern}/**`
 
   return {
     type: 'addRules',

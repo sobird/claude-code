@@ -1,5 +1,6 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
+
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint.js'
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js'
 import { MessageResponse } from '../../components/MessageResponse.js'
@@ -31,8 +32,7 @@ export function renderToolUseMessage(
   if (!verbose) {
     const lines = displayCommand.split('\n')
     const needsLineTruncation = lines.length > MAX_COMMAND_DISPLAY_LINES
-    const needsCharTruncation =
-      displayCommand.length > MAX_COMMAND_DISPLAY_CHARS
+    const needsCharTruncation = displayCommand.length > MAX_COMMAND_DISPLAY_CHARS
 
     if (needsLineTruncation || needsCharTruncation) {
       let truncated = displayCommand
@@ -117,14 +117,7 @@ export function renderToolResultMessage(
 ): React.ReactNode {
   const lastProgress = progressMessagesForMessage.at(-1)
   const timeoutMs = lastProgress?.data?.timeoutMs
-  const {
-    stdout,
-    stderr,
-    interrupted,
-    returnCodeInterpretation,
-    isImage,
-    backgroundTaskId,
-  } = content
+  const { stdout, stderr, interrupted, returnCodeInterpretation, isImage, backgroundTaskId } = content
 
   if (isImage) {
     return (
@@ -137,16 +130,13 @@ export function renderToolResultMessage(
   return (
     <Box flexDirection="column">
       {stdout !== '' ? <OutputLine content={stdout} verbose={verbose} /> : null}
-      {stderr.trim() !== '' ? (
-        <OutputLine content={stderr} verbose={verbose} isError />
-      ) : null}
+      {stderr.trim() !== '' ? <OutputLine content={stderr} verbose={verbose} isError /> : null}
       {stdout === '' && stderr.trim() === '' ? (
         <MessageResponse height={1}>
           <Text dimColor>
             {backgroundTaskId ? (
               <>
-                Running in the background{' '}
-                <KeyboardShortcutHint shortcut="↓" action="manage" parens />
+                Running in the background <KeyboardShortcutHint shortcut="↓" action="manage" parens />
               </>
             ) : interrupted ? (
               'Interrupted'

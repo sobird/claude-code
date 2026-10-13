@@ -1,4 +1,5 @@
 import { type FileHandle, open } from 'fs/promises'
+
 import { isENOENT } from './errors.js'
 
 export const CHUNK_SIZE = 8 * 1024
@@ -28,11 +29,7 @@ export type EditContext = {
  * Returns null on ENOENT. Returns { truncated: true, content: '' } if the
  * needle isn't found within MAX_SCAN_BYTES.
  */
-export async function readEditContext(
-  path: string,
-  needle: string,
-  contextLines = 3,
-): Promise<EditContext | null> {
+export async function readEditContext(path: string, needle: string, contextLines = 3): Promise<EditContext | null> {
   const handle = await openForScan(path)
   if (handle === null) return null
   try {
@@ -57,11 +54,7 @@ export async function openForScan(path: string): Promise<FileHandle | null> {
 /**
  * Handle-accepting core of readEditContext. Caller owns open/close.
  */
-export async function scanForContext(
-  handle: FileHandle,
-  needle: string,
-  contextLines: number,
-): Promise<EditContext> {
+export async function scanForContext(handle: FileHandle, needle: string, contextLines: number): Promise<EditContext> {
   if (needle === '') return { content: '', lineOffset: 1, truncated: false }
   const needleLF = Buffer.from(needle, 'utf8')
   // Model sends LF; files may be CRLF. Count newlines to size the overlap for
@@ -125,18 +118,11 @@ export async function readCapped(handle: FileHandle): Promise<string | null> {
   let total = 0
   for (;;) {
     if (total === buf.length) {
-      const grown = Buffer.allocUnsafe(
-        Math.min(buf.length * 2, MAX_SCAN_BYTES + CHUNK_SIZE),
-      )
+      const grown = Buffer.allocUnsafe(Math.min(buf.length * 2, MAX_SCAN_BYTES + CHUNK_SIZE))
       buf.copy(grown, 0, 0, total)
       buf = grown
     }
-    const { bytesRead } = await handle.read(
-      buf,
-      total,
-      buf.length - total,
-      total,
-    )
+    const { bytesRead } = await handle.read(buf, total, buf.length - total, total)
     if (bytesRead === 0) break
     total += bytesRead
     if (total > MAX_SCAN_BYTES) return null
@@ -178,12 +164,7 @@ async function sliceContext(
 ): Promise<EditContext> {
   // Scan backward from matchStart to find contextLines prior newlines.
   const backChunk = Math.min(matchStart, CHUNK_SIZE)
-  const { bytesRead: backRead } = await handle.read(
-    scratch,
-    0,
-    backChunk,
-    matchStart - backChunk,
-  )
+  const { bytesRead: backRead } = await handle.read(scratch, 0, backChunk, matchStart - backChunk)
   let ctxStart = matchStart
   let nlSeen = 0
   for (let i = backRead - 1; i >= 0 && nlSeen <= contextLines; i--) {
@@ -195,19 +176,11 @@ async function sliceContext(
   }
   // Compute lineOffset now, before scratch is overwritten by the forward read.
   const walkedBack = matchStart - ctxStart
-  const lineOffset =
-    linesBeforeMatch -
-    countNewlines(scratch, backRead - walkedBack, backRead) +
-    1
+  const lineOffset = linesBeforeMatch - countNewlines(scratch, backRead - walkedBack, backRead) + 1
 
   // Scan forward from matchEnd to find contextLines trailing newlines.
   const matchEnd = matchStart + matchLen
-  const { bytesRead: fwdRead } = await handle.read(
-    scratch,
-    0,
-    CHUNK_SIZE,
-    matchEnd,
-  )
+  const { bytesRead: fwdRead } = await handle.read(scratch, 0, CHUNK_SIZE, matchEnd)
   let ctxEnd = matchEnd
   nlSeen = 0
   for (let i = 0; i < fwdRead; i++) {

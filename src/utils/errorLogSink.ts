@@ -10,8 +10,10 @@
  * log.ts has NO heavy dependencies - events are queued until this sink is attached.
  */
 
-import axios from 'axios'
 import { dirname, join } from 'path'
+
+import axios from 'axios'
+
 import { getSessionId } from '../bootstrap/state.js'
 import { createBufferedWriter } from './bufferedWriter.js'
 import { CACHE_PATHS } from './cachePaths.js'
@@ -181,8 +183,7 @@ function logMCPErrorImpl(serverName: string, error: unknown): void {
   logForDebugging(`MCP server "${serverName}" ${error}`, { level: 'error' })
 
   const logFile = getMCPLogsPath(serverName)
-  const errorStr =
-    error instanceof Error ? error.stack || error.message : String(error)
+  const errorStr = error instanceof Error ? error.stack || error.message : String(error)
 
   const errorInfo = {
     error: errorStr,

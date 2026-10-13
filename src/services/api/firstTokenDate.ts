@@ -1,4 +1,5 @@
 import axios from 'axios'
+
 import { getOauthConfig } from '../../constants/oauth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { getAuthHeaders } from '../../utils/http.js'
@@ -40,17 +41,13 @@ export async function fetchAndStoreClaudeCodeFirstTokenDate(): Promise<void> {
     if (firstTokenDate !== null) {
       const dateTime = new Date(firstTokenDate).getTime()
       if (isNaN(dateTime)) {
-        logError(
-          new Error(
-            `Received invalid first_token_date from API: ${firstTokenDate}`,
-          ),
-        )
+        logError(new Error(`Received invalid first_token_date from API: ${firstTokenDate}`))
         // Don't save invalid dates
         return
       }
     }
 
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       claudeCodeFirstTokenDate: firstTokenDate,
     }))

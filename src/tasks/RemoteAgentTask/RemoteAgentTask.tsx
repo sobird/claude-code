@@ -1,4 +1,5 @@
 import type { ToolUseBlock } from '@anthropic-ai/sdk/resources'
+
 import { getRemoteSessionUrl } from '../../constants/product.js'
 import {
   OUTPUT_FILE_TAG,
@@ -12,16 +13,8 @@ import {
   TOOL_USE_ID_TAG,
   ULTRAPLAN_TAG,
 } from '../../constants/xml.js'
-import type {
-  SDKAssistantMessage,
-  SDKMessage,
-} from '../../entrypoints/agentSdkTypes.js'
-import type {
-  SetAppState,
-  Task,
-  TaskContext,
-  TaskStateBase,
-} from '../../Task.js'
+import type { SDKAssistantMessage, SDKMessage } from '../../entrypoints/agentSdkTypes.js'
+import type { SetAppState, Task, TaskContext, TaskStateBase } from '../../Task.js'
 import { createTaskStateBase, generateTaskId } from '../../Task.js'
 import { TodoWriteTool } from '../../tools/TodoWriteTool/TodoWriteTool.js'
 import {
@@ -40,18 +33,10 @@ import {
   writeRemoteAgentMetadata,
 } from '../../utils/sessionStorage.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
-import {
-  appendTaskOutput,
-  evictTaskOutput,
-  getTaskOutputPath,
-  initTaskOutput,
-} from '../../utils/task/diskOutput.js'
+import { appendTaskOutput, evictTaskOutput, getTaskOutputPath, initTaskOutput } from '../../utils/task/diskOutput.js'
 import { registerTask, updateTaskState } from '../../utils/task/framework.js'
+import { archiveRemoteSession, pollRemoteSessionEvents } from '../../utils/teleport.js'
 import { fetchSession } from '../../utils/teleport/api.js'
-import {
-  archiveRemoteSession,
-  pollRemoteSessionEvents,
-} from '../../utils/teleport.js'
 import type { TodoList } from '../../utils/todo/types.js'
 import type { UltraplanPhase } from '../../utils/ultraplan/ccrSession.js'
 
@@ -94,13 +79,7 @@ export type RemoteAgentTaskState = TaskStateBase & {
   ultraplanPhase?: Exclude<UltraplanPhase, 'running'>
 }
 
-const REMOTE_TASK_TYPES = [
-  'remote-agent',
-  'ultraplan',
-  'ultrareview',
-  'autofix-pr',
-  'background-pr',
-] as const
+const REMOTE_TASK_TYPES = ['remote-agent', 'ultraplan', 'ultrareview', 'autofix-pr', 'background-pr'] as const
 export type RemoteTaskType = (typeof REMOTE_TASK_TYPES)[number]
 
 function isRemoteTaskType(v: string | undefined): v is RemoteTaskType {
@@ -120,23 +99,15 @@ export type RemoteTaskMetadata = AutofixPrRemoteTaskMetadata
  * non-null string to complete the task (string becomes the notification text),
  * or null to keep polling. Checkers that hit external APIs should self-throttle.
  */
-export type RemoteTaskCompletionChecker = (
-  remoteTaskMetadata: RemoteTaskMetadata | undefined,
-) => Promise<string | null>
+export type RemoteTaskCompletionChecker = (remoteTaskMetadata: RemoteTaskMetadata | undefined) => Promise<string | null>
 
-const completionCheckers = new Map<
-  RemoteTaskType,
-  RemoteTaskCompletionChecker
->()
+const completionCheckers = new Map<RemoteTaskType, RemoteTaskCompletionChecker>()
 
 /**
  * Register a completion checker for a remote task type. Invoked on every poll
  * tick; survives --resume via the sidecar's remoteTaskType + remoteTaskMetadata.
  */
-export function registerCompletionChecker(
-  remoteTaskType: RemoteTaskType,
-  checker: RemoteTaskCompletionChecker,
-): void {
+export function registerCompletionChecker(remoteTaskType: RemoteTaskType, checker: RemoteTaskCompletionChecker): void {
   completionCheckers.set(remoteTaskType, checker)
 }
 
@@ -144,9 +115,7 @@ export function registerCompletionChecker(
  * Persist a remote-agent metadata entry to the session sidecar.
  * Fire-and-forget — persistence failures must not block task registration.
  */
-async function persistRemoteAgentMetadata(
-  meta: RemoteAgentMetadata,
-): Promise<void> {
+async function persistRemoteAgentMetadata(meta: RemoteAgentMetadata): Promise<void> {
   try {
     await writeRemoteAgentMetadata(meta.taskId, meta)
   } catch (e) {
@@ -195,9 +164,7 @@ export async function checkRemoteAgentEligibility({
 /**
  * Format precondition error for display.
  */
-export function formatPreconditionError(
-  error: BackgroundRemoteSessionPrecondition,
-): string {
+export function formatPreconditionError(error: BackgroundRemoteSessionPrecondition): string {
   switch (error.type) {
     case 'not_logged_in':
       return 'Please run /login and sign in with your Claude.ai account (not Console).'
@@ -227,16 +194,9 @@ function enqueueRemoteNotification(
   // Atomically check and set notified flag to prevent duplicate notifications.
   if (!markTaskNotified(taskId, setAppState)) return
 
-  const statusText =
-    status === 'completed'
-      ? 'completed successfully'
-      : status === 'failed'
-        ? 'failed'
-        : 'was stopped'
+  const statusText = status === 'completed' ? 'completed successfully' : status === 'failed' ? 'failed' : 'was stopped'
 
-  const toolUseIdLine = toolUseId
-    ? `\n<${TOOL_USE_ID_TAG}>${toolUseId}</${TOOL_USE_ID_TAG}>`
-    : ''
+  const toolUseIdLine = toolUseId ? `\n<${TOOL_USE_ID_TAG}>${toolUseId}</${TOOL_USE_ID_TAG}>` : ''
 
   const outputPath = getTaskOutputPath(taskId)
   const message = `<${TASK_NOTIFICATION_TAG}>
@@ -256,7 +216,7 @@ function enqueueRemoteNotification(
  */
 function markTaskNotified(taskId: string, setAppState: SetAppState): boolean {
   let shouldEnqueue = false
-  updateTaskState(taskId, setAppState, task => {
+  updateTaskState(taskId, setAppState, (task) => {
     if (task.notified) {
       return task
     }
@@ -326,10 +286,7 @@ function extractReviewFromLog(log: SDKMessage[]): string | null {
     // The final echo before hook exit may land in either the last
     // hook_progress or the terminal hook_response depending on buffering;
     // both have flat stdout.
-    if (
-      msg?.type === 'system' &&
-      (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response')
-    ) {
+    if (msg?.type === 'system' && (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response')) {
       const tagged = extractTag(msg.stdout, REMOTE_REVIEW_TAG)
       if (tagged?.trim()) return tagged.trim()
     }
@@ -347,12 +304,8 @@ function extractReviewFromLog(log: SDKMessage[]): string | null {
   // large JSON payloads can flush across two if the pipe buffer fills
   // mid-write. Per-message scan above misses a tag split across events.
   const hookStdout = log
-    .filter(
-      msg =>
-        msg.type === 'system' &&
-        (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response'),
-    )
-    .map(msg => msg.stdout)
+    .filter((msg) => msg.type === 'system' && (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response'))
+    .map((msg) => msg.stdout)
     .join('')
   const hookTagged = extractTag(hookStdout, REMOTE_REVIEW_TAG)
   if (hookTagged?.trim()) return hookTagged.trim()
@@ -360,7 +313,7 @@ function extractReviewFromLog(log: SDKMessage[]): string | null {
   // Fallback: concatenate all assistant text in chronological order.
   const allText = log
     .filter((msg): msg is SDKAssistantMessage => msg.type === 'assistant')
-    .map(msg => extractTextContent(msg.message.content, '\n'))
+    .map((msg) => extractTextContent(msg.message.content, '\n'))
     .join('\n')
     .trim()
 
@@ -381,10 +334,7 @@ function extractReviewTagFromLog(log: SDKMessage[]): string | null {
   // hook_progress / hook_response per-message scan (bughunter path)
   for (let i = log.length - 1; i >= 0; i--) {
     const msg = log[i]
-    if (
-      msg?.type === 'system' &&
-      (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response')
-    ) {
+    if (msg?.type === 'system' && (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response')) {
       const tagged = extractTag(msg.stdout, REMOTE_REVIEW_TAG)
       if (tagged?.trim()) return tagged.trim()
     }
@@ -401,12 +351,8 @@ function extractReviewTagFromLog(log: SDKMessage[]): string | null {
 
   // Hook-stdout concat fallback for split tags
   const hookStdout = log
-    .filter(
-      msg =>
-        msg.type === 'system' &&
-        (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response'),
-    )
-    .map(msg => msg.stdout)
+    .filter((msg) => msg.type === 'system' && (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response'))
+    .map((msg) => msg.stdout)
     .join('')
   const hookTagged = extractTag(hookStdout, REMOTE_REVIEW_TAG)
   if (hookTagged?.trim()) return hookTagged.trim()
@@ -420,11 +366,7 @@ function extractReviewTagFromLog(log: SDKMessage[]): string | null {
  * turn — no file indirection, no mode change. Session is kept alive so the
  * claude.ai URL stays a durable record the user can revisit; TTL handles cleanup.
  */
-function enqueueRemoteReviewNotification(
-  taskId: string,
-  reviewContent: string,
-  setAppState: SetAppState,
-): void {
+function enqueueRemoteReviewNotification(taskId: string, reviewContent: string, setAppState: SetAppState): void {
   if (!markTaskNotified(taskId, setAppState)) return
 
   const message = `<${TASK_NOTIFICATION_TAG}>
@@ -443,11 +385,7 @@ ${reviewContent}`
 /**
  * Enqueue a remote-review failure notification.
  */
-function enqueueRemoteReviewFailureNotification(
-  taskId: string,
-  reason: string,
-  setAppState: SetAppState,
-): void {
+function enqueueRemoteReviewFailureNotification(taskId: string, reason: string, setAppState: SetAppState): void {
   if (!markTaskNotified(taskId, setAppState)) return
 
   const message = `<${TASK_NOTIFICATION_TAG}>
@@ -468,17 +406,14 @@ function extractTodoListFromLog(log: SDKMessage[]): TodoList {
   const todoListMessage = log.findLast(
     (msg): msg is SDKAssistantMessage =>
       msg.type === 'assistant' &&
-      msg.message.content.some(
-        block => block.type === 'tool_use' && block.name === TodoWriteTool.name,
-      ),
+      msg.message.content.some((block) => block.type === 'tool_use' && block.name === TodoWriteTool.name),
   )
   if (!todoListMessage) {
     return []
   }
 
   const input = todoListMessage.message.content.find(
-    (block): block is ToolUseBlock =>
-      block.type === 'tool_use' && block.name === TodoWriteTool.name,
+    (block): block is ToolUseBlock => block.type === 'tool_use' && block.name === TodoWriteTool.name,
   )?.input
   if (!input) {
     return []
@@ -588,9 +523,7 @@ export function registerRemoteAgentTask(options: {
  * removed. Must run after switchSession() so getSessionId() points at the
  * resumed session's sidecar directory.
  */
-export async function restoreRemoteAgentTasks(
-  context: TaskContext,
-): Promise<void> {
+export async function restoreRemoteAgentTasks(context: TaskContext): Promise<void> {
   try {
     await restoreRemoteAgentTasksImpl(context)
   } catch (e) {
@@ -598,9 +531,7 @@ export async function restoreRemoteAgentTasks(
   }
 }
 
-async function restoreRemoteAgentTasksImpl(
-  context: TaskContext,
-): Promise<void> {
+async function restoreRemoteAgentTasksImpl(context: TaskContext): Promise<void> {
   const persisted = await listRemoteAgentMetadata()
   if (persisted.length === 0) return
 
@@ -616,14 +547,10 @@ async function restoreRemoteAgentTasksImpl(
       // 4xx (validateStatus treats <500 as success), so isTransientNetworkError
       // can't distinguish them; match the 404 message instead.
       if (e instanceof Error && e.message.startsWith('Session not found:')) {
-        logForDebugging(
-          `restoreRemoteAgentTasks: dropping ${meta.taskId} (404: ${String(e)})`,
-        )
+        logForDebugging(`restoreRemoteAgentTasks: dropping ${meta.taskId} (404: ${String(e)})`)
         void removeRemoteAgentMetadata(meta.taskId)
       } else {
-        logForDebugging(
-          `restoreRemoteAgentTasks: skipping ${meta.taskId} (recoverable: ${String(e)})`,
-        )
+        logForDebugging(`restoreRemoteAgentTasks: skipping ${meta.taskId} (recoverable: ${String(e)})`)
       }
       continue
     }
@@ -635,16 +562,9 @@ async function restoreRemoteAgentTasksImpl(
     }
 
     const taskState: RemoteAgentTaskState = {
-      ...createTaskStateBase(
-        meta.taskId,
-        'remote_agent',
-        meta.title,
-        meta.toolUseId,
-      ),
+      ...createTaskStateBase(meta.taskId, 'remote_agent', meta.title, meta.toolUseId),
       type: 'remote_agent',
-      remoteTaskType: isRemoteTaskType(meta.remoteTaskType)
-        ? meta.remoteTaskType
-        : 'remote-agent',
+      remoteTaskType: isRemoteTaskType(meta.remoteTaskType) ? meta.remoteTaskType : 'remote-agent',
       status: 'running',
       sessionId: meta.sessionId,
       command: meta.command,
@@ -656,9 +576,7 @@ async function restoreRemoteAgentTasksImpl(
       isLongRunning: meta.isLongRunning,
       startTime: meta.spawnedAt,
       pollStartedAt: Date.now(),
-      remoteTaskMetadata: meta.remoteTaskMetadata as
-        | RemoteTaskMetadata
-        | undefined,
+      remoteTaskMetadata: meta.remoteTaskMetadata as RemoteTaskMetadata | undefined,
     }
 
     registerTask(taskState, context.setAppState)
@@ -671,10 +589,7 @@ async function restoreRemoteAgentTasksImpl(
  * Start polling for remote session updates.
  * Returns a cleanup function to stop polling.
  */
-function startRemoteSessionPolling(
-  taskId: string,
-  context: TaskContext,
-): () => void {
+function startRemoteSessionPolling(taskId: string, context: TaskContext): () => void {
   let isRunning = true
   const POLL_INTERVAL_MS = 1000
   const REMOTE_REVIEW_TIMEOUT_MS = 30 * 60 * 1000
@@ -703,20 +618,17 @@ function startRemoteSessionPolling(
         return
       }
 
-      const response = await pollRemoteSessionEvents(
-        task.sessionId,
-        lastEventId,
-      )
+      const response = await pollRemoteSessionEvents(task.sessionId, lastEventId)
       lastEventId = response.lastEventId
       const logGrew = response.newEvents.length > 0
       if (logGrew) {
         accumulatedLog = [...accumulatedLog, ...response.newEvents]
         const deltaText = response.newEvents
-          .map(msg => {
+          .map((msg) => {
             if (msg.type === 'assistant') {
               return msg.message.content
-                .filter(block => block.type === 'text')
-                .map(block => ('text' in block ? block.text : ''))
+                .filter((block) => block.type === 'text')
+                .map((block) => ('text' in block ? block.text : ''))
                 .join('\n')
             }
             return jsonStringify(msg)
@@ -728,18 +640,10 @@ function startRemoteSessionPolling(
       }
 
       if (response.sessionStatus === 'archived') {
-        updateTaskState<RemoteAgentTaskState>(taskId, context.setAppState, t =>
-          t.status === 'running'
-            ? { ...t, status: 'completed', endTime: Date.now() }
-            : t,
+        updateTaskState<RemoteAgentTaskState>(taskId, context.setAppState, (t) =>
+          t.status === 'running' ? { ...t, status: 'completed', endTime: Date.now() } : t,
         )
-        enqueueRemoteNotification(
-          taskId,
-          task.title,
-          'completed',
-          context.setAppState,
-          task.toolUseId,
-        )
+        enqueueRemoteNotification(taskId, task.title, 'completed', context.setAppState, task.toolUseId)
         void evictTaskOutput(taskId)
         void removeRemoteAgentMetadata(taskId)
         return
@@ -749,21 +653,10 @@ function startRemoteSessionPolling(
       if (checker) {
         const completionResult = await checker(task.remoteTaskMetadata)
         if (completionResult !== null) {
-          updateTaskState<RemoteAgentTaskState>(
-            taskId,
-            context.setAppState,
-            t =>
-              t.status === 'running'
-                ? { ...t, status: 'completed', endTime: Date.now() }
-                : t,
+          updateTaskState<RemoteAgentTaskState>(taskId, context.setAppState, (t) =>
+            t.status === 'running' ? { ...t, status: 'completed', endTime: Date.now() } : t,
           )
-          enqueueRemoteNotification(
-            taskId,
-            completionResult,
-            'completed',
-            context.setAppState,
-            task.toolUseId,
-          )
+          enqueueRemoteNotification(taskId, completionResult, 'completed', context.setAppState, task.toolUseId)
           void evictTaskOutput(taskId)
           void removeRemoteAgentMetadata(taskId)
           return
@@ -775,9 +668,7 @@ function startRemoteSessionPolling(
       // Long-running monitors (autofix-pr) emit result per notification cycle,
       // so the same skip applies.
       const result =
-        task.isUltraplan || task.isLongRunning
-          ? undefined
-          : accumulatedLog.findLast(msg => msg.type === 'result')
+        task.isUltraplan || task.isLongRunning ? undefined : accumulatedLog.findLast((msg) => msg.type === 'result')
 
       // For remote-review: <remote-review> in hook_progress stdout is the
       // bughunter path's completion signal. Scan only the delta to stay O(new);
@@ -799,18 +690,13 @@ function startRemoteSessionPolling(
         const open = `<${REMOTE_REVIEW_PROGRESS_TAG}>`
         const close = `</${REMOTE_REVIEW_PROGRESS_TAG}>`
         for (const ev of response.newEvents) {
-          if (
-            ev.type === 'system' &&
-            (ev.subtype === 'hook_progress' || ev.subtype === 'hook_response')
-          ) {
+          if (ev.type === 'system' && (ev.subtype === 'hook_progress' || ev.subtype === 'hook_response')) {
             const s = ev.stdout
             const closeAt = s.lastIndexOf(close)
             const openAt = closeAt === -1 ? -1 : s.lastIndexOf(open, closeAt)
             if (openAt !== -1 && closeAt > openAt) {
               try {
-                const p = JSON.parse(
-                  s.slice(openAt + open.length, closeAt),
-                ) as {
+                const p = JSON.parse(s.slice(openAt + open.length, closeAt)) as {
                   stage?: 'finding' | 'verifying' | 'synthesizing'
                   bugs_found?: number
                   bugs_verified?: number
@@ -833,12 +719,11 @@ function startRemoteSessionPolling(
       // SessionStart hook produces zero assistant turns so stableIdle would
       // never arm without this.
       const hasAnyOutput = accumulatedLog.some(
-        msg =>
+        (msg) =>
           msg.type === 'assistant' ||
           (task.isRemoteReview &&
             msg.type === 'system' &&
-            (msg.subtype === 'hook_progress' ||
-              msg.subtype === 'hook_response')),
+            (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response')),
       )
       if (response.sessionStatus === 'idle' && !logGrew && hasAnyOutput) {
         consecutiveIdlePolls++
@@ -861,23 +746,16 @@ function startRemoteSessionPolling(
       // only registers SessionStart, but the 30min-hang failure mode is
       // worth defending against.
       const hasSessionStartHook = accumulatedLog.some(
-        m =>
+        (m) =>
           m.type === 'system' &&
-          (m.subtype === 'hook_started' ||
-            m.subtype === 'hook_progress' ||
-            m.subtype === 'hook_response') &&
+          (m.subtype === 'hook_started' || m.subtype === 'hook_progress' || m.subtype === 'hook_response') &&
           (m as { hook_event?: string }).hook_event === 'SessionStart',
       )
-      const hasAssistantEvents = accumulatedLog.some(
-        m => m.type === 'assistant',
-      )
+      const hasAssistantEvents = accumulatedLog.some((m) => m.type === 'assistant')
       const sessionDone =
         task.isRemoteReview &&
-        (cachedReviewContent !== null ||
-          (!hasSessionStartHook && stableIdle && hasAssistantEvents))
-      const reviewTimedOut =
-        task.isRemoteReview &&
-        Date.now() - task.pollStartedAt > REMOTE_REVIEW_TIMEOUT_MS
+        (cachedReviewContent !== null || (!hasSessionStartHook && stableIdle && hasAssistantEvents))
+      const reviewTimedOut = task.isRemoteReview && Date.now() - task.pollStartedAt > REMOTE_REVIEW_TIMEOUT_MS
       const newStatus = result
         ? result.subtype === 'success'
           ? ('completed' as const)
@@ -893,46 +771,37 @@ function startRemoteSessionPolling(
       // notified set to true), bail without overwriting status or proceeding to
       // side effects (notification, permission-mode flip).
       let raceTerminated = false
-      updateTaskState<RemoteAgentTaskState>(
-        taskId,
-        context.setAppState,
-        prevTask => {
-          if (prevTask.status !== 'running') {
-            raceTerminated = true
-            return prevTask
-          }
-          // No log growth and status unchanged → nothing to report. Return
-          // same ref so updateTaskState skips the spread and 18 s.tasks
-          // subscribers (REPL, Spinner, PromptInput, ...) don't re-render.
-          // newProgress only arrives via log growth (heartbeat echo is a
-          // hook_progress event), so !logGrew already covers no-update.
-          const statusUnchanged =
-            newStatus === 'running' || newStatus === 'starting'
-          if (!logGrew && statusUnchanged) {
-            return prevTask
-          }
-          return {
-            ...prevTask,
-            status: newStatus === 'starting' ? 'running' : newStatus,
-            log: accumulatedLog,
-            // Only re-scan for TodoWrite when log grew — log is append-only,
-            // so no growth means no new tool_use blocks. Avoids findLast +
-            // some + find + safeParse every second when idle.
-            todoList: logGrew
-              ? extractTodoListFromLog(accumulatedLog)
-              : prevTask.todoList,
-            reviewProgress: newProgress ?? prevTask.reviewProgress,
-            endTime:
-              result || sessionDone || reviewTimedOut ? Date.now() : undefined,
-          }
-        },
-      )
+      updateTaskState<RemoteAgentTaskState>(taskId, context.setAppState, (prevTask) => {
+        if (prevTask.status !== 'running') {
+          raceTerminated = true
+          return prevTask
+        }
+        // No log growth and status unchanged → nothing to report. Return
+        // same ref so updateTaskState skips the spread and 18 s.tasks
+        // subscribers (REPL, Spinner, PromptInput, ...) don't re-render.
+        // newProgress only arrives via log growth (heartbeat echo is a
+        // hook_progress event), so !logGrew already covers no-update.
+        const statusUnchanged = newStatus === 'running' || newStatus === 'starting'
+        if (!logGrew && statusUnchanged) {
+          return prevTask
+        }
+        return {
+          ...prevTask,
+          status: newStatus === 'starting' ? 'running' : newStatus,
+          log: accumulatedLog,
+          // Only re-scan for TodoWrite when log grew — log is append-only,
+          // so no growth means no new tool_use blocks. Avoids findLast +
+          // some + find + safeParse every second when idle.
+          todoList: logGrew ? extractTodoListFromLog(accumulatedLog) : prevTask.todoList,
+          reviewProgress: newProgress ?? prevTask.reviewProgress,
+          endTime: result || sessionDone || reviewTimedOut ? Date.now() : undefined,
+        }
+      })
       if (raceTerminated) return
 
       // Send notification if task completed or timed out
       if (result || sessionDone || reviewTimedOut) {
-        const finalStatus =
-          result && result.subtype !== 'success' ? 'failed' : 'completed'
+        const finalStatus = result && result.subtype !== 'success' ? 'failed' : 'completed'
 
         // For remote-review tasks: inject the review text directly into the
         // message queue. No mode change, no file indirection — the local model
@@ -944,21 +813,16 @@ function startRemoteSessionPolling(
           // cachedReviewContent hit the tag in the delta scan. Full-log scan
           // catches the stableIdle path where the tag arrived in an earlier
           // tick but the delta scan wasn't wired yet (first poll after resume).
-          const reviewContent =
-            cachedReviewContent ?? extractReviewFromLog(accumulatedLog)
+          const reviewContent = cachedReviewContent ?? extractReviewFromLog(accumulatedLog)
           if (reviewContent && finalStatus === 'completed') {
-            enqueueRemoteReviewNotification(
-              taskId,
-              reviewContent,
-              context.setAppState,
-            )
+            enqueueRemoteReviewNotification(taskId, reviewContent, context.setAppState)
             void evictTaskOutput(taskId)
             void removeRemoteAgentMetadata(taskId)
             return // Stop polling
           }
 
           // No output or remote error — mark failed with a review-specific message.
-          updateTaskState(taskId, context.setAppState, t => ({
+          updateTaskState(taskId, context.setAppState, (t) => ({
             ...t,
             status: 'failed',
           }))
@@ -968,23 +832,13 @@ function startRemoteSessionPolling(
               : reviewTimedOut && !sessionDone
                 ? 'remote session exceeded 30 minutes'
                 : 'no review output — orchestrator may have exited early'
-          enqueueRemoteReviewFailureNotification(
-            taskId,
-            reason,
-            context.setAppState,
-          )
+          enqueueRemoteReviewFailureNotification(taskId, reason, context.setAppState)
           void evictTaskOutput(taskId)
           void removeRemoteAgentMetadata(taskId)
           return // Stop polling
         }
 
-        enqueueRemoteNotification(
-          taskId,
-          task.title,
-          finalStatus,
-          context.setAppState,
-          task.toolUseId,
-        )
+        enqueueRemoteNotification(taskId, task.title, finalStatus, context.setAppState, task.toolUseId)
         void evictTaskOutput(taskId)
         void removeRemoteAgentMetadata(taskId)
         return // Stop polling
@@ -998,24 +852,18 @@ function startRemoteSessionPolling(
       // persistent API errors skip the timeout check and poll forever.
       try {
         const appState = context.getAppState()
-        const task = appState.tasks?.[taskId] as
-          | RemoteAgentTaskState
-          | undefined
+        const task = appState.tasks?.[taskId] as RemoteAgentTaskState | undefined
         if (
           task?.isRemoteReview &&
           task.status === 'running' &&
           Date.now() - task.pollStartedAt > REMOTE_REVIEW_TIMEOUT_MS
         ) {
-          updateTaskState(taskId, context.setAppState, t => ({
+          updateTaskState(taskId, context.setAppState, (t) => ({
             ...t,
             status: 'failed',
             endTime: Date.now(),
           }))
-          enqueueRemoteReviewFailureNotification(
-            taskId,
-            'remote session exceeded 30 minutes',
-            context.setAppState,
-          )
+          enqueueRemoteReviewFailureNotification(taskId, 'remote session exceeded 30 minutes', context.setAppState)
           void evictTaskOutput(taskId)
           void removeRemoteAgentMetadata(taskId)
           return // Stop polling
@@ -1055,7 +903,7 @@ export const RemoteAgentTask: Task = {
     let description: string | undefined
     let sessionId: string | undefined
     let killed = false
-    updateTaskState<RemoteAgentTaskState>(taskId, setAppState, task => {
+    updateTaskState<RemoteAgentTaskState>(taskId, setAppState, (task) => {
       if (task.status !== 'running') {
         return task
       }
@@ -1080,7 +928,7 @@ export const RemoteAgentTask: Task = {
       })
       // Archive the remote session so it stops consuming cloud resources.
       if (sessionId) {
-        void archiveRemoteSession(sessionId).catch(e =>
+        void archiveRemoteSession(sessionId).catch((e) =>
           logForDebugging(`RemoteAgentTask archive failed: ${String(e)}`),
         )
       }
@@ -1088,9 +936,7 @@ export const RemoteAgentTask: Task = {
 
     void evictTaskOutput(taskId)
     void removeRemoteAgentMetadata(taskId)
-    logForDebugging(
-      `RemoteAgentTask ${taskId} killed, archiving session ${sessionId ?? 'unknown'}`,
-    )
+    logForDebugging(`RemoteAgentTask ${taskId} killed, archiving session ${sessionId ?? 'unknown'}`)
   },
 }
 

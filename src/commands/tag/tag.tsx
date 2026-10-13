@@ -1,6 +1,8 @@
-import chalk from 'chalk'
 import type { UUID } from 'crypto'
+
+import chalk from 'chalk'
 import * as React from 'react'
+
 import { getSessionId } from '../../bootstrap/state.js'
 import type { CommandResultDisplay } from '../../commands.js'
 import { Select } from '../../components/CustomSelect/select.js'
@@ -10,11 +12,7 @@ import { Box, Text } from '../../ink.js'
 import { logEvent } from '../../services/analytics/index.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
 import { recursivelySanitizeUnicode } from '../../utils/sanitization.js'
-import {
-  getCurrentSessionTag,
-  getTranscriptPath,
-  saveTag,
-} from '../../utils/sessionStorage.js'
+import { getCurrentSessionTag, getTranscriptPath, saveTag } from '../../utils/sessionStorage.js'
 
 function ConfirmRemoveTag({
   tagName,
@@ -26,16 +24,11 @@ function ConfirmRemoveTag({
   onCancel: () => void
 }): React.ReactNode {
   return (
-    <Dialog
-      title="Remove tag?"
-      subtitle={`Current tag: #${tagName}`}
-      onCancel={onCancel}
-      color="warning"
-    >
+    <Dialog title="Remove tag?" subtitle={`Current tag: #${tagName}`} onCancel={onCancel} color="warning">
       <Box flexDirection="column" gap={1}>
         <Text>This will remove the tag from the current session.</Text>
         <Select<'yes' | 'no'>
-          onChange={value => (value === 'yes' ? onConfirm() : onCancel())}
+          onChange={(value) => (value === 'yes' ? onConfirm() : onCancel())}
           options={[
             { label: 'Yes, remove tag', value: 'yes' },
             { label: 'No, keep tag', value: 'no' },
@@ -51,10 +44,7 @@ function ToggleTagAndClose({
   onDone,
 }: {
   tagName: string
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }): React.ReactNode {
   const [showConfirm, setShowConfirm] = React.useState(false)
   const [sessionId, setSessionId] = React.useState<UUID | null>(null)
@@ -123,10 +113,7 @@ function ToggleTagAndClose({
 function ShowHelp({
   onDone,
 }: {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }): React.ReactNode {
   React.useEffect(() => {
     onDone(
@@ -148,11 +135,7 @@ Examples:
   return null
 }
 
-export async function call(
-  onDone: LocalJSXCommandOnDone,
-  _context: unknown,
-  args?: string,
-): Promise<React.ReactNode> {
+export async function call(onDone: LocalJSXCommandOnDone, _context: unknown, args?: string): Promise<React.ReactNode> {
   args = args?.trim() || ''
 
   if (COMMON_INFO_ARGS.includes(args) || COMMON_HELP_ARGS.includes(args)) {

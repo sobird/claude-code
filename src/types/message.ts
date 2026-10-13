@@ -1,7 +1,9 @@
 // Auto-generated stub — replace with real implementation
 import type { UUID } from 'crypto'
+
 import type { BetaUsage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { ContentBlockParam, ContentBlock } from '@anthropic-ai/sdk/resources/index.mjs'
+
 import type { BranchAction, CommitKind, PrAction } from '../tools/shared/gitOperationTracking.js'
 import type { ToolProgressData } from './tools.js'
 

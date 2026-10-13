@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import React from 'react'
+
 import { supportsHyperlinks } from '../supports-hyperlinks.js'
 import Text from './Text.js'
 
@@ -9,11 +10,7 @@ export type Props = {
   readonly fallback?: ReactNode
 }
 
-export default function Link({
-  children,
-  url,
-  fallback,
-}: Props): React.ReactNode {
+export default function Link({ children, url, fallback }: Props): React.ReactNode {
   // Use children if provided, otherwise display the URL
   const content = children ?? url
 

@@ -1,11 +1,7 @@
 import type { StructuredPatchHunk } from 'diff'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  fetchGitDiff,
-  fetchGitDiffHunks,
-  type GitDiffResult,
-  type GitDiffStats,
-} from '../utils/gitDiff.js'
+
+import { fetchGitDiff, fetchGitDiffHunks, type GitDiffResult, type GitDiffStats } from '../utils/gitDiff.js'
 
 const MAX_LINES_PER_FILE = 400
 
@@ -33,9 +29,7 @@ export type DiffData = {
  */
 export function useDiffData(): DiffData {
   const [diffResult, setDiffResult] = useState<GitDiffResult | null>(null)
-  const [hunks, setHunks] = useState<Map<string, StructuredPatchHunk[]>>(
-    new Map(),
-  )
+  const [hunks, setHunks] = useState<Map<string, StructuredPatchHunk[]>>(new Map())
   const [loading, setLoading] = useState(true)
 
   // Fetch diff data on mount
@@ -45,10 +39,7 @@ export function useDiffData(): DiffData {
     async function loadDiffData() {
       try {
         // Fetch both stats and hunks
-        const [statsResult, hunksResult] = await Promise.all([
-          fetchGitDiff(),
-          fetchGitDiffHunks(),
-        ])
+        const [statsResult, hunksResult] = await Promise.all([fetchGitDiff(), fetchGitDiffHunks()])
 
         if (!cancelled) {
           setDiffResult(statsResult)
@@ -89,8 +80,7 @@ export function useDiffData(): DiffData {
 
       // Detect truncated file (total > limit means we truncated)
       const totalLines = fileStats.added + fileStats.removed
-      const isTruncated =
-        !isLargeFile && !fileStats.isBinary && totalLines > MAX_LINES_PER_FILE
+      const isTruncated = !isLargeFile && !fileStats.isBinary && totalLines > MAX_LINES_PER_FILE
 
       files.push({
         path,

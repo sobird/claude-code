@@ -1,10 +1,7 @@
 /* eslint-disable eslint-plugin-n/no-unsupported-features/node-builtins */
 
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
-import type {
-  SDKControlPermissionRequest,
-  StdoutMessage,
-} from '../entrypoints/sdk/controlTypes.js'
+import type { SDKControlPermissionRequest, StdoutMessage } from '../entrypoints/sdk/controlTypes.js'
 import type { RemotePermissionResponse } from '../remote/RemoteSessionManager.js'
 import { logForDebugging } from '../utils/debug.js'
 import { jsonParse, jsonStringify } from '../utils/slowOperations.js'
@@ -19,22 +16,14 @@ export type DirectConnectConfig = {
 
 export type DirectConnectCallbacks = {
   onMessage: (message: SDKMessage) => void
-  onPermissionRequest: (
-    request: SDKControlPermissionRequest,
-    requestId: string,
-  ) => void
+  onPermissionRequest: (request: SDKControlPermissionRequest, requestId: string) => void
   onConnected?: () => void
   onDisconnected?: () => void
   onError?: (error: Error) => void
 }
 
 function isStdoutMessage(value: unknown): value is StdoutMessage {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'type' in value &&
-    typeof value.type === 'string'
-  )
+  return typeof value === 'object' && value !== null && 'type' in value && typeof value.type === 'string'
 }
 
 export class DirectConnectSessionManager {
@@ -61,7 +50,7 @@ export class DirectConnectSessionManager {
       this.callbacks.onConnected?.()
     })
 
-    this.ws.addEventListener('message', event => {
+    this.ws.addEventListener('message', (event) => {
       const data = typeof event.data === 'string' ? event.data : ''
       const lines = data.split('\n').filter((l: string) => l.trim())
 
@@ -81,20 +70,12 @@ export class DirectConnectSessionManager {
         // Handle control requests (permission requests)
         if (parsed.type === 'control_request') {
           if (parsed.request.subtype === 'can_use_tool') {
-            this.callbacks.onPermissionRequest(
-              parsed.request,
-              parsed.request_id,
-            )
+            this.callbacks.onPermissionRequest(parsed.request, parsed.request_id)
           } else {
             // Send an error response for unrecognized subtypes so the
             // server doesn't hang waiting for a reply that never comes.
-            logForDebugging(
-              `[DirectConnect] Unsupported control request subtype: ${parsed.request.subtype}`,
-            )
-            this.sendErrorResponse(
-              parsed.request_id,
-              `Unsupported control request subtype: ${parsed.request.subtype}`,
-            )
+            logForDebugging(`[DirectConnect] Unsupported control request subtype: ${parsed.request.subtype}`)
+            this.sendErrorResponse(parsed.request_id, `Unsupported control request subtype: ${parsed.request.subtype}`)
           }
           continue
         }
@@ -141,10 +122,7 @@ export class DirectConnectSessionManager {
     return true
   }
 
-  respondToPermissionRequest(
-    requestId: string,
-    result: RemotePermissionResponse,
-  ): void {
+  respondToPermissionRequest(requestId: string, result: RemotePermissionResponse): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       return
     }
@@ -157,9 +135,7 @@ export class DirectConnectSessionManager {
         request_id: requestId,
         response: {
           behavior: result.behavior,
-          ...(result.behavior === 'allow'
-            ? { updatedInput: result.updatedInput }
-            : { message: result.message }),
+          ...(result.behavior === 'allow' ? { updatedInput: result.updatedInput } : { message: result.message }),
         },
       },
     })

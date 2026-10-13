@@ -1,4 +1,10 @@
-export type ApiMetricEntry = { ttftMs: number; firstTokenTime: number; lastTokenTime: number; responseLengthBaseline: number; endResponseLength: number }
+export type ApiMetricEntry = {
+  ttftMs: number
+  firstTokenTime: number
+  lastTokenTime: number
+  responseLengthBaseline: number
+  endResponseLength: number
+}
 
 /**
  * Computes a human-readable text representation of TTFT (Time To First Token) metrics.

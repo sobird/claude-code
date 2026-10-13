@@ -56,11 +56,7 @@ export type TransitionResult = {
 /**
  * Main transition function. Dispatches based on current state type.
  */
-export function transition(
-  state: CommandState,
-  input: string,
-  ctx: TransitionContext,
-): TransitionResult {
+export function transition(state: CommandState, input: string, ctx: TransitionContext): TransitionResult {
   switch (state.type) {
     case 'idle':
       return fromIdle(input, ctx)
@@ -95,11 +91,7 @@ export function transition(
  * Handle input that's valid in both idle and count states.
  * Returns null if input is not recognized.
  */
-function handleNormalInput(
-  input: string,
-  count: number,
-  ctx: TransitionContext,
-): TransitionResult | null {
+function handleNormalInput(input: string, count: number, ctx: TransitionContext): TransitionResult | null {
   if (isOperatorKey(input)) {
     return { next: { type: 'operator', op: OPERATORS[input], count } }
   }
@@ -170,16 +162,13 @@ function handleNormalInput(
   }
   if (input === 'I') {
     return {
-      execute: () =>
-        ctx.enterInsert(ctx.cursor.firstNonBlankInLogicalLine().offset),
+      execute: () => ctx.enterInsert(ctx.cursor.firstNonBlankInLogicalLine().offset),
     }
   }
   if (input === 'a') {
     return {
       execute: () => {
-        const newOffset = ctx.cursor.isAtEnd()
-          ? ctx.cursor.offset
-          : ctx.cursor.right().offset
+        const newOffset = ctx.cursor.isAtEnd() ? ctx.cursor.offset : ctx.cursor.right().offset
         ctx.enterInsert(newOffset)
       },
     }
@@ -262,11 +251,7 @@ function fromIdle(input: string, ctx: TransitionContext): TransitionResult {
   return {}
 }
 
-function fromCount(
-  state: { type: 'count'; digits: string },
-  input: string,
-  ctx: TransitionContext,
-): TransitionResult {
+function fromCount(state: { type: 'count'; digits: string }, input: string, ctx: TransitionContext): TransitionResult {
   if (/[0-9]/.test(input)) {
     const newDigits = state.digits + input
     const count = Math.min(parseInt(newDigits, 10), MAX_VIM_COUNT)
@@ -342,8 +327,7 @@ function fromOperatorFind(
   ctx: TransitionContext,
 ): TransitionResult {
   return {
-    execute: () =>
-      executeOperatorFind(state.op, state.find, input, state.count, ctx),
+    execute: () => executeOperatorFind(state.op, state.find, input, state.count, ctx),
   }
 }
 
@@ -359,8 +343,7 @@ function fromOperatorTextObj(
 ): TransitionResult {
   if (TEXT_OBJ_TYPES.has(input)) {
     return {
-      execute: () =>
-        executeOperatorTextObj(state.op, state.scope, input, state.count, ctx),
+      execute: () => executeOperatorTextObj(state.op, state.scope, input, state.count, ctx),
     }
   }
   return { next: { type: 'idle' } }
@@ -382,11 +365,7 @@ function fromFind(
   }
 }
 
-function fromG(
-  state: { type: 'g'; count: number },
-  input: string,
-  ctx: TransitionContext,
-): TransitionResult {
+function fromG(state: { type: 'g'; count: number }, input: string, ctx: TransitionContext): TransitionResult {
   if (input === 'j' || input === 'k') {
     return {
       execute: () => {
@@ -424,8 +403,7 @@ function fromOperatorG(
 ): TransitionResult {
   if (input === 'j' || input === 'k') {
     return {
-      execute: () =>
-        executeOperatorMotion(state.op, `g${input}`, state.count, ctx),
+      execute: () => executeOperatorMotion(state.op, `g${input}`, state.count, ctx),
     }
   }
   if (input === 'g') {
@@ -462,11 +440,7 @@ function fromIndent(
 // Helper functions for special commands
 // ============================================================================
 
-function executeRepeatFind(
-  reverse: boolean,
-  count: number,
-  ctx: TransitionContext,
-): void {
+function executeRepeatFind(reverse: boolean, count: number, ctx: TransitionContext): void {
   const lastFind = ctx.getLastFind()
   if (!lastFind) return
 

@@ -4,6 +4,7 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
+
 import {
   ALL_OAUTH_SCOPES,
   CLAUDE_AI_INFERENCE_SCOPE,
@@ -74,9 +75,7 @@ export function buildAuthUrl({
   authUrl.searchParams.append('response_type', 'code')
   authUrl.searchParams.append(
     'redirect_uri',
-    isManual
-      ? getOauthConfig().MANUAL_REDIRECT_URL
-      : `http://localhost:${port}/callback`,
+    isManual ? getOauthConfig().MANUAL_REDIRECT_URL : `http://localhost:${port}/callback`,
   )
   const scopesToUse = inferenceOnly
     ? [CLAUDE_AI_INFERENCE_SCOPE] // Long-lived inference-only tokens
@@ -115,9 +114,7 @@ export async function exchangeCodeForTokens(
   const requestBody: Record<string, string | number> = {
     grant_type: 'authorization_code',
     code: authorizationCode,
-    redirect_uri: useManualRedirect
-      ? getOauthConfig().MANUAL_REDIRECT_URL
-      : `http://localhost:${port}/callback`,
+    redirect_uri: useManualRedirect ? getOauthConfig().MANUAL_REDIRECT_URL : `http://localhost:${port}/callback`,
     client_id: getOauthConfig().CLIENT_ID,
     code_verifier: codeVerifier,
     state,
@@ -156,10 +153,7 @@ export async function refreshOAuthToken(
     // initial authorize granted (see ALLOWED_SCOPE_EXPANSIONS), so this is
     // safe even for tokens issued before scopes were added to the app's
     // registered oauth_scope.
-    scope: (requestedScopes?.length
-      ? requestedScopes
-      : CLAUDE_AI_OAUTH_SCOPES
-    ).join(' '),
+    scope: (requestedScopes?.length ? requestedScopes : CLAUDE_AI_OAUTH_SCOPES).join(' '),
   }
 
   try {
@@ -173,11 +167,7 @@ export async function refreshOAuthToken(
     }
 
     const data = response.data as OAuthTokenExchangeResponse
-    const {
-      access_token: accessToken,
-      refresh_token: newRefreshToken = refreshToken,
-      expires_in: expiresIn,
-    } = data
+    const { access_token: accessToken, refresh_token: newRefreshToken = refreshToken, expires_in: expiresIn } = data
 
     const expiresAt = Date.now() + expiresIn * 1000
     const scopes = parseScopes(data.scope)
@@ -206,9 +196,7 @@ export async function refreshOAuthToken(
       existing?.subscriptionType != null &&
       existing?.rateLimitTier != null
 
-    const profileInfo = haveProfileAlready
-      ? null
-      : await fetchProfileInfo(accessToken)
+    const profileInfo = haveProfileAlready ? null : await fetchProfileInfo(accessToken)
 
     // Update the stored properties if they have changed
     if (profileInfo && config.oauthAccount) {
@@ -229,11 +217,9 @@ export async function refreshOAuthToken(
         updates.subscriptionCreatedAt = profileInfo.subscriptionCreatedAt
       }
       if (Object.keys(updates).length > 0) {
-        saveGlobalConfig(current => ({
+        saveGlobalConfig((current) => ({
           ...current,
-          oauthAccount: current.oauthAccount
-            ? { ...current.oauthAccount, ...updates }
-            : current.oauthAccount,
+          oauthAccount: current.oauthAccount ? { ...current.oauthAccount, ...updates } : current.oauthAccount,
         }))
       }
     }
@@ -243,10 +229,8 @@ export async function refreshOAuthToken(
       refreshToken: newRefreshToken,
       expiresAt,
       scopes,
-      subscriptionType:
-        profileInfo?.subscriptionType ?? existing?.subscriptionType ?? null,
-      rateLimitTier:
-        profileInfo?.rateLimitTier ?? existing?.rateLimitTier ?? null,
+      subscriptionType: profileInfo?.subscriptionType ?? existing?.subscriptionType ?? null,
+      rateLimitTier: profileInfo?.rateLimitTier ?? existing?.rateLimitTier ?? null,
       profile: profileInfo?.rawProfile,
       tokenAccount: data.account
         ? {
@@ -258,24 +242,18 @@ export async function refreshOAuthToken(
     }
   } catch (error) {
     const responseBody =
-      axios.isAxiosError(error) && error.response?.data
-        ? JSON.stringify(error.response.data)
-        : undefined
+      axios.isAxiosError(error) && error.response?.data ? JSON.stringify(error.response.data) : undefined
     logEvent('tengu_oauth_token_refresh_failure', {
-      error: (error as Error)
-        .message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      error: (error as Error).message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       ...(responseBody && {
-        responseBody:
-          responseBody as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        responseBody: responseBody as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
     })
     throw error
   }
 }
 
-export async function fetchAndStoreUserRoles(
-  accessToken: string,
-): Promise<void> {
+export async function fetchAndStoreUserRoles(accessToken: string): Promise<void> {
   const response = await axios.get(getOauthConfig().ROLES_URL, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
@@ -290,7 +268,7 @@ export async function fetchAndStoreUserRoles(
     throw new Error('OAuth account information not found in config')
   }
 
-  saveGlobalConfig(current => ({
+  saveGlobalConfig((current) => ({
     ...current,
     oauthAccount: current.oauthAccount
       ? {
@@ -303,14 +281,11 @@ export async function fetchAndStoreUserRoles(
   }))
 
   logEvent('tengu_oauth_roles_stored', {
-    org_role:
-      data.organization_role as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    org_role: data.organization_role as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 }
 
-export async function createAndStoreApiKey(
-  accessToken: string,
-): Promise<string | null> {
+export async function createAndStoreApiKey(accessToken: string): Promise<string | null> {
   try {
     const response = await axios.post(getOauthConfig().API_KEY_URL, null, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -320,8 +295,7 @@ export async function createAndStoreApiKey(
     if (apiKey) {
       await saveApiKey(apiKey)
       logEvent('tengu_oauth_api_key', {
-        status:
-          'success' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        status: 'success' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         statusCode: response.status,
       })
       return apiKey
@@ -329,13 +303,10 @@ export async function createAndStoreApiKey(
     return null
   } catch (error) {
     logEvent('tengu_oauth_api_key', {
-      status:
-        'failure' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      status: 'failure' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       error: (error instanceof Error
         ? error.message
-        : String(
-            error,
-          )) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        : String(error)) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     throw error
   }
@@ -397,8 +368,7 @@ export async function fetchProfileInfo(accessToken: string): Promise<{
   } = {
     subscriptionType,
     rateLimitTier: profile?.organization?.rate_limit_tier ?? null,
-    hasExtraUsageEnabled:
-      profile?.organization?.has_extra_usage_enabled ?? null,
+    hasExtraUsageEnabled: profile?.organization?.has_extra_usage_enabled ?? null,
     billingType: profile?.organization?.billing_type ?? null,
   }
 
@@ -457,9 +427,7 @@ export async function populateOAuthAccountInfoIfNeeded(): Promise<boolean> {
   const envAccountUuid = process.env.CLAUDE_CODE_ACCOUNT_UUID
   const envUserEmail = process.env.CLAUDE_CODE_USER_EMAIL
   const envOrganizationUuid = process.env.CLAUDE_CODE_ORGANIZATION_UUID
-  const hasEnvVars = Boolean(
-    envAccountUuid && envUserEmail && envOrganizationUuid,
-  )
+  const hasEnvVars = Boolean(envAccountUuid && envUserEmail && envOrganizationUuid)
   if (envAccountUuid && envUserEmail && envOrganizationUuid) {
     if (!getGlobalConfig().oauthAccount) {
       storeOAuthAccountInfo({
@@ -491,22 +459,17 @@ export async function populateOAuthAccountInfoIfNeeded(): Promise<boolean> {
     const profile = await getOauthProfileFromOauthToken(tokens.accessToken)
     if (profile) {
       if (hasEnvVars) {
-        logForDebugging(
-          'OAuth profile fetch succeeded, overriding env var account info',
-          { level: 'info' },
-        )
+        logForDebugging('OAuth profile fetch succeeded, overriding env var account info', { level: 'info' })
       }
       storeOAuthAccountInfo({
         accountUuid: profile.account.uuid,
         emailAddress: profile.account.email,
         organizationUuid: profile.organization.uuid,
         displayName: profile.account.display_name || undefined,
-        hasExtraUsageEnabled:
-          profile.organization.has_extra_usage_enabled ?? false,
+        hasExtraUsageEnabled: profile.organization.has_extra_usage_enabled ?? false,
         billingType: profile.organization.billing_type ?? undefined,
         accountCreatedAt: profile.account.created_at,
-        subscriptionCreatedAt:
-          profile.organization.subscription_created_at ?? undefined,
+        subscriptionCreatedAt: profile.organization.subscription_created_at ?? undefined,
       })
       return true
     }
@@ -545,19 +508,17 @@ export function storeOAuthAccountInfo({
   if (displayName) {
     accountInfo.displayName = displayName
   }
-  saveGlobalConfig(current => {
+  saveGlobalConfig((current) => {
     // For oauthAccount we need to compare content since it's an object
     if (
       current.oauthAccount?.accountUuid === accountInfo.accountUuid &&
       current.oauthAccount?.emailAddress === accountInfo.emailAddress &&
       current.oauthAccount?.organizationUuid === accountInfo.organizationUuid &&
       current.oauthAccount?.displayName === accountInfo.displayName &&
-      current.oauthAccount?.hasExtraUsageEnabled ===
-        accountInfo.hasExtraUsageEnabled &&
+      current.oauthAccount?.hasExtraUsageEnabled === accountInfo.hasExtraUsageEnabled &&
       current.oauthAccount?.billingType === accountInfo.billingType &&
       current.oauthAccount?.accountCreatedAt === accountInfo.accountCreatedAt &&
-      current.oauthAccount?.subscriptionCreatedAt ===
-        accountInfo.subscriptionCreatedAt
+      current.oauthAccount?.subscriptionCreatedAt === accountInfo.subscriptionCreatedAt
     ) {
       return current
     }

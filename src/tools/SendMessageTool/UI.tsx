@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { MessageResponse } from '../../components/MessageResponse.js'
 import { Text } from '../../ink.js'
 import { jsonParse } from '../../utils/slowOperations.js'
@@ -9,9 +10,7 @@ export function renderToolUseMessage(input: Partial<Input>): React.ReactNode {
     return null
   }
   if (input.message.type === 'plan_approval_response') {
-    return input.message.approve
-      ? `approve plan from: ${input.to}`
-      : `reject plan from: ${input.to}`
+    return input.message.approve ? `approve plan from: ${input.to}` : `reject plan from: ${input.to}`
   }
   return null
 }
@@ -21,8 +20,7 @@ export function renderToolResultMessage(
   _progressMessages: unknown,
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
-  const result: SendMessageToolOutput =
-    typeof content === 'string' ? jsonParse(content) : content
+  const result: SendMessageToolOutput = typeof content === 'string' ? jsonParse(content) : content
 
   if ('routing' in result && result.routing) {
     return null

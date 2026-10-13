@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useMemo } from 'react'
+
 import { useTerminalSize } from '../../../hooks/useTerminalSize.js'
 import { Box, NoSelect, Text } from '../../../ink.js'
 import { intersperse } from '../../../utils/array.js'
@@ -14,12 +15,7 @@ type Props = {
   oldContent: string
 }
 
-export function FileWriteToolDiff({
-  file_path,
-  content,
-  fileExists,
-  oldContent,
-}: Props): React.ReactNode {
+export function FileWriteToolDiff({ file_path, content, fileExists, oldContent }: Props): React.ReactNode {
   const { columns } = useTerminalSize()
   const hunks = useMemo(() => {
     if (!fileExists) {
@@ -53,7 +49,7 @@ export function FileWriteToolDiff({
       >
         {hunks ? (
           intersperse(
-            hunks.map(_ => (
+            hunks.map((_) => (
               <StructuredDiff
                 key={_.newStart}
                 patch={_}
@@ -64,17 +60,14 @@ export function FileWriteToolDiff({
                 width={columns - 2 * paddingX}
               />
             )),
-            i => (
+            (i) => (
               <NoSelect fromLeftEdge key={`ellipsis-${i}`}>
                 <Text dimColor>...</Text>
               </NoSelect>
             ),
           )
         ) : (
-          <HighlightedCode
-            code={content || '(No content)'}
-            filePath={file_path}
-          />
+          <HighlightedCode code={content || '(No content)'} filePath={file_path} />
         )}
       </Box>
     </Box>

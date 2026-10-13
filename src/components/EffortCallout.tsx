@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react'
+
 import { Box, Text } from '../ink.js'
-import {
-  isMaxSubscriber,
-  isProSubscriber,
-  isTeamSubscriber,
-} from '../utils/auth.js'
+import { isMaxSubscriber, isProSubscriber, isTeamSubscriber } from '../utils/auth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
 import type { EffortLevel } from '../utils/effort.js'
 import {
@@ -53,9 +50,7 @@ export function EffortCallout({ model, onDone }: Props): React.ReactNode {
   }, [handleCancel])
 
   const defaultEffort = getDefaultEffortForModel(model)
-  const defaultLevel = defaultEffort
-    ? convertEffortValueToLevel(defaultEffort)
-    : 'high'
+  const defaultLevel = defaultEffort ? convertEffortValueToLevel(defaultEffort) : 'high'
 
   const handleSelect = useCallback(
     (value: EffortLevel): void => {
@@ -85,36 +80,21 @@ export function EffortCallout({ model, onDone }: Props): React.ReactNode {
         </Box>
         <Box marginBottom={1}>
           <Text dimColor>
-            <EffortIndicatorSymbol level="low" /> low {'·'}{' '}
-            <EffortIndicatorSymbol level="medium" /> medium {'·'}{' '}
+            <EffortIndicatorSymbol level="low" /> low {'·'} <EffortIndicatorSymbol level="medium" /> medium {'·'}{' '}
             <EffortIndicatorSymbol level="high" /> high
           </Text>
         </Box>
-        <Select
-          options={options}
-          onChange={handleSelect}
-          onCancel={handleCancel}
-        />
+        <Select options={options} onChange={handleSelect} onCancel={handleCancel} />
       </Box>
     </PermissionDialog>
   )
 }
 
-function EffortIndicatorSymbol({
-  level,
-}: {
-  level: EffortLevel
-}): React.ReactNode {
+function EffortIndicatorSymbol({ level }: { level: EffortLevel }): React.ReactNode {
   return <Text color="suggestion">{effortLevelToSymbol(level)}</Text>
 }
 
-function EffortOptionLabel({
-  level,
-  text,
-}: {
-  level: EffortLevel
-  text: string
-}): React.ReactNode {
+function EffortOptionLabel({ level, text }: { level: EffortLevel; text: string }): React.ReactNode {
   return (
     <>
       <EffortIndicatorSymbol level={level} /> {text}
@@ -170,7 +150,7 @@ export function shouldShowEffortCallout(model: string): boolean {
 }
 
 function markV2Dismissed(): void {
-  saveGlobalConfig(current => {
+  saveGlobalConfig((current) => {
     if (current.effortCalloutV2Dismissed) return current
     return { ...current, effortCalloutV2Dismissed: true }
   })

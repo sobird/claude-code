@@ -1,6 +1,7 @@
 import React from 'react'
-import { stringWidth } from '../ink/stringWidth.js'
+
 import { Box, Text } from '../ink.js'
+import { stringWidth } from '../ink/stringWidth.js'
 import { truncateToWidth } from '../utils/format.js'
 
 // Constants for width calculations - derived from actual rendered strings
@@ -15,10 +16,7 @@ const MAX_OVERFLOW_DIGITS = 2 // Assume max 99 hidden tabs for width calculation
 
 // Computed widths
 const LEFT_ARROW_WIDTH = LEFT_ARROW_PREFIX.length + MAX_OVERFLOW_DIGITS + 1 // "← NN " with gap
-const RIGHT_HINT_WIDTH_WITH_COUNT =
-  RIGHT_HINT_WITH_COUNT_PREFIX.length +
-  MAX_OVERFLOW_DIGITS +
-  RIGHT_HINT_SUFFIX.length // "→NN (tab to cycle)"
+const RIGHT_HINT_WIDTH_WITH_COUNT = RIGHT_HINT_WITH_COUNT_PREFIX.length + MAX_OVERFLOW_DIGITS + RIGHT_HINT_SUFFIX.length // "→NN (tab to cycle)"
 const RIGHT_HINT_WIDTH_NO_COUNT = RIGHT_HINT_NO_COUNT.length
 
 type Props = {
@@ -37,9 +35,7 @@ function getTabWidth(tab: string, maxWidth?: number): number {
   }
   // For non-All tabs: " #{tag} " but truncate tag if needed
   const tagWidth = stringWidth(tab)
-  const effectiveTagWidth = maxWidth
-    ? Math.min(tagWidth, maxWidth - TAB_PADDING - HASH_PREFIX_LENGTH)
-    : tagWidth
+  const effectiveTagWidth = maxWidth ? Math.min(tagWidth, maxWidth - TAB_PADDING - HASH_PREFIX_LENGTH) : tagWidth
   return Math.max(0, effectiveTagWidth) + TAB_PADDING + HASH_PREFIX_LENGTH
 }
 
@@ -58,41 +54,27 @@ function truncateTag(tag: string, maxWidth: number): string {
   return truncateToWidth(tag, availableForTag)
 }
 
-export function TagTabs({
-  tabs,
-  selectedIndex,
-  availableWidth,
-  showAllProjects = false,
-}: Props): React.ReactNode {
+export function TagTabs({ tabs, selectedIndex, availableWidth, showAllProjects = false }: Props): React.ReactNode {
   const resumeLabel = showAllProjects ? 'Resume (All Projects)' : 'Resume'
   const resumeLabelWidth = resumeLabel.length + 1 // +1 for gap
 
   // Calculate how much space we have for tabs (use worst-case hint width)
-  const rightHintWidth = Math.max(
-    RIGHT_HINT_WIDTH_WITH_COUNT,
-    RIGHT_HINT_WIDTH_NO_COUNT,
-  )
+  const rightHintWidth = Math.max(RIGHT_HINT_WIDTH_WITH_COUNT, RIGHT_HINT_WIDTH_NO_COUNT)
   const maxTabsWidth = availableWidth - resumeLabelWidth - rightHintWidth - 2 // 2 for gaps
 
   // Clamp selectedIndex to valid range
-  const safeSelectedIndex = Math.max(
-    0,
-    Math.min(selectedIndex, tabs.length - 1),
-  )
+  const safeSelectedIndex = Math.max(0, Math.min(selectedIndex, tabs.length - 1))
 
   // Calculate width of each tab, with truncation for very long tags
   const maxSingleTabWidth = Math.max(20, Math.floor(maxTabsWidth / 2)) // At least show half the space for one tab
-  const tabWidths = tabs.map(tab => getTabWidth(tab, maxSingleTabWidth))
+  const tabWidths = tabs.map((tab) => getTabWidth(tab, maxSingleTabWidth))
 
   // Find a window of tabs that fits, centered around selectedIndex
   let startIndex = 0
   let endIndex = tabs.length
 
   // Calculate total width of all tabs
-  const totalTabsWidth = tabWidths.reduce(
-    (sum, w, i) => sum + w + (i < tabWidths.length - 1 ? 1 : 0),
-    0,
-  ) // +1 for gaps between tabs
+  const totalTabsWidth = tabWidths.reduce((sum, w, i) => sum + w + (i < tabWidths.length - 1 ? 1 : 0), 0) // +1 for gaps between tabs
 
   if (totalTabsWidth > maxTabsWidth) {
     // Need to show a subset - account for left arrow when not at start
@@ -147,10 +129,7 @@ export function TagTabs({
       {visibleTabs.map((tab, i) => {
         const actualIndex = visibleIndices[i]!
         const isSelected = actualIndex === safeSelectedIndex
-        const displayText =
-          tab === ALL_TAB_LABEL
-            ? tab
-            : `#${truncateTag(tab, maxSingleTabWidth - TAB_PADDING)}`
+        const displayText = tab === ALL_TAB_LABEL ? tab : `#${truncateTag(tab, maxSingleTabWidth - TAB_PADDING)}`
         return (
           <Text
             key={tab}

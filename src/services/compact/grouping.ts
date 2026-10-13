@@ -41,11 +41,7 @@ export function groupMessagesByApiRound(messages: Message[]): Message[][] {
   // ensureToolResultPairing at claude.ts:1136 repairs the dangling tu at
   // API time.
   for (const msg of messages) {
-    if (
-      msg.type === 'assistant' &&
-      msg.message.id !== lastAssistantId &&
-      current.length > 0
-    ) {
+    if (msg.type === 'assistant' && msg.message.id !== lastAssistantId && current.length > 0) {
       groups.push(current)
       current = [msg]
     } else {

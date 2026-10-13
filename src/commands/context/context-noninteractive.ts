@@ -1,13 +1,11 @@
 import { feature } from 'bun:bundle'
+
 import { microcompactMessages } from '../../services/compact/microCompact.js'
 import type { AppState } from '../../state/AppStateStore.js'
 import type { Tools, ToolUseContext } from '../../Tool.js'
 import type { AgentDefinitionsResult } from '../../tools/AgentTool/loadAgentsDir.js'
 import type { Message } from '../../types/message.js'
-import {
-  analyzeContextUsage,
-  type ContextData,
-} from '../../utils/analyzeContext.js'
+import { analyzeContextUsage, type ContextData } from '../../utils/analyzeContext.js'
 import { formatTokens } from '../../utils/format.js'
 import { getMessagesAfterCompactBoundary } from '../../utils/messages.js'
 import { getSourceDisplayName } from '../../utils/settings/constants.js'
@@ -31,19 +29,11 @@ type CollectContextDataInput = {
   }
 }
 
-export async function collectContextData(
-  context: CollectContextDataInput,
-): Promise<ContextData> {
+export async function collectContextData(context: CollectContextDataInput): Promise<ContextData> {
   const {
     messages,
     getAppState,
-    options: {
-      mainLoopModel,
-      tools,
-      agentDefinitions,
-      customSystemPrompt,
-      appendSystemPrompt,
-    },
+    options: { mainLoopModel, tools, agentDefinitions, customSystemPrompt, appendSystemPrompt },
   } = context
 
   let apiView = getMessagesAfterCompactBoundary(messages)
@@ -67,19 +57,13 @@ export async function collectContextData(
     undefined, // terminalWidth
     // analyzeContextUsage only reads options.{customSystemPrompt,appendSystemPrompt}
     // but its signature declares the full Pick<ToolUseContext, 'options'>.
-    { options: { customSystemPrompt, appendSystemPrompt } } as Pick<
-      ToolUseContext,
-      'options'
-    >,
+    { options: { customSystemPrompt, appendSystemPrompt } } as Pick<ToolUseContext, 'options'>,
     undefined, // mainThreadAgentDefinition
     apiView, // original messages for API usage extraction
   )
 }
 
-export async function call(
-  _args: string,
-  context: ToolUseContext,
-): Promise<{ type: 'text'; value: string }> {
+export async function call(_args: string, context: ToolUseContext): Promise<{ type: 'text'; value: string }> {
   const data = await collectContextData(context)
   return {
     type: 'text' as const,
@@ -149,10 +133,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
 
   // Main categories table
   const visibleCategories = categories.filter(
-    cat =>
-      cat.tokens > 0 &&
-      cat.name !== 'Free space' &&
-      cat.name !== 'Autocompact buffer',
+    (cat) => cat.tokens > 0 && cat.name !== 'Free space' && cat.name !== 'Autocompact buffer',
   )
 
   if (visibleCategories.length > 0) {
@@ -165,23 +146,15 @@ function formatContextAsMarkdownTable(data: ContextData): string {
       output += `| ${cat.name} | ${formatTokens(cat.tokens)} | ${percentDisplay}% |\n`
     }
 
-    const freeSpaceCategory = categories.find(c => c.name === 'Free space')
+    const freeSpaceCategory = categories.find((c) => c.name === 'Free space')
     if (freeSpaceCategory && freeSpaceCategory.tokens > 0) {
-      const percentDisplay = (
-        (freeSpaceCategory.tokens / rawMaxTokens) *
-        100
-      ).toFixed(1)
+      const percentDisplay = ((freeSpaceCategory.tokens / rawMaxTokens) * 100).toFixed(1)
       output += `| Free space | ${formatTokens(freeSpaceCategory.tokens)} | ${percentDisplay}% |\n`
     }
 
-    const autocompactCategory = categories.find(
-      c => c.name === 'Autocompact buffer',
-    )
+    const autocompactCategory = categories.find((c) => c.name === 'Autocompact buffer')
     if (autocompactCategory && autocompactCategory.tokens > 0) {
-      const percentDisplay = (
-        (autocompactCategory.tokens / rawMaxTokens) *
-        100
-      ).toFixed(1)
+      const percentDisplay = ((autocompactCategory.tokens / rawMaxTokens) * 100).toFixed(1)
       output += `| Autocompact buffer | ${formatTokens(autocompactCategory.tokens)} | ${percentDisplay}% |\n`
     }
 
@@ -200,11 +173,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
   }
 
   // System tools (ant-only)
-  if (
-    systemTools &&
-    systemTools.length > 0 &&
-    process.env.USER_TYPE === 'ant'
-  ) {
+  if (systemTools && systemTools.length > 0 && process.env.USER_TYPE === 'ant') {
     output += `### [ANT-ONLY] System Tools\n\n`
     output += `| Tool | Tokens |\n`
     output += `|------|--------|\n`
@@ -215,11 +184,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
   }
 
   // System prompt sections (ant-only)
-  if (
-    systemPromptSections &&
-    systemPromptSections.length > 0 &&
-    process.env.USER_TYPE === 'ant'
-  ) {
+  if (systemPromptSections && systemPromptSections.length > 0 && process.env.USER_TYPE === 'ant') {
     output += `### [ANT-ONLY] System Prompt Sections\n\n`
     output += `| Section | Tokens |\n`
     output += `|---------|--------|\n`

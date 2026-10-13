@@ -1,10 +1,6 @@
 import type { Command } from '../commands.js'
 import type { LocalCommandCall } from '../types/command.js'
-import {
-  canUserConfigureAdvisor,
-  isValidAdvisorModel,
-  modelSupportsAdvisor,
-} from '../utils/advisor.js'
+import { canUserConfigureAdvisor, isValidAdvisorModel, modelSupportsAdvisor } from '../utils/advisor.js'
 import {
   getDefaultMainLoopModelSetting,
   normalizeModelStringForAPI,
@@ -15,17 +11,14 @@ import { updateSettingsForSource } from '../utils/settings/settings.js'
 
 const call: LocalCommandCall = async (args, context) => {
   const arg = args.trim().toLowerCase()
-  const baseModel = parseUserSpecifiedModel(
-    context.getAppState().mainLoopModel ?? getDefaultMainLoopModelSetting(),
-  )
+  const baseModel = parseUserSpecifiedModel(context.getAppState().mainLoopModel ?? getDefaultMainLoopModelSetting())
 
   if (!arg) {
     const current = context.getAppState().advisorModel
     if (!current) {
       return {
         type: 'text',
-        value:
-          'Advisor: not set\nUse "/advisor <model>" to enable (e.g. "/advisor opus").',
+        value: 'Advisor: not set\nUse "/advisor <model>" to enable (e.g. "/advisor opus").',
       }
     }
     if (!modelSupportsAdvisor(baseModel)) {
@@ -42,16 +35,14 @@ const call: LocalCommandCall = async (args, context) => {
 
   if (arg === 'unset' || arg === 'off') {
     const prev = context.getAppState().advisorModel
-    context.setAppState(s => {
+    context.setAppState((s) => {
       if (s.advisorModel === undefined) return s
       return { ...s, advisorModel: undefined }
     })
     updateSettingsForSource('userSettings', { advisorModel: undefined })
     return {
       type: 'text',
-      value: prev
-        ? `Advisor disabled (was ${prev}).`
-        : 'Advisor already unset.',
+      value: prev ? `Advisor disabled (was ${prev}).` : 'Advisor already unset.',
     }
   }
 
@@ -61,9 +52,7 @@ const call: LocalCommandCall = async (args, context) => {
   if (!valid) {
     return {
       type: 'text',
-      value: error
-        ? `Invalid advisor model: ${error}`
-        : `Unknown model: ${arg} (${resolvedModel})`,
+      value: error ? `Invalid advisor model: ${error}` : `Unknown model: ${arg} (${resolvedModel})`,
     }
   }
 
@@ -74,7 +63,7 @@ const call: LocalCommandCall = async (args, context) => {
     }
   }
 
-  context.setAppState(s => {
+  context.setAppState((s) => {
     if (s.advisorModel === normalizedModel) return s
     return { ...s, advisorModel: normalizedModel }
   })

@@ -1,10 +1,8 @@
 import { logEvent } from 'src/services/analytics/index.js'
+
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
 import { logError } from '../utils/log.js'
-import {
-  getSettingsForSource,
-  updateSettingsForSource,
-} from '../utils/settings/settings.js'
+import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings.js'
 /**
  * Migration: Move user-set autoUpdates preference to settings.json env var
  * Only migrates if user explicitly disabled auto-updates (not for protection)
@@ -15,10 +13,7 @@ export function migrateAutoUpdatesToSettings(): void {
 
   // Only migrate if autoUpdates was explicitly set to false by user preference
   // (not automatically for native protection)
-  if (
-    globalConfig.autoUpdates !== false ||
-    globalConfig.autoUpdatesProtectedForNative === true
-  ) {
+  if (globalConfig.autoUpdates !== false || globalConfig.autoUpdatesProtectedForNative === true) {
     return
   }
 
@@ -44,12 +39,8 @@ export function migrateAutoUpdatesToSettings(): void {
     process.env.DISABLE_AUTOUPDATER = '1'
 
     // Remove autoUpdates from global config after successful migration
-    saveGlobalConfig(current => {
-      const {
-        autoUpdates: _,
-        autoUpdatesProtectedForNative: __,
-        ...updatedConfig
-      } = current
+    saveGlobalConfig((current) => {
+      const { autoUpdates: _, autoUpdatesProtectedForNative: __, ...updatedConfig } = current
       return updatedConfig
     })
   } catch (error) {

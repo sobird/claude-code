@@ -1,7 +1,9 @@
-import chalk from 'chalk'
 import type { UUID } from 'crypto'
+
+import chalk from 'chalk'
 import figures from 'figures'
 import * as React from 'react'
+
 import { getOriginalCwd, getSessionId } from '../../bootstrap/state.js'
 import type { CommandResultDisplay, ResumeEntrypoint } from '../../commands.js'
 import { LogSelector } from '../../components/LogSelector.js'
@@ -9,8 +11,8 @@ import { MessageResponse } from '../../components/MessageResponse.js'
 import { Spinner } from '../../components/Spinner.js'
 import { useIsInsideModal } from '../../context/modalContext.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
-import { setClipboard } from '../../ink/termio/osc.js'
 import { Box, Text } from '../../ink.js'
+import { setClipboard } from '../../ink/termio/osc.js'
 import type { LocalJSXCommandCall } from '../../types/command.js'
 import type { LogOption } from '../../types/logs.js'
 import { agenticSessionSearch } from '../../utils/agenticSessionSearch.js'
@@ -72,15 +74,8 @@ function ResumeCommand({
   onDone,
   onResume,
 }: {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
-  onResume: (
-    sessionId: UUID,
-    log: LogOption,
-    entrypoint: ResumeEntrypoint,
-  ) => Promise<void>
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
+  onResume: (sessionId: UUID, log: LogOption, entrypoint: ResumeEntrypoint) => Promise<void>
 }): React.ReactNode {
   const [logs, setLogs] = React.useState<LogOption[]>([])
   const [worktreePaths, setWorktreePaths] = React.useState<string[]>([])
@@ -94,9 +89,7 @@ function ResumeCommand({
     async (allProjects: boolean, paths: string[]) => {
       setLoading(true)
       try {
-        const allLogs = allProjects
-          ? await loadAllProjectsMessageLogs()
-          : await loadSameRepoMessageLogs(paths)
+        const allLogs = allProjects ? await loadAllProjectsMessageLogs() : await loadSameRepoMessageLogs(paths)
         const resumable = filterResumableSessions(allLogs, getSessionId())
         if (resumable.length === 0) {
           onDone('No conversations found to resume')
@@ -138,11 +131,7 @@ function ResumeCommand({
     const fullLog = isLiteLog(log) ? await loadFullLog(log) : log
 
     // Check if this conversation is from a different directory
-    const crossProjectCheck = checkCrossProjectResume(
-      fullLog,
-      showAllProjects,
-      worktreePaths,
-    )
+    const crossProjectCheck = checkCrossProjectResume(fullLog, showAllProjects, worktreePaths)
     if (crossProjectCheck.isCrossProject) {
       if (crossProjectCheck.isSameRepoWorktree) {
         // Same repo worktree - can resume directly
@@ -212,21 +201,12 @@ function ResumeCommand({
   )
 }
 
-export function filterResumableSessions(
-  logs: LogOption[],
-  currentSessionId: string,
-): LogOption[] {
-  return logs.filter(
-    l => !l.isSidechain && getSessionIdFromLog(l) !== currentSessionId,
-  )
+export function filterResumableSessions(logs: LogOption[], currentSessionId: string): LogOption[] {
+  return logs.filter((l) => !l.isSidechain && getSessionIdFromLog(l) !== currentSessionId)
 }
 
 export const call: LocalJSXCommandCall = async (onDone, context, args) => {
-  const onResume = async (
-    sessionId: UUID,
-    log: LogOption,
-    entrypoint: ResumeEntrypoint,
-  ) => {
+  const onResume = async (sessionId: UUID, log: LogOption, entrypoint: ResumeEntrypoint) => {
     try {
       await context.resume?.(sessionId, log, entrypoint)
       onDone(undefined, { display: 'skip' })
@@ -240,9 +220,7 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
 
   // No argument provided - show picker
   if (!arg) {
-    return (
-      <ResumeCommand key={Date.now()} onDone={onDone} onResume={onResume} />
-    )
+    return <ResumeCommand key={Date.now()} onDone={onDone} onResume={onResume} />
   }
 
   // Load logs to search (includes same-repo worktrees)
@@ -250,20 +228,14 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
   const logs = await loadSameRepoMessageLogs(worktreePaths)
   if (logs.length === 0) {
     const message = 'No conversations found to resume.'
-    return (
-      <ResumeError
-        message={message}
-        args={arg}
-        onDone={() => onDone(message)}
-      />
-    )
+    return <ResumeError message={message} args={arg} onDone={() => onDone(message)} />
   }
 
   // First, check if arg is a valid UUID
   const maybeSessionId = validateUuid(arg)
   if (maybeSessionId) {
     const matchingLogs = logs
-      .filter(l => getSessionIdFromLog(l) === maybeSessionId)
+      .filter((l) => getSessionIdFromLog(l) === maybeSessionId)
       .sort((a, b) => b.modified.getTime() - a.modified.getTime())
 
     if (matchingLogs.length > 0) {
@@ -305,19 +277,11 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
         arg,
         count: titleMatches.length,
       })
-      return (
-        <ResumeError
-          message={message}
-          args={arg}
-          onDone={() => onDone(message)}
-        />
-      )
+      return <ResumeError message={message} args={arg} onDone={() => onDone(message)} />
     }
   }
 
   // No match found - show error
   const message = resumeHelpMessage({ resultType: 'sessionNotFound', arg })
-  return (
-    <ResumeError message={message} args={arg} onDone={() => onDone(message)} />
-  )
+  return <ResumeError message={message} args={arg} onDone={() => onDone(message)} />
 }

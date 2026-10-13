@@ -10,6 +10,7 @@ import {
   onOrgFastModeChanged,
 } from 'src/utils/fastMode.js'
 import { formatDuration } from 'src/utils/format.js'
+
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 
 const COOLDOWN_STARTED_KEY = 'fast-mode-cooldown-started'
@@ -19,7 +20,7 @@ const OVERAGE_REJECTED_KEY = 'fast-mode-overage-rejected'
 
 export function useFastModeNotification(): void {
   const { addNotification } = useNotifications()
-  const isFastMode = useAppState(s => s.fastMode)
+  const isFastMode = useAppState((s) => s.fastMode)
   const setAppState = useSetAppState()
 
   // Notify when org fast mode status changes
@@ -29,7 +30,7 @@ export function useFastModeNotification(): void {
       return
     }
 
-    return onOrgFastModeChanged(orgEnabled => {
+    return onOrgFastModeChanged((orgEnabled) => {
       if (orgEnabled) {
         addNotification({
           key: ORG_CHANGED_KEY,
@@ -39,7 +40,7 @@ export function useFastModeNotification(): void {
         })
       } else if (isFastMode) {
         // Org disabled fast mode — permanently turn off fast mode
-        setAppState(prev => ({ ...prev, fastMode: false }))
+        setAppState((prev) => ({ ...prev, fastMode: false }))
         addNotification({
           key: ORG_CHANGED_KEY,
           color: 'warning',
@@ -55,8 +56,8 @@ export function useFastModeNotification(): void {
     if (getIsRemoteMode()) return
     if (!isFastModeEnabled()) return
 
-    return onFastModeOverageRejection(message => {
-      setAppState(prev => ({ ...prev, fastMode: false }))
+    return onFastModeOverageRejection((message) => {
+      setAppState((prev) => ({ ...prev, fastMode: false }))
       addNotification({
         key: OVERAGE_REJECTED_KEY,
         color: 'warning',

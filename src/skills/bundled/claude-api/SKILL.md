@@ -20,7 +20,6 @@ For the Claude model version, please use {{OPUS_NAME}}, which you can access via
 Before reading code examples, determine which language the user is working in:
 
 1. **Look at project files** to infer the language:
-
    - `*.py`, `requirements.txt`, `pyproject.toml`, `setup.py`, `Pipfile` → **Python** — read from `python/`
    - `*.ts`, `*.tsx`, `package.json`, `tsconfig.json` → **TypeScript** — read from `typescript/`
    - `*.js`, `*.jsx` (no `.ts` files present) → **TypeScript** — JS uses the same SDK, read from `typescript/`
@@ -33,17 +32,14 @@ Before reading code examples, determine which language the user is working in:
    - `*.php`, `composer.json` → **PHP** — read from `php/`
 
 2. **If multiple languages detected** (e.g., both Python and TypeScript files):
-
    - Check which language the user's current file or question relates to
    - If still ambiguous, ask: "I detected both Python and TypeScript files. Which language are you using for the Claude API integration?"
 
 3. **If language can't be inferred** (empty project, no source files, or unsupported language):
-
    - Use AskUserQuestion with options: Python, TypeScript, Java, Go, Ruby, cURL/raw HTTP, C#, PHP
    - If AskUserQuestion is unavailable, default to Python examples and note: "Showing Python examples. Let me know if you need a different language."
 
 4. **If unsupported language detected** (Rust, Swift, C++, Elixir, etc.):
-
    - Suggest cURL/raw HTTP examples from `curl/` and note that community SDKs may exist
    - Offer to show Python or TypeScript examples as reference implementations
 

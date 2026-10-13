@@ -1,6 +1,7 @@
 import { APIError } from '@anthropic-ai/sdk'
 import type { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import isEqual from 'lodash-es/isEqual.js'
+
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
 import { isClaudeAISubscriber } from '../utils/auth.js'
 import { getModelBetas } from '../utils/betas.js'
@@ -12,26 +13,14 @@ import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 
 import { logEvent } from './analytics/index.js'
 import { getAPIMetadata } from './api/claude.js'
 import { getAnthropicClient } from './api/client.js'
-import {
-  processRateLimitHeaders,
-  shouldProcessRateLimits,
-} from './rateLimitMocking.js'
+import { processRateLimitHeaders, shouldProcessRateLimits } from './rateLimitMocking.js'
 
 // Re-export message functions from centralized location
-export {
-  getRateLimitErrorMessage,
-  getRateLimitWarning,
-  getUsingOverageText,
-} from './rateLimitMessages.js'
+export { getRateLimitErrorMessage, getRateLimitWarning, getUsingOverageText } from './rateLimitMessages.js'
 
 type QuotaStatus = 'allowed' | 'allowed_warning' | 'rejected'
 
-type RateLimitType =
-  | 'five_hour'
-  | 'seven_day'
-  | 'seven_day_opus'
-  | 'seven_day_sonnet'
-  | 'overage'
+type RateLimitType = 'five_hour' | 'seven_day' | 'seven_day_opus' | 'seven_day_sonnet' | 'overage'
 
 export type { RateLimitType }
 
@@ -167,9 +156,7 @@ function extractRawUtilization(headers: globalThis.Headers): RawUtilization {
     ['five_hour', '5h'],
     ['seven_day', '7d'],
   ] as const) {
-    const util = headers.get(
-      `anthropic-ratelimit-unified-${abbrev}-utilization`,
-    )
+    const util = headers.get(`anthropic-ratelimit-unified-${abbrev}-utilization`)
     const reset = headers.get(`anthropic-ratelimit-unified-${abbrev}-reset`)
     if (util !== null && reset !== null) {
       result[key] = { utilization: Number(util), resets_at: Number(reset) }
@@ -183,14 +170,11 @@ export const statusListeners: Set<StatusChangeListener> = new Set()
 
 export function emitStatusChange(limits: ClaudeAILimits) {
   currentLimits = limits
-  statusListeners.forEach(listener => listener(limits))
-  const hoursTillReset = Math.round(
-    (limits.resetsAt ? limits.resetsAt - Date.now() / 1000 : 0) / (60 * 60),
-  )
+  statusListeners.forEach((listener) => listener(limits))
+  const hoursTillReset = Math.round((limits.resetsAt ? limits.resetsAt - Date.now() / 1000 : 0) / (60 * 60))
 
   logEvent('tengu_claudeai_limits_status_changed', {
-    status:
-      limits.status as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    status: limits.status as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     unifiedRateLimitFallbackAvailable: limits.unifiedRateLimitFallbackAvailable,
     hoursTillReset,
   })
@@ -257,25 +241,15 @@ function getHeaderBasedEarlyWarning(
   unifiedRateLimitFallbackAvailable: boolean,
 ): ClaudeAILimits | null {
   // Check each claim type for surpassed threshold header
-  for (const [claimAbbrev, rateLimitType] of Object.entries(
-    EARLY_WARNING_CLAIM_MAP,
-  )) {
-    const surpassedThreshold = headers.get(
-      `anthropic-ratelimit-unified-${claimAbbrev}-surpassed-threshold`,
-    )
+  for (const [claimAbbrev, rateLimitType] of Object.entries(EARLY_WARNING_CLAIM_MAP)) {
+    const surpassedThreshold = headers.get(`anthropic-ratelimit-unified-${claimAbbrev}-surpassed-threshold`)
 
     // If threshold header is present, user has crossed a warning threshold
     if (surpassedThreshold !== null) {
-      const utilizationHeader = headers.get(
-        `anthropic-ratelimit-unified-${claimAbbrev}-utilization`,
-      )
-      const resetHeader = headers.get(
-        `anthropic-ratelimit-unified-${claimAbbrev}-reset`,
-      )
+      const utilizationHeader = headers.get(`anthropic-ratelimit-unified-${claimAbbrev}-utilization`)
+      const resetHeader = headers.get(`anthropic-ratelimit-unified-${claimAbbrev}-reset`)
 
-      const utilization = utilizationHeader
-        ? Number(utilizationHeader)
-        : undefined
+      const utilization = utilizationHeader ? Number(utilizationHeader) : undefined
       const resetsAt = resetHeader ? Number(resetHeader) : undefined
 
       return {
@@ -305,12 +279,8 @@ function getTimeRelativeEarlyWarning(
 ): ClaudeAILimits | null {
   const { rateLimitType, claimAbbrev, windowSeconds, thresholds } = config
 
-  const utilizationHeader = headers.get(
-    `anthropic-ratelimit-unified-${claimAbbrev}-utilization`,
-  )
-  const resetHeader = headers.get(
-    `anthropic-ratelimit-unified-${claimAbbrev}-reset`,
-  )
+  const utilizationHeader = headers.get(`anthropic-ratelimit-unified-${claimAbbrev}-utilization`)
+  const resetHeader = headers.get(`anthropic-ratelimit-unified-${claimAbbrev}-reset`)
 
   if (utilizationHeader === null || resetHeader === null) {
     return null
@@ -321,9 +291,7 @@ function getTimeRelativeEarlyWarning(
   const timeProgress = computeTimeProgress(resetsAt, windowSeconds)
 
   // Check if any threshold is exceeded: high usage early in the window
-  const shouldWarn = thresholds.some(
-    t => utilization >= t.utilization && timeProgress <= t.timePct,
-  )
+  const shouldWarn = thresholds.some((t) => utilization >= t.utilization && timeProgress <= t.timePct)
 
   if (!shouldWarn) {
     return null
@@ -349,10 +317,7 @@ function getEarlyWarningFromHeaders(
   unifiedRateLimitFallbackAvailable: boolean,
 ): ClaudeAILimits | null {
   // Try header-based detection first (preferred when API sends the header)
-  const headerBasedWarning = getHeaderBasedEarlyWarning(
-    headers,
-    unifiedRateLimitFallbackAvailable,
-  )
+  const headerBasedWarning = getHeaderBasedEarlyWarning(headers, unifiedRateLimitFallbackAvailable)
   if (headerBasedWarning) {
     return headerBasedWarning
   }
@@ -360,11 +325,7 @@ function getEarlyWarningFromHeaders(
   // Fallback: Use time-relative thresholds (client-side calculation)
   // This catches users burning quota faster than sustainable
   for (const config of EARLY_WARNING_CONFIGS) {
-    const timeRelativeWarning = getTimeRelativeEarlyWarning(
-      headers,
-      config,
-      unifiedRateLimitFallbackAvailable,
-    )
+    const timeRelativeWarning = getTimeRelativeEarlyWarning(headers, config, unifiedRateLimitFallbackAvailable)
     if (timeRelativeWarning) {
       return timeRelativeWarning
     }
@@ -373,30 +334,17 @@ function getEarlyWarningFromHeaders(
   return null
 }
 
-function computeNewLimitsFromHeaders(
-  headers: globalThis.Headers,
-): ClaudeAILimits {
-  const status =
-    (headers.get('anthropic-ratelimit-unified-status') as QuotaStatus) ||
-    'allowed'
+function computeNewLimitsFromHeaders(headers: globalThis.Headers): ClaudeAILimits {
+  const status = (headers.get('anthropic-ratelimit-unified-status') as QuotaStatus) || 'allowed'
   const resetsAtHeader = headers.get('anthropic-ratelimit-unified-reset')
   const resetsAt = resetsAtHeader ? Number(resetsAtHeader) : undefined
-  const unifiedRateLimitFallbackAvailable =
-    headers.get('anthropic-ratelimit-unified-fallback') === 'available'
+  const unifiedRateLimitFallbackAvailable = headers.get('anthropic-ratelimit-unified-fallback') === 'available'
 
   // Headers for rate limit type and overage support
-  const rateLimitType = headers.get(
-    'anthropic-ratelimit-unified-representative-claim',
-  ) as RateLimitType | null
-  const overageStatus = headers.get(
-    'anthropic-ratelimit-unified-overage-status',
-  ) as QuotaStatus | null
-  const overageResetsAtHeader = headers.get(
-    'anthropic-ratelimit-unified-overage-reset',
-  )
-  const overageResetsAt = overageResetsAtHeader
-    ? Number(overageResetsAtHeader)
-    : undefined
+  const rateLimitType = headers.get('anthropic-ratelimit-unified-representative-claim') as RateLimitType | null
+  const overageStatus = headers.get('anthropic-ratelimit-unified-overage-status') as QuotaStatus | null
+  const overageResetsAtHeader = headers.get('anthropic-ratelimit-unified-overage-reset')
+  const overageResetsAt = overageResetsAtHeader ? Number(overageResetsAtHeader) : undefined
 
   // Reason why overage is disabled (spending cap or wallet empty)
   const overageDisabledReason = headers.get(
@@ -404,18 +352,13 @@ function computeNewLimitsFromHeaders(
   ) as OverageDisabledReason | null
 
   // Determine if we're using overage (standard limits rejected but overage allowed)
-  const isUsingOverage =
-    status === 'rejected' &&
-    (overageStatus === 'allowed' || overageStatus === 'allowed_warning')
+  const isUsingOverage = status === 'rejected' && (overageStatus === 'allowed' || overageStatus === 'allowed_warning')
 
   // Check for early warning based on surpassed-threshold header
   // If status is allowed/allowed_warning and we find a surpassed threshold, show warning
   let finalStatus: QuotaStatus = status
   if (status === 'allowed' || status === 'allowed_warning') {
-    const earlyWarning = getEarlyWarningFromHeaders(
-      headers,
-      unifiedRateLimitFallbackAvailable,
-    )
+    const earlyWarning = getEarlyWarningFromHeaders(headers, unifiedRateLimitFallbackAvailable)
     if (earlyWarning) {
       return earlyWarning
     }
@@ -440,20 +383,17 @@ function computeNewLimitsFromHeaders(
  */
 function cacheExtraUsageDisabledReason(headers: globalThis.Headers): void {
   // A null reason means extra usage is enabled (no disabled reason header)
-  const reason =
-    headers.get('anthropic-ratelimit-unified-overage-disabled-reason') ?? null
+  const reason = headers.get('anthropic-ratelimit-unified-overage-disabled-reason') ?? null
   const cached = getGlobalConfig().cachedExtraUsageDisabledReason
   if (cached !== reason) {
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       cachedExtraUsageDisabledReason: reason,
     }))
   }
 }
 
-export function extractQuotaStatusFromHeaders(
-  headers: globalThis.Headers,
-): void {
+export function extractQuotaStatusFromHeaders(headers: globalThis.Headers): void {
   // Check if we need to process rate limits
   const isSubscriber = isClaudeAISubscriber()
 
@@ -485,10 +425,7 @@ export function extractQuotaStatusFromHeaders(
 }
 
 export function extractQuotaStatusFromError(error: APIError): void {
-  if (
-    !shouldProcessRateLimits(isClaudeAISubscriber()) ||
-    error.status !== 429
-  ) {
+  if (!shouldProcessRateLimits(isClaudeAISubscriber()) || error.status !== 429) {
     return
   }
 

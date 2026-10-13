@@ -10,10 +10,7 @@ import type { PermissionResult } from '../../utils/permissions/PermissionResult.
  * @param allowedFlags Array of allowed single-character and long flags
  * @returns true if all flags are valid, false otherwise
  */
-function validateFlagsAgainstAllowlist(
-  flags: string[],
-  allowedFlags: string[],
-): boolean {
+function validateFlagsAgainstAllowlist(flags: string[], allowedFlags: string[]): boolean {
   for (const flag of flags) {
     // Handle combined flags like -nE or -Er
     if (flag.startsWith('-') && !flag.startsWith('--') && flag.length > 2) {
@@ -41,10 +38,7 @@ function validateFlagsAgainstAllowlist(
  * File arguments are ALLOWED for this pattern
  * @internal Exported for testing
  */
-export function isLinePrintingCommand(
-  command: string,
-  expressions: string[],
-): boolean {
+export function isLinePrintingCommand(command: string, expressions: string[]): boolean {
   const sedMatch = command.match(/^\s*sed\s+/)
   if (!sedMatch) return false
 
@@ -244,10 +238,7 @@ function isSubstitutionCommand(
  * @param options.allowFileWrites When true, allows -i flag and file arguments for substitution commands
  * @returns true if the command is allowed (matches allowlist and passes denylist check), false otherwise
  */
-export function sedCommandIsAllowedByAllowlist(
-  command: string,
-  options?: { allowFileWrites?: boolean },
-): boolean {
+export function sedCommandIsAllowedByAllowlist(command: string, options?: { allowFileWrites?: boolean }): boolean {
   const allowFileWrites = options?.allowFileWrites ?? false
 
   // Extract sed expressions (content inside quotes where actual sed commands live)
@@ -324,12 +315,7 @@ export function hasFileArgs(command: string): boolean {
       if (typeof arg !== 'string' && typeof arg !== 'object') continue
 
       // If it's a glob pattern, it counts as a file argument
-      if (
-        typeof arg === 'object' &&
-        arg !== null &&
-        'op' in arg &&
-        arg.op === 'glob'
-      ) {
+      if (typeof arg === 'object' && arg !== null && 'op' in arg && arg.op === 'glob') {
         return true
       }
 
@@ -457,9 +443,7 @@ export function extractSedExpressions(command: string): string[] {
     }
   } catch (error) {
     // If shell-quote parsing fails, treat the sed command as unsafe
-    throw new Error(
-      `Failed to parse sed command: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    )
+    throw new Error(`Failed to parse sed command: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 
   return expressions
@@ -665,8 +649,7 @@ export function checkSedConstraints(
     if (!isAllowed) {
       return {
         behavior: 'ask',
-        message:
-          'sed command requires approval (contains potentially dangerous operations)',
+        message: 'sed command requires approval (contains potentially dangerous operations)',
         decisionReason: {
           type: 'other',
           reason:

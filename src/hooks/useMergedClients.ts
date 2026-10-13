@@ -1,5 +1,6 @@
 import uniqBy from 'lodash-es/uniqBy.js'
 import { useMemo } from 'react'
+
 import type { MCPServerConnection } from '../services/mcp/types.js'
 
 export function mergeClients(
@@ -16,8 +17,5 @@ export function useMergedClients(
   initialClients: MCPServerConnection[] | undefined,
   mcpClients: MCPServerConnection[] | undefined,
 ): MCPServerConnection[] {
-  return useMemo(
-    () => mergeClients(initialClients, mcpClients),
-    [initialClients, mcpClients],
-  )
+  return useMemo(() => mergeClients(initialClients, mcpClients), [initialClients, mcpClients])
 }

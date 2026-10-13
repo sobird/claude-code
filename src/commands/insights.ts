@@ -1,24 +1,14 @@
 import { execFileSync } from 'child_process'
-import { diffLines } from 'diff'
 import { constants as fsConstants } from 'fs'
-import {
-  copyFile,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  unlink,
-  writeFile,
-} from 'fs/promises'
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { extname, join } from 'path'
+
+import { diffLines } from 'diff'
+
 import type { Command } from '../commands.js'
 import { queryWithModel } from '../services/api/claude.js'
-import {
-  AGENT_TOOL_NAME,
-  LEGACY_AGENT_TOOL_NAME,
-} from '../tools/AgentTool/constants.js'
+import { AGENT_TOOL_NAME, LEGACY_AGENT_TOOL_NAME } from '../tools/AgentTool/constants.js'
 import type { LogOption } from '../types/logs.js'
 import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
 import { toError } from '../utils/errors.js'
@@ -60,20 +50,14 @@ type RemoteHostInfo = {
 const getRunningRemoteHosts: () => Promise<string[]> =
   process.env.USER_TYPE === 'ant'
     ? async () => {
-        const { stdout, code } = await execFileNoThrow(
-          'coder',
-          ['list', '-o', 'json'],
-          { timeout: 30000 },
-        )
+        const { stdout, code } = await execFileNoThrow('coder', ['list', '-o', 'json'], { timeout: 30000 })
         if (code !== 0) return []
         try {
           const workspaces = jsonParse(stdout) as Array<{
             name: string
             latest_build?: { status?: string }
           }>
-          return workspaces
-            .filter(w => w.latest_build?.status === 'running')
-            .map(w => w.name)
+          return workspaces.filter((w) => w.latest_build?.status === 'running').map((w) => w.name)
         } catch {
           return []
         }
@@ -85,10 +69,7 @@ const getRemoteHostSessionCount: (hs: string) => Promise<number> =
     ? async (homespace: string) => {
         const { stdout, code } = await execFileNoThrow(
           'ssh',
-          [
-            `${homespace}.coder`,
-            'find /root/.claude/projects -name "*.jsonl" 2>/dev/null | wc -l',
-          ],
+          [`${homespace}.coder`, 'find /root/.claude/projects -name "*.jsonl" 2>/dev/null | wc -l'],
           { timeout: 30000 },
         )
         if (code !== 0) return 0
@@ -96,10 +77,7 @@ const getRemoteHostSessionCount: (hs: string) => Promise<number> =
       }
     : async () => 0
 
-const collectFromRemoteHost: (
-  hs: string,
-  destDir: string,
-) => Promise<{ copied: number; skipped: number }> =
+const collectFromRemoteHost: (hs: string, destDir: string) => Promise<{ copied: number; skipped: number }> =
   process.env.USER_TYPE === 'ant'
     ? async (homespace: string, destDir: string) => {
         const result = { copied: 0, skipped: 0 }
@@ -129,7 +107,7 @@ const collectFromRemoteHost: (
 
           // Merge into destination (parallel per project directory)
           await Promise.all(
-            projectDirents.map(async dirent => {
+            projectDirents.map(async (dirent) => {
               const projectName = dirent.name
               const projectPath = join(projectsDir, projectName)
 
@@ -153,7 +131,7 @@ const collectFromRemoteHost: (
                 return
               }
               await Promise.all(
-                files.map(async fileDirent => {
+                files.map(async (fileDirent) => {
                   const fileName = fileDirent.name
                   if (!fileName.endsWith('.jsonl')) return
 
@@ -197,13 +175,10 @@ const collectAllRemoteHostData: (destDir: string) => Promise<{
 
         // Collect from all hosts in parallel (SCP per host can take seconds)
         const hostResults = await Promise.all(
-          rHosts.map(async hs => {
+          rHosts.map(async (hs) => {
             const sessionCount = await getRemoteHostSessionCount(hs)
             if (sessionCount > 0) {
-              const { copied, skipped } = await collectFromRemoteHost(
-                hs,
-                destDir,
-              )
+              const { copied, skipped } = await collectFromRemoteHost(hs, destDir)
               return { name: hs, sessionCount, copied, skipped }
             }
             return { name: hs, sessionCount, copied: 0, skipped: 0 }
@@ -540,11 +515,7 @@ function extractToolStats(log: LogOption): {
             toolCounts[toolName] = (toolCounts[toolName] || 0) + 1
 
             // Check for special tool usage
-            if (
-              toolName === AGENT_TOOL_NAME ||
-              toolName === LEGACY_AGENT_TOOL_NAME
-            )
-              usesTaskAgent = true
+            if (toolName === AGENT_TOOL_NAME || toolName === LEGACY_AGENT_TOOL_NAME) usesTaskAgent = true
             if (toolName.startsWith('mcp__')) usesMcp = true
             if (toolName === 'WebSearch') usesWebSearch = true
             if (toolName === 'WebFetch') usesWebFetch = true
@@ -651,10 +622,7 @@ function extractToolStats(log: LogOption): {
                 const lowerContent = resultContent.toLowerCase()
                 if (lowerContent.includes('exit code')) {
                   category = 'Command Failed'
-                } else if (
-                  lowerContent.includes('rejected') ||
-                  lowerContent.includes("doesn't want")
-                ) {
+                } else if (lowerContent.includes('rejected') || lowerContent.includes("doesn't want")) {
                   category = 'User Rejected'
                 } else if (
                   lowerContent.includes('string to replace not found') ||
@@ -663,20 +631,13 @@ function extractToolStats(log: LogOption): {
                   category = 'Edit Failed'
                 } else if (lowerContent.includes('modified since read')) {
                   category = 'File Changed'
-                } else if (
-                  lowerContent.includes('exceeds maximum') ||
-                  lowerContent.includes('too large')
-                ) {
+                } else if (lowerContent.includes('exceeds maximum') || lowerContent.includes('too large')) {
                   category = 'File Too Large'
-                } else if (
-                  lowerContent.includes('file not found') ||
-                  lowerContent.includes('does not exist')
-                ) {
+                } else if (lowerContent.includes('file not found') || lowerContent.includes('does not exist')) {
                   category = 'File Not Found'
                 }
               }
-              toolErrorCategories[category] =
-                (toolErrorCategories[category] || 0) + 1
+              toolErrorCategories[category] = (toolErrorCategories[category] || 0) + 1
             }
           }
         }
@@ -728,19 +689,14 @@ function extractToolStats(log: LogOption): {
 }
 
 function hasValidDates(log: LogOption): boolean {
-  return (
-    !Number.isNaN(log.created.getTime()) &&
-    !Number.isNaN(log.modified.getTime())
-  )
+  return !Number.isNaN(log.created.getTime()) && !Number.isNaN(log.modified.getTime())
 }
 
 function logToSessionMeta(log: LogOption): SessionMeta {
   const stats = extractToolStats(log)
   const sessionId = getSessionIdFromLog(log) || 'unknown'
   const startTime = log.created.toISOString()
-  const durationMinutes = Math.round(
-    (log.modified.getTime() - log.created.getTime()) / 1000 / 60,
-  )
+  const durationMinutes = Math.round((log.modified.getTime() - log.created.getTime()) / 1000 / 60)
 
   let userMessageCount = 0
   let assistantMessageCount = 0
@@ -903,9 +859,7 @@ async function summarizeTranscriptChunk(chunk: string): Promise<string> {
   }
 }
 
-async function formatTranscriptWithSummarization(
-  log: LogOption,
-): Promise<string> {
+async function formatTranscriptWithSummarization(log: LogOption): Promise<string> {
   const fullTranscript = formatTranscriptForFacets(log)
 
   // If under 30k chars, use as-is
@@ -938,9 +892,7 @@ async function formatTranscriptWithSummarization(
   return header + summaries.join('\n\n---\n\n')
 }
 
-async function loadCachedFacets(
-  sessionId: string,
-): Promise<SessionFacets | null> {
+async function loadCachedFacets(sessionId: string): Promise<SessionFacets | null> {
   const facetPath = join(getFacetsDir(), `${sessionId}.json`)
   try {
     const content = await readFile(facetPath, { encoding: 'utf-8' })
@@ -973,9 +925,7 @@ async function saveFacets(facets: SessionFacets): Promise<void> {
   })
 }
 
-async function loadCachedSessionMeta(
-  sessionId: string,
-): Promise<SessionMeta | null> {
+async function loadCachedSessionMeta(sessionId: string): Promise<SessionMeta | null> {
   const metaPath = join(getSessionMetaDir(), `${sessionId}.json`)
   try {
     const content = await readFile(metaPath, { encoding: 'utf-8' })
@@ -998,10 +948,7 @@ async function saveSessionMeta(meta: SessionMeta): Promise<void> {
   })
 }
 
-async function extractFacetsFromAPI(
-  log: LogOption,
-  sessionId: string,
-): Promise<SessionFacets | null> {
+async function extractFacetsFromAPI(log: LogOption, sessionId: string): Promise<SessionFacets | null> {
   try {
     // Use summarization for long transcripts
     const transcript = await formatTranscriptWithSummarization(log)
@@ -1096,10 +1043,7 @@ export function detectMultiClauding(
     const msg = allSessionMessages[i]!
 
     // Shrink window from the left
-    while (
-      windowStart < i &&
-      msg.ts - allSessionMessages[windowStart]!.ts > OVERLAP_WINDOW_MS
-    ) {
+    while (windowStart < i && msg.ts - allSessionMessages[windowStart]!.ts > OVERLAP_WINDOW_MS) {
       const expiring = allSessionMessages[windowStart]!
       if (sessionLastIndex.get(expiring.sessionId) === windowStart) {
         sessionLastIndex.delete(expiring.sessionId)
@@ -1115,9 +1059,7 @@ export function detectMultiClauding(
         if (between.sessionId !== msg.sessionId) {
           const pair = [msg.sessionId, between.sessionId].sort().join(':')
           multiClaudeSessionPairs.add(pair)
-          messagesDuringMulticlaude.add(
-            `${allSessionMessages[prevIndex]!.ts}:${msg.sessionId}`,
-          )
+          messagesDuringMulticlaude.add(`${allSessionMessages[prevIndex]!.ts}:${msg.sessionId}`)
           messagesDuringMulticlaude.add(`${between.ts}:${between.sessionId}`)
           messagesDuringMulticlaude.add(`${msg.ts}:${msg.sessionId}`)
           break
@@ -1142,10 +1084,7 @@ export function detectMultiClauding(
   }
 }
 
-function aggregateData(
-  sessions: SessionMeta[],
-  facets: Map<string, SessionFacets>,
-): AggregatedData {
+function aggregateData(sessions: SessionMeta[], facets: Map<string, SessionFacets>): AggregatedData {
   const result: AggregatedData = {
     total_sessions: sessions.length,
     sessions_with_facets: facets.size,
@@ -1210,8 +1149,7 @@ function aggregateData(
     result.total_interruptions += session.user_interruptions
     result.total_tool_errors += session.tool_errors
     for (const [cat, count] of Object.entries(session.tool_error_categories)) {
-      result.tool_error_categories[cat] =
-        (result.tool_error_categories[cat] || 0) + count
+      result.tool_error_categories[cat] = (result.tool_error_categories[cat] || 0) + count
     }
     allResponseTimes.push(...session.user_response_times)
     if (session.uses_task_agent) result.sessions_using_task_agent++
@@ -1234,8 +1172,7 @@ function aggregateData(
     }
 
     if (session.project_path) {
-      result.projects[session.project_path] =
-        (result.projects[session.project_path] || 0) + 1
+      result.projects[session.project_path] = (result.projects[session.project_path] || 0) + 1
     }
 
     const sessionFacets = facets.get(session.session_id)
@@ -1243,19 +1180,15 @@ function aggregateData(
       // Goal categories
       for (const [cat, count] of safeEntries(sessionFacets.goal_categories)) {
         if (count > 0) {
-          result.goal_categories[cat] =
-            (result.goal_categories[cat] || 0) + count
+          result.goal_categories[cat] = (result.goal_categories[cat] || 0) + count
         }
       }
 
       // Outcomes
-      result.outcomes[sessionFacets.outcome] =
-        (result.outcomes[sessionFacets.outcome] || 0) + 1
+      result.outcomes[sessionFacets.outcome] = (result.outcomes[sessionFacets.outcome] || 0) + 1
 
       // Satisfaction counts
-      for (const [level, count] of safeEntries(
-        sessionFacets.user_satisfaction_counts,
-      )) {
+      for (const [level, count] of safeEntries(sessionFacets.user_satisfaction_counts)) {
         if (count > 0) {
           result.satisfaction[level] = (result.satisfaction[level] || 0) + count
         }
@@ -1266,8 +1199,7 @@ function aggregateData(
         (result.helpfulness[sessionFacets.claude_helpfulness] || 0) + 1
 
       // Session types
-      result.session_types[sessionFacets.session_type] =
-        (result.session_types[sessionFacets.session_type] || 0) + 1
+      result.session_types[sessionFacets.session_type] = (result.session_types[sessionFacets.session_type] || 0) + 1
 
       // Friction counts
       for (const [type, count] of safeEntries(sessionFacets.friction_counts)) {
@@ -1278,8 +1210,7 @@ function aggregateData(
 
       // Success factors
       if (sessionFacets.primary_success !== 'none') {
-        result.success[sessionFacets.primary_success] =
-          (result.success[sessionFacets.primary_success] || 0) + 1
+        result.success[sessionFacets.primary_success] = (result.success[sessionFacets.primary_success] || 0) + 1
       }
     }
 
@@ -1302,17 +1233,14 @@ function aggregateData(
   if (allResponseTimes.length > 0) {
     const sorted = [...allResponseTimes].sort((a, b) => a - b)
     result.median_response_time = sorted[Math.floor(sorted.length / 2)] || 0
-    result.avg_response_time =
-      allResponseTimes.reduce((a, b) => a + b, 0) / allResponseTimes.length
+    result.avg_response_time = allResponseTimes.reduce((a, b) => a + b, 0) / allResponseTimes.length
   }
 
   // Calculate days active and messages per day
-  const uniqueDays = new Set(dates.map(d => d.split('T')[0]))
+  const uniqueDays = new Set(dates.map((d) => d.split('T')[0]))
   result.days_active = uniqueDays.size
   result.messages_per_day =
-    result.days_active > 0
-      ? Math.round((result.total_messages / result.days_active) * 10) / 10
-      : 0
+    result.days_active > 0 ? Math.round((result.total_messages / result.days_active) * 10) / 10 : 0
 
   // Store message hours for time-of-day chart
   result.message_hours = allMessageHours
@@ -1616,19 +1544,19 @@ async function generateParallelInsights(
   // Build data context string
   const facetSummaries = Array.from(facets.values())
     .slice(0, 50)
-    .map(f => `- ${f.brief_summary} (${f.outcome}, ${f.claude_helpfulness})`)
+    .map((f) => `- ${f.brief_summary} (${f.outcome}, ${f.claude_helpfulness})`)
     .join('\n')
 
   const frictionDetails = Array.from(facets.values())
-    .filter(f => f.friction_detail)
+    .filter((f) => f.friction_detail)
     .slice(0, 20)
-    .map(f => `- ${f.friction_detail}`)
+    .map((f) => `- ${f.friction_detail}`)
     .join('\n')
 
   const userInstructions = Array.from(facets.values())
-    .flatMap(f => f.user_instructions_to_claude || [])
+    .flatMap((f) => f.user_instructions_to_claude || [])
     .slice(0, 15)
-    .map(i => `- ${i}`)
+    .map((i) => `- ${i}`)
     .join('\n')
 
   const dataContext = jsonStringify(
@@ -1665,11 +1593,7 @@ async function generateParallelInsights(
     (userInstructions || 'None captured')
 
   // Run sections in parallel first (excluding at_a_glance)
-  const results = await Promise.all(
-    INSIGHT_SECTIONS.map(section =>
-      generateSectionInsight(section, fullContext),
-    ),
-  )
+  const results = await Promise.all(INSIGHT_SECTIONS.map((section) => generateSectionInsight(section, fullContext)))
 
   // Combine results
   const insights: InsightResults = {}
@@ -1686,7 +1610,7 @@ async function generateParallelInsights(
         areas?: Array<{ name: string; description: string }>
       }
     )?.areas
-      ?.map(a => `- ${a.name}: ${a.description}`)
+      ?.map((a) => `- ${a.name}: ${a.description}`)
       .join('\n') || ''
 
   const bigWinsText =
@@ -1695,7 +1619,7 @@ async function generateParallelInsights(
         impressive_workflows?: Array<{ title: string; description: string }>
       }
     )?.impressive_workflows
-      ?.map(w => `- ${w.title}: ${w.description}`)
+      ?.map((w) => `- ${w.title}: ${w.description}`)
       .join('\n') || ''
 
   const frictionText =
@@ -1704,7 +1628,7 @@ async function generateParallelInsights(
         categories?: Array<{ category: string; description: string }>
       }
     )?.categories
-      ?.map(c => `- ${c.category}: ${c.description}`)
+      ?.map((c) => `- ${c.category}: ${c.description}`)
       .join('\n') || ''
 
   const featuresText =
@@ -1713,7 +1637,7 @@ async function generateParallelInsights(
         features_to_try?: Array<{ feature: string; one_liner: string }>
       }
     )?.features_to_try
-      ?.map(f => `- ${f.feature}: ${f.one_liner}`)
+      ?.map((f) => `- ${f.feature}: ${f.one_liner}`)
       .join('\n') || ''
 
   const patternsText =
@@ -1722,7 +1646,7 @@ async function generateParallelInsights(
         usage_patterns?: Array<{ title: string; suggestion: string }>
       }
     )?.usage_patterns
-      ?.map(p => `- ${p.title}: ${p.suggestion}`)
+      ?.map((p) => `- ${p.title}: ${p.suggestion}`)
       .join('\n') || ''
 
   const horizonText =
@@ -1731,7 +1655,7 @@ async function generateParallelInsights(
         opportunities?: Array<{ title: string; whats_possible: string }>
       }
     )?.opportunities
-      ?.map(o => `- ${o.title}: ${o.whats_possible}`)
+      ?.map((o) => `- ${o.title}: ${o.whats_possible}`)
       .join('\n') || ''
 
   // Now generate "At a Glance" with access to other sections' outputs
@@ -1804,14 +1728,7 @@ function escapeHtmlWithBold(text: string): string {
 }
 
 // Fixed orderings for specific charts (matching Python reference)
-const SATISFACTION_ORDER = [
-  'frustrated',
-  'dissatisfied',
-  'likely_satisfied',
-  'satisfied',
-  'happy',
-  'unsure',
-]
+const SATISFACTION_ORDER = ['frustrated', 'dissatisfied', 'likely_satisfied', 'satisfied', 'happy', 'unsure']
 
 const OUTCOME_ORDER = [
   'not_achieved',
@@ -1821,19 +1738,14 @@ const OUTCOME_ORDER = [
   'unclear_from_transcript',
 ]
 
-function generateBarChart(
-  data: Record<string, number>,
-  color: string,
-  maxItems = 6,
-  fixedOrder?: string[],
-): string {
+function generateBarChart(data: Record<string, number>, color: string, maxItems = 6, fixedOrder?: string[]): string {
   let entries: [string, number][]
 
   if (fixedOrder) {
     // Use fixed order, only including items that exist in data
     entries = fixedOrder
-      .filter(key => key in data && (data[key] ?? 0) > 0)
-      .map(key => [key, data[key] ?? 0] as [string, number])
+      .filter((key) => key in data && (data[key] ?? 0) > 0)
+      .map((key) => [key, data[key] ?? 0] as [string, number])
   } else {
     // Sort by count descending
     entries = Object.entries(data)
@@ -1843,14 +1755,12 @@ function generateBarChart(
 
   if (entries.length === 0) return '<p class="empty">No data</p>'
 
-  const maxVal = Math.max(...entries.map(e => e[1]))
+  const maxVal = Math.max(...entries.map((e) => e[1]))
   return entries
     .map(([label, count]) => {
       const pct = (count / maxVal) * 100
       // Use LABEL_MAP if available, otherwise clean up underscores and title case
-      const cleanLabel =
-        LABEL_MAP[label] ||
-        label.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      const cleanLabel = LABEL_MAP[label] || label.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
       return `<div class="bar-row">
         <div class="bar-label">${escapeHtml(cleanLabel)}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
@@ -1915,16 +1825,16 @@ function generateTimeOfDayChart(messageHours: number[]): string {
     hourCounts[h] = (hourCounts[h] || 0) + 1
   }
 
-  const periodCounts = periods.map(p => ({
+  const periodCounts = periods.map((p) => ({
     label: p.label,
     count: p.range.reduce((sum, h) => sum + (hourCounts[h] || 0), 0),
   }))
 
-  const maxVal = Math.max(...periodCounts.map(p => p.count)) || 1
+  const maxVal = Math.max(...periodCounts.map((p) => p.count)) || 1
 
   const barsHtml = periodCounts
     .map(
-      p => `
+      (p) => `
       <div class="bar-row">
         <div class="bar-label">${p.label}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${(p.count / maxVal) * 100}%;background:#8b5cf6"></div></div>
@@ -1944,15 +1854,12 @@ function getHourCountsJson(messageHours: number[]): string {
   return jsonStringify(hourCounts)
 }
 
-function generateHtmlReport(
-  data: AggregatedData,
-  insights: InsightResults,
-): string {
+function generateHtmlReport(data: AggregatedData, insights: InsightResults): string {
   const markdownToHtml = (md: string): string => {
     if (!md) return ''
     return md
       .split('\n\n')
-      .map(p => {
+      .map((p) => {
         let html = escapeHtml(p)
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         html = html.replace(/^- /gm, '• ')
@@ -1987,7 +1894,7 @@ function generateHtmlReport(
     <div class="project-areas">
       ${projectAreas
         .map(
-          area => `
+          (area) => `
         <div class="project-area">
           <div class="area-header">
             <span class="area-name">${escapeHtml(area.name)}</span>
@@ -2024,7 +1931,7 @@ function generateHtmlReport(
     <div class="big-wins">
       ${whatWorks.impressive_workflows
         .map(
-          wf => `
+          (wf) => `
         <div class="big-win">
           <div class="big-win-title">${escapeHtml(wf.title || '')}</div>
           <div class="big-win-desc">${escapeHtml(wf.description || '')}</div>
@@ -2046,11 +1953,11 @@ function generateHtmlReport(
     <div class="friction-categories">
       ${frictionAnalysis.categories
         .map(
-          cat => `
+          (cat) => `
         <div class="friction-category">
           <div class="friction-title">${escapeHtml(cat.category || '')}</div>
           <div class="friction-desc">${escapeHtml(cat.description || '')}</div>
-          ${cat.examples ? `<ul class="friction-examples">${cat.examples.map(ex => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>` : ''}
+          ${cat.examples ? `<ul class="friction-examples">${cat.examples.map((ex) => `<li>${escapeHtml(ex)}</li>`).join('')}</ul>` : ''}
         </div>
       `,
         )
@@ -2064,8 +1971,7 @@ function generateHtmlReport(
   const suggestionsHtml = suggestions
     ? `
     ${
-      suggestions.claude_md_additions &&
-      suggestions.claude_md_additions.length > 0
+      suggestions.claude_md_additions && suggestions.claude_md_additions.length > 0
         ? `
     <h2 id="section-features">Existing CC Features to Try</h2>
     <div class="claude-md-section">
@@ -2099,7 +2005,7 @@ function generateHtmlReport(
     <div class="features-section">
       ${suggestions.features_to_try
         .map(
-          feat => `
+          (feat) => `
         <div class="feature-card">
           <div class="feature-title">${escapeHtml(feat.feature || '')}</div>
           <div class="feature-oneliner">${escapeHtml(feat.one_liner || '')}</div>
@@ -2134,7 +2040,7 @@ function generateHtmlReport(
     <div class="patterns-section">
       ${suggestions.usage_patterns
         .map(
-          pat => `
+          (pat) => `
         <div class="pattern-card">
           <div class="pattern-title">${escapeHtml(pat.title || '')}</div>
           <div class="pattern-summary">${escapeHtml(pat.suggestion || '')}</div>
@@ -2173,7 +2079,7 @@ function generateHtmlReport(
     <div class="horizon-section">
       ${horizonData.opportunities
         .map(
-          opp => `
+          (opp) => `
         <div class="horizon-card">
           <div class="horizon-title">${escapeHtml(opp.title || '')}</div>
           <div class="horizon-possible">${escapeHtml(opp.whats_possible || '')}</div>
@@ -2188,14 +2094,9 @@ function generateHtmlReport(
       : ''
 
   // Build Team Feedback section (collapsible, ant-only)
-  const ccImprovements =
-    process.env.USER_TYPE === 'ant'
-      ? insights.cc_team_improvements?.improvements || []
-      : []
+  const ccImprovements = process.env.USER_TYPE === 'ant' ? insights.cc_team_improvements?.improvements || [] : []
   const modelImprovements =
-    process.env.USER_TYPE === 'ant'
-      ? insights.model_behavior_improvements?.improvements || []
-      : []
+    process.env.USER_TYPE === 'ant' ? insights.model_behavior_improvements?.improvements || [] : []
   const teamFeedbackHtml =
     ccImprovements.length > 0 || modelImprovements.length > 0
       ? `
@@ -2213,7 +2114,7 @@ function generateHtmlReport(
         <div class="suggestions-section">
           ${ccImprovements
             .map(
-              imp => `
+              (imp) => `
             <div class="feedback-card team-card">
               <div class="feedback-title">${escapeHtml(imp.title || '')}</div>
               <div class="feedback-detail">${escapeHtml(imp.detail || '')}</div>
@@ -2240,7 +2141,7 @@ function generateHtmlReport(
         <div class="suggestions-section">
           ${modelImprovements
             .map(
-              imp => `
+              (imp) => `
             <div class="feedback-card model-card">
               <div class="feedback-title">${escapeHtml(imp.title || '')}</div>
               <div class="feedback-detail">${escapeHtml(imp.detail || '')}</div>
@@ -2684,9 +2585,7 @@ export function buildExportData(
 ): InsightsExport {
   const version = typeof MACRO !== 'undefined' ? MACRO.VERSION : 'unknown'
 
-  const remote_hosts_collected = remoteStats?.hosts
-    .filter(h => h.sessionCount > 0)
-    .map(h => h.name)
+  const remote_hosts_collected = remoteStats?.hosts.filter((h) => h.sessionCount > 0).map((h) => h.name)
 
   const facets_summary = {
     total: facets.size,
@@ -2698,22 +2597,18 @@ export function buildExportData(
   for (const f of facets.values()) {
     for (const [cat, count] of safeEntries(f.goal_categories)) {
       if (count > 0) {
-        facets_summary.goal_categories[cat] =
-          (facets_summary.goal_categories[cat] || 0) + count
+        facets_summary.goal_categories[cat] = (facets_summary.goal_categories[cat] || 0) + count
       }
     }
-    facets_summary.outcomes[f.outcome] =
-      (facets_summary.outcomes[f.outcome] || 0) + 1
+    facets_summary.outcomes[f.outcome] = (facets_summary.outcomes[f.outcome] || 0) + 1
     for (const [level, count] of safeEntries(f.user_satisfaction_counts)) {
       if (count > 0) {
-        facets_summary.satisfaction[level] =
-          (facets_summary.satisfaction[level] || 0) + count
+        facets_summary.satisfaction[level] = (facets_summary.satisfaction[level] || 0) + count
       }
     }
     for (const [type, count] of safeEntries(f.friction_counts)) {
       if (count > 0) {
-        facets_summary.friction[type] =
-          (facets_summary.friction[type] || 0) + count
+        facets_summary.friction[type] = (facets_summary.friction[type] || 0) + count
       }
     }
   }
@@ -2762,9 +2657,7 @@ async function scanAllSessions(): Promise<LiteSessionInfo[]> {
     return []
   }
 
-  const projectDirs = dirents
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => join(projectsDir, dirent.name))
+  const projectDirs = dirents.filter((dirent) => dirent.isDirectory()).map((dirent) => join(projectsDir, dirent.name))
 
   const allSessions: LiteSessionInfo[] = []
 
@@ -2780,7 +2673,7 @@ async function scanAllSessions(): Promise<LiteSessionInfo[]> {
     }
     // Yield to event loop every 10 project directories
     if (i % 10 === 9) {
-      await new Promise<void>(resolve => setImmediate(resolve))
+      await new Promise<void>((resolve) => setImmediate(resolve))
     }
   }
 
@@ -2793,9 +2686,7 @@ async function scanAllSessions(): Promise<LiteSessionInfo[]> {
 // Main Function
 // ============================================================================
 
-export async function generateUsageReport(options?: {
-  collectRemote?: boolean
-}): Promise<{
+export async function generateUsageReport(options?: { collectRemote?: boolean }): Promise<{
   insights: InsightResults
   htmlPath: string
   data: AggregatedData
@@ -2825,7 +2716,7 @@ export async function generateUsageReport(options?: {
   for (let i = 0; i < allScannedSessions.length; i += META_BATCH_SIZE) {
     const batch = allScannedSessions.slice(i, i + META_BATCH_SIZE)
     const results = await Promise.all(
-      batch.map(async sessionInfo => ({
+      batch.map(async (sessionInfo) => ({
         sessionInfo,
         cached: await loadCachedSessionMeta(sessionInfo.sessionId),
       })),
@@ -2848,10 +2739,7 @@ export async function generateUsageReport(options?: {
       if (msg.type === 'user' && msg.message) {
         const content = msg.message.content
         if (typeof content === 'string') {
-          if (
-            content.includes('RESPOND WITH ONLY A VALID JSON OBJECT') ||
-            content.includes('record_facets')
-          ) {
+          if (content.includes('RESPOND WITH ONLY A VALID JSON OBJECT') || content.includes('record_facets')) {
             return true
           }
         }
@@ -2865,7 +2753,7 @@ export async function generateUsageReport(options?: {
   for (let i = 0; i < uncachedSessions.length; i += LOAD_BATCH_SIZE) {
     const batch = uncachedSessions.slice(i, i + LOAD_BATCH_SIZE)
     const batchResults = await Promise.all(
-      batch.map(async sessionInfo => {
+      batch.map(async (sessionInfo) => {
         try {
           return await loadAllLogsFromSessionFile(sessionInfo.path)
         } catch {
@@ -2885,7 +2773,7 @@ export async function generateUsageReport(options?: {
         logsForFacets.set(meta.session_id, log)
       }
     }
-    await Promise.all(metasToSave.map(meta => saveSessionMeta(meta)))
+    await Promise.all(metasToSave.map((meta) => saveSessionMeta(meta)))
   }
 
   // Deduplicate session branches (keep the one with most user messages per session_id)
@@ -2896,8 +2784,7 @@ export async function generateUsageReport(options?: {
     if (
       !existing ||
       meta.user_message_count > existing.user_message_count ||
-      (meta.user_message_count === existing.user_message_count &&
-        meta.duration_minutes > existing.duration_minutes)
+      (meta.user_message_count === existing.user_message_count && meta.duration_minutes > existing.duration_minutes)
     ) {
       bestBySession.set(meta.session_id, meta)
     }
@@ -2933,7 +2820,7 @@ export async function generateUsageReport(options?: {
 
   // Load cached facets for all substantive sessions in parallel
   const cachedFacetResults = await Promise.all(
-    substantiveMetas.map(async meta => ({
+    substantiveMetas.map(async (meta) => ({
       sessionId: meta.session_id,
       cached: await loadCachedFacets(meta.session_id),
     })),
@@ -2967,7 +2854,7 @@ export async function generateUsageReport(options?: {
         facetsToSave.push(newFacets)
       }
     }
-    await Promise.all(facetsToSave.map(f => saveFacets(f)))
+    await Promise.all(facetsToSave.map((f) => saveFacets(f)))
   }
 
   // Filter out warmup/minimal sessions (matching Python's is_minimal)
@@ -2976,13 +2863,11 @@ export async function generateUsageReport(options?: {
     const sessionFacets = facets.get(sessionId)
     if (!sessionFacets) return false
     const cats = sessionFacets.goal_categories
-    const catKeys = safeKeys(cats).filter(k => (cats[k] ?? 0) > 0)
+    const catKeys = safeKeys(cats).filter((k) => (cats[k] ?? 0) > 0)
     return catKeys.length === 1 && catKeys[0] === 'warmup_minimal'
   }
 
-  const substantiveSessions = substantiveMetas.filter(
-    s => !isMinimalSession(s.session_id),
-  )
+  const substantiveSessions = substantiveMetas.filter((s) => !isMinimalSession(s.session_id))
 
   const substantiveFacets = new Map<string, SessionFacets>()
   for (const [sessionId, f] of facets) {
@@ -3022,9 +2907,7 @@ export async function generateUsageReport(options?: {
   }
 }
 
-function safeEntries<V>(
-  obj: Record<string, V> | undefined | null,
-): [string, V][] {
+function safeEntries<V>(obj: Record<string, V> | undefined | null): [string, V][] {
   return obj ? Object.entries(obj) : []
 }
 
@@ -3059,26 +2942,18 @@ const usageReport: Command = {
       // Show collection message if collecting
       if (collectRemote && hasRemoteHosts) {
         // biome-ignore lint/suspicious/noConsole: intentional
-        console.error(
-          `Collecting sessions from ${remoteHosts.length} homespace(s): ${remoteHosts.join(', ')}...`,
-        )
+        console.error(`Collecting sessions from ${remoteHosts.length} homespace(s): ${remoteHosts.join(', ')}...`)
       }
     }
 
-    const { insights, htmlPath, data, remoteStats } = await generateUsageReport(
-      { collectRemote },
-    )
+    const { insights, htmlPath, data, remoteStats } = await generateUsageReport({ collectRemote })
 
     let reportUrl = `file://${htmlPath}`
     let uploadHint = ''
 
     if (process.env.USER_TYPE === 'ant') {
       // Try to upload to S3
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/[-:]/g, '')
-        .replace('T', '_')
-        .slice(0, 15)
+      const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15)
       const username = process.env.SAFEUSER || process.env.USER || 'unknown'
       const filename = `${username}_insights_${timestamp}.html`
       const s3Path = `s3://anthropic-serve/atamkin/cc-user-reports/${filename}`
@@ -3101,8 +2976,7 @@ Then access at: ${s3Url}`
 
     // Build header with stats
     const sessionLabel =
-      data.total_sessions_scanned &&
-      data.total_sessions_scanned > data.total_sessions
+      data.total_sessions_scanned && data.total_sessions_scanned > data.total_sessions
         ? `${data.total_sessions_scanned.toLocaleString()} sessions total · ${data.total_sessions} analyzed`
         : `${data.total_sessions} sessions`
     const stats = [
@@ -3117,8 +2991,8 @@ Then access at: ${s3Url}`
     if (process.env.USER_TYPE === 'ant') {
       if (remoteStats && remoteStats.totalCopied > 0) {
         const hsNames = remoteStats.hosts
-          .filter(h => h.sessionCount > 0)
-          .map(h => h.name)
+          .filter((h) => h.sessionCount > 0)
+          .map((h) => h.name)
           .join(', ')
         remoteInfo = `\n_Collected ${remoteStats.totalCopied} new sessions from: ${hsNames}_\n`
       } else if (!collectRemote && hasRemoteHosts) {

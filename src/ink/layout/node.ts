@@ -33,8 +33,7 @@ export const LayoutFlexDirection = {
   Column: 'column',
   ColumnReverse: 'column-reverse',
 } as const
-export type LayoutFlexDirection =
-  (typeof LayoutFlexDirection)[keyof typeof LayoutFlexDirection]
+export type LayoutFlexDirection = (typeof LayoutFlexDirection)[keyof typeof LayoutFlexDirection]
 
 export const LayoutAlign = {
   Auto: 'auto',
@@ -66,29 +65,23 @@ export const LayoutPositionType = {
   Relative: 'relative',
   Absolute: 'absolute',
 } as const
-export type LayoutPositionType =
-  (typeof LayoutPositionType)[keyof typeof LayoutPositionType]
+export type LayoutPositionType = (typeof LayoutPositionType)[keyof typeof LayoutPositionType]
 
 export const LayoutOverflow = {
   Visible: 'visible',
   Hidden: 'hidden',
   Scroll: 'scroll',
 } as const
-export type LayoutOverflow =
-  (typeof LayoutOverflow)[keyof typeof LayoutOverflow]
+export type LayoutOverflow = (typeof LayoutOverflow)[keyof typeof LayoutOverflow]
 
-export type LayoutMeasureFunc = (
-  width: number,
-  widthMode: LayoutMeasureMode,
-) => { width: number; height: number }
+export type LayoutMeasureFunc = (width: number, widthMode: LayoutMeasureMode) => { width: number; height: number }
 
 export const LayoutMeasureMode = {
   Undefined: 'undefined',
   Exactly: 'exactly',
   AtMost: 'at-most',
 } as const
-export type LayoutMeasureMode =
-  (typeof LayoutMeasureMode)[keyof typeof LayoutMeasureMode]
+export type LayoutMeasureMode = (typeof LayoutMeasureMode)[keyof typeof LayoutMeasureMode]
 
 export type LayoutNode = {
   // Tree

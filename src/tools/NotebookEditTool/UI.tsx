@@ -4,6 +4,7 @@ import type { Message, ProgressMessage } from 'src/types/message.js'
 import { extractTag } from 'src/utils/messages.js'
 import type { ThemeName } from 'src/utils/theme.js'
 import type { z } from 'zod/v4'
+
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js'
 import { FilePathLink } from '../../components/FilePathLink.js'
 import { HighlightedCode } from '../../components/HighlightedCode.js'
@@ -14,9 +15,7 @@ import type { Tools } from '../../Tool.js'
 import { getDisplayPath } from '../../utils/file.js'
 import type { inputSchema, Output } from './NotebookEditTool.js'
 
-export function getToolUseSummary(
-  input: Partial<z.infer<ReturnType<typeof inputSchema>>> | undefined,
-): string | null {
+export function getToolUseSummary(input: Partial<z.infer<ReturnType<typeof inputSchema>>> | undefined): string | null {
   if (!input?.notebook_path) {
     return null
   }
@@ -24,13 +23,7 @@ export function getToolUseSummary(
 }
 
 export function renderToolUseMessage(
-  {
-    notebook_path,
-    cell_id,
-    new_source,
-    cell_type,
-    edit_mode,
-  }: Partial<z.infer<ReturnType<typeof inputSchema>>>,
+  { notebook_path, cell_id, new_source, cell_type, edit_mode }: Partial<z.infer<ReturnType<typeof inputSchema>>>,
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
   if (!notebook_path || !new_source || !cell_type) {
@@ -82,11 +75,7 @@ export function renderToolUseErrorMessage(
   result: ToolResultBlockParam['content'],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
-  if (
-    !verbose &&
-    typeof result === 'string' &&
-    extractTag(result, 'tool_use_error')
-  ) {
+  if (!verbose && typeof result === 'string' && extractTag(result, 'tool_use_error')) {
     return (
       <MessageResponse>
         <Text color="error">Error editing notebook</Text>
@@ -96,11 +85,7 @@ export function renderToolUseErrorMessage(
   return <FallbackToolUseErrorMessage result={result} verbose={verbose} />
 }
 
-export function renderToolResultMessage({
-  cell_id,
-  new_source,
-  error,
-}: Output): React.ReactNode {
+export function renderToolResultMessage({ cell_id, new_source, error }: Output): React.ReactNode {
   if (error) {
     return (
       <MessageResponse>

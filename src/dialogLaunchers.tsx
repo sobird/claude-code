@@ -7,6 +7,7 @@
  * perf/extract-interactive-helpers and perf/launch-repl.
  */
 import React from 'react'
+
 import type { AssistantSession } from './assistant/sessionDiscovery.js'
 import type { StatsStore } from './context/stats.js'
 import type { Root } from './ink.js'
@@ -20,9 +21,7 @@ import type { ValidationError } from './utils/settings/validation.js'
 
 // Type-only access to ResumeConversation's Props via the module type.
 // No runtime cost - erased at compile time.
-type ResumeConversationProps = React.ComponentProps<
-  typeof import('./screens/ResumeConversation.js').ResumeConversation
->
+type ResumeConversationProps = React.ComponentProps<typeof import('./screens/ResumeConversation.js').ResumeConversation>
 
 /**
  * Site ~3173: SnapshotUpdateDialog (agent memory snapshot update prompt).
@@ -36,10 +35,8 @@ export async function launchSnapshotUpdateDialog(
     snapshotTimestamp: string
   },
 ): Promise<'merge' | 'keep' | 'replace'> {
-  const { SnapshotUpdateDialog } = await import(
-    './components/agents/SnapshotUpdateDialog.js'
-  )
-  return showSetupDialog<'merge' | 'keep' | 'replace'>(root, done => (
+  const { SnapshotUpdateDialog } = await import('./components/agents/SnapshotUpdateDialog.js')
+  return showSetupDialog<'merge' | 'keep' | 'replace'>(root, (done) => (
     <SnapshotUpdateDialog
       agentType={props.agentType}
       scope={props.scope}
@@ -61,15 +58,9 @@ export async function launchInvalidSettingsDialog(
     onExit: () => void
   },
 ): Promise<void> {
-  const { InvalidSettingsDialog } = await import(
-    './components/InvalidSettingsDialog.js'
-  )
-  return showSetupDialog(root, done => (
-    <InvalidSettingsDialog
-      settingsErrors={props.settingsErrors}
-      onContinue={done}
-      onExit={props.onExit}
-    />
+  const { InvalidSettingsDialog } = await import('./components/InvalidSettingsDialog.js')
+  return showSetupDialog(root, (done) => (
+    <InvalidSettingsDialog settingsErrors={props.settingsErrors} onContinue={done} onExit={props.onExit} />
   ))
 }
 
@@ -81,15 +72,9 @@ export async function launchAssistantSessionChooser(
   root: Root,
   props: { sessions: AssistantSession[] },
 ): Promise<string | null> {
-  const { AssistantSessionChooser } = await import(
-    './assistant/AssistantSessionChooser.js'
-  )
-  return showSetupDialog<string | null>(root, done => (
-    <AssistantSessionChooser
-      sessions={props.sessions}
-      onSelect={id => done(id)}
-      onCancel={() => done(null)}
-    />
+  const { AssistantSessionChooser } = await import('./assistant/AssistantSessionChooser.js')
+  return showSetupDialog<string | null>(root, (done) => (
+    <AssistantSessionChooser sessions={props.sessions} onSelect={(id) => done(id)} onCancel={() => done(null)} />
   ))
 }
 
@@ -99,25 +84,19 @@ export async function launchAssistantSessionChooser(
  * success, null on cancel. Rejects on install failure so the caller can
  * distinguish errors from user cancellation.
  */
-export async function launchAssistantInstallWizard(
-  root: Root,
-): Promise<string | null> {
-  const { NewInstallWizard, computeDefaultInstallDir } = await import(
-    './commands/assistant/assistant.js'
-  )
+export async function launchAssistantInstallWizard(root: Root): Promise<string | null> {
+  const { NewInstallWizard, computeDefaultInstallDir } = await import('./commands/assistant/assistant.js')
   const defaultDir = await computeDefaultInstallDir()
   let rejectWithError: (reason: Error) => void
   const errorPromise = new Promise<never>((_, reject) => {
     rejectWithError = reject
   })
-  const resultPromise = showSetupDialog<string | null>(root, done => (
+  const resultPromise = showSetupDialog<string | null>(root, (done) => (
     <NewInstallWizard
       defaultDir={defaultDir}
-      onInstalled={dir => done(dir)}
+      onInstalled={(dir) => done(dir)}
       onCancel={() => done(null)}
-      onError={message =>
-        rejectWithError(new Error(`Installation failed: ${message}`))
-      }
+      onError={(message) => rejectWithError(new Error(`Installation failed: ${message}`))}
     />
   ))
   return Promise.race([resultPromise, errorPromise])
@@ -127,18 +106,10 @@ export async function launchAssistantInstallWizard(
  * Site ~4549: TeleportResumeWrapper (interactive teleport session picker).
  * Original callback wiring: onComplete={done}, onCancel={() => done(null)}, source="cliArg".
  */
-export async function launchTeleportResumeWrapper(
-  root: Root,
-): Promise<TeleportRemoteResponse | null> {
-  const { TeleportResumeWrapper } = await import(
-    './components/TeleportResumeWrapper.js'
-  )
-  return showSetupDialog<TeleportRemoteResponse | null>(root, done => (
-    <TeleportResumeWrapper
-      onComplete={done}
-      onCancel={() => done(null)}
-      source="cliArg"
-    />
+export async function launchTeleportResumeWrapper(root: Root): Promise<TeleportRemoteResponse | null> {
+  const { TeleportResumeWrapper } = await import('./components/TeleportResumeWrapper.js')
+  return showSetupDialog<TeleportRemoteResponse | null>(root, (done) => (
+    <TeleportResumeWrapper onComplete={done} onCancel={() => done(null)} source="cliArg" />
   ))
 }
 
@@ -153,10 +124,8 @@ export async function launchTeleportRepoMismatchDialog(
     initialPaths: string[]
   },
 ): Promise<string | null> {
-  const { TeleportRepoMismatchDialog } = await import(
-    './components/TeleportRepoMismatchDialog.js'
-  )
-  return showSetupDialog<string | null>(root, done => (
+  const { TeleportRepoMismatchDialog } = await import('./components/TeleportRepoMismatchDialog.js')
+  return showSetupDialog<string | null>(root, (done) => (
     <TeleportRepoMismatchDialog
       targetRepo={props.targetRepo}
       initialPaths={props.initialPaths}
@@ -188,11 +157,7 @@ export async function launchResumeChooser(
   ])
   await renderAndRun(
     root,
-    <App
-      getFpsMetrics={appProps.getFpsMetrics}
-      stats={appProps.stats}
-      initialState={appProps.initialState}
-    >
+    <App getFpsMetrics={appProps.getFpsMetrics} stats={appProps.stats} initialState={appProps.initialState}>
       <KeybindingSetup>
         <ResumeConversation {...resumeProps} worktreePaths={worktreePaths} />
       </KeybindingSetup>

@@ -1,4 +1,5 @@
 import { ColorDiff, ColorFile, getSyntaxTheme as nativeGetSyntaxTheme, type SyntaxTheme } from 'color-diff-napi'
+
 import { isEnvDefinedFalsy } from '../../utils/envUtils.js'
 
 export type ColorModuleUnavailableReason = 'env'

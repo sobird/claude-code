@@ -1,7 +1,4 @@
-import {
-  execFileNoThrowWithCwd,
-  execSyncWithDefaults_DEPRECATED,
-} from './execFileNoThrow.js'
+import { execFileNoThrowWithCwd, execSyncWithDefaults_DEPRECATED } from './execFileNoThrow.js'
 
 // This file contains platform-agnostic implementations of common `ps` type commands.
 // When adding new code to this file, make sure to handle:
@@ -33,10 +30,7 @@ export function isProcessRunning(pid: number): boolean {
  * @param maxDepth - Maximum number of ancestors to fetch (default: 10)
  * @returns Array of ancestor PIDs from immediate parent to furthest ancestor
  */
-export async function getAncestorPidsAsync(
-  pid: string | number,
-  maxDepth = 10,
-): Promise<number[]> {
+export async function getAncestorPidsAsync(pid: string | number, maxDepth = 10): Promise<number[]> {
   if (process.platform === 'win32') {
     // For Windows, use a PowerShell script that walks the process tree
     const script = `
@@ -51,11 +45,7 @@ export async function getAncestorPidsAsync(
       $ancestors -join ','
     `.trim()
 
-    const result = await execFileNoThrowWithCwd(
-      'powershell.exe',
-      ['-NoProfile', '-Command', script],
-      { timeout: 3000 },
-    )
+    const result = await execFileNoThrowWithCwd('powershell.exe', ['-NoProfile', '-Command', script], { timeout: 3000 })
     if (result.code !== 0 || !result.stdout?.trim()) {
       return []
     }
@@ -63,8 +53,8 @@ export async function getAncestorPidsAsync(
       .trim()
       .split(',')
       .filter(Boolean)
-      .map(p => parseInt(p, 10))
-      .filter(p => !isNaN(p))
+      .map((p) => parseInt(p, 10))
+      .filter((p) => !isNaN(p))
   }
 
   // For Unix, use a shell command that walks up the process tree
@@ -81,8 +71,8 @@ export async function getAncestorPidsAsync(
     .trim()
     .split('\n')
     .filter(Boolean)
-    .map(p => parseInt(p, 10))
-    .filter(p => !isNaN(p))
+    .map((p) => parseInt(p, 10))
+    .filter((p) => !isNaN(p))
 }
 
 /**
@@ -112,10 +102,7 @@ export function getProcessCommand(pid: string | number): string | null {
  * @param maxDepth - Maximum depth to traverse (default: 10)
  * @returns Array of command strings for the process chain
  */
-export async function getAncestorCommandsAsync(
-  pid: string | number,
-  maxDepth = 10,
-): Promise<string[]> {
+export async function getAncestorCommandsAsync(pid: string | number, maxDepth = 10): Promise<string[]> {
   if (process.platform === 'win32') {
     // For Windows, use a PowerShell script that walks the process tree and collects commands
     const script = `
@@ -131,11 +118,7 @@ export async function getAncestorCommandsAsync(
       $commands -join [char]0
     `.trim()
 
-    const result = await execFileNoThrowWithCwd(
-      'powershell.exe',
-      ['-NoProfile', '-Command', script],
-      { timeout: 3000 },
-    )
+    const result = await execFileNoThrowWithCwd('powershell.exe', ['-NoProfile', '-Command', script], { timeout: 3000 })
     if (result.code !== 0 || !result.stdout?.trim()) {
       return []
     }
@@ -176,8 +159,8 @@ export function getChildPids(pid: string | number): number[] {
       .trim()
       .split('\n')
       .filter(Boolean)
-      .map(p => parseInt(p, 10))
-      .filter(p => !isNaN(p))
+      .map((p) => parseInt(p, 10))
+      .filter((p) => !isNaN(p))
   } catch {
     return []
   }

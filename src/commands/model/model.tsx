@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 import * as React from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { ModelPicker } from '../../components/ModelPicker.js'
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from '../../constants/xml.js'
@@ -18,10 +19,7 @@ import {
   isFastModeSupportedByModel,
 } from '../../utils/fastMode.js'
 import { MODEL_ALIASES } from '../../utils/model/aliases.js'
-import {
-  checkOpus1mAccess,
-  checkSonnet1mAccess,
-} from '../../utils/model/check1mAccess.js'
+import { checkOpus1mAccess, checkSonnet1mAccess } from '../../utils/model/check1mAccess.js'
 import {
   getDefaultMainLoopModelSetting,
   isOpus1mMergeEnabled,
@@ -33,20 +31,16 @@ import { validateModel } from '../../utils/model/validateModel.js'
 function ModelPickerWrapper({
   onDone,
 }: {
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }): React.ReactNode {
-  const mainLoopModel = useAppState(s => s.mainLoopModel)
-  const mainLoopModelForSession = useAppState(s => s.mainLoopModelForSession)
-  const isFastMode = useAppState(s => s.fastMode)
+  const mainLoopModel = useAppState((s) => s.mainLoopModel)
+  const mainLoopModelForSession = useAppState((s) => s.mainLoopModelForSession)
+  const isFastMode = useAppState((s) => s.fastMode)
   const setAppState = useSetAppState()
 
   function handleCancel(): void {
     logEvent('tengu_model_command_menu', {
-      action:
-        'cancel' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      action: 'cancel' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     const displayModel = renderModelLabel(mainLoopModel)
     onDone(`Kept model as ${chalk.bold(displayModel)}`, {
@@ -54,19 +48,13 @@ function ModelPickerWrapper({
     })
   }
 
-  function handleSelect(
-    model: string | null,
-    effort: EffortLevel | undefined,
-  ): void {
+  function handleSelect(model: string | null, effort: EffortLevel | undefined): void {
     logEvent('tengu_model_command_menu', {
-      action:
-        model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      from_model:
-        mainLoopModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      to_model:
-        model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      action: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      from_model: mainLoopModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      to_model: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
       mainLoopModel: model,
       mainLoopModelForSession: null,
@@ -82,29 +70,19 @@ function ModelPickerWrapper({
     if (isFastModeEnabled()) {
       clearFastModeCooldown()
       if (!isFastModeSupportedByModel(model) && isFastMode) {
-        setAppState(prev => ({
+        setAppState((prev) => ({
           ...prev,
           fastMode: false,
         }))
         wasFastModeToggledOn = false
         // Do not update fast mode in settings since this is an automatic downgrade
-      } else if (
-        isFastModeSupportedByModel(model) &&
-        isFastModeAvailable() &&
-        isFastMode
-      ) {
+      } else if (isFastModeSupportedByModel(model) && isFastModeAvailable() && isFastMode) {
         message += ` · Fast mode ON`
         wasFastModeToggledOn = true
       }
     }
 
-    if (
-      isBilledAsExtraUsage(
-        model,
-        wasFastModeToggledOn === true,
-        isOpus1mMergeEnabled(),
-      )
-    ) {
+    if (isBilledAsExtraUsage(model, wasFastModeToggledOn === true, isOpus1mMergeEnabled())) {
       message += ` · Billed as extra usage`
     }
 
@@ -124,10 +102,7 @@ function ModelPickerWrapper({
       onCancel={handleCancel}
       isStandaloneCommand
       showFastModeNotice={
-        isFastModeEnabled() &&
-        isFastMode &&
-        isFastModeSupportedByModel(mainLoopModel) &&
-        isFastModeAvailable()
+        isFastModeEnabled() && isFastMode && isFastModeSupportedByModel(mainLoopModel) && isFastModeAvailable()
       }
     />
   )
@@ -138,22 +113,16 @@ function SetModelAndClose({
   onDone,
 }: {
   args: string
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }): React.ReactNode {
-  const isFastMode = useAppState(s => s.fastMode)
+  const isFastMode = useAppState((s) => s.fastMode)
   const setAppState = useSetAppState()
   const model = args === 'default' ? null : args
 
   React.useEffect(() => {
     async function handleModelChange(): Promise<void> {
       if (model && !isModelAllowed(model)) {
-        onDone(
-          `Model '${model}' is not available. Your organization restricts model selection.`,
-          { display: 'system' },
-        )
+        onDone(`Model '${model}' is not available. Your organization restricts model selection.`, { display: 'system' })
         return
       }
 
@@ -207,7 +176,7 @@ function SetModelAndClose({
     }
 
     function setModel(modelValue: string | null): void {
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
         mainLoopModel: modelValue,
         mainLoopModelForSession: null,
@@ -218,7 +187,7 @@ function SetModelAndClose({
       if (isFastModeEnabled()) {
         clearFastModeCooldown()
         if (!isFastModeSupportedByModel(modelValue) && isFastMode) {
-          setAppState(prev => ({
+          setAppState((prev) => ({
             ...prev,
             fastMode: false,
           }))
@@ -230,13 +199,7 @@ function SetModelAndClose({
         }
       }
 
-      if (
-        isBilledAsExtraUsage(
-          modelValue,
-          wasFastModeToggledOn === true,
-          isOpus1mMergeEnabled(),
-        )
-      ) {
+      if (isBilledAsExtraUsage(modelValue, wasFastModeToggledOn === true, isOpus1mMergeEnabled())) {
         message += ` · Billed as extra usage`
       }
 
@@ -255,42 +218,27 @@ function SetModelAndClose({
 }
 
 function isKnownAlias(model: string): boolean {
-  return (MODEL_ALIASES as readonly string[]).includes(
-    model.toLowerCase().trim(),
-  )
+  return (MODEL_ALIASES as readonly string[]).includes(model.toLowerCase().trim())
 }
 
 function isOpus1mUnavailable(model: string): boolean {
   const m = model.toLowerCase()
-  return (
-    !checkOpus1mAccess() &&
-    !isOpus1mMergeEnabled() &&
-    m.includes('opus') &&
-    m.includes('[1m]')
-  )
+  return !checkOpus1mAccess() && !isOpus1mMergeEnabled() && m.includes('opus') && m.includes('[1m]')
 }
 
 function isSonnet1mUnavailable(model: string): boolean {
   const m = model.toLowerCase()
   // Warn about Sonnet and Sonnet 4.6, but not Sonnet 4.5 since that had
   // a different access criteria.
-  return (
-    !checkSonnet1mAccess() &&
-    (m.includes('sonnet[1m]') || m.includes('sonnet-4-6[1m]'))
-  )
+  return !checkSonnet1mAccess() && (m.includes('sonnet[1m]') || m.includes('sonnet-4-6[1m]'))
 }
 
-function ShowModelAndClose({
-  onDone,
-}: {
-  onDone: (result?: string) => void
-}): React.ReactNode {
-  const mainLoopModel = useAppState(s => s.mainLoopModel)
-  const mainLoopModelForSession = useAppState(s => s.mainLoopModelForSession)
-  const effortValue = useAppState(s => s.effortValue)
+function ShowModelAndClose({ onDone }: { onDone: (result?: string) => void }): React.ReactNode {
+  const mainLoopModel = useAppState((s) => s.mainLoopModel)
+  const mainLoopModelForSession = useAppState((s) => s.mainLoopModelForSession)
+  const effortValue = useAppState((s) => s.effortValue)
   const displayModel = renderModelLabel(mainLoopModel)
-  const effortInfo =
-    effortValue !== undefined ? ` (effort: ${effortValue})` : ''
+  const effortInfo = effortValue !== undefined ? ` (effort: ${effortValue})` : ''
 
   if (mainLoopModelForSession) {
     onDone(
@@ -312,10 +260,9 @@ export const call: LocalJSXCommandCall = async (onDone, _context, args) => {
     return <ShowModelAndClose onDone={onDone} />
   }
   if (COMMON_HELP_ARGS.includes(args)) {
-    onDone(
-      'Run /model to open the model selection menu, or /model [modelName] to set the model.',
-      { display: 'system' },
-    )
+    onDone('Run /model to open the model selection menu, or /model [modelName] to set the model.', {
+      display: 'system',
+    })
     return
   }
 
@@ -330,8 +277,6 @@ export const call: LocalJSXCommandCall = async (onDone, _context, args) => {
 }
 
 function renderModelLabel(model: string | null): string {
-  const rendered = renderDefaultModelSetting(
-    model ?? getDefaultMainLoopModelSetting(),
-  )
+  const rendered = renderDefaultModelSetting(model ?? getDefaultMainLoopModelSetting())
   return model === null ? `${rendered} (default)` : rendered
 }

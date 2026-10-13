@@ -1,6 +1,7 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
 import { extractTag } from 'src/utils/messages.js'
+
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js'
 import { FilePathLink } from '../../components/FilePathLink.js'
 import { MessageResponse } from '../../components/MessageResponse.js'
@@ -21,11 +22,7 @@ function getAgentOutputTaskId(filePath: string): string | null {
   if (filePath.startsWith(prefix) && filePath.endsWith(suffix)) {
     const taskId = filePath.slice(prefix.length, -suffix.length)
     // Validate it looks like a task ID (alphanumeric, reasonable length)
-    if (
-      taskId.length > 0 &&
-      taskId.length <= 20 &&
-      /^[a-zA-Z0-9_-]+$/.test(taskId)
-    ) {
+    if (taskId.length > 0 && taskId.length <= 20 && /^[a-zA-Z0-9_-]+$/.test(taskId)) {
       return taskId
     }
   }
@@ -57,9 +54,7 @@ export function renderToolUseMessage(
   }
   if (verbose && (offset || limit)) {
     const startLine = offset ?? 1
-    const lineRange = limit
-      ? `lines ${startLine}-${startLine + limit - 1}`
-      : `from line ${startLine}`
+    const lineRange = limit ? `lines ${startLine}-${startLine + limit - 1}` : `from line ${startLine}`
     return (
       <>
         <FilePathLink filePath={file_path}>{displayPath}</FilePathLink>
@@ -70,9 +65,7 @@ export function renderToolUseMessage(
   return <FilePathLink filePath={file_path}>{displayPath}</FilePathLink>
 }
 
-export function renderToolUseTag({
-  file_path,
-}: Partial<Input>): React.ReactNode {
+export function renderToolUseTag({ file_path }: Partial<Input>): React.ReactNode {
   const agentTaskId = file_path ? getAgentOutputTaskId(file_path) : null
 
   // Show agent task ID for Read tool when reading agent output
@@ -122,8 +115,7 @@ export function renderToolResultMessage(output: Output): React.ReactNode {
       return (
         <MessageResponse height={1}>
           <Text>
-            Read <Text bold>{output.file.count}</Text>{' '}
-            {output.file.count === 1 ? 'page' : 'pages'} (
+            Read <Text bold>{output.file.count}</Text> {output.file.count === 1 ? 'page' : 'pages'} (
             {formatFileSize(output.file.originalSize)})
           </Text>
         </MessageResponse>
@@ -135,8 +127,7 @@ export function renderToolResultMessage(output: Output): React.ReactNode {
       return (
         <MessageResponse height={1}>
           <Text>
-            Read <Text bold>{numLines}</Text>{' '}
-            {numLines === 1 ? 'line' : 'lines'}
+            Read <Text bold>{numLines}</Text> {numLines === 1 ? 'line' : 'lines'}
           </Text>
         </MessageResponse>
       )
@@ -186,9 +177,7 @@ export function userFacingName(input: Partial<Input> | undefined): string {
   return 'Read'
 }
 
-export function getToolUseSummary(
-  input: Partial<Input> | undefined,
-): string | null {
+export function getToolUseSummary(input: Partial<Input> | undefined): string | null {
   if (!input?.file_path) {
     return null
   }

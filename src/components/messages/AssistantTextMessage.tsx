@@ -2,6 +2,7 @@ import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import React, { useContext } from 'react'
 import { ERROR_MESSAGE_USER_ABORT } from 'src/services/compact/compact.js'
 import { isRateLimitErrorMessage } from 'src/services/rateLimitMessages.js'
+
 import { BLACK_CIRCLE } from '../../constants/figures.js'
 import { Box, NoSelect, Text } from '../../ink.js'
 import {
@@ -17,21 +18,15 @@ import {
   startsWithApiErrorPrefix,
   TOKEN_REVOKED_ERROR_MESSAGE,
 } from '../../services/api/errors.js'
-import {
-  isEmptyMessageText,
-  NO_RESPONSE_REQUESTED,
-} from '../../utils/messages.js'
+import { isEmptyMessageText, NO_RESPONSE_REQUESTED } from '../../utils/messages.js'
 import { getUpgradeMessage } from '../../utils/model/contextWindowUpgradeCheck.js'
-import {
-  getDefaultSonnetModel,
-  renderModelName,
-} from '../../utils/model/model.js'
+import { getDefaultSonnetModel, renderModelName } from '../../utils/model/model.js'
 import { isMacOsKeychainLocked } from '../../utils/secureStorage/macOsKeychainStorage.js'
 import { CtrlOToExpand } from '../CtrlOToExpand.js'
 import { InterruptedByUser } from '../InterruptedByUser.js'
 import { Markdown } from '../Markdown.js'
-import { MessageResponse } from '../MessageResponse.js'
 import { MessageActionsSelectedContext } from '../messageActions.js'
+import { MessageResponse } from '../MessageResponse.js'
 import { RateLimitMessage } from './RateLimitMessage.js'
 
 const MAX_API_ERROR_CHARS = 1000
@@ -52,11 +47,7 @@ function InvalidApiKeyMessage(): React.ReactNode {
     <MessageResponse>
       <Box flexDirection="column">
         <Text color="error">{INVALID_API_KEY_ERROR_MESSAGE}</Text>
-        {isKeychainLocked && (
-          <Text dimColor>
-            · Run in another terminal: security unlock-keychain
-          </Text>
-        )}
+        {isKeychainLocked && <Text dimColor>· Run in another terminal: security unlock-keychain</Text>}
       </Box>
     </MessageResponse>
   )
@@ -77,12 +68,7 @@ export function AssistantTextMessage({
   // Handle all rate limit error messages from getRateLimitErrorMessage
   // Use the exported function to avoid fragile string coupling
   if (isRateLimitErrorMessage(text)) {
-    return (
-      <RateLimitMessage
-        text={text}
-        onOpenRateLimitOptions={onOpenRateLimitOptions}
-      />
-    )
+    return <RateLimitMessage text={text} onOpenRateLimitOptions={onOpenRateLimitOptions} />
   }
 
   switch (text) {
@@ -107,8 +93,7 @@ export function AssistantTextMessage({
       return (
         <MessageResponse height={1}>
           <Text color="error">
-            Credit balance too low &middot; Add funds:
-            https://platform.claude.com/settings/billing
+            Credit balance too low &middot; Add funds: https://platform.claude.com/settings/billing
           </Text>
         </MessageResponse>
       )
@@ -143,13 +128,7 @@ export function AssistantTextMessage({
         <MessageResponse height={1}>
           <Text color="error">
             {API_TIMEOUT_ERROR_MESSAGE}
-            {process.env.API_TIMEOUT_MS && (
-              <>
-                {' '}
-                (API_TIMEOUT_MS={process.env.API_TIMEOUT_MS}ms, try increasing
-                it)
-              </>
-            )}
+            {process.env.API_TIMEOUT_MS && <> (API_TIMEOUT_MS={process.env.API_TIMEOUT_MS}ms, try increasing it)</>}
           </Text>
         </MessageResponse>
       )
@@ -158,12 +137,10 @@ export function AssistantTextMessage({
       return (
         <MessageResponse>
           <Box flexDirection="column" gap={1}>
-            <Text color="error">
-              We are experiencing high demand for Opus 4.
-            </Text>
+            <Text color="error">We are experiencing high demand for Opus 4.</Text>
             <Text>
-              To continue immediately, use /model to switch to{' '}
-              {renderModelName(getDefaultSonnetModel())} and continue coding.
+              To continue immediately, use /model to switch to {renderModelName(getDefaultSonnetModel())} and continue
+              coding.
             </Text>
           </Box>
         </MessageResponse>
@@ -207,9 +184,7 @@ export function AssistantTextMessage({
           <Box flexDirection="row">
             {shouldShowDot && (
               <NoSelect fromLeftEdge minWidth={2}>
-                <Text color={isSelected ? 'suggestion' : 'text'}>
-                  {BLACK_CIRCLE}
-                </Text>
+                <Text color={isSelected ? 'suggestion' : 'text'}>{BLACK_CIRCLE}</Text>
               </NoSelect>
             )}
             <Box flexDirection="column">

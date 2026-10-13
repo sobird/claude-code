@@ -7,6 +7,7 @@ import { NOTEBOOK_EDIT_TOOL_NAME } from 'src/tools/NotebookEditTool/constants.js
 import { WEB_FETCH_TOOL_NAME } from 'src/tools/WebFetchTool/prompt.js'
 import { WEB_SEARCH_TOOL_NAME } from 'src/tools/WebSearchTool/prompt.js'
 import { SHELL_TOOL_NAMES } from 'src/utils/shell/shellToolUtils.js'
+
 import { isEnvTruthy } from '../../utils/envUtils.js'
 
 // docs: https://docs.google.com/document/d/1oCT4evvWTh3P6z-kcfNQwWTCxAhkoFndSaNS9Gm40uw/edit?tab=t.0
@@ -25,11 +26,7 @@ const TOOLS_CLEARABLE_RESULTS = [
   WEB_SEARCH_TOOL_NAME,
 ]
 
-const TOOLS_CLEARABLE_USES = [
-  FILE_EDIT_TOOL_NAME,
-  FILE_WRITE_TOOL_NAME,
-  NOTEBOOK_EDIT_TOOL_NAME,
-]
+const TOOLS_CLEARABLE_USES = [FILE_EDIT_TOOL_NAME, FILE_WRITE_TOOL_NAME, NOTEBOOK_EDIT_TOOL_NAME]
 
 // Context management strategy types matching API documentation
 export type ContextEditStrategy =
@@ -66,11 +63,7 @@ export function getAPIContextManagement(options?: {
   isRedactThinkingActive?: boolean
   clearAllThinking?: boolean
 }): ContextManagementConfig | undefined {
-  const {
-    hasThinking = false,
-    isRedactThinkingActive = false,
-    clearAllThinking = false,
-  } = options ?? {}
+  const { hasThinking = false, isRedactThinkingActive = false, clearAllThinking = false } = options ?? {}
 
   const strategies: ContextEditStrategy[] = []
 
@@ -91,9 +84,7 @@ export function getAPIContextManagement(options?: {
     return strategies.length > 0 ? { edits: strategies } : undefined
   }
 
-  const useClearToolResults = isEnvTruthy(
-    process.env.USE_API_CLEAR_TOOL_RESULTS,
-  )
+  const useClearToolResults = isEnvTruthy(process.env.USE_API_CLEAR_TOOL_RESULTS)
   const useClearToolUses = isEnvTruthy(process.env.USE_API_CLEAR_TOOL_USES)
 
   // If no tool clearing strategy is enabled, return early

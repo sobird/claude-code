@@ -17,9 +17,7 @@ import type {
  * Check if the MCP server config comes from project settings (projectSettings or localSettings)
  * This is important for security checks
  */
-function isMcpServerFromProjectOrLocalSettings(
-  config: ScopedMcpServerConfig,
-): boolean {
+function isMcpServerFromProjectOrLocalSettings(config: ScopedMcpServerConfig): boolean {
   return config.scope === 'project' || config.scope === 'local'
 }
 
@@ -70,18 +68,12 @@ export async function getMcpHeadersFromHelper(
       },
     })
     if (execResult.code !== 0 || !execResult.stdout) {
-      throw new Error(
-        `headersHelper for MCP server '${serverName}' did not return a valid value`,
-      )
+      throw new Error(`headersHelper for MCP server '${serverName}' did not return a valid value`)
     }
     const result = execResult.stdout.trim()
 
     const headers = jsonParse(result)
-    if (
-      typeof headers !== 'object' ||
-      headers === null ||
-      Array.isArray(headers)
-    ) {
+    if (typeof headers !== 'object' || headers === null || Array.isArray(headers)) {
       throw new Error(
         `headersHelper for MCP server '${serverName}' must return a JSON object with string key-value pairs`,
       )
@@ -96,20 +88,12 @@ export async function getMcpHeadersFromHelper(
       }
     }
 
-    logMCPDebug(
-      serverName,
-      `Successfully retrieved ${Object.keys(headers).length} headers from headersHelper`,
-    )
+    logMCPDebug(serverName, `Successfully retrieved ${Object.keys(headers).length} headers from headersHelper`)
     return headers as Record<string, string>
   } catch (error) {
-    logMCPError(
-      serverName,
-      `Error getting headers from headersHelper: ${errorMessage(error)}`,
-    )
+    logMCPError(serverName, `Error getting headers from headersHelper: ${errorMessage(error)}`)
     logError(
-      new Error(
-        `Error getting MCP headers from headersHelper for server '${serverName}': ${errorMessage(error)}`,
-      ),
+      new Error(`Error getting MCP headers from headersHelper for server '${serverName}': ${errorMessage(error)}`),
     )
     // Return null instead of throwing to avoid blocking the connection
     return null
@@ -127,8 +111,7 @@ export async function getMcpServerHeaders(
   config: McpSSEServerConfig | McpHTTPServerConfig | McpWebSocketServerConfig,
 ): Promise<Record<string, string>> {
   const staticHeaders = config.headers || {}
-  const dynamicHeaders =
-    (await getMcpHeadersFromHelper(serverName, config)) || {}
+  const dynamicHeaders = (await getMcpHeadersFromHelper(serverName, config)) || {}
 
   // Dynamic headers override static headers if both are present
   return {

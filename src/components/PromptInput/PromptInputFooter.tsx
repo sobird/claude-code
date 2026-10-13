@@ -1,6 +1,8 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
 import { memo, type ReactNode, useMemo, useRef } from 'react'
+
 import { isBridgeEnabled } from '../../bridge/bridgeEnabled.js'
 import { getBridgeStatus } from '../../bridge/bridgeStatusUtil.js'
 import { useSetPromptOverlay } from '../../context/promptOverlayContext.js'
@@ -17,21 +19,11 @@ import type { PromptInputMode, VimMode } from '../../types/textInputTypes.js'
 import type { AutoUpdaterResult } from '../../utils/autoUpdater.js'
 import { isFullscreenEnvEnabled } from '../../utils/fullscreen.js'
 import { isUndercover } from '../../utils/undercover.js'
-import {
-  CoordinatorTaskPanel,
-  useCoordinatorTaskCount,
-} from '../CoordinatorAgentStatus.js'
-import {
-  getLastAssistantMessageId,
-  StatusLine,
-  statusLineShouldDisplay,
-} from '../StatusLine.js'
+import { CoordinatorTaskPanel, useCoordinatorTaskCount } from '../CoordinatorAgentStatus.js'
+import { getLastAssistantMessageId, StatusLine, statusLineShouldDisplay } from '../StatusLine.js'
 import { Notifications } from './Notifications.js'
 import { PromptInputFooterLeftSide } from './PromptInputFooterLeftSide.js'
-import {
-  PromptInputFooterSuggestions,
-  type SuggestionItem,
-} from './PromptInputFooterSuggestions.js'
+import { PromptInputFooterSuggestions, type SuggestionItem } from './PromptInputFooterSuggestions.js'
 import { PromptInputHelpMenu } from './PromptInputHelpMenu.js'
 
 type Props = {
@@ -110,10 +102,7 @@ function PromptInputFooter({
   const { columns, rows } = useTerminalSize()
   const messagesRef = useRef(messages)
   messagesRef.current = messages
-  const lastAssistantMessageId = useMemo(
-    () => getLastAssistantMessageId(messages),
-    [messages],
-  )
+  const lastAssistantMessageId = useMemo(() => getLastAssistantMessageId(messages), [messages])
   const isNarrow = columns < 80
   // In fullscreen the bottom slot is flexShrink:0, so every row here is a row
   // stolen from the ScrollBox. Drop the optional StatusLine first. Non-fullscreen
@@ -127,19 +116,14 @@ function PromptInputFooter({
   // coordinatorTaskCount === 0 covers the bash-only case (no agent rows
   // exist, pill is the only selectable item).
   const coordinatorTaskCount = useCoordinatorTaskCount()
-  const coordinatorTaskIndex = useAppState(s => s.coordinatorTaskIndex)
-  const pillSelected =
-    tasksSelected && (coordinatorTaskCount === 0 || coordinatorTaskIndex < 0)
+  const coordinatorTaskIndex = useAppState((s) => s.coordinatorTaskIndex)
+  const pillSelected = tasksSelected && (coordinatorTaskCount === 0 || coordinatorTaskIndex < 0)
 
   // Hide `? for shortcuts` if the user has a custom status line, or during ctrl-r
-  const suppressHint =
-    suppressHintFromProps || statusLineShouldDisplay(settings) || isSearching
+  const suppressHint = suppressHintFromProps || statusLineShouldDisplay(settings) || isSearching
   // Fullscreen: portal data to FullscreenLayout — see promptOverlayContext.tsx
   const overlayData = useMemo(
-    () =>
-      isFullscreen && suggestions.length
-        ? { suggestions, selectedSuggestion, maxColumnWidth }
-        : null,
+    () => (isFullscreen && suggestions.length ? { suggestions, selectedSuggestion, maxColumnWidth } : null),
     [isFullscreen, suggestions, selectedSuggestion, maxColumnWidth],
   )
   useSetPromptOverlay(overlayData)
@@ -157,9 +141,7 @@ function PromptInputFooter({
   }
 
   if (helpOpen) {
-    return (
-      <PromptInputHelpMenu dimColor={true} fixedWidth={true} paddingX={2} />
-    )
+    return <PromptInputHelpMenu dimColor={true} fixedWidth={true} paddingX={2} />
   }
 
   return (
@@ -171,17 +153,9 @@ function PromptInputFooter({
         gap={isNarrow ? 0 : 1}
       >
         <Box flexDirection="column" flexShrink={isNarrow ? 0 : 1}>
-          {mode === 'prompt' &&
-            !isShort &&
-            !exitMessage.show &&
-            !isPasting &&
-            statusLineShouldDisplay(settings) && (
-              <StatusLine
-                messagesRef={messagesRef}
-                lastAssistantMessageId={lastAssistantMessageId}
-                vimMode={vimMode}
-              />
-            )}
+          {mode === 'prompt' && !isShort && !exitMessage.show && !isPasting && statusLineShouldDisplay(settings) && (
+            <StatusLine messagesRef={messagesRef} lastAssistantMessageId={lastAssistantMessageId} vimMode={vimMode} />
+          )}
           <PromptInputFooterLeftSide
             exitMessage={exitMessage}
             vimMode={vimMode}
@@ -218,9 +192,7 @@ function PromptInputFooter({
               isNarrow={isNarrow}
             />
           )}
-          {process.env.USER_TYPE === 'ant' && isUndercover() && (
-            <Text dimColor>undercover</Text>
-          )}
+          {process.env.USER_TYPE === 'ant' && isUndercover() && <Text dimColor>undercover</Text>}
           <BridgeStatusIndicator bridgeSelected={bridgeSelected} />
         </Box>
       </Box>
@@ -235,21 +207,19 @@ type BridgeStatusProps = {
   bridgeSelected: boolean
 }
 
-function BridgeStatusIndicator({
-  bridgeSelected,
-}: BridgeStatusProps): React.ReactNode {
+function BridgeStatusIndicator({ bridgeSelected }: BridgeStatusProps): React.ReactNode {
   if (!feature('BRIDGE_MODE')) return null
 
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  const enabled = useAppState(s => s.replBridgeEnabled)
+  const enabled = useAppState((s) => s.replBridgeEnabled)
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  const connected = useAppState(s => s.replBridgeConnected)
+  const connected = useAppState((s) => s.replBridgeConnected)
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  const sessionActive = useAppState(s => s.replBridgeSessionActive)
+  const sessionActive = useAppState((s) => s.replBridgeSessionActive)
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  const reconnecting = useAppState(s => s.replBridgeReconnecting)
+  const reconnecting = useAppState((s) => s.replBridgeReconnecting)
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  const explicit = useAppState(s => s.replBridgeExplicit)
+  const explicit = useAppState((s) => s.replBridgeExplicit)
 
   // Failed state is surfaced via notification (useReplBridge), not a footer pill.
   if (!isBridgeEnabled() || !enabled) return null
@@ -267,11 +237,7 @@ function BridgeStatusIndicator({
   }
 
   return (
-    <Text
-      color={bridgeSelected ? 'background' : status.color}
-      inverse={bridgeSelected}
-      wrap="truncate"
-    >
+    <Text color={bridgeSelected ? 'background' : status.color} inverse={bridgeSelected} wrap="truncate">
       {status.label}
       {bridgeSelected && <Text dimColor> · Enter to view</Text>}
     </Text>

@@ -1,11 +1,9 @@
 import React, { type ReactNode } from 'react'
+
 import { Box } from '../../../../ink.js'
 import { useKeybinding } from '../../../../keybindings/useKeybinding.js'
 import { isAutoMemoryEnabled } from '../../../../memdir/paths.js'
-import {
-  type AgentMemoryScope,
-  loadAgentMemoryPrompt,
-} from '../../../../tools/AgentTool/agentMemory.js'
+import { type AgentMemoryScope, loadAgentMemoryPrompt } from '../../../../tools/AgentTool/agentMemory.js'
 import { ConfigurableShortcutHint } from '../../../ConfigurableShortcutHint.js'
 import { Select } from '../../../CustomSelect/select.js'
 import { Byline } from '../../../design-system/Byline.js'
@@ -20,8 +18,7 @@ type MemoryOption = {
 }
 
 export function MemoryStep(): ReactNode {
-  const { goNext, goBack, updateWizardData, wizardData } =
-    useWizard<AgentWizardData>()
+  const { goNext, goBack, updateWizardData, wizardData } = useWizard<AgentWizardData>()
 
   useKeybinding('confirm:no', goBack, { context: 'Confirmation' })
 
@@ -62,10 +59,7 @@ export function MemoryStep(): ReactNode {
             memory,
             getSystemPrompt:
               isAutoMemoryEnabled() && memory && agentType
-                ? () =>
-                    wizardData.systemPrompt! +
-                    '\n\n' +
-                    loadAgentMemoryPrompt(agentType, memory)
+                ? () => wizardData.systemPrompt! + '\n\n' + loadAgentMemoryPrompt(agentType, memory)
                 : () => wizardData.systemPrompt!,
           }
         : undefined,
@@ -80,22 +74,12 @@ export function MemoryStep(): ReactNode {
         <Byline>
           <KeyboardShortcutHint shortcut="↑↓" action="navigate" />
           <KeyboardShortcutHint shortcut="Enter" action="select" />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="go back"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="go back" />
         </Byline>
       }
     >
       <Box>
-        <Select
-          key="memory-select"
-          options={memoryOptions}
-          onChange={handleSelect}
-          onCancel={goBack}
-        />
+        <Select key="memory-select" options={memoryOptions} onChange={handleSelect} onCancel={goBack} />
       </Box>
     </WizardDialogLayout>
   )

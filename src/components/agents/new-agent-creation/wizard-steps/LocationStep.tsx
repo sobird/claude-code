@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react'
+
 import { Box } from '../../../../ink.js'
 import type { SettingSource } from '../../../../utils/settings/constants.js'
 import { ConfigurableShortcutHint } from '../../../ConfigurableShortcutHint.js'
@@ -30,12 +31,7 @@ export function LocationStep(): ReactNode {
         <Byline>
           <KeyboardShortcutHint shortcut="↑↓" action="navigate" />
           <KeyboardShortcutHint shortcut="Enter" action="select" />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="cancel"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
         </Byline>
       }
     >

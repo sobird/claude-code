@@ -1,13 +1,7 @@
 import type { Cursor } from './cursor.js'
 import type { Size } from './layout/geometry.js'
 import type { ScrollHint } from './render-node-to-output.js'
-import {
-  type CharPool,
-  createScreen,
-  type HyperlinkPool,
-  type Screen,
-  type StylePool,
-} from './screen.js'
+import { type CharPool, createScreen, type HyperlinkPool, type Screen, type StylePool } from './screen.js'
 
 export type Frame = {
   readonly screen: Screen
@@ -102,20 +96,15 @@ export type Diff = Patch[]
  * 2. Current frame screen height exceeds available terminal rows → 'offscreen'
  * 3. Previous frame screen height exceeded available terminal rows → 'offscreen'
  */
-export function shouldClearScreen(
-  prevFrame: Frame,
-  frame: Frame,
-): FlickerReason | undefined {
+export function shouldClearScreen(prevFrame: Frame, frame: Frame): FlickerReason | undefined {
   const didResize =
-    frame.viewport.height !== prevFrame.viewport.height ||
-    frame.viewport.width !== prevFrame.viewport.width
+    frame.viewport.height !== prevFrame.viewport.height || frame.viewport.width !== prevFrame.viewport.width
   if (didResize) {
     return 'resize'
   }
 
   const currentFrameOverflows = frame.screen.height >= frame.viewport.height
-  const previousFrameOverflowed =
-    prevFrame.screen.height >= prevFrame.viewport.height
+  const previousFrameOverflowed = prevFrame.screen.height >= prevFrame.viewport.height
   if (currentFrameOverflows || previousFrameOverflowed) {
     return 'offscreen'
   }

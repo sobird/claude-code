@@ -1,5 +1,6 @@
-import { LRUCache } from 'lru-cache'
 import { basename, dirname, join, sep } from 'path'
+
+import { LRUCache } from 'lru-cache'
 import type { SuggestionItem } from 'src/components/PromptInput/PromptInputFooterSuggestions.js'
 import { getCwd } from 'src/utils/cwd.js'
 import { getFsImplementation } from 'src/utils/fsOperations.js'
@@ -52,10 +53,7 @@ const pathCache = new LRUCache<string, PathEntry[]>({
 /**
  * Parses a partial path into directory and prefix components
  */
-export function parsePartialPath(
-  partialPath: string,
-  basePath?: string,
-): ParsedPath {
+export function parsePartialPath(partialPath: string, basePath?: string): ParsedPath {
   // Handle empty input
   if (!partialPath) {
     const directory = basePath || getCwd()
@@ -81,9 +79,7 @@ export function parsePartialPath(
  * Scans a directory and returns subdirectories
  * Uses LRU cache to avoid repeated filesystem calls
  */
-export async function scanDirectory(
-  dirPath: string,
-): Promise<DirectoryEntry[]> {
+export async function scanDirectory(dirPath: string): Promise<DirectoryEntry[]> {
   // Check cache first
   const cached = directoryCache.get(dirPath)
   if (cached) {
@@ -97,8 +93,8 @@ export async function scanDirectory(
 
     // Filter for directories only, exclude hidden directories
     const directories = entries
-      .filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))
-      .map(entry => ({
+      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
+      .map((entry) => ({
         name: entry.name,
         path: join(dirPath, entry.name),
         type: 'directory' as const,
@@ -127,11 +123,9 @@ export async function getDirectoryCompletions(
   const { directory, prefix } = parsePartialPath(partialPath, basePath)
   const entries = await scanDirectory(directory)
   const prefixLower = prefix.toLowerCase()
-  const matches = entries
-    .filter(entry => entry.name.toLowerCase().startsWith(prefixLower))
-    .slice(0, maxResults)
+  const matches = entries.filter((entry) => entry.name.toLowerCase().startsWith(prefixLower)).slice(0, maxResults)
 
-  return matches.map(entry => ({
+  return matches.map((entry) => ({
     id: entry.path,
     displayText: entry.name + '/',
     description: 'directory',
@@ -165,10 +159,7 @@ export function isPathLikeToken(token: string): boolean {
  * Scans a directory and returns both files and subdirectories
  * Uses LRU cache to avoid repeated filesystem calls
  */
-export async function scanDirectoryForPaths(
-  dirPath: string,
-  includeHidden = false,
-): Promise<PathEntry[]> {
+export async function scanDirectoryForPaths(dirPath: string, includeHidden = false): Promise<PathEntry[]> {
   const cacheKey = `${dirPath}:${includeHidden}`
   const cached = pathCache.get(cacheKey)
   if (cached) {
@@ -180,8 +171,8 @@ export async function scanDirectoryForPaths(
     const entries = await fs.readdir(dirPath)
 
     const paths = entries
-      .filter(entry => includeHidden || !entry.name.startsWith('.'))
-      .map(entry => ({
+      .filter((entry) => includeHidden || !entry.name.startsWith('.'))
+      .map((entry) => ({
         name: entry.name,
         path: join(dirPath, entry.name),
         type: entry.isDirectory() ? ('directory' as const) : ('file' as const),
@@ -209,19 +200,14 @@ export async function getPathCompletions(
   partialPath: string,
   options: PathCompletionOptions = {},
 ): Promise<SuggestionItem[]> {
-  const {
-    basePath = getCwd(),
-    maxResults = 10,
-    includeFiles = true,
-    includeHidden = false,
-  } = options
+  const { basePath = getCwd(), maxResults = 10, includeFiles = true, includeHidden = false } = options
 
   const { directory, prefix } = parsePartialPath(partialPath, basePath)
   const entries = await scanDirectoryForPaths(directory, includeHidden)
   const prefixLower = prefix.toLowerCase()
 
   const matches = entries
-    .filter(entry => {
+    .filter((entry) => {
       if (!includeFiles && entry.type === 'file') return false
       return entry.name.toLowerCase().startsWith(prefixLower)
     })
@@ -244,7 +230,7 @@ export async function getPathCompletions(
     dirPortion = dirPortion.slice(2)
   }
 
-  return matches.map(entry => {
+  return matches.map((entry) => {
     const fullPath = dirPortion + entry.name
     return {
       id: fullPath,

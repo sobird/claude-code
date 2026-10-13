@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { stringWidth } from '../../ink/stringWidth.js'
+
 import { Box, Text } from '../../ink.js'
+import { stringWidth } from '../../ink/stringWidth.js'
 import { truncate } from '../../utils/format.js'
 
 export type FeedLine = {
@@ -32,16 +33,11 @@ export function calculateFeedWidth(config: FeedConfig): number {
     maxWidth = Math.max(maxWidth, stringWidth(emptyMessage))
   } else {
     const gap = '  '
-    const maxTimestampWidth = Math.max(
-      0,
-      ...lines.map(line => (line.timestamp ? stringWidth(line.timestamp) : 0)),
-    )
+    const maxTimestampWidth = Math.max(0, ...lines.map((line) => (line.timestamp ? stringWidth(line.timestamp) : 0)))
 
     for (const line of lines) {
       const timestampWidth = maxTimestampWidth > 0 ? maxTimestampWidth : 0
-      const lineWidth =
-        stringWidth(line.text) +
-        (timestampWidth > 0 ? timestampWidth + gap.length : 0)
+      const lineWidth = stringWidth(line.text) + (timestampWidth > 0 ? timestampWidth + gap.length : 0)
       maxWidth = Math.max(maxWidth, lineWidth)
     }
   }
@@ -57,10 +53,7 @@ export function Feed({ config, actualWidth }: FeedProps): React.ReactNode {
   const { title, lines, footer, emptyMessage, customContent } = config
 
   const gap = '  '
-  const maxTimestampWidth = Math.max(
-    0,
-    ...lines.map(line => (line.timestamp ? stringWidth(line.timestamp) : 0)),
-  )
+  const maxTimestampWidth = Math.max(0, ...lines.map((line) => (line.timestamp ? stringWidth(line.timestamp) : 0)))
 
   return (
     <Box flexDirection="column" width={actualWidth}>
@@ -81,19 +74,13 @@ export function Feed({ config, actualWidth }: FeedProps): React.ReactNode {
       ) : (
         <>
           {lines.map((line, index) => {
-            const textWidth = Math.max(
-              10,
-              actualWidth -
-                (maxTimestampWidth > 0 ? maxTimestampWidth + gap.length : 0),
-            )
+            const textWidth = Math.max(10, actualWidth - (maxTimestampWidth > 0 ? maxTimestampWidth + gap.length : 0))
 
             return (
               <Text key={index}>
                 {maxTimestampWidth > 0 && (
                   <>
-                    <Text dimColor>
-                      {(line.timestamp || '').padEnd(maxTimestampWidth)}
-                    </Text>
+                    <Text dimColor>{(line.timestamp || '').padEnd(maxTimestampWidth)}</Text>
                     {gap}
                   </>
                 )}

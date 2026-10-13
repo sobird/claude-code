@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import {
   isShutdownApproved,
@@ -15,18 +16,10 @@ type ShutdownRequestProps = {
 /**
  * Renders a shutdown request with a warning-colored border.
  */
-export function ShutdownRequestDisplay({
-  request,
-}: ShutdownRequestProps): React.ReactNode {
+export function ShutdownRequestDisplay({ request }: ShutdownRequestProps): React.ReactNode {
   return (
     <Box flexDirection="column" marginY={1}>
-      <Box
-        borderStyle="round"
-        borderColor="warning"
-        flexDirection="column"
-        paddingX={1}
-        paddingY={1}
-      >
+      <Box borderStyle="round" borderColor="warning" flexDirection="column" paddingX={1} paddingY={1}>
         <Box marginBottom={1}>
           <Text color="warning" bold>
             Shutdown request from {request.from}
@@ -49,18 +42,10 @@ type ShutdownRejectedProps = {
 /**
  * Renders a shutdown rejected message with a subtle (grey) border.
  */
-export function ShutdownRejectedDisplay({
-  response,
-}: ShutdownRejectedProps): React.ReactNode {
+export function ShutdownRejectedDisplay({ response }: ShutdownRejectedProps): React.ReactNode {
   return (
     <Box flexDirection="column" marginY={1}>
-      <Box
-        borderStyle="round"
-        borderColor="subtle"
-        flexDirection="column"
-        paddingX={1}
-        paddingY={1}
-      >
+      <Box borderStyle="round" borderColor="subtle" flexDirection="column" paddingX={1} paddingY={1}>
         <Text color="subtle" bold>
           Shutdown rejected by {response.from}
         </Text>
@@ -75,10 +60,7 @@ export function ShutdownRejectedDisplay({
           <Text>Reason: {response.reason}</Text>
         </Box>
         <Box marginTop={1}>
-          <Text dimColor>
-            Teammate is continuing to work. You may request shutdown again
-            later.
-          </Text>
+          <Text dimColor>Teammate is continuing to work. You may request shutdown again later.</Text>
         </Box>
       </Box>
     </Box>
@@ -89,9 +71,7 @@ export function ShutdownRejectedDisplay({
  * Try to parse and render a shutdown message from raw content.
  * Returns the rendered component if it's a shutdown message, null otherwise.
  */
-export function tryRenderShutdownMessage(
-  content: string,
-): React.ReactNode | null {
+export function tryRenderShutdownMessage(content: string): React.ReactNode | null {
   const request = isShutdownRequest(content)
   if (request) {
     return <ShutdownRequestDisplay request={request} />

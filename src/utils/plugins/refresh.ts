@@ -69,9 +69,7 @@ export type RefreshActivePluginsResult = {
  * LSP: if plugins now contribute LSP servers, reinitializeLspServerManager()
  * re-reads config. Servers are lazy-started so this is just config parsing.
  */
-export async function refreshActivePlugins(
-  setAppState: SetAppState,
-): Promise<RefreshActivePluginsResult> {
+export async function refreshActivePlugins(setAppState: SetAppState): Promise<RefreshActivePluginsResult> {
   logForDebugging('refreshActivePlugins: clearing all plugin caches')
   clearAllCaches()
   // Orphan exclusions are session-frozen by default, but /reload-plugins is
@@ -101,7 +99,7 @@ export async function refreshActivePlugins(
   // without re-parsing manifests. Errors are pushed to the shared errors array.
   const [mcpCounts, lspCounts] = await Promise.all([
     Promise.all(
-      enabled.map(async p => {
+      enabled.map(async (p) => {
         if (p.mcpServers) return Object.keys(p.mcpServers).length
         const servers = await loadPluginMcpServers(p, errors)
         if (servers) p.mcpServers = servers
@@ -109,7 +107,7 @@ export async function refreshActivePlugins(
       }),
     ),
     Promise.all(
-      enabled.map(async p => {
+      enabled.map(async (p) => {
         if (p.lspServers) return Object.keys(p.lspServers).length
         const servers = await loadPluginLspServers(p, errors)
         if (servers) p.lspServers = servers
@@ -120,7 +118,7 @@ export async function refreshActivePlugins(
   const mcp_count = mcpCounts.reduce((sum, n) => sum + n, 0)
   const lsp_count = lspCounts.reduce((sum, n) => sum + n, 0)
 
-  setAppState(prev => ({
+  setAppState((prev) => ({
     ...prev,
     plugins: {
       ...prev.plugins,
@@ -155,9 +153,7 @@ export async function refreshActivePlugins(
   } catch (e) {
     hook_load_failed = true
     logError(e)
-    logForDebugging(
-      `refreshActivePlugins: loadPluginHooks failed: ${errorMessage(e)}`,
-    )
+    logForDebugging(`refreshActivePlugins: loadPluginHooks failed: ${errorMessage(e)}`)
   }
 
   const hook_count = enabled.reduce((sum, p) => {
@@ -165,8 +161,7 @@ export async function refreshActivePlugins(
     return (
       sum +
       Object.values(p.hooksConfig).reduce(
-        (s, matchers) =>
-          s + (matchers?.reduce((h, m) => h + m.hooks.length, 0) ?? 0),
+        (s, matchers) => s + (matchers?.reduce((h, m) => h + m.hooks.length, 0) ?? 0),
         0,
       )
     )
@@ -196,20 +191,13 @@ export async function refreshActivePlugins(
  * deduplicating. Same logic as refreshPlugins()/updatePluginState(), extracted
  * so refresh.ts doesn't leave those errors stranded.
  */
-function mergePluginErrors(
-  existing: PluginError[],
-  fresh: PluginError[],
-): PluginError[] {
-  const preserved = existing.filter(
-    e => e.source === 'lsp-manager' || e.source.startsWith('plugin:'),
-  )
+function mergePluginErrors(existing: PluginError[], fresh: PluginError[]): PluginError[] {
+  const preserved = existing.filter((e) => e.source === 'lsp-manager' || e.source.startsWith('plugin:'))
   const freshKeys = new Set(fresh.map(errorKey))
-  const deduped = preserved.filter(e => !freshKeys.has(errorKey(e)))
+  const deduped = preserved.filter((e) => !freshKeys.has(errorKey(e)))
   return [...deduped, ...fresh]
 }
 
 function errorKey(e: PluginError): string {
-  return e.type === 'generic-error'
-    ? `generic-error:${e.source}:${e.error}`
-    : `${e.type}:${e.source}`
+  return e.type === 'generic-error' ? `generic-error:${e.source}:${e.error}` : `${e.type}:${e.source}`
 }

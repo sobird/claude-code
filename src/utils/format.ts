@@ -97,9 +97,7 @@ export function formatDuration(
 // `new Intl.NumberFormat` is expensive, so cache formatters for reuse
 let numberFormatterForConsistentDecimals: Intl.NumberFormat | null = null
 let numberFormatterForInconsistentDecimals: Intl.NumberFormat | null = null
-const getNumberFormatter = (
-  useConsistentDecimals: boolean,
-): Intl.NumberFormat => {
+const getNumberFormatter = (useConsistentDecimals: boolean): Intl.NumberFormat => {
   if (useConsistentDecimals) {
     if (!numberFormatterForConsistentDecimals) {
       numberFormatterForConsistentDecimals = new Intl.NumberFormat('en-US', {
@@ -141,10 +139,7 @@ type RelativeTimeOptions = {
   numeric?: 'always' | 'auto'
 }
 
-export function formatRelativeTime(
-  date: Date,
-  options: RelativeTimeOptions & { now?: Date } = {},
-): string {
+export function formatRelativeTime(date: Date, options: RelativeTimeOptions & { now?: Date } = {}): string {
   const { style = 'narrow', numeric = 'always', now = new Date() } = options
   const diffInMs = date.getTime() - now.getTime()
   // Use Math.trunc to truncate towards zero for both positive and negative values
@@ -167,9 +162,7 @@ export function formatRelativeTime(
       const value = Math.trunc(diffInSeconds / intervalSeconds)
       // For short style, use custom format
       if (style === 'narrow') {
-        return diffInSeconds < 0
-          ? `${Math.abs(value)}${shortUnit} ago`
-          : `in ${value}${shortUnit}`
+        return diffInSeconds < 0 ? `${Math.abs(value)}${shortUnit} ago` : `in ${value}${shortUnit}`
       }
       // For days and longer, use long style regardless of the style parameter
       return getRelativeTimeFormat('long', numeric).format(value, unit)
@@ -183,10 +176,7 @@ export function formatRelativeTime(
   return getRelativeTimeFormat(style, numeric).format(0, 'second')
 }
 
-export function formatRelativeTimeAgo(
-  date: Date,
-  options: RelativeTimeOptions & { now?: Date } = {},
-): string {
+export function formatRelativeTimeAgo(date: Date, options: RelativeTimeOptions & { now?: Date } = {}): string {
   const { now = new Date(), ...restOptions } = options
   if (date > now) {
     // For future dates, just return the relative time without "ago"
@@ -210,10 +200,7 @@ export function formatLogMetadata(log: {
   prNumber?: number
   prRepository?: string
 }): string {
-  const sizeOrCount =
-    log.fileSize !== undefined
-      ? formatFileSize(log.fileSize)
-      : `${log.messageCount} messages`
+  const sizeOrCount = log.fileSize !== undefined ? formatFileSize(log.fileSize) : `${log.messageCount} messages`
   const parts = [
     formatRelativeTimeAgo(log.modified, { style: 'short' }),
     ...(log.gitBranch ? [log.gitBranch] : []),
@@ -226,11 +213,7 @@ export function formatLogMetadata(log: {
     parts.push(`@${log.agentSetting}`)
   }
   if (log.prNumber) {
-    parts.push(
-      log.prRepository
-        ? `${log.prRepository}#${log.prNumber}`
-        : `#${log.prNumber}`,
-    )
+    parts.push(log.prRepository ? `${log.prRepository}#${log.prNumber}` : `#${log.prNumber}`)
   }
   return parts.join(' · ')
 }
@@ -283,16 +266,11 @@ export function formatResetTime(
 
   // Remove the space before AM/PM and make it lowercase, then add timezone
   return (
-    timeString.replace(/ ([AP]M)/i, (_match, ampm) => ampm.toLowerCase()) +
-    (showTimezone ? ` (${getTimeZone()})` : '')
+    timeString.replace(/ ([AP]M)/i, (_match, ampm) => ampm.toLowerCase()) + (showTimezone ? ` (${getTimeZone()})` : '')
   )
 }
 
-export function formatResetText(
-  resetsAt: string,
-  showTimezone: boolean = false,
-  showTime: boolean = true,
-): string {
+export function formatResetText(resetsAt: string, showTimezone: boolean = false, showTime: boolean = true): string {
   const dt = new Date(resetsAt)
   return `${formatResetTime(Math.floor(dt.getTime() / 1000), showTimezone, showTime)}`
 }

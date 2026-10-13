@@ -3,12 +3,7 @@
  * Detects modern terminals that support ESC[3J for clearing scrollback.
  */
 
-import {
-  CURSOR_HOME,
-  csi,
-  ERASE_SCREEN,
-  ERASE_SCROLLBACK,
-} from './termio/csi.js'
+import { CURSOR_HOME, csi, ERASE_SCREEN, ERASE_SCROLLBACK } from './termio/csi.js'
 
 // HVP (Horizontal Vertical Position) - legacy Windows cursor home
 const CURSOR_HOME_WINDOWS = csi(0, 'f')
@@ -36,11 +31,7 @@ function isModernWindowsTerminal(): boolean {
   }
 
   // VS Code integrated terminal on Windows with ConPTY support
-  if (
-    process.platform === 'win32' &&
-    process.env.TERM_PROGRAM === 'vscode' &&
-    process.env.TERM_PROGRAM_VERSION
-  ) {
+  if (process.platform === 'win32' && process.env.TERM_PROGRAM === 'vscode' && process.env.TERM_PROGRAM_VERSION) {
     return true
   }
 

@@ -5,6 +5,7 @@ import { Suspense, use, useState } from 'react'
 import { FileEditToolUseRejectedMessage } from 'src/components/FileEditToolUseRejectedMessage.js'
 import { MessageResponse } from 'src/components/MessageResponse.js'
 import { extractTag } from 'src/utils/messages.js'
+
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js'
 import { FileEditToolUpdatedMessage } from '../../components/FileEditToolUpdatedMessage.js'
 import { FilePathLink } from '../../components/FilePathLink.js'
@@ -19,11 +20,7 @@ import { readEditContext } from '../../utils/readEditContext.js'
 import { firstLineOf } from '../../utils/stringUtils.js'
 import type { ThemeName } from '../../utils/theme.js'
 import type { FileEditOutput } from './types.js'
-import {
-  findActualString,
-  getPatchForEdit,
-  preserveQuoteStyle,
-} from './utils.js'
+import { findActualString, getPatchForEdit, preserveQuoteStyle } from './utils.js'
 
 export function userFacingName(
   input:
@@ -79,11 +76,7 @@ export function renderToolUseMessage(
   if (file_path.startsWith(getPlansDirectory())) {
     return ''
   }
-  return (
-    <FilePathLink filePath={file_path}>
-      {verbose ? file_path : getDisplayPath(file_path)}
-    </FilePathLink>
-  )
+  return <FilePathLink filePath={file_path}>{verbose ? file_path : getDisplayPath(file_path)}</FilePathLink>
 }
 
 export function renderToolResultMessage(
@@ -133,14 +126,7 @@ export function renderToolUseRejectedMessage(
 
   // Defensive: if input has an unexpected shape, show a simple rejection message
   if ('edits' in input && input.edits != null) {
-    return (
-      <FileEditToolUseRejectedMessage
-        file_path={filePath}
-        operation="update"
-        firstLine={null}
-        verbose={verbose}
-      />
-    )
+    return <FileEditToolUseRejectedMessage file_path={filePath} operation="update" firstLine={null} verbose={verbose} />
   }
 
   const isNewFile = oldString === ''
@@ -179,11 +165,7 @@ export function renderToolUseErrorMessage(
   },
 ): React.ReactElement {
   const { verbose } = options
-  if (
-    !verbose &&
-    typeof result === 'string' &&
-    extractTag(result, 'tool_use_error')
-  ) {
+  if (!verbose && typeof result === 'string' && extractTag(result, 'tool_use_error')) {
     const errorMessage = extractTag(result, 'tool_use_error')
     // Show a less scary message for intended behavior
     if (errorMessage?.includes('File has not been read yet')) {
@@ -230,26 +212,14 @@ function EditRejectionDiff({
   style?: 'condensed'
   verbose: boolean
 }): React.ReactNode {
-  const [dataPromise] = useState(() =>
-    loadRejectionDiff(filePath, oldString, newString, replaceAll),
-  )
+  const [dataPromise] = useState(() => loadRejectionDiff(filePath, oldString, newString, replaceAll))
   return (
     <Suspense
       fallback={
-        <FileEditToolUseRejectedMessage
-          file_path={filePath}
-          operation="update"
-          firstLine={null}
-          verbose={verbose}
-        />
+        <FileEditToolUseRejectedMessage file_path={filePath} operation="update" firstLine={null} verbose={verbose} />
       }
     >
-      <EditRejectionBody
-        promise={dataPromise}
-        filePath={filePath}
-        style={style}
-        verbose={verbose}
-      />
+      <EditRejectionBody promise={dataPromise} filePath={filePath} style={style} verbose={verbose} />
     </Suspense>
   )
 }

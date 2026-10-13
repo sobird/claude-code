@@ -116,10 +116,7 @@ export function parseCronExpression(expr: string): CronFields | null {
  * the gap. Fall-back repeats fire once (the step-forward logic jumps past
  * the second occurrence). This matches vixie-cron behavior.
  */
-export function computeNextCronRun(
-  fields: CronFields,
-  from: Date,
-): Date | null {
+export function computeNextCronRun(fields: CronFields, from: Date): Date | null {
   const minuteSet = new Set(fields.minute)
   const hourSet = new Set(fields.hour)
   const domSet = new Set(fields.dayOfMonth)
@@ -187,15 +184,7 @@ export function computeNextCronRun(
 // — that path translates UTC→local for display and needs midnight-crossing
 // logic for the weekday case. Local scheduled tasks (the default) need neither.
 
-const DAY_NAMES = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-]
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 function formatLocalTime(minute: number, hour: number): string {
   // January 1 — no DST gap anywhere. Using `new Date()` (today) would roll
@@ -220,35 +209,17 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
   const parts = cron.trim().split(/\s+/)
   if (parts.length !== 5) return cron
 
-  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts as [
-    string,
-    string,
-    string,
-    string,
-    string,
-  ]
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts as [string, string, string, string, string]
 
   // Every N minutes: step/N * * * *
   const everyMinMatch = minute.match(/^\*\/(\d+)$/)
-  if (
-    everyMinMatch &&
-    hour === '*' &&
-    dayOfMonth === '*' &&
-    month === '*' &&
-    dayOfWeek === '*'
-  ) {
+  if (everyMinMatch && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
     const n = parseInt(everyMinMatch[1]!, 10)
     return n === 1 ? 'Every minute' : `Every ${n} minutes`
   }
 
   // Every hour: 0 * * * *
-  if (
-    minute.match(/^\d+$/) &&
-    hour === '*' &&
-    dayOfMonth === '*' &&
-    month === '*' &&
-    dayOfWeek === '*'
-  ) {
+  if (minute.match(/^\d+$/) && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
     const m = parseInt(minute, 10)
     if (m === 0) return 'Every hour'
     return `Every hour at :${m.toString().padStart(2, '0')}`
@@ -256,13 +227,7 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
 
   // Every N hours: 0 step/N * * *
   const everyHourMatch = hour.match(/^\*\/(\d+)$/)
-  if (
-    minute.match(/^\d+$/) &&
-    everyHourMatch &&
-    dayOfMonth === '*' &&
-    month === '*' &&
-    dayOfWeek === '*'
-  ) {
+  if (minute.match(/^\d+$/) && everyHourMatch && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
     const n = parseInt(everyHourMatch[1]!, 10)
     const m = parseInt(minute, 10)
     const suffix = m === 0 ? '' : ` at :${m.toString().padStart(2, '0')}`

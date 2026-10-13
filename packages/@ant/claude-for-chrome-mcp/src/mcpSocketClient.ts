@@ -3,6 +3,7 @@ import { createConnection } from 'net'
 import type { Socket } from 'net'
 import { platform } from 'os'
 import { dirname } from 'path'
+
 import type { ClaudeForChromeContext, PermissionMode, PermissionOverrides } from './types.js'
 
 export class SocketConnectionError extends Error {

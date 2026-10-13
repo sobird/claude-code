@@ -20,6 +20,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+
 import type { ScreenshotResult } from './executor.js'
 import type { CuCallToolResult } from './toolCalls.js'
 import { defersLockAcquire, handleToolCall, resetMouseButtonHeld } from './toolCalls.js'

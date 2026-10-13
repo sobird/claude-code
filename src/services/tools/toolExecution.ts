@@ -1,9 +1,6 @@
 import { feature } from 'bun:bundle'
-import type {
-  ContentBlockParam,
-  ToolResultBlockParam,
-  ToolUseBlock,
-} from '@anthropic-ai/sdk/resources/index.mjs'
+
+import type { ContentBlockParam, ToolResultBlockParam, ToolUseBlock } from '@anthropic-ai/sdk/resources/index.mjs'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -18,25 +15,14 @@ import {
   mcpToolDetailsForAnalytics,
   sanitizeToolNameForAnalytics,
 } from 'src/services/analytics/metadata.js'
-import {
-  addToToolDuration,
-  getCodeEditToolDecisionCounter,
-  getStatsStore,
-} from '../../bootstrap/state.js'
-import {
-  buildCodeEditToolAttributes,
-  isCodeEditingTool,
-} from '../../hooks/toolPermission/permissionLogging.js'
+
+import { addToToolDuration, getCodeEditToolDecisionCounter, getStatsStore } from '../../bootstrap/state.js'
+import { buildCodeEditToolAttributes, isCodeEditingTool } from '../../hooks/toolPermission/permissionLogging.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
-import {
-  findToolByName,
-  type Tool,
-  type ToolProgress,
-  type ToolProgressData,
-  type ToolUseContext,
-} from '../../Tool.js'
-import type { BashToolInput } from '../../tools/BashTool/BashTool.js'
+import { findToolByName, type Tool, type ToolProgress, type ToolProgressData, type ToolUseContext } from '../../Tool.js'
+import { getAllBaseTools } from '../../tools.js'
 import { startSpeculativeClassifierCheck } from '../../tools/BashTool/bashPermissions.js'
+import type { BashToolInput } from '../../tools/BashTool/BashTool.js'
 import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
 import { FILE_EDIT_TOOL_NAME } from '../../tools/FileEditTool/constants.js'
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
@@ -44,11 +30,7 @@ import { FILE_WRITE_TOOL_NAME } from '../../tools/FileWriteTool/prompt.js'
 import { NOTEBOOK_EDIT_TOOL_NAME } from '../../tools/NotebookEditTool/constants.js'
 import { POWERSHELL_TOOL_NAME } from '../../tools/PowerShellTool/toolName.js'
 import { parseGitCommitId } from '../../tools/shared/gitOperationTracking.js'
-import {
-  isDeferredTool,
-  TOOL_SEARCH_TOOL_NAME,
-} from '../../tools/ToolSearchTool/prompt.js'
-import { getAllBaseTools } from '../../tools.js'
+import { isDeferredTool, TOOL_SEARCH_TOOL_NAME } from '../../tools/ToolSearchTool/prompt.js'
 import type { HookProgress } from '../../types/hooks.js'
 import type {
   AssistantMessage,
@@ -77,14 +59,8 @@ import {
   createUserMessage,
   withMemoryCorrectionHint,
 } from '../../utils/messages.js'
-import type {
-  PermissionDecisionReason,
-  PermissionResult,
-} from '../../utils/permissions/PermissionResult.js'
-import {
-  startSessionActivity,
-  stopSessionActivity,
-} from '../../utils/sessionActivity.js'
+import type { PermissionDecisionReason, PermissionResult } from '../../utils/permissions/PermissionResult.js'
+import { startSessionActivity, stopSessionActivity } from '../../utils/sessionActivity.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { Stream } from '../../utils/stream.js'
 import { logOTelEvent } from '../../utils/telemetry/events.js'
@@ -98,31 +74,18 @@ import {
   startToolExecutionSpan,
   startToolSpan,
 } from '../../utils/telemetry/sessionTracing.js'
-import {
-  formatError,
-  formatZodValidationError,
-} from '../../utils/toolErrors.js'
-import {
-  processPreMappedToolResultBlock,
-  processToolResultBlock,
-} from '../../utils/toolResultStorage.js'
+import { formatError, formatZodValidationError } from '../../utils/toolErrors.js'
+import { processPreMappedToolResultBlock, processToolResultBlock } from '../../utils/toolResultStorage.js'
 import {
   extractDiscoveredToolNames,
   isToolSearchEnabledOptimistic,
   isToolSearchToolAvailable,
 } from '../../utils/toolSearch.js'
-import {
-  McpAuthError,
-  McpToolCallError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-} from '../mcp/client.js'
+import { McpAuthError, McpToolCallError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../mcp/client.js'
 import { mcpInfoFromString } from '../mcp/mcpStringUtils.js'
 import { normalizeNameForMCP } from '../mcp/normalization.js'
 import type { MCPServerConnection } from '../mcp/types.js'
-import {
-  getLoggingSafeMcpBaseUrl,
-  getMcpServerScopeFromToolName,
-  isMcpTool,
-} from '../mcp/utils.js'
+import { getLoggingSafeMcpBaseUrl, getMcpServerScopeFromToolName, isMcpTool } from '../mcp/utils.js'
 import {
   resolveHookPermissionDecision,
   runPostToolUseFailureHooks,
@@ -148,9 +111,7 @@ const SLOW_PHASE_LOG_THRESHOLD_MS = 2000
  * - Fallback: "Error" (better than a mangled 3-char identifier)
  */
 export function classifyToolError(error: unknown): string {
-  if (
-    error instanceof TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-  ) {
+  if (error instanceof TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS) {
     return error.telemetryMessage.slice(0, 200)
   }
   if (error instanceof Error) {
@@ -178,10 +139,7 @@ export function classifyToolError(error: unknown): string {
  * didn't write (cliArg, policySettings, projectSettings, flagSettings) is
  * config.
  */
-function ruleSourceToOTelSource(
-  ruleSource: string,
-  behavior: 'allow' | 'deny',
-): string {
+function ruleSourceToOTelSource(ruleSource: string, behavior: 'allow' | 'deny'): string {
   switch (ruleSource) {
     case 'session':
       return behavior === 'allow' ? 'user_temporary' : 'user_reject'
@@ -204,10 +162,7 @@ function ruleSourceToOTelSource(
  * Without it, we fall back conservatively: allow → user_temporary,
  * deny → user_reject.
  */
-function decisionReasonToOTelSource(
-  reason: PermissionDecisionReason | undefined,
-  behavior: 'allow' | 'deny',
-): string {
+function decisionReasonToOTelSource(reason: PermissionDecisionReason | undefined, behavior: 'allow' | 'deny'): string {
   if (!reason) {
     return 'config'
   }
@@ -216,15 +171,9 @@ function decisionReasonToOTelSource(
       // toolResult is typed `unknown` on PermissionDecisionReason but carries
       // the parsed Output from PermissionPromptToolResultSchema. Narrow at
       // runtime rather than widen the cross-file type.
-      const toolResult = reason.toolResult as
-        | { decisionClassification?: string }
-        | undefined
+      const toolResult = reason.toolResult as { decisionClassification?: string } | undefined
       const classified = toolResult?.decisionClassification
-      if (
-        classified === 'user_temporary' ||
-        classified === 'user_permanent' ||
-        classified === 'user_reject'
-      ) {
+      if (classified === 'user_temporary' || classified === 'user_permanent' || classified === 'user_reject') {
         return classified
       }
       return behavior === 'allow' ? 'user_temporary' : 'user_reject'
@@ -280,10 +229,7 @@ export type McpServerType =
   | 'claudeai-proxy'
   | undefined
 
-function findMcpServerConnection(
-  toolName: string,
-  mcpClients: MCPServerConnection[],
-): MCPServerConnection | undefined {
+function findMcpServerConnection(toolName: string, mcpClients: MCPServerConnection[]): MCPServerConnection | undefined {
   if (!toolName.startsWith('mcp__')) {
     return undefined
   }
@@ -295,9 +241,7 @@ function findMcpServerConnection(
 
   // mcpInfo.serverName is normalized (e.g., "claude_ai_Slack"), but client.name
   // is the original name (e.g., "claude.ai Slack"). Normalize both for comparison.
-  return mcpClients.find(
-    client => normalizeNameForMCP(client.name) === mcpInfo.serverName,
-  )
+  return mcpClients.find((client) => normalizeNameForMCP(client.name) === mcpInfo.serverName)
 }
 
 /**
@@ -305,10 +249,7 @@ function findMcpServerConnection(
  * Returns the server type (stdio, sse, http, ws, sdk, etc.) for MCP tools,
  * or undefined for built-in tools.
  */
-function getMcpServerType(
-  toolName: string,
-  mcpClients: MCPServerConnection[],
-): McpServerType {
+function getMcpServerType(toolName: string, mcpClients: MCPServerConnection[]): McpServerType {
   const serverConnection = findMcpServerConnection(toolName, mcpClients)
 
   if (serverConnection?.type === 'connected') {
@@ -323,10 +264,7 @@ function getMcpServerType(
  * Extracts the MCP server base URL for a tool by looking up its server connection.
  * Returns undefined for stdio servers, built-in tools, or if the server is not connected.
  */
-function getMcpServerBaseUrlFromToolName(
-  toolName: string,
-  mcpClients: MCPServerConnection[],
-): string | undefined {
+function getMcpServerBaseUrlFromToolName(toolName: string, mcpClients: MCPServerConnection[]): string | undefined {
   const serverConnection = findMcpServerConnection(toolName, mcpClients)
   if (serverConnection?.type !== 'connected') {
     return undefined
@@ -356,14 +294,8 @@ export async function* runToolUse(
   }
   const messageId = assistantMessage.message.id
   const requestId = assistantMessage.requestId
-  const mcpServerType = getMcpServerType(
-    toolName,
-    toolUseContext.options.mcpClients,
-  )
-  const mcpServerBaseUrl = getMcpServerBaseUrlFromToolName(
-    toolName,
-    toolUseContext.options.mcpClients,
-  )
+  const mcpServerType = getMcpServerType(toolName, toolUseContext.options.mcpClients)
+  const mcpServerBaseUrl = getMcpServerBaseUrlFromToolName(toolName, toolUseContext.options.mcpClients)
 
   // Check if the tool exists
   if (!tool) {
@@ -373,23 +305,18 @@ export async function* runToolUse(
       error:
         `No such tool available: ${sanitizedToolName}` as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       toolName: sanitizedToolName,
-      toolUseID:
-        toolUse.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      toolUseID: toolUse.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       isMcp: toolName.startsWith('mcp__'),
-      queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      queryChainId: toolUseContext.queryTracking?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
-        mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerType: mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(mcpServerBaseUrl && {
-        mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerBaseUrl: mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(requestId && {
-        requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        requestId: requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...mcpToolDetailsForAnalytics(toolName, mcpServerType, mcpServerBaseUrl),
     })
@@ -415,30 +342,22 @@ export async function* runToolUse(
     if (toolUseContext.abortController.signal.aborted) {
       logEvent('tengu_tool_use_cancelled', {
         toolName: sanitizeToolNameForAnalytics(tool.name),
-        toolUseID:
-          toolUse.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        toolUseID: toolUse.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         isMcp: tool.isMcp ?? false,
 
         queryChainId: toolUseContext.queryTracking
           ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         queryDepth: toolUseContext.queryTracking?.depth,
         ...(mcpServerType && {
-          mcpServerType:
-            mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerType: mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
         ...(mcpServerBaseUrl && {
-          mcpServerBaseUrl:
-            mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerBaseUrl: mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
         ...(requestId && {
-          requestId:
-            requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          requestId: requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
-        ...mcpToolDetailsForAnalytics(
-          tool.name,
-          mcpServerType,
-          mcpServerBaseUrl,
-        ),
+        ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
       })
       const content = createToolResultStopMessage(toolUse.id)
       content.content = withMemoryCorrectionHint(CANCEL_MESSAGE)
@@ -518,10 +437,9 @@ function streamedCheckPermissionsAndCallTool(
     requestId,
     mcpServerType,
     mcpServerBaseUrl,
-    progress => {
+    (progress) => {
       logEvent('tengu_tool_use_progress', {
-        messageID:
-          messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        messageID: messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         toolName: sanitizeToolNameForAnalytics(tool.name),
         isMcp: tool.isMcp ?? false,
 
@@ -529,22 +447,15 @@ function streamedCheckPermissionsAndCallTool(
           ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         queryDepth: toolUseContext.queryTracking?.depth,
         ...(mcpServerType && {
-          mcpServerType:
-            mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerType: mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
         ...(mcpServerBaseUrl && {
-          mcpServerBaseUrl:
-            mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerBaseUrl: mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
         ...(requestId && {
-          requestId:
-            requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          requestId: requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
-        ...mcpToolDetailsForAnalytics(
-          tool.name,
-          mcpServerType,
-          mcpServerBaseUrl,
-        ),
+        ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
       })
       stream.enqueue({
         message: createProgressMessage({
@@ -555,12 +466,12 @@ function streamedCheckPermissionsAndCallTool(
       })
     },
   )
-    .then(results => {
+    .then((results) => {
       for (const result of results) {
         stream.enqueue(result)
       }
     })
-    .catch(error => {
+    .catch((error) => {
       stream.error(error)
     })
     .finally(() => {
@@ -607,20 +518,14 @@ async function checkPermissionsAndCallTool(
   requestId: string | undefined,
   mcpServerType: McpServerType,
   mcpServerBaseUrl: ReturnType<typeof getLoggingSafeMcpBaseUrl>,
-  onToolProgress: (
-    progress: ToolProgress<ToolProgressData> | ProgressMessage<HookProgress>,
-  ) => void,
+  onToolProgress: (progress: ToolProgress<ToolProgressData> | ProgressMessage<HookProgress>) => void,
 ): Promise<MessageUpdateLazy[]> {
   // Validate input types with zod (surprisingly, the model is not great at generating valid input)
   const parsedInput = tool.inputSchema.safeParse(input)
   if (!parsedInput.success) {
     let errorContent = formatZodValidationError(tool.name, parsedInput.error)
 
-    const schemaHint = buildSchemaNotSentHint(
-      tool,
-      toolUseContext.messages,
-      toolUseContext.options.tools,
-    )
+    const schemaHint = buildSchemaNotSentHint(tool, toolUseContext.messages, toolUseContext.options.tools)
     if (schemaHint) {
       logEvent('tengu_deferred_tool_schema_not_sent', {
         toolName: sanitizeToolNameForAnalytics(tool.name),
@@ -629,35 +534,24 @@ async function checkPermissionsAndCallTool(
       errorContent += schemaHint
     }
 
-    logForDebugging(
-      `${tool.name} tool input error: ${errorContent.slice(0, 200)}`,
-    )
+    logForDebugging(`${tool.name} tool input error: ${errorContent.slice(0, 200)}`)
     logEvent('tengu_tool_use_error', {
-      error:
-        'InputValidationError' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      errorDetails: errorContent.slice(
-        0,
-        2000,
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      messageID:
-        messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      error: 'InputValidationError' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      errorDetails: errorContent.slice(0, 2000) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      messageID: messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       toolName: sanitizeToolNameForAnalytics(tool.name),
       isMcp: tool.isMcp ?? false,
 
-      queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      queryChainId: toolUseContext.queryTracking?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
-        mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerType: mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(mcpServerBaseUrl && {
-        mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerBaseUrl: mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(requestId && {
-        requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        requestId: requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
     })
@@ -680,37 +574,26 @@ async function checkPermissionsAndCallTool(
   }
 
   // Validate input values. Each tool has its own validation logic
-  const isValidCall = await tool.validateInput?.(
-    parsedInput.data,
-    toolUseContext,
-  )
+  const isValidCall = await tool.validateInput?.(parsedInput.data, toolUseContext)
   if (isValidCall?.result === false) {
-    logForDebugging(
-      `${tool.name} tool validation error: ${isValidCall.message?.slice(0, 200)}`,
-    )
+    logForDebugging(`${tool.name} tool validation error: ${isValidCall.message?.slice(0, 200)}`)
     logEvent('tengu_tool_use_error', {
-      messageID:
-        messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      messageID: messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       toolName: sanitizeToolNameForAnalytics(tool.name),
-      error:
-        isValidCall.message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      error: isValidCall.message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       errorCode: isValidCall.errorCode,
       isMcp: tool.isMcp ?? false,
 
-      queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      queryChainId: toolUseContext.queryTracking?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
-        mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerType: mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(mcpServerBaseUrl && {
-        mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerBaseUrl: mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(requestId && {
-        requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        requestId: requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
     })
@@ -737,11 +620,7 @@ async function checkPermissionsAndCallTool(
   // set in interactiveHandler.ts only when the permission check returns `ask`
   // with a pendingClassifierCheck. This avoids flashing "classifier running"
   // for commands that auto-allow via prefix rules.
-  if (
-    tool.name === BASH_TOOL_NAME &&
-    parsedInput.data &&
-    'command' in parsedInput.data
-  ) {
+  if (tool.name === BASH_TOOL_NAME && parsedInput.data && 'command' in parsedInput.data) {
     const appState = toolUseContext.getAppState()
     startSpeculativeClassifierCheck(
       (parsedInput.data as BashToolInput).command,
@@ -765,10 +644,9 @@ async function checkPermissionsAndCallTool(
     typeof processedInput === 'object' &&
     '_simulatedSedEdit' in processedInput
   ) {
-    const { _simulatedSedEdit: _, ...rest } =
-      processedInput as typeof processedInput & {
-        _simulatedSedEdit: unknown
-      }
+    const { _simulatedSedEdit: _, ...rest } = processedInput as typeof processedInput & {
+      _simulatedSedEdit: unknown
+    }
     processedInput = rest as typeof processedInput
   }
 
@@ -782,9 +660,7 @@ async function checkPermissionsAndCallTool(
   // is intentional and should reach call().
   let callInput = processedInput
   const backfilledClone =
-    tool.backfillObservableInput &&
-    typeof processedInput === 'object' &&
-    processedInput !== null
+    tool.backfillObservableInput && typeof processedInput === 'object' && processedInput !== null
       ? ({ ...processedInput } as typeof processedInput)
       : null
   if (backfilledClone) {
@@ -846,10 +722,7 @@ async function checkPermissionsAndCallTool(
         resultingMessages.push(result.message)
         break
       case 'stop':
-        getStatsStore()?.observe(
-          'pre_tool_hook_duration_ms',
-          Date.now() - preToolHookStart,
-        )
+        getStatsStore()?.observe('pre_tool_hook_duration_ms', Date.now() - preToolHookStart)
         resultingMessages.push({
           message: createUserMessage({
             content: [createToolResultStopMessage(toolUseID)],
@@ -895,8 +768,7 @@ async function checkPermissionsAndCallTool(
     if (tool.name === FILE_READ_TOOL_NAME && 'file_path' in processedInput) {
       toolAttributes.file_path = String(processedInput.file_path)
     } else if (
-      (tool.name === FILE_EDIT_TOOL_NAME ||
-        tool.name === FILE_WRITE_TOOL_NAME) &&
+      (tool.name === FILE_EDIT_TOOL_NAME || tool.name === FILE_WRITE_TOOL_NAME) &&
       'file_path' in processedInput
     ) {
       toolAttributes.file_path = String(processedInput.file_path)
@@ -906,11 +778,7 @@ async function checkPermissionsAndCallTool(
     }
   }
 
-  startToolSpan(
-    tool.name,
-    toolAttributes,
-    isBetaTracingEnabled() ? jsonStringify(processedInput) : undefined,
-  )
+  startToolSpan(tool.name, toolAttributes, isBetaTracingEnabled() ? jsonStringify(processedInput) : undefined)
   startToolBlockedOnUserSpan()
 
   // Check whether we have permission to use the tool,
@@ -934,10 +802,7 @@ async function checkPermissionsAndCallTool(
   // slow the collapsed view shows "Running…" with no (Ns) tick since
   // bash_progress hasn't started yet. Auto-only: in default mode this timer
   // includes interactive-dialog wait (user think time), which is just noise.
-  if (
-    permissionDurationMs >= SLOW_PHASE_LOG_THRESHOLD_MS &&
-    permissionMode === 'auto'
-  ) {
+  if (permissionDurationMs >= SLOW_PHASE_LOG_THRESHOLD_MS && permissionMode === 'auto') {
     logForDebugging(
       `Slow permission decision: ${permissionDurationMs}ms for ${tool.name} ` +
         `(mode=${permissionMode}, behavior=${permissionDecision.behavior})`,
@@ -949,16 +814,9 @@ async function checkPermissionsAndCallTool(
   // permission path didn't already log it (headless mode bypasses permission
   // logging, so we need to emit both the generic event and the code-edit
   // counter here)
-  if (
-    permissionDecision.behavior !== 'ask' &&
-    !toolUseContext.toolDecisions?.has(toolUseID)
-  ) {
-    const decision =
-      permissionDecision.behavior === 'allow' ? 'accept' : 'reject'
-    const source = decisionReasonToOTelSource(
-      permissionDecision.decisionReason,
-      permissionDecision.behavior,
-    )
+  if (permissionDecision.behavior !== 'ask' && !toolUseContext.toolDecisions?.has(toolUseID)) {
+    const decision = permissionDecision.behavior === 'allow' ? 'accept' : 'reject'
+    const source = decisionReasonToOTelSource(permissionDecision.decisionReason, permissionDecision.behavior)
     void logOTelEvent('tool_decision', {
       decision,
       source,
@@ -967,12 +825,9 @@ async function checkPermissionsAndCallTool(
 
     // Increment code-edit tool decision counter for headless mode
     if (isCodeEditingTool(tool.name)) {
-      void buildCodeEditToolAttributes(
-        tool,
-        processedInput,
-        decision,
-        source,
-      ).then(attributes => getCodeEditToolDecisionCounter()?.add(1, attributes))
+      void buildCodeEditToolAttributes(tool, processedInput, decision, source).then((attributes) =>
+        getCodeEditToolDecisionCounter()?.add(1, attributes),
+      )
     }
   }
 
@@ -999,24 +854,19 @@ async function checkPermissionsAndCallTool(
     endToolSpan()
 
     logEvent('tengu_tool_use_can_use_tool_rejected', {
-      messageID:
-        messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      messageID: messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       toolName: sanitizeToolNameForAnalytics(tool.name),
 
-      queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      queryChainId: toolUseContext.queryTracking?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
-        mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerType: mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(mcpServerBaseUrl && {
-        mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerBaseUrl: mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(requestId && {
-        requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        requestId: requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
     })
@@ -1037,10 +887,7 @@ async function checkPermissionsAndCallTool(
     ]
 
     // Add image blocks at top level (not inside tool_result, which rejects non-text with is_error)
-    const rejectContentBlocks =
-      permissionDecision.behavior === 'ask'
-        ? permissionDecision.contentBlocks
-        : undefined
+    const rejectContentBlocks = permissionDecision.behavior === 'ask' ? permissionDecision.contentBlocks : undefined
     if (rejectContentBlocks?.length) {
       messageContent.push(...rejectContentBlocks)
     }
@@ -1048,16 +895,10 @@ async function checkPermissionsAndCallTool(
     // Generate sequential imagePasteIds so each image renders with a distinct label
     let rejectImageIds: number[] | undefined
     if (rejectContentBlocks?.length) {
-      const imageCount = count(
-        rejectContentBlocks,
-        (b: ContentBlockParam) => b.type === 'image',
-      )
+      const imageCount = count(rejectContentBlocks, (b: ContentBlockParam) => b.type === 'image')
       if (imageCount > 0) {
         const startId = getNextImagePasteId(toolUseContext.messages)
-        rejectImageIds = Array.from(
-          { length: imageCount },
-          (_, i) => startId + i,
-        )
+        rejectImageIds = Array.from({ length: imageCount }, (_, i) => startId + i)
       }
     }
 
@@ -1103,24 +944,19 @@ async function checkPermissionsAndCallTool(
     return resultingMessages
   }
   logEvent('tengu_tool_use_can_use_tool_allowed', {
-    messageID:
-      messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    messageID: messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     toolName: sanitizeToolNameForAnalytics(tool.name),
 
-    queryChainId: toolUseContext.queryTracking
-      ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    queryChainId: toolUseContext.queryTracking?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     queryDepth: toolUseContext.queryTracking?.depth,
     ...(mcpServerType && {
-      mcpServerType:
-        mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      mcpServerType: mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     }),
     ...(mcpServerBaseUrl && {
-      mcpServerBaseUrl:
-        mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      mcpServerBaseUrl: mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     }),
     ...(requestId && {
-      requestId:
-        requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      requestId: requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     }),
     ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
   })
@@ -1169,10 +1005,7 @@ async function checkPermissionsAndCallTool(
   }
 
   const decisionInfo = toolUseContext.toolDecisions?.get(toolUseID)
-  endToolBlockedOnUserSpan(
-    decisionInfo?.decision || 'unknown',
-    decisionInfo?.source || 'unknown',
-  )
+  endToolBlockedOnUserSpan(decisionInfo?.decision || 'unknown', decisionInfo?.source || 'unknown')
   startToolExecutionSpan()
 
   const startTime = Date.now()
@@ -1193,8 +1026,7 @@ async function checkPermissionsAndCallTool(
     processedInput !== null &&
     'file_path' in processedInput &&
     'file_path' in (callInput as Record<string, unknown>) &&
-    (processedInput as Record<string, unknown>).file_path ===
-      (backfilledClone as Record<string, unknown>).file_path
+    (processedInput as Record<string, unknown>).file_path === (backfilledClone as Record<string, unknown>).file_path
   ) {
     callInput = {
       ...processedInput,
@@ -1213,7 +1045,7 @@ async function checkPermissionsAndCallTool(
       },
       canUseTool,
       assistantMessage,
-      progress => {
+      (progress) => {
         onToolProgress({
           toolUseID: progress.toolUseID,
           data: progress.data,
@@ -1236,11 +1068,7 @@ async function checkPermissionsAndCallTool(
       }
 
       // Edit/Write tools: capture file_path and diff
-      if (
-        (tool.name === FILE_EDIT_TOOL_NAME ||
-          tool.name === FILE_WRITE_TOOL_NAME) &&
-        'file_path' in processedInput
-      ) {
+      if ((tool.name === FILE_EDIT_TOOL_NAME || tool.name === FILE_WRITE_TOOL_NAME) && 'file_path' in processedInput) {
         contentAttributes.file_path = String(processedInput.file_path)
 
         // For Edit, capture the actual changes made
@@ -1282,17 +1110,12 @@ async function checkPermissionsAndCallTool(
     endToolExecutionSpan({ success: true })
     // Pass tool result for new_context logging
     const toolResultStr =
-      result.data && typeof result.data === 'object'
-        ? jsonStringify(result.data)
-        : String(result.data ?? '')
+      result.data && typeof result.data === 'object' ? jsonStringify(result.data) : String(result.data ?? '')
     endToolSpan(toolResultStr)
 
     // Map the tool result to API format once and cache it. This block is reused
     // by addToolResult (skipping the remap) and measured here for analytics.
-    const mappedToolResultBlock = tool.mapToolResultToToolResultBlockParam(
-      result.data,
-      toolUseID,
-    )
+    const mappedToolResultBlock = tool.mapToolResultToToolResultBlockParam(result.data, toolUseID)
     const mappedContent = mappedToolResultBlock.content
     const toolResultSizeBytes = !mappedContent
       ? 0
@@ -1309,28 +1132,17 @@ async function checkPermissionsAndCallTool(
           tool.name === FILE_WRITE_TOOL_NAME) &&
         'file_path' in processedInput
       ) {
-        fileExtension = getFileExtensionForAnalytics(
-          String(processedInput.file_path),
-        )
-      } else if (
-        tool.name === NOTEBOOK_EDIT_TOOL_NAME &&
-        'notebook_path' in processedInput
-      ) {
-        fileExtension = getFileExtensionForAnalytics(
-          String(processedInput.notebook_path),
-        )
+        fileExtension = getFileExtensionForAnalytics(String(processedInput.file_path))
+      } else if (tool.name === NOTEBOOK_EDIT_TOOL_NAME && 'notebook_path' in processedInput) {
+        fileExtension = getFileExtensionForAnalytics(String(processedInput.notebook_path))
       } else if (tool.name === BASH_TOOL_NAME && 'command' in processedInput) {
         const bashInput = processedInput as BashToolInput
-        fileExtension = getFileExtensionsFromBashCommand(
-          bashInput.command,
-          bashInput._simulatedSedEdit?.filePath,
-        )
+        fileExtension = getFileExtensionsFromBashCommand(bashInput.command, bashInput._simulatedSedEdit?.filePath)
       }
     }
 
     logEvent('tengu_tool_use_success', {
-      messageID:
-        messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      messageID: messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       toolName: sanitizeToolNameForAnalytics(tool.name),
       isMcp: tool.isMcp ?? false,
       durationMs,
@@ -1338,20 +1150,16 @@ async function checkPermissionsAndCallTool(
       toolResultSizeBytes,
       ...(fileExtension !== undefined && { fileExtension }),
 
-      queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      queryChainId: toolUseContext.queryTracking?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
-        mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerType: mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(mcpServerBaseUrl && {
-        mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerBaseUrl: mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...(requestId && {
-        requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        requestId: requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
       ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
     })
@@ -1374,9 +1182,7 @@ async function checkPermissionsAndCallTool(
     }
 
     // Log tool result event for OTLP with tool parameters and decision context
-    const mcpServerScope = isMcpTool(tool)
-      ? getMcpServerScopeFromToolName(tool.name)
-      : null
+    const mcpServerScope = isMcpTool(tool) ? getMcpServerScopeFromToolName(tool.name) : null
 
     void logOTelEvent('tool_result', {
       tool_name: sanitizeToolNameForAnalytics(tool.name),
@@ -1400,28 +1206,18 @@ async function checkPermissionsAndCallTool(
     const toolContextModifier = result.contextModifier
     const mcpMeta = result.mcpMeta
 
-    async function addToolResult(
-      toolUseResult: unknown,
-      preMappedBlock?: ToolResultBlockParam,
-    ) {
+    async function addToolResult(toolUseResult: unknown, preMappedBlock?: ToolResultBlockParam) {
       // Use the pre-mapped block when available (non-MCP tools where hooks
       // don't modify the output), otherwise map from scratch.
       const toolResultBlock = preMappedBlock
-        ? await processPreMappedToolResultBlock(
-            preMappedBlock,
-            tool.name,
-            tool.maxResultSizeChars,
-          )
+        ? await processPreMappedToolResultBlock(preMappedBlock, tool.name, tool.maxResultSizeChars)
         : await processToolResultBlock(tool, toolUseResult, toolUseID)
 
       // Build content blocks - tool result first, then optional feedback
       const contentBlocks: ContentBlockParam[] = [toolResultBlock]
       // Add accept feedback if user provided feedback when approving
       // (acceptFeedback only exists on PermissionAllowDecision, which is guaranteed here)
-      if (
-        'acceptFeedback' in permissionDecision &&
-        permissionDecision.acceptFeedback
-      ) {
+      if ('acceptFeedback' in permissionDecision && permissionDecision.acceptFeedback) {
         contentBlocks.push({
           type: 'text',
           text: permissionDecision.acceptFeedback,
@@ -1429,10 +1225,7 @@ async function checkPermissionsAndCallTool(
       }
 
       // Add content blocks (e.g., pasted images) from the permission decision
-      const allowContentBlocks =
-        'contentBlocks' in permissionDecision
-          ? permissionDecision.contentBlocks
-          : undefined
+      const allowContentBlocks = 'contentBlocks' in permissionDecision ? permissionDecision.contentBlocks : undefined
       if (allowContentBlocks?.length) {
         contentBlocks.push(...allowContentBlocks)
       }
@@ -1440,16 +1233,10 @@ async function checkPermissionsAndCallTool(
       // Generate sequential imagePasteIds so each image renders with a distinct label
       let allowImageIds: number[] | undefined
       if (allowContentBlocks?.length) {
-        const imageCount = count(
-          allowContentBlocks,
-          (b: ContentBlockParam) => b.type === 'image',
-        )
+        const imageCount = count(allowContentBlocks, (b: ContentBlockParam) => b.type === 'image')
         if (imageCount > 0) {
           const startId = getNextImagePasteId(toolUseContext.messages)
-          allowImageIds = Array.from(
-            { length: imageCount },
-            (_, i) => startId + i,
-          )
+          allowImageIds = Array.from({ length: imageCount }, (_, i) => startId + i)
         }
       }
 
@@ -1457,10 +1244,7 @@ async function checkPermissionsAndCallTool(
         message: createUserMessage({
           content: contentBlocks,
           imagePasteIds: allowImageIds,
-          toolUseResult:
-            toolUseContext.agentId && !toolUseContext.preserveToolUseResults
-              ? undefined
-              : toolUseResult,
+          toolUseResult: toolUseContext.agentId && !toolUseContext.preserveToolUseResults ? undefined : toolUseResult,
           mcpMeta: toolUseContext.agentId ? undefined : mcpMeta,
           sourceToolAssistantUUID: assistantMessage.uuid,
         }),
@@ -1499,12 +1283,7 @@ async function checkPermissionsAndCallTool(
         hookResults.push(hookResult)
         if (hookResult.message.type === 'attachment') {
           const att = hookResult.message.attachment
-          if (
-            'command' in att &&
-            att.command !== undefined &&
-            'durationMs' in att &&
-            att.durationMs !== undefined
-          ) {
+          if ('command' in att && att.command !== undefined && 'durationMs' in att && att.durationMs !== undefined) {
             postToolHookInfos.push({
               command: att.command,
               durationMs: att.durationMs,
@@ -1515,12 +1294,7 @@ async function checkPermissionsAndCallTool(
         resultingMessages.push(hookResult)
         if (hookResult.message.type === 'attachment') {
           const att = hookResult.message.attachment
-          if (
-            'command' in att &&
-            att.command !== undefined &&
-            'durationMs' in att &&
-            att.durationMs !== undefined
-          ) {
+          if ('command' in att && att.command !== undefined && 'durationMs' in att && att.durationMs !== undefined) {
             postToolHookInfos.push({
               command: att.command,
               durationMs: att.durationMs,
@@ -1599,11 +1373,9 @@ async function checkPermissionsAndCallTool(
     // Handle MCP auth errors by updating the client status to 'needs-auth'
     // This updates the /mcp display to show the server needs re-authorization
     if (error instanceof McpAuthError) {
-      toolUseContext.setAppState(prevState => {
+      toolUseContext.setAppState((prevState) => {
         const serverName = error.serverName
-        const existingClientIndex = prevState.mcp.clients.findIndex(
-          c => c.name === serverName,
-        )
+        const existingClientIndex = prevState.mcp.clients.findIndex((c) => c.name === serverName)
         if (existingClientIndex === -1) {
           return prevState
         }
@@ -1630,46 +1402,32 @@ async function checkPermissionsAndCallTool(
 
     if (!(error instanceof AbortError)) {
       const errorMsg = errorMessage(error)
-      logForDebugging(
-        `${tool.name} tool error (${durationMs}ms): ${errorMsg.slice(0, 200)}`,
-      )
+      logForDebugging(`${tool.name} tool error (${durationMs}ms): ${errorMsg.slice(0, 200)}`)
       if (!(error instanceof ShellError)) {
         logError(error)
       }
       logEvent('tengu_tool_use_error', {
-        messageID:
-          messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        messageID: messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         toolName: sanitizeToolNameForAnalytics(tool.name),
-        error: classifyToolError(
-          error,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error: classifyToolError(error) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         isMcp: tool.isMcp ?? false,
 
         queryChainId: toolUseContext.queryTracking
           ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         queryDepth: toolUseContext.queryTracking?.depth,
         ...(mcpServerType && {
-          mcpServerType:
-            mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerType: mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
         ...(mcpServerBaseUrl && {
-          mcpServerBaseUrl:
-            mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerBaseUrl: mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
         ...(requestId && {
-          requestId:
-            requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          requestId: requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }),
-        ...mcpToolDetailsForAnalytics(
-          tool.name,
-          mcpServerType,
-          mcpServerBaseUrl,
-        ),
+        ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
       })
       // Log tool result error event for OTLP with tool parameters and decision context
-      const mcpServerScope = isMcpTool(tool)
-        ? getMcpServerScopeFromToolName(tool.name)
-        : null
+      const mcpServerScope = isMcpTool(tool) ? getMcpServerScopeFromToolName(tool.name) : null
 
       void logOTelEvent('tool_result', {
         tool_name: sanitizeToolNameForAnalytics(tool.name),
@@ -1694,9 +1452,7 @@ async function checkPermissionsAndCallTool(
     const isInterrupt = error instanceof AbortError
 
     // Run PostToolUseFailure hooks
-    const hookMessages: MessageUpdateLazy<
-      AttachmentMessage | ProgressMessage<HookProgress>
-    >[] = []
+    const hookMessages: MessageUpdateLazy<AttachmentMessage | ProgressMessage<HookProgress>>[] = []
     for await (const hookResult of runPostToolUseFailureHooks(
       toolUseContext,
       tool,
@@ -1726,8 +1482,7 @@ async function checkPermissionsAndCallTool(
           toolUseResult: `Error: ${content}`,
           mcpMeta: toolUseContext.agentId
             ? undefined
-            : error instanceof
-                McpToolCallError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            : error instanceof McpToolCallError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
               ? error.mcpMeta
               : undefined,
           sourceToolAssistantUUID: assistantMessage.uuid,

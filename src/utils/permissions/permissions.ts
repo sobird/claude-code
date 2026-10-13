@@ -1,10 +1,9 @@
 import { feature } from 'bun:bundle'
+
 import { APIUserAbortError } from '@anthropic-ai/sdk'
+
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
-import {
-  getToolNameForPermissionCheck,
-  mcpInfoFromString,
-} from '../../services/mcp/mcpStringUtils.js'
+import { getToolNameForPermissionCheck, mcpInfoFromString } from '../../services/mcp/mcpStringUtils.js'
 import type { Tool, ToolPermissionContext, ToolUseContext } from '../../Tool.js'
 import { AGENT_TOOL_NAME } from '../../tools/AgentTool/constants.js'
 import { shouldUseSandbox } from '../../tools/BashTool/shouldUseSandbox.js'
@@ -17,10 +16,7 @@ import { logForDebugging } from '../debug.js'
 import { AbortError, toError } from '../errors.js'
 import { logError } from '../log.js'
 import { SandboxManager } from '../sandbox/sandbox-adapter.js'
-import {
-  getSettingSourceDisplayNameLowercase,
-  SETTING_SOURCES,
-} from '../settings/constants.js'
+import { getSettingSourceDisplayNameLowercase, SETTING_SOURCES } from '../settings/constants.js'
 import { plural } from '../stringUtils.js'
 import { permissionModeTitle } from './PermissionMode.js'
 import type {
@@ -30,30 +26,15 @@ import type {
   PermissionDenyDecision,
   PermissionResult,
 } from './PermissionResult.js'
-import type {
-  PermissionBehavior,
-  PermissionRule,
-  PermissionRuleSource,
-  PermissionRuleValue,
-} from './PermissionRule.js'
-import {
-  applyPermissionUpdate,
-  applyPermissionUpdates,
-  persistPermissionUpdates,
-} from './PermissionUpdate.js'
-import type {
-  PermissionUpdate,
-  PermissionUpdateDestination,
-} from './PermissionUpdateSchema.js'
-import {
-  permissionRuleValueFromString,
-  permissionRuleValueToString,
-} from './permissionRuleParser.js'
+import type { PermissionBehavior, PermissionRule, PermissionRuleSource, PermissionRuleValue } from './PermissionRule.js'
+import { permissionRuleValueFromString, permissionRuleValueToString } from './permissionRuleParser.js'
 import {
   deletePermissionRuleFromSettings,
   type PermissionRuleFromEditableSettings,
   shouldAllowManagedPermissionRulesOnly,
 } from './permissionsLoader.js'
+import { applyPermissionUpdate, applyPermissionUpdates, persistPermissionUpdates } from './PermissionUpdate.js'
+import type { PermissionUpdate, PermissionUpdateDestination } from './PermissionUpdateSchema.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const classifierDecisionModule = feature('TRANSCRIPT_CLASSIFIER')
@@ -76,10 +57,7 @@ import {
   logEvent,
 } from '../../services/analytics/index.js'
 import { sanitizeToolNameForAnalytics } from '../../services/analytics/metadata.js'
-import {
-  clearClassifierChecking,
-  setClassifierChecking,
-} from '../classifierApprovals.js'
+import { clearClassifierChecking, setClassifierChecking } from '../classifierApprovals.js'
 import { isInProtectedNamespace } from '../envUtils.js'
 import { executePermissionRequestHooks } from '../hooks.js'
 import {
@@ -99,10 +77,7 @@ import {
   recordSuccess,
   shouldFallbackToPrompting,
 } from './denialTracking.js'
-import {
-  classifyYoloAction,
-  formatActionForClassifier,
-} from './yoloClassifier.js'
+import { classifyYoloAction, formatActionForClassifier } from './yoloClassifier.js'
 
 const CLASSIFIER_FAIL_CLOSED_REFRESH_MS = 30 * 60 * 1000 // 30 minutes
 
@@ -113,17 +88,13 @@ const PERMISSION_RULE_SOURCES = [
   'session',
 ] as const satisfies readonly PermissionRuleSource[]
 
-export function permissionRuleSourceDisplayString(
-  source: PermissionRuleSource,
-): string {
+export function permissionRuleSourceDisplayString(source: PermissionRuleSource): string {
   return getSettingSourceDisplayNameLowercase(source)
 }
 
-export function getAllowRules(
-  context: ToolPermissionContext,
-): PermissionRule[] {
-  return PERMISSION_RULE_SOURCES.flatMap(source =>
-    (context.alwaysAllowRules[source] || []).map(ruleString => ({
+export function getAllowRules(context: ToolPermissionContext): PermissionRule[] {
+  return PERMISSION_RULE_SOURCES.flatMap((source) =>
+    (context.alwaysAllowRules[source] || []).map((ruleString) => ({
       source,
       ruleBehavior: 'allow',
       ruleValue: permissionRuleValueFromString(ruleString),
@@ -134,16 +105,10 @@ export function getAllowRules(
 /**
  * Creates a permission request message that explain the permission request
  */
-export function createPermissionRequestMessage(
-  toolName: string,
-  decisionReason?: PermissionDecisionReason,
-): string {
+export function createPermissionRequestMessage(toolName: string, decisionReason?: PermissionDecisionReason): string {
   // Handle different decision reason types
   if (decisionReason) {
-    if (
-      (feature('BASH_CLASSIFIER') || feature('TRANSCRIPT_CLASSIFIER')) &&
-      decisionReason.type === 'classifier'
-    ) {
+    if ((feature('BASH_CLASSIFIER') || feature('TRANSCRIPT_CLASSIFIER')) && decisionReason.type === 'classifier') {
       return `Classifier '${decisionReason.classifier}' requires approval for this ${toolName} command: ${decisionReason.reason}`
     }
     switch (decisionReason.type) {
@@ -154,12 +119,8 @@ export function createPermissionRequestMessage(
         return hookMessage
       }
       case 'rule': {
-        const ruleString = permissionRuleValueToString(
-          decisionReason.rule.ruleValue,
-        )
-        const sourceString = permissionRuleSourceDisplayString(
-          decisionReason.rule.source,
-        )
+        const ruleString = permissionRuleValueToString(decisionReason.rule.ruleValue)
+        const sourceString = permissionRuleSourceDisplayString(decisionReason.rule.source)
         return `Permission rule '${ruleString}' from ${sourceString} requires approval for this ${toolName} command`
       }
       case 'subcommandResults': {
@@ -169,11 +130,9 @@ export function createPermissionRequestMessage(
             // Strip output redirections for display to avoid showing filenames as commands
             // Only do this for Bash tool to avoid affecting other tools
             if (toolName === 'Bash') {
-              const { commandWithoutRedirections, redirections } =
-                extractOutputRedirections(cmd)
+              const { commandWithoutRedirections, redirections } = extractOutputRedirections(cmd)
               // Only use stripped version if there were actual redirections
-              const displayCmd =
-                redirections.length > 0 ? commandWithoutRedirections : cmd
+              const displayCmd = redirections.length > 0 ? commandWithoutRedirections : cmd
               needsApproval.push(displayCmd)
             } else {
               needsApproval.push(cmd)
@@ -211,8 +170,8 @@ export function createPermissionRequestMessage(
 }
 
 export function getDenyRules(context: ToolPermissionContext): PermissionRule[] {
-  return PERMISSION_RULE_SOURCES.flatMap(source =>
-    (context.alwaysDenyRules[source] || []).map(ruleString => ({
+  return PERMISSION_RULE_SOURCES.flatMap((source) =>
+    (context.alwaysDenyRules[source] || []).map((ruleString) => ({
       source,
       ruleBehavior: 'deny',
       ruleValue: permissionRuleValueFromString(ruleString),
@@ -221,8 +180,8 @@ export function getDenyRules(context: ToolPermissionContext): PermissionRule[] {
 }
 
 export function getAskRules(context: ToolPermissionContext): PermissionRule[] {
-  return PERMISSION_RULE_SOURCES.flatMap(source =>
-    (context.alwaysAskRules[source] || []).map(ruleString => ({
+  return PERMISSION_RULE_SOURCES.flatMap((source) =>
+    (context.alwaysAskRules[source] || []).map((ruleString) => ({
       source,
       ruleBehavior: 'ask',
       ruleValue: permissionRuleValueFromString(ruleString),
@@ -235,10 +194,7 @@ export function getAskRules(context: ToolPermissionContext): PermissionRule[] {
  * For example, this matches "Bash" but not "Bash(prefix:*)" for BashTool
  * This also matches MCP tools with a server name, e.g. the rule "mcp__server1"
  */
-function toolMatchesRule(
-  tool: Pick<Tool, 'name' | 'mcpInfo'>,
-  rule: PermissionRule,
-): boolean {
+function toolMatchesRule(tool: Pick<Tool, 'name' | 'mcpInfo'>, rule: PermissionRule): boolean {
   // Rule must not have content to match the entire tool
   if (rule.ruleValue.ruleContent !== undefined) {
     return false
@@ -276,9 +232,7 @@ export function toolAlwaysAllowedRule(
   context: ToolPermissionContext,
   tool: Pick<Tool, 'name' | 'mcpInfo'>,
 ): PermissionRule | null {
-  return (
-    getAllowRules(context).find(rule => toolMatchesRule(tool, rule)) || null
-  )
+  return getAllowRules(context).find((rule) => toolMatchesRule(tool, rule)) || null
 }
 
 /**
@@ -288,7 +242,7 @@ export function getDenyRuleForTool(
   context: ToolPermissionContext,
   tool: Pick<Tool, 'name' | 'mcpInfo'>,
 ): PermissionRule | null {
-  return getDenyRules(context).find(rule => toolMatchesRule(tool, rule)) || null
+  return getDenyRules(context).find((rule) => toolMatchesRule(tool, rule)) || null
 }
 
 /**
@@ -298,7 +252,7 @@ export function getAskRuleForTool(
   context: ToolPermissionContext,
   tool: Pick<Tool, 'name' | 'mcpInfo'>,
 ): PermissionRule | null {
-  return getAskRules(context).find(rule => toolMatchesRule(tool, rule)) || null
+  return getAskRules(context).find((rule) => toolMatchesRule(tool, rule)) || null
 }
 
 /**
@@ -312,9 +266,7 @@ export function getDenyRuleForAgent(
 ): PermissionRule | null {
   return (
     getDenyRules(context).find(
-      rule =>
-        rule.ruleValue.toolName === agentToolName &&
-        rule.ruleValue.ruleContent === agentType,
+      (rule) => rule.ruleValue.toolName === agentToolName && rule.ruleValue.ruleContent === agentType,
     ) || null
   )
 }
@@ -332,14 +284,11 @@ export function filterDeniedAgents<T extends { agentType: string }>(
   // every deny rule for every agent (O(agents×rules) parse calls).
   const deniedAgentTypes = new Set<string>()
   for (const rule of getDenyRules(context)) {
-    if (
-      rule.ruleValue.toolName === agentToolName &&
-      rule.ruleValue.ruleContent !== undefined
-    ) {
+    if (rule.ruleValue.toolName === agentToolName && rule.ruleValue.ruleContent !== undefined) {
       deniedAgentTypes.add(rule.ruleValue.ruleContent)
     }
   }
-  return agents.filter(agent => !deniedAgentTypes.has(agent.agentType))
+  return agents.filter((agent) => !deniedAgentTypes.has(agent.agentType))
 }
 
 /**
@@ -351,11 +300,7 @@ export function getRuleByContentsForTool(
   tool: Tool,
   behavior: PermissionBehavior,
 ): Map<string, PermissionRule> {
-  return getRuleByContentsForToolName(
-    context,
-    getToolNameForPermissionCheck(tool),
-    behavior,
-  )
+  return getRuleByContentsForToolName(context, getToolNameForPermissionCheck(tool), behavior)
 }
 
 // Used to break circular dependency where a Tool calls this function
@@ -424,12 +369,9 @@ async function runPermissionRequestHooksForHeadlessAgent(
         // Persist permission updates if provided
         if (decision.updatedPermissions?.length) {
           persistPermissionUpdates(decision.updatedPermissions)
-          context.setAppState(prev => ({
+          context.setAppState((prev) => ({
             ...prev,
-            toolPermissionContext: applyPermissionUpdates(
-              prev.toolPermissionContext,
-              decision.updatedPermissions!,
-            ),
+            toolPermissionContext: applyPermissionUpdates(prev.toolPermissionContext, decision.updatedPermissions!),
           }))
         }
         return {
@@ -443,9 +385,7 @@ async function runPermissionRequestHooksForHeadlessAgent(
       }
       if (decision.behavior === 'deny') {
         if (decision.interrupt) {
-          logForDebugging(
-            `Hook interrupt: tool=${tool.name} hookMessage=${decision.message}`,
-          )
+          logForDebugging(`Hook interrupt: tool=${tool.name} hookMessage=${decision.message}`)
           context.abortController.abort()
         }
         return {
@@ -479,15 +419,13 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
 ): Promise<PermissionDecision> => {
   const result = await hasPermissionsToUseToolInner(tool, input, context)
 
-
   // Reset consecutive denials on any allowed tool use in auto mode.
   // This ensures that a successful tool use (even one auto-allowed by rules)
   // breaks the consecutive denial streak.
   if (result.behavior === 'allow') {
     const appState = context.getAppState()
     if (feature('TRANSCRIPT_CLASSIFIER')) {
-      const currentDenialState =
-        context.localDenialTracking ?? appState.denialTracking
+      const currentDenialState = context.localDenialTracking ?? appState.denialTracking
       if (
         appState.toolPermissionContext.mode === 'auto' &&
         currentDenialState &&
@@ -520,8 +458,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
     if (
       feature('TRANSCRIPT_CLASSIFIER') &&
       (appState.toolPermissionContext.mode === 'auto' ||
-        (appState.toolPermissionContext.mode === 'plan' &&
-          (autoModeStateModule?.isAutoModeActive() ?? false)))
+        (appState.toolPermissionContext.mode === 'plan' && (autoModeStateModule?.isAutoModeActive() ?? false)))
     ) {
       // Non-classifier-approvable safetyCheck decisions stay immune to ALL
       // auto-approve paths: the acceptEdits fast-path, the safe-tool allowlist,
@@ -529,10 +466,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
       // auto. classifierApprovable safetyChecks (sensitive-file paths) fall
       // through to the classifier — the fast-paths below naturally don't fire
       // because the tool's own checkPermissions still returns 'ask'.
-      if (
-        result.decisionReason?.type === 'safetyCheck' &&
-        !result.decisionReason.classifierApprovable
-      ) {
+      if (result.decisionReason?.type === 'safetyCheck' && !result.decisionReason.classifierApprovable) {
         if (appState.toolPermissionContext.shouldAvoidPermissionPrompts) {
           return {
             behavior: 'deny',
@@ -552,10 +486,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
 
       // Use local denial tracking for async subagents (whose setAppState
       // is a no-op), otherwise read from appState as before.
-      const denialState =
-        context.localDenialTracking ??
-        appState.denialTracking ??
-        createDenialTrackingState()
+      const denialState = context.localDenialTracking ?? appState.denialTracking ?? createDenialTrackingState()
 
       // PowerShell requires explicit user permission in auto mode unless
       // POWERSHELL_AUTO_MODE (ant-only build flag) is on. When disabled, this
@@ -569,10 +500,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
       // permissionSetup.ts: isOverlyBroadPowerShellAllowRule strips PowerShell(*)
       // and isDangerousPowerShellPermission strips iex/pwsh/Start-Process
       // prefix rules for ant users and auto mode entry.
-      if (
-        tool.name === POWERSHELL_TOOL_NAME &&
-        !feature('POWERSHELL_AUTO_MODE')
-      ) {
+      if (tool.name === POWERSHELL_TOOL_NAME && !feature('POWERSHELL_AUTO_MODE')) {
         if (appState.toolPermissionContext.shouldAvoidPermissionPrompts) {
           return {
             behavior: 'deny',
@@ -584,9 +512,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
             },
           }
         }
-        logForDebugging(
-          `Skipping auto mode classifier for ${tool.name}: tool requires explicit user permission`,
-        )
+        logForDebugging(`Skipping auto mode classifier for ${tool.name}: tool requires explicit user permission`)
         return result
       }
 
@@ -597,11 +523,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
       // acceptEdits mode, which would silently bypass the classifier. REPL
       // code can contain VM escapes between inner tool calls; the classifier
       // must see the glue JavaScript, not just the inner tool calls.
-      if (
-        result.behavior === 'ask' &&
-        tool.name !== AGENT_TOOL_NAME &&
-        tool.name !== REPL_TOOL_NAME
-      ) {
+      if (result.behavior === 'ask' && tool.name !== AGENT_TOOL_NAME && tool.name !== REPL_TOOL_NAME) {
         try {
           const parsedInput = tool.inputSchema.parse(input)
           const acceptEditsResult = await tool.checkPermissions(parsedInput, {
@@ -620,23 +542,17 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           if (acceptEditsResult.behavior === 'allow') {
             const newDenialState = recordSuccess(denialState)
             persistDenialState(context, newDenialState)
-            logForDebugging(
-              `Skipping auto mode classifier for ${tool.name}: would be allowed in acceptEdits mode`,
-            )
+            logForDebugging(`Skipping auto mode classifier for ${tool.name}: would be allowed in acceptEdits mode`)
             logEvent('tengu_auto_mode_decision', {
-              decision:
-                'allowed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              decision: 'allowed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               toolName: sanitizeToolNameForAnalytics(tool.name),
               inProtectedNamespace: isInProtectedNamespace(),
               // msg_id of the agent completion that produced this tool_use —
               // the action at the bottom of the classifier transcript. Joins
               // the decision back to the main agent's API response.
-              agentMsgId: assistantMessage.message
-                .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-              confidence:
-                'high' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-              fastPath:
-                'acceptEdits' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              agentMsgId: assistantMessage.message.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              confidence: 'high' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              fastPath: 'acceptEdits' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
             })
             return {
               behavior: 'allow',
@@ -660,20 +576,14 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
       if (classifierDecisionModule!.isAutoModeAllowlistedTool(tool.name)) {
         const newDenialState = recordSuccess(denialState)
         persistDenialState(context, newDenialState)
-        logForDebugging(
-          `Skipping auto mode classifier for ${tool.name}: tool is on the safe allowlist`,
-        )
+        logForDebugging(`Skipping auto mode classifier for ${tool.name}: tool is on the safe allowlist`)
         logEvent('tengu_auto_mode_decision', {
-          decision:
-            'allowed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          decision: 'allowed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           toolName: sanitizeToolNameForAnalytics(tool.name),
           inProtectedNamespace: isInProtectedNamespace(),
-          agentMsgId: assistantMessage.message
-            .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          confidence:
-            'high' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          fastPath:
-            'allowlist' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          agentMsgId: assistantMessage.message.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          confidence: 'high' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          fastPath: 'allowlist' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
         return {
           behavior: 'allow',
@@ -702,11 +612,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
       }
 
       // Notify ants when classifier error dumped prompts (will be in /share)
-      if (
-        process.env.USER_TYPE === 'ant' &&
-        classifierResult.errorDumpPath &&
-        context.addNotification
-      ) {
+      if (process.env.USER_TYPE === 'ant' && classifierResult.errorDumpPath && context.addNotification) {
         context.addNotification({
           key: 'auto-mode-error-dump',
           text: `Auto mode classifier error — prompts dumped to ${classifierResult.errorDumpPath} (included in /share)`,
@@ -725,42 +631,28 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
       // Compute classifier cost in USD for overhead analysis
       const classifierCostUSD =
         classifierResult.usage && classifierResult.model
-          ? calculateCostFromTokens(
-              classifierResult.model,
-              classifierResult.usage,
-            )
+          ? calculateCostFromTokens(classifierResult.model, classifierResult.usage)
           : undefined
       logEvent('tengu_auto_mode_decision', {
-        decision:
-          yoloDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        decision: yoloDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         toolName: sanitizeToolNameForAnalytics(tool.name),
         inProtectedNamespace: isInProtectedNamespace(),
         // msg_id of the agent completion that produced this tool_use —
         // the action at the bottom of the classifier transcript.
-        agentMsgId: assistantMessage.message
-          .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        classifierModel:
-          classifierResult.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        consecutiveDenials: classifierResult.shouldBlock
-          ? denialState.consecutiveDenials + 1
-          : 0,
-        totalDenials: classifierResult.shouldBlock
-          ? denialState.totalDenials + 1
-          : denialState.totalDenials,
+        agentMsgId: assistantMessage.message.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        classifierModel: classifierResult.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        consecutiveDenials: classifierResult.shouldBlock ? denialState.consecutiveDenials + 1 : 0,
+        totalDenials: classifierResult.shouldBlock ? denialState.totalDenials + 1 : denialState.totalDenials,
         // Overhead telemetry: token usage and latency for the classifier API call
         classifierInputTokens: classifierResult.usage?.inputTokens,
         classifierOutputTokens: classifierResult.usage?.outputTokens,
-        classifierCacheReadInputTokens:
-          classifierResult.usage?.cacheReadInputTokens,
-        classifierCacheCreationInputTokens:
-          classifierResult.usage?.cacheCreationInputTokens,
+        classifierCacheReadInputTokens: classifierResult.usage?.cacheReadInputTokens,
+        classifierCacheCreationInputTokens: classifierResult.usage?.cacheCreationInputTokens,
         classifierDurationMs: classifierResult.durationMs,
         // Character lengths of the prompt components sent to the classifier
-        classifierSystemPromptLength:
-          classifierResult.promptLengths?.systemPrompt,
+        classifierSystemPromptLength: classifierResult.promptLengths?.systemPrompt,
         classifierToolCallsLength: classifierResult.promptLengths?.toolCalls,
-        classifierUserPromptsLength:
-          classifierResult.promptLengths?.userPrompts,
+        classifierUserPromptsLength: classifierResult.promptLengths?.userPrompts,
         // Session totals at time of classifier call (for computing overhead %).
         // These are main-transcript-only — sideQuery (used by the classifier)
         // does NOT call addToTotalSessionCost, so classifier tokens are excluded.
@@ -769,15 +661,11 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         sessionCacheReadInputTokens: getTotalCacheReadInputTokens(),
         sessionCacheCreationInputTokens: getTotalCacheCreationInputTokens(),
         classifierCostUSD,
-        classifierStage:
-          classifierResult.stage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        classifierStage: classifierResult.stage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         classifierStage1InputTokens: classifierResult.stage1Usage?.inputTokens,
-        classifierStage1OutputTokens:
-          classifierResult.stage1Usage?.outputTokens,
-        classifierStage1CacheReadInputTokens:
-          classifierResult.stage1Usage?.cacheReadInputTokens,
-        classifierStage1CacheCreationInputTokens:
-          classifierResult.stage1Usage?.cacheCreationInputTokens,
+        classifierStage1OutputTokens: classifierResult.stage1Usage?.outputTokens,
+        classifierStage1CacheReadInputTokens: classifierResult.stage1Usage?.cacheReadInputTokens,
+        classifierStage1CacheCreationInputTokens: classifierResult.stage1Usage?.cacheCreationInputTokens,
         classifierStage1DurationMs: classifierResult.stage1DurationMs,
         classifierStage1RequestId:
           classifierResult.stage1RequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -785,18 +673,12 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           classifierResult.stage1MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         classifierStage1CostUSD:
           classifierResult.stage1Usage && classifierResult.model
-            ? calculateCostFromTokens(
-                classifierResult.model,
-                classifierResult.stage1Usage,
-              )
+            ? calculateCostFromTokens(classifierResult.model, classifierResult.stage1Usage)
             : undefined,
         classifierStage2InputTokens: classifierResult.stage2Usage?.inputTokens,
-        classifierStage2OutputTokens:
-          classifierResult.stage2Usage?.outputTokens,
-        classifierStage2CacheReadInputTokens:
-          classifierResult.stage2Usage?.cacheReadInputTokens,
-        classifierStage2CacheCreationInputTokens:
-          classifierResult.stage2Usage?.cacheCreationInputTokens,
+        classifierStage2OutputTokens: classifierResult.stage2Usage?.outputTokens,
+        classifierStage2CacheReadInputTokens: classifierResult.stage2Usage?.cacheReadInputTokens,
+        classifierStage2CacheCreationInputTokens: classifierResult.stage2Usage?.cacheCreationInputTokens,
         classifierStage2DurationMs: classifierResult.stage2DurationMs,
         classifierStage2RequestId:
           classifierResult.stage2RequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -804,10 +686,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           classifierResult.stage2MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         classifierStage2CostUSD:
           classifierResult.stage2Usage && classifierResult.model
-            ? calculateCostFromTokens(
-                classifierResult.model,
-                classifierResult.stage2Usage,
-              )
+            ? calculateCostFromTokens(classifierResult.model, classifierResult.stage2Usage)
             : undefined,
       })
 
@@ -827,33 +706,24 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
               'Agent aborted: auto mode classifier transcript exceeded context window in headless mode',
             )
           }
-          logForDebugging(
-            'Auto mode classifier transcript too long, falling back to normal permission handling',
-            { level: 'warn' },
-          )
+          logForDebugging('Auto mode classifier transcript too long, falling back to normal permission handling', {
+            level: 'warn',
+          })
           return {
             ...result,
             decisionReason: {
               type: 'other',
-              reason:
-                'Auto mode classifier transcript exceeded context window — falling back to manual approval',
+              reason: 'Auto mode classifier transcript exceeded context window — falling back to manual approval',
             },
           }
         }
         // When classifier is unavailable (API error), behavior depends on
         // the tengu_iron_gate_closed gate.
         if (classifierResult.unavailable) {
-          if (
-            getFeatureValue_CACHED_WITH_REFRESH(
-              'tengu_iron_gate_closed',
-              true,
-              CLASSIFIER_FAIL_CLOSED_REFRESH_MS,
-            )
-          ) {
-            logForDebugging(
-              'Auto mode classifier unavailable, denying with retry guidance (fail closed)',
-              { level: 'warn' },
-            )
+          if (getFeatureValue_CACHED_WITH_REFRESH('tengu_iron_gate_closed', true, CLASSIFIER_FAIL_CLOSED_REFRESH_MS)) {
+            logForDebugging('Auto mode classifier unavailable, denying with retry guidance (fail closed)', {
+              level: 'warn',
+            })
             return {
               behavior: 'deny',
               decisionReason: {
@@ -861,17 +731,13 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
                 classifier: 'auto-mode',
                 reason: 'Classifier unavailable',
               },
-              message: buildClassifierUnavailableMessage(
-                tool.name,
-                classifierResult.model,
-              ),
+              message: buildClassifierUnavailableMessage(tool.name, classifierResult.model),
             }
           }
           // Fail open: fall back to normal permission handling
-          logForDebugging(
-            'Auto mode classifier unavailable, falling back to normal permission handling (fail open)',
-            { level: 'warn' },
-          )
+          logForDebugging('Auto mode classifier unavailable, falling back to normal permission handling (fail open)', {
+            level: 'warn',
+          })
           return result
         }
 
@@ -879,10 +745,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         const newDenialState = recordDenial(denialState)
         persistDenialState(context, newDenialState)
 
-        logForDebugging(
-          `Auto mode classifier blocked action: ${classifierResult.reason}`,
-          { level: 'warn' },
-        )
+        logForDebugging(`Auto mode classifier blocked action: ${classifierResult.reason}`, { level: 'warn' })
 
         // If denial limit hit, fall back to prompting so the user
         // can review. We check after the classifier so we can include
@@ -960,14 +823,11 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
  * mutate the local state in place (since setAppState is a no-op). Otherwise,
  * write to appState as usual.
  */
-function persistDenialState(
-  context: ToolUseContext,
-  newState: DenialTrackingState,
-): void {
+function persistDenialState(context: ToolUseContext, newState: DenialTrackingState): void {
   if (context.localDenialTracking) {
     Object.assign(context.localDenialTracking, newState)
   } else {
-    context.setAppState(prev => {
+    context.setAppState((prev) => {
       // recordSuccess returns the same reference when state is
       // unchanged. Returning prev here lets store.setState's Object.is check
       // skip the listener loop entirely.
@@ -1007,29 +867,19 @@ function handleDenialLimitExceeded(
     : `${consecutiveCount} consecutive actions were blocked. Please review the transcript before continuing.`
 
   logEvent('tengu_auto_mode_denial_limit_exceeded', {
-    limit: (hitTotalLimit
-      ? 'total'
-      : 'consecutive') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    mode: (isHeadless
-      ? 'headless'
-      : 'cli') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    messageID: assistantMessage.message
-      .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    limit: (hitTotalLimit ? 'total' : 'consecutive') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    mode: (isHeadless ? 'headless' : 'cli') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    messageID: assistantMessage.message.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     consecutiveDenials: consecutiveCount,
     totalDenials: totalCount,
     toolName: sanitizeToolNameForAnalytics(tool.name),
   })
 
   if (isHeadless) {
-    throw new AbortError(
-      'Agent aborted: too many classifier denials in headless mode',
-    )
+    throw new AbortError('Agent aborted: too many classifier denials in headless mode')
   }
 
-  logForDebugging(
-    `Classifier denial limit exceeded, falling back to prompting: ${warning}`,
-    { level: 'warn' },
-  )
+  logForDebugging(`Classifier denial limit exceeded, falling back to prompting: ${warning}`, { level: 'warn' })
 
   if (hitTotalLimit) {
     persistDenialState(context, {
@@ -1043,9 +893,7 @@ function handleDenialLimitExceeded(
   // so downstream analytics in interactiveHandler can log the correct
   // user override event.
   const originalClassifier =
-    result.decisionReason?.type === 'classifier'
-      ? result.decisionReason.classifier
-      : 'auto-mode'
+    result.decisionReason?.type === 'classifier' ? result.decisionReason.classifier : 'auto-mode'
 
   return {
     ...result,
@@ -1144,10 +992,7 @@ export async function checkRuleBasedPermissions(
   // 1g. Safety checks (e.g. .git/, .claude/, .vscode/, shell configs) are
   // bypass-immune — they must prompt even when a PreToolUse hook returned
   // allow. checkPathSafetyForAutoEdit returns {type:'safetyCheck'} for these.
-  if (
-    toolPermissionResult?.behavior === 'ask' &&
-    toolPermissionResult.decisionReason?.type === 'safetyCheck'
-  ) {
+  if (toolPermissionResult?.behavior === 'ask' && toolPermissionResult.decisionReason?.type === 'safetyCheck') {
     return toolPermissionResult
   }
 
@@ -1228,10 +1073,7 @@ async function hasPermissionsToUseToolInner(
   }
 
   // 1e. Tool requires user interaction even in bypass mode
-  if (
-    tool.requiresUserInteraction?.() &&
-    toolPermissionResult?.behavior === 'ask'
-  ) {
+  if (tool.requiresUserInteraction?.() && toolPermissionResult?.behavior === 'ask') {
     return toolPermissionResult
   }
 
@@ -1252,10 +1094,7 @@ async function hasPermissionsToUseToolInner(
   // 1g. Safety checks (e.g. .git/, .claude/, .vscode/, shell configs) are
   // bypass-immune — they must prompt even in bypassPermissions mode.
   // checkPathSafetyForAutoEdit returns {type:'safetyCheck'} for these paths.
-  if (
-    toolPermissionResult?.behavior === 'ask' &&
-    toolPermissionResult.decisionReason?.type === 'safetyCheck'
-  ) {
+  if (toolPermissionResult?.behavior === 'ask' && toolPermissionResult.decisionReason?.type === 'safetyCheck') {
     return toolPermissionResult
   }
 
@@ -1267,8 +1106,7 @@ async function hasPermissionsToUseToolInner(
   // - Plan mode when the user originally started with bypass mode (isBypassPermissionsModeAvailable)
   const shouldBypassPermissions =
     appState.toolPermissionContext.mode === 'bypassPermissions' ||
-    (appState.toolPermissionContext.mode === 'plan' &&
-      appState.toolPermissionContext.isBypassPermissionsModeAvailable)
+    (appState.toolPermissionContext.mode === 'plan' && appState.toolPermissionContext.isBypassPermissionsModeAvailable)
   if (shouldBypassPermissions) {
     return {
       behavior: 'allow',
@@ -1281,10 +1119,7 @@ async function hasPermissionsToUseToolInner(
   }
 
   // 2b. Entire tool is allowed
-  const alwaysAllowedRule = toolAlwaysAllowedRule(
-    appState.toolPermissionContext,
-    tool,
-  )
+  const alwaysAllowedRule = toolAlwaysAllowedRule(appState.toolPermissionContext, tool)
   if (alwaysAllowedRule) {
     return {
       behavior: 'allow',
@@ -1302,17 +1137,12 @@ async function hasPermissionsToUseToolInner(
       ? {
           ...toolPermissionResult,
           behavior: 'ask' as const,
-          message: createPermissionRequestMessage(
-            tool.name,
-            toolPermissionResult.decisionReason,
-          ),
+          message: createPermissionRequestMessage(tool.name, toolPermissionResult.decisionReason),
         }
       : toolPermissionResult
 
   if (result.behavior === 'ask' && result.suggestions) {
-    logForDebugging(
-      `Permission suggestions for ${tool.name}: ${jsonStringify(result.suggestions, null, 2)}`,
-    )
+    logForDebugging(`Permission suggestions for ${tool.name}: ${jsonStringify(result.suggestions, null, 2)}`)
   }
 
   return result
@@ -1331,11 +1161,7 @@ export async function deletePermissionRule({
   initialContext,
   setToolPermissionContext,
 }: EditPermissionRuleArgs & { rule: PermissionRule }): Promise<void> {
-  if (
-    rule.source === 'policySettings' ||
-    rule.source === 'flagSettings' ||
-    rule.source === 'command'
-  ) {
+  if (rule.source === 'policySettings' || rule.source === 'flagSettings' || rule.source === 'command') {
     throw new Error('Cannot delete permission rules from read-only settings')
   }
 
@@ -1353,9 +1179,7 @@ export async function deletePermissionRule({
     case 'userSettings':
     case 'projectSettings': {
       // Note: Typescript doesn't know that rule conforms to `PermissionRuleFromEditableSettings` even when we switch on `rule.source`
-      deletePermissionRuleFromSettings(
-        rule as PermissionRuleFromEditableSettings,
-      )
+      deletePermissionRuleFromSettings(rule as PermissionRuleFromEditableSettings)
       break
     }
     case 'cliArg':
@@ -1372,10 +1196,7 @@ export async function deletePermissionRule({
 /**
  * Helper to convert PermissionRule array to PermissionUpdate array
  */
-function convertRulesToUpdates(
-  rules: PermissionRule[],
-  updateType: 'addRules' | 'replaceRules',
-): PermissionUpdate[] {
+function convertRulesToUpdates(rules: PermissionRule[], updateType: 'addRules' | 'replaceRules'): PermissionUpdate[] {
   // Group rules by source and behavior
   const grouped = new Map<string, PermissionRuleValue[]>()
 
@@ -1450,11 +1271,7 @@ export function syncPermissionRulesFromDisk(
   // would leave the old rule in the context because convertRulesToUpdates
   // only generates replaceRules for source:behavior pairs that have rules —
   // an empty group produces no update, so stale rules persist.
-  const diskSources: PermissionUpdateDestination[] = [
-    'userSettings',
-    'projectSettings',
-    'localSettings',
-  ]
+  const diskSources: PermissionUpdateDestination[] = ['userSettings', 'projectSettings', 'localSettings']
   for (const diskSource of diskSources) {
     for (const behavior of ['allow', 'deny', 'ask'] as PermissionBehavior[]) {
       context = applyPermissionUpdate(context, {
@@ -1478,9 +1295,5 @@ function getUpdatedInputOrFallback(
   permissionResult: PermissionResult,
   fallback: Record<string, unknown>,
 ): Record<string, unknown> {
-  return (
-    ('updatedInput' in permissionResult
-      ? permissionResult.updatedInput
-      : undefined) ?? fallback
-  )
+  return ('updatedInput' in permissionResult ? permissionResult.updatedInput : undefined) ?? fallback
 }

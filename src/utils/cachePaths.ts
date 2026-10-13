@@ -1,5 +1,7 @@
-import envPaths from 'env-paths'
 import { join } from 'path'
+
+import envPaths from 'env-paths'
+
 import { getFsImplementation } from './fsOperations.js'
 import { djb2Hash } from './hash.js'
 
@@ -24,10 +26,8 @@ function getProjectDir(cwd: string): string {
 
 export const CACHE_PATHS = {
   baseLogs: () => join(paths.cache, getProjectDir(getFsImplementation().cwd())),
-  errors: () =>
-    join(paths.cache, getProjectDir(getFsImplementation().cwd()), 'errors'),
-  messages: () =>
-    join(paths.cache, getProjectDir(getFsImplementation().cwd()), 'messages'),
+  errors: () => join(paths.cache, getProjectDir(getFsImplementation().cwd()), 'errors'),
+  messages: () => join(paths.cache, getProjectDir(getFsImplementation().cwd()), 'messages'),
   mcpLogs: (serverName: string) =>
     join(
       paths.cache,

@@ -1,61 +1,48 @@
-// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import { Box, Text } from '../ink.js'
+import { feature } from 'bun:bundle'
+
+import figures from 'figures'
+import sample from 'lodash-es/sample.js'
 import * as React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  computeGlimmerIndex,
-  computeShimmerSegments,
-  SHIMMER_INTERVAL_MS,
-} from '../bridge/bridgeStatusUtil.js'
-import { feature } from 'bun:bundle'
-import { getKairosActive, getUserMsgOptIn } from '../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
-import { isEnvTruthy } from '../utils/envUtils.js'
-import { count } from '../utils/array.js'
-import sample from 'lodash-es/sample.js'
-import {
-  formatDuration,
-  formatNumber,
-  formatSecondsShort,
-} from '../utils/format.js'
 import type { Theme } from 'src/utils/theme.js'
-import { activityManager } from '../utils/activityManager.js'
+
+import { getKairosActive, getUserMsgOptIn } from '../bootstrap/state.js'
+import { getCurrentTurnTokenBudget, getTurnOutputTokens } from '../bootstrap/state.js'
+import { computeGlimmerIndex, computeShimmerSegments, SHIMMER_INTERVAL_MS } from '../bridge/bridgeStatusUtil.js'
+import { TEARDROP_ASTERISK } from '../constants/figures.js'
 import { getSpinnerVerbs } from '../constants/spinnerVerbs.js'
-import { MessageResponse } from './MessageResponse.js'
-import { TaskListV2 } from './TaskListV2.js'
-import { useTasksV2 } from '../hooks/useTasksV2.js'
-import type { Task } from '../utils/tasks.js'
-import { useAppState } from '../state/AppState.js'
-import { useTerminalSize } from '../hooks/useTerminalSize.js'
-import { stringWidth } from '../ink/stringWidth.js'
-import { getDefaultCharacters, type SpinnerMode } from './Spinner/index.js'
-import { SpinnerAnimationRow } from './Spinner/SpinnerAnimationRow.js'
 import { useSettings } from '../hooks/useSettings.js'
+import { useTasksV2 } from '../hooks/useTasksV2.js'
+import { useTerminalSize } from '../hooks/useTerminalSize.js'
+// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
+import { Box, Text } from '../ink.js'
+import { useAnimationFrame } from '../ink.js'
+import { stringWidth } from '../ink/stringWidth.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { useAppState } from '../state/AppState.js'
+import { getViewedTeammateTask } from '../state/selectors.js'
+import { getAllInProcessTeammateTasks } from '../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
 import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js'
 import { isBackgroundTask } from '../tasks/types.js'
-import { getAllInProcessTeammateTasks } from '../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
-import { getEffortSuffix } from '../utils/effort.js'
-import { getMainLoopModel } from '../utils/model/model.js'
-import { getViewedTeammateTask } from '../state/selectors.js'
-import { TEARDROP_ASTERISK } from '../constants/figures.js'
-import figures from 'figures'
-import {
-  getCurrentTurnTokenBudget,
-  getTurnOutputTokens,
-} from '../bootstrap/state.js'
+import { activityManager } from '../utils/activityManager.js'
+import { count } from '../utils/array.js'
 import { computeTtftText, type ApiMetricEntry } from '../utils/computeTtftText'
-import { TeammateSpinnerTree } from './Spinner/TeammateSpinnerTree.js'
-import { useAnimationFrame } from '../ink.js'
 import { getGlobalConfig } from '../utils/config.js'
+import { getEffortSuffix } from '../utils/effort.js'
+import { isEnvTruthy } from '../utils/envUtils.js'
+import { formatDuration, formatNumber, formatSecondsShort } from '../utils/format.js'
+import { getMainLoopModel } from '../utils/model/model.js'
+import type { Task } from '../utils/tasks.js'
+import { MessageResponse } from './MessageResponse.js'
+import { getDefaultCharacters, type SpinnerMode } from './Spinner/index.js'
+import { SpinnerAnimationRow } from './Spinner/SpinnerAnimationRow.js'
+import { TeammateSpinnerTree } from './Spinner/TeammateSpinnerTree.js'
+import { TaskListV2 } from './TaskListV2.js'
 export type { SpinnerMode } from './Spinner/index.js'
 
 const DEFAULT_CHARACTERS = getDefaultCharacters()
 
-const SPINNER_FRAMES = [
-  ...DEFAULT_CHARACTERS,
-  ...[...DEFAULT_CHARACTERS].reverse(),
-]
-
+const SPINNER_FRAMES = [...DEFAULT_CHARACTERS, ...[...DEFAULT_CHARACTERS].reverse()]
 
 type Props = {
   mode: SpinnerMode
@@ -79,12 +66,12 @@ type Props = {
 // hook call chains. Without this split, toggling /brief mid-render would
 // violate Rules of Hooks (the inner variant calls ~10 more hooks).
 export function SpinnerWithVerb(props: Props): React.ReactNode {
-  const isBriefOnly = useAppState(s => s.isBriefOnly)
+  const isBriefOnly = useAppState((s) => s.isBriefOnly)
   // REPL overrides isBriefOnly→false when viewing a teammate transcript
   // (see isBriefOnly={viewedTeammateTask ? false : isBriefOnly}). That
   // prop isn't threaded here, so replicate the gate from the store —
   // teammate view needs the real spinner (which shows teammate status).
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId)
+  const viewingAgentTaskId = useAppState((s) => s.viewingAgentTaskId)
   // Hoisted to mount-time — this component re-renders at animation framerate.
   const briefEnvEnabled =
     feature('KAIROS') || feature('KAIROS_BRIEF')
@@ -98,15 +85,11 @@ export function SpinnerWithVerb(props: Props): React.ReactNode {
   if (
     (feature('KAIROS') || feature('KAIROS_BRIEF')) &&
     (getKairosActive() ||
-      (getUserMsgOptIn() &&
-        (briefEnvEnabled ||
-          getFeatureValue_CACHED_MAY_BE_STALE('tengu_kairos_brief', false)))) &&
+      (getUserMsgOptIn() && (briefEnvEnabled || getFeatureValue_CACHED_MAY_BE_STALE('tengu_kairos_brief', false)))) &&
     isBriefOnly &&
     !viewingAgentTaskId
   ) {
-    return (
-      <BriefSpinner mode={props.mode} overrideMessage={props.overrideMessage} />
-    )
+    return <BriefSpinner mode={props.mode} overrideMessage={props.overrideMessage} />
   }
 
   return <SpinnerWithVerbInner {...props} />
@@ -137,25 +120,21 @@ function SpinnerWithVerbInner({
   // (frame, glimmer, stalled intensity, token counter, thinking shimmer,
   // elapsed-time timer) are computed inside the child.
 
-  const tasks = useAppState(s => s.tasks)
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId)
-  const expandedView = useAppState(s => s.expandedView)
+  const tasks = useAppState((s) => s.tasks)
+  const viewingAgentTaskId = useAppState((s) => s.viewingAgentTaskId)
+  const expandedView = useAppState((s) => s.expandedView)
   const showExpandedTodos = expandedView === 'tasks'
   const showSpinnerTree = expandedView === 'teammates'
-  const selectedIPAgentIndex = useAppState(s => s.selectedIPAgentIndex)
-  const viewSelectionMode = useAppState(s => s.viewSelectionMode)
+  const selectedIPAgentIndex = useAppState((s) => s.selectedIPAgentIndex)
+  const viewSelectionMode = useAppState((s) => s.viewSelectionMode)
   // Get foregrounded teammate (if viewing a teammate's transcript)
-  const foregroundedTeammate = viewingAgentTaskId
-    ? getViewedTeammateTask({ viewingAgentTaskId, tasks })
-    : undefined
+  const foregroundedTeammate = viewingAgentTaskId ? getViewedTeammateTask({ viewingAgentTaskId, tasks }) : undefined
   const { columns } = useTerminalSize()
   const tasksV2 = useTasksV2()
 
   // Track thinking status: 'thinking' | number (duration in ms) | null
   // Shows each state for minimum 2s to avoid UI jank
-  const [thinkingStatus, setThinkingStatus] = useState<
-    'thinking' | number | null
-  >(null)
+  const [thinkingStatus, setThinkingStatus] = useState<'thinking' | number | null>(null)
   const thinkingStartRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -197,25 +176,17 @@ function SpinnerWithVerbInner({
   }, [mode])
 
   // Find the current in-progress task and next pending task
-  const currentTodo = tasksV2?.find(
-    task => task.status !== 'pending' && task.status !== 'completed',
-  )
+  const currentTodo = tasksV2?.find((task) => task.status !== 'pending' && task.status !== 'completed')
   const nextTask = findNextPendingTask(tasksV2)
 
   // Use useState with initializer to pick a random verb once on mount
   const [randomVerb] = useState(() => sample(getSpinnerVerbs()))
 
   // Leader's own verb (always the leader's, regardless of who is foregrounded)
-  const leaderVerb =
-    overrideMessage ??
-    currentTodo?.activeForm ??
-    currentTodo?.subject ??
-    randomVerb
+  const leaderVerb = overrideMessage ?? currentTodo?.activeForm ?? currentTodo?.subject ?? randomVerb
 
   const effectiveVerb =
-    foregroundedTeammate && !foregroundedTeammate.isIdle
-      ? (foregroundedTeammate.spinnerVerb ?? randomVerb)
-      : leaderVerb
+    foregroundedTeammate && !foregroundedTeammate.isIdle ? (foregroundedTeammate.spinnerVerb ?? randomVerb) : leaderVerb
   const message = effectiveVerb + '…'
 
   // Track CLI activity when spinner is active
@@ -227,15 +198,13 @@ function SpinnerWithVerbInner({
     }
   }, [mode])
 
-  const effortValue = useAppState(s => s.effortValue)
+  const effortValue = useAppState((s) => s.effortValue)
   const effortSuffix = getEffortSuffix(getMainLoopModel(), effortValue)
 
   // Check if any running in-process teammates exist (needed for both modes)
-  const runningTeammates = getAllInProcessTeammateTasks(tasks).filter(
-    t => t.status === 'running',
-  )
+  const runningTeammates = getAllInProcessTeammateTasks(tasks).filter((t) => t.status === 'running')
   const hasRunningTeammates = runningTeammates.length > 0
-  const allIdle = hasRunningTeammates && runningTeammates.every(t => t.isIdle)
+  const allIdle = hasRunningTeammates && runningTeammates.every((t) => t.isIdle)
 
   // Gather aggregate token stats from all running swarm teammates
   // In spinner-tree mode, skip aggregation (teammates have their own lines in the tree)
@@ -255,9 +224,7 @@ function SpinnerWithVerbInner({
   // a coarse 30s threshold.
   const elapsedSnapshot =
     pauseStartTimeRef.current !== null
-      ? pauseStartTimeRef.current -
-        loadingStartTimeRef.current -
-        totalPausedMsRef.current
+      ? pauseStartTimeRef.current - loadingStartTimeRef.current - totalPausedMsRef.current
       : Date.now() - loadingStartTimeRef.current - totalPausedMsRef.current
 
   // Leader token count for TeammateSpinnerTree — read raw (non-animated) from
@@ -276,11 +243,7 @@ function SpinnerWithVerbInner({
   // doesn't trigger re-renders; we pick up updates on the parent's ~25x/turn
   // re-render cadence, same as the old ApiMetricsLine did.
   let ttftText: string | null = null
-  if (
-    process.env.USER_TYPE === 'ant' &&
-    apiMetricsRef?.current &&
-    apiMetricsRef.current.length > 0
-  ) {
+  if (process.env.USER_TYPE === 'ant' && apiMetricsRef?.current && apiMetricsRef.current.length > 0) {
     ttftText = computeTtftText(apiMetricsRef.current)
   }
 
@@ -339,8 +302,7 @@ function SpinnerWithVerbInner({
   let contextTipsActive = false
   const tipsEnabled = settings.spinnerTipsEnabled !== false
   const showClearTip = tipsEnabled && elapsedSnapshot > 1_800_000
-  const showBtwTip =
-    tipsEnabled && elapsedSnapshot > 30_000 && !getGlobalConfig().btwUseCount
+  const showBtwTip = tipsEnabled && elapsedSnapshot > 30_000 && !getGlobalConfig().btwUseCount
 
   const effectiveTip = contextTipsActive
     ? undefined
@@ -361,14 +323,8 @@ function SpinnerWithVerbInner({
       } else {
         const pct = Math.round((tokens / budget) * 100)
         const remaining = budget - tokens
-        const rate =
-          elapsedSnapshot > 5000 && tokens >= 2000
-            ? tokens / elapsedSnapshot
-            : 0
-        const eta =
-          rate > 0
-            ? ` \u00B7 ~${formatDuration(remaining / rate, { mostSignificantOnly: true })}`
-            : ''
+        const rate = elapsedSnapshot > 5000 && tokens >= 2000 ? tokens / elapsedSnapshot : 0
+        const eta = rate > 0 ? ` \u00B7 ~${formatDuration(remaining / rate, { mostSignificantOnly: true })}` : ''
         budgetText = `Target: ${formatNumber(tokens)} / ${formatNumber(budget)} (${pct}%)${eta}`
       }
     }
@@ -426,11 +382,7 @@ function SpinnerWithVerbInner({
           )}
           {(nextTask || effectiveTip) && (
             <MessageResponse>
-              <Text dimColor>
-                {nextTask
-                  ? `Next: ${nextTask.subject}`
-                  : `Tip: ${effectiveTip}`}
-              </Text>
+              <Text dimColor>{nextTask ? `Next: ${nextTask.subject}` : `Tip: ${effectiveTip}`}</Text>
             </MessageResponse>
           )}
         </Box>
@@ -453,15 +405,12 @@ type BriefSpinnerProps = {
   overrideMessage?: string | null
 }
 
-function BriefSpinner({
-  mode,
-  overrideMessage,
-}: BriefSpinnerProps): React.ReactNode {
+function BriefSpinner({ mode, overrideMessage }: BriefSpinnerProps): React.ReactNode {
   const settings = useSettings()
   const reducedMotion = settings.prefersReducedMotion ?? false
   const [randomVerb] = useState(() => sample(getSpinnerVerbs()) ?? 'Working')
   const verb = overrideMessage ?? randomVerb
-  const connStatus = useAppState(s => s.remoteConnectionStatus)
+  const connStatus = useAppState((s) => s.remoteConnectionStatus)
 
   // Track CLI activity so OS/IDE "busy" indicators fire in brief mode too
   useEffect(() => {
@@ -480,18 +429,12 @@ function BriefSpinner({
   // Local tasks + remote tasks are mutually exclusive (viewer mode has an
   // empty local AppState.tasks; local mode has remoteBackgroundTaskCount=0).
   // Summing avoids a mode branch.
-  const runningCount = useAppState(
-    s =>
-      count(Object.values(s.tasks), isBackgroundTask) +
-      s.remoteBackgroundTaskCount,
-  )
+  const runningCount = useAppState((s) => count(Object.values(s.tasks), isBackgroundTask) + s.remoteBackgroundTaskCount)
 
   // Connection trouble overrides the verb — `claude assistant` is a pure viewer,
   // nothing useful is happening while the WS is down.
-  const showConnWarning =
-    connStatus === 'reconnecting' || connStatus === 'disconnected'
-  const connText =
-    connStatus === 'reconnecting' ? 'Reconnecting' : 'Disconnected'
+  const showConnWarning = connStatus === 'reconnecting' || connStatus === 'disconnected'
+  const connText = connStatus === 'reconnecting' ? 'Reconnecting' : 'Disconnected'
 
   // Dots padded to a fixed 3 columns so the right-aligned count doesn't
   // jitter as the cycle advances.
@@ -502,9 +445,7 @@ function BriefSpinner({
   // warnings (shimmer reads as "working"; Reconnecting/Disconnected is not).
   const verbWidth = useMemo(() => stringWidth(verb), [verb])
   const glimmerIndex =
-    reducedMotion || showConnWarning
-      ? -100
-      : computeGlimmerIndex(Math.floor(time / SHIMMER_INTERVAL_MS), verbWidth)
+    reducedMotion || showConnWarning ? -100 : computeGlimmerIndex(Math.floor(time / SHIMMER_INTERVAL_MS), verbWidth)
   const { before, shimmer, after } = computeShimmerSegments(verb, glimmerIndex)
 
   const { columns } = useTerminalSize()
@@ -542,27 +483,18 @@ function BriefSpinner({
 // working/idle/disconnected. See BriefSpinner's comment for the
 // Notifications overlay coupling.
 export function BriefIdleStatus(): React.ReactNode {
-  const connStatus = useAppState(s => s.remoteConnectionStatus)
-  const runningCount = useAppState(
-    s =>
-      count(Object.values(s.tasks), isBackgroundTask) +
-      s.remoteBackgroundTaskCount,
-  )
+  const connStatus = useAppState((s) => s.remoteConnectionStatus)
+  const runningCount = useAppState((s) => count(Object.values(s.tasks), isBackgroundTask) + s.remoteBackgroundTaskCount)
   const { columns } = useTerminalSize()
 
-  const showConnWarning =
-    connStatus === 'reconnecting' || connStatus === 'disconnected'
-  const connText =
-    connStatus === 'reconnecting' ? 'Reconnecting…' : 'Disconnected'
+  const showConnWarning = connStatus === 'reconnecting' || connStatus === 'disconnected'
+  const connText = connStatus === 'reconnecting' ? 'Reconnecting…' : 'Disconnected'
   const leftText = showConnWarning ? connText : ''
   const rightText = runningCount > 0 ? `${runningCount} in background` : ''
 
   if (!leftText && !rightText) return <Box height={2} />
 
-  const pad = Math.max(
-    1,
-    columns - 2 - stringWidth(leftText) - stringWidth(rightText),
-  )
+  const pad = Math.max(1, columns - 2 - stringWidth(leftText) - stringWidth(rightText))
   return (
     <Box marginTop={1} paddingLeft={2}>
       <Text>
@@ -602,20 +534,14 @@ export function Spinner(): React.ReactNode {
   )
 }
 
-
 function findNextPendingTask(tasks: Task[] | undefined): Task | undefined {
   if (!tasks) {
     return undefined
   }
-  const pendingTasks = tasks.filter(t => t.status === 'pending')
+  const pendingTasks = tasks.filter((t) => t.status === 'pending')
   if (pendingTasks.length === 0) {
     return undefined
   }
-  const unresolvedIds = new Set(
-    tasks.filter(t => t.status !== 'completed').map(t => t.id),
-  )
-  return (
-    pendingTasks.find(t => !t.blockedBy.some(id => unresolvedIds.has(id))) ??
-    pendingTasks[0]
-  )
+  const unresolvedIds = new Set(tasks.filter((t) => t.status !== 'completed').map((t) => t.id))
+  return pendingTasks.find((t) => !t.blockedBy.some((id) => unresolvedIds.has(id))) ?? pendingTasks[0]
 }

@@ -1,13 +1,12 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
-import {
-  getAllowedChannels,
-  getQuestionPreviewFormat,
-} from 'src/bootstrap/state.js'
+import { getAllowedChannels, getQuestionPreviewFormat } from 'src/bootstrap/state.js'
 import { MessageResponse } from 'src/components/MessageResponse.js'
 import { BLACK_CIRCLE } from 'src/constants/figures.js'
 import { getModeColor } from 'src/utils/permissions/PermissionMode.js'
 import { z } from 'zod/v4'
+
 import { Box, Text } from '../../ink.js'
 import type { Tool } from '../../Tool.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
@@ -74,13 +73,8 @@ const annotationsSchema = lazySchema(() => {
     preview: z
       .string()
       .optional()
-      .describe(
-        'The preview content of the selected option, if the question used previews.',
-      ),
-    notes: z
-      .string()
-      .optional()
-      .describe('Free-text notes the user added to their selection.'),
+      .describe('The preview content of the selected option, if the question used previews.'),
+    notes: z.string().optional().describe('Free-text notes the user added to their selection.'),
   })
 
   return z
@@ -92,30 +86,24 @@ const annotationsSchema = lazySchema(() => {
 })
 
 const UNIQUENESS_REFINE = {
-  check: (data: {
-    questions: { question: string; options: { label: string }[] }[]
-  }) => {
-    const questions = data.questions.map(q => q.question)
+  check: (data: { questions: { question: string; options: { label: string }[] }[] }) => {
+    const questions = data.questions.map((q) => q.question)
     if (questions.length !== new Set(questions).size) {
       return false
     }
     for (const question of data.questions) {
-      const labels = question.options.map(opt => opt.label)
+      const labels = question.options.map((opt) => opt.label)
       if (labels.length !== new Set(labels).size) {
         return false
       }
     }
     return true
   },
-  message:
-    'Question texts must be unique, option labels must be unique within each question',
+  message: 'Question texts must be unique, option labels must be unique within each question',
 } as const
 
 const commonFields = lazySchema(() => ({
-  answers: z
-    .record(z.string(), z.string())
-    .optional()
-    .describe('User answers collected by the permission component'),
+  answers: z.record(z.string(), z.string()).optional().describe('User answers collected by the permission component'),
   annotations: annotationsSchema(),
   metadata: z
     .object({
@@ -127,19 +115,13 @@ const commonFields = lazySchema(() => ({
         ),
     })
     .optional()
-    .describe(
-      'Optional metadata for tracking and analytics purposes. Not displayed to user.',
-    ),
+    .describe('Optional metadata for tracking and analytics purposes. Not displayed to user.'),
 }))
 
 const inputSchema = lazySchema(() =>
   z
     .strictObject({
-      questions: z
-        .array(questionSchema())
-        .min(1)
-        .max(4)
-        .describe('Questions to ask the user (1-4 questions)'),
+      questions: z.array(questionSchema()).min(1).max(4).describe('Questions to ask the user (1-4 questions)'),
       ...commonFields(),
     })
     .refine(UNIQUENESS_REFINE.check, {
@@ -150,9 +132,7 @@ type InputSchema = ReturnType<typeof inputSchema>
 
 const outputSchema = lazySchema(() =>
   z.object({
-    questions: z
-      .array(questionSchema())
-      .describe('The questions that were asked'),
+    questions: z.array(questionSchema()).describe('The questions that were asked'),
     answers: z
       .record(z.string(), z.string())
       .describe(
@@ -172,11 +152,7 @@ export type Question = z.infer<ReturnType<typeof questionSchema>>
 export type QuestionOption = z.infer<ReturnType<typeof questionOptionSchema>>
 export type Output = z.infer<OutputSchema>
 
-function AskUserQuestionResultMessage({
-  answers,
-}: {
-  answers: Output['answers']
-}): React.ReactNode {
+function AskUserQuestionResultMessage({ answers }: { answers: Output['answers'] }): React.ReactNode {
   return (
     <Box flexDirection="column" marginTop={1}>
       <Box flexDirection="row">
@@ -228,10 +204,7 @@ export const AskUserQuestionTool: Tool<InputSchema, Output> = buildTool({
     // the keyboard. Channel permission relay already skips
     // requiresUserInteraction() tools (interactiveHandler.ts) so there's
     // no alternate approval path.
-    if (
-      (feature('KAIROS') || feature('KAIROS_CHANNELS')) &&
-      getAllowedChannels().length > 0
-    ) {
+    if ((feature('KAIROS') || feature('KAIROS_CHANNELS')) && getAllowedChannels().length > 0) {
       return false
     }
     return true
@@ -243,7 +216,7 @@ export const AskUserQuestionTool: Tool<InputSchema, Output> = buildTool({
     return true
   },
   toAutoClassifierInput(input) {
-    return input.questions.map(q => q.question).join(' | ')
+    return input.questions.map((q) => q.question).join(' | ')
   },
   requiresUserInteraction() {
     return true

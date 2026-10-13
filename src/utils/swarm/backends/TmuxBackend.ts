@@ -11,11 +11,7 @@ import {
   SWARM_VIEW_WINDOW_NAME,
   TMUX_COMMAND,
 } from '../constants.js'
-import {
-  getLeaderPaneId,
-  isInsideTmux as isInsideTmuxFromDetection,
-  isTmuxAvailable,
-} from './detection.js'
+import { getLeaderPaneId, isInsideTmux as isInsideTmuxFromDetection, isTmuxAvailable } from './detection.js'
 import { registerTmuxBackend } from './registry.js'
 import type { CreatePaneResult, PaneBackend, PaneId } from './types.js'
 
@@ -42,7 +38,7 @@ function waitForPaneShellReady(): Promise<void> {
  */
 function acquirePaneCreationLock(): Promise<() => void> {
   let release: () => void
-  const newLock = new Promise<void>(resolve => {
+  const newLock = new Promise<void>((resolve) => {
     release = resolve
   })
 
@@ -74,9 +70,7 @@ function getTmuxColorName(color: AgentColorName): string {
  * Runs a tmux command in the user's original tmux session (no socket override).
  * Use this for operations that interact with the user's tmux panes (split-pane with leader).
  */
-function runTmuxInUserSession(
-  args: string[],
-): Promise<{ stdout: string; stderr: string; code: number }> {
+function runTmuxInUserSession(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
   return execFileNoThrow(TMUX_COMMAND, args)
 }
 
@@ -84,9 +78,7 @@ function runTmuxInUserSession(
  * Runs a tmux command in the external swarm socket.
  * Use this for operations in the standalone swarm session (when user is not in tmux).
  */
-function runTmuxInSwarm(
-  args: string[],
-): Promise<{ stdout: string; stderr: string; code: number }> {
+function runTmuxInSwarm(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
   return execFileNoThrow(TMUX_COMMAND, ['-L', getSwarmSocketName(), ...args])
 }
 
@@ -126,10 +118,7 @@ export class TmuxBackend implements PaneBackend {
    * Creates a new teammate pane in the swarm view.
    * Uses a lock to prevent race conditions when multiple teammates are spawned in parallel.
    */
-  async createTeammatePaneInSwarmView(
-    name: string,
-    color: AgentColorName,
-  ): Promise<CreatePaneResult> {
+  async createTeammatePaneInSwarmView(name: string, color: AgentColorName): Promise<CreatePaneResult> {
     const releaseLock = await acquirePaneCreationLock()
 
     try {
@@ -148,69 +137,34 @@ export class TmuxBackend implements PaneBackend {
   /**
    * Sends a command to a specific pane.
    */
-  async sendCommandToPane(
-    paneId: PaneId,
-    command: string,
-    useExternalSession = false,
-  ): Promise<void> {
+  async sendCommandToPane(paneId: PaneId, command: string, useExternalSession = false): Promise<void> {
     const runTmux = useExternalSession ? runTmuxInSwarm : runTmuxInUserSession
     const result = await runTmux(['send-keys', '-t', paneId, command, 'Enter'])
 
     if (result.code !== 0) {
-      throw new Error(
-        `Failed to send command to pane ${paneId}: ${result.stderr}`,
-      )
+      throw new Error(`Failed to send command to pane ${paneId}: ${result.stderr}`)
     }
   }
 
   /**
    * Sets the border color for a specific pane.
    */
-  async setPaneBorderColor(
-    paneId: PaneId,
-    color: AgentColorName,
-    useExternalSession = false,
-  ): Promise<void> {
+  async setPaneBorderColor(paneId: PaneId, color: AgentColorName, useExternalSession = false): Promise<void> {
     const tmuxColor = getTmuxColorName(color)
     const runTmux = useExternalSession ? runTmuxInSwarm : runTmuxInUserSession
 
     // Set pane-specific border style using pane options (requires tmux 3.2+)
-    await runTmux([
-      'select-pane',
-      '-t',
-      paneId,
-      '-P',
-      `bg=default,fg=${tmuxColor}`,
-    ])
+    await runTmux(['select-pane', '-t', paneId, '-P', `bg=default,fg=${tmuxColor}`])
 
-    await runTmux([
-      'set-option',
-      '-p',
-      '-t',
-      paneId,
-      'pane-border-style',
-      `fg=${tmuxColor}`,
-    ])
+    await runTmux(['set-option', '-p', '-t', paneId, 'pane-border-style', `fg=${tmuxColor}`])
 
-    await runTmux([
-      'set-option',
-      '-p',
-      '-t',
-      paneId,
-      'pane-active-border-style',
-      `fg=${tmuxColor}`,
-    ])
+    await runTmux(['set-option', '-p', '-t', paneId, 'pane-active-border-style', `fg=${tmuxColor}`])
   }
 
   /**
    * Sets the title for a pane (shown in pane border if pane-border-status is set).
    */
-  async setPaneTitle(
-    paneId: PaneId,
-    name: string,
-    color: AgentColorName,
-    useExternalSession = false,
-  ): Promise<void> {
+  async setPaneTitle(paneId: PaneId, name: string, color: AgentColorName, useExternalSession = false): Promise<void> {
     const tmuxColor = getTmuxColorName(color)
     const runTmux = useExternalSession ? runTmuxInSwarm : runTmuxInUserSession
 
@@ -231,33 +185,20 @@ export class TmuxBackend implements PaneBackend {
   /**
    * Enables pane border status for a window (shows pane titles).
    */
-  async enablePaneBorderStatus(
-    windowTarget?: string,
-    useExternalSession = false,
-  ): Promise<void> {
+  async enablePaneBorderStatus(windowTarget?: string, useExternalSession = false): Promise<void> {
     const target = windowTarget || (await this.getCurrentWindowTarget())
     if (!target) {
       return
     }
 
     const runTmux = useExternalSession ? runTmuxInSwarm : runTmuxInUserSession
-    await runTmux([
-      'set-option',
-      '-w',
-      '-t',
-      target,
-      'pane-border-status',
-      'top',
-    ])
+    await runTmux(['set-option', '-w', '-t', target, 'pane-border-status', 'top'])
   }
 
   /**
    * Rebalances panes to achieve the desired layout.
    */
-  async rebalancePanes(
-    windowTarget: string,
-    hasLeader: boolean,
-  ): Promise<void> {
+  async rebalancePanes(windowTarget: string, hasLeader: boolean): Promise<void> {
     if (hasLeader) {
       await this.rebalancePanesWithLeader(windowTarget)
     } else {
@@ -285,21 +226,12 @@ export class TmuxBackend implements PaneBackend {
     await runTmux(['new-session', '-d', '-s', HIDDEN_SESSION_NAME])
 
     // Move the pane to the hidden session
-    const result = await runTmux([
-      'break-pane',
-      '-d',
-      '-s',
-      paneId,
-      '-t',
-      `${HIDDEN_SESSION_NAME}:`,
-    ])
+    const result = await runTmux(['break-pane', '-d', '-s', paneId, '-t', `${HIDDEN_SESSION_NAME}:`])
 
     if (result.code === 0) {
       logForDebugging(`[TmuxBackend] Hidden pane ${paneId}`)
     } else {
-      logForDebugging(
-        `[TmuxBackend] Failed to hide pane ${paneId}: ${result.stderr}`,
-      )
+      logForDebugging(`[TmuxBackend] Failed to hide pane ${paneId}: ${result.stderr}`)
     }
 
     return result.code === 0
@@ -310,47 +242,26 @@ export class TmuxBackend implements PaneBackend {
    * Uses `tmux join-pane` to move the pane back, then reapplies main-vertical layout
    * with leader at 30%.
    */
-  async showPane(
-    paneId: PaneId,
-    targetWindowOrPane: string,
-    useExternalSession = false,
-  ): Promise<boolean> {
+  async showPane(paneId: PaneId, targetWindowOrPane: string, useExternalSession = false): Promise<boolean> {
     const runTmux = useExternalSession ? runTmuxInSwarm : runTmuxInUserSession
 
     // join-pane -s: source pane to move
     // -t: target window/pane to join into
     // -h: join horizontally (side by side)
-    const result = await runTmux([
-      'join-pane',
-      '-h',
-      '-s',
-      paneId,
-      '-t',
-      targetWindowOrPane,
-    ])
+    const result = await runTmux(['join-pane', '-h', '-s', paneId, '-t', targetWindowOrPane])
 
     if (result.code !== 0) {
-      logForDebugging(
-        `[TmuxBackend] Failed to show pane ${paneId}: ${result.stderr}`,
-      )
+      logForDebugging(`[TmuxBackend] Failed to show pane ${paneId}: ${result.stderr}`)
       return false
     }
 
-    logForDebugging(
-      `[TmuxBackend] Showed pane ${paneId} in ${targetWindowOrPane}`,
-    )
+    logForDebugging(`[TmuxBackend] Showed pane ${paneId} in ${targetWindowOrPane}`)
 
     // Reapply main-vertical layout with leader at 30%
     await runTmux(['select-layout', '-t', targetWindowOrPane, 'main-vertical'])
 
     // Get the first pane (leader) and resize to 30%
-    const panesResult = await runTmux([
-      'list-panes',
-      '-t',
-      targetWindowOrPane,
-      '-F',
-      '#{pane_id}',
-    ])
+    const panesResult = await runTmux(['list-panes', '-t', targetWindowOrPane, '-F', '#{pane_id}'])
 
     const panes = panesResult.stdout.trim().split('\n').filter(Boolean)
     if (panes[0]) {
@@ -375,16 +286,10 @@ export class TmuxBackend implements PaneBackend {
     }
 
     // Fallback to dynamic query (shouldn't happen if we're inside tmux)
-    const result = await execFileNoThrow(TMUX_COMMAND, [
-      'display-message',
-      '-p',
-      '#{pane_id}',
-    ])
+    const result = await execFileNoThrow(TMUX_COMMAND, ['display-message', '-p', '#{pane_id}'])
 
     if (result.code !== 0) {
-      logForDebugging(
-        `[TmuxBackend] Failed to get current pane ID (exit ${result.code}): ${result.stderr}`,
-      )
+      logForDebugging(`[TmuxBackend] Failed to get current pane ID (exit ${result.code}): ${result.stderr}`)
       return null
     }
 
@@ -414,9 +319,7 @@ export class TmuxBackend implements PaneBackend {
     const result = await execFileNoThrow(TMUX_COMMAND, args)
 
     if (result.code !== 0) {
-      logForDebugging(
-        `[TmuxBackend] Failed to get current window target (exit ${result.code}): ${result.stderr}`,
-      )
+      logForDebugging(`[TmuxBackend] Failed to get current window target (exit ${result.code}): ${result.stderr}`)
       return null
     }
 
@@ -427,25 +330,18 @@ export class TmuxBackend implements PaneBackend {
   /**
    * Gets the number of panes in a window.
    */
-  private async getCurrentWindowPaneCount(
-    windowTarget?: string,
-    useSwarmSocket = false,
-  ): Promise<number | null> {
+  private async getCurrentWindowPaneCount(windowTarget?: string, useSwarmSocket = false): Promise<number | null> {
     const target = windowTarget || (await this.getCurrentWindowTarget())
     if (!target) {
       return null
     }
 
     const args = ['list-panes', '-t', target, '-F', '#{pane_id}']
-    const result = useSwarmSocket
-      ? await runTmuxInSwarm(args)
-      : await runTmuxInUserSession(args)
+    const result = useSwarmSocket ? await runTmuxInSwarm(args) : await runTmuxInUserSession(args)
 
     if (result.code !== 0) {
       logError(
-        new Error(
-          `[TmuxBackend] Failed to get pane count for ${target} (exit ${result.code}): ${result.stderr}`,
-        ),
+        new Error(`[TmuxBackend] Failed to get pane count for ${target} (exit ${result.code}): ${result.stderr}`),
       )
       return null
     }
@@ -484,41 +380,25 @@ export class TmuxBackend implements PaneBackend {
       ])
 
       if (result.code !== 0) {
-        throw new Error(
-          `Failed to create swarm session: ${result.stderr || 'Unknown error'}`,
-        )
+        throw new Error(`Failed to create swarm session: ${result.stderr || 'Unknown error'}`)
       }
 
       const paneId = result.stdout.trim()
       const windowTarget = `${SWARM_SESSION_NAME}:${SWARM_VIEW_WINDOW_NAME}`
 
-      logForDebugging(
-        `[TmuxBackend] Created external swarm session with window ${windowTarget}, pane ${paneId}`,
-      )
+      logForDebugging(`[TmuxBackend] Created external swarm session with window ${windowTarget}, pane ${paneId}`)
 
       return { windowTarget, paneId }
     }
 
     // Session exists, check if swarm-view window exists
-    const listResult = await runTmuxInSwarm([
-      'list-windows',
-      '-t',
-      SWARM_SESSION_NAME,
-      '-F',
-      '#{window_name}',
-    ])
+    const listResult = await runTmuxInSwarm(['list-windows', '-t', SWARM_SESSION_NAME, '-F', '#{window_name}'])
 
     const windows = listResult.stdout.trim().split('\n').filter(Boolean)
     const windowTarget = `${SWARM_SESSION_NAME}:${SWARM_VIEW_WINDOW_NAME}`
 
     if (windows.includes(SWARM_VIEW_WINDOW_NAME)) {
-      const paneResult = await runTmuxInSwarm([
-        'list-panes',
-        '-t',
-        windowTarget,
-        '-F',
-        '#{pane_id}',
-      ])
+      const paneResult = await runTmuxInSwarm(['list-panes', '-t', windowTarget, '-F', '#{pane_id}'])
 
       const panes = paneResult.stdout.trim().split('\n').filter(Boolean)
       return { windowTarget, paneId: panes[0] || '' }
@@ -537,9 +417,7 @@ export class TmuxBackend implements PaneBackend {
     ])
 
     if (createResult.code !== 0) {
-      throw new Error(
-        `Failed to create swarm-view window: ${createResult.stderr || 'Unknown error'}`,
-      )
+      throw new Error(`Failed to create swarm-view window: ${createResult.stderr || 'Unknown error'}`)
     }
 
     return { windowTarget, paneId: createResult.stdout.trim() }
@@ -581,13 +459,7 @@ export class TmuxBackend implements PaneBackend {
       ])
     } else {
       // Additional teammates: split from an existing teammate pane
-      const listResult = await execFileNoThrow(TMUX_COMMAND, [
-        'list-panes',
-        '-t',
-        windowTarget,
-        '-F',
-        '#{pane_id}',
-      ])
+      const listResult = await execFileNoThrow(TMUX_COMMAND, ['list-panes', '-t', windowTarget, '-F', '#{pane_id}'])
 
       const panes = listResult.stdout.trim().split('\n').filter(Boolean)
       const teammatePanes = panes.slice(1)
@@ -595,9 +467,7 @@ export class TmuxBackend implements PaneBackend {
 
       const splitVertically = teammateCount % 2 === 1
       const targetPaneIndex = Math.floor((teammateCount - 1) / 2)
-      const targetPane =
-        teammatePanes[targetPaneIndex] ||
-        teammatePanes[teammatePanes.length - 1]
+      const targetPane = teammatePanes[targetPaneIndex] || teammatePanes[teammatePanes.length - 1]
 
       splitResult = await execFileNoThrow(TMUX_COMMAND, [
         'split-window',
@@ -615,9 +485,7 @@ export class TmuxBackend implements PaneBackend {
     }
 
     const paneId = splitResult.stdout.trim()
-    logForDebugging(
-      `[TmuxBackend] Created teammate pane for ${teammateName}: ${paneId}`,
-    )
+    logForDebugging(`[TmuxBackend] Created teammate pane for ${teammateName}: ${paneId}`)
 
     await this.setPaneBorderColor(paneId, teammateColor)
     await this.setPaneTitle(paneId, teammateName, teammateColor)
@@ -636,8 +504,7 @@ export class TmuxBackend implements PaneBackend {
     teammateName: string,
     teammateColor: AgentColorName,
   ): Promise<CreatePaneResult> {
-    const { windowTarget, paneId: firstPaneId } =
-      await this.createExternalSwarmSession()
+    const { windowTarget, paneId: firstPaneId } = await this.createExternalSwarmSession()
 
     const paneCount = await this.getCurrentWindowPaneCount(windowTarget, true)
     if (paneCount === null) {
@@ -650,19 +517,11 @@ export class TmuxBackend implements PaneBackend {
     if (isFirstTeammate) {
       paneId = firstPaneId
       firstPaneUsedForExternal = true
-      logForDebugging(
-        `[TmuxBackend] Using initial pane for first teammate ${teammateName}: ${paneId}`,
-      )
+      logForDebugging(`[TmuxBackend] Using initial pane for first teammate ${teammateName}: ${paneId}`)
 
       await this.enablePaneBorderStatus(windowTarget, true)
     } else {
-      const listResult = await runTmuxInSwarm([
-        'list-panes',
-        '-t',
-        windowTarget,
-        '-F',
-        '#{pane_id}',
-      ])
+      const listResult = await runTmuxInSwarm(['list-panes', '-t', windowTarget, '-F', '#{pane_id}'])
 
       const panes = listResult.stdout.trim().split('\n').filter(Boolean)
       const teammateCount = panes.length
@@ -686,9 +545,7 @@ export class TmuxBackend implements PaneBackend {
       }
 
       paneId = splitResult.stdout.trim()
-      logForDebugging(
-        `[TmuxBackend] Created teammate pane for ${teammateName}: ${paneId}`,
-      )
+      logForDebugging(`[TmuxBackend] Created teammate pane for ${teammateName}: ${paneId}`)
     }
 
     await this.setPaneBorderColor(paneId, teammateColor, true)
@@ -705,45 +562,26 @@ export class TmuxBackend implements PaneBackend {
    * Rebalances panes in a window with a leader.
    */
   private async rebalancePanesWithLeader(windowTarget: string): Promise<void> {
-    const listResult = await runTmuxInUserSession([
-      'list-panes',
-      '-t',
-      windowTarget,
-      '-F',
-      '#{pane_id}',
-    ])
+    const listResult = await runTmuxInUserSession(['list-panes', '-t', windowTarget, '-F', '#{pane_id}'])
 
     const panes = listResult.stdout.trim().split('\n').filter(Boolean)
     if (panes.length <= 2) {
       return
     }
 
-    await runTmuxInUserSession([
-      'select-layout',
-      '-t',
-      windowTarget,
-      'main-vertical',
-    ])
+    await runTmuxInUserSession(['select-layout', '-t', windowTarget, 'main-vertical'])
 
     const leaderPane = panes[0]
     await runTmuxInUserSession(['resize-pane', '-t', leaderPane!, '-x', '30%'])
 
-    logForDebugging(
-      `[TmuxBackend] Rebalanced ${panes.length - 1} teammate panes with leader`,
-    )
+    logForDebugging(`[TmuxBackend] Rebalanced ${panes.length - 1} teammate panes with leader`)
   }
 
   /**
    * Rebalances panes in a window without a leader (tiled layout).
    */
   private async rebalancePanesTiled(windowTarget: string): Promise<void> {
-    const listResult = await runTmuxInSwarm([
-      'list-panes',
-      '-t',
-      windowTarget,
-      '-F',
-      '#{pane_id}',
-    ])
+    const listResult = await runTmuxInSwarm(['list-panes', '-t', windowTarget, '-F', '#{pane_id}'])
 
     const panes = listResult.stdout.trim().split('\n').filter(Boolean)
     if (panes.length <= 1) {
@@ -752,9 +590,7 @@ export class TmuxBackend implements PaneBackend {
 
     await runTmuxInSwarm(['select-layout', '-t', windowTarget, 'tiled'])
 
-    logForDebugging(
-      `[TmuxBackend] Rebalanced ${panes.length} teammate panes with tiled layout`,
-    )
+    logForDebugging(`[TmuxBackend] Rebalanced ${panes.length} teammate panes with tiled layout`)
   }
 }
 

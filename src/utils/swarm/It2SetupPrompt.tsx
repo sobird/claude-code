@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import {
-  type OptionWithDescription,
-  Select,
-} from '../../components/CustomSelect/index.js'
+
+import { type OptionWithDescription, Select } from '../../components/CustomSelect/index.js'
 import { Pane } from '../../components/design-system/Pane.js'
 import { Spinner } from '../../components/Spinner.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
@@ -34,19 +32,15 @@ type Props = {
   tmuxAvailable: boolean
 }
 
-export function It2SetupPrompt({
-  onDone,
-  tmuxAvailable,
-}: Props): React.ReactNode {
+export function It2SetupPrompt({ onDone, tmuxAvailable }: Props): React.ReactNode {
   const [step, setStep] = useState<SetupStep>('initial')
-  const [packageManager, setPackageManager] =
-    useState<PythonPackageManager | null>(null)
+  const [packageManager, setPackageManager] = useState<PythonPackageManager | null>(null)
   const [error, setError] = useState<string | null>(null)
   const exitState = useExitOnCtrlCDWithKeybindings()
 
   // Detect package manager on mount
   useEffect(() => {
-    void detectPythonPackageManager().then(pm => {
+    void detectPythonPackageManager().then((pm) => {
       setPackageManager(pm)
     })
   }, [])
@@ -64,7 +58,7 @@ export function It2SetupPrompt({
   useInput((_input, key) => {
     if (step === 'api-instructions' && key.return) {
       setStep('verifying')
-      void verifyIt2Setup().then(result => {
+      void verifyIt2Setup().then((result) => {
         if (result.success) {
           markIt2SetupComplete()
           setStep('success')
@@ -153,17 +147,13 @@ export function It2SetupPrompt({
     return (
       <Box flexDirection="column" gap={1}>
         <Text>
-          To use native iTerm2 split panes for teammates, you need the{' '}
-          <Text bold>it2</Text> CLI tool.
+          To use native iTerm2 split panes for teammates, you need the <Text bold>it2</Text> CLI tool.
         </Text>
-        <Text dimColor>
-          This enables teammates to appear as split panes within your current
-          window.
-        </Text>
+        <Text dimColor>This enables teammates to appear as split panes within your current window.</Text>
         <Box marginTop={1}>
           <Select
             options={options}
-            onChange={value => {
+            onChange={(value) => {
               switch (value) {
                 case 'install':
                   void handleInstall()
@@ -233,7 +223,7 @@ export function It2SetupPrompt({
         <Box marginTop={1}>
           <Select
             options={options}
-            onChange={value => {
+            onChange={(value) => {
               switch (value) {
                 case 'retry':
                   void handleInstall()
@@ -323,11 +313,11 @@ export function It2SetupPrompt({
         <Box marginTop={1}>
           <Select
             options={options}
-            onChange={value => {
+            onChange={(value) => {
               switch (value) {
                 case 'retry':
                   setStep('verifying')
-                  void verifyIt2Setup().then(result => {
+                  void verifyIt2Setup().then((result) => {
                     if (result.success) {
                       markIt2SetupComplete()
                       setStep('success')
@@ -360,17 +350,11 @@ export function It2SetupPrompt({
           iTerm2 Split Pane Setup
         </Text>
         {renderContent()}
-        {step !== 'installing' &&
-          step !== 'verifying' &&
-          step !== 'success' && (
-            <Text dimColor italic>
-              {exitState.pending ? (
-                <>Press {exitState.keyName} again to exit</>
-              ) : (
-                <>Esc to cancel</>
-              )}
-            </Text>
-          )}
+        {step !== 'installing' && step !== 'verifying' && step !== 'success' && (
+          <Text dimColor italic>
+            {exitState.pending ? <>Press {exitState.keyName} again to exit</> : <>Esc to cancel</>}
+          </Text>
+        )}
       </Box>
     </Pane>
   )

@@ -1,9 +1,11 @@
 import { join } from 'path'
+
 import React, { useCallback, useState } from 'react'
+
 import type { ExitState } from '../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
-import { setClipboard } from '../ink/termio/osc.js'
 import { Box, Text } from '../ink.js'
+import { setClipboard } from '../ink/termio/osc.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
 import { getCwd } from '../utils/cwd.js'
 import { writeFileSync_DEPRECATED } from '../utils/slowOperations.js'
@@ -22,16 +24,10 @@ type ExportDialogProps = {
 
 type ExportOption = 'clipboard' | 'file'
 
-export function ExportDialog({
-  content,
-  defaultFilename,
-  onDone,
-}: ExportDialogProps): React.ReactNode {
+export function ExportDialog({ content, defaultFilename, onDone }: ExportDialogProps): React.ReactNode {
   const [, setSelectedOption] = useState<ExportOption | null>(null)
   const [filename, setFilename] = useState<string>(defaultFilename)
-  const [cursorOffset, setCursorOffset] = useState<number>(
-    defaultFilename.length,
-  )
+  const [cursorOffset, setCursorOffset] = useState<number>(defaultFilename.length)
   const [showFilenameInput, setShowFilenameInput] = useState(false)
   const { columns } = useTerminalSize()
 
@@ -54,9 +50,7 @@ export function ExportDialog({
   }
 
   const handleFilenameSubmit = () => {
-    const finalFilename = filename.endsWith('.txt')
-      ? filename
-      : filename.replace(/\.[^.]+$/, '') + '.txt'
+    const finalFilename = filename.endsWith('.txt') ? filename : filename.replace(/\.[^.]+$/, '') + '.txt'
     const filepath = join(getCwd(), finalFilename)
 
     try {
@@ -105,12 +99,7 @@ export function ExportDialog({
       return (
         <Byline>
           <KeyboardShortcutHint shortcut="Enter" action="save" />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="go back"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="go back" />
         </Byline>
       )
     }
@@ -119,14 +108,7 @@ export function ExportDialog({
       return <Text>Press {exitState.keyName} again to exit</Text>
     }
 
-    return (
-      <ConfigurableShortcutHint
-        action="confirm:no"
-        context="Confirmation"
-        fallback="Esc"
-        description="cancel"
-      />
-    )
+    return <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
   }
 
   // Use Settings context so 'n' key doesn't cancel (allows typing 'n' in filename input)
@@ -145,11 +127,7 @@ export function ExportDialog({
       isCancelActive={!showFilenameInput}
     >
       {!showFilenameInput ? (
-        <Select
-          options={options}
-          onChange={handleSelectOption}
-          onCancel={handleCancel}
-        />
+        <Select options={options} onChange={handleSelectOption} onCancel={handleCancel} />
       ) : (
         <Box flexDirection="column">
           <Text>Enter filename:</Text>

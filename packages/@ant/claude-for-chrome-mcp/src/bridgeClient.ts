@@ -4,6 +4,7 @@
  */
 
 import WebSocket from 'ws'
+
 import { SocketConnectionError } from './mcpSocketClient.js'
 import {
   localPlatformLabel,

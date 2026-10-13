@@ -1,5 +1,6 @@
 import type { Attributes } from '@opentelemetry/api'
 import { getSessionId } from 'src/bootstrap/state.js'
+
 import { getOauthAccountInfo } from './auth.js'
 import { getOrCreateUserID } from './config.js'
 import { envDynamic } from './envDynamic.js'
@@ -13,9 +14,7 @@ const METRICS_CARDINALITY_DEFAULTS = {
   OTEL_METRICS_INCLUDE_ACCOUNT_UUID: true,
 }
 
-function shouldIncludeAttribute(
-  envVar: keyof typeof METRICS_CARDINALITY_DEFAULTS,
-): boolean {
+function shouldIncludeAttribute(envVar: keyof typeof METRICS_CARDINALITY_DEFAULTS): boolean {
   const defaultValue = METRICS_CARDINALITY_DEFAULTS[envVar]
   const envValue = process.env[envVar]
 
@@ -51,14 +50,9 @@ export function getTelemetryAttributes(): Attributes {
     if (orgId) attributes['organization.id'] = orgId
     if (email) attributes['user.email'] = email
 
-    if (
-      accountUuid &&
-      shouldIncludeAttribute('OTEL_METRICS_INCLUDE_ACCOUNT_UUID')
-    ) {
+    if (accountUuid && shouldIncludeAttribute('OTEL_METRICS_INCLUDE_ACCOUNT_UUID')) {
       attributes['user.account_uuid'] = accountUuid
-      attributes['user.account_id'] =
-        process.env.CLAUDE_CODE_ACCOUNT_TAGGED_ID ||
-        toTaggedId('user', accountUuid)
+      attributes['user.account_id'] = process.env.CLAUDE_CODE_ACCOUNT_TAGGED_ID || toTaggedId('user', accountUuid)
     }
   }
 

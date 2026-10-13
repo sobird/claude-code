@@ -1,8 +1,10 @@
-import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { randomUUID } from 'crypto'
+
+import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { getOauthConfig } from 'src/constants/oauth.js'
 import { getOrganizationUUID } from 'src/services/oauth/client.js'
 import z from 'zod/v4'
+
 import { getClaudeAIOAuthTokens } from '../auth.js'
 import { logForDebugging } from '../debug.js'
 import { parseGitHubRepository } from '../detectRepository.js'
@@ -44,10 +46,7 @@ export function isTransientNetworkError(error: unknown): boolean {
  * Makes an axios GET request with automatic retry for transient network errors
  * Uses exponential backoff: 2s, 4s, 8s, 16s (4 retries = 5 total attempts)
  */
-export async function axiosGetWithRetry<T>(
-  url: string,
-  config?: AxiosRequestConfig,
-): Promise<AxiosResponse<T>> {
+export async function axiosGetWithRetry<T>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
   let lastError: unknown
 
   for (let attempt = 0; attempt <= MAX_TELEPORT_RETRIES; attempt++) {
@@ -63,9 +62,7 @@ export async function axiosGetWithRetry<T>(
 
       // Don't retry if we've exhausted all retries
       if (attempt >= MAX_TELEPORT_RETRIES) {
-        logForDebugging(
-          `Teleport request failed after ${attempt + 1} attempts: ${errorMessage(error)}`,
-        )
+        logForDebugging(`Teleport request failed after ${attempt + 1} attempts: ${errorMessage(error)}`)
         throw error
       }
 
@@ -147,15 +144,7 @@ export const CodeSessionSchema = lazySchema(() =>
     id: z.string(),
     title: z.string(),
     description: z.string(),
-    status: z.enum([
-      'idle',
-      'working',
-      'waiting',
-      'completed',
-      'archived',
-      'cancelled',
-      'rejected',
-    ]),
+    status: z.enum(['idle', 'working', 'waiting', 'completed', 'archived', 'cancelled', 'rejected']),
     repo: z
       .object({
         name: z.string(),
@@ -201,9 +190,7 @@ export async function prepareApiRequest(): Promise<{
  * Fetches code sessions from the new Sessions API (/v1/sessions)
  * @returns Array of code sessions
  */
-export async function fetchCodeSessionsFromSessionsAPI(): Promise<
-  CodeSession[]
-> {
+export async function fetchCodeSessionsFromSessionsAPI(): Promise<CodeSession[]> {
   const { accessToken, orgUUID } = await prepareApiRequest()
 
   const url = `${getOauthConfig().BASE_API_URL}/v1/sessions`
@@ -224,7 +211,7 @@ export async function fetchCodeSessionsFromSessionsAPI(): Promise<
     }
 
     // Transform SessionResource[] to CodeSession[] format
-    const sessions: CodeSession[] = response.data.data.map(session => {
+    const sessions: CodeSession[] = response.data.data.map((session) => {
       // Extract repository info from git sources
       const gitSource = session.session_context.sources.find(
         (source): source is GitSource => source.type === 'git_repository',
@@ -286,9 +273,7 @@ export function getOAuthHeaders(accessToken: string): Record<string, string> {
  * @param sessionId The session ID to fetch
  * @returns The session resource
  */
-export async function fetchSession(
-  sessionId: string,
-): Promise<SessionResource> {
+export async function fetchSession(sessionId: string): Promise<SessionResource> {
   const { accessToken, orgUUID } = await prepareApiRequest()
 
   const url = `${getOauthConfig().BASE_API_URL}/v1/sessions/${sessionId}`
@@ -301,7 +286,7 @@ export async function fetchSession(
   const response = await axios.get<SessionResource>(url, {
     headers,
     timeout: 15000,
-    validateStatus: status => status < 500,
+    validateStatus: (status) => status < 500,
   })
 
   if (response.status !== 200) {
@@ -317,10 +302,7 @@ export async function fetchSession(
       throw new Error('Session expired. Please run /login to sign in again.')
     }
 
-    throw new Error(
-      apiMessage ||
-        `Failed to fetch session: ${response.status} ${response.statusText}`,
-    )
+    throw new Error(apiMessage || `Failed to fetch session: ${response.status} ${response.statusText}`)
   }
 
   return response.data
@@ -331,12 +313,9 @@ export async function fetchSession(
  * @param session The session resource to extract from
  * @returns The first branch name, or undefined if none found
  */
-export function getBranchFromSession(
-  session: SessionResource,
-): string | undefined {
+export function getBranchFromSession(session: SessionResource): string | undefined {
   const gitOutcome = session.session_context.outcomes?.find(
-    (outcome): outcome is GitRepositoryOutcome =>
-      outcome.type === 'git_repository',
+    (outcome): outcome is GitRepositoryOutcome => outcome.type === 'git_repository',
   )
   return gitOutcome?.git_info?.branches[0]
 }
@@ -346,9 +325,7 @@ export function getBranchFromSession(
  * Accepts a plain string or an array of content blocks (text, image, etc.)
  * following the Anthropic API messages spec.
  */
-export type RemoteMessageContent =
-  | string
-  | Array<{ type: string; [key: string]: unknown }>
+export type RemoteMessageContent = string | Array<{ type: string; [key: string]: unknown }>
 
 /**
  * Sends a user message event to an existing remote session via the Sessions API
@@ -388,27 +365,21 @@ export async function sendEventToRemoteSession(
       events: [userEvent],
     }
 
-    logForDebugging(
-      `[sendEventToRemoteSession] Sending event to session ${sessionId}`,
-    )
+    logForDebugging(`[sendEventToRemoteSession] Sending event to session ${sessionId}`)
     // The endpoint may block until the CCR worker is ready. Observed ~2.6s
     // in normal cases; allow a generous margin for cold-start containers.
     const response = await axios.post(url, requestBody, {
       headers,
-      validateStatus: status => status < 500,
+      validateStatus: (status) => status < 500,
       timeout: 30000,
     })
 
     if (response.status === 200 || response.status === 201) {
-      logForDebugging(
-        `[sendEventToRemoteSession] Successfully sent event to session ${sessionId}`,
-      )
+      logForDebugging(`[sendEventToRemoteSession] Successfully sent event to session ${sessionId}`)
       return true
     }
 
-    logForDebugging(
-      `[sendEventToRemoteSession] Failed with status ${response.status}: ${jsonStringify(response.data)}`,
-    )
+    logForDebugging(`[sendEventToRemoteSession] Failed with status ${response.status}: ${jsonStringify(response.data)}`)
     return false
   } catch (error) {
     logForDebugging(`[sendEventToRemoteSession] Error: ${errorMessage(error)}`)
@@ -422,10 +393,7 @@ export async function sendEventToRemoteSession(
  * @param title The new title for the session
  * @returns Promise<boolean> True if successful, false otherwise
  */
-export async function updateSessionTitle(
-  sessionId: string,
-  title: string,
-): Promise<boolean> {
+export async function updateSessionTitle(sessionId: string, title: string): Promise<boolean> {
   try {
     const { accessToken, orgUUID } = await prepareApiRequest()
 
@@ -436,28 +404,22 @@ export async function updateSessionTitle(
       'x-organization-uuid': orgUUID,
     }
 
-    logForDebugging(
-      `[updateSessionTitle] Updating title for session ${sessionId}: "${title}"`,
-    )
+    logForDebugging(`[updateSessionTitle] Updating title for session ${sessionId}: "${title}"`)
     const response = await axios.patch(
       url,
       { title },
       {
         headers,
-        validateStatus: status => status < 500,
+        validateStatus: (status) => status < 500,
       },
     )
 
     if (response.status === 200) {
-      logForDebugging(
-        `[updateSessionTitle] Successfully updated title for session ${sessionId}`,
-      )
+      logForDebugging(`[updateSessionTitle] Successfully updated title for session ${sessionId}`)
       return true
     }
 
-    logForDebugging(
-      `[updateSessionTitle] Failed with status ${response.status}: ${jsonStringify(response.data)}`,
-    )
+    logForDebugging(`[updateSessionTitle] Failed with status ${response.status}: ${jsonStringify(response.data)}`)
     return false
   } catch (error) {
     logForDebugging(`[updateSessionTitle] Error: ${errorMessage(error)}`)

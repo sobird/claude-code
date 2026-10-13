@@ -1,5 +1,6 @@
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
+
 import { BLACK_CIRCLE } from '../../constants/figures.js'
 import { Box, Text, type TextProps } from '../../ink.js'
 import { extractTag } from '../../utils/messages.js'
@@ -22,10 +23,7 @@ function getStatusColor(status: string | null): TextProps['color'] {
   }
 }
 
-export function UserAgentNotificationMessage({
-  addMargin,
-  param: { text },
-}: Props): React.ReactNode {
+export function UserAgentNotificationMessage({ addMargin, param: { text } }: Props): React.ReactNode {
   const summary = extractTag(text, 'summary')
   if (!summary) return null
 

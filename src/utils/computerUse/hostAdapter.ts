@@ -1,8 +1,7 @@
-import type {
-  ComputerUseHostAdapter,
-  Logger,
-} from '@ant/computer-use-mcp/types'
 import { format } from 'util'
+
+import type { ComputerUseHostAdapter, Logger } from '@ant/computer-use-mcp/types'
+
 import { logForDebugging } from '../debug.js'
 import { COMPUTER_USE_MCP_SERVER_NAME } from './common.js'
 import { createCliExecutor } from './executor.js'
@@ -48,9 +47,7 @@ export function getComputerUseHostAdapter(): ComputerUseHostAdapter {
       const cu = requireComputerUseSwift()
       const accessibility = cu.tcc.checkAccessibility()
       const screenRecording = cu.tcc.checkScreenRecording()
-      return accessibility && screenRecording
-        ? { granted: true }
-        : { granted: false, accessibility, screenRecording }
+      return accessibility && screenRecording ? { granted: true } : { granted: false, accessibility, screenRecording }
     },
     isDisabled: () => !getChicagoEnabled(),
     getSubGates: getChicagoSubGates,

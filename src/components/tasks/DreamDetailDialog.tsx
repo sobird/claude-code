@@ -1,8 +1,9 @@
 import React from 'react'
 import type { DeepImmutable } from 'src/types/utils.js'
+
 import { useElapsedTime } from '../../hooks/useElapsedTime.js'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { Box, Text } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { DreamTaskState } from '../../tasks/DreamTask/DreamTask.js'
 import { plural } from '../../utils/stringUtils.js'
@@ -20,18 +21,8 @@ type Props = {
 // How many recent turns to render. Earlier turns collapse to a count.
 const VISIBLE_TURNS = 6
 
-export function DreamDetailDialog({
-  task,
-  onDone,
-  onBack,
-  onKill,
-}: Props): React.ReactNode {
-  const elapsedTime = useElapsedTime(
-    task.startTime,
-    task.status === 'running',
-    1000,
-    0,
-  )
+export function DreamDetailDialog({ task, onDone, onBack, onKill }: Props): React.ReactNode {
+  const elapsedTime = useElapsedTime(task.startTime, task.status === 'running', 1000, 0)
 
   // Dialog handles confirm:no (Esc) → onCancel. Wire confirm:yes (Enter/y) too.
   useKeybindings({ 'confirm:yes': onDone }, { context: 'Confirmation' })
@@ -51,44 +42,35 @@ export function DreamDetailDialog({
 
   // Turns with text to show. Tool-only turns (text='') are dropped entirely —
   // the per-turn toolUseCount already captures that work.
-  const visibleTurns = task.turns.filter(t => t.text !== '')
+  const visibleTurns = task.turns.filter((t) => t.text !== '')
   const shown = visibleTurns.slice(-VISIBLE_TURNS)
   const hidden = visibleTurns.length - shown.length
 
   return (
-    <Box
-      flexDirection="column"
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       <Dialog
         title="Memory consolidation"
         subtitle={
           <Text dimColor>
-            {elapsedTime} · reviewing {task.sessionsReviewing}{' '}
-            {plural(task.sessionsReviewing, 'session')}
+            {elapsedTime} · reviewing {task.sessionsReviewing} {plural(task.sessionsReviewing, 'session')}
             {task.filesTouched.length > 0 && (
               <>
                 {' '}
-                · {task.filesTouched.length}{' '}
-                {plural(task.filesTouched.length, 'file')} touched
+                · {task.filesTouched.length} {plural(task.filesTouched.length, 'file')} touched
               </>
             )}
           </Text>
         }
         onCancel={onDone}
         color="background"
-        inputGuide={exitState =>
+        inputGuide={(exitState) =>
           exitState.pending ? (
             <Text>Press {exitState.keyName} again to exit</Text>
           ) : (
             <Byline>
               {onBack && <KeyboardShortcutHint shortcut="←" action="go back" />}
               <KeyboardShortcutHint shortcut="Esc/Enter/Space" action="close" />
-              {task.status === 'running' && onKill && (
-                <KeyboardShortcutHint shortcut="x" action="stop" />
-              )}
+              {task.status === 'running' && onKill && <KeyboardShortcutHint shortcut="x" action="stop" />}
             </Byline>
           )
         }
@@ -106,9 +88,7 @@ export function DreamDetailDialog({
           </Text>
 
           {shown.length === 0 ? (
-            <Text dimColor>
-              {task.status === 'running' ? 'Starting…' : '(no text output)'}
-            </Text>
+            <Text dimColor>{task.status === 'running' ? 'Starting…' : '(no text output)'}</Text>
           ) : (
             <>
               {hidden > 0 && (
@@ -121,8 +101,7 @@ export function DreamDetailDialog({
                   <Text wrap="wrap">{turn.text}</Text>
                   {turn.toolUseCount > 0 && (
                     <Text dimColor>
-                      {'  '}({turn.toolUseCount}{' '}
-                      {plural(turn.toolUseCount, 'tool')})
+                      {'  '}({turn.toolUseCount} {plural(turn.toolUseCount, 'tool')})
                     </Text>
                   )}
                 </Box>

@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
+
 import { useSettings } from '../../hooks/useSettings.js'
 import { Box, Text, useAnimationFrame } from '../../ink.js'
 import { interpolateColor, toRGBColor } from '../Spinner/utils.js'
@@ -49,11 +51,8 @@ function ProcessingShimmer(): React.ReactNode {
   }
 
   const elapsedSec = time / 1000
-  const opacity =
-    (Math.sin((elapsedSec * Math.PI * 2) / PULSE_PERIOD_S) + 1) / 2
-  const color = toRGBColor(
-    interpolateColor(PROCESSING_DIM, PROCESSING_BRIGHT, opacity),
-  )
+  const opacity = (Math.sin((elapsedSec * Math.PI * 2) / PULSE_PERIOD_S) + 1) / 2
+  const color = toRGBColor(interpolateColor(PROCESSING_DIM, PROCESSING_BRIGHT, opacity))
 
   return (
     <Box ref={ref}>

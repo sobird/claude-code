@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Box, Text } from '../ink.js'
 import { formatTokens } from '../utils/format.js'
 import { Select } from './CustomSelect/index.js'
@@ -12,11 +13,7 @@ type Props = {
   onDone: (action: IdleReturnAction) => void
 }
 
-export function IdleReturnDialog({
-  idleMinutes,
-  totalInputTokens,
-  onDone,
-}: Props): React.ReactNode {
+export function IdleReturnDialog({ idleMinutes, totalInputTokens, onDone }: Props): React.ReactNode {
   const formattedIdle = formatIdleDuration(idleMinutes)
   const formattedTokens = formatTokens(totalInputTokens)
 
@@ -26,9 +23,7 @@ export function IdleReturnDialog({
       onCancel={() => onDone('dismiss')}
     >
       <Box flexDirection="column">
-        <Text>
-          If this is a new task, clearing context will save usage and be faster.
-        </Text>
+        <Text>If this is a new task, clearing context will save usage and be faster.</Text>
       </Box>
       <Select
         options={[

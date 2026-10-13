@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from 'react'
+
 import { Box, Link, Text } from '../ink.js'
-import {
-  type AwsAuthStatus,
-  AwsAuthStatusManager,
-} from '../utils/awsAuthStatusManager.js'
+import { type AwsAuthStatus, AwsAuthStatusManager } from '../utils/awsAuthStatusManager.js'
 
 const URL_RE = /https?:\/\/\S+/
 
 export function AwsAuthStatusBox(): React.ReactNode {
-  const [status, setStatus] = useState<AwsAuthStatus>(
-    AwsAuthStatusManager.getInstance().getStatus(),
-  )
+  const [status, setStatus] = useState<AwsAuthStatus>(AwsAuthStatusManager.getInstance().getStatus())
 
   useEffect(() => {
     // Subscribe to status updates
@@ -29,13 +25,7 @@ export function AwsAuthStatusBox(): React.ReactNode {
   }
 
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="permission"
-      paddingX={1}
-      marginY={1}
-    >
+    <Box flexDirection="column" borderStyle="round" borderColor="permission" paddingX={1} marginY={1}>
       <Text bold color="permission">
         Cloud Authentication
       </Text>

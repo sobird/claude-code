@@ -1,6 +1,7 @@
 import sample from 'lodash-es/sample.js'
 import * as React from 'react'
 import { useMemo } from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { extractTag } from '../../utils/messages.js'
 import { MessageResponse } from '../MessageResponse.js'
@@ -14,10 +15,7 @@ type Props = {
   text: string
 }
 
-export function UserMemoryInputMessage({
-  text,
-  addMargin,
-}: Props): React.ReactNode {
+export function UserMemoryInputMessage({ text, addMargin }: Props): React.ReactNode {
   const input = extractTag(text, 'user-memory-input')
   const savingText = useMemo(() => getSavingMessage(), [])
 

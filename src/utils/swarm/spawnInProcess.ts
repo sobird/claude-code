@@ -14,26 +14,20 @@
  */
 
 import sample from 'lodash-es/sample.js'
+
 import { getSessionId } from '../../bootstrap/state.js'
 import { getSpinnerVerbs } from '../../constants/spinnerVerbs.js'
 import { TURN_COMPLETION_VERBS } from '../../constants/turnCompletionVerbs.js'
 import type { AppState } from '../../state/AppState.js'
 import { createTaskStateBase, generateTaskId } from '../../Task.js'
-import type {
-  InProcessTeammateTaskState,
-  TeammateIdentity,
-} from '../../tasks/InProcessTeammateTask/types.js'
+import type { InProcessTeammateTaskState, TeammateIdentity } from '../../tasks/InProcessTeammateTask/types.js'
 import { createAbortController } from '../abortController.js'
 import { formatAgentId } from '../agentId.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { logForDebugging } from '../debug.js'
 import { emitTaskTerminatedSdk } from '../sdkEventQueue.js'
 import { evictTaskOutput } from '../task/diskOutput.js'
-import {
-  evictTerminalTask,
-  registerTask,
-  STOPPED_DISPLAY_MS,
-} from '../task/framework.js'
+import { evictTerminalTask, registerTask, STOPPED_DISPLAY_MS } from '../task/framework.js'
 import { createTeammateContext } from '../teammateContext.js'
 import {
   isPerfettoTracingEnabled,
@@ -112,9 +106,7 @@ export async function spawnInProcessTeammate(
   const agentId = formatAgentId(name, teamName)
   const taskId = generateTaskId('in_process_teammate')
 
-  logForDebugging(
-    `[spawnInProcessTeammate] Spawning ${agentId} (taskId: ${taskId})`,
-  )
+  logForDebugging(`[spawnInProcessTeammate] Spawning ${agentId} (taskId: ${taskId})`)
 
   try {
     // Create independent AbortController for this teammate
@@ -155,12 +147,7 @@ export async function spawnInProcessTeammate(
     const description = `${name}: ${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}`
 
     const taskState: InProcessTeammateTaskState = {
-      ...createTaskStateBase(
-        taskId,
-        'in_process_teammate',
-        description,
-        context.toolUseId,
-      ),
+      ...createTaskStateBase(taskId, 'in_process_teammate', description, context.toolUseId),
       type: 'in_process_teammate',
       status: 'running',
       identity,
@@ -190,9 +177,7 @@ export async function spawnInProcessTeammate(
     // Register task in AppState
     registerTask(taskState, setAppState)
 
-    logForDebugging(
-      `[spawnInProcessTeammate] Registered ${agentId} in AppState`,
-    )
+    logForDebugging(`[spawnInProcessTeammate] Registered ${agentId} in AppState`)
 
     return {
       success: true,
@@ -202,11 +187,8 @@ export async function spawnInProcessTeammate(
       teammateContext,
     }
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error during spawn'
-    logForDebugging(
-      `[spawnInProcessTeammate] Failed to spawn ${agentId}: ${errorMessage}`,
-    )
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error during spawn'
+    logForDebugging(`[spawnInProcessTeammate] Failed to spawn ${agentId}: ${errorMessage}`)
     return {
       success: false,
       agentId,
@@ -224,10 +206,7 @@ export async function spawnInProcessTeammate(
  * @param setAppState - AppState setter
  * @returns true if killed successfully
  */
-export function killInProcessTeammate(
-  taskId: string,
-  setAppState: SetAppStateFn,
-): boolean {
+export function killInProcessTeammate(taskId: string, setAppState: SetAppStateFn): boolean {
   let killed = false
   let teamName: string | null = null
   let agentId: string | null = null
@@ -262,7 +241,7 @@ export function killInProcessTeammate(
     killed = true
 
     // Call pending idle callbacks to unblock any waiters (e.g., engine.waitForIdle)
-    teammateTask.onIdleCallbacks?.forEach(cb => cb())
+    teammateTask.onIdleCallbacks?.forEach((cb) => cb())
 
     // Remove from teamContext.teammates using the agentId
     let updatedTeamContext = prev.teamContext
@@ -313,10 +292,7 @@ export function killInProcessTeammate(
       toolUseId,
       summary: description,
     })
-    setTimeout(
-      evictTerminalTask.bind(null, taskId, setAppState),
-      STOPPED_DISPLAY_MS,
-    )
+    setTimeout(evictTerminalTask.bind(null, taskId, setAppState), STOPPED_DISPLAY_MS)
   }
 
   // Release perfetto agent registry entry

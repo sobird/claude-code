@@ -1,11 +1,6 @@
-import React, {
-  type Ref,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+import React, { type Ref, useCallback, useEffect, useRef, useState } from 'react'
 import type { Except } from 'type-fest'
+
 import type { DOMElement } from '../dom.js'
 import type { ClickEvent } from '../events/click-event.js'
 import type { FocusEvent } from '../events/focus-event.js'
@@ -44,14 +39,7 @@ export type Props = Except<Styles, 'textWrap'> & {
   children: ((state: ButtonState) => React.ReactNode) | React.ReactNode
 }
 
-function Button({
-  onAction,
-  tabIndex = 0,
-  autoFocus,
-  children,
-  ref,
-  ...style
-}: Props): React.ReactNode {
+function Button({ onAction, tabIndex = 0, autoFocus, children, ref, ...style }: Props): React.ReactNode {
   const [isFocused, setIsFocused] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [isActive, setIsActive] = useState(false)
@@ -71,11 +59,7 @@ function Button({
         setIsActive(true)
         onAction()
         if (activeTimer.current) clearTimeout(activeTimer.current)
-        activeTimer.current = setTimeout(
-          setter => setter(false),
-          100,
-          setIsActive,
-        )
+        activeTimer.current = setTimeout((setter) => setter(false), 100, setIsActive)
       }
     },
     [onAction],

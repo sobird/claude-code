@@ -36,8 +36,5 @@ const TIME_BASED_MC_CONFIG_DEFAULTS: TimeBasedMCConfig = {
 export function getTimeBasedMCConfig(): TimeBasedMCConfig {
   // Hoist the GB read so exposure fires on every eval path, not just when
   // the caller's other conditions (querySource, messages.length) pass.
-  return getFeatureValue_CACHED_MAY_BE_STALE<TimeBasedMCConfig>(
-    'tengu_slate_heron',
-    TIME_BASED_MC_CONFIG_DEFAULTS,
-  )
+  return getFeatureValue_CACHED_MAY_BE_STALE<TimeBasedMCConfig>('tengu_slate_heron', TIME_BASED_MC_CONFIG_DEFAULTS)
 }

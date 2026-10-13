@@ -9,10 +9,7 @@ const CONFIG_NAME = 'tengu-top-of-feed-tip'
 export function EmergencyTip(): React.ReactNode {
   const tip = useMemo(getTipOfFeed, [])
   // Memoize to prevent re-reads after we save - we want the value at mount time
-  const lastShownTip = useMemo(
-    () => getGlobalConfig().lastShownEmergencyTip,
-    [],
-  )
+  const lastShownTip = useMemo(() => getGlobalConfig().lastShownEmergencyTip, [])
 
   // Only show if this is a new/different tip
   const shouldShow = tip.tip && tip.tip !== lastShownTip
@@ -20,7 +17,7 @@ export function EmergencyTip(): React.ReactNode {
   // Save the tip we're showing so we don't show it again
   useEffect(() => {
     if (shouldShow) {
-      saveGlobalConfig(current => {
+      saveGlobalConfig((current) => {
         if (current.lastShownEmergencyTip === tip.tip) return current
         return { ...current, lastShownEmergencyTip: tip.tip }
       })
@@ -58,8 +55,5 @@ const DEFAULT_TIP: TipOfFeed = { tip: '', color: 'dim' }
  * Returns cached value immediately, updates in background
  */
 function getTipOfFeed(): TipOfFeed {
-  return getDynamicConfig_CACHED_MAY_BE_STALE<TipOfFeed>(
-    CONFIG_NAME,
-    DEFAULT_TIP,
-  )
+  return getDynamicConfig_CACHED_MAY_BE_STALE<TipOfFeed>(CONFIG_NAME, DEFAULT_TIP)
 }

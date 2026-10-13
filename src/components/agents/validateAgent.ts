@@ -1,9 +1,6 @@
 import type { Tools } from '../../Tool.js'
 import { resolveAgentTools } from '../../tools/AgentTool/agentToolUtils.js'
-import type {
-  AgentDefinition,
-  CustomAgentDefinition,
-} from '../../tools/AgentTool/loadAgentsDir.js'
+import type { AgentDefinition, CustomAgentDefinition } from '../../tools/AgentTool/loadAgentsDir.js'
 import { getAgentSourceDisplayName } from './utils.js'
 
 export type AgentValidationResult = {
@@ -50,13 +47,9 @@ export function validateAgent(
     }
 
     // Check for duplicates (excluding self for editing)
-    const duplicate = existingAgents.find(
-      a => a.agentType === agent.agentType && a.source !== agent.source,
-    )
+    const duplicate = existingAgents.find((a) => a.agentType === agent.agentType && a.source !== agent.source)
     if (duplicate) {
-      errors.push(
-        `Agent type "${agent.agentType}" already exists in ${getAgentSourceDisplayName(duplicate.source)}`,
-      )
+      errors.push(`Agent type "${agent.agentType}" already exists in ${getAgentSourceDisplayName(duplicate.source)}`)
     }
   }
 
@@ -64,9 +57,7 @@ export function validateAgent(
   if (!agent.whenToUse) {
     errors.push('Description (description) is required')
   } else if (agent.whenToUse.length < 10) {
-    warnings.push(
-      'Description should be more descriptive (at least 10 characters)',
-    )
+    warnings.push('Description should be more descriptive (at least 10 characters)')
   } else if (agent.whenToUse.length > 5000) {
     warnings.push('Description is very long (over 5000 characters)')
   }
@@ -78,9 +69,7 @@ export function validateAgent(
     if (agent.tools === undefined) {
       warnings.push('Agent has access to all tools')
     } else if (agent.tools.length === 0) {
-      warnings.push(
-        'No tools selected - agent will have very limited capabilities',
-      )
+      warnings.push('No tools selected - agent will have very limited capabilities')
     }
 
     // Check for invalid tools

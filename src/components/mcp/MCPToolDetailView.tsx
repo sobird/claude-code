@@ -1,9 +1,7 @@
 import React from 'react'
+
 import { Box, Text } from '../../ink.js'
-import {
-  extractMcpToolDisplayName,
-  getMcpDisplayName,
-} from '../../services/mcp/mcpStringUtils.js'
+import { extractMcpToolDisplayName, getMcpDisplayName } from '../../services/mcp/mcpStringUtils.js'
 import type { Tool } from '../../Tool.js'
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js'
 import { Dialog } from '../design-system/Dialog.js'
@@ -15,17 +13,11 @@ type Props = {
   onBack: () => void
 }
 
-export function MCPToolDetailView({
-  tool,
-  server,
-  onBack,
-}: Props): React.ReactNode {
+export function MCPToolDetailView({ tool, server, onBack }: Props): React.ReactNode {
   const [toolDescription, setToolDescription] = React.useState<string>('')
 
   const toolName = getMcpDisplayName(tool.name, server.name)
-  const fullDisplayName = tool.userFacingName
-    ? tool.userFacingName({})
-    : toolName
+  const fullDisplayName = tool.userFacingName ? tool.userFacingName({}) : toolName
   const displayName = extractMcpToolDisplayName(fullDisplayName)
 
   const isReadOnly = tool.isReadOnly?.({}) ?? false
@@ -72,16 +64,11 @@ export function MCPToolDetailView({
       title={titleContent}
       subtitle={server.name}
       onCancel={onBack}
-      inputGuide={exitState =>
+      inputGuide={(exitState) =>
         exitState.pending ? (
           <Text>Press {exitState.keyName} again to exit</Text>
         ) : (
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="go back"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="go back" />
         )
       }
     >
@@ -109,30 +96,22 @@ export function MCPToolDetailView({
             <Box flexDirection="column" marginTop={1}>
               <Text bold>Parameters:</Text>
               <Box marginLeft={2} flexDirection="column">
-                {Object.entries(tool.inputJSONSchema.properties).map(
-                  ([key, value]) => {
-                    const required = tool.inputJSONSchema?.required as
-                      | string[]
-                      | undefined
-                    const isRequired = required?.includes(key)
-                    return (
-                      <Text key={key}>
-                        • {key}
-                        {isRequired && <Text dimColor> (required)</Text>}:{' '}
-                        <Text dimColor>
-                          {typeof value === 'object' && value && 'type' in value
-                            ? String(value.type)
-                            : 'unknown'}
-                        </Text>
-                        {typeof value === 'object' &&
-                          value &&
-                          'description' in value && (
-                            <Text dimColor> - {String(value.description)}</Text>
-                          )}
+                {Object.entries(tool.inputJSONSchema.properties).map(([key, value]) => {
+                  const required = tool.inputJSONSchema?.required as string[] | undefined
+                  const isRequired = required?.includes(key)
+                  return (
+                    <Text key={key}>
+                      • {key}
+                      {isRequired && <Text dimColor> (required)</Text>}:{' '}
+                      <Text dimColor>
+                        {typeof value === 'object' && value && 'type' in value ? String(value.type) : 'unknown'}
                       </Text>
-                    )
-                  },
-                )}
+                      {typeof value === 'object' && value && 'description' in value && (
+                        <Text dimColor> - {String(value.description)}</Text>
+                      )}
+                    </Text>
+                  )
+                })}
               </Box>
             </Box>
           )}

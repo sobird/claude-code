@@ -1,5 +1,6 @@
 import { createHash } from 'crypto'
 import { join } from 'path'
+
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
 import type { Command } from '../../commands.js'
 import type { AgentMcpServerInfo } from '../../components/mcp/types.js'
@@ -8,10 +9,7 @@ import type { AgentDefinition } from '../../tools/AgentTool/loadAgentsDir.js'
 import { getCwd } from '../../utils/cwd.js'
 import { getGlobalClaudeFile } from '../../utils/env.js'
 import { isSettingSourceEnabled } from '../../utils/settings/constants.js'
-import {
-  getSettings_DEPRECATED,
-  hasSkipDangerousModePermissionPrompt,
-} from '../../utils/settings/settings.js'
+import { getSettings_DEPRECATED, hasSkipDangerousModePermissionPrompt } from '../../utils/settings/settings.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { getEnterpriseMcpFilePath, getMcpConfigByName } from './config.js'
 import { mcpInfoFromString } from './mcpStringUtils.js'
@@ -38,7 +36,7 @@ import {
  */
 export function filterToolsByServer(tools: Tool[], serverName: string): Tool[] {
   const prefix = `mcp__${normalizeNameForMCP(serverName)}__`
-  return tools.filter(tool => tool.name?.startsWith(prefix))
+  return tools.filter((tool) => tool.name?.startsWith(prefix))
 }
 
 /**
@@ -49,16 +47,11 @@ export function filterToolsByServer(tools: Tool[], serverName: string): Tool[] {
  * naming). Both live in `mcp.commands`, so cleanup and filtering must match
  * either shape.
  */
-export function commandBelongsToServer(
-  command: Command,
-  serverName: string,
-): boolean {
+export function commandBelongsToServer(command: Command, serverName: string): boolean {
   const normalized = normalizeNameForMCP(serverName)
   const name = command.name
   if (!name) return false
-  return (
-    name.startsWith(`mcp__${normalized}__`) || name.startsWith(`${normalized}:`)
-  )
+  return name.startsWith(`mcp__${normalized}__`) || name.startsWith(`${normalized}:`)
 }
 
 /**
@@ -67,11 +60,8 @@ export function commandBelongsToServer(
  * @param serverName Name of the MCP server
  * @returns Commands belonging to the specified server
  */
-export function filterCommandsByServer(
-  commands: Command[],
-  serverName: string,
-): Command[] {
-  return commands.filter(c => commandBelongsToServer(c, serverName))
+export function filterCommandsByServer(commands: Command[], serverName: string): Command[] {
+  return commands.filter((c) => commandBelongsToServer(c, serverName))
 }
 
 /**
@@ -82,14 +72,9 @@ export function filterCommandsByServer(
  * The distinguisher is `loadedFrom === 'mcp'`: MCP skills set it, MCP
  * prompts don't (they use `isMcp: true` instead).
  */
-export function filterMcpPromptsByServer(
-  commands: Command[],
-  serverName: string,
-): Command[] {
+export function filterMcpPromptsByServer(commands: Command[], serverName: string): Command[] {
   return commands.filter(
-    c =>
-      commandBelongsToServer(c, serverName) &&
-      !(c.type === 'prompt' && c.loadedFrom === 'mcp'),
+    (c) => commandBelongsToServer(c, serverName) && !(c.type === 'prompt' && c.loadedFrom === 'mcp'),
   )
 }
 
@@ -99,11 +84,8 @@ export function filterMcpPromptsByServer(
  * @param serverName Name of the MCP server
  * @returns Resources belonging to the specified server
  */
-export function filterResourcesByServer(
-  resources: ServerResource[],
-  serverName: string,
-): ServerResource[] {
-  return resources.filter(resource => resource.server === serverName)
+export function filterResourcesByServer(resources: ServerResource[], serverName: string): ServerResource[] {
+  return resources.filter((resource) => resource.server === serverName)
 }
 
 /**
@@ -112,12 +94,9 @@ export function filterResourcesByServer(
  * @param serverName Name of the MCP server to exclude
  * @returns Tools not belonging to the specified server
  */
-export function excludeToolsByServer(
-  tools: Tool[],
-  serverName: string,
-): Tool[] {
+export function excludeToolsByServer(tools: Tool[], serverName: string): Tool[] {
   const prefix = `mcp__${normalizeNameForMCP(serverName)}__`
-  return tools.filter(tool => !tool.name?.startsWith(prefix))
+  return tools.filter((tool) => !tool.name?.startsWith(prefix))
 }
 
 /**
@@ -126,11 +105,8 @@ export function excludeToolsByServer(
  * @param serverName Name of the MCP server to exclude
  * @returns Commands not belonging to the specified server
  */
-export function excludeCommandsByServer(
-  commands: Command[],
-  serverName: string,
-): Command[] {
-  return commands.filter(c => !commandBelongsToServer(c, serverName))
+export function excludeCommandsByServer(commands: Command[], serverName: string): Command[] {
+  return commands.filter((c) => !commandBelongsToServer(c, serverName))
 }
 
 /**
@@ -197,7 +173,7 @@ export function excludeStalePluginClients(
   resources: Record<string, ServerResource[]>
   stale: MCPServerConnection[]
 } {
-  const stale = mcp.clients.filter(c => {
+  const stale = mcp.clients.filter((c) => {
     const fresh = configs[c.name]
     if (!fresh) return c.config.scope === 'dynamic'
     return hashMcpConfig(c.config) !== hashMcpConfig(fresh)
@@ -212,10 +188,10 @@ export function excludeStalePluginClients(
     commands = excludeCommandsByServer(commands, s.name)
     resources = excludeResourcesByServer(resources, s.name)
   }
-  const staleNames = new Set(stale.map(c => c.name))
+  const staleNames = new Set(stale.map((c) => c.name))
 
   return {
-    clients: mcp.clients.filter(c => !staleNames.has(c.name)),
+    clients: mcp.clients.filter((c) => !staleNames.has(c.name)),
     tools,
     commands,
     resources,
@@ -229,10 +205,7 @@ export function excludeStalePluginClients(
  * @param serverName The server name to match against
  * @returns True if the tool belongs to the specified server
  */
-export function isToolFromMcpServer(
-  toolName: string,
-  serverName: string,
-): boolean {
+export function isToolFromMcpServer(toolName: string, serverName: string): boolean {
   const info = mcpInfoFromString(toolName)
   return info?.serverName === serverName
 }
@@ -302,9 +275,7 @@ export function ensureConfigScope(scope?: string): ConfigScope {
   if (!scope) return 'local'
 
   if (!ConfigScopeSchema().options.includes(scope as ConfigScope)) {
-    throw new Error(
-      `Invalid scope: ${scope}. Must be one of: ${ConfigScopeSchema().options.join(', ')}`,
-    )
+    throw new Error(`Invalid scope: ${scope}. Must be one of: ${ConfigScopeSchema().options.join(', ')}`)
   }
 
   return scope as ConfigScope
@@ -314,9 +285,7 @@ export function ensureTransport(type?: string): 'stdio' | 'sse' | 'http' {
   if (!type) return 'stdio'
 
   if (type !== 'stdio' && type !== 'sse' && type !== 'http') {
-    throw new Error(
-      `Invalid transport type: ${type}. Must be one of: stdio, sse, http`,
-    )
+    throw new Error(`Invalid transport type: ${type}. Must be one of: stdio, sse, http`)
   }
 
   return type as 'stdio' | 'sse' | 'http'
@@ -328,18 +297,14 @@ export function parseHeaders(headerArray: string[]): Record<string, string> {
   for (const header of headerArray) {
     const colonIndex = header.indexOf(':')
     if (colonIndex === -1) {
-      throw new Error(
-        `Invalid header format: "${header}". Expected format: "Header-Name: value"`,
-      )
+      throw new Error(`Invalid header format: "${header}". Expected format: "Header-Name: value"`)
     }
 
     const key = header.substring(0, colonIndex).trim()
     const value = header.substring(colonIndex + 1).trim()
 
     if (!key) {
-      throw new Error(
-        `Invalid header: "${header}". Header name cannot be empty.`,
-      )
+      throw new Error(`Invalid header: "${header}". Header name cannot be empty.`)
     }
 
     headers[key] = value
@@ -348,26 +313,18 @@ export function parseHeaders(headerArray: string[]): Record<string, string> {
   return headers
 }
 
-export function getProjectMcpServerStatus(
-  serverName: string,
-): 'approved' | 'rejected' | 'pending' {
+export function getProjectMcpServerStatus(serverName: string): 'approved' | 'rejected' | 'pending' {
   const settings = getSettings_DEPRECATED()
   const normalizedName = normalizeNameForMCP(serverName)
 
   // TODO: This fails an e2e test if the ?. is not present. This is likely a bug in the e2e test.
   // Will fix this in a follow-up PR.
-  if (
-    settings?.disabledMcpjsonServers?.some(
-      name => normalizeNameForMCP(name) === normalizedName,
-    )
-  ) {
+  if (settings?.disabledMcpjsonServers?.some((name) => normalizeNameForMCP(name) === normalizedName)) {
     return 'rejected'
   }
 
   if (
-    settings?.enabledMcpjsonServers?.some(
-      name => normalizeNameForMCP(name) === normalizedName,
-    ) ||
+    settings?.enabledMcpjsonServers?.some((name) => normalizeNameForMCP(name) === normalizedName) ||
     settings?.enableAllProjectMcpServers
   ) {
     return 'approved'
@@ -383,10 +340,7 @@ export function getProjectMcpServerStatus(
   // users. We also do NOT check getSessionBypassPermissionsMode() here because
   // sessionBypassPermissionsMode can be set from project settings before the dialog is shown,
   // which would allow RCE attacks via malicious project settings.
-  if (
-    hasSkipDangerousModePermissionPrompt() &&
-    isSettingSourceEnabled('projectSettings')
-  ) {
+  if (hasSkipDangerousModePermissionPrompt() && isSettingSourceEnabled('projectSettings')) {
     return 'approved'
   }
 
@@ -395,10 +349,7 @@ export function getProjectMcpServerStatus(
   // 1. The user/developer explicitly chose to run in this mode
   // 2. For SDK, projectSettings is off by default - they must explicitly enable it
   // 3. For -p mode, the help text warns to only use in trusted directories
-  if (
-    getIsNonInteractiveSession() &&
-    isSettingSourceEnabled('projectSettings')
-  ) {
+  if (getIsNonInteractiveSession() && isSettingSourceEnabled('projectSettings')) {
     return 'approved'
   }
 
@@ -410,9 +361,7 @@ export function getProjectMcpServerStatus(
  * @param toolName MCP tool name (format: mcp__serverName__toolName)
  * @returns ConfigScope or null if not an MCP tool or server not found
  */
-export function getMcpServerScopeFromToolName(
-  toolName: string,
-): ConfigScope | null {
+export function getMcpServerScopeFromToolName(toolName: string): ConfigScope | null {
   if (!isMcpTool({ name: toolName } as Tool)) {
     return null
   }
@@ -436,9 +385,7 @@ export function getMcpServerScopeFromToolName(
 }
 
 // Type guards for MCP server config types
-function isStdioConfig(
-  config: McpServerConfig,
-): config is McpStdioServerConfig {
+function isStdioConfig(config: McpServerConfig): config is McpStdioServerConfig {
   return config.type === 'stdio' || config.type === undefined
 }
 
@@ -450,9 +397,7 @@ function isHTTPConfig(config: McpServerConfig): config is McpHTTPServerConfig {
   return config.type === 'http'
 }
 
-function isWebSocketConfig(
-  config: McpServerConfig,
-): config is McpWebSocketServerConfig {
+function isWebSocketConfig(config: McpServerConfig): config is McpWebSocketServerConfig {
   return config.type === 'ws'
 }
 
@@ -463,9 +408,7 @@ function isWebSocketConfig(
  * @param agents Array of agent definitions
  * @returns Array of AgentMcpServerInfo, grouped by server name with list of source agents
  */
-export function extractAgentMcpServers(
-  agents: AgentDefinition[],
-): AgentMcpServerInfo[] {
+export function extractAgentMcpServers(agents: AgentDefinition[]): AgentMcpServerInfo[] {
   // Map: server name -> { config, sourceAgents }
   const serverMap = new Map<
     string,
@@ -558,9 +501,7 @@ export function extractAgentMcpServers(
  * Trailing slashes are also removed for normalization.
  * Returns undefined for stdio/sdk servers or if URL parsing fails.
  */
-export function getLoggingSafeMcpBaseUrl(
-  config: McpServerConfig,
-): string | undefined {
+export function getLoggingSafeMcpBaseUrl(config: McpServerConfig): string | undefined {
   if (!('url' in config) || typeof config.url !== 'string') {
     return undefined
   }

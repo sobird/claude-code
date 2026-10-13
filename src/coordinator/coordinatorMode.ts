@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import { ASYNC_AGENT_ALLOWED_TOOLS } from '../constants/tools.js'
 import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import {
@@ -46,9 +47,7 @@ export function isCoordinatorMode(): boolean {
  * the correct value for the resumed session. Returns a warning message if
  * the mode was switched, or undefined if no switch was needed.
  */
-export function matchSessionMode(
-  sessionMode: 'coordinator' | 'normal' | undefined,
-): string | undefined {
+export function matchSessionMode(sessionMode: 'coordinator' | 'normal' | undefined): string | undefined {
   // No stored mode (old session before mode tracking) — do nothing
   if (!sessionMode) {
     return undefined
@@ -86,18 +85,16 @@ export function getCoordinatorUserContext(
   }
 
   const workerTools = isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
-    ? [BASH_TOOL_NAME, FILE_READ_TOOL_NAME, FILE_EDIT_TOOL_NAME]
-        .sort()
-        .join(', ')
+    ? [BASH_TOOL_NAME, FILE_READ_TOOL_NAME, FILE_EDIT_TOOL_NAME].sort().join(', ')
     : Array.from(ASYNC_AGENT_ALLOWED_TOOLS)
-        .filter(name => !INTERNAL_WORKER_TOOLS.has(name))
+        .filter((name) => !INTERNAL_WORKER_TOOLS.has(name))
         .sort()
         .join(', ')
 
   let content = `Workers spawned via the ${AGENT_TOOL_NAME} tool have access to these tools: ${workerTools}`
 
   if (mcpClients.length > 0) {
-    const serverNames = mcpClients.map(c => c.name).join(', ')
+    const serverNames = mcpClients.map((c) => c.name).join(', ')
     content += `\n\nWorkers also have access to MCP tools from connected MCP servers: ${serverNames}`
   }
 

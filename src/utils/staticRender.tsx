@@ -1,7 +1,9 @@
+import { PassThrough } from 'stream'
+
 import * as React from 'react'
 import { useLayoutEffect } from 'react'
-import { PassThrough } from 'stream'
 import stripAnsi from 'strip-ansi'
+
 import { render, useApp } from '../ink.js'
 
 // This is a workaround for the fact that Ink doesn't support multiple <Static>
@@ -14,11 +16,7 @@ import { render, useApp } from '../ink.js'
  * before exiting. This is more robust than process.nextTick() for React 19's
  * async render cycle.
  */
-function RenderOnceAndExit({
-  children,
-}: {
-  children: React.ReactNode
-}): React.ReactNode {
+function RenderOnceAndExit({ children }: { children: React.ReactNode }): React.ReactNode {
   const { exit } = useApp()
 
   // useLayoutEffect runs synchronously after React commits DOM mutations.
@@ -54,11 +52,8 @@ function extractFirstFrame(output: string): string {
 /**
  * Renders a React node to a string with ANSI escape codes (for terminal output).
  */
-export function renderToAnsiString(
-  node: React.ReactNode,
-  columns?: number,
-): Promise<string> {
-  return new Promise(async resolve => {
+export function renderToAnsiString(node: React.ReactNode, columns?: number): Promise<string> {
+  return new Promise(async (resolve) => {
     let output = ''
 
     // Capture all writes. Set .columns so Ink (ink.tsx:~165) picks up a
@@ -69,19 +64,16 @@ export function renderToAnsiString(
     if (columns !== undefined) {
       ;(stream as unknown as { columns: number }).columns = columns
     }
-    stream.on('data', chunk => {
+    stream.on('data', (chunk) => {
       output += chunk.toString()
     })
 
     // Render the component wrapped in RenderOnceAndExit
     // Non-TTY stdout (PassThrough) gives full-frame output instead of diffs
-    const instance = await render(
-      <RenderOnceAndExit>{node}</RenderOnceAndExit>,
-      {
-        stdout: stream as unknown as NodeJS.WriteStream,
-        patchConsole: false,
-      },
-    )
+    const instance = await render(<RenderOnceAndExit>{node}</RenderOnceAndExit>, {
+      stdout: stream as unknown as NodeJS.WriteStream,
+      patchConsole: false,
+    })
 
     // Wait for the component to exit naturally
     await instance.waitUntilExit()
@@ -95,10 +87,7 @@ export function renderToAnsiString(
 /**
  * Renders a React node to a plain text string (ANSI codes stripped).
  */
-export async function renderToString(
-  node: React.ReactNode,
-  columns?: number,
-): Promise<string> {
+export async function renderToString(node: React.ReactNode, columns?: number): Promise<string> {
   const output = await renderToAnsiString(node, columns)
   return stripAnsi(output)
 }

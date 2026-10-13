@@ -11,6 +11,7 @@
  */
 
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
+
 import type { CoordinateMode } from './types.js'
 
 // See packages/desktop/computer-use-mcp/COORDINATES.md before touching any

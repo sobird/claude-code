@@ -1,6 +1,7 @@
 import capitalize from 'lodash-es/capitalize.js'
 import * as React from 'react'
 import { useMemo } from 'react'
+
 import {
   type Command,
   type CommandBase,
@@ -9,16 +10,10 @@ import {
   type PromptCommand,
 } from '../../commands.js'
 import { Box, Text } from '../../ink.js'
-import {
-  estimateSkillFrontmatterTokens,
-  getSkillsPath,
-} from '../../skills/loadSkillsDir.js'
+import { estimateSkillFrontmatterTokens, getSkillsPath } from '../../skills/loadSkillsDir.js'
 import { getDisplayPath } from '../../utils/file.js'
 import { formatTokens } from '../../utils/format.js'
-import {
-  getSettingSourceName,
-  type SettingSource,
-} from '../../utils/settings/constants.js'
+import { getSettingSourceName, type SettingSource } from '../../utils/settings/constants.js'
 import { plural } from '../../utils/stringUtils.js'
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js'
 import { Dialog } from '../design-system/Dialog.js'
@@ -29,10 +24,7 @@ type SkillCommand = CommandBase & PromptCommand
 type SkillSource = SettingSource | 'plugin' | 'mcp'
 
 type Props = {
-  onExit: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onExit: (result?: string, options?: { display?: CommandResultDisplay }) => void
   commands: Command[]
 }
 
@@ -46,17 +38,14 @@ function getSourceTitle(source: SkillSource): string {
   return `${capitalize(getSettingSourceName(source))} skills`
 }
 
-function getSourceSubtitle(
-  source: SkillSource,
-  skills: SkillCommand[],
-): string | undefined {
+function getSourceSubtitle(source: SkillSource, skills: SkillCommand[]): string | undefined {
   // MCP skills show server names; file-based skills show filesystem paths.
   // Skill names are `<server>:<skill>`, not `mcp__<server>__…`.
   if (source === 'mcp') {
     const servers = [
       ...new Set(
         skills
-          .map(s => {
+          .map((s) => {
             const idx = s.name.indexOf(':')
             return idx > 0 ? s.name.slice(0, idx) : null
           })
@@ -66,12 +55,8 @@ function getSourceSubtitle(
     return servers.length > 0 ? servers.join(', ') : undefined
   }
   const skillsPath = getDisplayPath(getSkillsPath(source, 'skills'))
-  const hasCommandsSkills = skills.some(
-    s => s.loadedFrom === 'commands_DEPRECATED',
-  )
-  return hasCommandsSkills
-    ? `${skillsPath}, ${getDisplayPath(getSkillsPath(source, 'commands'))}`
-    : skillsPath
+  const hasCommandsSkills = skills.some((s) => s.loadedFrom === 'commands_DEPRECATED')
+  return hasCommandsSkills ? `${skillsPath}, ${getDisplayPath(getSkillsPath(source, 'commands'))}` : skillsPath
 }
 
 export function SkillsMenu({ onExit, commands }: Props): React.ReactNode {
@@ -118,22 +103,10 @@ export function SkillsMenu({ onExit, commands }: Props): React.ReactNode {
 
   if (skills.length === 0) {
     return (
-      <Dialog
-        title="Skills"
-        subtitle="No skills found"
-        onCancel={handleCancel}
-        hideInputGuide
-      >
-        <Text dimColor>
-          Create skills in .claude/skills/ or ~/.claude/skills/
-        </Text>
+      <Dialog title="Skills" subtitle="No skills found" onCancel={handleCancel} hideInputGuide>
+        <Text dimColor>Create skills in .claude/skills/ or ~/.claude/skills/</Text>
         <Text dimColor italic>
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="close"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="close" />
         </Text>
       </Dialog>
     )
@@ -142,17 +115,13 @@ export function SkillsMenu({ onExit, commands }: Props): React.ReactNode {
   const renderSkill = (skill: SkillCommand) => {
     const estimatedTokens = estimateSkillFrontmatterTokens(skill)
     const tokenDisplay = `~${formatTokens(estimatedTokens)}`
-    const pluginName =
-      skill.source === 'plugin'
-        ? skill.pluginInfo?.pluginManifest.name
-        : undefined
+    const pluginName = skill.source === 'plugin' ? skill.pluginInfo?.pluginManifest.name : undefined
 
     return (
       <Box key={`${skill.name}-${skill.source}`}>
         <Text>{getCommandName(skill)}</Text>
         <Text dimColor>
-          {pluginName ? ` · ${pluginName}` : ''} · {tokenDisplay} description
-          tokens
+          {pluginName ? ` · ${pluginName}` : ''} · {tokenDisplay} description tokens
         </Text>
       </Box>
     )
@@ -173,7 +142,7 @@ export function SkillsMenu({ onExit, commands }: Props): React.ReactNode {
           </Text>
           {subtitle && <Text dimColor> ({subtitle})</Text>}
         </Box>
-        {groupSkills.map(skill => renderSkill(skill))}
+        {groupSkills.map((skill) => renderSkill(skill))}
       </Box>
     )
   }
@@ -193,12 +162,7 @@ export function SkillsMenu({ onExit, commands }: Props): React.ReactNode {
         {renderSkillGroup('mcp')}
       </Box>
       <Text dimColor italic>
-        <ConfigurableShortcutHint
-          action="confirm:no"
-          context="Confirmation"
-          fallback="Esc"
-          description="close"
-        />
+        <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="close" />
       </Text>
     </Dialog>
   )

@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { Byline } from '../design-system/Byline.js'
 
@@ -27,9 +28,7 @@ export function CapabilitiesSection({
   return (
     <Box>
       <Text bold>Capabilities: </Text>
-      <Text color="text">
-        {capabilities.length > 0 ? <Byline>{capabilities}</Byline> : 'none'}
-      </Text>
+      <Text color="text">{capabilities.length > 0 ? <Byline>{capabilities}</Byline> : 'none'}</Text>
     </Box>
   )
 }

@@ -1,6 +1,7 @@
 import React, { useRef } from 'react'
 import type { RemoteAgentTaskState } from 'src/tasks/RemoteAgentTask/RemoteAgentTask.js'
 import type { DeepImmutable } from 'src/types/utils.js'
+
 import { DIAMOND_FILLED, DIAMOND_OPEN } from '../../constants/figures.js'
 import { useSettings } from '../../hooks/useSettings.js'
 import { Text, useAnimationFrame } from '../../ink.js'
@@ -9,9 +10,7 @@ import { getRainbowColor } from '../../utils/thinking.js'
 
 const TICK_MS = 80
 
-type ReviewStage = NonNullable<
-  NonNullable<RemoteAgentTaskState['reviewProgress']>['stage']
->
+type ReviewStage = NonNullable<NonNullable<RemoteAgentTaskState['reviewProgress']>['stage']>
 
 /**
  * Stage-appropriate counts line for a running review. Shared between the
@@ -48,13 +47,7 @@ export function formatReviewStageCounts(
 // Per-character rainbow gradient, same treatment as the ultraplan keyword.
 // The phase offset lets the gradient cycle — so the colors sweep along the
 // text on each animation frame instead of being static.
-function RainbowText({
-  text,
-  phase = 0,
-}: {
-  text: string
-  phase?: number
-}): React.ReactNode {
+function RainbowText({ text, phase = 0 }: { text: string; phase?: number }): React.ReactNode {
   return (
     <>
       {[...text].map((ch, i) => (
@@ -84,11 +77,7 @@ function useSmoothCount(target: number, time: number, snap: boolean): number {
   return displayed.current
 }
 
-function ReviewRainbowLine({
-  session,
-}: {
-  session: DeepImmutable<RemoteAgentTaskState>
-}): React.ReactNode {
+function ReviewRainbowLine({ session }: { session: DeepImmutable<RemoteAgentTaskState> }): React.ReactNode {
   const settings = useSettings()
   const reducedMotion = settings.prefersReducedMotion ?? false
   const p = session.reviewProgress
@@ -147,9 +136,7 @@ function ReviewRainbowLine({
   // The !p branch ("setting up") covers the window before the orchestrator
   // writes its first progress snapshot — container boot + repo clone can
   // take 1-3 min, during which "0 found" looked hung.
-  const tail = !p
-    ? 'setting up'
-    : formatReviewStageCounts(p.stage, found, verified, refuted)
+  const tail = !p ? 'setting up' : formatReviewStageCounts(p.stage, found, verified, refuted)
   return (
     <>
       <Text color="background">{DIAMOND_OPEN} </Text>
@@ -159,11 +146,7 @@ function ReviewRainbowLine({
   )
 }
 
-export function RemoteSessionProgress({
-  session,
-}: {
-  session: DeepImmutable<RemoteAgentTaskState>
-}): React.ReactNode {
+export function RemoteSessionProgress({ session }: { session: DeepImmutable<RemoteAgentTaskState> }): React.ReactNode {
   // Lite-review: rainbow gradient over the full line, ultraplan-style.
   // BackgroundTask.tsx delegates the whole <Text> wrapper here so the
   // gradient spans the title, not just the trailing status.
@@ -191,7 +174,7 @@ export function RemoteSessionProgress({
     return <Text dimColor>{session.status}…</Text>
   }
 
-  const completed = count(session.todoList, _ => _.status === 'completed')
+  const completed = count(session.todoList, (_) => _.status === 'completed')
   const total = session.todoList.length
   return (
     <Text dimColor>

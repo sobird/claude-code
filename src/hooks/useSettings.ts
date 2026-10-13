@@ -13,5 +13,5 @@ export type ReadonlySettings = AppState['settings']
  * Use this instead of getSettings_DEPRECATED() in React components for reactive updates.
  */
 export function useSettings(): ReadonlySettings {
-  return useAppState(s => s.settings)
+  return useAppState((s) => s.settings)
 }

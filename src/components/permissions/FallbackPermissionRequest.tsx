@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from 'react'
+
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import { Box, Text, useTheme } from '../../ink.js'
 import { sanitizeToolNameForAnalytics } from '../../services/analytics/metadata.js'
@@ -8,11 +9,7 @@ import { truncateToLines } from '../../utils/stringUtils.js'
 import { logUnaryEvent } from '../../utils/unaryLogging.js'
 import { type UnaryEvent, usePermissionRequestLogging } from './hooks.js'
 import { PermissionDialog } from './PermissionDialog.js'
-import {
-  PermissionPrompt,
-  type PermissionPromptOption,
-  type ToolAnalyticsContext,
-} from './PermissionPrompt.js'
+import { PermissionPrompt, type PermissionPromptOption, type ToolAnalyticsContext } from './PermissionPrompt.js'
 import type { PermissionRequestProps } from './PermissionRequest.js'
 import { PermissionRuleExplanation } from './PermissionRuleExplanation.js'
 
@@ -27,9 +24,7 @@ export function FallbackPermissionRequest({
 }: PermissionRequestProps): React.ReactNode {
   const [theme] = useTheme()
   // TODO: Avoid these special cases
-  const originalUserFacingName = toolUseConfirm.tool.userFacingName(
-    toolUseConfirm.input as never,
-  )
+  const originalUserFacingName = toolUseConfirm.tool.userFacingName(toolUseConfirm.input as never)
   const userFacingName = originalUserFacingName.endsWith(' (MCP)')
     ? originalUserFacingName.slice(0, -6)
     : originalUserFacingName
@@ -135,8 +130,8 @@ export function FallbackPermissionRequest({
       result.push({
         label: (
           <Text>
-            Yes, and don&apos;t ask again for <Text bold>{userFacingName}</Text>{' '}
-            commands in <Text bold>{originalCwd}</Text>
+            Yes, and don&apos;t ask again for <Text bold>{userFacingName}</Text> commands in{' '}
+            <Text bold>{originalCwd}</Text>
           </Text>
         ),
         value: 'yes-dont-ask-again',
@@ -165,25 +160,14 @@ export function FallbackPermissionRequest({
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Text>
           {userFacingName}(
-          {toolUseConfirm.tool.renderToolUseMessage(
-            toolUseConfirm.input as never,
-            { theme, verbose: true },
-          )}
-          )
-          {originalUserFacingName.endsWith(' (MCP)') ? (
-            <Text dimColor> (MCP)</Text>
-          ) : (
-            ''
-          )}
+          {toolUseConfirm.tool.renderToolUseMessage(toolUseConfirm.input as never, { theme, verbose: true })})
+          {originalUserFacingName.endsWith(' (MCP)') ? <Text dimColor> (MCP)</Text> : ''}
         </Text>
         <Text dimColor>{truncateToLines(toolUseConfirm.description, 3)}</Text>
       </Box>
 
       <Box flexDirection="column">
-        <PermissionRuleExplanation
-          permissionResult={toolUseConfirm.permissionResult}
-          toolType="tool"
-        />
+        <PermissionRuleExplanation permissionResult={toolUseConfirm.permissionResult} toolType="tool" />
         <PermissionPrompt
           options={options}
           onSelect={handleSelect}

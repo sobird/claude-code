@@ -15,19 +15,10 @@ import { nodeCache } from './node-cache.js'
  * Returns the hit node even if it has no onClick — dispatchClick walks up
  * via parentNode to find handlers.
  */
-export function hitTest(
-  node: DOMElement,
-  col: number,
-  row: number,
-): DOMElement | null {
+export function hitTest(node: DOMElement, col: number, row: number): DOMElement | null {
   const rect = nodeCache.get(node)
   if (!rect) return null
-  if (
-    col < rect.x ||
-    col >= rect.x + rect.width ||
-    row < rect.y ||
-    row >= rect.y + rect.height
-  ) {
+  if (col < rect.x || col >= rect.x + rect.width || row < rect.y || row >= rect.y + rect.height) {
     return null
   }
   // Later siblings paint on top; reversed traversal returns topmost hit.
@@ -46,12 +37,7 @@ export function hitTest(
  * fire. Stops when a handler calls stopImmediatePropagation(). Returns
  * true if at least one onClick handler fired.
  */
-export function dispatchClick(
-  root: DOMElement,
-  col: number,
-  row: number,
-  cellIsBlank = false,
-): boolean {
+export function dispatchClick(root: DOMElement, col: number, row: number, cellIsBlank = false): boolean {
   let target: DOMElement | undefined = hitTest(root, col, row) ?? undefined
   if (!target) return false
 
@@ -70,9 +56,7 @@ export function dispatchClick(
   const event = new ClickEvent(col, row, cellIsBlank)
   let handled = false
   while (target) {
-    const handler = target._eventHandlers?.onClick as
-      | ((event: ClickEvent) => void)
-      | undefined
+    const handler = target._eventHandlers?.onClick as ((event: ClickEvent) => void) | undefined
     if (handler) {
       handled = true
       const rect = nodeCache.get(target)
@@ -99,12 +83,7 @@ export function dispatchClick(
  * across calls. Clears the set when the hit is null (cursor moved into a
  * non-rendered gap or off the root rect).
  */
-export function dispatchHover(
-  root: DOMElement,
-  col: number,
-  row: number,
-  hovered: Set<DOMElement>,
-): void {
+export function dispatchHover(root: DOMElement, col: number, row: number, hovered: Set<DOMElement>): void {
   const next = new Set<DOMElement>()
   let node: DOMElement | undefined = hitTest(root, col, row) ?? undefined
   while (node) {

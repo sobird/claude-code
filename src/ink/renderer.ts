@@ -1,4 +1,5 @@
 import { logForDebugging } from 'src/utils/debug.js'
+
 import { type DOMElement, markDirty } from './dom.js'
 import type { Frame } from './frame.js'
 import { consumeAbsoluteRemovedFlag } from './node-cache.js'
@@ -28,16 +29,12 @@ export type RenderOptions = {
 
 export type Renderer = (options: RenderOptions) => Frame
 
-export default function createRenderer(
-  node: DOMElement,
-  stylePool: StylePool,
-): Renderer {
+export default function createRenderer(node: DOMElement, stylePool: StylePool): Renderer {
   // Reuse Output across frames so charCache (tokenize + grapheme clustering)
   // persists — most lines don't change between renders.
   let output: Output | undefined
-  return options => {
-    const { frontFrame, backFrame, isTTY, terminalWidth, terminalRows } =
-      options
+  return (options) => {
+    const { frontFrame, backFrame, isTTY, terminalWidth, terminalRows } = options
     const prevScreen = frontFrame.screen
     const backScreen = backFrame.screen
     // Read pools from the back buffer's screen — pools may be replaced
@@ -51,14 +48,8 @@ export default function createRenderer(
     // when creating arrays.
     const computedHeight = node.yogaNode?.getComputedHeight()
     const computedWidth = node.yogaNode?.getComputedWidth()
-    const hasInvalidHeight =
-      computedHeight === undefined ||
-      !Number.isFinite(computedHeight) ||
-      computedHeight < 0
-    const hasInvalidWidth =
-      computedWidth === undefined ||
-      !Number.isFinite(computedWidth) ||
-      computedWidth < 0
+    const hasInvalidHeight = computedHeight === undefined || !Number.isFinite(computedHeight) || computedHeight < 0
+    const hasInvalidWidth = computedWidth === undefined || !Number.isFinite(computedWidth) || computedWidth < 0
 
     if (!node.yogaNode || hasInvalidHeight || hasInvalidWidth) {
       // Log to help diagnose root cause (visible with --debug flag)
@@ -69,13 +60,7 @@ export default function createRenderer(
         )
       }
       return {
-        screen: createScreen(
-          terminalWidth,
-          0,
-          stylePool,
-          charPool,
-          hyperlinkPool,
-        ),
+        screen: createScreen(terminalWidth, 0, stylePool, charPool, hyperlinkPool),
         viewport: { width: terminalWidth, height: terminalRows },
         cursor: { x: 0, y: 0, visible: true },
       }
@@ -102,9 +87,7 @@ export default function createRenderer(
         { level: 'warn' },
       )
     }
-    const screen =
-      backScreen ??
-      createScreen(width, height, stylePool, charPool, hyperlinkPool)
+    const screen = backScreen ?? createScreen(width, height, stylePool, charPool, hyperlinkPool)
     if (output) {
       output.reset(width, height, screen)
     } else {
@@ -128,10 +111,7 @@ export default function createRenderer(
     // Normal-flow removals don't paint cross-subtree and are fine.
     const absoluteRemoved = consumeAbsoluteRemovedFlag()
     renderNodeToOutput(node, output, {
-      prevScreen:
-        absoluteRemoved || options.prevFrameContaminated
-          ? undefined
-          : prevScreen,
+      prevScreen: absoluteRemoved || options.prevFrameContaminated ? undefined : prevScreen,
     })
 
     const renderedScreen = output.get()
@@ -167,9 +147,7 @@ export default function createRenderer(
         // cursor-restore LF at the last row, scrolling one row off the top
         // of the alt buffer and desyncing the diff's cursor model. The
         // cursor is hidden so its position only matters for diff coords.
-        y: options.altScreen
-          ? Math.max(0, Math.min(screen.height, terminalRows) - 1)
-          : screen.height,
+        y: options.altScreen ? Math.max(0, Math.min(screen.height, terminalRows) - 1) : screen.height,
         // Hide cursor when there's dynamic output to render (only in TTY mode)
         visible: !isTTY || screen.height === 0,
       },

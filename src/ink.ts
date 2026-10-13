@@ -1,11 +1,7 @@
 import { createElement, type ReactNode } from 'react'
+
 import { ThemeProvider } from './components/design-system/ThemeProvider.js'
-import inkRender, {
-  type Instance,
-  createRoot as inkCreateRoot,
-  type RenderOptions,
-  type Root,
-} from './ink/root.js'
+import inkRender, { type Instance, createRoot as inkCreateRoot, type RenderOptions, type Root } from './ink/root.js'
 
 export type { RenderOptions, Instance, Root }
 
@@ -15,10 +11,7 @@ function withTheme(node: ReactNode): ReactNode {
   return createElement(ThemeProvider, null, node)
 }
 
-export async function render(
-  node: ReactNode,
-  options?: NodeJS.WriteStream | RenderOptions,
-): Promise<Instance> {
+export async function render(node: ReactNode, options?: NodeJS.WriteStream | RenderOptions): Promise<Instance> {
   return inkRender(withTheme(node), options)
 }
 
@@ -26,7 +19,7 @@ export async function createRoot(options?: RenderOptions): Promise<Root> {
   const root = await inkCreateRoot(options)
   return {
     ...root,
-    render: node => root.render(withTheme(node)),
+    render: (node) => root.render(withTheme(node)),
   }
 }
 
@@ -35,20 +28,12 @@ export type { Props as BoxProps } from './components/design-system/ThemedBox.js'
 export { default as Box } from './components/design-system/ThemedBox.js'
 export type { Props as TextProps } from './components/design-system/ThemedText.js'
 export { default as Text } from './components/design-system/ThemedText.js'
-export {
-  ThemeProvider,
-  usePreviewTheme,
-  useTheme,
-  useThemeSetting,
-} from './components/design-system/ThemeProvider.js'
+export { ThemeProvider, usePreviewTheme, useTheme, useThemeSetting } from './components/design-system/ThemeProvider.js'
 export { Ansi } from './ink/Ansi.js'
 export type { Props as AppProps } from './ink/components/AppContext.js'
 export type { Props as BaseBoxProps } from './ink/components/Box.js'
 export { default as BaseBox } from './ink/components/Box.js'
-export type {
-  ButtonState,
-  Props as ButtonProps,
-} from './ink/components/Button.js'
+export type { ButtonState, Props as ButtonProps } from './ink/components/Button.js'
 export { default as Button } from './ink/components/Button.js'
 export type { Props as LinkProps } from './ink/components/Link.js'
 export { default as Link } from './ink/components/Link.js'

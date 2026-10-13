@@ -1,7 +1,8 @@
 import * as React from 'react'
+
 import { MessageResponse } from '../../components/MessageResponse.js'
-import { supportsHyperlinks } from '../../ink/supports-hyperlinks.js'
 import { Link, Text } from '../../ink.js'
+import { supportsHyperlinks } from '../../ink/supports-hyperlinks.js'
 import { renderToolResultMessage as renderDefaultMCPToolResultMessage } from '../../tools/MCPTool/UI.js'
 import type { MCPToolResult } from '../../utils/mcpValidation.js'
 import { truncateToWidth } from '../format.js'
@@ -85,10 +86,7 @@ function renderChromeToolUseMessage(
           secondaryInfo.push(`type "${truncateToWidth(input.text, 15)}"`)
         } else if (action === 'key' && typeof input.text === 'string') {
           secondaryInfo.push(`key ${input.text}`)
-        } else if (
-          action === 'scroll' &&
-          typeof input.scroll_direction === 'string'
-        ) {
+        } else if (action === 'scroll' && typeof input.scroll_direction === 'string') {
           secondaryInfo.push(`scroll ${input.scroll_direction}`)
         } else if (action === 'wait' && typeof input.duration === 'number') {
           secondaryInfo.push(`wait ${input.duration}s`)
@@ -172,11 +170,7 @@ function renderChromeViewTabLink(input: unknown): React.ReactNode {
     return null
   }
   const tabId =
-    typeof input.tabId === 'number'
-      ? input.tabId
-      : typeof input.tabId === 'string'
-        ? parseInt(input.tabId, 10)
-        : NaN
+    typeof input.tabId === 'number' ? input.tabId : typeof input.tabId === 'string' ? parseInt(input.tabId, 10) : NaN
   if (isNaN(tabId)) {
     return null
   }
@@ -277,10 +271,7 @@ export function renderChromeToolResultMessage(
  */
 export function getClaudeInChromeMCPToolOverrides(toolName: string): {
   userFacingName: (input?: Record<string, unknown>) => string
-  renderToolUseMessage: (
-    input: Record<string, unknown>,
-    options: { verbose: boolean },
-  ) => React.ReactNode
+  renderToolUseMessage: (input: Record<string, unknown>, options: { verbose: boolean }) => React.ReactNode
   renderToolUseTag: (input: Partial<Record<string, unknown>>) => React.ReactNode
   renderToolResultMessage: (
     output: string | MCPToolResult,
@@ -294,15 +285,8 @@ export function getClaudeInChromeMCPToolOverrides(toolName: string): {
       const displayName = toolName.replace(/_mcp$/, '')
       return `Claude in Chrome[${displayName}]`
     },
-    renderToolUseMessage(
-      input: Record<string, unknown>,
-      { verbose }: { verbose: boolean },
-    ): React.ReactNode {
-      return renderChromeToolUseMessage(
-        input,
-        toolName as ChromeToolName,
-        verbose,
-      )
+    renderToolUseMessage(input: Record<string, unknown>, { verbose }: { verbose: boolean }): React.ReactNode {
+      return renderChromeToolUseMessage(input, toolName as ChromeToolName, verbose)
     },
     renderToolUseTag(input: Partial<Record<string, unknown>>): React.ReactNode {
       return renderChromeViewTabLink(input)
@@ -315,17 +299,11 @@ export function getClaudeInChromeMCPToolOverrides(toolName: string): {
       if (!isMCPToolResult(output)) {
         return null
       }
-      return renderChromeToolResultMessage(
-        output,
-        toolName as ChromeToolName,
-        verbose,
-      )
+      return renderChromeToolResultMessage(output, toolName as ChromeToolName, verbose)
     },
   }
 }
 
-function isMCPToolResult(
-  output: string | MCPToolResult,
-): output is MCPToolResult {
+function isMCPToolResult(output: string | MCPToolResult): output is MCPToolResult {
   return typeof output === 'object' && output !== null
 }

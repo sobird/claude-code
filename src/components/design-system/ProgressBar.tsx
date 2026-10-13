@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Text } from '../../ink.js'
 import type { Theme } from '../../utils/theme.js'
 
@@ -26,12 +27,7 @@ type Props = {
 
 const BLOCKS = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█']
 
-export function ProgressBar({
-  ratio: inputRatio,
-  width,
-  fillColor,
-  emptyColor,
-}: Props): React.ReactNode {
+export function ProgressBar({ ratio: inputRatio, width, fillColor, emptyColor }: Props): React.ReactNode {
   const ratio = Math.min(1, Math.max(0, inputRatio))
   const whole = Math.floor(ratio * width)
   const segments = [BLOCKS[BLOCKS.length - 1]!.repeat(whole)]

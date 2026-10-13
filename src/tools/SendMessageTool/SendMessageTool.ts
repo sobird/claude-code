@@ -1,15 +1,14 @@
 import { feature } from 'bun:bundle'
+
 import { z } from 'zod/v4'
+
 import { isReplBridgeActive } from '../../bootstrap/state.js'
 import { getReplBridgeHandle } from '../../bridge/replBridgeHandle.js'
+import { findTeammateTaskByAgentId } from '../../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
+import { isLocalAgentTask, queuePendingMessage } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
+import { isMainSessionTask } from '../../tasks/LocalMainSessionTask.js'
 import type { Tool, ToolUseContext } from '../../Tool.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
-import { findTeammateTaskByAgentId } from '../../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
-import {
-  isLocalAgentTask,
-  queuePendingMessage,
-} from '../../tasks/LocalAgentTask/LocalAgentTask.js'
-import { isMainSessionTask } from '../../tasks/LocalMainSessionTask.js'
 import { toAgentId } from '../../types/ids.js'
 import { generateRequestId } from '../../utils/agentId.js'
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
@@ -76,13 +75,8 @@ const inputSchema = lazySchema(() =>
     summary: z
       .string()
       .optional()
-      .describe(
-        'A 5-10 word summary shown as a preview in the UI (required when message is a string)',
-      ),
-    message: z.union([
-      z.string().describe('Plain text message content'),
-      StructuredMessage(),
-    ]),
+      .describe('A 5-10 word summary shown as a preview in the UI (required when message is a string)'),
+    message: z.union([z.string().describe('Plain text message content'), StructuredMessage()]),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -124,11 +118,7 @@ export type ResponseOutput = {
   request_id?: string
 }
 
-export type SendMessageToolOutput =
-  | MessageOutput
-  | BroadcastOutput
-  | RequestOutput
-  | ResponseOutput
+export type SendMessageToolOutput = MessageOutput | BroadcastOutput | RequestOutput | ResponseOutput
 
 function findTeammateColor(
   appState: {
@@ -154,8 +144,7 @@ async function handleMessage(
 ): Promise<{ data: MessageOutput }> {
   const appState = context.getAppState()
   const teamName = getTeamName(appState.teamContext)
-  const senderName =
-    getAgentName() || (isTeammate() ? 'teammate' : TEAM_LEAD_NAME)
+  const senderName = getAgentName() || (isTeammate() ? 'teammate' : TEAM_LEAD_NAME)
   const senderColor = getTeammateColor()
 
   await writeToMailbox(
@@ -197,9 +186,7 @@ async function handleBroadcast(
   const teamName = getTeamName(appState.teamContext)
 
   if (!teamName) {
-    throw new Error(
-      'Not in a team context. Create a team with Teammate spawnTeam first, or set CLAUDE_CODE_TEAM_NAME.',
-    )
+    throw new Error('Not in a team context. Create a team with Teammate spawnTeam first, or set CLAUDE_CODE_TEAM_NAME.')
   }
 
   const teamFile = await readTeamFileAsync(teamName)
@@ -207,12 +194,9 @@ async function handleBroadcast(
     throw new Error(`Team "${teamName}" does not exist`)
   }
 
-  const senderName =
-    getAgentName() || (isTeammate() ? 'teammate' : TEAM_LEAD_NAME)
+  const senderName = getAgentName() || (isTeammate() ? 'teammate' : TEAM_LEAD_NAME)
   if (!senderName) {
-    throw new Error(
-      'Cannot broadcast: sender name is required. Set CLAUDE_CODE_AGENT_NAME.',
-    )
+    throw new Error('Cannot broadcast: sender name is required. Set CLAUDE_CODE_AGENT_NAME.')
   }
 
   const senderColor = getTeammateColor()
@@ -302,10 +286,7 @@ async function handleShutdownRequest(
   }
 }
 
-async function handleShutdownApproval(
-  requestId: string,
-  context: ToolUseContext,
-): Promise<{ data: ResponseOutput }> {
+async function handleShutdownApproval(requestId: string, context: ToolUseContext): Promise<{ data: ResponseOutput }> {
   const teamName = getTeamName()
   const agentId = getAgentId()
   const agentName = getAgentName() || 'teammate'
@@ -319,7 +300,7 @@ async function handleShutdownApproval(
   if (teamName) {
     const teamFile = await readTeamFileAsync(teamName)
     if (teamFile && agentId) {
-      const selfMember = teamFile.members.find(m => m.agentId === agentId)
+      const selfMember = teamFile.members.find((m) => m.agentId === agentId)
       if (selfMember) {
         ownPaneId = selfMember.tmuxPaneId
         ownBackendType = selfMember.backendType
@@ -346,22 +327,16 @@ async function handleShutdownApproval(
   )
 
   if (ownBackendType === 'in-process') {
-    logForDebugging(
-      `[SendMessageTool] In-process teammate ${agentName} approving shutdown - signaling abort`,
-    )
+    logForDebugging(`[SendMessageTool] In-process teammate ${agentName} approving shutdown - signaling abort`)
 
     if (agentId) {
       const appState = context.getAppState()
       const task = findTeammateTaskByAgentId(agentId, appState.tasks)
       if (task?.abortController) {
         task.abortController.abort()
-        logForDebugging(
-          `[SendMessageTool] Aborted controller for in-process teammate ${agentName}`,
-        )
+        logForDebugging(`[SendMessageTool] Aborted controller for in-process teammate ${agentName}`)
       } else {
-        logForDebugging(
-          `[SendMessageTool] Warning: Could not find task/abortController for ${agentName}`,
-        )
+        logForDebugging(`[SendMessageTool] Warning: Could not find task/abortController for ${agentName}`)
       }
     }
   } else {
@@ -369,9 +344,7 @@ async function handleShutdownApproval(
       const appState = context.getAppState()
       const task = findTeammateTaskByAgentId(agentId, appState.tasks)
       if (task?.abortController) {
-        logForDebugging(
-          `[SendMessageTool] Fallback: Found in-process task for ${agentName} via AppState, aborting`,
-        )
+        logForDebugging(`[SendMessageTool] Fallback: Found in-process task for ${agentName} via AppState, aborting`)
         task.abortController.abort()
 
         return {
@@ -398,10 +371,7 @@ async function handleShutdownApproval(
   }
 }
 
-async function handleShutdownRejection(
-  requestId: string,
-  reason: string,
-): Promise<{ data: ResponseOutput }> {
+async function handleShutdownRejection(requestId: string, reason: string): Promise<{ data: ResponseOutput }> {
   const teamName = getTeamName()
   const agentName = getAgentName() || 'teammate'
 
@@ -440,9 +410,7 @@ async function handlePlanApproval(
   const teamName = appState.teamContext?.teamName
 
   if (!isTeamLead(appState.teamContext)) {
-    throw new Error(
-      'Only the team lead can approve plans. Teammates cannot approve their own or other plans.',
-    )
+    throw new Error('Only the team lead can approve plans. Teammates cannot approve their own or other plans.')
   }
 
   const leaderMode = appState.toolPermissionContext.mode
@@ -485,9 +453,7 @@ async function handlePlanRejection(
   const teamName = appState.teamContext?.teamName
 
   if (!isTeamLead(appState.teamContext)) {
-    throw new Error(
-      'Only the team lead can reject plans. Teammates cannot reject their own or other plans.',
-    )
+    throw new Error('Only the team lead can reject plans. Teammates cannot reject their own or other plans.')
   }
 
   const rejectionResponse = {
@@ -517,401 +483,371 @@ async function handlePlanRejection(
   }
 }
 
-export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
-  buildTool({
-    name: SEND_MESSAGE_TOOL_NAME,
-    searchHint: 'send messages to agent teammates (swarm protocol)',
-    maxResultSizeChars: 100_000,
+export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> = buildTool({
+  name: SEND_MESSAGE_TOOL_NAME,
+  searchHint: 'send messages to agent teammates (swarm protocol)',
+  maxResultSizeChars: 100_000,
 
-    userFacingName() {
-      return 'SendMessage'
-    },
+  userFacingName() {
+    return 'SendMessage'
+  },
 
-    get inputSchema(): InputSchema {
-      return inputSchema()
-    },
-    shouldDefer: true,
+  get inputSchema(): InputSchema {
+    return inputSchema()
+  },
+  shouldDefer: true,
 
-    isEnabled() {
-      return isAgentSwarmsEnabled()
-    },
+  isEnabled() {
+    return isAgentSwarmsEnabled()
+  },
 
-    isReadOnly(input) {
-      return typeof input.message === 'string'
-    },
+  isReadOnly(input) {
+    return typeof input.message === 'string'
+  },
 
-    backfillObservableInput(input) {
-      if ('type' in input) return
-      if (typeof input.to !== 'string') return
+  backfillObservableInput(input) {
+    if ('type' in input) return
+    if (typeof input.to !== 'string') return
 
-      if (input.to === '*') {
-        input.type = 'broadcast'
-        if (typeof input.message === 'string') input.content = input.message
-      } else if (typeof input.message === 'string') {
-        input.type = 'message'
-        input.recipient = input.to
-        input.content = input.message
-      } else if (typeof input.message === 'object' && input.message !== null) {
-        const msg = input.message as {
-          type?: string
-          request_id?: string
-          approve?: boolean
-          reason?: string
-          feedback?: string
-        }
-        input.type = msg.type
-        input.recipient = input.to
-        if (msg.request_id !== undefined) input.request_id = msg.request_id
-        if (msg.approve !== undefined) input.approve = msg.approve
-        const content = msg.reason ?? msg.feedback
-        if (content !== undefined) input.content = content
+    if (input.to === '*') {
+      input.type = 'broadcast'
+      if (typeof input.message === 'string') input.content = input.message
+    } else if (typeof input.message === 'string') {
+      input.type = 'message'
+      input.recipient = input.to
+      input.content = input.message
+    } else if (typeof input.message === 'object' && input.message !== null) {
+      const msg = input.message as {
+        type?: string
+        request_id?: string
+        approve?: boolean
+        reason?: string
+        feedback?: string
       }
-    },
+      input.type = msg.type
+      input.recipient = input.to
+      if (msg.request_id !== undefined) input.request_id = msg.request_id
+      if (msg.approve !== undefined) input.approve = msg.approve
+      const content = msg.reason ?? msg.feedback
+      if (content !== undefined) input.content = content
+    }
+  },
 
-    toAutoClassifierInput(input) {
-      if (typeof input.message === 'string') {
-        return `to ${input.to}: ${input.message}`
-      }
-      switch (input.message.type) {
-        case 'shutdown_request':
-          return `shutdown_request to ${input.to}`
-        case 'shutdown_response':
-          return `shutdown_response ${input.message.approve ? 'approve' : 'reject'} ${input.message.request_id}`
-        case 'plan_approval_response':
-          return `plan_approval ${input.message.approve ? 'approve' : 'reject'} to ${input.to}`
-      }
-    },
+  toAutoClassifierInput(input) {
+    if (typeof input.message === 'string') {
+      return `to ${input.to}: ${input.message}`
+    }
+    switch (input.message.type) {
+      case 'shutdown_request':
+        return `shutdown_request to ${input.to}`
+      case 'shutdown_response':
+        return `shutdown_response ${input.message.approve ? 'approve' : 'reject'} ${input.message.request_id}`
+      case 'plan_approval_response':
+        return `plan_approval ${input.message.approve ? 'approve' : 'reject'} to ${input.to}`
+    }
+  },
 
-    async checkPermissions(input, _context) {
-      if (feature('UDS_INBOX') && parseAddress(input.to).scheme === 'bridge') {
-        return {
-          behavior: 'ask' as const,
-          message: `Send a message to Remote Control session ${input.to}? It arrives as a user prompt on the receiving Claude (possibly another machine) via Anthropic's servers.`,
-          // safetyCheck (not mode) — permissions.ts guards this before both
-          // bypassPermissions (step 1g) and auto-mode's allowlist/classifier.
-          // Cross-machine prompt injection must stay bypass-immune.
-          decisionReason: {
-            type: 'safetyCheck',
-            reason:
-              'Cross-machine bridge message requires explicit user consent',
-            classifierApprovable: false,
-          },
-        }
+  async checkPermissions(input, _context) {
+    if (feature('UDS_INBOX') && parseAddress(input.to).scheme === 'bridge') {
+      return {
+        behavior: 'ask' as const,
+        message: `Send a message to Remote Control session ${input.to}? It arrives as a user prompt on the receiving Claude (possibly another machine) via Anthropic's servers.`,
+        // safetyCheck (not mode) — permissions.ts guards this before both
+        // bypassPermissions (step 1g) and auto-mode's allowlist/classifier.
+        // Cross-machine prompt injection must stay bypass-immune.
+        decisionReason: {
+          type: 'safetyCheck',
+          reason: 'Cross-machine bridge message requires explicit user consent',
+          classifierApprovable: false,
+        },
       }
-      return { behavior: 'allow' as const, updatedInput: input }
-    },
+    }
+    return { behavior: 'allow' as const, updatedInput: input }
+  },
 
-    async validateInput(input, _context) {
-      if (input.to.trim().length === 0) {
+  async validateInput(input, _context) {
+    if (input.to.trim().length === 0) {
+      return {
+        result: false,
+        message: 'to must not be empty',
+        errorCode: 9,
+      }
+    }
+    const addr = parseAddress(input.to)
+    if ((addr.scheme === 'bridge' || addr.scheme === 'uds') && addr.target.trim().length === 0) {
+      return {
+        result: false,
+        message: 'address target must not be empty',
+        errorCode: 9,
+      }
+    }
+    if (input.to.includes('@')) {
+      return {
+        result: false,
+        message: 'to must be a bare teammate name or "*" — there is only one team per session',
+        errorCode: 9,
+      }
+    }
+    if (feature('UDS_INBOX') && parseAddress(input.to).scheme === 'bridge') {
+      // Structured-message rejection first — it's the permanent constraint.
+      // Showing "not connected" first would make the user reconnect only to
+      // hit this error on retry.
+      if (typeof input.message !== 'string') {
         return {
           result: false,
-          message: 'to must not be empty',
+          message: 'structured messages cannot be sent cross-session — only plain text',
           errorCode: 9,
         }
       }
-      const addr = parseAddress(input.to)
-      if (
-        (addr.scheme === 'bridge' || addr.scheme === 'uds') &&
-        addr.target.trim().length === 0
-      ) {
-        return {
-          result: false,
-          message: 'address target must not be empty',
-          errorCode: 9,
-        }
-      }
-      if (input.to.includes('@')) {
+      // postInterClaudeMessage derives from= via getReplBridgeHandle() —
+      // check handle directly for the init-timing window. Also check
+      // isReplBridgeActive() to reject outbound-only (CCR mirror) mode
+      // where the bridge is write-only and peer messaging is unsupported.
+      if (!getReplBridgeHandle() || !isReplBridgeActive()) {
         return {
           result: false,
           message:
-            'to must be a bare teammate name or "*" — there is only one team per session',
+            'Remote Control is not connected — cannot send to a bridge: target. Reconnect with /remote-control first.',
           errorCode: 9,
         }
       }
-      if (feature('UDS_INBOX') && parseAddress(input.to).scheme === 'bridge') {
-        // Structured-message rejection first — it's the permanent constraint.
-        // Showing "not connected" first would make the user reconnect only to
-        // hit this error on retry.
-        if (typeof input.message !== 'string') {
-          return {
-            result: false,
-            message:
-              'structured messages cannot be sent cross-session — only plain text',
-            errorCode: 9,
-          }
+      return { result: true }
+    }
+    if (feature('UDS_INBOX') && parseAddress(input.to).scheme === 'uds' && typeof input.message === 'string') {
+      // UDS cross-session send: summary isn't rendered (UI.tsx returns null
+      // for string messages), so don't require it. Structured messages fall
+      // through to the rejection below.
+      return { result: true }
+    }
+    if (typeof input.message === 'string') {
+      if (!input.summary || input.summary.trim().length === 0) {
+        return {
+          result: false,
+          message: 'summary is required when message is a string',
+          errorCode: 9,
         }
-        // postInterClaudeMessage derives from= via getReplBridgeHandle() —
-        // check handle directly for the init-timing window. Also check
-        // isReplBridgeActive() to reject outbound-only (CCR mirror) mode
-        // where the bridge is write-only and peer messaging is unsupported.
+      }
+      return { result: true }
+    }
+
+    if (input.to === '*') {
+      return {
+        result: false,
+        message: 'structured messages cannot be broadcast (to: "*")',
+        errorCode: 9,
+      }
+    }
+    if (feature('UDS_INBOX') && parseAddress(input.to).scheme !== 'other') {
+      return {
+        result: false,
+        message: 'structured messages cannot be sent cross-session — only plain text',
+        errorCode: 9,
+      }
+    }
+
+    if (input.message.type === 'shutdown_response' && input.to !== TEAM_LEAD_NAME) {
+      return {
+        result: false,
+        message: `shutdown_response must be sent to "${TEAM_LEAD_NAME}"`,
+        errorCode: 9,
+      }
+    }
+
+    if (
+      input.message.type === 'shutdown_response' &&
+      !input.message.approve &&
+      (!input.message.reason || input.message.reason.trim().length === 0)
+    ) {
+      return {
+        result: false,
+        message: 'reason is required when rejecting a shutdown request',
+        errorCode: 9,
+      }
+    }
+
+    return { result: true }
+  },
+
+  async description() {
+    return DESCRIPTION
+  },
+
+  async prompt() {
+    return getPrompt()
+  },
+
+  mapToolResultToToolResultBlockParam(data, toolUseID) {
+    return {
+      tool_use_id: toolUseID,
+      type: 'tool_result' as const,
+      content: [
+        {
+          type: 'text' as const,
+          text: jsonStringify(data),
+        },
+      ],
+    }
+  },
+
+  async call(input, context, canUseTool, assistantMessage) {
+    if (feature('UDS_INBOX') && typeof input.message === 'string') {
+      const addr = parseAddress(input.to)
+      if (addr.scheme === 'bridge') {
+        // Re-check handle — checkPermissions blocks on user approval (can be
+        // minutes). validateInput's check is stale if the bridge dropped
+        // during the prompt wait; without this, from="unknown" ships.
+        // Also re-check isReplBridgeActive for outbound-only mode.
         if (!getReplBridgeHandle() || !isReplBridgeActive()) {
           return {
-            result: false,
-            message:
-              'Remote Control is not connected — cannot send to a bridge: target. Reconnect with /remote-control first.',
-            errorCode: 9,
-          }
-        }
-        return { result: true }
-      }
-      if (
-        feature('UDS_INBOX') &&
-        parseAddress(input.to).scheme === 'uds' &&
-        typeof input.message === 'string'
-      ) {
-        // UDS cross-session send: summary isn't rendered (UI.tsx returns null
-        // for string messages), so don't require it. Structured messages fall
-        // through to the rejection below.
-        return { result: true }
-      }
-      if (typeof input.message === 'string') {
-        if (!input.summary || input.summary.trim().length === 0) {
-          return {
-            result: false,
-            message: 'summary is required when message is a string',
-            errorCode: 9,
-          }
-        }
-        return { result: true }
-      }
-
-      if (input.to === '*') {
-        return {
-          result: false,
-          message: 'structured messages cannot be broadcast (to: "*")',
-          errorCode: 9,
-        }
-      }
-      if (feature('UDS_INBOX') && parseAddress(input.to).scheme !== 'other') {
-        return {
-          result: false,
-          message:
-            'structured messages cannot be sent cross-session — only plain text',
-          errorCode: 9,
-        }
-      }
-
-      if (
-        input.message.type === 'shutdown_response' &&
-        input.to !== TEAM_LEAD_NAME
-      ) {
-        return {
-          result: false,
-          message: `shutdown_response must be sent to "${TEAM_LEAD_NAME}"`,
-          errorCode: 9,
-        }
-      }
-
-      if (
-        input.message.type === 'shutdown_response' &&
-        !input.message.approve &&
-        (!input.message.reason || input.message.reason.trim().length === 0)
-      ) {
-        return {
-          result: false,
-          message: 'reason is required when rejecting a shutdown request',
-          errorCode: 9,
-        }
-      }
-
-      return { result: true }
-    },
-
-    async description() {
-      return DESCRIPTION
-    },
-
-    async prompt() {
-      return getPrompt()
-    },
-
-    mapToolResultToToolResultBlockParam(data, toolUseID) {
-      return {
-        tool_use_id: toolUseID,
-        type: 'tool_result' as const,
-        content: [
-          {
-            type: 'text' as const,
-            text: jsonStringify(data),
-          },
-        ],
-      }
-    },
-
-    async call(input, context, canUseTool, assistantMessage) {
-      if (feature('UDS_INBOX') && typeof input.message === 'string') {
-        const addr = parseAddress(input.to)
-        if (addr.scheme === 'bridge') {
-          // Re-check handle — checkPermissions blocks on user approval (can be
-          // minutes). validateInput's check is stale if the bridge dropped
-          // during the prompt wait; without this, from="unknown" ships.
-          // Also re-check isReplBridgeActive for outbound-only mode.
-          if (!getReplBridgeHandle() || !isReplBridgeActive()) {
-            return {
-              data: {
-                success: false,
-                message: `Remote Control disconnected before send — cannot deliver to ${input.to}`,
-              },
-            }
-          }
-          /* eslint-disable @typescript-eslint/no-require-imports */
-          const { postInterClaudeMessage } =
-            require('../../bridge/peerSessions.js') as typeof import('../../bridge/peerSessions.js')
-          /* eslint-enable @typescript-eslint/no-require-imports */
-          const result = await postInterClaudeMessage(
-            addr.target,
-            input.message,
-          )
-          const preview = input.summary || truncate(input.message, 50)
-          return {
             data: {
-              success: result.ok,
-              message: result.ok
-                ? `“${preview}” → ${input.to}`
-                : `Failed to send to ${input.to}: ${result.error ?? 'unknown'}`,
+              success: false,
+              message: `Remote Control disconnected before send — cannot deliver to ${input.to}`,
             },
           }
         }
-        if (addr.scheme === 'uds') {
-          /* eslint-disable @typescript-eslint/no-require-imports */
-          const { sendToUdsSocket } =
-            require('../../utils/udsClient.js') as typeof import('../../utils/udsClient.js')
-          /* eslint-enable @typescript-eslint/no-require-imports */
-          try {
-            await sendToUdsSocket(addr.target, input.message)
-            const preview = input.summary || truncate(input.message, 50)
+        /* eslint-disable @typescript-eslint/no-require-imports */
+        const { postInterClaudeMessage } =
+          require('../../bridge/peerSessions.js') as typeof import('../../bridge/peerSessions.js')
+        /* eslint-enable @typescript-eslint/no-require-imports */
+        const result = await postInterClaudeMessage(addr.target, input.message)
+        const preview = input.summary || truncate(input.message, 50)
+        return {
+          data: {
+            success: result.ok,
+            message: result.ok
+              ? `“${preview}” → ${input.to}`
+              : `Failed to send to ${input.to}: ${result.error ?? 'unknown'}`,
+          },
+        }
+      }
+      if (addr.scheme === 'uds') {
+        /* eslint-disable @typescript-eslint/no-require-imports */
+        const { sendToUdsSocket } = require('../../utils/udsClient.js') as typeof import('../../utils/udsClient.js')
+        /* eslint-enable @typescript-eslint/no-require-imports */
+        try {
+          await sendToUdsSocket(addr.target, input.message)
+          const preview = input.summary || truncate(input.message, 50)
+          return {
+            data: {
+              success: true,
+              message: `“${preview}” → ${input.to}`,
+            },
+          }
+        } catch (e) {
+          return {
+            data: {
+              success: false,
+              message: `Failed to send to ${input.to}: ${errorMessage(e)}`,
+            },
+          }
+        }
+      }
+    }
+
+    // Route to in-process subagent by name or raw agentId before falling
+    // through to ambient-team resolution. Stopped agents are auto-resumed.
+    if (typeof input.message === 'string' && input.to !== '*') {
+      const appState = context.getAppState()
+      const registered = appState.agentNameRegistry.get(input.to)
+      const agentId = registered ?? toAgentId(input.to)
+      if (agentId) {
+        const task = appState.tasks[agentId]
+        if (isLocalAgentTask(task) && !isMainSessionTask(task)) {
+          if (task.status === 'running') {
+            queuePendingMessage(agentId, input.message, context.setAppStateForTasks ?? context.setAppState)
             return {
               data: {
                 success: true,
-                message: `“${preview}” → ${input.to}`,
+                message: `Message queued for delivery to ${input.to} at its next tool round.`,
+              },
+            }
+          }
+          // task exists but stopped — auto-resume
+          try {
+            const result = await resumeAgentBackground({
+              agentId,
+              prompt: input.message,
+              toolUseContext: context,
+              canUseTool,
+              invokingRequestId: assistantMessage?.requestId,
+            })
+            return {
+              data: {
+                success: true,
+                message: `Agent "${input.to}" was stopped (${task.status}); resumed it in the background with your message. You'll be notified when it finishes. Output: ${result.outputFile}`,
               },
             }
           } catch (e) {
             return {
               data: {
                 success: false,
-                message: `Failed to send to ${input.to}: ${errorMessage(e)}`,
+                message: `Agent "${input.to}" is stopped (${task.status}) and could not be resumed: ${errorMessage(e)}`,
+              },
+            }
+          }
+        } else {
+          // task evicted from state — try resume from disk transcript.
+          // agentId is either a registered name or a format-matching raw ID
+          // (toAgentId validates the createAgentId format, so teammate names
+          // never reach this block).
+          try {
+            const result = await resumeAgentBackground({
+              agentId,
+              prompt: input.message,
+              toolUseContext: context,
+              canUseTool,
+              invokingRequestId: assistantMessage?.requestId,
+            })
+            return {
+              data: {
+                success: true,
+                message: `Agent "${input.to}" had no active task; resumed from transcript in the background with your message. You'll be notified when it finishes. Output: ${result.outputFile}`,
+              },
+            }
+          } catch (e) {
+            return {
+              data: {
+                success: false,
+                message: `Agent "${input.to}" is registered but has no transcript to resume. It may have been cleaned up. (${errorMessage(e)})`,
               },
             }
           }
         }
       }
+    }
 
-      // Route to in-process subagent by name or raw agentId before falling
-      // through to ambient-team resolution. Stopped agents are auto-resumed.
-      if (typeof input.message === 'string' && input.to !== '*') {
-        const appState = context.getAppState()
-        const registered = appState.agentNameRegistry.get(input.to)
-        const agentId = registered ?? toAgentId(input.to)
-        if (agentId) {
-          const task = appState.tasks[agentId]
-          if (isLocalAgentTask(task) && !isMainSessionTask(task)) {
-            if (task.status === 'running') {
-              queuePendingMessage(
-                agentId,
-                input.message,
-                context.setAppStateForTasks ?? context.setAppState,
-              )
-              return {
-                data: {
-                  success: true,
-                  message: `Message queued for delivery to ${input.to} at its next tool round.`,
-                },
-              }
-            }
-            // task exists but stopped — auto-resume
-            try {
-              const result = await resumeAgentBackground({
-                agentId,
-                prompt: input.message,
-                toolUseContext: context,
-                canUseTool,
-                invokingRequestId: assistantMessage?.requestId,
-              })
-              return {
-                data: {
-                  success: true,
-                  message: `Agent "${input.to}" was stopped (${task.status}); resumed it in the background with your message. You'll be notified when it finishes. Output: ${result.outputFile}`,
-                },
-              }
-            } catch (e) {
-              return {
-                data: {
-                  success: false,
-                  message: `Agent "${input.to}" is stopped (${task.status}) and could not be resumed: ${errorMessage(e)}`,
-                },
-              }
-            }
-          } else {
-            // task evicted from state — try resume from disk transcript.
-            // agentId is either a registered name or a format-matching raw ID
-            // (toAgentId validates the createAgentId format, so teammate names
-            // never reach this block).
-            try {
-              const result = await resumeAgentBackground({
-                agentId,
-                prompt: input.message,
-                toolUseContext: context,
-                canUseTool,
-                invokingRequestId: assistantMessage?.requestId,
-              })
-              return {
-                data: {
-                  success: true,
-                  message: `Agent "${input.to}" had no active task; resumed from transcript in the background with your message. You'll be notified when it finishes. Output: ${result.outputFile}`,
-                },
-              }
-            } catch (e) {
-              return {
-                data: {
-                  success: false,
-                  message: `Agent "${input.to}" is registered but has no transcript to resume. It may have been cleaned up. (${errorMessage(e)})`,
-                },
-              }
-            }
-          }
-        }
-      }
-
-      if (typeof input.message === 'string') {
-        if (input.to === '*') {
-          return handleBroadcast(input.message, input.summary, context)
-        }
-        return handleMessage(input.to, input.message, input.summary, context)
-      }
-
+    if (typeof input.message === 'string') {
       if (input.to === '*') {
-        throw new Error('structured messages cannot be broadcast')
+        return handleBroadcast(input.message, input.summary, context)
       }
+      return handleMessage(input.to, input.message, input.summary, context)
+    }
 
-      switch (input.message.type) {
-        case 'shutdown_request':
-          return handleShutdownRequest(input.to, input.message.reason, context)
-        case 'shutdown_response':
-          if (input.message.approve) {
-            return handleShutdownApproval(input.message.request_id, context)
-          }
-          return handleShutdownRejection(
-            input.message.request_id,
-            input.message.reason!,
-          )
-        case 'plan_approval_response':
-          if (input.message.approve) {
-            return handlePlanApproval(
-              input.to,
-              input.message.request_id,
-              context,
-            )
-          }
-          return handlePlanRejection(
-            input.to,
-            input.message.request_id,
-            input.message.feedback ?? 'Plan needs revision',
-            context,
-          )
-      }
-    },
+    if (input.to === '*') {
+      throw new Error('structured messages cannot be broadcast')
+    }
 
-    renderToolUseMessage,
-    renderToolResultMessage,
-  } satisfies ToolDef<InputSchema, SendMessageToolOutput>)
+    switch (input.message.type) {
+      case 'shutdown_request':
+        return handleShutdownRequest(input.to, input.message.reason, context)
+      case 'shutdown_response':
+        if (input.message.approve) {
+          return handleShutdownApproval(input.message.request_id, context)
+        }
+        return handleShutdownRejection(input.message.request_id, input.message.reason!)
+      case 'plan_approval_response':
+        if (input.message.approve) {
+          return handlePlanApproval(input.to, input.message.request_id, context)
+        }
+        return handlePlanRejection(
+          input.to,
+          input.message.request_id,
+          input.message.feedback ?? 'Plan needs revision',
+          context,
+        )
+    }
+  },
+
+  renderToolUseMessage,
+  renderToolResultMessage,
+} satisfies ToolDef<InputSchema, SendMessageToolOutput>)

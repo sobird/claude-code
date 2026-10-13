@@ -1,13 +1,6 @@
 import { logEvent } from '../services/analytics/index.js'
-import {
-  getDefaultMainLoopModelSetting,
-  isOpus1mMergeEnabled,
-  parseUserSpecifiedModel,
-} from '../utils/model/model.js'
-import {
-  getSettingsForSource,
-  updateSettingsForSource,
-} from '../utils/settings/settings.js'
+import { getDefaultMainLoopModelSetting, isOpus1mMergeEnabled, parseUserSpecifiedModel } from '../utils/model/model.js'
+import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings.js'
 
 /**
  * Migrate users with 'opus' pinned in their settings to 'opus[1m]' when they
@@ -33,8 +26,7 @@ export function migrateOpusToOpus1m(): void {
 
   const migrated = 'opus[1m]'
   const modelToSet =
-    parseUserSpecifiedModel(migrated) ===
-    parseUserSpecifiedModel(getDefaultMainLoopModelSetting())
+    parseUserSpecifiedModel(migrated) === parseUserSpecifiedModel(getDefaultMainLoopModelSetting())
       ? undefined
       : migrated
   updateSettingsForSource('userSettings', { model: modelToSet })

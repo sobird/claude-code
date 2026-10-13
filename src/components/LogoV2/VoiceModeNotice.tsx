@@ -1,6 +1,8 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
 import { useEffect, useState } from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { getInitialSettings } from '../../utils/settings/settings.js'
@@ -34,7 +36,7 @@ function VoiceModeNoticeInner(): React.ReactNode {
     if (!show) return
     // Capture outside the updater so StrictMode's second invocation is a no-op.
     const newCount = (getGlobalConfig().voiceNoticeSeenCount ?? 0) + 1
-    saveGlobalConfig(prev => {
+    saveGlobalConfig((prev) => {
       if ((prev.voiceNoticeSeenCount ?? 0) >= newCount) return prev
       return { ...prev, voiceNoticeSeenCount: newCount }
     })

@@ -101,18 +101,15 @@ export const ALL_MODEL_CONFIGS = {
 export type ModelKey = keyof typeof ALL_MODEL_CONFIGS
 
 /** Union of all canonical first-party model IDs, e.g. 'claude-opus-4-6' | 'claude-sonnet-4-5-20250929' | … */
-export type CanonicalModelId =
-  (typeof ALL_MODEL_CONFIGS)[ModelKey]['firstParty']
+export type CanonicalModelId = (typeof ALL_MODEL_CONFIGS)[ModelKey]['firstParty']
 
 /** Runtime list of canonical model IDs — used by comprehensiveness tests. */
-export const CANONICAL_MODEL_IDS = Object.values(ALL_MODEL_CONFIGS).map(
-  c => c.firstParty,
-) as [CanonicalModelId, ...CanonicalModelId[]]
+export const CANONICAL_MODEL_IDS = Object.values(ALL_MODEL_CONFIGS).map((c) => c.firstParty) as [
+  CanonicalModelId,
+  ...CanonicalModelId[],
+]
 
 /** Map canonical ID → internal short key. Used to apply settings-based modelOverrides. */
-export const CANONICAL_ID_TO_KEY: Record<CanonicalModelId, ModelKey> =
-  Object.fromEntries(
-    (Object.entries(ALL_MODEL_CONFIGS) as [ModelKey, ModelConfig][]).map(
-      ([key, cfg]) => [cfg.firstParty, key],
-    ),
-  ) as Record<CanonicalModelId, ModelKey>
+export const CANONICAL_ID_TO_KEY: Record<CanonicalModelId, ModelKey> = Object.fromEntries(
+  (Object.entries(ALL_MODEL_CONFIGS) as [ModelKey, ModelConfig][]).map(([key, cfg]) => [cfg.firstParty, key]),
+) as Record<CanonicalModelId, ModelKey>

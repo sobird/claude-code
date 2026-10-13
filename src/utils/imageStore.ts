@@ -1,5 +1,6 @@
 import { mkdir, open } from 'fs/promises'
 import { join } from 'path'
+
 import { getSessionId } from '../bootstrap/state.js'
 import type { PastedContent } from './config.js'
 import { logForDebugging } from './debug.js'
@@ -51,9 +52,7 @@ export function cacheImagePath(content: PastedContent): string | null {
 /**
  * Store an image from pastedContents to disk.
  */
-export async function storeImage(
-  content: PastedContent,
-): Promise<string | null> {
+export async function storeImage(content: PastedContent): Promise<string | null> {
   if (content.type !== 'image') {
     return null
   }
@@ -81,9 +80,7 @@ export async function storeImage(
 /**
  * Store all images from pastedContents to disk.
  */
-export async function storeImages(
-  pastedContents: Record<number, PastedContent>,
-): Promise<Map<number, string>> {
+export async function storeImages(pastedContents: Record<number, PastedContent>): Promise<Map<number, string>> {
   const pathMap = new Map<number, string>()
 
   for (const [id, content] of Object.entries(pastedContents)) {

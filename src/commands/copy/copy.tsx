@@ -1,18 +1,20 @@
 import { mkdir, writeFile } from 'fs/promises'
-import { marked, type Tokens } from 'marked'
 import { tmpdir } from 'os'
 import { join } from 'path'
+
+import { marked, type Tokens } from 'marked'
 import React, { useRef } from 'react'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import type { OptionWithDescription } from '../../components/CustomSelect/select.js'
 import { Select } from '../../components/CustomSelect/select.js'
 import { Byline } from '../../components/design-system/Byline.js'
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint.js'
 import { Pane } from '../../components/design-system/Pane.js'
+import { Box, Text } from '../../ink.js'
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { stringWidth } from '../../ink/stringWidth.js'
 import { setClipboard } from '../../ink/termio/osc.js'
-import { Box, Text } from '../../ink.js'
 import { logEvent } from '../../services/analytics/index.js'
 import type { LocalJSXCommandCall } from '../../types/command.js'
 import type { AssistantMessage, Message } from '../../types/message.js'
@@ -48,11 +50,7 @@ function extractCodeBlocks(markdown: string): CodeBlock[] {
  */
 export function collectRecentAssistantTexts(messages: Message[]): string[] {
   const texts: string[] = []
-  for (
-    let i = messages.length - 1;
-    i >= 0 && texts.length < MAX_LOOKBACK;
-    i--
-  ) {
+  for (let i = messages.length - 1; i >= 0 && texts.length < MAX_LOOKBACK; i--) {
     const msg = messages[i]
     if (msg?.type !== 'assistant' || msg.isApiErrorMessage) continue
     const content = (msg as AssistantMessage).message.content
@@ -82,10 +80,7 @@ async function writeToFile(text: string, filename: string): Promise<string> {
   return filePath
 }
 
-async function copyOrWriteToFile(
-  text: string,
-  filename: string,
-): Promise<string> {
+async function copyOrWriteToFile(text: string, filename: string): Promise<string> {
   const raw = await setClipboard(text)
   if (raw) process.stdout.write(raw)
   const lineCount = countCharInString(text, '\n') + 1
@@ -121,20 +116,12 @@ type PickerProps = {
   fullText: string
   codeBlocks: CodeBlock[]
   messageAge: number
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
 }
 
 type PickerSelection = number | 'full' | 'always'
 
-function CopyPicker({
-  fullText,
-  codeBlocks,
-  messageAge,
-  onDone,
-}: PickerProps): React.ReactNode {
+function CopyPicker({ fullText, codeBlocks, messageAge, onDone }: PickerProps): React.ReactNode {
   const focusedRef = useRef<PickerSelection>('full')
 
   const options: OptionWithDescription<PickerSelection>[] = [
@@ -149,9 +136,7 @@ function CopyPicker({
         label: truncateLine(block.code, 60),
         value: index,
         description:
-          [block.lang, blockLines > 1 ? `${blockLines} lines` : undefined]
-            .filter(Boolean)
-            .join(', ') || undefined,
+          [block.lang, blockLines > 1 ? `${blockLines} lines` : undefined].filter(Boolean).join(', ') || undefined,
       }
     }),
     {
@@ -181,7 +166,7 @@ function CopyPicker({
     const content = getSelectionContent(selected)
     if (selected === 'always') {
       if (!getGlobalConfig().copyFullResponse) {
-        saveGlobalConfig(c => ({ ...c, copyFullResponse: true }))
+        saveGlobalConfig((c) => ({ ...c, copyFullResponse: true }))
       }
       logEvent('tengu_copy', {
         block_count: codeBlocks.length,
@@ -189,9 +174,7 @@ function CopyPicker({
         message_age: messageAge,
       })
       const result = await copyOrWriteToFile(content.text, content.filename)
-      onDone(
-        `${result}\nPreference saved. Use /config to change copyFullResponse`,
-      )
+      onDone(`${result}\nPreference saved. Use /config to change copyFullResponse`)
       return
     }
     logEvent('tengu_copy', {
@@ -228,21 +211,15 @@ function CopyPicker({
 
   return (
     <Pane>
-      <Box
-        flexDirection="column"
-        gap={1}
-        tabIndex={0}
-        autoFocus
-        onKeyDown={handleKeyDown}
-      >
+      <Box flexDirection="column" gap={1} tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
         <Text dimColor>Select content to copy:</Text>
         <Select<PickerSelection>
           options={options}
           hideIndexes={false}
-          onFocus={value => {
+          onFocus={(value) => {
             focusedRef.current = value
           }}
-          onChange={selected => {
+          onChange={(selected) => {
             void handleSelect(selected)
           }}
           onCancel={() => {
@@ -279,9 +256,7 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
       return null
     }
     if (n > texts.length) {
-      onDone(
-        `Only ${texts.length} assistant ${texts.length === 1 ? 'message' : 'messages'} available to copy`,
-      )
+      onDone(`Only ${texts.length} assistant ${texts.length === 1 ? 'message' : 'messages'} available to copy`)
       return null
     }
     age = n - 1
@@ -302,12 +277,5 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
     return null
   }
 
-  return (
-    <CopyPicker
-      fullText={text}
-      codeBlocks={codeBlocks}
-      messageAge={age}
-      onDone={onDone}
-    />
-  )
+  return <CopyPicker fullText={text} codeBlocks={codeBlocks} messageAge={age} onDone={onDone} />
 }

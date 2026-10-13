@@ -3,6 +3,7 @@ import * as React from 'react'
 import { stripUnderlineAnsi } from 'src/components/shell/OutputLine.js'
 import { extractTag } from 'src/utils/messages.js'
 import { removeSandboxViolationTags } from 'src/utils/sandbox/sandbox-ui-utils.js'
+
 import { Box, Text } from '../ink.js'
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js'
 import { countCharInString } from '../utils/stringUtils.js'
@@ -15,15 +16,8 @@ type Props = {
   verbose: boolean
 }
 
-export function FallbackToolUseErrorMessage({
-  result,
-  verbose,
-}: Props): React.ReactNode {
-  const transcriptShortcut = useShortcutDisplay(
-    'app:toggleTranscript',
-    'Global',
-    'ctrl+o',
-  )
+export function FallbackToolUseErrorMessage({ result, verbose }: Props): React.ReactNode {
+  const transcriptShortcut = useShortcutDisplay('app:toggleTranscript', 'Global', 'ctrl+o')
   let error: string
 
   if (typeof result !== 'string') {
@@ -37,10 +31,7 @@ export function FallbackToolUseErrorMessage({
     const trimmed = withoutErrorTags.trim()
     if (!verbose && trimmed.includes('InputValidationError: ')) {
       error = 'Invalid tool parameters'
-    } else if (
-      trimmed.startsWith('Error: ') ||
-      trimmed.startsWith('Cancelled: ')
-    ) {
+    } else if (trimmed.startsWith('Error: ') || trimmed.startsWith('Cancelled: ')) {
       error = trimmed
     } else {
       error = `Error: ${trimmed}`
@@ -53,11 +44,7 @@ export function FallbackToolUseErrorMessage({
     <MessageResponse>
       <Box flexDirection="column">
         <Text color="error">
-          {stripUnderlineAnsi(
-            verbose
-              ? error
-              : error.split('\n').slice(0, MAX_RENDERED_LINES).join('\n'),
-          )}
+          {stripUnderlineAnsi(verbose ? error : error.split('\n').slice(0, MAX_RENDERED_LINES).join('\n'))}
         </Text>
         {!verbose && plusLines > 0 && (
           // The careful <Text> layout is a workaround for the dim-bold

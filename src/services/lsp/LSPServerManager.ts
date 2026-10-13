@@ -1,13 +1,11 @@
 import * as path from 'path'
 import { pathToFileURL } from 'url'
+
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'
 import { getAllLspServers } from './config.js'
-import {
-  createLSPServerInstance,
-  type LSPServerInstance,
-} from './LSPServerInstance.js'
+import { createLSPServerInstance, type LSPServerInstance } from './LSPServerInstance.js'
 import type { ScopedLspServerConfig } from './types.js'
 /**
  * LSP Server Manager interface returned by createLSPServerManager.
@@ -23,11 +21,7 @@ export type LSPServerManager = {
   /** Ensure the appropriate LSP server is started for the given file */
   ensureServerStarted(filePath: string): Promise<LSPServerInstance | undefined>
   /** Send a request to the appropriate LSP server for the given file */
-  sendRequest<T>(
-    filePath: string,
-    method: string,
-    params: unknown,
-  ): Promise<T | undefined>
+  sendRequest<T>(filePath: string, method: string, params: unknown): Promise<T | undefined>
   /** Get all running server instances */
   getAllServers(): Map<string, LSPServerInstance>
   /** Synchronize file open to LSP server (sends didOpen notification) */
@@ -74,14 +68,10 @@ export function createLSPServerManager(): LSPServerManager {
     try {
       const result = await getAllLspServers()
       serverConfigs = result.servers
-      logForDebugging(
-        `[LSP SERVER MANAGER] getAllLspServers returned ${Object.keys(serverConfigs).length} server(s)`,
-      )
+      logForDebugging(`[LSP SERVER MANAGER] getAllLspServers returned ${Object.keys(serverConfigs).length} server(s)`)
     } catch (error) {
       const err = error as Error
-      logError(
-        new Error(`Failed to load LSP server configuration: ${err.message}`),
-      )
+      logError(new Error(`Failed to load LSP server configuration: ${err.message}`))
       throw error
     }
 
@@ -90,17 +80,10 @@ export function createLSPServerManager(): LSPServerManager {
       try {
         // Validate config before using it
         if (!config.command) {
-          throw new Error(
-            `Server ${serverName} missing required 'command' field`,
-          )
+          throw new Error(`Server ${serverName} missing required 'command' field`)
         }
-        if (
-          !config.extensionToLanguage ||
-          Object.keys(config.extensionToLanguage).length === 0
-        ) {
-          throw new Error(
-            `Server ${serverName} missing required 'extensionToLanguage' field`,
-          )
+        if (!config.extensionToLanguage || Object.keys(config.extensionToLanguage).length === 0) {
+          throw new Error(`Server ${serverName} missing required 'extensionToLanguage' field`)
         }
 
         // Map file extensions to this server (derive from extensionToLanguage)
@@ -122,24 +105,15 @@ export function createLSPServerManager(): LSPServerManager {
 
         // Register handler for workspace/configuration requests from the server
         // Some servers (like TypeScript) send these even when we say we don't support them
-        instance.onRequest(
-          'workspace/configuration',
-          (params: { items: Array<{ section?: string }> }) => {
-            logForDebugging(
-              `LSP: Received workspace/configuration request from ${serverName}`,
-            )
-            // Return empty/null config for each requested item
-            // This satisfies the protocol without providing actual configuration
-            return params.items.map(() => null)
-          },
-        )
+        instance.onRequest('workspace/configuration', (params: { items: Array<{ section?: string }> }) => {
+          logForDebugging(`LSP: Received workspace/configuration request from ${serverName}`)
+          // Return empty/null config for each requested item
+          // This satisfies the protocol without providing actual configuration
+          return params.items.map(() => null)
+        })
       } catch (error) {
         const err = error as Error
-        logError(
-          new Error(
-            `Failed to initialize LSP server ${serverName}: ${err.message}`,
-          ),
-        )
+        logError(new Error(`Failed to initialize LSP server ${serverName}: ${err.message}`))
         // Continue with other servers - don't fail entire initialization
       }
     }
@@ -155,30 +129,20 @@ export function createLSPServerManager(): LSPServerManager {
    * @throws {Error} If one or more servers fail to stop
    */
   async function shutdown(): Promise<void> {
-    const toStop = Array.from(servers.entries()).filter(
-      ([, s]) => s.state === 'running' || s.state === 'error',
-    )
+    const toStop = Array.from(servers.entries()).filter(([, s]) => s.state === 'running' || s.state === 'error')
 
-    const results = await Promise.allSettled(
-      toStop.map(([, server]) => server.stop()),
-    )
+    const results = await Promise.allSettled(toStop.map(([, server]) => server.stop()))
 
     servers.clear()
     extensionMap.clear()
     openedFiles.clear()
 
     const errors = results
-      .map((r, i) =>
-        r.status === 'rejected'
-          ? `${toStop[i]![0]}: ${errorMessage(r.reason)}`
-          : null,
-      )
+      .map((r, i) => (r.status === 'rejected' ? `${toStop[i]![0]}: ${errorMessage(r.reason)}` : null))
       .filter((e): e is string => e !== null)
 
     if (errors.length > 0) {
-      const err = new Error(
-        `Failed to stop ${errors.length} LSP server(s): ${errors.join('; ')}`,
-      )
+      const err = new Error(`Failed to stop ${errors.length} LSP server(s): ${errors.join('; ')}`)
       logError(err)
       throw err
     }
@@ -212,9 +176,7 @@ export function createLSPServerManager(): LSPServerManager {
    *
    * @throws {Error} If server fails to start
    */
-  async function ensureServerStarted(
-    filePath: string,
-  ): Promise<LSPServerInstance | undefined> {
+  async function ensureServerStarted(filePath: string): Promise<LSPServerInstance | undefined> {
     const server = getServerForFile(filePath)
     if (!server) return undefined
 
@@ -223,11 +185,7 @@ export function createLSPServerManager(): LSPServerManager {
         await server.start()
       } catch (error) {
         const err = error as Error
-        logError(
-          new Error(
-            `Failed to start LSP server for file ${filePath}: ${err.message}`,
-          ),
-        )
+        logError(new Error(`Failed to start LSP server for file ${filePath}: ${err.message}`))
         throw error
       }
     }
@@ -241,11 +199,7 @@ export function createLSPServerManager(): LSPServerManager {
    *
    * @throws {Error} If server fails to start or request fails
    */
-  async function sendRequest<T>(
-    filePath: string,
-    method: string,
-    params: unknown,
-  ): Promise<T | undefined> {
+  async function sendRequest<T>(filePath: string, method: string, params: unknown): Promise<T | undefined> {
     const server = await ensureServerStarted(filePath)
     if (!server) return undefined
 
@@ -253,11 +207,7 @@ export function createLSPServerManager(): LSPServerManager {
       return await server.sendRequest<T>(method, params)
     } catch (error) {
       const err = error as Error
-      logError(
-        new Error(
-          `LSP request failed for file ${filePath}, method '${method}': ${err.message}`,
-        ),
-      )
+      logError(new Error(`LSP request failed for file ${filePath}, method '${method}': ${err.message}`))
       throw error
     }
   }
@@ -275,9 +225,7 @@ export function createLSPServerManager(): LSPServerManager {
 
     // Skip if already opened on this server
     if (openedFiles.get(fileUri) === server.name) {
-      logForDebugging(
-        `LSP: File already open, skipping didOpen for ${filePath}`,
-      )
+      logForDebugging(`LSP: File already open, skipping didOpen for ${filePath}`)
       return
     }
 
@@ -296,13 +244,9 @@ export function createLSPServerManager(): LSPServerManager {
       })
       // Track that this file is now open on this server
       openedFiles.set(fileUri, server.name)
-      logForDebugging(
-        `LSP: Sent didOpen for ${filePath} (languageId: ${languageId})`,
-      )
+      logForDebugging(`LSP: Sent didOpen for ${filePath} (languageId: ${languageId})`)
     } catch (error) {
-      const err = new Error(
-        `Failed to sync file open ${filePath}: ${errorMessage(error)}`,
-      )
+      const err = new Error(`Failed to sync file open ${filePath}: ${errorMessage(error)}`)
       logError(err)
       // Re-throw to propagate error to caller
       throw err
@@ -333,9 +277,7 @@ export function createLSPServerManager(): LSPServerManager {
       })
       logForDebugging(`LSP: Sent didChange for ${filePath}`)
     } catch (error) {
-      const err = new Error(
-        `Failed to sync file change ${filePath}: ${errorMessage(error)}`,
-      )
+      const err = new Error(`Failed to sync file change ${filePath}: ${errorMessage(error)}`)
       logError(err)
       // Re-throw to propagate error to caller
       throw err
@@ -358,9 +300,7 @@ export function createLSPServerManager(): LSPServerManager {
       })
       logForDebugging(`LSP: Sent didSave for ${filePath}`)
     } catch (error) {
-      const err = new Error(
-        `Failed to sync file save ${filePath}: ${errorMessage(error)}`,
-      )
+      const err = new Error(`Failed to sync file save ${filePath}: ${errorMessage(error)}`)
       logError(err)
       // Re-throw to propagate error to caller
       throw err
@@ -390,9 +330,7 @@ export function createLSPServerManager(): LSPServerManager {
       openedFiles.delete(fileUri)
       logForDebugging(`LSP: Sent didClose for ${filePath}`)
     } catch (error) {
-      const err = new Error(
-        `Failed to sync file close ${filePath}: ${errorMessage(error)}`,
-      )
+      const err = new Error(`Failed to sync file close ${filePath}: ${errorMessage(error)}`)
       logError(err)
       // Re-throw to propagate error to caller
       throw err

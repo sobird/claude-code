@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import { ASK_USER_QUESTION_TOOL_NAME } from '../../tools/AskUserQuestionTool/prompt.js'
 import { ENTER_PLAN_MODE_TOOL_NAME } from '../../tools/EnterPlanModeTool/constants.js'
 import { EXIT_PLAN_MODE_TOOL_NAME } from '../../tools/ExitPlanModeTool/constants.js'
@@ -25,9 +26,8 @@ import { YOLO_CLASSIFIER_TOOL_NAME } from './yoloClassifier.js'
 // Gates mirror tools.ts. Keeps the tool name strings out of cli.js.
 /* eslint-disable @typescript-eslint/no-require-imports */
 const TERMINAL_CAPTURE_TOOL_NAME = feature('TERMINAL_PANEL')
-  ? (
-      require('../../tools/TerminalCaptureTool/prompt.js') as typeof import('../../tools/TerminalCaptureTool/prompt.js')
-    ).TERMINAL_CAPTURE_TOOL_NAME
+  ? (require('../../tools/TerminalCaptureTool/prompt.js') as typeof import('../../tools/TerminalCaptureTool/prompt.js'))
+      .TERMINAL_CAPTURE_TOOL_NAME
   : null
 const OVERFLOW_TEST_TOOL_NAME = feature('OVERFLOW_TEST_TOOL')
   ? (
@@ -41,9 +41,8 @@ const VERIFY_PLAN_EXECUTION_TOOL_NAME =
       ).VERIFY_PLAN_EXECUTION_TOOL_NAME
     : null
 const WORKFLOW_TOOL_NAME = feature('WORKFLOW_SCRIPTS')
-  ? (
-      require('../../tools/WorkflowTool/constants.js') as typeof import('../../tools/WorkflowTool/constants.js')
-    ).WORKFLOW_TOOL_NAME
+  ? (require('../../tools/WorkflowTool/constants.js') as typeof import('../../tools/WorkflowTool/constants.js'))
+      .WORKFLOW_TOOL_NAME
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 

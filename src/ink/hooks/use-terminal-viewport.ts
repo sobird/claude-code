@@ -1,4 +1,5 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from 'react'
+
 import { TerminalSizeContext } from '../components/TerminalSizeContext.js'
 import type { DOMElement } from '../dom.js'
 
@@ -26,10 +27,7 @@ type ViewportEntry = {
  * const [ref, entry] = useTerminalViewport()
  * return <Box ref={ref}><Animation enabled={entry.isVisible}>...</Animation></Box>
  */
-export function useTerminalViewport(): [
-  ref: (element: DOMElement | null) => void,
-  entry: ViewportEntry,
-] {
+export function useTerminalViewport(): [ref: (element: DOMElement | null) => void, entry: ViewportEntry] {
   const terminalSize = useContext(TerminalSizeContext)
   const elementRef = useRef<DOMElement | null>(null)
   const entryRef = useRef<ViewportEntry>({ isVisible: true })

@@ -1,34 +1,33 @@
+import { feature } from 'bun:bundle'
+import { basename, sep } from 'path'
+
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import React, { useMemo } from 'react'
-import { Ansi, Box, Text } from '../../ink.js'
 import type { Attachment } from 'src/utils/attachments.js'
-import type { NullRenderingAttachmentType } from './nullRenderingAttachments.js'
-import { useAppState } from '../../state/AppState.js'
 import { getDisplayPath } from 'src/utils/file.js'
 import { formatFileSize } from 'src/utils/format.js'
-import { MessageResponse } from '../MessageResponse.js'
-import { basename, sep } from 'path'
-import { UserTextMessage } from './UserTextMessage.js'
-import { DiagnosticsDisplay } from '../DiagnosticsDisplay.js'
 import { getContentText } from 'src/utils/messages.js'
 import type { Theme } from 'src/utils/theme.js'
-import { UserImageMessage } from './UserImageMessage.js'
+
+import { BLACK_CIRCLE } from '../../constants/figures.js'
+import { Ansi, Box, Text } from '../../ink.js'
+import { useAppState } from '../../state/AppState.js'
+import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
 import { toInkColor } from '../../utils/ink.js'
 import { jsonParse } from '../../utils/slowOperations.js'
 import { plural } from '../../utils/stringUtils.js'
-import { isEnvTruthy } from '../../utils/envUtils.js'
-import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
-import {
-  tryRenderPlanApprovalMessage,
-  formatTeammateMessageContent,
-} from './PlanApprovalMessage.js'
-import { BLACK_CIRCLE } from '../../constants/figures.js'
-import { TeammateMessageContent } from './UserTeammateMessage.js'
 import { isShutdownApproved } from '../../utils/teammateMailbox.js'
 import { CtrlOToExpand } from '../CtrlOToExpand.js'
+import { DiagnosticsDisplay } from '../DiagnosticsDisplay.js'
 import { FilePathLink } from '../FilePathLink.js'
-import { feature } from 'bun:bundle'
 import { useSelectedMessageBg } from '../messageActions.js'
+import { MessageResponse } from '../MessageResponse.js'
+import type { NullRenderingAttachmentType } from './nullRenderingAttachments.js'
+import { tryRenderPlanApprovalMessage, formatTeammateMessageContent } from './PlanApprovalMessage.js'
+import { UserImageMessage } from './UserImageMessage.js'
+import { TeammateMessageContent } from './UserTeammateMessage.js'
+import { UserTextMessage } from './UserTextMessage.js'
 
 type Props = {
   addMargin: boolean
@@ -37,12 +36,7 @@ type Props = {
   isTranscriptMode?: boolean
 }
 
-export function AttachmentMessage({
-  attachment,
-  addMargin,
-  verbose,
-  isTranscriptMode,
-}: Props): React.ReactNode {
+export function AttachmentMessage({ attachment, addMargin, verbose, isTranscriptMode }: Props): React.ReactNode {
   const bg = useSelectedMessageBg()
   // Hoisted to mount-time — per-message component, re-renders on every scroll.
   const isDemoEnv = feature('EXPERIMENTAL_SKILL_SEARCH')
@@ -53,16 +47,13 @@ export function AttachmentMessage({
   if (isAgentSwarmsEnabled() && attachment.type === 'teammate_mailbox') {
     // Filter out idle notifications BEFORE counting - they are hidden in the UI
     // so showing them in the count would be confusing ("2 messages in mailbox:" with nothing shown)
-    const visibleMessages = attachment.messages.filter(msg => {
+    const visibleMessages = attachment.messages.filter((msg) => {
       if (isShutdownApproved(msg.text)) {
         return false
       }
       try {
         const parsed = jsonParse(msg.text)
-        return (
-          parsed?.type !== 'idle_notification' &&
-          parsed?.type !== 'teammate_terminated'
-        )
+        return parsed?.type !== 'idle_notification' && parsed?.type !== 'teammate_terminated'
       } catch {
         return true // Non-JSON messages are visible
       }
@@ -102,20 +93,14 @@ export function AttachmentMessage({
           // Note: idle_notification messages already filtered out above
 
           // Try to render as plan approval message (request or response)
-          const planApprovalElement = tryRenderPlanApprovalMessage(
-            msg.text,
-            msg.from,
-          )
+          const planApprovalElement = tryRenderPlanApprovalMessage(msg.text, msg.from)
           if (planApprovalElement) {
-            return (
-              <React.Fragment key={idx}>{planApprovalElement}</React.Fragment>
-            )
+            return <React.Fragment key={idx}>{planApprovalElement}</React.Fragment>
           }
 
           // Plain text message - sender header with chevron, truncated content
           const inkColor = toInkColor(msg.color)
-          const formattedContent =
-            formatTeammateMessageContent(msg.text) ?? msg.text
+          const formattedContent = formatTeammateMessageContent(msg.text) ?? msg.text
           return (
             <TeammateMessageContent
               key={idx}
@@ -140,9 +125,7 @@ export function AttachmentMessage({
       // Ant users get shortIds inline so they can /skill-feedback while the
       // turn is still fresh. External users (when this un-gates) just see
       // names — shortId is undefined outside ant builds anyway.
-      const names = attachment.skills
-        .map(s => (s.shortId ? `${s.name} [${s.shortId}]` : s.name))
-        .join(', ')
+      const names = attachment.skills.map((s) => (s.shortId ? `${s.name} [${s.shortId}]` : s.name)).join(', ')
       const firstId = attachment.skills[0]?.shortId
       const hint =
         process.env.USER_TYPE === 'ant' && !isDemoEnv && firstId
@@ -150,8 +133,7 @@ export function AttachmentMessage({
           : ''
       return (
         <Line>
-          <Text bold>{attachment.skills.length}</Text> relevant{' '}
-          {plural(attachment.skills.length, 'skill')}: {names}
+          <Text bold>{attachment.skills.length}</Text> relevant {plural(attachment.skills.length, 'skill')}: {names}
           {hint && <Text dimColor>{hint}</Text>}
         </Line>
       )
@@ -171,8 +153,7 @@ export function AttachmentMessage({
       if (attachment.content.type === 'notebook') {
         return (
           <Line>
-            Read <Text bold>{attachment.displayPath}</Text> (
-            {attachment.content.file.cells.length} cells)
+            Read <Text bold>{attachment.displayPath}</Text> ({attachment.content.file.cells.length} cells)
           </Line>
         )
       }
@@ -201,17 +182,14 @@ export function AttachmentMessage({
     case 'pdf_reference':
       return (
         <Line>
-          Referenced PDF <Text bold>{attachment.displayPath}</Text> (
-          {attachment.pageCount} pages)
+          Referenced PDF <Text bold>{attachment.displayPath}</Text> ({attachment.pageCount} pages)
         </Line>
       )
     case 'selected_lines_in_ide':
       return (
         <Line>
-          ⧉ Selected{' '}
-          <Text bold>{attachment.lineEnd - attachment.lineStart + 1}</Text>{' '}
-          lines from <Text bold>{attachment.displayPath}</Text> in{' '}
-          {attachment.ideName}
+          ⧉ Selected <Text bold>{attachment.lineEnd - attachment.lineStart + 1}</Text> lines from{' '}
+          <Text bold>{attachment.displayPath}</Text> in {attachment.ideName}
         </Line>
       )
     case 'nested_memory':
@@ -226,11 +204,7 @@ export function AttachmentMessage({
       // Write) and no group was open. Match CollapsedReadSearchContent's style:
       // 2-space gutter, dim text, count only — filenames/content in ctrl+o.
       return (
-        <Box
-          flexDirection="column"
-          marginTop={addMargin ? 1 : 0}
-          backgroundColor={bg}
-        >
+        <Box flexDirection="column" marginTop={addMargin ? 1 : 0} backgroundColor={bg}>
           <Box flexDirection="row">
             <Box minWidth={2} />
             <Text dimColor>
@@ -245,13 +219,11 @@ export function AttachmentMessage({
             </Text>
           </Box>
           {(verbose || isTranscriptMode) &&
-            attachment.memories.map(m => (
+            attachment.memories.map((m) => (
               <Box key={m.path} flexDirection="column">
                 <MessageResponse>
                   <Text dimColor>
-                    <FilePathLink filePath={m.path}>
-                      {basename(m.path)}
-                    </FilePathLink>
+                    <FilePathLink filePath={m.path}>{basename(m.path)}</FilePathLink>
                   </Text>
                 </MessageResponse>
                 {isTranscriptMode && (
@@ -283,8 +255,7 @@ export function AttachmentMessage({
       }
       return (
         <Line>
-          <Text bold>{attachment.skillCount}</Text>{' '}
-          {plural(attachment.skillCount, 'skill')} available
+          <Text bold>{attachment.skillCount}</Text> {plural(attachment.skillCount, 'skill')} available
         </Line>
       )
     }
@@ -300,12 +271,8 @@ export function AttachmentMessage({
       )
     }
     case 'queued_command': {
-      const text =
-        typeof attachment.prompt === 'string'
-          ? attachment.prompt
-          : getContentText(attachment.prompt) || ''
-      const hasImages =
-        attachment.imagePasteIds && attachment.imagePasteIds.length > 0
+      const text = typeof attachment.prompt === 'string' ? attachment.prompt : getContentText(attachment.prompt) || ''
+      const hasImages = attachment.imagePasteIds && attachment.imagePasteIds.length > 0
       return (
         <Box flexDirection="column">
           <UserTextMessage
@@ -314,24 +281,17 @@ export function AttachmentMessage({
             verbose={verbose}
             isTranscriptMode={isTranscriptMode}
           />
-          {hasImages &&
-            attachment.imagePasteIds?.map(id => (
-              <UserImageMessage key={id} imageId={id} />
-            ))}
+          {hasImages && attachment.imagePasteIds?.map((id) => <UserImageMessage key={id} imageId={id} />)}
         </Box>
       )
     }
     case 'plan_file_reference':
-      return (
-        <Line>
-          Plan file referenced ({getDisplayPath(attachment.planFilePath)})
-        </Line>
-      )
+      return <Line>Plan file referenced ({getDisplayPath(attachment.planFilePath)})</Line>
     case 'invoked_skills': {
       if (attachment.skills.length === 0) {
         return null
       }
-      const skillNames = attachment.skills.map(s => s.name).join(', ')
+      const skillNames = attachment.skills.map((s) => s.name).join(', ')
       return <Line>Skills restored ({skillNames})</Line>
     }
     case 'diagnostics':
@@ -339,8 +299,7 @@ export function AttachmentMessage({
     case 'mcp_resource':
       return (
         <Line>
-          Read MCP resource <Text bold>{attachment.name}</Text> from{' '}
-          {attachment.server}
+          Read MCP resource <Text bold>{attachment.name}</Text> from {attachment.server}
         </Line>
       )
     case 'command_permissions':
@@ -364,29 +323,21 @@ export function AttachmentMessage({
     }
     case 'hook_blocking_error': {
       // Stop hooks are rendered as a summary in SystemStopHookSummaryMessage
-      if (
-        attachment.hookEvent === 'Stop' ||
-        attachment.hookEvent === 'SubagentStop'
-      ) {
+      if (attachment.hookEvent === 'Stop' || attachment.hookEvent === 'SubagentStop') {
         return null
       }
       // Show stderr to the user so they can understand why the hook blocked
       const stderr = attachment.blockingError.blockingError.trim()
       return (
         <>
-          <Line color="error">
-            {attachment.hookName} hook returned blocking error
-          </Line>
+          <Line color="error">{attachment.hookName} hook returned blocking error</Line>
           {stderr ? <Line color="error">{stderr}</Line> : null}
         </>
       )
     }
     case 'hook_non_blocking_error': {
       // Stop hooks are rendered as a summary in SystemStopHookSummaryMessage
-      if (
-        attachment.hookEvent === 'Stop' ||
-        attachment.hookEvent === 'SubagentStop'
-      ) {
+      if (attachment.hookEvent === 'Stop' || attachment.hookEvent === 'SubagentStop') {
         return null
       }
       // Full hook output is logged to debug log via hookEvents.ts
@@ -394,10 +345,7 @@ export function AttachmentMessage({
     }
     case 'hook_error_during_execution':
       // Stop hooks are rendered as a summary in SystemStopHookSummaryMessage
-      if (
-        attachment.hookEvent === 'Stop' ||
-        attachment.hookEvent === 'SubagentStop'
-      ) {
+      if (attachment.hookEvent === 'Stop' || attachment.hookEvent === 'SubagentStop') {
         return null
       }
       // Full hook output is logged to debug log via hookEvents.ts
@@ -407,10 +355,7 @@ export function AttachmentMessage({
       return null
     case 'hook_stopped_continuation':
       // Stop hooks are rendered as a summary in SystemStopHookSummaryMessage
-      if (
-        attachment.hookEvent === 'Stop' ||
-        attachment.hookEvent === 'SubagentStop'
-      ) {
+      if (attachment.hookEvent === 'Stop' || attachment.hookEvent === 'SubagentStop') {
         return null
       }
       return (
@@ -436,16 +381,10 @@ export function AttachmentMessage({
       return <TaskStatusMessage attachment={attachment} />
     case 'teammate_shutdown_batch':
       return (
-        <Box
-          flexDirection="row"
-          width="100%"
-          marginTop={1}
-          backgroundColor={bg}
-        >
+        <Box flexDirection="row" width="100%" marginTop={1} backgroundColor={bg}>
           <Text dimColor>{BLACK_CIRCLE} </Text>
           <Text dimColor>
-            {attachment.count} {plural(attachment.count, 'teammate')} shut down
-            gracefully
+            {attachment.count} {plural(attachment.count, 'teammate')} shut down gracefully
           </Text>
         </Box>
       )
@@ -459,21 +398,14 @@ export function AttachmentMessage({
       // skill_discovery and teammate_mailbox are handled BEFORE the switch in
       // runtime-gated blocks (feature() / isAgentSwarmsEnabled()) that TS can't
       // narrow through — excluded here via type union (compile-time only, no emit).
-      attachment.type satisfies
-        | NullRenderingAttachmentType
-        | 'skill_discovery'
-        | 'teammate_mailbox'
+      attachment.type satisfies NullRenderingAttachmentType | 'skill_discovery' | 'teammate_mailbox'
       return null
   }
 }
 
 type TaskStatusAttachment = Extract<Attachment, { type: 'task_status' }>
 
-function TaskStatusMessage({
-  attachment,
-}: {
-  attachment: TaskStatusAttachment
-}): React.ReactNode {
+function TaskStatusMessage({ attachment }: { attachment: TaskStatusAttachment }): React.ReactNode {
   // For ants, killed task status is shown in the CoordinatorTaskPanel.
   // Don't render it again in the chat.
   if (process.env.USER_TYPE === 'ant' && attachment.status === 'killed') {
@@ -490,11 +422,7 @@ function TaskStatusMessage({
   return <GenericTaskStatus attachment={attachment} />
 }
 
-function GenericTaskStatus({
-  attachment,
-}: {
-  attachment: TaskStatusAttachment
-}): React.ReactNode {
+function GenericTaskStatus({ attachment }: { attachment: TaskStatusAttachment }): React.ReactNode {
   const bg = useSelectedMessageBg()
   const statusText =
     attachment.status === 'completed'
@@ -514,23 +442,16 @@ function GenericTaskStatus({
   )
 }
 
-function TeammateTaskStatus({
-  attachment,
-}: {
-  attachment: TaskStatusAttachment
-}): React.ReactNode {
+function TeammateTaskStatus({ attachment }: { attachment: TaskStatusAttachment }): React.ReactNode {
   const bg = useSelectedMessageBg()
   // Narrow selector: only re-render when this specific task changes.
-  const task = useAppState(s => s.tasks[attachment.taskId])
+  const task = useAppState((s) => s.tasks[attachment.taskId])
   if (task?.type !== 'in_process_teammate') {
     // Fall through to generic rendering (task not yet in store, or wrong type)
     return <GenericTaskStatus attachment={attachment} />
   }
   const agentColor = toInkColor(task.identity.color)
-  const statusText =
-    attachment.status === 'completed'
-      ? 'shut down gracefully'
-      : attachment.status
+  const statusText = attachment.status === 'completed' ? 'shut down gracefully' : attachment.status
   return (
     <Box flexDirection="row" width="100%" marginTop={1} backgroundColor={bg}>
       <Text dimColor>{BLACK_CIRCLE} </Text>

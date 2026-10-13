@@ -4,6 +4,7 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
+
 import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint.js'
 import { Byline } from '../../components/design-system/Byline.js'
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint.js'
@@ -13,10 +14,7 @@ import { Box, Text } from '../../ink.js'
 import { toError } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'
 import { clearAllCaches } from '../../utils/plugins/cacheUtils.js'
-import {
-  addMarketplaceSource,
-  saveMarketplaceToSettings,
-} from '../../utils/plugins/marketplaceManager.js'
+import { addMarketplaceSource, saveMarketplaceToSettings } from '../../utils/plugins/marketplaceManager.js'
 import { parseMarketplaceInput } from '../../utils/plugins/parseMarketplaceInput.js'
 import type { ViewState } from './types.js'
 
@@ -60,9 +58,7 @@ export function AddMarketplace({
 
     const parsed = await parseMarketplaceInput(input)
     if (!parsed) {
-      setError(
-        'Invalid marketplace source format. Try: owner/repo, https://..., or ./path',
-      )
+      setError('Invalid marketplace source format. Try: owner/repo, https://..., or ./path')
       return
     }
 
@@ -77,24 +73,19 @@ export function AddMarketplace({
     try {
       setLoading(true)
       setProgressMessage('')
-      const { name, resolvedSource } = await addMarketplaceSource(
-        parsed,
-        message => {
-          setProgressMessage(message)
-        },
-      )
+      const { name, resolvedSource } = await addMarketplaceSource(parsed, (message) => {
+        setProgressMessage(message)
+      })
       saveMarketplaceToSettings(name, { source: resolvedSource })
       clearAllCaches()
 
       let sourceType = parsed.source
       if (parsed.source === 'github') {
-        sourceType =
-          parsed.repo as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        sourceType = parsed.repo as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
       }
 
       logEvent('tengu_marketplace_added', {
-        source_type:
-          sourceType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        source_type: sourceType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
 
       if (onAddComplete) {
@@ -166,9 +157,7 @@ export function AddMarketplace({
         {isLoading && (
           <Box marginTop={1}>
             <Spinner />
-            <Text>
-              {progressMessage || 'Adding marketplace to configuration…'}
-            </Text>
+            <Text>{progressMessage || 'Adding marketplace to configuration…'}</Text>
           </Box>
         )}
         {error && (
@@ -186,12 +175,7 @@ export function AddMarketplace({
         <Text dimColor italic>
           <Byline>
             <KeyboardShortcutHint shortcut="Enter" action="add" />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Settings"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
           </Byline>
         </Text>
       </Box>

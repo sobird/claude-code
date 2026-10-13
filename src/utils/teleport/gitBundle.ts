@@ -10,10 +10,12 @@
  */
 
 import { stat, unlink } from 'fs/promises'
+
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
+
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { type FilesApiConfig, uploadFile } from '../../services/api/filesApi.js'
 import { getCwd } from '../cwd.js'
@@ -57,11 +59,10 @@ async function _bundleWithFallback(
   // --all picks up refs/seed/stash; HEAD needs it explicit.
   const extra = hasStash ? ['refs/seed/stash'] : []
   const mkBundle = (base: string) =>
-    execFileNoThrowWithCwd(
-      gitExe(),
-      ['bundle', 'create', bundlePath, base, ...extra],
-      { cwd: gitRoot, abortSignal: signal },
-    )
+    execFileNoThrowWithCwd(gitExe(), ['bundle', 'create', bundlePath, base, ...extra], {
+      cwd: gitRoot,
+      abortSignal: signal,
+    })
 
   const allResult = await mkBundle('--all')
   if (allResult.code !== 0) {
@@ -98,15 +99,12 @@ async function _bundleWithFallback(
   // Last resort: squash to a single parentless commit. Uses the stash tree
   // when WIP exists (bakes uncommitted changes in — can't bundle the stash
   // ref separately since its parents would drag history back).
-  logForDebugging(
-    `[gitBundle] HEAD bundle is ${(headSize / 1024 / 1024).toFixed(1)}MB, retrying squashed-root`,
-  )
+  logForDebugging(`[gitBundle] HEAD bundle is ${(headSize / 1024 / 1024).toFixed(1)}MB, retrying squashed-root`)
   const treeRef = hasStash ? 'refs/seed/stash^{tree}' : 'HEAD^{tree}'
-  const commitTree = await execFileNoThrowWithCwd(
-    gitExe(),
-    ['commit-tree', treeRef, '-m', 'seed'],
-    { cwd: gitRoot, abortSignal: signal },
-  )
+  const commitTree = await execFileNoThrowWithCwd(gitExe(), ['commit-tree', treeRef, '-m', 'seed'], {
+    cwd: gitRoot,
+    abortSignal: signal,
+  })
   if (commitTree.code !== 0) {
     return {
       ok: false,
@@ -115,16 +113,11 @@ async function _bundleWithFallback(
     }
   }
   const squashedSha = commitTree.stdout.trim()
-  await execFileNoThrowWithCwd(
-    gitExe(),
-    ['update-ref', 'refs/seed/root', squashedSha],
-    { cwd: gitRoot },
-  )
-  const squashResult = await execFileNoThrowWithCwd(
-    gitExe(),
-    ['bundle', 'create', bundlePath, 'refs/seed/root'],
-    { cwd: gitRoot, abortSignal: signal },
-  )
+  await execFileNoThrowWithCwd(gitExe(), ['update-ref', 'refs/seed/root', squashedSha], { cwd: gitRoot })
+  const squashResult = await execFileNoThrowWithCwd(gitExe(), ['bundle', 'create', bundlePath, 'refs/seed/root'], {
+    cwd: gitRoot,
+    abortSignal: signal,
+  })
   if (squashResult.code !== 0) {
     return {
       ok: false,
@@ -139,8 +132,7 @@ async function _bundleWithFallback(
 
   return {
     ok: false,
-    error:
-      'Repo is too large to bundle. Please setup GitHub on https://claude.ai/code',
+    error: 'Repo is too large to bundle. Please setup GitHub on https://claude.ai/code',
     failReason: 'too_large',
   }
 }
@@ -171,15 +163,10 @@ export async function createAndUploadGitBundle(
   // `stash create` fails with "You do not have the initial commit yet".
   // Check for any refs (not just HEAD) so orphan branches with commits
   // elsewhere still bundle — `--all` packs those refs regardless of HEAD.
-  const refCheck = await execFileNoThrowWithCwd(
-    gitExe(),
-    ['for-each-ref', '--count=1', 'refs/'],
-    { cwd: gitRoot },
-  )
+  const refCheck = await execFileNoThrowWithCwd(gitExe(), ['for-each-ref', '--count=1', 'refs/'], { cwd: gitRoot })
   if (refCheck.code === 0 && refCheck.stdout.trim() === '') {
     logEvent('tengu_ccr_bundle_upload', {
-      outcome:
-        'empty_repo' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      outcome: 'empty_repo' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     return {
       success: false,
@@ -190,11 +177,10 @@ export async function createAndUploadGitBundle(
 
   // stash create writes a dangling commit — doesn't touch refs/stash or
   // the working tree. Untracked files intentionally excluded.
-  const stashResult = await execFileNoThrowWithCwd(
-    gitExe(),
-    ['stash', 'create'],
-    { cwd: gitRoot, abortSignal: opts?.signal },
-  )
+  const stashResult = await execFileNoThrowWithCwd(gitExe(), ['stash', 'create'], {
+    cwd: gitRoot,
+    abortSignal: opts?.signal,
+  })
   // exit 0 + empty stdout = nothing to stash. Nonzero is rare; non-fatal.
   const wipStashSha = stashResult.code === 0 ? stashResult.stdout.trim() : ''
   const hasWip = wipStashSha !== ''
@@ -205,11 +191,7 @@ export async function createAndUploadGitBundle(
   } else if (hasWip) {
     logForDebugging(`[gitBundle] Captured WIP as stash ${wipStashSha}`)
     // env-runner reads the SHA via bundle list-heads refs/seed/stash.
-    await execFileNoThrowWithCwd(
-      gitExe(),
-      ['update-ref', 'refs/seed/stash', wipStashSha],
-      { cwd: gitRoot },
-    )
+    await execFileNoThrowWithCwd(gitExe(), ['update-ref', 'refs/seed/stash', wipStashSha], { cwd: gitRoot })
   }
 
   const bundlePath = generateTempFilePath('ccr-seed', '.bundle')
@@ -217,24 +199,14 @@ export async function createAndUploadGitBundle(
   // git leaves a partial file on nonzero exit (e.g. empty-repo 128).
   try {
     const maxBytes =
-      getFeatureValue_CACHED_MAY_BE_STALE<number | null>(
-        'tengu_ccr_bundle_max_bytes',
-        null,
-      ) ?? DEFAULT_BUNDLE_MAX_BYTES
+      getFeatureValue_CACHED_MAY_BE_STALE<number | null>('tengu_ccr_bundle_max_bytes', null) ?? DEFAULT_BUNDLE_MAX_BYTES
 
-    const bundle = await _bundleWithFallback(
-      gitRoot,
-      bundlePath,
-      maxBytes,
-      hasWip,
-      opts?.signal,
-    )
+    const bundle = await _bundleWithFallback(gitRoot, bundlePath, maxBytes, hasWip, opts?.signal)
 
     if (!bundle.ok) {
       logForDebugging(`[gitBundle] ${bundle.error}`)
       logEvent('tengu_ccr_bundle_upload', {
-        outcome:
-          bundle.failReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        outcome: bundle.failReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         max_bytes: maxBytes,
       })
       return {
@@ -251,21 +223,16 @@ export async function createAndUploadGitBundle(
 
     if (!upload.success) {
       logEvent('tengu_ccr_bundle_upload', {
-        outcome:
-          'failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        outcome: 'failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
       return { success: false, error: upload.error }
     }
 
-    logForDebugging(
-      `[gitBundle] Uploaded ${upload.size} bytes as file_id ${upload.fileId}`,
-    )
+    logForDebugging(`[gitBundle] Uploaded ${upload.size} bytes as file_id ${upload.fileId}`)
     logEvent('tengu_ccr_bundle_upload', {
-      outcome:
-        'success' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      outcome: 'success' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       size_bytes: upload.size,
-      scope:
-        bundle.scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      scope: bundle.scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       has_wip: hasWip,
     })
     return {

@@ -106,9 +106,7 @@ export function startSessionActivity(reason: SessionActivityReason): void {
         active: Object.fromEntries(activeReasons),
         // Only meaningful while work is in-flight; stale otherwise.
         oldest_activity_ms:
-          refcount > 0 && oldestActivityStartedAt !== null
-            ? Date.now() - oldestActivityStartedAt
-            : null,
+          refcount > 0 && oldestActivityStartedAt !== null ? Date.now() - oldestActivityStartedAt : null,
       })
     })
   }

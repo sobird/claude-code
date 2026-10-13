@@ -4,6 +4,7 @@ import { MessageResponse } from 'src/components/MessageResponse.js'
 import { RejectedPlanMessage } from 'src/components/messages/UserToolResultMessage/RejectedPlanMessage.js'
 import { BLACK_CIRCLE } from 'src/constants/figures.js'
 import { getModeColor } from 'src/utils/permissions/PermissionMode.js'
+
 import { Box, Text } from '../../ink.js'
 import type { ToolProgressData } from '../../Tool.js'
 import type { ProgressMessage } from '../../types/message.js'
@@ -64,9 +65,7 @@ export function renderToolResultMessage(
       </Box>
       <MessageResponse>
         <Box flexDirection="column">
-          {filePath && (
-            <Text dimColor>Plan saved to: {displayPath} · /plan to edit</Text>
-          )}
+          {filePath && <Text dimColor>Plan saved to: {displayPath} · /plan to edit</Text>}
           <Markdown>{plan}</Markdown>
         </Box>
       </MessageResponse>

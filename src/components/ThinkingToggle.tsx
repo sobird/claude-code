@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useState } from 'react'
 import { useExitOnCtrlCDWithKeybindings } from 'src/hooks/useExitOnCtrlCDWithKeybindings.js'
+
 import { Box, Text } from '../ink.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint.js'
@@ -16,16 +17,9 @@ export type Props = {
   isMidConversation?: boolean
 }
 
-export function ThinkingToggle({
-  currentValue,
-  onSelect,
-  onCancel,
-  isMidConversation,
-}: Props): React.ReactNode {
+export function ThinkingToggle({ currentValue, onSelect, onCancel, isMidConversation }: Props): React.ReactNode {
   const exitState = useExitOnCtrlCDWithKeybindings()
-  const [confirmationPending, setConfirmationPending] = useState<
-    boolean | null
-  >(null)
+  const [confirmationPending, setConfirmationPending] = useState<boolean | null>(null)
 
   const options = [
     {
@@ -86,9 +80,8 @@ export function ThinkingToggle({
         {confirmationPending !== null ? (
           <Box flexDirection="column" marginBottom={1} gap={1}>
             <Text color="warning">
-              Changing thinking mode mid-conversation will increase latency and
-              may reduce quality. For best results, set this at the start of a
-              session.
+              Changing thinking mode mid-conversation will increase latency and may reduce quality. For best results,
+              set this at the start of a session.
             </Text>
             <Text color="warning">Do you want to proceed?</Text>
           </Box>
@@ -111,22 +104,12 @@ export function ThinkingToggle({
         ) : confirmationPending !== null ? (
           <Byline>
             <KeyboardShortcutHint shortcut="Enter" action="confirm" />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline>
         ) : (
           <Byline>
             <KeyboardShortcutHint shortcut="Enter" action="confirm" />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="exit"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="exit" />
           </Byline>
         )}
       </Text>

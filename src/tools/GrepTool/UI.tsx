@@ -1,5 +1,6 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import React from 'react'
+
 import { CtrlOToExpand } from '../../components/CtrlOToExpand.js'
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js'
 import { MessageResponse } from '../../components/MessageResponse.js'
@@ -39,9 +40,7 @@ function SearchResultSummary({
       <Text>
         {' '}
         across <Text bold>{secondaryCount} </Text>
-        {secondaryCount === 0 || secondaryCount > 1
-          ? secondaryLabel
-          : secondaryLabel.slice(0, -1)}
+        {secondaryCount === 0 || secondaryCount > 1 ? secondaryLabel : secondaryLabel.slice(0, -1)}
       </Text>
     ) : null
 
@@ -101,11 +100,7 @@ export function renderToolUseErrorMessage(
   result: ToolResultBlockParam['content'],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
-  if (
-    !verbose &&
-    typeof result === 'string' &&
-    extractTag(result, 'tool_use_error')
-  ) {
+  if (!verbose && typeof result === 'string' && extractTag(result, 'tool_use_error')) {
     const errorMessage = extractTag(result, 'tool_use_error')
     if (errorMessage?.includes(FILE_NOT_FOUND_CWD_NOTE)) {
       return (
@@ -124,26 +119,12 @@ export function renderToolUseErrorMessage(
 }
 
 export function renderToolResultMessage(
-  {
-    mode = 'files_with_matches',
-    filenames,
-    numFiles,
-    content,
-    numLines,
-    numMatches,
-  }: Output,
+  { mode = 'files_with_matches', filenames, numFiles, content, numLines, numMatches }: Output,
   _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
   if (mode === 'content') {
-    return (
-      <SearchResultSummary
-        count={numLines ?? 0}
-        countLabel="lines"
-        content={content}
-        verbose={verbose}
-      />
-    )
+    return <SearchResultSummary count={numLines ?? 0} countLabel="lines" content={content} verbose={verbose} />
   }
 
   if (mode === 'count') {
@@ -160,15 +141,8 @@ export function renderToolResultMessage(
   }
 
   // files_with_matches mode
-  const fileListContent = filenames.map(filename => filename).join('\n')
-  return (
-    <SearchResultSummary
-      count={numFiles}
-      countLabel="files"
-      content={fileListContent}
-      verbose={verbose}
-    />
-  )
+  const fileListContent = filenames.map((filename) => filename).join('\n')
+  return <SearchResultSummary count={numFiles} countLabel="files" content={fileListContent} verbose={verbose} />
 }
 
 export function getToolUseSummary(

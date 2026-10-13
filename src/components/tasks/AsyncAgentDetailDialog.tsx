@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react'
 import type { DeepImmutable } from 'src/types/utils.js'
+
 import { useElapsedTime } from '../../hooks/useElapsedTime.js'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { Box, Text, useTheme } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { useKeybindings } from '../../keybindings/useKeybinding.js'
-import { getEmptyToolPermissionContext } from '../../Tool.js'
 import type { LocalAgentTaskState } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
+import { getEmptyToolPermissionContext } from '../../Tool.js'
 import { getTools } from '../../tools.js'
 import { formatNumber } from '../../utils/format.js'
 import { extractTag } from '../../utils/messages.js'
@@ -23,23 +24,13 @@ type Props = {
   onBack?: () => void
 }
 
-export function AsyncAgentDetailDialog({
-  agent,
-  onDone,
-  onKillAgent,
-  onBack,
-}: Props): React.ReactNode {
+export function AsyncAgentDetailDialog({ agent, onDone, onKillAgent, onBack }: Props): React.ReactNode {
   const [theme] = useTheme()
 
   // Get tools for rendering activity messages
   const tools = useMemo(() => getTools(getEmptyToolPermissionContext()), [])
 
-  const elapsedTime = useElapsedTime(
-    agent.startTime,
-    agent.status === 'running',
-    1000,
-    agent.totalPausedMs ?? 0,
-  )
+  const elapsedTime = useElapsedTime(agent.startTime, agent.status === 'running', 1000, agent.totalPausedMs ?? 0)
 
   // Restore confirm:yes (Enter/y) dismissal — Dialog handles confirm:no (Esc)
   // internally but does NOT auto-wire confirm:yes.
@@ -71,20 +62,15 @@ export function AsyncAgentDetailDialog({
   // Extract plan from prompt - if present, we show the plan instead of the prompt
   const planContent = extractTag(agent.prompt, 'plan')
 
-  const displayPrompt =
-    agent.prompt.length > 300
-      ? agent.prompt.substring(0, 297) + '…'
-      : agent.prompt
+  const displayPrompt = agent.prompt.length > 300 ? agent.prompt.substring(0, 297) + '…' : agent.prompt
 
   // Get tokens and tool uses (from result if completed, otherwise from progress)
   const tokenCount = agent.result?.totalTokens ?? agent.progress?.tokenCount
-  const toolUseCount =
-    agent.result?.totalToolUseCount ?? agent.progress?.toolUseCount
+  const toolUseCount = agent.result?.totalToolUseCount ?? agent.progress?.toolUseCount
 
   const title = (
     <Text>
-      {agent.selectedAgent?.agentType ?? 'agent'} ›{' '}
-      {agent.description || 'Async agent'}
+      {agent.selectedAgent?.agentType ?? 'agent'} › {agent.description || 'Async agent'}
     </Text>
   )
 
@@ -94,19 +80,13 @@ export function AsyncAgentDetailDialog({
       {agent.status !== 'running' && (
         <Text color={getTaskStatusColor(agent.status)}>
           {getTaskStatusIcon(agent.status)}{' '}
-          {agent.status === 'completed'
-            ? 'Completed'
-            : agent.status === 'failed'
-              ? 'Failed'
-              : 'Stopped'}
+          {agent.status === 'completed' ? 'Completed' : agent.status === 'failed' ? 'Failed' : 'Stopped'}
           {' · '}
         </Text>
       )}
       <Text dimColor>
         {elapsedTime}
-        {tokenCount !== undefined && tokenCount > 0 && (
-          <> · {formatNumber(tokenCount)} tokens</>
-        )}
+        {tokenCount !== undefined && tokenCount > 0 && <> · {formatNumber(tokenCount)} tokens</>}
         {toolUseCount !== undefined && toolUseCount > 0 && (
           <>
             {' '}
@@ -118,27 +98,20 @@ export function AsyncAgentDetailDialog({
   )
 
   return (
-    <Box
-      flexDirection="column"
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       <Dialog
         title={title}
         subtitle={subtitle}
         onCancel={onDone}
         color="background"
-        inputGuide={exitState =>
+        inputGuide={(exitState) =>
           exitState.pending ? (
             <Text>Press {exitState.keyName} again to exit</Text>
           ) : (
             <Byline>
               {onBack && <KeyboardShortcutHint shortcut="←" action="go back" />}
               <KeyboardShortcutHint shortcut="Esc/Enter/Space" action="close" />
-              {agent.status === 'running' && onKillAgent && (
-                <KeyboardShortcutHint shortcut="x" action="stop" />
-              )}
+              {agent.status === 'running' && onKillAgent && <KeyboardShortcutHint shortcut="x" action="stop" />}
             </Byline>
           )
         }
@@ -153,14 +126,8 @@ export function AsyncAgentDetailDialog({
                   Progress
                 </Text>
                 {agent.progress.recentActivities.map((activity, i) => (
-                  <Text
-                    key={i}
-                    dimColor={i < agent.progress!.recentActivities!.length - 1}
-                    wrap="truncate-end"
-                  >
-                    {i === agent.progress!.recentActivities!.length - 1
-                      ? '› '
-                      : '  '}
+                  <Text key={i} dimColor={i < agent.progress!.recentActivities!.length - 1} wrap="truncate-end">
+                    {i === agent.progress!.recentActivities!.length - 1 ? '› ' : '  '}
                     {renderToolActivity(activity, tools, theme)}
                   </Text>
                 ))}

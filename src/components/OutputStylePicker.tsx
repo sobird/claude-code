@@ -1,10 +1,7 @@
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
-import {
-  getAllOutputStyles,
-  OUTPUT_STYLE_CONFIG,
-  type OutputStyleConfig,
-} from '../constants/outputStyles.js'
+
+import { getAllOutputStyles, OUTPUT_STYLE_CONFIG, type OutputStyleConfig } from '../constants/outputStyles.js'
 import { Box, Text } from '../ink.js'
 import type { OutputStyle } from '../utils/config.js'
 import { getCwd } from '../utils/cwd.js'
@@ -13,12 +10,9 @@ import { Select } from './CustomSelect/select.js'
 import { Dialog } from './design-system/Dialog.js'
 
 const DEFAULT_OUTPUT_STYLE_LABEL = 'Default'
-const DEFAULT_OUTPUT_STYLE_DESCRIPTION =
-  'Claude completes coding tasks efficiently and provides concise responses'
+const DEFAULT_OUTPUT_STYLE_DESCRIPTION = 'Claude completes coding tasks efficiently and provides concise responses'
 
-function mapConfigsToOptions(styles: {
-  [styleName: string]: OutputStyleConfig | null
-}): OptionWithDescription[] {
+function mapConfigsToOptions(styles: { [styleName: string]: OutputStyleConfig | null }): OptionWithDescription[] {
   return Object.entries(styles).map(([style, config]) => ({
     label: config?.name ?? DEFAULT_OUTPUT_STYLE_LABEL,
     value: style,
@@ -45,7 +39,7 @@ export function OutputStylePicker({
   useEffect(() => {
     // Load all output styles including custom ones
     getAllOutputStyles(getCwd())
-      .then(allStyles => {
+      .then((allStyles) => {
         const options = mapConfigsToOptions(allStyles)
         setStyleOptions(options)
         setIsLoading(false)
@@ -75,9 +69,7 @@ export function OutputStylePicker({
     >
       <Box flexDirection="column" gap={1}>
         <Box marginTop={1}>
-          <Text dimColor>
-            This changes how Claude Code communicates with you
-          </Text>
+          <Text dimColor>This changes how Claude Code communicates with you</Text>
         </Box>
         {isLoading ? (
           <Text dimColor>Loading output styles…</Text>

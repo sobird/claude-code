@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
+
 import type { HookResultMessage, Message } from '../types/message.js'
 
 /**
@@ -20,12 +21,12 @@ export function useDeferredHookMessages(
     const promise = pendingRef.current
     if (!promise) return
     let cancelled = false
-    promise.then(msgs => {
+    promise.then((msgs) => {
       if (cancelled) return
       resolvedRef.current = true
       pendingRef.current = null
       if (msgs.length > 0) {
-        setMessages(prev => [...msgs, ...prev])
+        setMessages((prev) => [...msgs, ...prev])
       }
     })
     return () => {
@@ -40,7 +41,7 @@ export function useDeferredHookMessages(
     resolvedRef.current = true
     pendingRef.current = null
     if (msgs.length > 0) {
-      setMessages(prev => [...msgs, ...prev])
+      setMessages((prev) => [...msgs, ...prev])
     }
   }, [setMessages])
 }

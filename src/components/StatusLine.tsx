@@ -1,9 +1,11 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
 import { useAppState, useSetAppState } from 'src/state/AppState.js'
 import type { PermissionMode } from 'src/utils/permissions/PermissionMode.js'
+
 import {
   getIsRemoteMode,
   getKairosActive,
@@ -31,28 +33,15 @@ import type { Message } from '../types/message.js'
 import type { StatusLineCommandInput } from '../types/statusLine.js'
 import type { VimMode } from '../types/textInputTypes.js'
 import { checkHasTrustDialogAccepted } from '../utils/config.js'
-import {
-  calculateContextPercentages,
-  getContextWindowForModel,
-} from '../utils/context.js'
+import { calculateContextPercentages, getContextWindowForModel } from '../utils/context.js'
 import { getCwd } from '../utils/cwd.js'
 import { logForDebugging } from '../utils/debug.js'
 import { isFullscreenEnvEnabled } from '../utils/fullscreen.js'
-import {
-  createBaseHookInput,
-  executeStatusLineCommand,
-} from '../utils/hooks.js'
+import { createBaseHookInput, executeStatusLineCommand } from '../utils/hooks.js'
 import { getLastAssistantMessage } from '../utils/messages.js'
-import {
-  getRuntimeMainLoopModel,
-  type ModelName,
-  renderModelName,
-} from '../utils/model/model.js'
+import { getRuntimeMainLoopModel, type ModelName, renderModelName } from '../utils/model/model.js'
 import { getCurrentSessionTitle } from '../utils/sessionStorage.js'
-import {
-  doesMostRecentAssistantMessageExceed200k,
-  getCurrentUsage,
-} from '../utils/tokens.js'
+import { doesMostRecentAssistantMessageExceed200k, getCurrentUsage } from '../utils/tokens.js'
 import { getCurrentWorktreeSession } from '../utils/worktree.js'
 import { isVimModeEnabled } from './PromptInput/utils.js'
 
@@ -82,14 +71,8 @@ function buildStatusLineCommandInput(
   const outputStyleName = settings?.outputStyle || DEFAULT_OUTPUT_STYLE_NAME
 
   const currentUsage = getCurrentUsage(messages)
-  const contextWindowSize = getContextWindowForModel(
-    runtimeModel,
-    getSdkBetas(),
-  )
-  const contextPercentages = calculateContextPercentages(
-    currentUsage,
-    contextWindowSize,
-  )
+  const contextWindowSize = getContextWindowForModel(runtimeModel, getSdkBetas())
+  const contextPercentages = calculateContextPercentages(currentUsage, contextWindowSize)
 
   const sessionId = getSessionId()
   const sessionName = getCurrentSessionTitle(sessionId)
@@ -182,17 +165,11 @@ export function getLastAssistantMessageId(messages: Message[]): string | null {
   return getLastAssistantMessage(messages)?.uuid ?? null
 }
 
-function StatusLineInner({
-  messagesRef,
-  lastAssistantMessageId,
-  vimMode,
-}: Props): React.ReactNode {
+function StatusLineInner({ messagesRef, lastAssistantMessageId, vimMode }: Props): React.ReactNode {
   const abortControllerRef = useRef<AbortController | undefined>(undefined)
-  const permissionMode = useAppState(s => s.toolPermissionContext.mode)
-  const additionalWorkingDirectories = useAppState(
-    s => s.toolPermissionContext.additionalWorkingDirectories,
-  )
-  const statusLineText = useAppState(s => s.statusLineText)
+  const permissionMode = useAppState((s) => s.toolPermissionContext.mode)
+  const additionalWorkingDirectories = useAppState((s) => s.toolPermissionContext.additionalWorkingDirectories)
+  const statusLineText = useAppState((s) => s.statusLineText)
   const setAppState = useSetAppState()
   const settings = useSettings()
   const { addNotification } = useNotifications()
@@ -229,9 +206,7 @@ function StatusLineInner({
   })
 
   // Debounce timer ref
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  )
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // True when the next invocation should log its result (first run or after settings reload)
   const logNextResultRef = useRef(true)
@@ -270,14 +245,9 @@ function StatusLineInner({
         vimModeRef.current,
       )
 
-      const text = await executeStatusLineCommand(
-        statusInput,
-        controller.signal,
-        undefined,
-        logResult,
-      )
+      const text = await executeStatusLineCommand(statusInput, controller.signal, undefined, logResult)
       if (!controller.signal.aborted) {
-        setAppState(prev => {
+        setAppState((prev) => {
           if (prev.statusLineText === text) return prev
           return { ...prev, statusLineText: text }
         })
@@ -318,13 +288,7 @@ function StatusLineInner({
       previousStateRef.current.mainLoopModel = mainLoopModel
       scheduleUpdate()
     }
-  }, [
-    lastAssistantMessageId,
-    permissionMode,
-    vimMode,
-    mainLoopModel,
-    scheduleUpdate,
-  ])
+  }, [lastAssistantMessageId, permissionMode, vimMode, mainLoopModel, scheduleUpdate])
 
   // When the statusLine command changes (hot reload), log the next result
   const statusLineCommand = settings?.statusLine?.command
@@ -348,10 +312,7 @@ function StatusLineInner({
       })
       // Log if status line is configured but disabled by disableAllHooks
       if (settings.disableAllHooks === true) {
-        logForDebugging(
-          'Status line is configured but disableAllHooks is true',
-          { level: 'warn' },
-        )
+        logForDebugging('Status line is configured but disableAllHooks is true', { level: 'warn' })
       }
       // executeStatusLineCommand (hooks.ts) returns undefined when trust is
       // blocked — statusLineText stays undefined forever, user sees nothing,
@@ -363,10 +324,7 @@ function StatusLineInner({
           color: 'warning',
           priority: 'low',
         })
-        logForDebugging(
-          'Status line command skipped: workspace trust not accepted',
-          { level: 'warn' },
-        )
+        logForDebugging('Status line command skipped: workspace trust not accepted', { level: 'warn' })
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

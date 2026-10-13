@@ -5,6 +5,7 @@
  */
 
 import * as React from 'react'
+
 import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint.js'
 import { Byline } from '../../components/design-system/Byline.js'
 import { Box, Text } from '../../ink.js'
@@ -38,11 +39,7 @@ export function extractGitHubRepo(plugin: InstallablePlugin): string | null {
     'source' in plugin.entry.source &&
     plugin.entry.source.source === 'github'
 
-  if (
-    isGitHub &&
-    typeof plugin.entry.source === 'object' &&
-    'repo' in plugin.entry.source
-  ) {
+  if (isGitHub && typeof plugin.entry.source === 'object' && 'repo' in plugin.entry.source) {
     return plugin.entry.source.repo
   }
 
@@ -80,11 +77,7 @@ export function buildPluginDetailsMenuOptions(
 /**
  * Key hint component for plugin selection screens
  */
-export function PluginSelectionKeyHint({
-  hasSelection,
-}: {
-  hasSelection: boolean
-}): React.ReactNode {
+export function PluginSelectionKeyHint({ hasSelection }: { hasSelection: boolean }): React.ReactNode {
   return (
     <Box marginTop={1}>
       <Text dimColor italic>
@@ -98,24 +91,9 @@ export function PluginSelectionKeyHint({
               bold
             />
           )}
-          <ConfigurableShortcutHint
-            action="plugin:toggle"
-            context="Plugin"
-            fallback="Space"
-            description="toggle"
-          />
-          <ConfigurableShortcutHint
-            action="select:accept"
-            context="Select"
-            fallback="Enter"
-            description="details"
-          />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Confirmation"
-            fallback="Esc"
-            description="back"
-          />
+          <ConfigurableShortcutHint action="plugin:toggle" context="Plugin" fallback="Space" description="toggle" />
+          <ConfigurableShortcutHint action="select:accept" context="Select" fallback="Enter" description="details" />
+          <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />
         </Byline>
       </Text>
     </Box>

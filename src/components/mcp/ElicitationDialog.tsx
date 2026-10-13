@@ -6,6 +6,7 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js'
 import figures from 'figures'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
 import { useRegisterOverlay } from '../../context/overlayContext.js'
 import { useNotifyAfterTimeout } from '../../hooks/useNotifyAfterTimeout.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
@@ -34,27 +35,18 @@ import TextInput from '../TextInput.js'
 
 type Props = {
   event: ElicitationRequestEvent
-  onResponse: (
-    action: ElicitResult['action'],
-    content?: ElicitResult['content'],
-  ) => void
+  onResponse: (action: ElicitResult['action'], content?: ElicitResult['content']) => void
   /** Called when the phase 2 waiting state is dismissed (URL elicitations only). */
   onWaitingDismiss?: (action: 'dismiss' | 'retry' | 'cancel') => void
 }
 
-const isTextField = (s: PrimitiveSchemaDefinition) =>
-  ['string', 'number', 'integer'].includes(s.type)
+const isTextField = (s: PrimitiveSchemaDefinition) => ['string', 'number', 'integer'].includes(s.type)
 
-const RESOLVING_SPINNER_CHARS =
-  '\u280B\u2819\u2839\u2838\u283C\u2834\u2826\u2827\u2807\u280F'
-const advanceSpinnerFrame = (f: number) =>
-  (f + 1) % RESOLVING_SPINNER_CHARS.length
+const RESOLVING_SPINNER_CHARS = '\u280B\u2819\u2839\u2838\u283C\u2834\u2826\u2827\u2807\u280F'
+const advanceSpinnerFrame = (f: number) => (f + 1) % RESOLVING_SPINNER_CHARS.length
 
 /** Timer callback for enumTypeaheadRef — module-scope to avoid closure capture. */
-function resetTypeahead(ta: {
-  buffer: string
-  timer: ReturnType<typeof setTimeout> | undefined
-}): void {
+function resetTypeahead(ta: { buffer: string; timer: ReturnType<typeof setTimeout> | undefined }): void {
   ta.buffer = ''
   ta.timer = undefined
 }
@@ -79,10 +71,7 @@ function ResolvingSpinner(): React.ReactNode {
 }
 
 /** Format an ISO date/datetime for display, keeping the ISO value for submission. */
-function formatDateDisplay(
-  isoValue: string,
-  schema: PrimitiveSchemaDefinition,
-): string {
+function formatDateDisplay(isoValue: string, schema: PrimitiveSchemaDefinition): string {
   try {
     const date = new Date(isoValue)
     if (Number.isNaN(date.getTime())) return isoValue
@@ -101,11 +90,7 @@ function formatDateDisplay(
     // date-only: parse as local date to avoid timezone shift
     const parts = isoValue.split('-')
     if (parts.length === 3) {
-      const local = new Date(
-        Number(parts[0]),
-        Number(parts[1]) - 1,
-        Number(parts[2]),
-      )
+      const local = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
       return local.toLocaleDateString('en-US', {
         weekday: 'short',
         year: 'numeric',
@@ -119,19 +104,9 @@ function formatDateDisplay(
   }
 }
 
-export function ElicitationDialog({
-  event,
-  onResponse,
-  onWaitingDismiss,
-}: Props): React.ReactNode {
+export function ElicitationDialog({ event, onResponse, onWaitingDismiss }: Props): React.ReactNode {
   if (event.params.mode === 'url') {
-    return (
-      <ElicitationURLDialog
-        event={event}
-        onResponse={onResponse}
-        onWaitingDismiss={onWaitingDismiss}
-      />
-    )
+    return <ElicitationURLDialog event={event} onResponse={onResponse} onWaitingDismiss={onWaitingDismiss} />
   }
 
   return <ElicitationFormDialog event={event} onResponse={onResponse} />
@@ -148,18 +123,11 @@ function ElicitationFormDialog({
   const request = event.params as ElicitRequestFormParams
   const { message, requestedSchema } = request
   const hasFields = Object.keys(requestedSchema.properties).length > 0
-  const [focusedButton, setFocusedButton] = useState<
-    'accept' | 'decline' | null
-  >(hasFields ? null : 'accept')
-  const [formValues, setFormValues] = useState<
-    Record<string, string | number | boolean | string[]>
-  >(() => {
-    const initialValues: Record<string, string | number | boolean | string[]> =
-      {}
+  const [focusedButton, setFocusedButton] = useState<'accept' | 'decline' | null>(hasFields ? null : 'accept')
+  const [formValues, setFormValues] = useState<Record<string, string | number | boolean | string[]>>(() => {
+    const initialValues: Record<string, string | number | boolean | string[]> = {}
     if (requestedSchema.properties) {
-      for (const [propName, propSchema] of Object.entries(
-        requestedSchema.properties,
-      )) {
+      for (const [propName, propSchema] of Object.entries(requestedSchema.properties)) {
         if (typeof propSchema === 'object' && propSchema !== null) {
           if (propSchema.default !== undefined) {
             initialValues[propName] = propSchema.default
@@ -170,18 +138,11 @@ function ElicitationFormDialog({
     return initialValues
   })
 
-  const [validationErrors, setValidationErrors] = useState<
-    Record<string, string>
-  >(() => {
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>(() => {
     const initialErrors: Record<string, string> = {}
-    for (const [propName, propSchema] of Object.entries(
-      requestedSchema.properties,
-    )) {
+    for (const [propName, propSchema] of Object.entries(requestedSchema.properties)) {
       if (isTextField(propSchema) && propSchema?.default !== undefined) {
-        const validation = validateElicitationInput(
-          String(propSchema.default),
-          propSchema,
-        )
+        const validation = validateElicitationInput(String(propSchema.default), propSchema)
         if (!validation.isValid && validation.error) {
           initialErrors[propName] = validation.error
         }
@@ -217,9 +178,7 @@ function ElicitationFormDialog({
     }))
   }, [requestedSchema])
 
-  const [currentFieldIndex, setCurrentFieldIndex] = useState<
-    number | undefined
-  >(hasFields ? 0 : undefined)
+  const [currentFieldIndex, setCurrentFieldIndex] = useState<number | undefined>(hasFields ? 0 : undefined)
   const [textInputValue, setTextInputValue] = useState(() => {
     // Initialize from the first field's value if it's a text field
     const firstField = schemaFields[0]
@@ -230,21 +189,13 @@ function ElicitationFormDialog({
     }
     return ''
   })
-  const [textInputCursorOffset, setTextInputCursorOffset] = useState(
-    textInputValue.length,
-  )
-  const [resolvingFields, setResolvingFields] = useState<Set<string>>(
-    () => new Set(),
-  )
+  const [textInputCursorOffset, setTextInputCursorOffset] = useState(textInputValue.length)
+  const [resolvingFields, setResolvingFields] = useState<Set<string>>(() => new Set())
   // Accordion state (shared by multi-select and single-select enum)
-  const [expandedAccordion, setExpandedAccordion] = useState<
-    string | undefined
-  >()
+  const [expandedAccordion, setExpandedAccordion] = useState<string | undefined>()
   const [accordionOptionIndex, setAccordionOptionIndex] = useState(0)
 
-  const dateDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  )
+  const dateDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const resolveAbortRef = useRef<Map<string, AbortController>>(new Map())
   const enumTypeaheadRef = useRef({
     buffer: '',
@@ -273,14 +224,9 @@ function ElicitationFormDialog({
 
   const { columns, rows } = useTerminalSize()
 
-  const currentField =
-    currentFieldIndex !== undefined
-      ? schemaFields[currentFieldIndex]
-      : undefined
+  const currentField = currentFieldIndex !== undefined ? schemaFields[currentFieldIndex] : undefined
   const currentFieldIsText =
-    currentField !== undefined &&
-    isTextField(currentField.schema) &&
-    !isEnumSchema(currentField.schema)
+    currentField !== undefined && isTextField(currentField.schema) && !isEnumSchema(currentField.schema)
 
   // Text fields are always in edit mode when focused — no Enter-to-edit step.
   const isEditingTextField = currentFieldIsText && !focusedButton
@@ -307,31 +253,17 @@ function ElicitationFormDialog({
     [schemaFields, formValues],
   )
 
-  function validateMultiSelect(
-    fieldName: string,
-    schema: PrimitiveSchemaDefinition,
-  ) {
+  function validateMultiSelect(fieldName: string, schema: PrimitiveSchemaDefinition) {
     if (!isMultiSelectEnumSchema(schema)) return
     const selected = (formValues[fieldName] as string[] | undefined) ?? []
-    const fieldRequired =
-      schemaFields.find(f => f.name === fieldName)?.isRequired ?? false
+    const fieldRequired = schemaFields.find((f) => f.name === fieldName)?.isRequired ?? false
     const min = schema.minItems
     const max = schema.maxItems
     // Skip minItems check when field is optional and unset
-    if (
-      min !== undefined &&
-      selected.length < min &&
-      (selected.length > 0 || fieldRequired)
-    ) {
-      updateValidationError(
-        fieldName,
-        `Select at least ${min} ${plural(min, 'item')}`,
-      )
+    if (min !== undefined && selected.length < min && (selected.length > 0 || fieldRequired)) {
+      updateValidationError(fieldName, `Select at least ${min} ${plural(min, 'item')}`)
     } else if (max !== undefined && selected.length > max) {
-      updateValidationError(
-        fieldName,
-        `Select at most ${max} ${plural(max, 'item')}`,
-      )
+      updateValidationError(fieldName, `Select at most ${max} ${plural(max, 'item')}`)
     } else {
       updateValidationError(fieldName)
     }
@@ -362,11 +294,7 @@ function ElicitationFormDialog({
         textInputValue.trim() !== '' &&
         validationErrors[currentField.name]
       ) {
-        resolveFieldAsync(
-          currentField.name,
-          currentField.schema,
-          textInputValue,
-        )
+        resolveFieldAsync(currentField.name, currentField.schema, textInputValue)
       }
     }
 
@@ -379,10 +307,7 @@ function ElicitationFormDialog({
         : focusedButton === 'decline'
           ? schemaFields.length + 1
           : undefined)
-    const nextIndex =
-      index !== undefined
-        ? (index + (direction === 'up' ? itemCount - 1 : 1)) % itemCount
-        : 0
+    const nextIndex = index !== undefined ? (index + (direction === 'up' ? itemCount - 1 : 1)) % itemCount : 0
     if (nextIndex < schemaFields.length) {
       setCurrentFieldIndex(nextIndex)
       setFocusedButton(null)
@@ -394,11 +319,8 @@ function ElicitationFormDialog({
     }
   }
 
-  function setField(
-    fieldName: string,
-    value: number | string | boolean | string[] | undefined,
-  ) {
-    setFormValues(prev => {
+  function setField(fieldName: string, value: number | string | boolean | string[] | undefined) {
+    setFormValues((prev) => {
       const next = { ...prev }
       if (value === undefined) {
         delete next[fieldName]
@@ -408,16 +330,13 @@ function ElicitationFormDialog({
       return next
     })
     // Clear "required" error when a value is provided
-    if (
-      value !== undefined &&
-      validationErrors[fieldName] === 'This field is required'
-    ) {
+    if (value !== undefined && validationErrors[fieldName] === 'This field is required') {
       updateValidationError(fieldName)
     }
   }
 
   function updateValidationError(fieldName: string, error?: string) {
-    setValidationErrors(prev => {
+    setValidationErrors((prev) => {
       const next = { ...prev }
       if (error) {
         next[fieldName] = error
@@ -436,19 +355,11 @@ function ElicitationFormDialog({
     setTextInputCursorOffset(0)
   }
 
-  function commitTextField(
-    fieldName: string,
-    schema: PrimitiveSchemaDefinition,
-    value: string,
-  ) {
+  function commitTextField(fieldName: string, schema: PrimitiveSchemaDefinition, value: string) {
     const trimmedValue = value.trim()
 
     // Empty input for non-plain-string types means unset
-    if (
-      trimmedValue === '' &&
-      (schema.type !== 'string' ||
-        ('format' in schema && schema.format !== undefined))
-    ) {
+    if (trimmedValue === '' && (schema.type !== 'string' || ('format' in schema && schema.format !== undefined))) {
       unsetField(fieldName)
       return
     }
@@ -463,17 +374,10 @@ function ElicitationFormDialog({
 
     const validation = validateElicitationInput(value, schema)
     setField(fieldName, validation.isValid ? validation.value : value)
-    updateValidationError(
-      fieldName,
-      validation.isValid ? undefined : validation.error,
-    )
+    updateValidationError(fieldName, validation.isValid ? undefined : validation.error)
   }
 
-  function resolveFieldAsync(
-    fieldName: string,
-    schema: PrimitiveSchemaDefinition,
-    rawValue: string,
-  ) {
+  function resolveFieldAsync(fieldName: string, schema: PrimitiveSchemaDefinition, rawValue: string) {
     if (!signal) return
 
     // Abort any existing resolution for this field
@@ -485,16 +389,12 @@ function ElicitationFormDialog({
     const controller = new AbortController()
     resolveAbortRef.current.set(fieldName, controller)
 
-    setResolvingFields(prev => new Set(prev).add(fieldName))
+    setResolvingFields((prev) => new Set(prev).add(fieldName))
 
-    void validateElicitationInputAsync(
-      rawValue,
-      schema,
-      controller.signal,
-    ).then(
-      result => {
+    void validateElicitationInputAsync(rawValue, schema, controller.signal).then(
+      (result) => {
         resolveAbortRef.current.delete(fieldName)
-        setResolvingFields(prev => {
+        setResolvingFields((prev) => {
           const next = new Set(prev)
           next.delete(fieldName)
           return next
@@ -506,7 +406,7 @@ function ElicitationFormDialog({
           updateValidationError(fieldName)
           // Update the text input if we're still on this field
           const isoText = String(result.value)
-          setTextInputValue(prev => {
+          setTextInputValue((prev) => {
             // Only replace if the field is still showing the raw input
             if (prev === rawValue) {
               setTextInputCursorOffset(isoText.length)
@@ -521,7 +421,7 @@ function ElicitationFormDialog({
       },
       () => {
         resolveAbortRef.current.delete(fieldName)
-        setResolvingFields(prev => {
+        setResolvingFields((prev) => {
           const next = new Set(prev)
           next.delete(fieldName)
           return next
@@ -541,11 +441,7 @@ function ElicitationFormDialog({
         clearTimeout(dateDebounceRef.current)
         dateDebounceRef.current = undefined
       }
-      if (
-        isDateTimeSchema(currentField.schema) &&
-        newValue.trim() !== '' &&
-        validationErrors[currentField.name]
-      ) {
+      if (isDateTimeSchema(currentField.schema) && newValue.trim() !== '' && validationErrors[currentField.name]) {
         const fieldName = currentField.name
         const schema = currentField.schema
         dateDebounceRef.current = setTimeout(
@@ -573,16 +469,12 @@ function ElicitationFormDialog({
    * call `onMatch` with the index of the first label that prefix-matches.
    * Shared by boolean y/n, enum accordion, and multi-select accordion.
    */
-  function runTypeahead(
-    char: string,
-    labels: string[],
-    onMatch: (index: number) => void,
-  ) {
+  function runTypeahead(char: string, labels: string[], onMatch: (index: number) => void) {
     const ta = enumTypeaheadRef.current
     if (ta.timer !== undefined) clearTimeout(ta.timer)
     ta.buffer += char.toLowerCase()
     ta.timer = setTimeout(resetTypeahead, 2000, ta)
-    const match = labels.findIndex(l => l.startsWith(ta.buffer))
+    const match = labels.findIndex((l) => l.startsWith(ta.buffer))
     if (match !== -1) onMatch(match)
   }
 
@@ -610,22 +502,12 @@ function ElicitationFormDialog({
     (_input, key) => {
       // Text fields handle their own character input; we only intercept
       // navigation keys and backspace-on-empty here.
-      if (
-        isEditingTextField &&
-        !key.upArrow &&
-        !key.downArrow &&
-        !key.return &&
-        !key.backspace
-      ) {
+      if (isEditingTextField && !key.upArrow && !key.downArrow && !key.return && !key.backspace) {
         return
       }
 
       // Expanded multi-select accordion
-      if (
-        expandedAccordion &&
-        currentField &&
-        isMultiSelectEnumSchema(currentField.schema)
-      ) {
+      if (expandedAccordion && currentField && isMultiSelectEnumSchema(currentField.schema)) {
         const msSchema = currentField.schema
         const msValues = getMultiSelectValues(msSchema)
         const selected = (formValues[currentField.name] as string[]) ?? []
@@ -657,26 +539,16 @@ function ElicitationFormDialog({
           const optionValue = msValues[accordionOptionIndex]
           if (optionValue !== undefined) {
             const newSelected = selected.includes(optionValue)
-              ? selected.filter(v => v !== optionValue)
+              ? selected.filter((v) => v !== optionValue)
               : [...selected, optionValue]
             const newValue = newSelected.length > 0 ? newSelected : undefined
             setField(currentField.name, newValue)
             const min = msSchema.minItems
             const max = msSchema.maxItems
-            if (
-              min !== undefined &&
-              newSelected.length < min &&
-              (newSelected.length > 0 || currentField.isRequired)
-            ) {
-              updateValidationError(
-                currentField.name,
-                `Select at least ${min} ${plural(min, 'item')}`,
-              )
+            if (min !== undefined && newSelected.length < min && (newSelected.length > 0 || currentField.isRequired)) {
+              updateValidationError(currentField.name, `Select at least ${min} ${plural(min, 'item')}`)
             } else if (max !== undefined && newSelected.length > max) {
-              updateValidationError(
-                currentField.name,
-                `Select at most ${max} ${plural(max, 'item')}`,
-              )
+              updateValidationError(currentField.name, `Select at most ${max} ${plural(max, 'item')}`)
             } else {
               updateValidationError(currentField.name)
             }
@@ -694,9 +566,7 @@ function ElicitationFormDialog({
           return
         }
         if (_input) {
-          const labels = msValues.map(v =>
-            getMultiSelectLabel(msSchema, v).toLowerCase(),
-          )
+          const labels = msValues.map((v) => getMultiSelectLabel(msSchema, v).toLowerCase())
           runTypeahead(_input, labels, setAccordionOptionIndex)
           return
         }
@@ -704,11 +574,7 @@ function ElicitationFormDialog({
       }
 
       // Expanded single-select enum accordion
-      if (
-        expandedAccordion &&
-        currentField &&
-        isEnumSchema(currentField.schema)
-      ) {
+      if (expandedAccordion && currentField && isEnumSchema(currentField.schema)) {
         const enumSchema = currentField.schema
         const enumValues = getEnumValues(enumSchema)
 
@@ -753,9 +619,7 @@ function ElicitationFormDialog({
           return
         }
         if (_input) {
-          const labels = enumValues.map(v =>
-            getEnumLabel(enumSchema, v).toLowerCase(),
-          )
+          const labels = enumValues.map((v) => getEnumLabel(enumSchema, v).toLowerCase())
           runTypeahead(_input, labels, setAccordionOptionIndex)
           return
         }
@@ -775,9 +639,8 @@ function ElicitationFormDialog({
             }
           }
           const firstBadIndex = schemaFields.findIndex(
-            f =>
-              (requiredFields.includes(f.name) &&
-                formValues[f.name] === undefined) ||
+            (f) =>
+              (requiredFields.includes(f.name) && formValues[f.name] === undefined) ||
               validationErrors[f.name] !== undefined,
           )
           if (firstBadIndex !== -1) {
@@ -833,7 +696,7 @@ function ElicitationFormDialog({
         }
         // y/n typeahead
         if (_input && !key.return) {
-          runTypeahead(_input, ['yes', 'no'], i => setField(name, i === 0))
+          runTypeahead(_input, ['yes', 'no'], (i) => setField(name, i === 0))
           return
         }
         return
@@ -855,13 +718,13 @@ function ElicitationFormDialog({
         let startIdx = 0
         if (isEnumSchema(schema)) {
           const vals = getEnumValues(schema)
-          labels = vals.map(v => getEnumLabel(schema, v).toLowerCase())
+          labels = vals.map((v) => getEnumLabel(schema, v).toLowerCase())
           if (value !== undefined) {
             startIdx = Math.max(0, vals.indexOf(value as string))
           }
         } else {
           const vals = getMultiSelectValues(schema)
-          labels = vals.map(v => getMultiSelectLabel(schema, v).toLowerCase())
+          labels = vals.map((v) => getMultiSelectLabel(schema, v).toLowerCase())
         }
         if (key.rightArrow) {
           setExpandedAccordion(name)
@@ -870,7 +733,7 @@ function ElicitationFormDialog({
         }
         // Typeahead: expand and jump to matching option
         if (_input && !key.leftArrow) {
-          runTypeahead(_input, labels, i => {
+          runTypeahead(_input, labels, (i) => {
             setExpandedAccordion(name)
             setAccordionOptionIndex(i)
           })
@@ -917,10 +780,7 @@ function ElicitationFormDialog({
   // of a simple item-count window.
   const LINES_PER_FIELD = 3
   const DIALOG_OVERHEAD = 14
-  const maxVisibleFields = Math.max(
-    2,
-    Math.floor((rows - DIALOG_OVERHEAD) / LINES_PER_FIELD),
-  )
+  const maxVisibleFields = Math.max(2, Math.floor((rows - DIALOG_OVERHEAD) / LINES_PER_FIELD))
 
   const scrollWindow = useMemo(() => {
     const total = schemaFields.length
@@ -951,266 +811,232 @@ function ElicitationFormDialog({
             </Text>
           </Box>
         )}
-        {schemaFields
-          .slice(scrollWindow.start, scrollWindow.end)
-          .map((field, visibleIdx) => {
-            const index = scrollWindow.start + visibleIdx
-            const { name, schema, isRequired } = field
-            const isActive = index === currentFieldIndex && !focusedButton
-            const value = formValues[name]
-            const hasValue =
-              value !== undefined && (!Array.isArray(value) || value.length > 0)
-            const error = validationErrors[name]
+        {schemaFields.slice(scrollWindow.start, scrollWindow.end).map((field, visibleIdx) => {
+          const index = scrollWindow.start + visibleIdx
+          const { name, schema, isRequired } = field
+          const isActive = index === currentFieldIndex && !focusedButton
+          const value = formValues[name]
+          const hasValue = value !== undefined && (!Array.isArray(value) || value.length > 0)
+          const error = validationErrors[name]
 
-            // Checkbox: spinner → ⚠ error → ✔ set → * required → space
-            const isResolving = resolvingFields.has(name)
-            const checkbox = isResolving ? (
-              <ResolvingSpinner />
-            ) : error ? (
-              <Text color="error">{figures.warning}</Text>
-            ) : hasValue ? (
-              <Text color="success" dimColor={!isActive}>
-                {figures.tick}
-              </Text>
-            ) : isRequired ? (
-              <Text color="error">*</Text>
-            ) : (
-              <Text> </Text>
-            )
+          // Checkbox: spinner → ⚠ error → ✔ set → * required → space
+          const isResolving = resolvingFields.has(name)
+          const checkbox = isResolving ? (
+            <ResolvingSpinner />
+          ) : error ? (
+            <Text color="error">{figures.warning}</Text>
+          ) : hasValue ? (
+            <Text color="success" dimColor={!isActive}>
+              {figures.tick}
+            </Text>
+          ) : isRequired ? (
+            <Text color="error">*</Text>
+          ) : (
+            <Text> </Text>
+          )
 
-            // Selection color matches field status
-            const selectionColor = error
-              ? 'error'
-              : hasValue
-                ? 'success'
-                : isRequired
-                  ? 'error'
-                  : 'suggestion'
+          // Selection color matches field status
+          const selectionColor = error ? 'error' : hasValue ? 'success' : isRequired ? 'error' : 'suggestion'
 
-            const activeColor = isActive ? selectionColor : undefined
+          const activeColor = isActive ? selectionColor : undefined
 
-            const label = (
-              <Text color={activeColor} bold={isActive}>
-                {schema.title || name}
-              </Text>
-            )
+          const label = (
+            <Text color={activeColor} bold={isActive}>
+              {schema.title || name}
+            </Text>
+          )
 
-            // Render the value portion based on field type
-            let valueContent: React.ReactNode
-            let accordionContent: React.ReactNode = null
+          // Render the value portion based on field type
+          let valueContent: React.ReactNode
+          let accordionContent: React.ReactNode = null
 
-            if (isMultiSelectEnumSchema(schema)) {
-              const msValues = getMultiSelectValues(schema)
-              const selected = (value as string[] | undefined) ?? []
-              const isExpanded = expandedAccordion === name && isActive
+          if (isMultiSelectEnumSchema(schema)) {
+            const msValues = getMultiSelectValues(schema)
+            const selected = (value as string[] | undefined) ?? []
+            const isExpanded = expandedAccordion === name && isActive
 
-              if (isExpanded) {
-                valueContent = <Text dimColor>{figures.triangleDownSmall}</Text>
-                accordionContent = (
-                  <Box flexDirection="column" marginLeft={6}>
-                    {msValues.map((optVal, optIdx) => {
-                      const optLabel = getMultiSelectLabel(schema, optVal)
-                      const isChecked = selected.includes(optVal)
-                      const isFocused = optIdx === accordionOptionIndex
-                      return (
-                        <Box key={optVal} gap={1}>
-                          <Text color="suggestion">
-                            {isFocused ? figures.pointer : ' '}
-                          </Text>
-                          <Text color={isChecked ? 'success' : undefined}>
-                            {isChecked
-                              ? figures.checkboxOn
-                              : figures.checkboxOff}
-                          </Text>
-                          <Text
-                            color={isFocused ? 'suggestion' : undefined}
-                            bold={isFocused}
-                          >
-                            {optLabel}
-                          </Text>
-                        </Box>
-                      )
-                    })}
-                  </Box>
-                )
-              } else {
-                // Collapsed: ▸ arrow then comma-joined selected items
-                const arrow = isActive ? (
-                  <Text dimColor>{figures.triangleRightSmall} </Text>
-                ) : null
-                if (selected.length > 0) {
-                  const displayLabels = selected.map(v =>
-                    getMultiSelectLabel(schema, v),
-                  )
-                  valueContent = (
-                    <Text>
-                      {arrow}
-                      <Text color={activeColor} bold={isActive}>
-                        {displayLabels.join(', ')}
-                      </Text>
-                    </Text>
-                  )
-                } else {
-                  valueContent = (
-                    <Text>
-                      {arrow}
-                      <Text dimColor italic>
-                        not set
-                      </Text>
-                    </Text>
-                  )
-                }
-              }
-            } else if (isEnumSchema(schema)) {
-              const enumValues = getEnumValues(schema)
-              const isExpanded = expandedAccordion === name && isActive
-
-              if (isExpanded) {
-                valueContent = <Text dimColor>{figures.triangleDownSmall}</Text>
-                accordionContent = (
-                  <Box flexDirection="column" marginLeft={6}>
-                    {enumValues.map((optVal, optIdx) => {
-                      const optLabel = getEnumLabel(schema, optVal)
-                      const isSelected = value === optVal
-                      const isFocused = optIdx === accordionOptionIndex
-                      return (
-                        <Box key={optVal} gap={1}>
-                          <Text color="suggestion">
-                            {isFocused ? figures.pointer : ' '}
-                          </Text>
-                          <Text color={isSelected ? 'success' : undefined}>
-                            {isSelected ? figures.radioOn : figures.radioOff}
-                          </Text>
-                          <Text
-                            color={isFocused ? 'suggestion' : undefined}
-                            bold={isFocused}
-                          >
-                            {optLabel}
-                          </Text>
-                        </Box>
-                      )
-                    })}
-                  </Box>
-                )
-              } else {
-                // Collapsed: ▸ arrow then current value
-                const arrow = isActive ? (
-                  <Text dimColor>{figures.triangleRightSmall} </Text>
-                ) : null
-                if (hasValue) {
-                  valueContent = (
-                    <Text>
-                      {arrow}
-                      <Text color={activeColor} bold={isActive}>
-                        {getEnumLabel(schema, value as string)}
-                      </Text>
-                    </Text>
-                  )
-                } else {
-                  valueContent = (
-                    <Text>
-                      {arrow}
-                      <Text dimColor italic>
-                        not set
-                      </Text>
-                    </Text>
-                  )
-                }
-              }
-            } else if (schema.type === 'boolean') {
-              if (isActive) {
-                valueContent = hasValue ? (
-                  <Text color={activeColor} bold>
-                    {value ? figures.checkboxOn : figures.checkboxOff}
-                  </Text>
-                ) : (
-                  <Text dimColor>{figures.checkboxOff}</Text>
-                )
-              } else {
-                valueContent = hasValue ? (
-                  <Text>
-                    {value ? figures.checkboxOn : figures.checkboxOff}
-                  </Text>
-                ) : (
-                  <Text dimColor italic>
-                    not set
-                  </Text>
-                )
-              }
-            } else if (isTextField(schema)) {
-              if (isActive) {
+            if (isExpanded) {
+              valueContent = <Text dimColor>{figures.triangleDownSmall}</Text>
+              accordionContent = (
+                <Box flexDirection="column" marginLeft={6}>
+                  {msValues.map((optVal, optIdx) => {
+                    const optLabel = getMultiSelectLabel(schema, optVal)
+                    const isChecked = selected.includes(optVal)
+                    const isFocused = optIdx === accordionOptionIndex
+                    return (
+                      <Box key={optVal} gap={1}>
+                        <Text color="suggestion">{isFocused ? figures.pointer : ' '}</Text>
+                        <Text color={isChecked ? 'success' : undefined}>
+                          {isChecked ? figures.checkboxOn : figures.checkboxOff}
+                        </Text>
+                        <Text color={isFocused ? 'suggestion' : undefined} bold={isFocused}>
+                          {optLabel}
+                        </Text>
+                      </Box>
+                    )
+                  })}
+                </Box>
+              )
+            } else {
+              // Collapsed: ▸ arrow then comma-joined selected items
+              const arrow = isActive ? <Text dimColor>{figures.triangleRightSmall} </Text> : null
+              if (selected.length > 0) {
+                const displayLabels = selected.map((v) => getMultiSelectLabel(schema, v))
                 valueContent = (
-                  <TextInput
-                    value={textInputValue}
-                    onChange={handleTextInputChange}
-                    onSubmit={handleTextInputSubmit}
-                    placeholder={`Type something\u{2026}`}
-                    columns={Math.min(columns - 20, 60)}
-                    cursorOffset={textInputCursorOffset}
-                    onChangeCursorOffset={setTextInputCursorOffset}
-                    focus
-                    showCursor
-                  />
+                  <Text>
+                    {arrow}
+                    <Text color={activeColor} bold={isActive}>
+                      {displayLabels.join(', ')}
+                    </Text>
+                  </Text>
                 )
               } else {
-                const displayValue =
-                  hasValue && isDateTimeSchema(schema)
-                    ? formatDateDisplay(String(value), schema)
-                    : String(value)
-                valueContent = hasValue ? (
-                  <Text>{displayValue}</Text>
-                ) : (
-                  <Text dimColor italic>
-                    not set
+                valueContent = (
+                  <Text>
+                    {arrow}
+                    <Text dimColor italic>
+                      not set
+                    </Text>
                   </Text>
                 )
               }
+            }
+          } else if (isEnumSchema(schema)) {
+            const enumValues = getEnumValues(schema)
+            const isExpanded = expandedAccordion === name && isActive
+
+            if (isExpanded) {
+              valueContent = <Text dimColor>{figures.triangleDownSmall}</Text>
+              accordionContent = (
+                <Box flexDirection="column" marginLeft={6}>
+                  {enumValues.map((optVal, optIdx) => {
+                    const optLabel = getEnumLabel(schema, optVal)
+                    const isSelected = value === optVal
+                    const isFocused = optIdx === accordionOptionIndex
+                    return (
+                      <Box key={optVal} gap={1}>
+                        <Text color="suggestion">{isFocused ? figures.pointer : ' '}</Text>
+                        <Text color={isSelected ? 'success' : undefined}>
+                          {isSelected ? figures.radioOn : figures.radioOff}
+                        </Text>
+                        <Text color={isFocused ? 'suggestion' : undefined} bold={isFocused}>
+                          {optLabel}
+                        </Text>
+                      </Box>
+                    )
+                  })}
+                </Box>
+              )
+            } else {
+              // Collapsed: ▸ arrow then current value
+              const arrow = isActive ? <Text dimColor>{figures.triangleRightSmall} </Text> : null
+              if (hasValue) {
+                valueContent = (
+                  <Text>
+                    {arrow}
+                    <Text color={activeColor} bold={isActive}>
+                      {getEnumLabel(schema, value as string)}
+                    </Text>
+                  </Text>
+                )
+              } else {
+                valueContent = (
+                  <Text>
+                    {arrow}
+                    <Text dimColor italic>
+                      not set
+                    </Text>
+                  </Text>
+                )
+              }
+            }
+          } else if (schema.type === 'boolean') {
+            if (isActive) {
+              valueContent = hasValue ? (
+                <Text color={activeColor} bold>
+                  {value ? figures.checkboxOn : figures.checkboxOff}
+                </Text>
+              ) : (
+                <Text dimColor>{figures.checkboxOff}</Text>
+              )
             } else {
               valueContent = hasValue ? (
-                <Text>{String(value)}</Text>
+                <Text>{value ? figures.checkboxOn : figures.checkboxOff}</Text>
               ) : (
                 <Text dimColor italic>
                   not set
                 </Text>
               )
             }
+          } else if (isTextField(schema)) {
+            if (isActive) {
+              valueContent = (
+                <TextInput
+                  value={textInputValue}
+                  onChange={handleTextInputChange}
+                  onSubmit={handleTextInputSubmit}
+                  placeholder={`Type something\u{2026}`}
+                  columns={Math.min(columns - 20, 60)}
+                  cursorOffset={textInputCursorOffset}
+                  onChangeCursorOffset={setTextInputCursorOffset}
+                  focus
+                  showCursor
+                />
+              )
+            } else {
+              const displayValue =
+                hasValue && isDateTimeSchema(schema) ? formatDateDisplay(String(value), schema) : String(value)
+              valueContent = hasValue ? (
+                <Text>{displayValue}</Text>
+              ) : (
+                <Text dimColor italic>
+                  not set
+                </Text>
+              )
+            }
+          } else {
+            valueContent = hasValue ? (
+              <Text>{String(value)}</Text>
+            ) : (
+              <Text dimColor italic>
+                not set
+              </Text>
+            )
+          }
 
-            return (
-              <Box key={name} flexDirection="column">
-                <Box gap={1}>
-                  <Text color={selectionColor}>
-                    {isActive ? figures.pointer : ' '}
-                  </Text>
-                  {checkbox}
-                  <Box>
-                    {label}
-                    <Text color={activeColor}>: </Text>
-                    {valueContent}
-                  </Box>
-                </Box>
-                {accordionContent}
-                {schema.description && (
-                  <Box marginLeft={6}>
-                    <Text dimColor>{schema.description}</Text>
-                  </Box>
-                )}
-                <Box marginLeft={6} height={1}>
-                  {error ? (
-                    <Text color="error" italic>
-                      {error}
-                    </Text>
-                  ) : (
-                    <Text> </Text>
-                  )}
+          return (
+            <Box key={name} flexDirection="column">
+              <Box gap={1}>
+                <Text color={selectionColor}>{isActive ? figures.pointer : ' '}</Text>
+                {checkbox}
+                <Box>
+                  {label}
+                  <Text color={activeColor}>: </Text>
+                  {valueContent}
                 </Box>
               </Box>
-            )
-          })}
+              {accordionContent}
+              {schema.description && (
+                <Box marginLeft={6}>
+                  <Text dimColor>{schema.description}</Text>
+                </Box>
+              )}
+              <Box marginLeft={6} height={1}>
+                {error ? (
+                  <Text color="error" italic>
+                    {error}
+                  </Text>
+                ) : (
+                  <Text> </Text>
+                )}
+              </Box>
+            </Box>
+          )
+        })}
         {hasFieldsBelow && (
           <Box marginLeft={2}>
             <Text dimColor>
-              {figures.arrowDown} {schemaFields.length - scrollWindow.end} more
-              below
+              {figures.arrowDown} {schemaFields.length - scrollWindow.end} more below
             </Text>
           </Box>
         )}
@@ -1225,21 +1051,14 @@ function ElicitationFormDialog({
       color="permission"
       onCancel={() => onResponse('cancel')}
       isCancelActive={(!currentField || !!focusedButton) && !expandedAccordion}
-      inputGuide={exitState =>
+      inputGuide={(exitState) =>
         exitState.pending ? (
           <Text>Press {exitState.keyName} again to exit</Text>
         ) : (
           <Byline>
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
             <KeyboardShortcutHint shortcut="↑↓" action="navigate" />
-            {currentField && (
-              <KeyboardShortcutHint shortcut="Backspace" action="unset" />
-            )}
+            {currentField && <KeyboardShortcutHint shortcut="Backspace" action="unset" />}
             {currentField && currentField.schema.type === 'boolean' && (
               <KeyboardShortcutHint shortcut="Space" action="toggle" />
             )}
@@ -1264,9 +1083,7 @@ function ElicitationFormDialog({
       <Box flexDirection="column">
         {renderFormFields()}
         <Box>
-          <Text color="success">
-            {focusedButton === 'accept' ? figures.pointer : ' '}
-          </Text>
+          <Text color="success">{focusedButton === 'accept' ? figures.pointer : ' '}</Text>
           <Text
             bold={focusedButton === 'accept'}
             color={focusedButton === 'accept' ? 'success' : undefined}
@@ -1274,9 +1091,7 @@ function ElicitationFormDialog({
           >
             {' Accept  '}
           </Text>
-          <Text color="error">
-            {focusedButton === 'decline' ? figures.pointer : ' '}
-          </Text>
+          <Text color="error">{focusedButton === 'decline' ? figures.pointer : ' '}</Text>
           <Text
             bold={focusedButton === 'decline'}
             color={focusedButton === 'decline' ? 'error' : undefined}
@@ -1304,15 +1119,10 @@ function ElicitationURLDialog({
   const { message, url } = urlParams
   const [phase, setPhase] = useState<'prompt' | 'waiting'>('prompt')
   const phaseRef = useRef<'prompt' | 'waiting'>('prompt')
-  const [focusedButton, setFocusedButton] = useState<
-    'accept' | 'decline' | 'open' | 'action' | 'cancel'
-  >('accept')
+  const [focusedButton, setFocusedButton] = useState<'accept' | 'decline' | 'open' | 'action' | 'cancel'>('accept')
   const showCancel = waitingState?.showCancel ?? false
 
-  useNotifyAfterTimeout(
-    'Claude Code needs your input',
-    'elicitation_url_dialog',
-  )
+  useNotifyAfterTimeout('Claude Code needs your input', 'elicitation_url_dialog')
   useRegisterOverlay('elicitation-url')
 
   // Keep refs in sync for use in abort handler (avoids re-registering listener)
@@ -1369,7 +1179,7 @@ function ElicitationURLDialog({
   useInput((_input, key) => {
     if (phase === 'prompt') {
       if (key.leftArrow || key.rightArrow) {
-        setFocusedButton(prev => (prev === 'accept' ? 'decline' : 'accept'))
+        setFocusedButton((prev) => (prev === 'accept' ? 'decline' : 'accept'))
         return
       }
       if (key.return) {
@@ -1382,16 +1192,12 @@ function ElicitationURLDialog({
     } else {
       // waiting phase — cycle through buttons
       type ButtonName = 'accept' | 'decline' | 'open' | 'action' | 'cancel'
-      const waitingButtons: readonly ButtonName[] = showCancel
-        ? ['open', 'action', 'cancel']
-        : ['open', 'action']
+      const waitingButtons: readonly ButtonName[] = showCancel ? ['open', 'action', 'cancel'] : ['open', 'action']
       if (key.leftArrow || key.rightArrow) {
-        setFocusedButton(prev => {
+        setFocusedButton((prev) => {
           const idx = waitingButtons.indexOf(prev)
           const delta = key.rightArrow ? 1 : -1
-          return waitingButtons[
-            (idx + delta + waitingButtons.length) % waitingButtons.length
-          ]!
+          return waitingButtons[(idx + delta + waitingButtons.length) % waitingButtons.length]!
         })
         return
       }
@@ -1416,7 +1222,7 @@ function ElicitationURLDialog({
         color="permission"
         onCancel={() => onWaitingDismiss?.('cancel')}
         isCancelActive
-        inputGuide={exitState =>
+        inputGuide={(exitState) =>
           exitState.pending ? (
             <Text>Press {exitState.keyName} again to exit</Text>
           ) : (
@@ -1446,9 +1252,7 @@ function ElicitationURLDialog({
             </Text>
           </Box>
           <Box>
-            <Text color="success">
-              {focusedButton === 'open' ? figures.pointer : ' '}
-            </Text>
+            <Text color="success">{focusedButton === 'open' ? figures.pointer : ' '}</Text>
             <Text
               bold={focusedButton === 'open'}
               color={focusedButton === 'open' ? 'success' : undefined}
@@ -1456,9 +1260,7 @@ function ElicitationURLDialog({
             >
               {' Reopen URL  '}
             </Text>
-            <Text color="success">
-              {focusedButton === 'action' ? figures.pointer : ' '}
-            </Text>
+            <Text color="success">{focusedButton === 'action' ? figures.pointer : ' '}</Text>
             <Text
               bold={focusedButton === 'action'}
               color={focusedButton === 'action' ? 'success' : undefined}
@@ -1469,9 +1271,7 @@ function ElicitationURLDialog({
             {showCancel && (
               <>
                 <Text> </Text>
-                <Text color="error">
-                  {focusedButton === 'cancel' ? figures.pointer : ' '}
-                </Text>
+                <Text color="error">{focusedButton === 'cancel' ? figures.pointer : ' '}</Text>
                 <Text
                   bold={focusedButton === 'cancel'}
                   color={focusedButton === 'cancel' ? 'error' : undefined}
@@ -1494,17 +1294,12 @@ function ElicitationURLDialog({
       color="permission"
       onCancel={() => onResponse('cancel')}
       isCancelActive
-      inputGuide={exitState =>
+      inputGuide={(exitState) =>
         exitState.pending ? (
           <Text>Press {exitState.keyName} again to exit</Text>
         ) : (
           <Byline>
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
             <KeyboardShortcutHint shortcut="\u2190\u2192" action="switch" />
           </Byline>
         )
@@ -1519,9 +1314,7 @@ function ElicitationURLDialog({
           </Text>
         </Box>
         <Box>
-          <Text color="success">
-            {focusedButton === 'accept' ? figures.pointer : ' '}
-          </Text>
+          <Text color="success">{focusedButton === 'accept' ? figures.pointer : ' '}</Text>
           <Text
             bold={focusedButton === 'accept'}
             color={focusedButton === 'accept' ? 'success' : undefined}
@@ -1529,9 +1322,7 @@ function ElicitationURLDialog({
           >
             {' Accept  '}
           </Text>
-          <Text color="error">
-            {focusedButton === 'decline' ? figures.pointer : ' '}
-          </Text>
+          <Text color="error">{focusedButton === 'decline' ? figures.pointer : ' '}</Text>
           <Text
             bold={focusedButton === 'decline'}
             color={focusedButton === 'decline' ? 'error' : undefined}

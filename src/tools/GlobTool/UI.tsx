@@ -2,6 +2,7 @@ import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs
 import React from 'react'
 import { MessageResponse } from 'src/components/MessageResponse.js'
 import { extractTag } from 'src/utils/messages.js'
+
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js'
 import { TOOL_SUMMARY_MAX_LENGTH } from '../../constants/toolLimits.js'
 import { Text } from '../../ink.js'
@@ -30,11 +31,7 @@ export function renderToolUseErrorMessage(
   result: ToolResultBlockParam['content'],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
-  if (
-    !verbose &&
-    typeof result === 'string' &&
-    extractTag(result, 'tool_use_error')
-  ) {
+  if (!verbose && typeof result === 'string' && extractTag(result, 'tool_use_error')) {
     const errorMessage = extractTag(result, 'tool_use_error')
     if (errorMessage?.includes(FILE_NOT_FOUND_CWD_NOTE)) {
       return (
@@ -55,9 +52,7 @@ export function renderToolUseErrorMessage(
 // Note: GlobTool reuses GrepTool's renderToolResultMessage
 export const renderToolResultMessage = GrepTool.renderToolResultMessage
 
-export function getToolUseSummary(
-  input: Partial<{ pattern: string; path: string }> | undefined,
-): string | null {
+export function getToolUseSummary(input: Partial<{ pattern: string; path: string }> | undefined): string | null {
   if (!input?.pattern) {
     return null
   }

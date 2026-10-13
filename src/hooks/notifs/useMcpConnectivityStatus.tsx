@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useEffect } from 'react'
 import { useNotifications } from 'src/context/notifications.js'
+
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 import { Text } from '../../ink.js'
 import { hasClaudeAiMcpEverConnected } from '../../services/mcp/claudeai.js'
@@ -12,14 +13,12 @@ type Props = {
 
 const EMPTY_MCP_CLIENTS: MCPServerConnection[] = []
 
-export function useMcpConnectivityStatus({
-  mcpClients = EMPTY_MCP_CLIENTS,
-}: Props): void {
+export function useMcpConnectivityStatus({ mcpClients = EMPTY_MCP_CLIENTS }: Props): void {
   const { addNotification } = useNotifications()
   useEffect(() => {
     if (getIsRemoteMode()) return
     const failedLocalClients = mcpClients.filter(
-      client =>
+      (client) =>
         client.type === 'failed' &&
         client.config.type !== 'sse-ide' &&
         client.config.type !== 'ws-ide' &&
@@ -32,17 +31,14 @@ export function useMcpConnectivityStatus({
     // the user has ignored and shouldn't nag about; one that was working
     // yesterday and is now failed is a state change worth surfacing.
     const failedClaudeAiClients = mcpClients.filter(
-      client =>
-        client.type === 'failed' &&
-        client.config.type === 'claudeai-proxy' &&
-        hasClaudeAiMcpEverConnected(client.name),
+      (client) =>
+        client.type === 'failed' && client.config.type === 'claudeai-proxy' && hasClaudeAiMcpEverConnected(client.name),
     )
     const needsAuthLocalServers = mcpClients.filter(
-      client =>
-        client.type === 'needs-auth' && client.config.type !== 'claudeai-proxy',
+      (client) => client.type === 'needs-auth' && client.config.type !== 'claudeai-proxy',
     )
     const needsAuthClaudeAiServers = mcpClients.filter(
-      client =>
+      (client) =>
         client.type === 'needs-auth' &&
         client.config.type === 'claudeai-proxy' &&
         hasClaudeAiMcpEverConnected(client.name),
@@ -61,8 +57,7 @@ export function useMcpConnectivityStatus({
         jsx: (
           <>
             <Text color="error">
-              {failedLocalClients.length} MCP{' '}
-              {failedLocalClients.length === 1 ? 'server' : 'servers'} failed
+              {failedLocalClients.length} MCP {failedLocalClients.length === 1 ? 'server' : 'servers'} failed
             </Text>
             <Text dimColor> · /mcp</Text>
           </>
@@ -76,8 +71,7 @@ export function useMcpConnectivityStatus({
         jsx: (
           <>
             <Text color="error">
-              {failedClaudeAiClients.length} claude.ai{' '}
-              {failedClaudeAiClients.length === 1 ? 'connector' : 'connectors'}{' '}
+              {failedClaudeAiClients.length} claude.ai {failedClaudeAiClients.length === 1 ? 'connector' : 'connectors'}{' '}
               unavailable
             </Text>
             <Text dimColor> · /mcp</Text>
@@ -92,10 +86,7 @@ export function useMcpConnectivityStatus({
         jsx: (
           <>
             <Text color="warning">
-              {needsAuthLocalServers.length} MCP{' '}
-              {needsAuthLocalServers.length === 1
-                ? 'server needs'
-                : 'servers need'}{' '}
+              {needsAuthLocalServers.length} MCP {needsAuthLocalServers.length === 1 ? 'server needs' : 'servers need'}{' '}
               auth
             </Text>
             <Text dimColor> · /mcp</Text>
@@ -111,10 +102,7 @@ export function useMcpConnectivityStatus({
           <>
             <Text color="warning">
               {needsAuthClaudeAiServers.length} claude.ai{' '}
-              {needsAuthClaudeAiServers.length === 1
-                ? 'connector needs'
-                : 'connectors need'}{' '}
-              auth
+              {needsAuthClaudeAiServers.length === 1 ? 'connector needs' : 'connectors need'} auth
             </Text>
             <Text dimColor> · /mcp</Text>
           </>

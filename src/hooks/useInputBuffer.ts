@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+
 import type { PastedContent } from '../utils/config.js'
 
 export type BufferEntry = {
@@ -14,31 +15,20 @@ export type UseInputBufferProps = {
 }
 
 export type UseInputBufferResult = {
-  pushToBuffer: (
-    text: string,
-    cursorOffset: number,
-    pastedContents?: Record<number, PastedContent>,
-  ) => void
+  pushToBuffer: (text: string, cursorOffset: number, pastedContents?: Record<number, PastedContent>) => void
   undo: () => BufferEntry | undefined
   canUndo: boolean
   clearBuffer: () => void
 }
 
-export function useInputBuffer({
-  maxBufferSize,
-  debounceMs,
-}: UseInputBufferProps): UseInputBufferResult {
+export function useInputBuffer({ maxBufferSize, debounceMs }: UseInputBufferProps): UseInputBufferResult {
   const [buffer, setBuffer] = useState<BufferEntry[]>([])
   const [currentIndex, setCurrentIndex] = useState(-1)
   const lastPushTime = useRef<number>(0)
   const pendingPush = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const pushToBuffer = useCallback(
-    (
-      text: string,
-      cursorOffset: number,
-      pastedContents: Record<number, PastedContent> = {},
-    ) => {
+    (text: string, cursorOffset: number, pastedContents: Record<number, PastedContent> = {}) => {
       const now = Date.now()
 
       // Clear any pending push
@@ -49,22 +39,15 @@ export function useInputBuffer({
 
       // Debounce rapid changes
       if (now - lastPushTime.current < debounceMs) {
-        pendingPush.current = setTimeout(
-          pushToBuffer,
-          debounceMs,
-          text,
-          cursorOffset,
-          pastedContents,
-        )
+        pendingPush.current = setTimeout(pushToBuffer, debounceMs, text, cursorOffset, pastedContents)
         return
       }
 
       lastPushTime.current = now
 
-      setBuffer(prevBuffer => {
+      setBuffer((prevBuffer) => {
         // If we're not at the end of the buffer, truncate everything after current position
-        const newBuffer =
-          currentIndex >= 0 ? prevBuffer.slice(0, currentIndex + 1) : prevBuffer
+        const newBuffer = currentIndex >= 0 ? prevBuffer.slice(0, currentIndex + 1) : prevBuffer
 
         // Don't add if it's the same as the last entry
         const lastEntry = newBuffer[newBuffer.length - 1]
@@ -73,10 +56,7 @@ export function useInputBuffer({
         }
 
         // Add new entry
-        const updatedBuffer = [
-          ...newBuffer,
-          { text, cursorOffset, pastedContents, timestamp: now },
-        ]
+        const updatedBuffer = [...newBuffer, { text, cursorOffset, pastedContents, timestamp: now }]
 
         // Limit buffer size
         if (updatedBuffer.length > maxBufferSize) {
@@ -87,7 +67,7 @@ export function useInputBuffer({
       })
 
       // Update current index to point to the new entry
-      setCurrentIndex(prev => {
+      setCurrentIndex((prev) => {
         const newIndex = prev >= 0 ? prev + 1 : buffer.length
         return Math.min(newIndex, maxBufferSize - 1)
       })

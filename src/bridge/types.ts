@@ -6,9 +6,7 @@ export const BRIDGE_LOGIN_INSTRUCTION =
   'Remote Control is only available with claude.ai subscriptions. Please use `/login` to sign in with your claude.ai account.'
 
 /** Full error printed when `claude remote-control` is run without auth. */
-export const BRIDGE_LOGIN_ERROR =
-  'Error: You must be logged in to use Remote Control.\n\n' +
-  BRIDGE_LOGIN_INSTRUCTION
+export const BRIDGE_LOGIN_ERROR = 'Error: You must be logged in to use Remote Control.\n\n' + BRIDGE_LOGIN_INSTRUCTION
 
 /** Shown when the user disconnects Remote Control (via /remote-control or ultraplan launch). */
 export const REMOTE_CONTROL_DISCONNECTED_MSG = 'Remote Control disconnected.'
@@ -141,21 +139,13 @@ export type BridgeApiClient = {
     signal?: AbortSignal,
     reclaimOlderThanMs?: number,
   ): Promise<WorkResponse | null>
-  acknowledgeWork(
-    environmentId: string,
-    workId: string,
-    sessionToken: string,
-  ): Promise<void>
+  acknowledgeWork(environmentId: string, workId: string, sessionToken: string): Promise<void>
   /** Stop a work item via the environments API. */
   stopWork(environmentId: string, workId: string, force: boolean): Promise<void>
   /** Deregister/delete the bridge environment on graceful shutdown. */
   deregisterEnvironment(environmentId: string): Promise<void>
   /** Send a permission response (control_response) to a session via the session events API. */
-  sendPermissionResponseEvent(
-    sessionId: string,
-    event: PermissionResponseEvent,
-    sessionToken: string,
-  ): Promise<void>
+  sendPermissionResponseEvent(sessionId: string, event: PermissionResponseEvent, sessionToken: string): Promise<void>
   /** Archive a session so it no longer appears as active on the server. */
   archiveSession(sessionId: string): Promise<void>
   /**
@@ -224,12 +214,7 @@ export type BridgeLogger = {
   updateIdleStatus(): void
   /** Show reconnecting status in the live display. */
   updateReconnectingStatus(delayStr: string, elapsedStr: string): void
-  updateSessionStatus(
-    sessionId: string,
-    elapsed: string,
-    activity: SessionActivity,
-    trail: string[],
-  ): void
+  updateSessionStatus(sessionId: string, elapsed: string, activity: SessionActivity, trail: string[]): void
   clearStatus(): void
   /** Set repository info for status line display. */
   setRepoInfo(repoName: string, branch: string): void

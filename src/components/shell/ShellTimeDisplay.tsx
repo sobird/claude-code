@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Text } from '../../ink.js'
 import { formatDuration } from '../../utils/format.js'
 
@@ -7,16 +8,11 @@ type Props = {
   timeoutMs?: number
 }
 
-export function ShellTimeDisplay({
-  elapsedTimeSeconds,
-  timeoutMs,
-}: Props): React.ReactNode {
+export function ShellTimeDisplay({ elapsedTimeSeconds, timeoutMs }: Props): React.ReactNode {
   if (elapsedTimeSeconds === undefined && !timeoutMs) {
     return null
   }
-  const timeout = timeoutMs
-    ? formatDuration(timeoutMs, { hideTrailingZeros: true })
-    : undefined
+  const timeout = timeoutMs ? formatDuration(timeoutMs, { hideTrailingZeros: true }) : undefined
   if (elapsedTimeSeconds === undefined) {
     return <Text dimColor>{`(timeout ${timeout})`}</Text>
   }

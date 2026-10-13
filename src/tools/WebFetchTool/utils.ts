@@ -1,5 +1,6 @@
 import axios, { type AxiosResponse } from 'axios'
 import { LRUCache } from 'lru-cache'
+
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -8,10 +9,7 @@ import { queryHaiku } from '../../services/api/claude.js'
 import { AbortError } from '../../utils/errors.js'
 import { getWebFetchUserAgent } from '../../utils/http.js'
 import { logError } from '../../utils/log.js'
-import {
-  isBinaryContentType,
-  persistBinaryContent,
-} from '../../utils/mcpOutputStorage.js'
+import { isBinaryContentType, persistBinaryContent } from '../../utils/mcpOutputStorage.js'
 import { getSettings_DEPRECATED } from '../../utils/settings/settings.js'
 import { asSystemPrompt } from '../../utils/systemPromptType.js'
 import { isPreapprovedHost } from './preapproved.js'
@@ -90,7 +88,7 @@ export function clearWebFetchCache(): void {
 type TurndownCtor = typeof import('turndown')
 let turndownServicePromise: Promise<InstanceType<TurndownCtor>> | undefined
 function getTurndownService(): Promise<InstanceType<TurndownCtor>> {
-  return (turndownServicePromise ??= import('turndown').then(m => {
+  return (turndownServicePromise ??= import('turndown').then((m) => {
     const Turndown = (m as unknown as { default: TurndownCtor }).default
     return new Turndown()
   }))
@@ -168,14 +166,9 @@ export function validateURL(url: string): boolean {
   return true
 }
 
-type DomainCheckResult =
-  | { status: 'allowed' }
-  | { status: 'blocked' }
-  | { status: 'check_failed'; error: Error }
+type DomainCheckResult = { status: 'allowed' } | { status: 'blocked' } | { status: 'check_failed'; error: Error }
 
-export async function checkDomainBlocklist(
-  domain: string,
-): Promise<DomainCheckResult> {
+export async function checkDomainBlocklist(domain: string): Promise<DomainCheckResult> {
   if (DOMAIN_CHECK_CACHE.has(domain)) {
     return { status: 'allowed' }
   }
@@ -209,10 +202,7 @@ export async function checkDomainBlocklist(
  * - Keep the origin the same but change path/query params
  * - Or both of the above
  */
-export function isPermittedRedirect(
-  originalUrl: string,
-  redirectUrl: string,
-): boolean {
+export function isPermittedRedirect(originalUrl: string, redirectUrl: string): boolean {
   try {
     const parsedOriginal = new URL(originalUrl)
     const parsedRedirect = new URL(redirectUrl)
@@ -281,11 +271,7 @@ export async function getWithPermittedRedirects(
       },
     })
   } catch (error) {
-    if (
-      axios.isAxiosError(error) &&
-      error.response &&
-      [301, 302, 307, 308].includes(error.response.status)
-    ) {
+    if (axios.isAxiosError(error) && error.response && [301, 302, 307, 308].includes(error.response.status)) {
       const redirectLocation = error.response.headers.location
       if (!redirectLocation) {
         throw new Error('Redirect missing Location header')
@@ -296,12 +282,7 @@ export async function getWithPermittedRedirects(
 
       if (redirectChecker(url, redirectUrl)) {
         // Recursively follow the permitted redirect
-        return getWithPermittedRedirects(
-          redirectUrl,
-          signal,
-          redirectChecker,
-          depth + 1,
-        )
+        return getWithPermittedRedirects(redirectUrl, signal, redirectChecker, depth + 1)
       } else {
         // Return redirect information to the caller
         return {
@@ -328,9 +309,7 @@ export async function getWithPermittedRedirects(
   }
 }
 
-function isRedirectInfo(
-  response: AxiosResponse<ArrayBuffer> | RedirectInfo,
-): response is RedirectInfo {
+function isRedirectInfo(response: AxiosResponse<ArrayBuffer> | RedirectInfo): response is RedirectInfo {
   return 'type' in response && response.type === 'redirect'
 }
 
@@ -399,26 +378,18 @@ export async function getURLMarkdownContent(
 
     if (process.env.USER_TYPE === 'ant') {
       logEvent('tengu_web_fetch_host', {
-        hostname:
-          hostname as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        hostname: hostname as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
     }
   } catch (e) {
-    if (
-      e instanceof DomainBlockedError ||
-      e instanceof DomainCheckFailedError
-    ) {
+    if (e instanceof DomainBlockedError || e instanceof DomainCheckFailedError) {
       // Expected user-facing failures - re-throw without logging as internal error
       throw e
     }
     logError(e)
   }
 
-  const response = await getWithPermittedRedirects(
-    upgradedUrl,
-    abortController.signal,
-    isPermittedRedirect,
-  )
+  const response = await getWithPermittedRedirects(upgradedUrl, abortController.signal, isPermittedRedirect)
 
   // Check if we got a redirect response
   if (isRedirectInfo(response)) {
@@ -491,15 +462,10 @@ export async function applyPromptToMarkdown(
   // Truncate content to avoid "Prompt is too long" errors from the secondary model
   const truncatedContent =
     markdownContent.length > MAX_MARKDOWN_LENGTH
-      ? markdownContent.slice(0, MAX_MARKDOWN_LENGTH) +
-        '\n\n[Content truncated due to length...]'
+      ? markdownContent.slice(0, MAX_MARKDOWN_LENGTH) + '\n\n[Content truncated due to length...]'
       : markdownContent
 
-  const modelPrompt = makeSecondaryModelPrompt(
-    truncatedContent,
-    prompt,
-    isPreapprovedDomain,
-  )
+  const modelPrompt = makeSecondaryModelPrompt(truncatedContent, prompt, isPreapprovedDomain)
   const assistantMessage = await queryHaiku({
     systemPrompt: asSystemPrompt([]),
     userPrompt: modelPrompt,

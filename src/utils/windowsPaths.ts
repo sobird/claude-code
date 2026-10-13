@@ -1,6 +1,8 @@
-import memoize from 'lodash-es/memoize.js'
 import * as path from 'path'
 import * as pathWin32 from 'path/win32'
+
+import memoize from 'lodash-es/memoize.js'
+
 import { getCwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
 import { execSync_DEPRECATED } from './execSyncWrapper.js'
@@ -63,9 +65,7 @@ function findExecutable(executable: string): string | null {
 
       // Skip if the executable is in the current working directory
       if (pathDir === cwd || normalizedPath.startsWith(cwd + path.sep)) {
-        logForDebugging(
-          `Skipping potentially malicious executable in current directory: ${candidatePath}`,
-        )
+        logForDebugging(`Skipping potentially malicious executable in current directory: ${candidatePath}`)
         continue
       }
 

@@ -1,6 +1,7 @@
 import { appendFile, mkdir, readFile, writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { dirname, join } from 'path'
+
 import { getCwd } from '../cwd.js'
 import { getErrnoCode } from '../errors.js'
 import { execFileNoThrowWithCwd } from '../execFileNoThrow.js'
@@ -20,18 +21,11 @@ import { logError } from '../log.js'
  * @param filePath The path to check (absolute or relative to cwd)
  * @param cwd The working directory to run git from
  */
-export async function isPathGitignored(
-  filePath: string,
-  cwd: string,
-): Promise<boolean> {
-  const { code } = await execFileNoThrowWithCwd(
-    'git',
-    ['check-ignore', filePath],
-    {
-      preserveOutputOnError: false,
-      cwd,
-    },
-  )
+export async function isPathGitignored(filePath: string, cwd: string): Promise<boolean> {
+  const { code } = await execFileNoThrowWithCwd('git', ['check-ignore', filePath], {
+    preserveOutputOnError: false,
+    cwd,
+  })
 
   return code === 0
 }
@@ -50,10 +44,7 @@ export function getGlobalGitignorePath(): string {
  * @param filename The filename to add to gitignore
  * @param cwd The current working directory (optional)
  */
-export async function addFileGlobRuleToGitignore(
-  filename: string,
-  cwd: string = getCwd(),
-): Promise<void> {
+export async function addFileGlobRuleToGitignore(filename: string, cwd: string = getCwd()): Promise<void> {
   try {
     if (!(await dirIsInGitRepo(cwd))) {
       return
@@ -62,9 +53,7 @@ export async function addFileGlobRuleToGitignore(
     // First check if the pattern is already ignored by any gitignore file (including global)
     const gitignoreEntry = `**/${filename}`
     // For directory patterns (ending with /), check with a sample file inside
-    const testPath = filename.endsWith('/')
-      ? `${filename}sample-file.txt`
-      : filename
+    const testPath = filename.endsWith('/') ? `${filename}sample-file.txt` : filename
     if (await isPathGitignored(testPath, cwd)) {
       // File is already ignored by existing patterns (local or global)
       return

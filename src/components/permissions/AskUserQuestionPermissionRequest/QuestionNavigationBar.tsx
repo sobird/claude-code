@@ -1,8 +1,9 @@
 import figures from 'figures'
 import React, { useMemo } from 'react'
+
 import { useTerminalSize } from '../../../hooks/useTerminalSize.js'
-import { stringWidth } from '../../../ink/stringWidth.js'
 import { Box, Text } from '../../../ink.js'
+import { stringWidth } from '../../../ink/stringWidth.js'
 import type { Question } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js'
 import { truncateToWidth } from '../../../utils/format.js'
 
@@ -30,8 +31,7 @@ export function QuestionNavigationBar({
     const checkboxWidth = 2 // checkbox + space
     const paddingPerTab = 2 // space before and after each tab text
 
-    const fixedWidth =
-      stringWidth(leftArrow) + stringWidth(rightArrow) + stringWidth(submitText)
+    const fixedWidth = stringWidth(leftArrow) + stringWidth(rightArrow) + stringWidth(submitText)
 
     // Available width for all question tabs
     const availableForTabs = columns - fixedWidth
@@ -45,12 +45,8 @@ export function QuestionNavigationBar({
     }
 
     // Calculate ideal width for each tab (checkbox + padding + text)
-    const tabHeaders = questions.map(
-      (q: Question, index: number) => q?.header || `Q${index + 1}`,
-    )
-    const idealWidths = tabHeaders.map(
-      header => checkboxWidth + paddingPerTab + stringWidth(header),
-    )
+    const tabHeaders = questions.map((q: Question, index: number) => q?.header || `Q${index + 1}`)
+    const idealWidths = tabHeaders.map((header) => checkboxWidth + paddingPerTab + stringWidth(header))
 
     // Calculate total ideal width
     const totalIdealWidth = idealWidths.reduce((sum, w) => sum + w, 0)
@@ -62,8 +58,7 @@ export function QuestionNavigationBar({
 
     // Need to truncate - prioritize current tab
     const currentHeader = tabHeaders[currentQuestionIndex] || ''
-    const currentIdealWidth =
-      checkboxWidth + paddingPerTab + stringWidth(currentHeader)
+    const currentIdealWidth = checkboxWidth + paddingPerTab + stringWidth(currentHeader)
 
     // Minimum width for other tabs (checkbox + padding + 1 char + ellipsis)
     const minWidthPerTab = checkboxWidth + paddingPerTab + 2 // "X…"
@@ -74,10 +69,7 @@ export function QuestionNavigationBar({
 
     // Calculate space for other tabs
     const otherTabCount = questions.length - 1
-    const widthPerOtherTab = Math.max(
-      minWidthPerTab,
-      Math.floor(remainingWidth / Math.max(otherTabCount, 1)),
-    )
+    const widthPerOtherTab = Math.max(minWidthPerTab, Math.floor(remainingWidth / Math.max(otherTabCount, 1)))
 
     return tabHeaders.map((header, index) => {
       if (index === currentQuestionIndex) {
@@ -96,17 +88,12 @@ export function QuestionNavigationBar({
 
   return (
     <Box flexDirection="row" marginBottom={1}>
-      {!hideArrows && (
-        <Text color={currentQuestionIndex === 0 ? 'inactive' : undefined}>
-          ←{' '}
-        </Text>
-      )}
+      {!hideArrows && <Text color={currentQuestionIndex === 0 ? 'inactive' : undefined}>← </Text>}
       {questions.map((q: Question, index: number) => {
         const isSelected = index === currentQuestionIndex
         const isAnswered = q?.question && !!answers[q.question]
         const checkbox = isAnswered ? figures.checkboxOn : figures.checkboxOff
-        const displayText =
-          tabDisplayTexts[index] || q?.header || `Q${index + 1}`
+        const displayText = tabDisplayTexts[index] || q?.header || `Q${index + 1}`
 
         return (
           <Box key={q?.question || `question-${index}`}>
@@ -136,16 +123,7 @@ export function QuestionNavigationBar({
           )}
         </Box>
       )}
-      {!hideArrows && (
-        <Text
-          color={
-            currentQuestionIndex === questions.length ? 'inactive' : undefined
-          }
-        >
-          {' '}
-          →
-        </Text>
-      )}
+      {!hideArrows && <Text color={currentQuestionIndex === questions.length ? 'inactive' : undefined}> →</Text>}
     </Box>
   )
 }

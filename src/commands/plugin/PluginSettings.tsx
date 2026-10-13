@@ -1,48 +1,36 @@
 import figures from 'figures'
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
+
 import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint.js'
 import { Byline } from '../../components/design-system/Byline.js'
 import { Pane } from '../../components/design-system/Pane.js'
 import { Tab, Tabs } from '../../components/design-system/Tabs.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { Box, Text } from '../../ink.js'
-import {
-  useKeybinding,
-  useKeybindings,
-} from '../../keybindings/useKeybinding.js'
+import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js'
 import { useAppState, useSetAppState } from '../../state/AppState.js'
 import type { PluginError } from '../../types/plugin.js'
 import { errorMessage } from '../../utils/errors.js'
 import { clearAllCaches } from '../../utils/plugins/cacheUtils.js'
 import { loadMarketplacesWithGracefulDegradation } from '../../utils/plugins/marketplaceHelpers.js'
-import {
-  loadKnownMarketplacesConfig,
-  removeMarketplaceSource,
-} from '../../utils/plugins/marketplaceManager.js'
+import { loadKnownMarketplacesConfig, removeMarketplaceSource } from '../../utils/plugins/marketplaceManager.js'
 import { getPluginEditableScopes } from '../../utils/plugins/pluginStartupCheck.js'
 import type { EditableSettingSource } from '../../utils/settings/constants.js'
-import {
-  getSettingsForSource,
-  updateSettingsForSource,
-} from '../../utils/settings/settings.js'
+import { getSettingsForSource, updateSettingsForSource } from '../../utils/settings/settings.js'
 import { AddMarketplace } from './AddMarketplace.js'
 import { BrowseMarketplace } from './BrowseMarketplace.js'
 import { DiscoverPlugins } from './DiscoverPlugins.js'
 import { ManageMarketplaces } from './ManageMarketplaces.js'
 import { ManagePlugins } from './ManagePlugins.js'
-import { formatErrorMessage, getErrorGuidance } from './PluginErrors.js'
 import { type ParsedCommand, parsePluginArgs } from './parseArgs.js'
+import { formatErrorMessage, getErrorGuidance } from './PluginErrors.js'
 import type { PluginSettingsProps, ViewState } from './types.js'
 import { ValidatePlugin } from './ValidatePlugin.js'
 
 type TabId = 'discover' | 'installed' | 'marketplaces' | 'errors'
 
-function MarketplaceList({
-  onComplete,
-}: {
-  onComplete: (result?: string) => void
-}): React.ReactNode {
+function MarketplaceList({ onComplete }: { onComplete: (result?: string) => void }): React.ReactNode {
   useEffect(() => {
     async function loadList() {
       try {
@@ -52,9 +40,7 @@ function MarketplaceList({
         if (names.length === 0) {
           onComplete('No marketplaces configured')
         } else {
-          onComplete(
-            `Configured marketplaces:\n${names.map(n => `  • ${n}`).join('\n')}`,
-          )
+          onComplete(`Configured marketplaces:\n${names.map((n) => `  • ${n}`).join('\n')}`)
         }
       } catch (err) {
         onComplete(`Error loading marketplaces: ${errorMessage(err)}`)
@@ -90,10 +76,7 @@ function McpRedirectBanner(): React.ReactNode {
           i{' '}
         </Text>
       </Box>
-      <Text>
-        [ANT-ONLY] MCP servers are now managed in /plugins. Use /mcp no-redirect
-        to test old UI
-      </Text>
+      <Text>[ANT-ONLY] MCP servers are now managed in /plugins. Use /mcp no-redirect to test old UI</Text>
     </Box>
   )
 }
@@ -189,11 +172,7 @@ function buildPluginAction(pluginName: string): ErrorRowAction {
   }
 }
 
-const TRANSIENT_ERROR_TYPES = new Set([
-  'git-auth-failed',
-  'git-timeout',
-  'network-error',
-])
+const TRANSIENT_ERROR_TYPES = new Set(['git-auth-failed', 'git-timeout', 'network-error'])
 
 function isTransientError(error: PluginError): boolean {
   return TRANSIENT_ERROR_TYPES.has(error.type)
@@ -224,12 +203,7 @@ function buildErrorRows(
 
   // --- Transient errors at the top (restart to retry) ---
   for (const error of transientErrors) {
-    const pluginName =
-      'pluginId' in error
-        ? error.pluginId
-        : 'plugin' in error
-          ? error.plugin
-          : undefined
+    const pluginName = 'pluginId' in error ? error.pluginId : 'plugin' in error ? error.plugin : undefined
     rows.push({
       label: pluginName ?? error.source,
       message: formatErrorMessage(error),
@@ -246,16 +220,11 @@ function buildErrorRows(
     shownMarketplaceNames.add(m.name)
     const action = buildMarketplaceAction(m.name)
     const sourceInfo = getExtraMarketplaceSourceInfo(m.name)
-    const scope = sourceInfo.isInPolicy
-      ? 'managed'
-      : sourceInfo.editableSources[0]?.scope
+    const scope = sourceInfo.isInPolicy ? 'managed' : sourceInfo.editableSources[0]?.scope
     rows.push({
       label: m.name,
       message: m.error ?? 'Installation failed',
-      guidance:
-        action.kind === 'managed-only'
-          ? 'Managed by your organization — contact your admin'
-          : undefined,
+      guidance: action.kind === 'managed-only' ? 'Managed by your organization — contact your admin' : undefined,
       action,
       scope,
     })
@@ -267,16 +236,12 @@ function buildErrorRows(
     shownMarketplaceNames.add(marketplace)
     const action = buildMarketplaceAction(marketplace)
     const sourceInfo = getExtraMarketplaceSourceInfo(marketplace)
-    const scope = sourceInfo.isInPolicy
-      ? 'managed'
-      : sourceInfo.editableSources[0]?.scope
+    const scope = sourceInfo.isInPolicy ? 'managed' : sourceInfo.editableSources[0]?.scope
     rows.push({
       label: marketplace,
       message: formatErrorMessage(e),
       guidance:
-        action.kind === 'managed-only'
-          ? 'Managed by your organization — contact your admin'
-          : getErrorGuidance(e),
+        action.kind === 'managed-only' ? 'Managed by your organization — contact your admin' : getErrorGuidance(e),
       action,
       scope,
     })
@@ -302,15 +267,9 @@ function buildErrorRows(
 
     const marketplace = 'marketplace' in error ? error.marketplace : undefined
     // Try pluginId@marketplace format first, then just pluginName
-    const scope = pluginName
-      ? (pluginScopes.get(error.source) ?? pluginScopes.get(pluginName))
-      : undefined
+    const scope = pluginName ? (pluginScopes.get(error.source) ?? pluginScopes.get(pluginName)) : undefined
     rows.push({
-      label: pluginName
-        ? marketplace
-          ? `${pluginName} @ ${marketplace}`
-          : pluginName
-        : error.source,
+      label: pluginName ? (marketplace ? `${pluginName} @ ${marketplace}` : pluginName) : error.source,
       message: formatErrorMessage(error),
       guidance: getErrorGuidance(error),
       action: pluginName ? buildPluginAction(pluginName) : { kind: 'none' },
@@ -335,10 +294,7 @@ function buildErrorRows(
  * Remove a marketplace from extraKnownMarketplaces in the given settings sources,
  * and also remove any associated enabled plugins.
  */
-function removeExtraMarketplace(
-  name: string,
-  sources: Array<{ source: EditableSettingSource }>,
-): void {
+function removeExtraMarketplace(name: string, sources: Array<{ source: EditableSettingSource }>): void {
   for (const { source } of sources) {
     const settings = getSettingsForSource(source)
     if (!settings) continue
@@ -384,22 +340,19 @@ function ErrorsTabContent({
   setActiveTab: (tab: TabId) => void
   markPluginsChanged: () => void
 }): React.ReactNode {
-  const errors = useAppState(s => s.plugins.errors)
-  const installationStatus = useAppState(s => s.plugins.installationStatus)
+  const errors = useAppState((s) => s.plugins.errors)
+  const installationStatus = useAppState((s) => s.plugins.installationStatus)
   const setAppState = useSetAppState()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
-  const [marketplaceLoadFailures, setMarketplaceLoadFailures] = useState<
-    Array<{ name: string; error: string }>
-  >([])
+  const [marketplaceLoadFailures, setMarketplaceLoadFailures] = useState<Array<{ name: string; error: string }>>([])
 
   // Detect marketplaces that are installed but fail to load their data
   useEffect(() => {
     void (async () => {
       try {
         const config = await loadKnownMarketplacesConfig()
-        const { failures } =
-          await loadMarketplacesWithGracefulDegradation(config)
+        const { failures } = await loadMarketplacesWithGracefulDegradation(config)
         setMarketplaceLoadFailures(failures)
       } catch {
         // Ignore — if we can't load config, other tabs handle it
@@ -407,17 +360,15 @@ function ErrorsTabContent({
     })()
   }, [])
 
-  const failedMarketplaces = installationStatus.marketplaces.filter(
-    m => m.status === 'failed',
-  )
-  const failedMarketplaceNames = new Set(failedMarketplaces.map(m => m.name))
+  const failedMarketplaces = installationStatus.marketplaces.filter((m) => m.status === 'failed')
+  const failedMarketplaceNames = new Set(failedMarketplaces.map((m) => m.name))
 
   // Transient errors (git/network) — show at top with "restart to retry"
   const transientErrors = errors.filter(isTransientError)
 
   // Marketplace-related loading errors not already covered by install failures
   const extraMarketplaceErrors = errors.filter(
-    e =>
+    (e) =>
       (e.type === 'marketplace-not-found' ||
         e.type === 'marketplace-load-failed' ||
         e.type === 'marketplace-blocked-by-policy') &&
@@ -425,7 +376,7 @@ function ErrorsTabContent({
   )
 
   // Plugin-specific loading errors
-  const pluginLoadingErrors = errors.filter(e => {
+  const pluginLoadingErrors = errors.filter((e) => {
     if (isTransientError(e)) return false
     if (
       e.type === 'marketplace-not-found' ||
@@ -438,7 +389,7 @@ function ErrorsTabContent({
   })
 
   // Remaining errors with no plugin association
-  const otherErrors = errors.filter(e => {
+  const otherErrors = errors.filter((e) => {
     if (isTransientError(e)) return false
     if (
       e.type === 'marketplace-not-found' ||
@@ -480,31 +431,25 @@ function ErrorsTabContent({
         setViewState(action.viewState)
         break
       case 'remove-extra-marketplace': {
-        const scopes = action.sources.map(s => s.scope).join(', ')
+        const scopes = action.sources.map((s) => s.scope).join(', ')
         removeExtraMarketplace(action.name, action.sources)
         clearAllCaches()
         // Synchronously clear all stale state for this marketplace so the UI
         // updates glitch-free. markPluginsChanged only sets needsRefresh —
         // it does not refresh plugins.errors, so this is the authoritative
         // cleanup until the user runs /reload-plugins.
-        setAppState(prev => ({
+        setAppState((prev) => ({
           ...prev,
           plugins: {
             ...prev.plugins,
-            errors: prev.plugins.errors.filter(
-              e => !('marketplace' in e && e.marketplace === action.name),
-            ),
+            errors: prev.plugins.errors.filter((e) => !('marketplace' in e && e.marketplace === action.name)),
             installationStatus: {
               ...prev.plugins.installationStatus,
-              marketplaces: prev.plugins.installationStatus.marketplaces.filter(
-                m => m.name !== action.name,
-              ),
+              marketplaces: prev.plugins.installationStatus.marketplaces.filter((m) => m.name !== action.name),
             },
           },
         }))
-        setActionMessage(
-          `${figures.tick} Removed "${action.name}" from ${scopes} settings`,
-        )
+        setActionMessage(`${figures.tick} Removed "${action.name}" from ${scopes} settings`)
         markPluginsChanged()
         break
       }
@@ -513,17 +458,11 @@ function ErrorsTabContent({
           try {
             await removeMarketplaceSource(action.name)
             clearAllCaches()
-            setMarketplaceLoadFailures(prev =>
-              prev.filter(f => f.name !== action.name),
-            )
-            setActionMessage(
-              `${figures.tick} Removed marketplace "${action.name}"`,
-            )
+            setMarketplaceLoadFailures((prev) => prev.filter((f) => f.name !== action.name))
+            setActionMessage(`${figures.tick} Removed marketplace "${action.name}"`)
             markPluginsChanged()
           } catch (err) {
-            setActionMessage(
-              `Failed to remove "${action.name}": ${err instanceof Error ? err.message : String(err)}`,
-            )
+            setActionMessage(`Failed to remove "${action.name}": ${err instanceof Error ? err.message : String(err)}`)
           }
         })()
         break
@@ -538,9 +477,8 @@ function ErrorsTabContent({
 
   useKeybindings(
     {
-      'select:previous': () => setSelectedIndex(prev => Math.max(0, prev - 1)),
-      'select:next': () =>
-        setSelectedIndex(prev => Math.min(rows.length - 1, prev + 1)),
+      'select:previous': () => setSelectedIndex((prev) => Math.max(0, prev - 1)),
+      'select:next': () => setSelectedIndex((prev) => Math.min(rows.length - 1, prev + 1)),
       'select:accept': handleSelect,
     },
     { context: 'Select', isActive: rows.length > 0 },
@@ -553,10 +491,7 @@ function ErrorsTabContent({
   }
 
   const selectedAction = rows[clampedIndex]?.action
-  const hasAction =
-    selectedAction &&
-    selectedAction.kind !== 'none' &&
-    selectedAction.kind !== 'managed-only'
+  const hasAction = selectedAction && selectedAction.kind !== 'none' && selectedAction.kind !== 'managed-only'
 
   if (rows.length === 0) {
     return (
@@ -566,12 +501,7 @@ function ErrorsTabContent({
         </Box>
         <Box marginTop={1}>
           <Text dimColor italic>
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="back"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />
           </Text>
         </Box>
       </Box>
@@ -585,9 +515,7 @@ function ErrorsTabContent({
         return (
           <Box key={idx} marginLeft={1} flexDirection="column" marginBottom={1}>
             <Text>
-              <Text color={isSelected ? 'suggestion' : 'error'}>
-                {isSelected ? figures.pointer : figures.cross}{' '}
-              </Text>
+              <Text color={isSelected ? 'suggestion' : 'error'}>{isSelected ? figures.pointer : figures.cross} </Text>
               <Text bold={isSelected}>{row.label}</Text>
               {row.scope && <Text dimColor> ({row.scope})</Text>}
             </Text>
@@ -614,12 +542,7 @@ function ErrorsTabContent({
       <Box marginTop={1}>
         <Text dimColor italic>
           <Byline>
-            <ConfigurableShortcutHint
-              action="select:previous"
-              context="Select"
-              fallback="↑"
-              description="navigate"
-            />
+            <ConfigurableShortcutHint action="select:previous" context="Select" fallback="↑" description="navigate" />
             {hasAction && (
               <ConfigurableShortcutHint
                 action="select:accept"
@@ -628,12 +551,7 @@ function ErrorsTabContent({
                 description="resolve"
               />
             )}
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="back"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />
           </Byline>
         </Text>
       </Box>
@@ -720,20 +638,12 @@ function getInitialTab(viewState: ViewState): TabId {
   return 'discover'
 }
 
-export function PluginSettings({
-  onComplete,
-  args,
-  showMcpRedirectMessage,
-}: PluginSettingsProps): React.ReactNode {
+export function PluginSettings({ onComplete, args, showMcpRedirectMessage }: PluginSettingsProps): React.ReactNode {
   const parsedCommand = parsePluginArgs(args)
   const initialViewState = getInitialViewState(parsedCommand)
   const [viewState, setViewState] = useState<ViewState>(initialViewState)
-  const [activeTab, setActiveTab] = useState<TabId>(
-    getInitialTab(initialViewState),
-  )
-  const [inputValue, setInputValue] = useState(
-    viewState.type === 'add-marketplace' ? viewState.initialValue || '' : '',
-  )
+  const [activeTab, setActiveTab] = useState<TabId>(getInitialTab(initialViewState))
+  const [inputValue, setInputValue] = useState(viewState.type === 'add-marketplace' ? viewState.initialValue || '' : '')
   const [cursorOffset, setCursorOffset] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
@@ -745,15 +655,14 @@ export function PluginSettings({
   // failures (those require I/O and are discovered lazily when the tab opens).
   // May slightly overcount vs. displayed rows when a marketplace has both a
   // loader error and a failed install status (buildErrorRows deduplicates).
-  const pluginErrorCount = useAppState(s => {
+  const pluginErrorCount = useAppState((s) => {
     let count = s.plugins.errors.length
     for (const m of s.plugins.installationStatus.marketplaces) {
       if (m.status === 'failed') count++
     }
     return count
   })
-  const errorsTabTitle =
-    pluginErrorCount > 0 ? `Errors (${pluginErrorCount})` : 'Errors'
+  const errorsTabTitle = pluginErrorCount > 0 ? `Errors (${pluginErrorCount})` : 'Errors'
 
   const exitState = useExitOnCtrlCDWithKeybindings()
 
@@ -763,9 +672,7 @@ export function PluginSettings({
    * Interactive mode is used when arguments are missing, allowing the user to input them.
    */
   const cliMode =
-    parsedCommand.type === 'marketplace' &&
-    parsedCommand.action === 'add' &&
-    parsedCommand.target !== undefined
+    parsedCommand.type === 'marketplace' && parsedCommand.action === 'add' && parsedCommand.target !== undefined
 
   // Signal that plugin state has changed on disk (Layer 2) and active
   // components (Layer 3) are stale. User runs /reload-plugins to apply.
@@ -775,10 +682,8 @@ export function PluginSettings({
   // primitive via /reload-plugins, giving one consistent mental model:
   // plugin changes require /reload-plugins.
   const markPluginsChanged = useCallback(() => {
-    setAppState(prev =>
-      prev.plugins.needsRefresh
-        ? prev
-        : { ...prev, plugins: { ...prev.plugins, needsRefresh: true } },
+    setAppState((prev) =>
+      prev.plugins.needsRefresh ? prev : { ...prev, plugins: { ...prev.plugins, needsRefresh: true } },
     )
   }, [setAppState])
 
@@ -857,17 +762,9 @@ export function PluginSettings({
         <Text> </Text>
         <Text dimColor>Installation:</Text>
         <Text> /plugin install - Browse and install plugins</Text>
-        <Text>
-          {' '}
-          /plugin install &lt;marketplace&gt; - Install from specific
-          marketplace
-        </Text>
+        <Text> /plugin install &lt;marketplace&gt; - Install from specific marketplace</Text>
         <Text> /plugin install &lt;plugin&gt; - Install specific plugin</Text>
-        <Text>
-          {' '}
-          /plugin install &lt;plugin&gt;@&lt;market&gt; - Install plugin from
-          marketplace
-        </Text>
+        <Text> /plugin install &lt;plugin&gt;@&lt;market&gt; - Install plugin from marketplace</Text>
         <Text> </Text>
         <Text dimColor>Management:</Text>
         <Text> /plugin manage - Manage installed plugins</Text>
@@ -878,27 +775,15 @@ export function PluginSettings({
         <Text dimColor>Marketplaces:</Text>
         <Text> /plugin marketplace - Marketplace management menu</Text>
         <Text> /plugin marketplace add - Add a marketplace</Text>
-        <Text>
-          {' '}
-          /plugin marketplace add &lt;path/url&gt; - Add marketplace directly
-        </Text>
+        <Text> /plugin marketplace add &lt;path/url&gt; - Add marketplace directly</Text>
         <Text> /plugin marketplace update - Update marketplaces</Text>
-        <Text>
-          {' '}
-          /plugin marketplace update &lt;name&gt; - Update specific marketplace
-        </Text>
+        <Text> /plugin marketplace update &lt;name&gt; - Update specific marketplace</Text>
         <Text> /plugin marketplace remove - Remove a marketplace</Text>
-        <Text>
-          {' '}
-          /plugin marketplace remove &lt;name&gt; - Remove specific marketplace
-        </Text>
+        <Text> /plugin marketplace remove &lt;name&gt; - Remove specific marketplace</Text>
         <Text> /plugin marketplace list - List all marketplaces</Text>
         <Text> </Text>
         <Text dimColor>Validation:</Text>
-        <Text>
-          {' '}
-          /plugin validate &lt;path&gt; - Validate a manifest file or directory
-        </Text>
+        <Text> /plugin validate &lt;path&gt; - Validate a manifest file or directory</Text>
         <Text> </Text>
         <Text dimColor>Other:</Text>
         <Text> /plugin - Main plugin menu</Text>
@@ -948,11 +833,7 @@ export function PluginSettings({
         onTabChange={handleTabChange}
         color="suggestion"
         disableNavigation={childSearchActive}
-        banner={
-          showMcpRedirectMessage && activeTab === 'installed' ? (
-            <McpRedirectBanner />
-          ) : undefined
-        }
+        banner={showMcpRedirectMessage && activeTab === 'installed' ? <McpRedirectBanner /> : undefined}
       >
         <Tab id="discover" title="Discover">
           {viewState.type === 'browse-marketplace' ? (
@@ -975,11 +856,7 @@ export function PluginSettings({
               setViewState={setViewState}
               onInstallComplete={markPluginsChanged}
               onSearchModeChange={setChildSearchActive}
-              targetPlugin={
-                viewState.type === 'discover-plugins'
-                  ? viewState.targetPlugin
-                  : undefined
-              }
+              targetPlugin={viewState.type === 'discover-plugins' ? viewState.targetPlugin : undefined}
             />
           )}
         </Tab>
@@ -989,19 +866,9 @@ export function PluginSettings({
             setResult={setResult}
             onManageComplete={markPluginsChanged}
             onSearchModeChange={setChildSearchActive}
-            targetPlugin={
-              viewState.type === 'manage-plugins'
-                ? viewState.targetPlugin
-                : undefined
-            }
-            targetMarketplace={
-              viewState.type === 'manage-plugins'
-                ? viewState.targetMarketplace
-                : undefined
-            }
-            action={
-              viewState.type === 'manage-plugins' ? viewState.action : undefined
-            }
+            targetPlugin={viewState.type === 'manage-plugins' ? viewState.targetPlugin : undefined}
+            targetMarketplace={viewState.type === 'manage-plugins' ? viewState.targetMarketplace : undefined}
+            action={viewState.type === 'manage-plugins' ? viewState.action : undefined}
           />
         </Tab>
         <Tab id="marketplaces" title="Marketplaces">
@@ -1012,16 +879,8 @@ export function PluginSettings({
             setResult={setResult}
             exitState={exitState}
             onManageComplete={markPluginsChanged}
-            targetMarketplace={
-              viewState.type === 'manage-marketplaces'
-                ? viewState.targetMarketplace
-                : undefined
-            }
-            action={
-              viewState.type === 'manage-marketplaces'
-                ? viewState.action
-                : undefined
-            }
+            targetMarketplace={viewState.type === 'manage-marketplaces' ? viewState.targetMarketplace : undefined}
+            action={viewState.type === 'manage-marketplaces' ? viewState.action : undefined}
           />
         </Tab>
         <Tab id="errors" title={errorsTabTitle}>

@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+
 import type { DailyActivity } from './stats.js'
 import { toDateString } from './statsCache.js'
 
@@ -16,12 +17,10 @@ type Percentiles = {
 /**
  * Pre-calculates percentiles from activity data for use in intensity calculations
  */
-function calculatePercentiles(
-  dailyActivity: DailyActivity[],
-): Percentiles | null {
+function calculatePercentiles(dailyActivity: DailyActivity[]): Percentiles | null {
   const counts = dailyActivity
-    .map(a => a.messageCount)
-    .filter(c => c > 0)
+    .map((a) => a.messageCount)
+    .filter((c) => c > 0)
     .sort((a, b) => a - b)
 
   if (counts.length === 0) return null
@@ -36,10 +35,7 @@ function calculatePercentiles(
 /**
  * Generates a GitHub-style activity heatmap for the terminal
  */
-export function generateHeatmap(
-  dailyActivity: DailyActivity[],
-  options: HeatmapOptions = {},
-): string {
+export function generateHeatmap(dailyActivity: DailyActivity[], options: HeatmapOptions = {}): string {
   const { terminalWidth = 80, showMonthLabels = true } = options
 
   // Day labels take 4 characters ("Mon "), calculate weeks that fit
@@ -71,9 +67,7 @@ export function generateHeatmap(
 
   // Generate grid (7 rows for days of week, width columns for weeks)
   // Also track which week each month starts for labels
-  const grid: string[][] = Array.from({ length: 7 }, () =>
-    Array(width).fill(''),
-  )
+  const grid: string[][] = Array.from({ length: 7 }, () => Array(width).fill(''))
   const monthStarts: { month: number; week: number }[] = []
   let lastMonth = -1
 
@@ -112,27 +106,12 @@ export function generateHeatmap(
 
   // Month labels - evenly spaced across the grid
   if (showMonthLabels) {
-    const monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ]
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
     // Build label line with fixed-width month labels
-    const uniqueMonths = monthStarts.map(m => m.month)
+    const uniqueMonths = monthStarts.map((m) => m.month)
     const labelWidth = Math.floor(width / Math.max(uniqueMonths.length, 1))
-    const monthLabels = uniqueMonths
-      .map(month => monthNames[month]!.padEnd(labelWidth))
-      .join('')
+    const monthLabels = uniqueMonths.map((month) => monthNames[month]!.padEnd(labelWidth)).join('')
 
     // 4 spaces for day label column prefix
     lines.push('    ' + monthLabels)
@@ -152,23 +131,13 @@ export function generateHeatmap(
   // Legend
   lines.push('')
   lines.push(
-    '    Less ' +
-      [
-        claudeOrange('░'),
-        claudeOrange('▒'),
-        claudeOrange('▓'),
-        claudeOrange('█'),
-      ].join(' ') +
-      ' More',
+    '    Less ' + [claudeOrange('░'), claudeOrange('▒'), claudeOrange('▓'), claudeOrange('█')].join(' ') + ' More',
   )
 
   return lines.join('\n')
 }
 
-function getIntensity(
-  messageCount: number,
-  percentiles: Percentiles | null,
-): number {
+function getIntensity(messageCount: number, percentiles: Percentiles | null): number {
   if (messageCount === 0 || !percentiles) return 0
 
   if (messageCount >= percentiles.p75) return 4

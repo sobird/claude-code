@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+
 import { normalizeFullWidthDigits } from '../../utils/stringUtils.js'
 
 // Delay before accepting a digit as a response, to prevent accidental

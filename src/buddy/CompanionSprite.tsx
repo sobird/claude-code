@@ -1,9 +1,11 @@
 import { feature } from 'bun:bundle'
+
 import figures from 'figures'
 import React, { useEffect, useRef, useState } from 'react'
+
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
-import { stringWidth } from '../ink/stringWidth.js'
 import { Box, Text } from '../ink.js'
+import { stringWidth } from '../ink/stringWidth.js'
 import { useAppState, useSetAppState } from '../state/AppState.js'
 import type { AppState } from '../state/AppStateStore.js'
 import { getGlobalConfig } from '../utils/config.js'
@@ -62,20 +64,9 @@ function SpeechBubble({
   const lines = wrap(text, 30)
   const borderColor = fading ? 'inactive' : color
   const bubble = (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor={borderColor}
-      paddingX={1}
-      width={34}
-    >
+    <Box flexDirection="column" borderStyle="round" borderColor={borderColor} paddingX={1} width={34}>
       {lines.map((l, i) => (
-        <Text
-          key={i}
-          italic
-          dimColor={!fading}
-          color={fading ? 'inactive' : undefined}
-        >
+        <Text key={i} italic dimColor={!fading} color={fading ? 'inactive' : undefined}>
           {l}
         </Text>
       ))}
@@ -116,10 +107,7 @@ function spriteColWidth(nameWidth: number): number {
 // width); in non-fullscreen it sits inline and needs BUBBLE_WIDTH more.
 // Narrow terminals: 0 — REPL.tsx stacks the one-liner on its own row
 // (above input in fullscreen, below in scrollback), so no reservation.
-export function companionReservedColumns(
-  terminalColumns: number,
-  speaking: boolean,
-): number {
+export function companionReservedColumns(terminalColumns: number, speaking: boolean): number {
   if (!feature('BUDDY')) return 0
   const companion = getCompanion()
   if (!companion || getGlobalConfig().companionMuted) return 0
@@ -130,9 +118,9 @@ export function companionReservedColumns(
 }
 
 export function CompanionSprite(): React.ReactNode {
-  const reaction = useAppState(s => s.companionReaction)
-  const petAt = useAppState(s => s.companionPetAt)
-  const focused = useAppState(s => s.footerSelection === 'companion')
+  const reaction = useAppState((s) => s.companionReaction)
+  const petAt = useAppState((s) => s.companionPetAt)
+  const focused = useAppState((s) => s.footerSelection === 'companion')
   const setAppState = useSetAppState()
   const { columns } = useTerminalSize()
   const [tick, setTick] = useState(0)
@@ -148,11 +136,7 @@ export function CompanionSprite(): React.ReactNode {
   }
 
   useEffect(() => {
-    const timer = setInterval(
-      setT => setT((t: number) => t + 1),
-      TICK_MS,
-      setTick,
-    )
+    const timer = setInterval((setT) => setT((t: number) => t + 1), TICK_MS, setTick)
     return () => clearInterval(timer)
   }, [])
 
@@ -160,11 +144,9 @@ export function CompanionSprite(): React.ReactNode {
     if (!reaction) return
     lastSpokeTick.current = tick
     const timer = setTimeout(
-      setA =>
+      (setA) =>
         setA((prev: AppState) =>
-          prev.companionReaction === undefined
-            ? prev
-            : { ...prev, companionReaction: undefined },
+          prev.companionReaction === undefined ? prev : { ...prev, companionReaction: undefined },
         ),
       BUBBLE_SHOW * TICK_MS,
       setAppState,
@@ -181,8 +163,7 @@ export function CompanionSprite(): React.ReactNode {
   const colWidth = spriteColWidth(stringWidth(companion.name))
 
   const bubbleAge = reaction ? tick - lastSpokeTick.current : 0
-  const fading =
-    reaction !== undefined && bubbleAge >= BUBBLE_SHOW - FADE_WINDOW
+  const fading = reaction !== undefined && bubbleAge >= BUBBLE_SHOW - FADE_WINDOW
 
   const petAge = petAt ? tick - petStartTick : Infinity
   const petting = petAge * TICK_MS < PET_BURST_MS
@@ -190,15 +171,8 @@ export function CompanionSprite(): React.ReactNode {
   // Narrow terminals: collapse to one-line face. When speaking, the quip
   // replaces the name beside the face (no room for a bubble).
   if (columns < MIN_COLS_FOR_FULL_SPRITE) {
-    const quip =
-      reaction && reaction.length > NARROW_QUIP_CAP
-        ? reaction.slice(0, NARROW_QUIP_CAP - 1) + '…'
-        : reaction
-    const label = quip
-      ? `"${quip}"`
-      : focused
-        ? ` ${companion.name} `
-        : companion.name
+    const quip = reaction && reaction.length > NARROW_QUIP_CAP ? reaction.slice(0, NARROW_QUIP_CAP - 1) + '…' : reaction
+    const label = quip ? `"${quip}"` : focused ? ` ${companion.name} ` : companion.name
     return (
       <Box paddingX={1} alignSelf="flex-end">
         <Text>
@@ -211,15 +185,7 @@ export function CompanionSprite(): React.ReactNode {
             dimColor={!focused && !reaction}
             bold={focused}
             inverse={focused && !reaction}
-            color={
-              reaction
-                ? fading
-                  ? 'inactive'
-                  : color
-                : focused
-                  ? color
-                  : undefined
-            }
+            color={reaction ? (fading ? 'inactive' : color) : focused ? color : undefined}
           >
             {label}
           </Text>
@@ -245,9 +211,7 @@ export function CompanionSprite(): React.ReactNode {
     }
   }
 
-  const body = renderSprite(companion, spriteFrame).map(line =>
-    blink ? line.replaceAll(companion.eye, '-') : line,
-  )
+  const body = renderSprite(companion, spriteFrame).map((line) => (blink ? line.replaceAll(companion.eye, '-') : line))
   const sprite = heartFrame ? [heartFrame, ...body] : body
 
   // Name row doubles as hint row — unfocused shows dim name + ↓ discovery,
@@ -256,24 +220,13 @@ export function CompanionSprite(): React.ReactNode {
   // sprite doesn't jump up when selected. flexShrink=0 stops the
   // inline-bubble row wrapper from squeezing the sprite to fit.
   const spriteColumn = (
-    <Box
-      flexDirection="column"
-      flexShrink={0}
-      alignItems="center"
-      width={colWidth}
-    >
+    <Box flexDirection="column" flexShrink={0} alignItems="center" width={colWidth}>
       {sprite.map((line, i) => (
         <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : color}>
           {line}
         </Text>
       ))}
-      <Text
-        italic
-        bold={focused}
-        dimColor={!focused}
-        color={focused ? color : undefined}
-        inverse={focused}
-      >
+      <Text italic bold={focused} dimColor={!focused} color={focused ? color : undefined} inverse={focused}>
         {focused ? ` ${companion.name} ` : companion.name}
       </Text>
     </Box>
@@ -293,12 +246,7 @@ export function CompanionSprite(): React.ReactNode {
   }
   return (
     <Box flexDirection="row" alignItems="flex-end" paddingX={1} flexShrink={0}>
-      <SpeechBubble
-        text={reaction}
-        color={color}
-        fading={fading}
-        tail="right"
-      />
+      <SpeechBubble text={reaction} color={color} fading={fading} tail="right" />
       {spriteColumn}
     </Box>
   )
@@ -309,7 +257,7 @@ export function CompanionSprite(): React.ReactNode {
 // the ScrollBox region. CompanionSprite owns the clear-after-10s timer; this
 // just reads companionReaction and renders the fade.
 export function CompanionFloatingBubble(): React.ReactNode {
-  const reaction = useAppState(s => s.companionReaction)
+  const reaction = useAppState((s) => s.companionReaction)
   const [{ tick, forReaction }, setTick] = useState({
     tick: 0,
     forReaction: reaction,
@@ -325,11 +273,7 @@ export function CompanionFloatingBubble(): React.ReactNode {
 
   useEffect(() => {
     if (!reaction) return
-    const timer = setInterval(
-      set => set(s => ({ ...s, tick: s.tick + 1 })),
-      TICK_MS,
-      setTick,
-    )
+    const timer = setInterval((set) => set((s) => ({ ...s, tick: s.tick + 1 })), TICK_MS, setTick)
     return () => clearInterval(timer)
   }, [reaction])
 

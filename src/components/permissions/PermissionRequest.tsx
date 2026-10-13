@@ -1,7 +1,9 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
 import { EnterPlanModeTool } from 'src/tools/EnterPlanModeTool/EnterPlanModeTool.js'
 import { ExitPlanModeV2Tool } from 'src/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
+
 import { useNotifyAfterTimeout } from '../../hooks/useNotifyAfterTimeout.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import type { AnyObject, Tool, ToolUseContext } from '../../Tool.js'
@@ -45,9 +47,8 @@ const ReviewArtifactPermissionRequest = feature('REVIEW_ARTIFACT')
   : null
 
 const WorkflowTool = feature('WORKFLOW_SCRIPTS')
-  ? (
-      require('../../tools/WorkflowTool/WorkflowTool.js') as typeof import('../../tools/WorkflowTool/WorkflowTool.js')
-    ).WorkflowTool
+  ? (require('../../tools/WorkflowTool/WorkflowTool.js') as typeof import('../../tools/WorkflowTool/WorkflowTool.js'))
+      .WorkflowTool
   : null
 
 const WorkflowPermissionRequest = feature('WORKFLOW_SCRIPTS')
@@ -57,9 +58,8 @@ const WorkflowPermissionRequest = feature('WORKFLOW_SCRIPTS')
   : null
 
 const MonitorTool = feature('MONITOR_TOOL')
-  ? (
-      require('../../tools/MonitorTool/MonitorTool.js') as typeof import('../../tools/MonitorTool/MonitorTool.js')
-    ).MonitorTool
+  ? (require('../../tools/MonitorTool/MonitorTool.js') as typeof import('../../tools/MonitorTool/MonitorTool.js'))
+      .MonitorTool
   : null
 
 const MonitorPermissionRequest = feature('MONITOR_TOOL')
@@ -71,12 +71,11 @@ const MonitorPermissionRequest = feature('MONITOR_TOOL')
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import type { z } from 'zod/v4'
+
 import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js'
 import type { WorkerBadgeProps } from './WorkerBadge.js'
 
-function permissionComponentForTool(
-  tool: Tool,
-): React.ComponentType<PermissionRequestProps> {
+function permissionComponentForTool(tool: Tool): React.ComponentType<PermissionRequestProps> {
   switch (tool) {
     case FileEditTool:
       return FileEditPermissionRequest
@@ -166,9 +165,7 @@ export type ToolUseConfirm<Input extends AnyObject = AnyObject> = {
 }
 
 function getNotificationMessage(toolUseConfirm: ToolUseConfirm): string {
-  const toolName = toolUseConfirm.tool.userFacingName(
-    toolUseConfirm.input as never,
-  )
+  const toolName = toolUseConfirm.tool.userFacingName(toolUseConfirm.input as never)
 
   if (toolUseConfirm.tool === ExitPlanModeV2Tool) {
     return 'Claude Code needs your approval for the plan'
@@ -178,10 +175,7 @@ function getNotificationMessage(toolUseConfirm: ToolUseConfirm): string {
     return 'Claude Code wants to enter plan mode'
   }
 
-  if (
-    feature('REVIEW_ARTIFACT') &&
-    toolUseConfirm.tool === ReviewArtifactTool
-  ) {
+  if (feature('REVIEW_ARTIFACT') && toolUseConfirm.tool === ReviewArtifactTool) {
     return 'Claude needs your approval for a review artifact'
   }
 

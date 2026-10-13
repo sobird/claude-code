@@ -1,4 +1,5 @@
 import memoize from 'lodash-es/memoize.js'
+
 import { getAPIProvider } from './providers.js'
 
 export type ModelCapabilityOverride =
@@ -41,7 +42,7 @@ export const get3PModelCapabilityOverride = memoize(
       return capabilities
         .toLowerCase()
         .split(',')
-        .map(s => s.trim())
+        .map((s) => s.trim())
         .includes(capability)
     }
     return undefined

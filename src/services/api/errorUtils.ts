@@ -39,9 +39,7 @@ export type ConnectionErrorDetails = {
  * The Anthropic SDK wraps underlying errors in the `cause` property.
  * This function walks the cause chain to find the root error code/message.
  */
-export function extractConnectionErrorDetails(
-  error: unknown,
-): ConnectionErrorDetails | null {
+export function extractConnectionErrorDetails(error: unknown): ConnectionErrorDetails | null {
   if (!error || typeof error !== 'object') {
     return null
   }
@@ -52,11 +50,7 @@ export function extractConnectionErrorDetails(
   let depth = 0
 
   while (current && depth < maxDepth) {
-    if (
-      current instanceof Error &&
-      'code' in current &&
-      typeof current.code === 'string'
-    ) {
+    if (current instanceof Error && 'code' in current && typeof current.code === 'string') {
       const code = current.code
       const isSSLError = SSL_ERROR_CODES.has(code)
       return {
@@ -67,11 +61,7 @@ export function extractConnectionErrorDetails(
     }
 
     // Move to the next cause in the chain
-    if (
-      current instanceof Error &&
-      'cause' in current &&
-      current.cause !== current
-    ) {
+    if (current instanceof Error && 'cause' in current && current.cause !== current) {
       current = current.cause
       depth++
     } else {
@@ -246,15 +236,10 @@ export function formatAPIError(error: APIError): string {
   // be a plain object without a `.message` property.  Return a safe fallback
   // instead of undefined, which would crash callers that access `.length`.
   if (!error.message) {
-    return (
-      extractNestedErrorMessage(error) ??
-      `API error (status ${error.status ?? 'unknown'})`
-    )
+    return extractNestedErrorMessage(error) ?? `API error (status ${error.status ?? 'unknown'})`
   }
 
   const sanitizedMessage = sanitizeAPIError(error)
   // Use sanitized message if it's different from the original (i.e., HTML was sanitized)
-  return sanitizedMessage !== error.message && sanitizedMessage.length > 0
-    ? sanitizedMessage
-    : error.message
+  return sanitizedMessage !== error.message && sanitizedMessage.length > 0 ? sanitizedMessage : error.message
 }

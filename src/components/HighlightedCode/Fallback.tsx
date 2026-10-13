@@ -1,5 +1,7 @@
 import { extname } from 'path'
+
 import React, { Suspense, use, useMemo } from 'react'
+
 import { Ansi, Text } from '../../ink.js'
 import { getCliHighlightPromise } from '../../utils/cliHighlight.js'
 import { logForDebugging } from '../../utils/debug.js'
@@ -63,13 +65,7 @@ export function HighlightedCodeFallback({
   )
 }
 
-function Highlighted({
-  codeWithSpaces,
-  language,
-}: {
-  codeWithSpaces: string
-  language: string
-}): React.ReactElement {
+function Highlighted({ codeWithSpaces, language }: { codeWithSpaces: string; language: string }): React.ReactElement {
   const hl = use(getCliHighlightPromise())
   const out = useMemo(() => {
     if (!hl) return codeWithSpaces
@@ -78,18 +74,14 @@ function Highlighted({
       if (hl.supportsLanguage(language)) {
         highlightLang = language
       } else {
-        logForDebugging(
-          `Language not supported while highlighting code, falling back to markdown: ${language}`,
-        )
+        logForDebugging(`Language not supported while highlighting code, falling back to markdown: ${language}`)
       }
     }
     try {
       return cachedHighlight(hl, codeWithSpaces, highlightLang)
     } catch (e) {
       if (e instanceof Error && e.message.includes('Unknown language')) {
-        logForDebugging(
-          `Language not supported while highlighting code, falling back to markdown: ${e}`,
-        )
+        logForDebugging(`Language not supported while highlighting code, falling back to markdown: ${e}`)
         return cachedHighlight(hl, codeWithSpaces, 'markdown')
       }
       return codeWithSpaces

@@ -1,6 +1,8 @@
 import { relative } from 'path'
+
 import * as React from 'react'
 import { getCwd } from 'src/utils/cwd.js'
+
 import { Box, Text } from '../ink.js'
 import { HighlightedCode } from './HighlightedCode.js'
 import { MessageResponse } from './MessageResponse.js'
@@ -36,11 +38,7 @@ export function NotebookEditToolUseRejectedMessage({
         </Box>
         {edit_mode !== 'delete' && (
           <Box marginTop={1} flexDirection="column">
-            <HighlightedCode
-              code={new_source}
-              filePath={cell_type === 'markdown' ? 'file.md' : 'file.py'}
-              dim
-            />
+            <HighlightedCode code={new_source} filePath={cell_type === 'markdown' ? 'file.md' : 'file.py'} dim />
           </Box>
         )}
       </Box>

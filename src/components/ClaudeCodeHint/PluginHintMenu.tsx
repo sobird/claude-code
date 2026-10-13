@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { Select } from '../CustomSelect/select.js'
 import { PermissionDialog } from '../permissions/PermissionDialog.js'
@@ -24,11 +25,7 @@ export function PluginHintMenu({
   onResponseRef.current = onResponse
 
   React.useEffect(() => {
-    const timeoutId = setTimeout(
-      ref => ref.current('no'),
-      AUTO_DISMISS_MS,
-      onResponseRef,
-    )
+    const timeoutId = setTimeout((ref) => ref.current('no'), AUTO_DISMISS_MS, onResponseRef)
     return () => clearTimeout(timeoutId)
   }, [])
 
@@ -69,8 +66,7 @@ export function PluginHintMenu({
       <Box flexDirection="column" paddingX={2} paddingY={1}>
         <Box marginBottom={1}>
           <Text dimColor>
-            The <Text bold>{sourceCommand}</Text> command suggests installing a
-            plugin.
+            The <Text bold>{sourceCommand}</Text> command suggests installing a plugin.
           </Text>
         </Box>
         <Box>
@@ -90,11 +86,7 @@ export function PluginHintMenu({
           <Text>Would you like to install it?</Text>
         </Box>
         <Box>
-          <Select
-            options={options}
-            onChange={onSelect}
-            onCancel={() => onResponse('no')}
-          />
+          <Select options={options} onChange={onSelect} onCancel={() => onResponse('no')} />
         </Box>
       </Box>
     </PermissionDialog>

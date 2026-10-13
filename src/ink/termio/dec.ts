@@ -49,12 +49,6 @@ export const EXIT_ALT_SCREEN = decreset(DEC.ALT_SCREEN_CLEAR)
 // hover), 1006 uses SGR format (CSI < btn;col;row M/m) instead of legacy
 // X10 bytes. Combined: wheel + click/drag for selection + hover.
 export const ENABLE_MOUSE_TRACKING =
-  decset(DEC.MOUSE_NORMAL) +
-  decset(DEC.MOUSE_BUTTON) +
-  decset(DEC.MOUSE_ANY) +
-  decset(DEC.MOUSE_SGR)
+  decset(DEC.MOUSE_NORMAL) + decset(DEC.MOUSE_BUTTON) + decset(DEC.MOUSE_ANY) + decset(DEC.MOUSE_SGR)
 export const DISABLE_MOUSE_TRACKING =
-  decreset(DEC.MOUSE_SGR) +
-  decreset(DEC.MOUSE_ANY) +
-  decreset(DEC.MOUSE_BUTTON) +
-  decreset(DEC.MOUSE_NORMAL)
+  decreset(DEC.MOUSE_SGR) + decreset(DEC.MOUSE_ANY) + decreset(DEC.MOUSE_BUTTON) + decreset(DEC.MOUSE_NORMAL)

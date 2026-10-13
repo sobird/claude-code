@@ -3,11 +3,7 @@ import { getAttributionTexts } from '../utils/attribution.js'
 import { executeShellCommandsInPrompt } from '../utils/promptShellExecution.js'
 import { getUndercoverInstructions, isUndercover } from '../utils/undercover.js'
 
-const ALLOWED_TOOLS = [
-  'Bash(git add:*)',
-  'Bash(git status:*)',
-  'Bash(git commit:*)',
-]
+const ALLOWED_TOOLS = ['Bash(git add:*)', 'Bash(git status:*)', 'Bash(git commit:*)']
 
 function getPromptContent(): string {
   const { commit: commitAttribution } = getAttributionTexts()

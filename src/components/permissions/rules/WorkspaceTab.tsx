@@ -1,6 +1,7 @@
 import figures from 'figures'
 import * as React from 'react'
 import { useCallback, useEffect } from 'react'
+
 import { getOriginalCwd } from '../../../bootstrap/state.js'
 import type { CommandResultDisplay } from '../../../commands.js'
 import { Select } from '../../../components/CustomSelect/select.js'
@@ -9,10 +10,7 @@ import type { ToolPermissionContext } from '../../../Tool.js'
 import { useTabHeaderFocus } from '../../design-system/Tabs.js'
 
 type Props = {
-  onExit: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onExit: (result?: string, options?: { display?: CommandResultDisplay }) => void
   toolPermissionContext: ToolPermissionContext
   onRequestAddDirectory: () => void
   onRequestRemoveDirectory: (path: string) => void
@@ -38,9 +36,7 @@ export function WorkspaceTab({
   }, [headerFocused, onHeaderFocusChange])
   // Get only additional workspace directories (not the current working directory)
   const additionalDirectories = React.useMemo((): DirectoryItem[] => {
-    return Array.from(
-      toolPermissionContext.additionalWorkingDirectories.keys(),
-    ).map(path => ({
+    return Array.from(toolPermissionContext.additionalWorkingDirectories.keys()).map((path) => ({
       path,
       isCurrent: false,
       isDeletable: true,
@@ -54,9 +50,7 @@ export function WorkspaceTab({
         return
       }
 
-      const directory = additionalDirectories.find(
-        d => d.path === selectedValue,
-      )
+      const directory = additionalDirectories.find((d) => d.path === selectedValue)
       if (directory && directory.isDeletable) {
         onRequestRemoveDirectory(directory.path)
       }
@@ -64,14 +58,11 @@ export function WorkspaceTab({
     [additionalDirectories, onRequestAddDirectory, onRequestRemoveDirectory],
   )
 
-  const handleCancel = useCallback(
-    () => onExit('Workspace dialog dismissed', { display: 'system' }),
-    [onExit],
-  )
+  const handleCancel = useCallback(() => onExit('Workspace dialog dismissed', { display: 'system' }), [onExit])
 
   // Main list view options
   const options = React.useMemo(() => {
-    const opts = additionalDirectories.map(dir => ({
+    const opts = additionalDirectories.map((dir) => ({
       label: dir.path,
       value: dir.path,
     }))

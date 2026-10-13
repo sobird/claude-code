@@ -1,22 +1,17 @@
 import { feature } from 'bun:bundle'
+
 import { z } from 'zod/v4'
-import {
-  getAllowedChannels,
-  handlePlanModeTransition,
-} from '../../bootstrap/state.js'
+
+import { getAllowedChannels, handlePlanModeTransition } from '../../bootstrap/state.js'
 import type { Tool } from '../../Tool.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
-import { applyPermissionUpdate } from '../../utils/permissions/PermissionUpdate.js'
 import { prepareContextForPlanMode } from '../../utils/permissions/permissionSetup.js'
+import { applyPermissionUpdate } from '../../utils/permissions/PermissionUpdate.js'
 import { isPlanModeInterviewPhaseEnabled } from '../../utils/planModeV2.js'
 import { ENTER_PLAN_MODE_TOOL_NAME } from './constants.js'
 import { getEnterPlanModeToolPrompt } from './prompt.js'
-import {
-  renderToolResultMessage,
-  renderToolUseMessage,
-  renderToolUseRejectedMessage,
-} from './UI.js'
+import { renderToolResultMessage, renderToolUseMessage, renderToolUseRejectedMessage } from './UI.js'
 
 const inputSchema = lazySchema(() =>
   z.strictObject({
@@ -57,10 +52,7 @@ export const EnterPlanModeTool: Tool<InputSchema, Output> = buildTool({
     // When --channels is active, ExitPlanMode is disabled (its approval
     // dialog needs the terminal). Disable entry too so plan mode isn't a
     // trap the model can enter but never leave.
-    if (
-      (feature('KAIROS') || feature('KAIROS_CHANNELS')) &&
-      getAllowedChannels().length > 0
-    ) {
+    if ((feature('KAIROS') || feature('KAIROS_CHANNELS')) && getAllowedChannels().length > 0) {
       return false
     }
     return true
@@ -85,12 +77,13 @@ export const EnterPlanModeTool: Tool<InputSchema, Output> = buildTool({
     // Update the permission mode to 'plan'. prepareContextForPlanMode runs
     // the classifier activation side effects when the user's defaultMode is
     // 'auto' — see permissionSetup.ts for the full lifecycle.
-    context.setAppState(prev => ({
+    context.setAppState((prev) => ({
       ...prev,
-      toolPermissionContext: applyPermissionUpdate(
-        prepareContextForPlanMode(prev.toolPermissionContext),
-        { type: 'setMode', mode: 'plan', destination: 'session' },
-      ),
+      toolPermissionContext: applyPermissionUpdate(prepareContextForPlanMode(prev.toolPermissionContext), {
+        type: 'setMode',
+        mode: 'plan',
+        destination: 'session',
+      }),
     }))
 
     return {

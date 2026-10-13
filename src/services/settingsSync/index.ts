@@ -10,29 +10,21 @@
  */
 
 import { feature } from 'bun:bundle'
-import axios from 'axios'
 import { mkdir, readFile, stat, writeFile } from 'fs/promises'
-import pickBy from 'lodash-es/pickBy.js'
 import { dirname } from 'path'
+
+import axios from 'axios'
+import pickBy from 'lodash-es/pickBy.js'
+
 import { getIsInteractive } from '../../bootstrap/state.js'
-import {
-  CLAUDE_AI_INFERENCE_SCOPE,
-  getOauthConfig,
-  OAUTH_BETA_HEADER,
-} from '../../constants/oauth.js'
-import {
-  checkAndRefreshOAuthTokenIfNeeded,
-  getClaudeAIOAuthTokens,
-} from '../../utils/auth.js'
+import { CLAUDE_AI_INFERENCE_SCOPE, getOauthConfig, OAUTH_BETA_HEADER } from '../../constants/oauth.js'
+import { checkAndRefreshOAuthTokenIfNeeded, getClaudeAIOAuthTokens } from '../../utils/auth.js'
 import { clearMemoryFileCaches } from '../../utils/claudemd.js'
 import { getMemoryPath } from '../../utils/config.js'
 import { logForDiagnosticsNoPII } from '../../utils/diagLogs.js'
 import { classifyAxiosError } from '../../utils/errors.js'
 import { getRepoRemoteHash } from '../../utils/git.js'
-import {
-  getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
-} from '../../utils/model/providers.js'
+import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/providers.js'
 import { markInternalWrite } from '../../utils/settings/internalWrites.js'
 import { getSettingsFilePathForSource } from '../../utils/settings/settings.js'
 import { resetSettingsCache } from '../../utils/settings/settingsCache.js'
@@ -41,12 +33,7 @@ import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 import { logEvent } from '../analytics/index.js'
 import { getRetryDelay } from '../api/withRetry.js'
-import {
-  type SettingsSyncFetchResult,
-  type SettingsSyncUploadResult,
-  SYNC_KEYS,
-  UserSyncDataSchema,
-} from './types.js'
+import { type SettingsSyncFetchResult, type SettingsSyncUploadResult, SYNC_KEYS, UserSyncDataSchema } from './types.js'
 
 const SETTINGS_SYNC_TIMEOUT_MS = 10000 // 10 seconds
 const DEFAULT_MAX_RETRIES = 3
@@ -61,10 +48,7 @@ export async function uploadUserSettingsInBackground(): Promise<void> {
   try {
     if (
       !feature('UPLOAD_USER_SETTINGS') ||
-      !getFeatureValue_CACHED_MAY_BE_STALE(
-        'tengu_enable_settings_sync_push',
-        false,
-      ) ||
+      !getFeatureValue_CACHED_MAY_BE_STALE('tengu_enable_settings_sync_push', false) ||
       !getIsInteractive() ||
       !isUsingOAuth()
     ) {
@@ -84,10 +68,7 @@ export async function uploadUserSettingsInBackground(): Promise<void> {
     const projectId = await getRepoRemoteHash()
     const localEntries = await buildEntriesFromLocalFiles(projectId)
     const remoteEntries = result.isEmpty ? {} : result.data!.content.entries
-    const changedEntries = pickBy(
-      localEntries,
-      (value, key) => remoteEntries[key] !== value,
-    )
+    const changedEntries = pickBy(localEntries, (value, key) => remoteEntries[key] !== value)
 
     const entryCount = Object.keys(changedEntries).length
     if (entryCount === 0) {
@@ -154,15 +135,10 @@ export function redownloadUserSettings(): Promise<boolean> {
   return downloadPromise
 }
 
-async function doDownloadUserSettings(
-  maxRetries = DEFAULT_MAX_RETRIES,
-): Promise<boolean> {
+async function doDownloadUserSettings(maxRetries = DEFAULT_MAX_RETRIES): Promise<boolean> {
   if (feature('DOWNLOAD_USER_SETTINGS')) {
     try {
-      if (
-        !getFeatureValue_CACHED_MAY_BE_STALE('tengu_strap_foyer', false) ||
-        !isUsingOAuth()
-      ) {
+      if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_strap_foyer', false) || !isUsingOAuth()) {
         logForDiagnosticsNoPII('info', 'settings_sync_download_skipped')
         logEvent('tengu_settings_sync_download_skipped', {})
         return false
@@ -215,9 +191,7 @@ function isUsingOAuth(): boolean {
   }
 
   const tokens = getClaudeAIOAuthTokens()
-  return Boolean(
-    tokens?.accessToken && tokens.scopes?.includes(CLAUDE_AI_INFERENCE_SCOPE),
-  )
+  return Boolean(tokens?.accessToken && tokens.scopes?.includes(CLAUDE_AI_INFERENCE_SCOPE))
 }
 
 function getSettingsSyncEndpoint(): string {
@@ -266,7 +240,7 @@ async function fetchUserSettingsOnce(): Promise<SettingsSyncFetchResult> {
     const response = await axios.get(endpoint, {
       headers,
       timeout: SETTINGS_SYNC_TIMEOUT_MS,
-      validateStatus: status => status === 200 || status === 404,
+      validateStatus: (status) => status === 200 || status === 404,
     })
 
     // 404 means no settings exist yet
@@ -312,9 +286,7 @@ async function fetchUserSettingsOnce(): Promise<SettingsSyncFetchResult> {
   }
 }
 
-async function fetchUserSettings(
-  maxRetries = DEFAULT_MAX_RETRIES,
-): Promise<SettingsSyncFetchResult> {
+async function fetchUserSettings(maxRetries = DEFAULT_MAX_RETRIES): Promise<SettingsSyncFetchResult> {
   let lastResult: SettingsSyncFetchResult | null = null
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
@@ -344,9 +316,7 @@ async function fetchUserSettings(
   return lastResult!
 }
 
-async function uploadUserSettings(
-  entries: Record<string, string>,
-): Promise<SettingsSyncUploadResult> {
+async function uploadUserSettings(entries: Record<string, string>): Promise<SettingsSyncUploadResult> {
   try {
     await checkAndRefreshOAuthTokenIfNeeded()
 
@@ -415,9 +385,7 @@ async function tryReadFileForSync(filePath: string): Promise<string | null> {
   }
 }
 
-async function buildEntriesFromLocalFiles(
-  projectId: string | null,
-): Promise<Record<string, string>> {
+async function buildEntriesFromLocalFiles(projectId: string | null): Promise<Record<string, string>> {
   const entries: Record<string, string> = {}
 
   // Global user settings
@@ -458,10 +426,7 @@ async function buildEntriesFromLocalFiles(
   return entries
 }
 
-async function writeFileForSync(
-  filePath: string,
-  content: string,
-): Promise<boolean> {
+async function writeFileForSync(filePath: string, content: string): Promise<boolean> {
   try {
     const parentDir = dirname(filePath)
     if (parentDir) {
@@ -485,10 +450,7 @@ async function writeFileForSync(
  * - resetSettingsCache() for settings files
  * - clearMemoryFileCaches() for memory files (CLAUDE.md)
  */
-async function applyRemoteEntriesToLocal(
-  entries: Record<string, string>,
-  projectId: string | null,
-): Promise<void> {
+async function applyRemoteEntriesToLocal(entries: Record<string, string>, projectId: string | null): Promise<void> {
   let appliedCount = 0
   let settingsWritten = false
   let memoryWritten = false
@@ -510,10 +472,7 @@ async function applyRemoteEntriesToLocal(
   const userSettingsContent = entries[SYNC_KEYS.USER_SETTINGS]
   if (userSettingsContent) {
     const userSettingsPath = getSettingsFilePathForSource('userSettings')
-    if (
-      userSettingsPath &&
-      !exceedsSizeLimit(userSettingsContent, userSettingsPath)
-    ) {
+    if (userSettingsPath && !exceedsSizeLimit(userSettingsContent, userSettingsPath)) {
       // Mark as internal write to prevent spurious change detection
       markInternalWrite(userSettingsPath)
       if (await writeFileForSync(userSettingsPath, userSettingsContent)) {
@@ -541,10 +500,7 @@ async function applyRemoteEntriesToLocal(
     const projectSettingsContent = entries[projectSettingsKey]
     if (projectSettingsContent) {
       const localSettingsPath = getSettingsFilePathForSource('localSettings')
-      if (
-        localSettingsPath &&
-        !exceedsSizeLimit(projectSettingsContent, localSettingsPath)
-      ) {
+      if (localSettingsPath && !exceedsSizeLimit(projectSettingsContent, localSettingsPath)) {
         // Mark as internal write to prevent spurious change detection
         markInternalWrite(localSettingsPath)
         if (await writeFileForSync(localSettingsPath, projectSettingsContent)) {

@@ -1,10 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { logError } from 'src/utils/log.js'
 import { z } from 'zod/v4'
-import type {
-  ConnectedMCPServer,
-  MCPServerConnection,
-} from '../services/mcp/types.js'
+
+import type { ConnectedMCPServer, MCPServerConnection } from '../services/mcp/types.js'
 import { getConnectedIdeClient } from '../utils/ide.js'
 import { lazySchema } from '../utils/lazySchema.js'
 export type SelectionPoint = {
@@ -56,10 +54,7 @@ const SelectionChangedSchema = lazySchema(() =>
  * A hook that tracks IDE text selection information by directly registering
  * with MCP client notification handlers
  */
-export function useIdeSelection(
-  mcpClients: MCPServerConnection[],
-  onSelect: (selection: IDESelection) => void,
-): void {
+export function useIdeSelection(mcpClients: MCPServerConnection[], onSelect: (selection: IDESelection) => void): void {
   const handlersRegistered = useRef(false)
   const currentIDERef = useRef<ConnectedMCPServer | null>(null)
 
@@ -109,38 +104,31 @@ export function useIdeSelection(
     }
 
     // Register notification handler for selection_changed events
-    ideClient.client.setNotificationHandler(
-      SelectionChangedSchema(),
-      notification => {
-        if (currentIDERef.current !== ideClient) {
-          return
-        }
+    ideClient.client.setNotificationHandler(SelectionChangedSchema(), (notification) => {
+      if (currentIDERef.current !== ideClient) {
+        return
+      }
 
-        try {
-          // Get the selection data from the notification params
-          const selectionData = notification.params
+      try {
+        // Get the selection data from the notification params
+        const selectionData = notification.params
 
-          // Process selection data - validate it has required properties
-          if (
-            selectionData.selection &&
-            selectionData.selection.start &&
-            selectionData.selection.end
-          ) {
-            // Handle selection changes
-            selectionChangeHandler(selectionData as SelectionData)
-          } else if (selectionData.text !== undefined) {
-            // Handle empty selection (when text is empty string)
-            selectionChangeHandler({
-              selection: null,
-              text: selectionData.text,
-              filePath: selectionData.filePath,
-            })
-          }
-        } catch (error) {
-          logError(error as Error)
+        // Process selection data - validate it has required properties
+        if (selectionData.selection && selectionData.selection.start && selectionData.selection.end) {
+          // Handle selection changes
+          selectionChangeHandler(selectionData as SelectionData)
+        } else if (selectionData.text !== undefined) {
+          // Handle empty selection (when text is empty string)
+          selectionChangeHandler({
+            selection: null,
+            text: selectionData.text,
+            filePath: selectionData.filePath,
+          })
         }
-      },
-    )
+      } catch (error) {
+        logError(error as Error)
+      }
+    })
 
     // Mark that we've registered handlers
     handlersRegistered.current = true

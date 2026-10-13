@@ -1,5 +1,6 @@
 import figures from 'figures'
 import * as React from 'react'
+
 import { Box, color, Text, useTheme } from '../../ink.js'
 import { plural } from '../../utils/stringUtils.js'
 import type { UnifiedInstalledItem } from './unifiedTypes.js'
@@ -9,10 +10,7 @@ type Props = {
   isSelected: boolean
 }
 
-export function UnifiedInstalledCell({
-  item,
-  isSelected,
-}: Props): React.ReactNode {
+export function UnifiedInstalledCell({ item, isSelected }: Props): React.ReactNode {
   const [theme] = useTheme()
 
   if (item.type === 'plugin') {
@@ -23,8 +21,7 @@ export function UnifiedInstalledCell({
     // Show pending toggle status if set, otherwise show current status
     if (item.pendingToggle) {
       statusIcon = color('suggestion', theme)(figures.arrowRight)
-      statusText =
-        item.pendingToggle === 'will-enable' ? 'will enable' : 'will disable'
+      statusText = item.pendingToggle === 'will-enable' ? 'will enable' : 'will disable'
     } else if (item.errorCount > 0) {
       statusIcon = color('error', theme)(figures.cross)
       statusText = `${item.errorCount} ${plural(item.errorCount, 'error')}`
@@ -38,9 +35,7 @@ export function UnifiedInstalledCell({
 
     return (
       <Box>
-        <Text color={isSelected ? 'suggestion' : undefined}>
-          {isSelected ? `${figures.pointer} ` : '  '}
-        </Text>
+        <Text color={isSelected ? 'suggestion' : undefined}>{isSelected ? `${figures.pointer} ` : '  '}</Text>
         <Text color={isSelected ? 'suggestion' : undefined}>{item.name}</Text>
         <Text dimColor={!isSelected}>
           {' '}
@@ -58,9 +53,7 @@ export function UnifiedInstalledCell({
 
     return (
       <Box>
-        <Text color={isSelected ? 'suggestion' : undefined}>
-          {isSelected ? `${figures.pointer} ` : '  '}
-        </Text>
+        <Text color={isSelected ? 'suggestion' : undefined}>{isSelected ? `${figures.pointer} ` : '  '}</Text>
         <Text color={isSelected ? 'suggestion' : undefined}>{item.name}</Text>
         <Text dimColor={!isSelected}>
           {' '}
@@ -79,9 +72,7 @@ export function UnifiedInstalledCell({
 
     return (
       <Box>
-        <Text color={isSelected ? 'suggestion' : undefined}>
-          {isSelected ? `${figures.pointer} ` : '  '}
-        </Text>
+        <Text color={isSelected ? 'suggestion' : undefined}>{isSelected ? `${figures.pointer} ` : '  '}</Text>
         <Text color={isSelected ? 'suggestion' : undefined}>{item.name}</Text>
         <Text dimColor={!isSelected}>
           {' '}
@@ -119,9 +110,7 @@ export function UnifiedInstalledCell({
   if (item.indented) {
     return (
       <Box>
-        <Text color={isSelected ? 'suggestion' : undefined}>
-          {isSelected ? `${figures.pointer} ` : '  '}
-        </Text>
+        <Text color={isSelected ? 'suggestion' : undefined}>{isSelected ? `${figures.pointer} ` : '  '}</Text>
         <Text dimColor={!isSelected}>└ </Text>
         <Text color={isSelected ? 'suggestion' : undefined}>{item.name}</Text>
         <Text dimColor={!isSelected}>
@@ -136,9 +125,7 @@ export function UnifiedInstalledCell({
 
   return (
     <Box>
-      <Text color={isSelected ? 'suggestion' : undefined}>
-        {isSelected ? `${figures.pointer} ` : '  '}
-      </Text>
+      <Text color={isSelected ? 'suggestion' : undefined}>{isSelected ? `${figures.pointer} ` : '  '}</Text>
       <Text color={isSelected ? 'suggestion' : undefined}>{item.name}</Text>
       <Text dimColor={!isSelected}>
         {' '}

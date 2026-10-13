@@ -1,10 +1,11 @@
 import * as React from 'react'
 import { useEffect, useState } from 'react'
+
 import { useSearchInput } from '../../hooks/useSearchInput.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
+import { Box, Text, useTerminalFocus } from '../../ink.js'
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { clamp } from '../../ink/layout/geometry.js'
-import { Box, Text, useTerminalFocus } from '../../ink.js'
 import { SearchBox } from '../SearchBox.js'
 import { Byline } from './Byline.js'
 import { KeyboardShortcutHint } from './KeyboardShortcutHint.js'
@@ -97,17 +98,14 @@ export function FuzzyPicker<T>({
   // Cap visibleCount so the picker never exceeds the terminal height. When it
   // overflows, each re-render (arrow key, ctrl+p) mis-positions the cursor-up
   // by the overflow amount and a previously-drawn line flashes blank.
-  const visibleCount = Math.max(
-    MIN_VISIBLE,
-    Math.min(requestedVisible, rows - CHROME_ROWS - (matchLabel ? 1 : 0)),
-  )
+  const visibleCount = Math.max(MIN_VISIBLE, Math.min(requestedVisible, rows - CHROME_ROWS - (matchLabel ? 1 : 0)))
 
   // Full hint row with onTab+onShiftTab is ~100 chars and wraps inconsistently
   // below that. Compact mode drops shift+tab and shortens labels.
   const compact = columns < 120
 
   const step = (delta: 1 | -1) => {
-    setFocusedIndex(i => clamp(i + delta, 0, items.length - 1))
+    setFocusedIndex((i) => clamp(i + delta, 0, items.length - 1))
   }
 
   // onKeyDown fires after useSearchInput's useInput, so onExit must be a
@@ -163,7 +161,7 @@ export function FuzzyPicker<T>({
   }, [query])
 
   useEffect(() => {
-    setFocusedIndex(i => clamp(i, 0, items.length - 1))
+    setFocusedIndex((i) => clamp(i, 0, items.length - 1))
   }, [items.length])
 
   const focused = items[focusedIndex]
@@ -172,15 +170,10 @@ export function FuzzyPicker<T>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focused])
 
-  const windowStart = clamp(
-    focusedIndex - visibleCount + 1,
-    0,
-    items.length - visibleCount,
-  )
+  const windowStart = clamp(focusedIndex - visibleCount + 1, 0, items.length - visibleCount)
   const visible = items.slice(windowStart, windowStart + visibleCount)
 
-  const emptyText =
-    typeof emptyMessage === 'function' ? emptyMessage(query) : emptyMessage
+  const emptyText = typeof emptyMessage === 'function' ? emptyMessage(query) : emptyMessage
 
   const searchBox = (
     <SearchBox
@@ -218,11 +211,7 @@ export function FuzzyPicker<T>({
   // change both layout AND gap count, bouncing the searchBox below.
   const listGroup =
     renderPreview && previewPosition === 'right' ? (
-      <Box
-        flexDirection="row"
-        gap={2}
-        height={visibleCount + (matchLabel ? 1 : 0)}
-      >
+      <Box flexDirection="row" gap={2} height={visibleCount + (matchLabel ? 1 : 0)}>
         <Box flexDirection="column" flexShrink={0}>
           {listBlock}
           {matchLabel && <Text dimColor>{matchLabel}</Text>}
@@ -243,13 +232,7 @@ export function FuzzyPicker<T>({
   const inputAbove = direction !== 'up'
   return (
     <Pane color="permission">
-      <Box
-        flexDirection="column"
-        gap={1}
-        tabIndex={0}
-        autoFocus
-        onKeyDown={handleKeyDown}
-      >
+      <Box flexDirection="column" gap={1} tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
         <Text bold color="permission">
           {title}
         </Text>
@@ -258,23 +241,10 @@ export function FuzzyPicker<T>({
         {!inputAbove && searchBox}
         <Text dimColor>
           <Byline>
-            <KeyboardShortcutHint
-              shortcut="↑/↓"
-              action={compact ? 'nav' : 'navigate'}
-            />
-            <KeyboardShortcutHint
-              shortcut="Enter"
-              action={compact ? firstWord(selectAction) : selectAction}
-            />
-            {onTab && (
-              <KeyboardShortcutHint shortcut="Tab" action={onTab.action} />
-            )}
-            {onShiftTab && !compact && (
-              <KeyboardShortcutHint
-                shortcut="shift+tab"
-                action={onShiftTab.action}
-              />
-            )}
+            <KeyboardShortcutHint shortcut="↑/↓" action={compact ? 'nav' : 'navigate'} />
+            <KeyboardShortcutHint shortcut="Enter" action={compact ? firstWord(selectAction) : selectAction} />
+            {onTab && <KeyboardShortcutHint shortcut="Tab" action={onTab.action} />}
+            {onShiftTab && !compact && <KeyboardShortcutHint shortcut="shift+tab" action={onShiftTab.action} />}
             <KeyboardShortcutHint shortcut="Esc" action="cancel" />
             {extraHints}
           </Byline>
@@ -284,10 +254,7 @@ export function FuzzyPicker<T>({
   )
 }
 
-type ListProps<T> = Pick<
-  Props<T>,
-  'visibleCount' | 'direction' | 'getKey' | 'renderItem'
-> & {
+type ListProps<T> = Pick<Props<T>, 'visibleCount' | 'direction' | 'getKey' | 'renderItem'> & {
   visible: readonly T[]
   windowStart: number
   total: number
@@ -318,8 +285,7 @@ function List<T>({
     const actualIndex = windowStart + i
     const isFocused = actualIndex === focusedIndex
     const atLowEdge = i === 0 && windowStart > 0
-    const atHighEdge =
-      i === visible.length - 1 && windowStart + visibleCount! < total
+    const atHighEdge = i === visible.length - 1 && windowStart + visibleCount! < total
     return (
       <ListItem
         key={getKey(item)}
@@ -334,11 +300,7 @@ function List<T>({
   })
 
   return (
-    <Box
-      height={visibleCount}
-      flexShrink={0}
-      flexDirection={direction === 'up' ? 'column-reverse' : 'column'}
-    >
+    <Box height={visibleCount} flexShrink={0} flexDirection={direction === 'up' ? 'column-reverse' : 'column'}>
       {rows}
     </Box>
   )

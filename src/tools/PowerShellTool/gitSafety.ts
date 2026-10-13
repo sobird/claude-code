@@ -8,6 +8,7 @@
  */
 
 import { basename, posix, resolve, sep } from 'path'
+
 import { getCwd } from '../../utils/cwd.js'
 import { PS_TOKENIZER_DASH_CHARS } from '../../utils/powershell/parser.js'
 
@@ -69,7 +70,7 @@ function normalizeGitPathArg(arg: string): string {
   // Originally-'' (leading slash split) stays '' (absolute-path marker).
   s = s
     .split('/')
-    .map(c => {
+    .map((c) => {
       if (c === '') return c
       let prev
       do {

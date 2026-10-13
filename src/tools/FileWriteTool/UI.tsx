@@ -1,10 +1,12 @@
+import { isAbsolute, relative, resolve } from 'path'
+
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { StructuredPatchHunk } from 'diff'
-import { isAbsolute, relative, resolve } from 'path'
 import * as React from 'react'
 import { Suspense, use, useState } from 'react'
 import { MessageResponse } from 'src/components/MessageResponse.js'
 import { extractTag } from 'src/utils/messages.js'
+
 import { CtrlOToExpand } from '../../components/CtrlOToExpand.js'
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js'
 import { FileEditToolUpdatedMessage } from '../../components/FileEditToolUpdatedMessage.js'
@@ -61,12 +63,7 @@ function FileWriteToolCreatedMessage({
         <Box flexDirection="column">
           <HighlightedCode
             code={
-              verbose
-                ? contentWithFallback
-                : contentWithFallback
-                    .split('\n')
-                    .slice(0, MAX_LINES_TO_RENDER)
-                    .join('\n')
+              verbose ? contentWithFallback : contentWithFallback.split('\n').slice(0, MAX_LINES_TO_RENDER).join('\n')
             }
             filePath={filePath}
             width={columns - 12}
@@ -74,8 +71,7 @@ function FileWriteToolCreatedMessage({
         </Box>
         {!verbose && plusLines > 0 && (
           <Text dimColor>
-            … +{plusLines} {plusLines === 1 ? 'line' : 'lines'}{' '}
-            {numLines > 0 && <CtrlOToExpand />}
+            … +{plusLines} {plusLines === 1 ? 'line' : 'lines'} {numLines > 0 && <CtrlOToExpand />}
           </Text>
         )}
       </Box>
@@ -83,9 +79,7 @@ function FileWriteToolCreatedMessage({
   )
 }
 
-export function userFacingName(
-  input: Partial<{ file_path: string; content: string }> | undefined,
-): string {
+export function userFacingName(input: Partial<{ file_path: string; content: string }> | undefined): string {
   if (input?.file_path?.startsWith(getPlansDirectory())) {
     return 'Updated plan'
   }
@@ -108,9 +102,7 @@ export function isResultTruncated({ type, content }: Output): boolean {
   return pos < content.length
 }
 
-export function getToolUseSummary(
-  input: Partial<{ file_path: string; content: string }> | undefined,
-): string | null {
+export function getToolUseSummary(input: Partial<{ file_path: string; content: string }> | undefined): string | null {
   if (!input?.file_path) {
     return null
   }
@@ -139,14 +131,7 @@ export function renderToolUseRejectedMessage(
   { file_path, content }: { file_path: string; content: string },
   { style, verbose }: { style?: 'condensed'; verbose: boolean },
 ): React.ReactNode {
-  return (
-    <WriteRejectionDiff
-      filePath={file_path}
-      content={content}
-      style={style}
-      verbose={verbose}
-    />
-  )
+  return <WriteRejectionDiff filePath={file_path} content={content} style={style} verbose={verbose} />
 }
 
 type RejectionDiffData =
@@ -227,14 +212,9 @@ function WriteRejectionBody({
   )
 }
 
-async function loadRejectionDiff(
-  filePath: string,
-  content: string,
-): Promise<RejectionDiffData> {
+async function loadRejectionDiff(filePath: string, content: string): Promise<RejectionDiffData> {
   try {
-    const fullFilePath = isAbsolute(filePath)
-      ? filePath
-      : resolve(getCwd(), filePath)
+    const fullFilePath = isAbsolute(filePath) ? filePath : resolve(getCwd(), filePath)
     const handle = await openForScan(fullFilePath)
     if (handle === null) return { type: 'create' }
     let oldContent: string | null
@@ -249,9 +229,7 @@ async function loadRejectionDiff(
     const patch = getPatchForDisplay({
       filePath,
       fileContents: oldContent,
-      edits: [
-        { old_string: oldContent, new_string: content, replace_all: false },
-      ],
+      edits: [{ old_string: oldContent, new_string: content, replace_all: false }],
     })
     return { type: 'update', patch, oldContent }
   } catch (e) {
@@ -265,11 +243,7 @@ export function renderToolUseErrorMessage(
   result: ToolResultBlockParam['content'],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
-  if (
-    !verbose &&
-    typeof result === 'string' &&
-    extractTag(result, 'tool_use_error')
-  ) {
+  if (!verbose && typeof result === 'string' && extractTag(result, 'tool_use_error')) {
     return (
       <MessageResponse>
         <Text color="error">Error writing file</Text>
@@ -303,19 +277,12 @@ export function renderToolResultMessage(
         const numLines = countLines(content)
         return (
           <Text>
-            Wrote <Text bold>{numLines}</Text> lines to{' '}
-            <Text bold>{relative(getCwd(), filePath)}</Text>
+            Wrote <Text bold>{numLines}</Text> lines to <Text bold>{relative(getCwd(), filePath)}</Text>
           </Text>
         )
       }
 
-      return (
-        <FileWriteToolCreatedMessage
-          filePath={filePath}
-          content={content}
-          verbose={verbose}
-        />
-      )
+      return <FileWriteToolCreatedMessage filePath={filePath} content={content} verbose={verbose} />
     }
     case 'update': {
       const isPlanFile = filePath.startsWith(getPlansDirectory())

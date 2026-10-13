@@ -20,10 +20,7 @@ declare namespace MACRO {
 declare function MACRO<T>(fn: () => T): T
 
 // Companion/buddy observer (internal)
-declare function fireCompanionObserver(
-  messages: unknown[],
-  callback: (reaction: unknown) => void,
-): void
+declare function fireCompanionObserver(messages: unknown[], callback: (reaction: unknown) => void): void
 
 // Ultraplan (internal)
 // declare function UltraplanChoiceDialog(props: Record<string, unknown>): JSX.Element | null
@@ -51,10 +48,10 @@ declare module '*.css' {
 
 declare namespace NodeJS {
   interface ProcessEnv {
-    AUDIO_CAPTURE_NODE_PATH?: string;
-    CLAUDE_CODE_TASK_LIST_ID: string;
-    USER_TYPE?: string;
-    CLAUDE_CODE_PERFETTO_TRACE?: string;
-    OTEL_LOG_TOOL_CONTENT?: string;
+    AUDIO_CAPTURE_NODE_PATH?: string
+    CLAUDE_CODE_TASK_LIST_ID: string
+    USER_TYPE?: string
+    CLAUDE_CODE_PERFETTO_TRACE?: string
+    OTEL_LOG_TOOL_CONTENT?: string
   }
 }

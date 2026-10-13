@@ -8,16 +8,11 @@
  */
 
 import * as React from 'react'
+
 import type { LoadedPlugin } from '../../types/plugin.js'
 import { errorMessage } from '../../utils/errors.js'
-import {
-  loadMcpServerUserConfig,
-  saveMcpServerUserConfig,
-} from '../../utils/plugins/mcpbHandler.js'
-import {
-  getUnconfiguredChannels,
-  type UnconfiguredChannel,
-} from '../../utils/plugins/mcpPluginIntegration.js'
+import { loadMcpServerUserConfig, saveMcpServerUserConfig } from '../../utils/plugins/mcpbHandler.js'
+import { getUnconfiguredChannels, type UnconfiguredChannel } from '../../utils/plugins/mcpPluginIntegration.js'
 import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js'
 import {
   getUnconfiguredOptions,
@@ -36,13 +31,9 @@ import { PluginOptionsDialog } from './PluginOptionsDialog.js'
  *
  * Install should have cleared caches already; loadAllPlugins reads fresh.
  */
-export async function findPluginOptionsTarget(
-  pluginId: string,
-): Promise<LoadedPlugin | undefined> {
+export async function findPluginOptionsTarget(pluginId: string): Promise<LoadedPlugin | undefined> {
   const { enabled, disabled } = await loadAllPlugins()
-  return [...enabled, ...disabled].find(
-    p => p.repository === pluginId || p.source === pluginId,
-  )
+  return [...enabled, ...disabled].find((p) => p.repository === pluginId || p.source === pluginId)
 }
 
 /**
@@ -71,11 +62,7 @@ type Props = {
   onDone: (outcome: 'configured' | 'skipped' | 'error', detail?: string) => void
 }
 
-export function PluginOptionsFlow({
-  plugin,
-  pluginId,
-  onDone,
-}: Props): React.ReactNode {
+export function PluginOptionsFlow({ plugin, pluginId, onDone }: Props): React.ReactNode {
   // Build the step list once at mount. Re-calling after a save would drop the
   // item we just configured.
   const [steps] = React.useState<ConfigStep[]>(() => {
@@ -90,8 +77,7 @@ export function PluginOptionsFlow({
         subtitle: 'Plugin options',
         schema: unconfigured,
         load: () => loadPluginOptions(pluginId),
-        save: values =>
-          savePluginOptions(pluginId, values, plugin.manifest.userConfig!),
+        save: (values) => savePluginOptions(pluginId, values, plugin.manifest.userConfig!),
       })
     }
 
@@ -103,15 +89,8 @@ export function PluginOptionsFlow({
         title: `Configure ${channel.displayName}`,
         subtitle: `Plugin: ${plugin.name}`,
         schema: channel.configSchema,
-        load: () =>
-          loadMcpServerUserConfig(pluginId, channel.server) ?? undefined,
-        save: values =>
-          saveMcpServerUserConfig(
-            pluginId,
-            channel.server,
-            values,
-            channel.configSchema,
-          ),
+        load: () => loadMcpServerUserConfig(pluginId, channel.server) ?? undefined,
+        save: (values) => saveMcpServerUserConfig(pluginId, channel.server, values, channel.configSchema),
       })
     }
 

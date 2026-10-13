@@ -1,6 +1,7 @@
 import React from 'react'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
+
 import { Box } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { type OptionWithDescription, Select } from '../CustomSelect/select.js'
 
 export type TreeNode<T> = {
@@ -127,9 +128,7 @@ export function TreeSelect<T>({
   onUpFromFirstItem,
 }: TreeSelectProps<T>): React.ReactNode {
   // Track which nodes are expanded (internal state if not controlled externally)
-  const [internalExpandedIds, setInternalExpandedIds] = React.useState<
-    Set<string | number>
-  >(new Set())
+  const [internalExpandedIds, setInternalExpandedIds] = React.useState<Set<string | number>>(new Set())
 
   // Track if we're programmatically setting focus to avoid infinite loops
   const isProgrammaticFocusRef = React.useRef(false)
@@ -152,11 +151,7 @@ export function TreeSelect<T>({
   const flattenedNodes = React.useMemo((): FlattenedNode<T>[] => {
     const result: FlattenedNode<T>[] = []
 
-    function traverse(
-      node: TreeNode<T>,
-      depth: number,
-      parentId?: string | number,
-    ): void {
+    function traverse(node: TreeNode<T>, depth: number, parentId?: string | number): void {
       const hasChildren = !!node.children && node.children.length > 0
       const nodeIsExpanded = isExpanded(node.id)
 
@@ -184,14 +179,8 @@ export function TreeSelect<T>({
   }, [nodes, isExpanded])
 
   // Default prefix functions
-  const defaultGetParentPrefix = React.useCallback(
-    (isExpanded: boolean): string => (isExpanded ? '▼ ' : '▶ '),
-    [],
-  )
-  const defaultGetChildPrefix = React.useCallback(
-    (_depth: number): string => '  ▸ ',
-    [],
-  )
+  const defaultGetParentPrefix = React.useCallback((isExpanded: boolean): string => (isExpanded ? '▼ ' : '▶ '), [])
+  const defaultGetChildPrefix = React.useCallback((_depth: number): string => '  ▸ ', [])
 
   const parentPrefixFn = getParentPrefix ?? defaultGetParentPrefix
   const childPrefixFn = getChildPrefix ?? defaultGetChildPrefix
@@ -215,10 +204,8 @@ export function TreeSelect<T>({
   )
 
   // Convert flattened nodes to Select options
-  const options = React.useMemo((): OptionWithDescription<
-    string | number
-  >[] => {
-    return flattenedNodes.map(flatNode => ({
+  const options = React.useMemo((): OptionWithDescription<string | number>[] => {
+    return flattenedNodes.map((flatNode) => ({
       label: buildLabel(flatNode),
       description: flatNode.node.description,
       dimDescription: flatNode.node.dimDescription ?? true,
@@ -229,14 +216,14 @@ export function TreeSelect<T>({
   // Map from node ID to the actual node for quick lookup
   const nodeMap = React.useMemo(() => {
     const map = new Map<string | number, TreeNode<T>>()
-    flattenedNodes.forEach(fn => map.set(fn.node.id, fn.node))
+    flattenedNodes.forEach((fn) => map.set(fn.node.id, fn.node))
     return map
   }, [flattenedNodes])
 
   // Find the flattened node by ID
   const findFlattenedNode = React.useCallback(
     (nodeId: string | number): FlattenedNode<T> | undefined => {
-      return flattenedNodes.find(fn => fn.node.id === nodeId)
+      return flattenedNodes.find((fn) => fn.node.id === nodeId)
     },
     [flattenedNodes],
   )
@@ -251,13 +238,13 @@ export function TreeSelect<T>({
         if (onExpand) {
           onExpand(nodeId)
         } else {
-          setInternalExpandedIds(prev => new Set(prev).add(nodeId))
+          setInternalExpandedIds((prev) => new Set(prev).add(nodeId))
         }
       } else {
         if (onCollapse) {
           onCollapse(nodeId)
         } else {
-          setInternalExpandedIds(prev => {
+          setInternalExpandedIds((prev) => {
             const newSet = new Set(prev)
             newSet.delete(nodeId)
             return newSet

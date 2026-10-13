@@ -1,8 +1,10 @@
-import chalk from 'chalk'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { pathToFileURL } from 'url'
+
+import chalk from 'chalk'
+
 import { color } from '../components/design-system/color.js'
 import { supportsHyperlinks } from '../ink/supports-hyperlinks.js'
 import { logForDebugging } from './debug.js'
@@ -90,12 +92,7 @@ export async function setupShellCompletion(theme: ThemeName): Promise<string> {
   // Using --output avoids piping through stdout where process.exit() can
   // truncate output before the pipe buffer drains.
   const claudeBin = process.argv[1] || 'claude'
-  const result = await execFileNoThrow(claudeBin, [
-    'completion',
-    shell.shellFlag,
-    '--output',
-    shell.cacheFile,
-  ])
+  const result = await execFileNoThrow(claudeBin, ['completion', shell.shellFlag, '--output', shell.cacheFile])
   if (result.code !== 0) {
     return `${EOL}${color('warning', theme)(`Could not generate ${shell.name} shell completions`)}${EOL}${chalk.dim(`Run manually: claude completion ${shell.shellFlag} > ${shell.cacheFile}`)}${EOL}`
   }
@@ -104,10 +101,7 @@ export async function setupShellCompletion(theme: ThemeName): Promise<string> {
   let existing = ''
   try {
     existing = await readFile(shell.rcFile, { encoding: 'utf-8' })
-    if (
-      existing.includes('claude completion') ||
-      existing.includes(shell.cacheFile)
-    ) {
+    if (existing.includes('claude completion') || existing.includes(shell.cacheFile)) {
       return `${EOL}${color('success', theme)(`Shell completions updated for ${shell.name}`)}${EOL}${chalk.dim(`See ${formatPathLink(shell.rcFile)}`)}${EOL}`
     }
   } catch (e: unknown) {
@@ -146,21 +140,12 @@ export async function regenerateCompletionCache(): Promise<void> {
   logForDebugging(`update: Regenerating ${shell.name} completion cache`)
 
   const claudeBin = process.argv[1] || 'claude'
-  const result = await execFileNoThrow(claudeBin, [
-    'completion',
-    shell.shellFlag,
-    '--output',
-    shell.cacheFile,
-  ])
+  const result = await execFileNoThrow(claudeBin, ['completion', shell.shellFlag, '--output', shell.cacheFile])
 
   if (result.code !== 0) {
-    logForDebugging(
-      `update: Failed to regenerate ${shell.name} completion cache`,
-    )
+    logForDebugging(`update: Failed to regenerate ${shell.name} completion cache`)
     return
   }
 
-  logForDebugging(
-    `update: Regenerated ${shell.name} completion cache at ${shell.cacheFile}`,
-  )
+  logForDebugging(`update: Regenerated ${shell.name} completion cache at ${shell.cacheFile}`)
 }

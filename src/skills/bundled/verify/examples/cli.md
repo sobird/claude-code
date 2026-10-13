@@ -23,12 +23,14 @@ the same fields the human output shows. `tool status` without the flag
 is unchanged.
 
 **Plan:**
+
 1. Build
 2. `tool status` → human output, same as before (non-regression)
 3. `tool status --json` → valid JSON, parseable
 4. JSON fields match human output fields
 
 **Execute:**
+
 ```bash
 go build -o /tmp/tool ./cmd/tool
 

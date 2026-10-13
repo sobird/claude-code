@@ -1,18 +1,13 @@
 import { feature } from 'bun:bundle'
+
 import figures from 'figures'
 import * as React from 'react'
 import { SentryErrorBoundary } from 'src/components/SentryErrorBoundary.js'
+
 import { Box, Text, useTheme } from '../../../ink.js'
 import { useAppState } from '../../../state/AppState.js'
-import {
-  filterToolProgressMessages,
-  type Tool,
-  type Tools,
-} from '../../../Tool.js'
-import type {
-  NormalizedUserMessage,
-  ProgressMessage,
-} from '../../../types/message.js'
+import { filterToolProgressMessages, type Tool, type Tools } from '../../../Tool.js'
+import type { NormalizedUserMessage, ProgressMessage } from '../../../types/message.js'
 import {
   deleteClassifierApproval,
   getClassifierApproval,
@@ -54,17 +49,13 @@ export function UserToolSuccessMessage({
   const isBriefOnly =
     feature('KAIROS') || feature('KAIROS_BRIEF')
       ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-        useAppState(s => s.isBriefOnly)
+        useAppState((s) => s.isBriefOnly)
       : false
 
   // Capture classifier approval once on mount, then delete from Map to prevent linear growth.
   // useState lazy initializer ensures the value persists across re-renders.
-  const [classifierRule] = React.useState(() =>
-    getClassifierApproval(toolUseID),
-  )
-  const [yoloReason] = React.useState(() =>
-    getYoloClassifierApproval(toolUseID),
-  )
+  const [classifierRule] = React.useState(() => getClassifierApproval(toolUseID))
+  const [yoloReason] = React.useState(() => getYoloClassifierApproval(toolUseID))
   React.useEffect(() => {
     deleteClassifierApproval(toolUseID)
   }, [toolUseID])
@@ -84,19 +75,15 @@ export function UserToolSuccessMessage({
   const toolResult = parsedOutput?.data ?? message.toolUseResult
 
   const renderedMessage =
-    tool.renderToolResultMessage?.(
-      toolResult as never,
-      filterToolProgressMessages(progressMessagesForMessage),
-      {
-        style,
-        theme,
-        tools,
-        verbose,
-        isTranscriptMode,
-        isBriefOnly,
-        input: lookups.toolUseByToolUseID.get(toolUseID)?.input,
-      },
-    ) ?? null
+    tool.renderToolResultMessage?.(toolResult as never, filterToolProgressMessages(progressMessagesForMessage), {
+      style,
+      theme,
+      tools,
+      verbose,
+      isTranscriptMode,
+      isBriefOnly,
+      input: lookups.toolUseByToolUseID.get(toolUseID)?.input,
+    }) ?? null
 
   // Don't render anything if the tool result message is null
   if (renderedMessage === null) {
@@ -111,10 +98,7 @@ export function UserToolSuccessMessage({
 
   return (
     <Box flexDirection="column">
-      <Box
-        flexDirection="column"
-        width={rendersAsAssistantText ? undefined : width}
-      >
+      <Box flexDirection="column" width={rendersAsAssistantText ? undefined : width}>
         {renderedMessage}
         {feature('BASH_CLASSIFIER')
           ? classifierRule && (

@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'url'
+
 import figures from 'figures'
 import React, {
   createContext,
@@ -11,17 +13,13 @@ import React, {
   useState,
   useSyncExternalStore,
 } from 'react'
-import { fileURLToPath } from 'url'
+
 import { ModalContext } from '../context/modalContext.js'
-import {
-  PromptOverlayProvider,
-  usePromptOverlay,
-  usePromptOverlayDialog,
-} from '../context/promptOverlayContext.js'
+import { PromptOverlayProvider, usePromptOverlay, usePromptOverlayDialog } from '../context/promptOverlayContext.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
+import { Box, Text } from '../ink.js'
 import ScrollBox, { type ScrollBoxHandle } from '../ink/components/ScrollBox.js'
 import instances from '../ink/instances.js'
-import { Box, Text } from '../ink.js'
 import type { Message } from '../types/message.js'
 import { openBrowser, openPath } from '../utils/browser.js'
 import { isFullscreenEnvEnabled } from '../utils/fullscreen.js'
@@ -147,10 +145,7 @@ export function useUnseenDivider(messageCount: number): {
     //   at max (Sarah Deaton, #claude-code-feedback 2026-03-15)
     // pendingDelta: scrollBy accumulates without updating scrollTop. Without
     // it, wheeling up from max would see scrollTop==max and suppress the pill.
-    const max = Math.max(
-      0,
-      handle.getScrollHeight() - handle.getViewportHeight(),
-    )
+    const max = Math.max(0, handle.getScrollHeight() - handle.getViewportHeight())
     if (handle.getScrollTop() + handle.getPendingDelta() >= max) return
     // Snapshot only on the FIRST scroll-away. onScrollAway fires on EVERY
     // scroll action (not just the initial break from sticky) — this guard
@@ -193,15 +188,12 @@ export function useUnseenDivider(messageCount: number): {
     }
   }, [messageCount, dividerIndex])
 
-  const shiftDivider = useCallback(
-    (indexDelta: number, heightDelta: number) => {
-      setDividerIndex(idx => (idx === null ? null : idx + indexDelta))
-      if (dividerYRef.current !== null) {
-        dividerYRef.current += heightDelta
-      }
-    },
-    [],
-  )
+  const shiftDivider = useCallback((indexDelta: number, heightDelta: number) => {
+    setDividerIndex((idx) => (idx === null ? null : idx + indexDelta))
+    if (dividerYRef.current !== null) {
+      dividerYRef.current += heightDelta
+    }
+  }, [])
 
   return {
     dividerIndex,
@@ -221,10 +213,7 @@ export function useUnseenDivider(messageCount: number): {
  * carry text — tool-use-only entries are skipped (like progress messages)
  * so "⏺ Searched for 13 patterns, read 6 files" doesn't tick the pill.
  */
-export function countUnseenAssistantTurns(
-  messages: readonly Message[],
-  dividerIndex: number,
-): number {
+export function countUnseenAssistantTurns(messages: readonly Message[], dividerIndex: number): number {
   let count = 0
   let prevWasAssistant = false
   for (let i = dividerIndex; i < messages.length; i++) {
@@ -274,8 +263,7 @@ export function computeUnseenDivider(
   let anchorIdx = dividerIndex
   while (
     anchorIdx < messages.length &&
-    (messages[anchorIdx]?.type === 'progress' ||
-      isNullRenderingAttachment(messages[anchorIdx]!))
+    (messages[anchorIdx]?.type === 'progress' || isNullRenderingAttachment(messages[anchorIdx]!))
   ) {
     anchorIdx++
   }
@@ -324,17 +312,14 @@ export function FullscreenLayout({
   // above the divider y?" — Object.is on a boolean → FullscreenLayout only
   // re-renders when the pill should actually flip, not per-frame.
   const subscribe = useCallback(
-    (listener: () => void) =>
-      scrollRef?.current?.subscribe(listener) ?? (() => {}),
+    (listener: () => void) => scrollRef?.current?.subscribe(listener) ?? (() => {}),
     [scrollRef],
   )
   const pillVisible = useSyncExternalStore(subscribe, () => {
     const s = scrollRef?.current
     const dividerY = dividerYRef?.current
     if (!s || dividerY == null) return false
-    return (
-      s.getScrollTop() + s.getPendingDelta() + s.getViewportHeight() < dividerY
-    )
+    return s.getScrollTop() + s.getPendingDelta() + s.getViewportHeight() < dividerY
   })
   // Wire up hyperlink click handling — in fullscreen mode, mouse tracking
   // intercepts clicks before the terminal can open OSC 8 links natively.
@@ -342,7 +327,7 @@ export function FullscreenLayout({
     if (!isFullscreenEnvEnabled()) return
     const ink = instances.get(process.stdout)
     if (!ink) return
-    ink.onHyperlinkClick = url => {
+    ink.onHyperlinkClick = (url) => {
       // Most OSC 8 links emitted by Claude Code are file:// URLs from
       // FilePathLink (FileEdit/FileWrite/FileRead tool output). openBrowser
       // rejects non-http(s) protocols — route file: to openPath instead.
@@ -381,28 +366,14 @@ export function FullscreenLayout({
     // header comes back (viewportTop 0→1, a single 1-row shift —
     // acceptable since user explicitly scrolled).
     const sticky = hideSticky ? null : stickyPrompt
-    const headerPrompt =
-      sticky != null && sticky !== 'clicked' && overlay == null ? sticky : null
+    const headerPrompt = sticky != null && sticky !== 'clicked' && overlay == null ? sticky : null
     const padCollapsed = sticky != null && overlay == null
     return (
       <PromptOverlayProvider>
         <Box flexGrow={1} flexDirection="column" overflow="hidden">
-          {headerPrompt && (
-            <StickyPromptHeader
-              text={headerPrompt.text}
-              onClick={headerPrompt.scrollTo}
-            />
-          )}
-          <ScrollBox
-            ref={scrollRef}
-            flexGrow={1}
-            flexDirection="column"
-            paddingTop={padCollapsed ? 0 : 1}
-            stickyScroll
-          >
-            <ScrollChromeContext value={chromeCtx}>
-              {scrollable}
-            </ScrollChromeContext>
+          {headerPrompt && <StickyPromptHeader text={headerPrompt.text} onClick={headerPrompt.scrollTo} />}
+          <ScrollBox ref={scrollRef} flexGrow={1} flexDirection="column" paddingTop={padCollapsed ? 0 : 1} stickyScroll>
+            <ScrollChromeContext value={chromeCtx}>{scrollable}</ScrollChromeContext>
             {overlay}
           </ScrollBox>
           {!hidePill && pillVisible && overlay == null && (
@@ -417,12 +388,7 @@ export function FullscreenLayout({
         <Box flexDirection="column" flexShrink={0} width="100%" maxHeight="50%">
           <SuggestionsOverlay />
           <DialogOverlay />
-          <Box
-            flexDirection="column"
-            width="100%"
-            flexGrow={1}
-            overflowY="hidden"
-          >
+          <Box flexDirection="column" width="100%" flexGrow={1} overflowY="hidden">
             {bottom}
           </Box>
         </Box>
@@ -466,12 +432,7 @@ export function FullscreenLayout({
               <Box flexShrink={0}>
                 <Text color="permission">{'▔'.repeat(columns)}</Text>
               </Box>
-              <Box
-                flexDirection="column"
-                paddingX={2}
-                flexShrink={0}
-                overflow="hidden"
-              >
+              <Box flexDirection="column" paddingX={2} flexShrink={0} overflow="hidden">
                 {modal}
               </Box>
             </Box>
@@ -498,38 +459,14 @@ export function FullscreenLayout({
 // (absoluteRectsPrev third-pass in render-node-to-output.ts, #23939). Shows
 // "Jump to bottom" when count is 0 (scrolled away but no new messages yet —
 // the dead zone where users previously thought chat stalled).
-function NewMessagesPill({
-  count,
-  onClick,
-}: {
-  count: number
-  onClick?: () => void
-}): React.ReactNode {
+function NewMessagesPill({ count, onClick }: { count: number; onClick?: () => void }): React.ReactNode {
   const [hover, setHover] = useState(false)
   return (
-    <Box
-      position="absolute"
-      bottom={0}
-      left={0}
-      right={0}
-      justifyContent="center"
-    >
-      <Box
-        onClick={onClick}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
-        <Text
-          backgroundColor={
-            hover ? 'userMessageBackgroundHover' : 'userMessageBackground'
-          }
-          dimColor
-        >
+    <Box position="absolute" bottom={0} left={0} right={0} justifyContent="center">
+      <Box onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+        <Text backgroundColor={hover ? 'userMessageBackgroundHover' : 'userMessageBackground'} dimColor>
           {' '}
-          {count > 0
-            ? `${count} new ${plural(count, 'message')}`
-            : 'Jump to bottom'}{' '}
-          {figures.arrowDown}{' '}
+          {count > 0 ? `${count} new ${plural(count, 'message')}` : 'Jump to bottom'} {figures.arrowDown}{' '}
         </Text>
       </Box>
     </Box>
@@ -548,13 +485,7 @@ function NewMessagesPill({
 // even with scrollTop unchanged (the DECSTBM region top shifts with the
 // ScrollBox, and the diff engine sees "everything moved"). Fixed height
 // keeps the ScrollBox anchored; only the header TEXT changes, not its box.
-function StickyPromptHeader({
-  text,
-  onClick,
-}: {
-  text: string
-  onClick: () => void
-}): React.ReactNode {
+function StickyPromptHeader({ text, onClick }: { text: string; onClick: () => void }): React.ReactNode {
   const [hover, setHover] = useState(false)
   return (
     <Box
@@ -562,9 +493,7 @@ function StickyPromptHeader({
       width="100%"
       height={1}
       paddingRight={1}
-      backgroundColor={
-        hover ? 'userMessageBackgroundHover' : 'userMessageBackground'
-      }
+      backgroundColor={hover ? 'userMessageBackgroundHover' : 'userMessageBackground'}
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -588,16 +517,7 @@ function SuggestionsOverlay(): React.ReactNode {
   const data = usePromptOverlay()
   if (!data || data.suggestions.length === 0) return null
   return (
-    <Box
-      position="absolute"
-      bottom="100%"
-      left={0}
-      right={0}
-      paddingX={2}
-      paddingTop={1}
-      flexDirection="column"
-      opaque
-    >
+    <Box position="absolute" bottom="100%" left={0} right={0} paddingX={2} paddingTop={1} flexDirection="column" opaque>
       <PromptInputFooterSuggestions
         suggestions={data.suggestions}
         selectedSuggestion={data.selectedSuggestion}

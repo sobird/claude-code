@@ -1,15 +1,13 @@
 import axios from 'axios'
 import { z } from 'zod/v4'
+
 import { getOauthConfig } from '../../constants/oauth.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { getOrganizationUUID } from '../../services/oauth/client.js'
 import { isPolicyAllowed } from '../../services/policyLimits/index.js'
 import type { ToolUseContext } from '../../Tool.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
-import {
-  checkAndRefreshOAuthTokenIfNeeded,
-  getClaudeAIOAuthTokens,
-} from '../../utils/auth.js'
+import { checkAndRefreshOAuthTokenIfNeeded, getClaudeAIOAuthTokens } from '../../utils/auth.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { DESCRIPTION, PROMPT, REMOTE_TRIGGER_TOOL_NAME } from './prompt.js'
@@ -23,10 +21,7 @@ const inputSchema = lazySchema(() =>
       .regex(/^[\w-]+$/)
       .optional()
       .describe('Required for get, update, and run'),
-    body: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe('JSON body for create and update'),
+    body: z.record(z.string(), z.unknown()).optional().describe('JSON body for create and update'),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -55,10 +50,7 @@ export const RemoteTriggerTool = buildTool({
     return outputSchema()
   },
   isEnabled() {
-    return (
-      getFeatureValue_CACHED_MAY_BE_STALE('tengu_surreal_dali', false) &&
-      isPolicyAllowed('allow_remote_sessions')
-    )
+    return getFeatureValue_CACHED_MAY_BE_STALE('tengu_surreal_dali', false) && isPolicyAllowed('allow_remote_sessions')
   },
   isConcurrencySafe() {
     return true
@@ -79,9 +71,7 @@ export const RemoteTriggerTool = buildTool({
     await checkAndRefreshOAuthTokenIfNeeded()
     const accessToken = getClaudeAIOAuthTokens()?.accessToken
     if (!accessToken) {
-      throw new Error(
-        'Not authenticated with a claude.ai account. Run /login and try again.',
-      )
+      throw new Error('Not authenticated with a claude.ai account. Run /login and try again.')
     }
     const orgUUID = await getOrganizationUUID()
     if (!orgUUID) {

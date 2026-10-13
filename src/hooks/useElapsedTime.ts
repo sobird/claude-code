@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react'
+
 import { formatDuration } from '../utils/format.js'
 
 /**
@@ -21,8 +22,7 @@ export function useElapsedTime(
   pausedMs: number = 0,
   endTime?: number,
 ): string {
-  const get = () =>
-    formatDuration(Math.max(0, (endTime ?? Date.now()) - startTime - pausedMs))
+  const get = () => formatDuration(Math.max(0, (endTime ?? Date.now()) - startTime - pausedMs))
 
   const subscribe = useCallback(
     (notify: () => void) => {

@@ -31,6 +31,7 @@ BUILDING_CLAUDE_APPS 启用的主要功能包括：
 ## 🔧 技术实现细节
 
 ### 启用条件
+
 - 通过 `feature('BUILDING_CLAUDE_APPS')` 控制
 - 默认已启用（在 scripts/config.ts 中取消注释）
 - 需要相应的 skill 模块支持
@@ -62,6 +63,7 @@ export function registerClaudeApiSkill(): void {
 ```
 
 ### 语言检测机制
+
 - **Python**: .py 文件, requirements.txt, pyproject.toml
 - **TypeScript**: .ts/.tsx 文件, tsconfig.json, package.json
 - **Java**: .java 文件, pom.xml, build.gradle
@@ -71,6 +73,7 @@ export function registerClaudeApiSkill(): void {
 - **PHP**: .php 文件, composer.json
 
 ### 文档结构
+
 ```
 claude-api/
 ├── python/
@@ -100,11 +103,13 @@ claude-api/
 ## 💾 数据存储和配置
 
 ### 技能文件提取
+
 - 将内联的 Markdown 文档提取到磁盘
 - 按语言分类存储在技能根目录
 - 支持模型变量替换（OPUS_ID, SONNET_ID 等）
 
 ### 缓存机制
+
 - 技能文件的一次性提取
 - 模型变量的运行时替换
 - 文档内容的内存缓存
@@ -112,12 +117,14 @@ claude-api/
 ## 🎯 使用场景
 
 ### 主要目的
+
 1. **API 开发**: 帮助开发者使用 Claude API 构建应用
 2. **SDK 学习**: 提供 Agent SDK 的学习资源和示例
 3. **最佳实践**: 展示各种编程语言的集成模式
 4. **问题解决**: 快速查找错误处理和调试技巧
 
 ### 适用场景
+
 - **初学者**: 学习如何使用 Claude API
 - **中级开发者**: 查找特定语言的集成示例
 - **高级开发者**: 了解批处理、流式传输等高级功能
@@ -126,17 +133,20 @@ claude-api/
 ## ⚙️ 配置和管理
 
 ### 启用方式
+
 ```javascript
 // 在 config 文件中已经启用
 'BUILDING_CLAUDE_APPS',
 ```
 
 ### 技能触发
+
 - **自动触发**: 检测到 anthropic SDK 导入时
 - **手动调用**: `/claude-api <问题>`
 - **智能建议**: 基于项目语言和需求推荐相关文档
 
 ### 自定义技能
+
 - **技能生成器**: 自动生成新的技能模板
 - **扩展机制**: 支持用户自定义技能
 - **模板系统**: 提供各种预定义的技能模式
@@ -144,11 +154,13 @@ claude-api/
 ## 🔍 调试和监控
 
 ### 日志记录
+
 - 技能调用事件记录
 - 语言检测结果的统计
 - 文档提取失败的错误日志
 
 ### 性能优化
+
 - 延迟加载大型文档文件
 - 缓存常用的技能内容
 - 优化的语言检测算法
@@ -156,12 +168,14 @@ claude-api/
 ## 📈 影响和用途
 
 ### 主要优势
+
 - **降低门槛**: 为开发者提供完整的使用指南
 - **提高效率**: 快速找到相关的代码示例和文档
 - **质量保证**: 统一的 API 使用标准和最佳实践
 - **生态建设**: 促进 Claude Apps 的开发和传播
 
 ### 技术价值
+
 - 支持多语言开发的统一体验
 - 提供可扩展的技能系统
 - 为产品决策提供开发者使用数据

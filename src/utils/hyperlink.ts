@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+
 import { supportsHyperlinks } from '../ink/supports-hyperlinks.js'
 
 // OSC 8 hyperlink escape sequences
@@ -21,11 +22,7 @@ type HyperlinkOptions = {
  *                  If hyperlinks are not supported, content is ignored and only the URL is shown.
  * @param options - Optional overrides for testing (supportsHyperlinks)
  */
-export function createHyperlink(
-  url: string,
-  content?: string,
-  options?: HyperlinkOptions,
-): string {
+export function createHyperlink(url: string, content?: string, options?: HyperlinkOptions): string {
   const hasSupport = options?.supportsHyperlinks ?? supportsHyperlinks()
   if (!hasSupport) {
     return url

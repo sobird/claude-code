@@ -1,9 +1,7 @@
 import * as React from 'react'
+
 import { Box, Text } from '../../ink.js'
-import {
-  SandboxManager,
-  shouldAllowManagedSandboxDomainsOnly,
-} from '../../utils/sandbox/sandbox-adapter.js'
+import { SandboxManager, shouldAllowManagedSandboxDomainsOnly } from '../../utils/sandbox/sandbox-adapter.js'
 
 export function SandboxConfigTab(): React.ReactNode {
   const isEnabled = SandboxManager.isSandboxingEnabled()
@@ -44,9 +42,7 @@ export function SandboxConfigTab(): React.ReactNode {
         <Text bold color="permission">
           Excluded Commands:
         </Text>
-        <Text dimColor>
-          {excludedCommands.length > 0 ? excludedCommands.join(', ') : 'None'}
-        </Text>
+        <Text dimColor>{excludedCommands.length > 0 ? excludedCommands.join(', ') : 'None'}</Text>
       </Box>
 
       {/* Filesystem Read Restrictions */}
@@ -56,12 +52,9 @@ export function SandboxConfigTab(): React.ReactNode {
             Filesystem Read Restrictions:
           </Text>
           <Text dimColor>Denied: {fsReadConfig.denyOnly.join(', ')}</Text>
-          {fsReadConfig.allowWithinDeny &&
-            fsReadConfig.allowWithinDeny.length > 0 && (
-              <Text dimColor>
-                Allowed within denied: {fsReadConfig.allowWithinDeny.join(', ')}
-              </Text>
-            )}
+          {fsReadConfig.allowWithinDeny && fsReadConfig.allowWithinDeny.length > 0 && (
+            <Text dimColor>Allowed within denied: {fsReadConfig.allowWithinDeny.join(', ')}</Text>
+          )}
         </Box>
       )}
 
@@ -73,34 +66,25 @@ export function SandboxConfigTab(): React.ReactNode {
           </Text>
           <Text dimColor>Allowed: {fsWriteConfig.allowOnly.join(', ')}</Text>
           {fsWriteConfig.denyWithinAllow.length > 0 && (
-            <Text dimColor>
-              Denied within allowed: {fsWriteConfig.denyWithinAllow.join(', ')}
-            </Text>
+            <Text dimColor>Denied within allowed: {fsWriteConfig.denyWithinAllow.join(', ')}</Text>
           )}
         </Box>
       )}
 
       {/* Network Restrictions */}
       {((networkConfig.allowedHosts && networkConfig.allowedHosts.length > 0) ||
-        (networkConfig.deniedHosts &&
-          networkConfig.deniedHosts.length > 0)) && (
+        (networkConfig.deniedHosts && networkConfig.deniedHosts.length > 0)) && (
         <Box marginTop={1} flexDirection="column">
           <Text bold color="permission">
             Network Restrictions
             {shouldAllowManagedSandboxDomainsOnly() ? ' (Managed)' : ''}:
           </Text>
-          {networkConfig.allowedHosts &&
-            networkConfig.allowedHosts.length > 0 && (
-              <Text dimColor>
-                Allowed: {networkConfig.allowedHosts.join(', ')}
-              </Text>
-            )}
-          {networkConfig.deniedHosts &&
-            networkConfig.deniedHosts.length > 0 && (
-              <Text dimColor>
-                Denied: {networkConfig.deniedHosts.join(', ')}
-              </Text>
-            )}
+          {networkConfig.allowedHosts && networkConfig.allowedHosts.length > 0 && (
+            <Text dimColor>Allowed: {networkConfig.allowedHosts.join(', ')}</Text>
+          )}
+          {networkConfig.deniedHosts && networkConfig.deniedHosts.length > 0 && (
+            <Text dimColor>Denied: {networkConfig.deniedHosts.join(', ')}</Text>
+          )}
         </Box>
       )}
 
@@ -121,10 +105,8 @@ export function SandboxConfigTab(): React.ReactNode {
             ⚠ Warning: Glob patterns not fully supported on Linux
           </Text>
           <Text dimColor>
-            The following patterns will be ignored:{' '}
-            {globPatternWarnings.slice(0, 3).join(', ')}
-            {globPatternWarnings.length > 3 &&
-              ` (${globPatternWarnings.length - 3} more)`}
+            The following patterns will be ignored: {globPatternWarnings.slice(0, 3).join(', ')}
+            {globPatternWarnings.length > 3 && ` (${globPatternWarnings.length - 3} more)`}
           </Text>
         </Box>
       )}

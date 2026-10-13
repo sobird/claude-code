@@ -1,14 +1,12 @@
 import * as React from 'react'
 import { useEffect, useMemo, useState } from 'react'
+
 import { useRegisterOverlay } from '../context/overlayContext.js'
-import {
-  getTimestampedHistory,
-  type TimestampedHistoryEntry,
-} from '../history.js'
+import { getTimestampedHistory, type TimestampedHistoryEntry } from '../history.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
+import { Box, Text } from '../ink.js'
 import { stringWidth } from '../ink/stringWidth.js'
 import { wrapAnsi } from '../ink/wrapAnsi.js'
-import { Box, Text } from '../ink.js'
 import { logEvent } from '../services/analytics/index.js'
 import type { HistoryEntry } from '../utils/config.js'
 import { formatRelativeTimeAgo, truncateToWidth } from '../utils/format.js'
@@ -31,11 +29,7 @@ type Item = {
   age: string
 }
 
-export function HistorySearchDialog({
-  initialQuery,
-  onSelect,
-  onCancel,
-}: Props): React.ReactNode {
+export function HistorySearchDialog({ initialQuery, onSelect, onCancel }: Props): React.ReactNode {
   useRegisterOverlay('history-search')
   const { columns } = useTerminalSize()
 
@@ -87,13 +81,9 @@ export function HistorySearchDialog({
   }, [items, query])
 
   const previewOnRight = columns >= 100
-  const listWidth = previewOnRight
-    ? Math.floor((columns - 6) * 0.5)
-    : columns - 6
+  const listWidth = previewOnRight ? Math.floor((columns - 6) * 0.5) : columns - 6
   const rowWidth = Math.max(20, listWidth - AGE_WIDTH - 1)
-  const previewWidth = previewOnRight
-    ? Math.max(20, columns - listWidth - 12)
-    : Math.max(20, columns - 10)
+  const previewWidth = previewOnRight ? Math.max(20, columns - listWidth - 12) : Math.max(20, columns - 10)
 
   return (
     <FuzzyPicker
@@ -101,9 +91,9 @@ export function HistorySearchDialog({
       placeholder="Filter history…"
       initialQuery={initialQuery}
       items={filtered}
-      getKey={item => String(item.entry.timestamp)}
+      getKey={(item) => String(item.entry.timestamp)}
       onQueryChange={setQuery}
-      onSelect={item => {
+      onSelect={(item) => {
         logEvent('tengu_history_picker_select', {
           result_count: filtered.length,
           query_length: query.length,
@@ -111,43 +101,25 @@ export function HistorySearchDialog({
         void item.entry.resolve().then(onSelect)
       }}
       onCancel={onCancel}
-      emptyMessage={q =>
-        items === null
-          ? 'Loading…'
-          : q
-            ? 'No matching prompts'
-            : 'No history yet'
-      }
+      emptyMessage={(q) => (items === null ? 'Loading…' : q ? 'No matching prompts' : 'No history yet')}
       selectAction="use"
       direction="up"
       previewPosition={previewOnRight ? 'right' : 'bottom'}
       renderItem={(item, isFocused) => (
         <Text>
           <Text dimColor>{item.age}</Text>
-          <Text color={isFocused ? 'suggestion' : undefined}>
-            {' '}
-            {truncateToWidth(item.firstLine, rowWidth)}
-          </Text>
+          <Text color={isFocused ? 'suggestion' : undefined}> {truncateToWidth(item.firstLine, rowWidth)}</Text>
         </Text>
       )}
-      renderPreview={item => {
+      renderPreview={(item) => {
         const wrapped = wrapAnsi(item.display, previewWidth, { hard: true })
           .split('\n')
-          .filter(l => l.trim() !== '')
+          .filter((l) => l.trim() !== '')
         const overflow = wrapped.length > PREVIEW_ROWS
-        const shown = wrapped.slice(
-          0,
-          overflow ? PREVIEW_ROWS - 1 : PREVIEW_ROWS,
-        )
+        const shown = wrapped.slice(0, overflow ? PREVIEW_ROWS - 1 : PREVIEW_ROWS)
         const more = wrapped.length - shown.length
         return (
-          <Box
-            flexDirection="column"
-            borderStyle="round"
-            borderDimColor
-            paddingX={1}
-            height={PREVIEW_ROWS + 2}
-          >
+          <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1} height={PREVIEW_ROWS + 2}>
             {shown.map((row, i) => (
               <Text key={i} dimColor>
                 {row}

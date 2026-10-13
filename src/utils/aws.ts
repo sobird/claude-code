@@ -48,9 +48,7 @@ export function isValidAwsStsOutput(obj: unknown): obj is AwsStsOutput {
 
 /** Throws if STS caller identity cannot be retrieved. */
 export async function checkStsCallerIdentity(): Promise<void> {
-  const { STSClient, GetCallerIdentityCommand } = await import(
-    '@aws-sdk/client-sts'
-  )
+  const { STSClient, GetCallerIdentityCommand } = await import('@aws-sdk/client-sts')
   await new STSClient().send(new GetCallerIdentityCommand({}))
 }
 
@@ -67,8 +65,6 @@ export async function clearAwsIniCache(): Promise<void> {
     logForDebugging('AWS credential provider cache refreshed')
   } catch (_error) {
     // Ignore errors - we're just clearing the cache
-    logForDebugging(
-      'Failed to clear AWS credential cache (this is expected if no credentials are configured)',
-    )
+    logForDebugging('Failed to clear AWS credential cache (this is expected if no credentials are configured)')
   }
 }

@@ -162,7 +162,7 @@ thinking: budget_tokens=10000, max_tokens=16000
 | Mistake                         | Error            | Fix                                                     |
 | ------------------------------- | ---------------- | ------------------------------------------------------- |
 | `budget_tokens` >= `max_tokens` | 400              | Ensure `budget_tokens` < `max_tokens`                   |
-| Typo in model ID                | 404              | Use valid model ID like `{{OPUS_ID}}`               |
+| Typo in model ID                | 404              | Use valid model ID like `{{OPUS_ID}}`                   |
 | First message is `assistant`    | 400              | First message must be `user`                            |
 | Consecutive same-role messages  | 400              | Alternate `user` and `assistant`                        |
 | API key in code                 | 401 (leaked key) | Use environment variable                                |

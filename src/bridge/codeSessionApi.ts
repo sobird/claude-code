@@ -8,6 +8,7 @@
  */
 
 import axios from 'axios'
+
 import { logForDebugging } from '../utils/debug.js'
 import { errorMessage } from '../utils/errors.js'
 import { jsonStringify } from '../utils/slowOperations.js'
@@ -42,21 +43,17 @@ export async function createCodeSession(
       {
         headers: oauthHeaders(accessToken),
         timeout: timeoutMs,
-        validateStatus: s => s < 500,
+        validateStatus: (s) => s < 500,
       },
     )
   } catch (err: unknown) {
-    logForDebugging(
-      `[code-session] Session create request failed: ${errorMessage(err)}`,
-    )
+    logForDebugging(`[code-session] Session create request failed: ${errorMessage(err)}`)
     return null
   }
 
   if (response.status !== 200 && response.status !== 201) {
     const detail = extractErrorDetail(response.data)
-    logForDebugging(
-      `[code-session] Session create failed ${response.status}${detail ? `: ${detail}` : ''}`,
-    )
+    logForDebugging(`[code-session] Session create failed ${response.status}${detail ? `: ${detail}` : ''}`)
     return null
   }
 
@@ -71,9 +68,7 @@ export async function createCodeSession(
     typeof data.session.id !== 'string' ||
     !data.session.id.startsWith('cse_')
   ) {
-    logForDebugging(
-      `[code-session] No session.id (cse_*) in response: ${jsonStringify(data).slice(0, 200)}`,
-    )
+    logForDebugging(`[code-session] No session.id (cse_*) in response: ${jsonStringify(data).slice(0, 200)}`)
     return null
   }
   return data.session.id
@@ -110,21 +105,17 @@ export async function fetchRemoteCredentials(
       {
         headers,
         timeout: timeoutMs,
-        validateStatus: s => s < 500,
+        validateStatus: (s) => s < 500,
       },
     )
   } catch (err: unknown) {
-    logForDebugging(
-      `[code-session] /bridge request failed: ${errorMessage(err)}`,
-    )
+    logForDebugging(`[code-session] /bridge request failed: ${errorMessage(err)}`)
     return null
   }
 
   if (response.status !== 200) {
     const detail = extractErrorDetail(response.data)
-    logForDebugging(
-      `[code-session] /bridge failed ${response.status}${detail ? `: ${detail}` : ''}`,
-    )
+    logForDebugging(`[code-session] /bridge failed ${response.status}${detail ? `: ${detail}` : ''}`)
     return null
   }
 
@@ -149,14 +140,8 @@ export async function fetchRemoteCredentials(
   // Go may also return a number depending on encoder settings.
   const rawEpoch = data.worker_epoch
   const epoch = typeof rawEpoch === 'string' ? Number(rawEpoch) : rawEpoch
-  if (
-    typeof epoch !== 'number' ||
-    !Number.isFinite(epoch) ||
-    !Number.isSafeInteger(epoch)
-  ) {
-    logForDebugging(
-      `[code-session] /bridge worker_epoch invalid: ${jsonStringify(rawEpoch)}`,
-    )
+  if (typeof epoch !== 'number' || !Number.isFinite(epoch) || !Number.isSafeInteger(epoch)) {
+    logForDebugging(`[code-session] /bridge worker_epoch invalid: ${jsonStringify(rawEpoch)}`)
     return null
   }
   return {

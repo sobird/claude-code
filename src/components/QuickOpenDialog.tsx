@@ -1,6 +1,8 @@
 import * as path from 'path'
+
 import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
+
 import { useRegisterOverlay } from '../context/overlayContext.js'
 import { generateFileSuggestions } from '../hooks/fileSuggestions.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
@@ -47,9 +49,7 @@ export function QuickOpenDialog({ onDone, onInsert }: Props): React.ReactNode {
   // Side preview sits in a fixed-height row alongside the list (visibleCount
   // rows), so overflowing that height garbles the layout — cap to fit, minus
   // one for the path header line.
-  const effectivePreviewLines = previewOnRight
-    ? VISIBLE_RESULTS - 1
-    : PREVIEW_LINES
+  const effectivePreviewLines = previewOnRight ? VISIBLE_RESULTS - 1 : PREVIEW_LINES
 
   // A generation counter invalidates stale results if the user types faster
   // than the index can respond.
@@ -62,7 +62,7 @@ export function QuickOpenDialog({ onDone, onInsert }: Props): React.ReactNode {
       setResults([])
       return
     }
-    void generateFileSuggestions(q, true).then(items => {
+    void generateFileSuggestions(q, true).then((items) => {
       if (gen !== queryGenRef.current) return
       // Filter out directory entries — they come back with a trailing path.sep
       // from getTopLevelPaths() and would cause readFileInRange to throw EISDIR,
@@ -70,10 +70,10 @@ export function QuickOpenDialog({ onDone, onInsert }: Props): React.ReactNode {
       // Normalize separators to '/' so truncatePathMiddle (which uses
       // lastIndexOf('/')) can find the filename on Windows too.
       const paths = items
-        .filter(i => i.id.startsWith('file-'))
-        .map(i => i.displayText)
-        .filter(p => !p.endsWith(path.sep))
-        .map(p => p.split(path.sep).join('/'))
+        .filter((i) => i.id.startsWith('file-'))
+        .map((i) => i.displayText)
+        .filter((p) => !p.endsWith(path.sep))
+        .map((p) => p.split(path.sep).join('/'))
       setResults(paths)
     })
   }
@@ -92,14 +92,8 @@ export function QuickOpenDialog({ onDone, onInsert }: Props): React.ReactNode {
     }
     const controller = new AbortController()
     const absolute = path.resolve(getCwd(), focusedPath)
-    void readFileInRange(
-      absolute,
-      0,
-      effectivePreviewLines,
-      undefined,
-      controller.signal,
-    )
-      .then(r => {
+    void readFileInRange(absolute, 0, effectivePreviewLines, undefined, controller.signal)
+      .then((r) => {
         if (controller.signal.aborted) return
         setPreview({ path: focusedPath, content: r.content })
       })
@@ -110,12 +104,8 @@ export function QuickOpenDialog({ onDone, onInsert }: Props): React.ReactNode {
     return () => controller.abort()
   }, [focusedPath, effectivePreviewLines])
 
-  const maxPathWidth = previewOnRight
-    ? Math.max(20, Math.floor((columns - 10) * 0.4))
-    : Math.max(20, columns - 8)
-  const previewWidth = previewOnRight
-    ? Math.max(40, columns - maxPathWidth - 14)
-    : columns - 6
+  const maxPathWidth = previewOnRight ? Math.max(20, Math.floor((columns - 10) * 0.4)) : Math.max(20, columns - 8)
+  const previewWidth = previewOnRight ? Math.max(40, columns - maxPathWidth - 14) : columns - 6
 
   const handleOpen = (p: string) => {
     const opened = openFileInExternalEditor(path.resolve(getCwd(), p))
@@ -140,27 +130,25 @@ export function QuickOpenDialog({ onDone, onInsert }: Props): React.ReactNode {
       title="Quick Open"
       placeholder="Type to search files…"
       items={results}
-      getKey={p => p}
+      getKey={(p) => p}
       visibleCount={visibleResults}
       direction="up"
       previewPosition={previewOnRight ? 'right' : 'bottom'}
       onQueryChange={handleQueryChange}
       onFocus={setFocusedPath}
       onSelect={handleOpen}
-      onTab={{ action: 'mention', handler: p => handleInsert(p, true) }}
+      onTab={{ action: 'mention', handler: (p) => handleInsert(p, true) }}
       onShiftTab={{
         action: 'insert path',
-        handler: p => handleInsert(p, false),
+        handler: (p) => handleInsert(p, false),
       }}
       onCancel={onDone}
-      emptyMessage={q => (q ? 'No matching files' : 'Start typing to search…')}
+      emptyMessage={(q) => (q ? 'No matching files' : 'Start typing to search…')}
       selectAction="open in editor"
       renderItem={(p, isFocused) => (
-        <Text color={isFocused ? 'suggestion' : undefined}>
-          {truncatePathMiddle(p, maxPathWidth)}
-        </Text>
+        <Text color={isFocused ? 'suggestion' : undefined}>{truncatePathMiddle(p, maxPathWidth)}</Text>
       )}
-      renderPreview={p =>
+      renderPreview={(p) =>
         preview ? (
           <>
             <Text dimColor>
@@ -168,9 +156,7 @@ export function QuickOpenDialog({ onDone, onInsert }: Props): React.ReactNode {
               {preview.path !== p ? ' · loading…' : ''}
             </Text>
             {preview.content.split('\n').map((line, i) => (
-              <Text key={i}>
-                {highlightMatch(truncateToWidth(line, previewWidth), query)}
-              </Text>
+              <Text key={i}>{highlightMatch(truncateToWidth(line, previewWidth), query)}</Text>
             ))}
           </>
         ) : (

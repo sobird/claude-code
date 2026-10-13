@@ -2,11 +2,7 @@ import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { capitalize } from '../stringUtils.js'
 import { MODEL_ALIASES, type ModelAlias } from './aliases.js'
 import { applyBedrockRegionPrefix, getBedrockRegionPrefix } from './bedrock.js'
-import {
-  getCanonicalName,
-  getRuntimeMainLoopModel,
-  parseUserSpecifiedModel,
-} from './model.js'
+import { getCanonicalName, getRuntimeMainLoopModel, parseUserSpecifiedModel } from './model.js'
 import { getAPIProvider } from './providers.js'
 
 export const AGENT_MODEL_OPTIONS = [...MODEL_ALIASES, 'inherit'] as const
@@ -55,10 +51,7 @@ export function getAgentModel(
   // region prefix (e.g., "eu.anthropic.…"), we preserve it instead of overwriting
   // with the parent's prefix. This prevents silent data-residency violations when
   // an agent config intentionally pins to a different region than the parent.
-  const applyParentRegionPrefix = (
-    resolvedModel: string,
-    originalSpec: string,
-  ): string => {
+  const applyParentRegionPrefix = (resolvedModel: string, originalSpec: string): string => {
     if (parentRegionPrefix && getAPIProvider() === 'bedrock') {
       if (getBedrockRegionPrefix(originalSpec)) return resolvedModel
       return applyBedrockRegionPrefix(resolvedModel, parentRegionPrefix)

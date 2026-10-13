@@ -1,15 +1,12 @@
 import { appendFile, mkdir, symlink, unlink } from 'fs/promises'
-import memoize from 'lodash-es/memoize.js'
 import { dirname, join } from 'path'
+
+import memoize from 'lodash-es/memoize.js'
 import { getSessionId } from 'src/bootstrap/state.js'
 
 import { type BufferedWriter, createBufferedWriter } from './bufferedWriter.js'
 import { registerCleanup } from './cleanupRegistry.js'
-import {
-  type DebugFilter,
-  parseDebugFilter,
-  shouldShowDebugMessage,
-} from './debugFilter.js'
+import { type DebugFilter, parseDebugFilter, shouldShowDebugMessage } from './debugFilter.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getFsImplementation } from './fsOperations.js'
 import { writeToStderr } from './process.js'
@@ -50,7 +47,7 @@ export const isDebugMode = memoize((): boolean => {
     process.argv.includes('-d') ||
     isDebugToStdErr() ||
     // Also check for --debug=pattern syntax
-    process.argv.some(arg => arg.startsWith('--debug=')) ||
+    process.argv.some((arg) => arg.startsWith('--debug=')) ||
     // --debug-file implicitly enables debug mode
     getDebugFilePath() !== null
   )
@@ -72,7 +69,7 @@ export function enableDebugLogging(): boolean {
 // Exported for testing purposes
 export const getDebugFilter = memoize((): DebugFilter | null => {
   // Look for --debug=pattern in argv
-  const debugArg = process.argv.find(arg => arg.startsWith('--debug='))
+  const debugArg = process.argv.find((arg) => arg.startsWith('--debug='))
   if (!debugArg) {
     return null
   }
@@ -83,9 +80,7 @@ export const getDebugFilter = memoize((): DebugFilter | null => {
 })
 
 export const isDebugToStdErr = memoize((): boolean => {
-  return (
-    process.argv.includes('--debug-to-stderr') || process.argv.includes('-d2e')
-  )
+  return process.argv.includes('--debug-to-stderr') || process.argv.includes('-d2e')
 })
 
 export const getDebugFilePath = memoize((): string | null => {
@@ -137,12 +132,7 @@ let pendingWrite: Promise<void> = Promise.resolve()
 
 // Module-level so .bind captures only its explicit args, not the
 // writeFn closure's parent scope (Jarred, #22257).
-async function appendAsync(
-  needMkdir: boolean,
-  dir: string,
-  path: string,
-  content: string,
-): Promise<void> {
+async function appendAsync(needMkdir: boolean, dir: string, path: string, content: string): Promise<void> {
   if (needMkdir) {
     await mkdir(dir, { recursive: true }).catch(() => {})
   }
@@ -156,7 +146,7 @@ function getDebugWriter(): BufferedWriter {
   if (!debugWriter) {
     let ensuredDir: string | null = null
     debugWriter = createBufferedWriter({
-      writeFn: content => {
+      writeFn: (content) => {
         const path = getDebugLogPath()
         const dir = dirname(path)
         const needMkdir = ensuredDir !== dir
@@ -179,9 +169,7 @@ function getDebugWriter(): BufferedWriter {
         // Buffered path (ants without --debug): flushes ~1/sec so chain
         // depth stays ~1. .bind over a closure so only the bound args are
         // retained, not this scope.
-        pendingWrite = pendingWrite
-          .then(appendAsync.bind(null, needMkdir, dir, path, content))
-          .catch(noop)
+        pendingWrite = pendingWrite.then(appendAsync.bind(null, needMkdir, dir, path, content)).catch(noop)
       },
       flushIntervalMs: 1000,
       maxBufferSize: 100,

@@ -1,14 +1,13 @@
 import { feature } from 'bun:bundle'
 import { basename } from 'path'
+
 import React, { useRef } from 'react'
+
 import { useMinDisplayTime } from '../../hooks/useMinDisplayTime.js'
 import { Ansi, Box, Text, useTheme } from '../../ink.js'
 import { findToolByName, type Tools } from '../../Tool.js'
 import { getReplPrimitiveTools } from '../../tools/REPLTool/primitiveTools.js'
-import type {
-  CollapsedReadSearchGroup,
-  NormalizedAssistantMessage,
-} from '../../types/message.js'
+import type { CollapsedReadSearchGroup, NormalizedAssistantMessage } from '../../types/message.js'
 import { uniq } from '../../utils/array.js'
 import { getToolUseIdsFromCollapsedGroup } from '../../utils/collapseReadSearch.js'
 import { getDisplayPath } from '../../utils/file.js'
@@ -63,9 +62,7 @@ function VerboseToolUse({
   // Same REPL-primitive fallback as getToolSearchOrReadInfo — REPL mode strips
   // these from the execution tools list, but virtual messages still need them
   // to render in verbose mode.
-  const tool =
-    findToolByName(tools, content.name) ??
-    findToolByName(getReplPrimitiveTools(), content.name)
+  const tool = findToolByName(tools, content.name) ?? findToolByName(getReplPrimitiveTools(), content.name)
   if (!tool) return null
 
   const isResolved = lookups.resolvedToolUseIDs.has(content.id)
@@ -73,31 +70,19 @@ function VerboseToolUse({
   const isInProgress = inProgressToolUseIDs.has(content.id)
 
   const resultMsg = lookups.toolResultByToolUseID.get(content.id)
-  const rawToolResult =
-    resultMsg?.type === 'user' ? resultMsg.toolUseResult : undefined
+  const rawToolResult = resultMsg?.type === 'user' ? resultMsg.toolUseResult : undefined
   const parsedOutput = tool.outputSchema?.safeParse(rawToolResult)
   const toolResult = parsedOutput?.success ? parsedOutput.data : undefined
 
   const parsedInput = tool.inputSchema.safeParse(content.input)
   const input = parsedInput.success ? parsedInput.data : undefined
   const userFacingName = tool.userFacingName(input)
-  const toolUseMessage = input
-    ? tool.renderToolUseMessage(input, { theme, verbose: true })
-    : null
+  const toolUseMessage = input ? tool.renderToolUseMessage(input, { theme, verbose: true }) : null
 
   return (
-    <Box
-      key={content.id}
-      flexDirection="column"
-      marginTop={1}
-      backgroundColor={bg}
-    >
+    <Box key={content.id} flexDirection="column" marginTop={1} backgroundColor={bg}>
       <Box flexDirection="row">
-        <ToolUseLoader
-          shouldAnimate={shouldAnimate && isInProgress}
-          isUnresolved={!isResolved}
-          isError={isError}
-        />
+        <ToolUseLoader shouldAnimate={shouldAnimate && isInProgress} isUnresolved={!isResolved} isError={isError} />
         <Text>
           <Text bold>{userFacingName}</Text>
           {toolUseMessage && <Text>({toolUseMessage})</Text>}
@@ -139,12 +124,9 @@ export function CollapsedReadSearchContent({
   } = message
   const [theme] = useTheme()
   const toolUseIds = getToolUseIdsFromCollapsedGroup(message)
-  const anyError = toolUseIds.some(id => lookups.erroredToolUseIDs.has(id))
-  const hasMemoryOps =
-    memorySearchCount > 0 || memoryReadCount > 0 || memoryWriteCount > 0
-  const hasTeamMemoryOps = feature('TEAMMEM')
-    ? teamMemCollapsed!.checkHasTeamMemOps(message)
-    : false
+  const anyError = toolUseIds.some((id) => lookups.erroredToolUseIDs.has(id))
+  const hasMemoryOps = memorySearchCount > 0 || memoryReadCount > 0 || memoryWriteCount > 0
+  const hasTeamMemoryOps = feature('TEAMMEM') ? teamMemCollapsed!.checkHasTeamMemOps(message) : false
 
   // Track the max seen counts so they only ever increase. The debounce timer
   // causes extra re-renders at arbitrary times; during a brief "invisible window"
@@ -155,19 +137,10 @@ export function CollapsedReadSearchContent({
   const maxMcpCountRef = useRef(0)
   const maxBashCountRef = useRef(0)
   maxReadCountRef.current = Math.max(maxReadCountRef.current, rawReadCount)
-  maxSearchCountRef.current = Math.max(
-    maxSearchCountRef.current,
-    rawSearchCount,
-  )
+  maxSearchCountRef.current = Math.max(maxSearchCountRef.current, rawSearchCount)
   maxListCountRef.current = Math.max(maxListCountRef.current, rawListCount)
-  maxMcpCountRef.current = Math.max(
-    maxMcpCountRef.current,
-    message.mcpCallCount ?? 0,
-  )
-  maxBashCountRef.current = Math.max(
-    maxBashCountRef.current,
-    message.bashCount ?? 0,
-  )
+  maxMcpCountRef.current = Math.max(maxMcpCountRef.current, message.mcpCallCount ?? 0)
+  maxBashCountRef.current = Math.max(maxBashCountRef.current, message.bashCount ?? 0)
   const readCount = maxReadCountRef.current
   const searchCount = maxSearchCountRef.current
   const listCount = maxListCountRef.current
@@ -176,9 +149,7 @@ export function CollapsedReadSearchContent({
   // same command isn't counted twice. gitOpBashCount is read live (no max-ref
   // needed — it's 0 until results arrive, then only grows).
   const gitOpBashCount = message.gitOpBashCount ?? 0
-  const bashCount = isFullscreenEnvEnabled()
-    ? Math.max(0, maxBashCountRef.current - gitOpBashCount)
-    : 0
+  const bashCount = isFullscreenEnvEnabled() ? Math.max(0, maxBashCountRef.current - gitOpBashCount) : 0
 
   const hasNonMemoryOps =
     searchCount > 0 ||
@@ -194,11 +165,9 @@ export function CollapsedReadSearchContent({
   let incomingHint = message.latestDisplayHint
   if (incomingHint === undefined) {
     const lastSearchRaw = searchArgs?.at(-1)
-    const lastSearch =
-      lastSearchRaw !== undefined ? `"${lastSearchRaw}"` : undefined
+    const lastSearch = lastSearchRaw !== undefined ? `"${lastSearchRaw}"` : undefined
     const lastRead = readPaths?.at(-1)
-    incomingHint =
-      lastRead !== undefined ? getDisplayPath(lastRead) : lastSearch
+    incomingHint = lastRead !== undefined ? getDisplayPath(lastRead) : lastSearch
   }
 
   // Active REPL calls emit repl_tool_call progress with the current inner
@@ -215,10 +184,7 @@ export function CollapsedReadSearchContent({
           file_path?: string
         }
         incomingHint =
-          input.file_path ??
-          (input.pattern ? `"${input.pattern}"` : undefined) ??
-          input.command ??
-          latest.toolName
+          input.file_path ?? (input.pattern ? `"${input.pattern}"` : undefined) ?? input.command ?? latest.toolName
       }
     }
   }
@@ -238,7 +204,7 @@ export function CollapsedReadSearchContent({
 
     return (
       <Box flexDirection="column">
-        {toolUses.map(msg => {
+        {toolUses.map((msg) => {
           const content = msg.message.content[0]
           if (content?.type !== 'tool_use') return null
           return (
@@ -256,8 +222,7 @@ export function CollapsedReadSearchContent({
         {message.hookInfos && message.hookInfos.length > 0 && (
           <>
             <Text dimColor>
-              {'  ⎿  '}Ran {message.hookCount} PreToolUse{' '}
-              {message.hookCount === 1 ? 'hook' : 'hooks'} (
+              {'  ⎿  '}Ran {message.hookCount} PreToolUse {message.hookCount === 1 ? 'hook' : 'hooks'} (
               {formatSecondsShort(message.hookTotalMs ?? 0)})
             </Text>
             {message.hookInfos.map((info, idx) => (
@@ -268,7 +233,7 @@ export function CollapsedReadSearchContent({
             ))}
           </>
         )}
-        {message.relevantMemories?.map(m => (
+        {message.relevantMemories?.map((m) => (
           <Box key={m.path} flexDirection="column" marginTop={1}>
             <Text dimColor>
               {'  ⎿  '}Recalled {basename(m.path)}
@@ -304,10 +269,7 @@ export function CollapsedReadSearchContent({
     for (const id of toolUseIds) {
       if (!inProgressToolUseIDs.has(id)) continue
       const data = lookups.progressMessagesByToolUseID.get(id)?.at(-1)?.data
-      if (
-        data?.type !== 'bash_progress' &&
-        data?.type !== 'powershell_progress'
-      ) {
+      if (data?.type !== 'bash_progress' && data?.type !== 'powershell_progress') {
         continue
       }
       if (elapsed === undefined || data.elapsedTimeSeconds > elapsed) {
@@ -317,10 +279,7 @@ export function CollapsedReadSearchContent({
     }
     if (elapsed !== undefined && elapsed >= 2) {
       const time = formatDuration(elapsed * 1000)
-      shellProgressSuffix =
-        lines > 0
-          ? ` (${time} · ${lines} ${lines === 1 ? 'line' : 'lines'})`
-          : ` (${time})`
+      shellProgressSuffix = lines > 0 ? ` (${time} · ${lines} ${lines === 1 ? 'line' : 'lines'})` : ` (${time})`
     }
   }
 
@@ -345,24 +304,20 @@ export function CollapsedReadSearchContent({
       'cherry-picked': 'cherry-picked',
     }
     for (const kind of ['committed', 'amended', 'cherry-picked'] as const) {
-      const shas = message.commits.filter(c => c.kind === kind).map(c => c.sha)
+      const shas = message.commits.filter((c) => c.kind === kind).map((c) => c.sha)
       if (shas.length) {
         pushPart(kind, byKind[kind], <Text bold>{shas.join(', ')}</Text>)
       }
     }
   }
   if (isFullscreenEnvEnabled() && message.pushes?.length) {
-    const branches = uniq(message.pushes.map(p => p.branch))
+    const branches = uniq(message.pushes.map((p) => p.branch))
     pushPart('push', 'pushed to', <Text bold>{branches.join(', ')}</Text>)
   }
   if (isFullscreenEnvEnabled() && message.branches?.length) {
     const byAction = { merged: 'merged', rebased: 'rebased onto' }
     for (const b of message.branches) {
-      pushPart(
-        `br-${b.action}-${b.ref}`,
-        byAction[b.action],
-        <Text bold>{b.ref}</Text>,
-      )
+      pushPart(`br-${b.action}-${b.ref}`, byAction[b.action], <Text bold>{b.ref}</Text>)
     }
   }
   if (isFullscreenEnvEnabled() && message.prs?.length) {
@@ -378,11 +333,7 @@ export function CollapsedReadSearchContent({
       pushPart(
         `pr-${pr.action}-${pr.number}`,
         verbs[pr.action],
-        pr.url ? (
-          <PrBadge number={pr.number} url={pr.url} bold />
-        ) : (
-          <Text bold>PR #{pr.number}</Text>
-        ),
+        pr.url ? <PrBadge number={pr.number} url={pr.url} bold /> : <Text bold>PR #{pr.number}</Text>,
       )
     }
   }
@@ -401,48 +352,33 @@ export function CollapsedReadSearchContent({
     }
     nonMemParts.push(
       <Text key="search">
-        {searchVerb} <Text bold>{searchCount}</Text>{' '}
-        {searchCount === 1 ? 'pattern' : 'patterns'}
+        {searchVerb} <Text bold>{searchCount}</Text> {searchCount === 1 ? 'pattern' : 'patterns'}
       </Text>,
     )
   }
 
   if (readCount > 0) {
     const isFirst = nonMemParts.length === 0
-    const readVerb = isActiveGroup
-      ? isFirst
-        ? 'Reading'
-        : 'reading'
-      : isFirst
-        ? 'Read'
-        : 'read'
+    const readVerb = isActiveGroup ? (isFirst ? 'Reading' : 'reading') : isFirst ? 'Read' : 'read'
     if (!isFirst) {
       nonMemParts.push(<Text key="comma-r">, </Text>)
     }
     nonMemParts.push(
       <Text key="read">
-        {readVerb} <Text bold>{readCount}</Text>{' '}
-        {readCount === 1 ? 'file' : 'files'}
+        {readVerb} <Text bold>{readCount}</Text> {readCount === 1 ? 'file' : 'files'}
       </Text>,
     )
   }
 
   if (listCount > 0) {
     const isFirst = nonMemParts.length === 0
-    const listVerb = isActiveGroup
-      ? isFirst
-        ? 'Listing'
-        : 'listing'
-      : isFirst
-        ? 'Listed'
-        : 'listed'
+    const listVerb = isActiveGroup ? (isFirst ? 'Listing' : 'listing') : isFirst ? 'Listed' : 'listed'
     if (!isFirst) {
       nonMemParts.push(<Text key="comma-l">, </Text>)
     }
     nonMemParts.push(
       <Text key="list">
-        {listVerb} <Text bold>{listCount}</Text>{' '}
-        {listCount === 1 ? 'directory' : 'directories'}
+        {listVerb} <Text bold>{listCount}</Text> {listCount === 1 ? 'directory' : 'directories'}
       </Text>,
     )
   }
@@ -454,25 +390,15 @@ export function CollapsedReadSearchContent({
     }
     nonMemParts.push(
       <Text key="repl">
-        {replVerb} <Text bold>{replCount}</Text>{' '}
-        {replCount === 1 ? 'time' : 'times'}
+        {replVerb} <Text bold>{replCount}</Text> {replCount === 1 ? 'time' : 'times'}
       </Text>,
     )
   }
 
   if (mcpCallCount > 0) {
-    const serverLabel =
-      message.mcpServerNames
-        ?.map(n => n.replace(/^claude\.ai /, ''))
-        .join(', ') || 'MCP'
+    const serverLabel = message.mcpServerNames?.map((n) => n.replace(/^claude\.ai /, '')).join(', ') || 'MCP'
     const isFirst = nonMemParts.length === 0
-    const verb = isActiveGroup
-      ? isFirst
-        ? 'Querying'
-        : 'querying'
-      : isFirst
-        ? 'Queried'
-        : 'queried'
+    const verb = isActiveGroup ? (isFirst ? 'Querying' : 'querying') : isFirst ? 'Queried' : 'queried'
     if (!isFirst) {
       nonMemParts.push(<Text key="comma-mcp">, </Text>)
     }
@@ -491,20 +417,13 @@ export function CollapsedReadSearchContent({
 
   if (isFullscreenEnvEnabled() && bashCount > 0) {
     const isFirst = nonMemParts.length === 0
-    const verb = isActiveGroup
-      ? isFirst
-        ? 'Running'
-        : 'running'
-      : isFirst
-        ? 'Ran'
-        : 'ran'
+    const verb = isActiveGroup ? (isFirst ? 'Running' : 'running') : isFirst ? 'Ran' : 'ran'
     if (!isFirst) {
       nonMemParts.push(<Text key="comma-bash">, </Text>)
     }
     nonMemParts.push(
       <Text key="bash">
-        {verb} <Text bold>{bashCount}</Text> bash{' '}
-        {bashCount === 1 ? 'command' : 'commands'}
+        {verb} <Text bold>{bashCount}</Text> bash {bashCount === 1 ? 'command' : 'commands'}
       </Text>,
     )
   }
@@ -515,33 +434,20 @@ export function CollapsedReadSearchContent({
 
   if (memoryReadCount > 0) {
     const isFirst = !hasPrecedingNonMem && memParts.length === 0
-    const verb = isActiveGroup
-      ? isFirst
-        ? 'Recalling'
-        : 'recalling'
-      : isFirst
-        ? 'Recalled'
-        : 'recalled'
+    const verb = isActiveGroup ? (isFirst ? 'Recalling' : 'recalling') : isFirst ? 'Recalled' : 'recalled'
     if (!isFirst) {
       memParts.push(<Text key="comma-mr">, </Text>)
     }
     memParts.push(
       <Text key="mem-read">
-        {verb} <Text bold>{memoryReadCount}</Text>{' '}
-        {memoryReadCount === 1 ? 'memory' : 'memories'}
+        {verb} <Text bold>{memoryReadCount}</Text> {memoryReadCount === 1 ? 'memory' : 'memories'}
       </Text>,
     )
   }
 
   if (memorySearchCount > 0) {
     const isFirst = !hasPrecedingNonMem && memParts.length === 0
-    const verb = isActiveGroup
-      ? isFirst
-        ? 'Searching'
-        : 'searching'
-      : isFirst
-        ? 'Searched'
-        : 'searched'
+    const verb = isActiveGroup ? (isFirst ? 'Searching' : 'searching') : isFirst ? 'Searched' : 'searched'
     if (!isFirst) {
       memParts.push(<Text key="comma-ms">, </Text>)
     }
@@ -550,20 +456,13 @@ export function CollapsedReadSearchContent({
 
   if (memoryWriteCount > 0) {
     const isFirst = !hasPrecedingNonMem && memParts.length === 0
-    const verb = isActiveGroup
-      ? isFirst
-        ? 'Writing'
-        : 'writing'
-      : isFirst
-        ? 'Wrote'
-        : 'wrote'
+    const verb = isActiveGroup ? (isFirst ? 'Writing' : 'writing') : isFirst ? 'Wrote' : 'wrote'
     if (!isFirst) {
       memParts.push(<Text key="comma-mw">, </Text>)
     }
     memParts.push(
       <Text key="mem-write">
-        {verb} <Text bold>{memoryWriteCount}</Text>{' '}
-        {memoryWriteCount === 1 ? 'memory' : 'memories'}
+        {verb} <Text bold>{memoryWriteCount}</Text> {memoryWriteCount === 1 ? 'memory' : 'memories'}
       </Text>,
     )
   }
@@ -571,11 +470,7 @@ export function CollapsedReadSearchContent({
   return (
     <Box flexDirection="column" marginTop={1} backgroundColor={bg}>
       <Box flexDirection="row">
-        {isActiveGroup ? (
-          <ToolUseLoader shouldAnimate isUnresolved isError={anyError} />
-        ) : (
-          <Box minWidth={2} />
-        )}
+        {isActiveGroup ? <ToolUseLoader shouldAnimate isUnresolved isError={anyError} /> : <Box minWidth={2} />}
         <Text dimColor={!isActiveGroup}>
           {nonMemParts}
           {memParts}
@@ -609,8 +504,7 @@ export function CollapsedReadSearchContent({
       )}
       {message.hookTotalMs !== undefined && message.hookTotalMs > 0 && (
         <Text dimColor>
-          {'  ⎿  '}Ran {message.hookCount} PreToolUse{' '}
-          {message.hookCount === 1 ? 'hook' : 'hooks'} (
+          {'  ⎿  '}Ran {message.hookCount} PreToolUse {message.hookCount === 1 ? 'hook' : 'hooks'} (
           {formatSecondsShort(message.hookTotalMs)})
         </Text>
       )}

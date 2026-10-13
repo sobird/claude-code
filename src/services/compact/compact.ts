@@ -1,5 +1,6 @@
 import { feature } from 'bun:bundle'
 import type { UUID } from 'crypto'
+
 import uniqBy from 'lodash-es/uniqBy.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -9,16 +10,14 @@ const sessionTranscriptModule = feature('KAIROS')
 
 import { APIUserAbortError } from '@anthropic-ai/sdk'
 import { markPostCompaction } from 'src/bootstrap/state.js'
+
 import { getInvokedSkillsForAgent } from '../../bootstrap/state.js'
 import type { QuerySource } from '../../constants/querySource.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
-import type { Tool, ToolUseContext } from '../../Tool.js'
 import type { LocalAgentTaskState } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
+import type { Tool, ToolUseContext } from '../../Tool.js'
 import { FileReadTool } from '../../tools/FileReadTool/FileReadTool.js'
-import {
-  FILE_READ_TOOL_NAME,
-  FILE_UNCHANGED_STUB,
-} from '../../tools/FileReadTool/prompt.js'
+import { FILE_READ_TOOL_NAME, FILE_UNCHANGED_STUB } from '../../tools/FileReadTool/prompt.js'
 import { ToolSearchTool } from '../../tools/ToolSearchTool/ToolSearchTool.js'
 import type { AgentId } from '../../types/ids.js'
 import type {
@@ -40,21 +39,12 @@ import {
 } from '../../utils/attachments.js'
 import { getMemoryPath } from '../../utils/config.js'
 import { COMPACT_MAX_OUTPUT_TOKENS } from '../../utils/context.js'
-import {
-  analyzeContext,
-  tokenStatsToStatsigMetrics,
-} from '../../utils/contextAnalysis.js'
+import { analyzeContext, tokenStatsToStatsigMetrics } from '../../utils/contextAnalysis.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { hasExactErrorMessage } from '../../utils/errors.js'
 import { cacheToObject } from '../../utils/fileStateCache.js'
-import {
-  type CacheSafeParams,
-  runForkedAgent,
-} from '../../utils/forkedAgent.js'
-import {
-  executePostCompactHooks,
-  executePreCompactHooks,
-} from '../../utils/hooks.js'
+import { type CacheSafeParams, runForkedAgent } from '../../utils/forkedAgent.js'
+import { executePostCompactHooks, executePreCompactHooks } from '../../utils/hooks.js'
 import { logError } from '../../utils/log.js'
 import { MEMORY_TYPE_VALUES } from '../../utils/memory/types.js'
 import {
@@ -68,56 +58,26 @@ import {
 } from '../../utils/messages.js'
 import { expandPath } from '../../utils/path.js'
 import { getPlan, getPlanFilePath } from '../../utils/plans.js'
-import {
-  isSessionActivityTrackingActive,
-  sendSessionActivitySignal,
-} from '../../utils/sessionActivity.js'
+import { isSessionActivityTrackingActive, sendSessionActivitySignal } from '../../utils/sessionActivity.js'
 import { processSessionStartHooks } from '../../utils/sessionStart.js'
-import {
-  getTranscriptPath,
-  reAppendSessionMetadata,
-} from '../../utils/sessionStorage.js'
+import { getTranscriptPath, reAppendSessionMetadata } from '../../utils/sessionStorage.js'
 import { sleep } from '../../utils/sleep.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { asSystemPrompt } from '../../utils/systemPromptType.js'
 import { getTaskOutputPath } from '../../utils/task/diskOutput.js'
-import {
-  getTokenUsage,
-  tokenCountFromLastAPIResponse,
-  tokenCountWithEstimation,
-} from '../../utils/tokens.js'
-import {
-  extractDiscoveredToolNames,
-  isToolSearchEnabled,
-} from '../../utils/toolSearch.js'
+import { getTokenUsage, tokenCountFromLastAPIResponse, tokenCountWithEstimation } from '../../utils/tokens.js'
+import { extractDiscoveredToolNames, isToolSearchEnabled } from '../../utils/toolSearch.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
-import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  logEvent,
-} from '../analytics/index.js'
-import {
-  getMaxOutputTokensForModel,
-  queryModelWithStreaming,
-} from '../api/claude.js'
-import {
-  getPromptTooLongTokenGap,
-  PROMPT_TOO_LONG_ERROR_MESSAGE,
-  startsWithApiErrorPrefix,
-} from '../api/errors.js'
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../analytics/index.js'
+import { getMaxOutputTokensForModel, queryModelWithStreaming } from '../api/claude.js'
+import { getPromptTooLongTokenGap, PROMPT_TOO_LONG_ERROR_MESSAGE, startsWithApiErrorPrefix } from '../api/errors.js'
 import { notifyCompaction } from '../api/promptCacheBreakDetection.js'
 import { getRetryDelay } from '../api/withRetry.js'
 import { logPermissionContextForAnts } from '../internalLogging.js'
-import {
-  roughTokenCountEstimation,
-  roughTokenCountEstimationForMessages,
-} from '../tokenEstimation.js'
+import { roughTokenCountEstimation, roughTokenCountEstimationForMessages } from '../tokenEstimation.js'
 import { groupMessagesByApiRound } from './grouping.js'
-import {
-  getCompactPrompt,
-  getCompactUserSummaryMessage,
-  getPartialCompactPrompt,
-} from './prompt.js'
+import { getCompactPrompt, getCompactUserSummaryMessage, getPartialCompactPrompt } from './prompt.js'
 
 export const POST_COMPACT_MAX_FILES_TO_RESTORE = 5
 export const POST_COMPACT_TOKEN_BUDGET = 50_000
@@ -143,7 +103,7 @@ const MAX_COMPACT_STREAMING_RETRIES = 2
  * and thinking blocks but not images.
  */
 export function stripImagesFromMessages(messages: Message[]): Message[] {
-  return messages.map(message => {
+  return messages.map((message) => {
     if (message.type !== 'user') {
       return message
     }
@@ -154,7 +114,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
     }
 
     let hasMediaBlock = false
-    const newContent = content.flatMap(block => {
+    const newContent = content.flatMap((block) => {
       if (block.type === 'image') {
         hasMediaBlock = true
         return [{ type: 'text' as const, text: '[image]' }]
@@ -166,7 +126,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
       // Also strip images/documents nested inside tool_result content arrays
       if (block.type === 'tool_result' && Array.isArray(block.content)) {
         let toolHasMedia = false
-        const newToolContent = block.content.map(item => {
+        const newToolContent = block.content.map((item) => {
           if (item.type === 'image') {
             toolHasMedia = true
             return { type: 'text' as const, text: '[image]' }
@@ -211,19 +171,17 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
 export function stripReinjectedAttachments(messages: Message[]): Message[] {
   if (feature('EXPERIMENTAL_SKILL_SEARCH')) {
     return messages.filter(
-      m =>
+      (m) =>
         !(
           m.type === 'attachment' &&
-          (m.attachment.type === 'skill_discovery' ||
-            m.attachment.type === 'skill_listing')
+          (m.attachment.type === 'skill_discovery' || m.attachment.type === 'skill_listing')
         ),
     )
   }
   return messages
 }
 
-export const ERROR_MESSAGE_NOT_ENOUGH_MESSAGES =
-  'Not enough messages to compact.'
+export const ERROR_MESSAGE_NOT_ENOUGH_MESSAGES = 'Not enough messages to compact.'
 const MAX_PTL_RETRIES = 3
 const PTL_RETRY_MARKER = '[earlier conversation truncated for compaction retry]'
 
@@ -240,17 +198,12 @@ const PTL_RETRY_MARKER = '[earlier conversation truncated for compaction retry]'
  * this helper is the dumb-but-safe fallback for the proactive/manual path
  * that wasn't migrated in bfdb472f's unification.
  */
-export function truncateHeadForPTLRetry(
-  messages: Message[],
-  ptlResponse: AssistantMessage,
-): Message[] | null {
+export function truncateHeadForPTLRetry(messages: Message[], ptlResponse: AssistantMessage): Message[] | null {
   // Strip our own synthetic marker from a previous retry before grouping.
   // Otherwise it becomes its own group 0 and the 20% fallback stalls
   // (drops only the marker, re-adds it, zero progress on retry 2+).
   const input =
-    messages[0]?.type === 'user' &&
-    messages[0].isMeta &&
-    messages[0].message.content === PTL_RETRY_MARKER
+    messages[0]?.type === 'user' && messages[0].isMeta && messages[0].message.content === PTL_RETRY_MARKER
       ? messages.slice(1)
       : messages
 
@@ -282,10 +235,7 @@ export function truncateHeadForPTLRetry(
   // role=user). Prepend a synthetic user marker — ensureToolResultPairing
   // already handles any orphaned tool_results this creates.
   if (sliced[0]?.type === 'assistant') {
-    return [
-      createUserMessage({ content: PTL_RETRY_MARKER, isMeta: true }),
-      ...sliced,
-    ]
+    return [createUserMessage({ content: PTL_RETRY_MARKER, isMeta: true }), ...sliced]
   }
   return sliced
 }
@@ -417,10 +367,7 @@ export async function compactConversation(
       },
       context.abortController.signal,
     )
-    customInstructions = mergeHookInstructions(
-      customInstructions,
-      hookResult.newCustomInstructions,
-    )
+    customInstructions = mergeHookInstructions(customInstructions, hookResult.newCustomInstructions)
     const userDisplayMessage = hookResult.userDisplayMessage
 
     // Show requesting mode with up arrow and custom message
@@ -432,10 +379,7 @@ export async function compactConversation(
     // Experiment (Jan 2026) confirmed: false path is 98% cache miss, costs ~0.76% of
     // fleet cache_creation (~38B tok/day), concentrated in ephemeral envs (CCR/GHA/SDK)
     // with cold GB cache and 3P providers where GB is disabled. GB gate kept as kill-switch.
-    const promptCacheSharingEnabled = getFeatureValue_CACHED_MAY_BE_STALE(
-      'tengu_compact_cache_prefix',
-      true,
-    )
+    const promptCacheSharingEnabled = getFeatureValue_CACHED_MAY_BE_STALE('tengu_compact_cache_prefix', true)
 
     const compactPrompt = getCompactPrompt(customInstructions)
     const summaryRequest = createUserMessage({
@@ -463,13 +407,10 @@ export async function compactConversation(
       // oldest API-round groups and retry rather than leaving the user stuck.
       ptlAttempts++
       const truncated =
-        ptlAttempts <= MAX_PTL_RETRIES
-          ? truncateHeadForPTLRetry(messagesToSummarize, summaryResponse)
-          : null
+        ptlAttempts <= MAX_PTL_RETRIES ? truncateHeadForPTLRetry(messagesToSummarize, summaryResponse) : null
       if (!truncated) {
         logEvent('tengu_compact_failed', {
-          reason:
-            'prompt_too_long' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          reason: 'prompt_too_long' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           preCompactTokenCount,
           promptCacheSharingEnabled,
           ptlAttempts,
@@ -491,23 +432,18 @@ export async function compactConversation(
     }
 
     if (!summary) {
-      logForDebugging(
-        `Compact failed: no summary text in response. Response: ${jsonStringify(summaryResponse)}`,
-        { level: 'error' },
-      )
+      logForDebugging(`Compact failed: no summary text in response. Response: ${jsonStringify(summaryResponse)}`, {
+        level: 'error',
+      })
       logEvent('tengu_compact_failed', {
-        reason:
-          'no_summary' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'no_summary' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         preCompactTokenCount,
         promptCacheSharingEnabled,
       })
-      throw new Error(
-        `Failed to generate conversation summary - response did not contain valid text content`,
-      )
+      throw new Error(`Failed to generate conversation summary - response did not contain valid text content`)
     } else if (startsWithApiErrorPrefix(summary)) {
       logEvent('tengu_compact_failed', {
-        reason:
-          'api_error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'api_error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         preCompactTokenCount,
         promptCacheSharingEnabled,
       })
@@ -530,18 +466,11 @@ export async function compactConversation(
 
     // Run async attachment generation in parallel
     const [fileAttachments, asyncAgentAttachments] = await Promise.all([
-      createPostCompactFileAttachments(
-        preCompactReadFileState,
-        context,
-        POST_COMPACT_MAX_FILES_TO_RESTORE,
-      ),
+      createPostCompactFileAttachments(preCompactReadFileState, context, POST_COMPACT_MAX_FILES_TO_RESTORE),
       createAsyncAgentAttachmentsIfNeeded(context),
     ])
 
-    const postCompactFileAttachments: AttachmentMessage[] = [
-      ...fileAttachments,
-      ...asyncAgentAttachments,
-    ]
+    const postCompactFileAttachments: AttachmentMessage[] = [...fileAttachments, ...asyncAgentAttachments]
     const planAttachment = createPlanAttachmentIfNeeded(context.agentId)
     if (planAttachment) {
       postCompactFileAttachments.push(planAttachment)
@@ -564,12 +493,9 @@ export async function compactConversation(
     // state so the model has tool/instruction context on the first
     // post-compact turn. Empty message history → diff against nothing →
     // announces the full set.
-    for (const att of getDeferredToolsDeltaAttachment(
-      context.options.tools,
-      context.options.mainLoopModel,
-      [],
-      { callSite: 'compact_full' },
-    )) {
+    for (const att of getDeferredToolsDeltaAttachment(context.options.tools, context.options.mainLoopModel, [], {
+      callSite: 'compact_full',
+    })) {
       postCompactFileAttachments.push(createAttachmentMessage(att))
     }
     for (const att of getAgentListingDeltaAttachment(context, [])) {
@@ -605,19 +531,13 @@ export async function compactConversation(
     // already-loaded deferred tool schemas to the API.
     const preCompactDiscovered = extractDiscoveredToolNames(messages)
     if (preCompactDiscovered.size > 0) {
-      boundaryMarker.compactMetadata.preCompactDiscoveredTools = [
-        ...preCompactDiscovered,
-      ].sort()
+      boundaryMarker.compactMetadata.preCompactDiscoveredTools = [...preCompactDiscovered].sort()
     }
 
     const transcriptPath = getTranscriptPath()
     const summaryMessages: UserMessage[] = [
       createUserMessage({
-        content: getCompactUserSummaryMessage(
-          summary,
-          suppressFollowUpQuestions,
-          transcriptPath,
-        ),
+        content: getCompactUserSummaryMessage(summary, suppressFollowUpQuestions, transcriptPath),
         isCompactSummary: true,
         isVisibleInTranscriptOnly: true,
       }),
@@ -626,9 +546,7 @@ export async function compactConversation(
     // Previously "postCompactTokenCount" — renamed because this is the
     // compact API call's total usage (input_tokens ≈ preCompactTokenCount),
     // NOT the size of the resulting context. Kept for event-field continuity.
-    const compactionCallTotalTokens = tokenCountFromLastAPIResponse([
-      summaryResponse,
-    ])
+    const compactionCallTotalTokens = tokenCountFromLastAPIResponse([summaryResponse])
 
     // Message-payload estimate of the resulting context. The next iteration's
     // shouldAutoCompact will see this PLUS ~20-40K for system prompt + tools +
@@ -644,8 +562,7 @@ export async function compactConversation(
     // Extract compaction API usage metrics
     const compactionUsage = getTokenUsage(summaryResponse)
 
-    const querySourceForEvent =
-      recompactionInfo?.querySource ?? context.options.querySource ?? 'unknown'
+    const querySourceForEvent = recompactionInfo?.querySource ?? context.options.querySource ?? 'unknown'
 
     logEvent('tengu_compact', {
       preCompactTokenCount,
@@ -654,24 +571,20 @@ export async function compactConversation(
       truePostCompactTokenCount,
       autoCompactThreshold: recompactionInfo?.autoCompactThreshold ?? -1,
       willRetriggerNextTurn:
-        recompactionInfo !== undefined &&
-        truePostCompactTokenCount >= recompactionInfo.autoCompactThreshold,
+        recompactionInfo !== undefined && truePostCompactTokenCount >= recompactionInfo.autoCompactThreshold,
       isAutoCompact,
-      querySource:
-        querySourceForEvent as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      querySource: querySourceForEvent as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       queryChainId: (context.queryTracking?.chainId ??
         '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       queryDepth: context.queryTracking?.depth ?? -1,
       isRecompactionInChain: recompactionInfo?.isRecompactionInChain ?? false,
-      turnsSincePreviousCompact:
-        recompactionInfo?.turnsSincePreviousCompact ?? -1,
+      turnsSincePreviousCompact: recompactionInfo?.turnsSincePreviousCompact ?? -1,
       previousCompactTurnId: (recompactionInfo?.previousCompactTurnId ??
         '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       compactionInputTokens: compactionUsage?.input_tokens,
       compactionOutputTokens: compactionUsage?.output_tokens,
       compactionCacheReadTokens: compactionUsage?.cache_read_input_tokens ?? 0,
-      compactionCacheCreationTokens:
-        compactionUsage?.cache_creation_input_tokens ?? 0,
+      compactionCacheCreationTokens: compactionUsage?.cache_creation_input_tokens ?? 0,
       compactionTotalTokens: compactionUsage
         ? compactionUsage.input_tokens +
           (compactionUsage.cache_creation_input_tokens ?? 0) +
@@ -696,10 +609,7 @@ export async function compactConversation(
 
     // Reset cache read baseline so the post-compact drop isn't flagged as a break
     if (feature('PROMPT_CACHE_BREAK_DETECTION')) {
-      notifyCompaction(
-        context.options.querySource ?? 'compact',
-        context.agentId,
-      )
+      notifyCompaction(context.options.querySource ?? 'compact', context.agentId)
     }
     markPostCompaction()
 
@@ -728,10 +638,7 @@ export async function compactConversation(
       context.abortController.signal,
     )
 
-    const combinedUserDisplayMessage = [
-      userDisplayMessage,
-      postCompactHookResult.userDisplayMessage,
-    ]
+    const combinedUserDisplayMessage = [userDisplayMessage, postCompactHookResult.userDisplayMessage]
       .filter(Boolean)
       .join('\n')
 
@@ -778,10 +685,7 @@ export async function partialCompactConversation(
   direction: PartialCompactDirection = 'from',
 ): Promise<CompactionResult> {
   try {
-    const messagesToSummarize =
-      direction === 'up_to'
-        ? allMessages.slice(0, pivotIndex)
-        : allMessages.slice(pivotIndex)
+    const messagesToSummarize = direction === 'up_to' ? allMessages.slice(0, pivotIndex) : allMessages.slice(pivotIndex)
     // 'up_to' must strip old compact boundaries/summaries: for 'up_to',
     // summary_B sits BEFORE kept, so a stale boundary_A in kept wins
     // findLastCompactBoundaryIndex's backward scan and drops summary_B.
@@ -792,12 +696,10 @@ export async function partialCompactConversation(
         ? allMessages
             .slice(pivotIndex)
             .filter(
-              m =>
-                m.type !== 'progress' &&
-                !isCompactBoundaryMessage(m) &&
-                !(m.type === 'user' && m.isCompactSummary),
+              (m) =>
+                m.type !== 'progress' && !isCompactBoundaryMessage(m) && !(m.type === 'user' && m.isCompactSummary),
             )
-        : allMessages.slice(0, pivotIndex).filter(m => m.type !== 'progress')
+        : allMessages.slice(0, pivotIndex).filter((m) => m.type !== 'progress')
 
     if (messagesToSummarize.length === 0) {
       throw new Error(
@@ -844,8 +746,7 @@ export async function partialCompactConversation(
 
     const failureMetadata = {
       preCompactTokenCount,
-      direction:
-        direction as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      direction: direction as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       messagesSummarized: messagesToSummarize.length,
     }
 
@@ -853,9 +754,7 @@ export async function partialCompactConversation(
     // PTL retry breaks the cache prefix but unblocks the user (CC-1180).
     let apiMessages = direction === 'up_to' ? messagesToSummarize : allMessages
     let retryCacheSafeParams =
-      direction === 'up_to'
-        ? { ...cacheSafeParams, forkContextMessages: messagesToSummarize }
-        : cacheSafeParams
+      direction === 'up_to' ? { ...cacheSafeParams, forkContextMessages: messagesToSummarize } : cacheSafeParams
     let summaryResponse: AssistantMessage
     let summary: string | null
     let ptlAttempts = 0
@@ -872,14 +771,10 @@ export async function partialCompactConversation(
       if (!summary?.startsWith(PROMPT_TOO_LONG_ERROR_MESSAGE)) break
 
       ptlAttempts++
-      const truncated =
-        ptlAttempts <= MAX_PTL_RETRIES
-          ? truncateHeadForPTLRetry(apiMessages, summaryResponse)
-          : null
+      const truncated = ptlAttempts <= MAX_PTL_RETRIES ? truncateHeadForPTLRetry(apiMessages, summaryResponse) : null
       if (!truncated) {
         logEvent('tengu_partial_compact_failed', {
-          reason:
-            'prompt_too_long' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          reason: 'prompt_too_long' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           ...failureMetadata,
           ptlAttempts,
         })
@@ -899,17 +794,13 @@ export async function partialCompactConversation(
     }
     if (!summary) {
       logEvent('tengu_partial_compact_failed', {
-        reason:
-          'no_summary' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'no_summary' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         ...failureMetadata,
       })
-      throw new Error(
-        'Failed to generate conversation summary - response did not contain valid text content',
-      )
+      throw new Error('Failed to generate conversation summary - response did not contain valid text content')
     } else if (startsWithApiErrorPrefix(summary)) {
       logEvent('tengu_partial_compact_failed', {
-        reason:
-          'api_error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'api_error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         ...failureMetadata,
       })
       throw new Error(summary)
@@ -932,10 +823,7 @@ export async function partialCompactConversation(
       createAsyncAgentAttachmentsIfNeeded(context),
     ])
 
-    const postCompactFileAttachments: AttachmentMessage[] = [
-      ...fileAttachments,
-      ...asyncAgentAttachments,
-    ]
+    const postCompactFileAttachments: AttachmentMessage[] = [...fileAttachments, ...asyncAgentAttachments]
     const planAttachment = createPlanAttachmentIfNeeded(context.agentId)
     if (planAttachment) {
       postCompactFileAttachments.push(planAttachment)
@@ -982,9 +870,7 @@ export async function partialCompactConversation(
       model: context.options.mainLoopModel,
     })
 
-    const postCompactTokenCount = tokenCountFromLastAPIResponse([
-      summaryResponse,
-    ])
+    const postCompactTokenCount = tokenCountFromLastAPIResponse([summaryResponse])
     const compactionUsage = getTokenUsage(summaryResponse)
 
     logEvent('tengu_partial_compact', {
@@ -992,24 +878,20 @@ export async function partialCompactConversation(
       postCompactTokenCount,
       messagesKept: messagesToKeep.length,
       messagesSummarized: messagesToSummarize.length,
-      direction:
-        direction as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      direction: direction as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       hasUserFeedback: !!userFeedback,
-      trigger:
-        'message_selector' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      trigger: 'message_selector' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       compactionInputTokens: compactionUsage?.input_tokens,
       compactionOutputTokens: compactionUsage?.output_tokens,
       compactionCacheReadTokens: compactionUsage?.cache_read_input_tokens ?? 0,
-      compactionCacheCreationTokens:
-        compactionUsage?.cache_creation_input_tokens ?? 0,
+      compactionCacheCreationTokens: compactionUsage?.cache_creation_input_tokens ?? 0,
     })
 
     // Progress messages aren't loggable, so forkSessionImpl would null out
     // a logicalParentUuid pointing at one. Both directions skip them.
     const lastPreCompactUuid =
       direction === 'up_to'
-        ? allMessages.slice(0, pivotIndex).findLast(m => m.type !== 'progress')
-            ?.uuid
+        ? allMessages.slice(0, pivotIndex).findLast((m) => m.type !== 'progress')?.uuid
         : messagesToKeep.at(-1)?.uuid
     const boundaryMarker = createCompactBoundaryMessage(
       'manual',
@@ -1022,9 +904,7 @@ export async function partialCompactConversation(
     // simpler than tracking which half each tool lived in.
     const preCompactDiscovered = extractDiscoveredToolNames(allMessages)
     if (preCompactDiscovered.size > 0) {
-      boundaryMarker.compactMetadata.preCompactDiscoveredTools = [
-        ...preCompactDiscovered,
-      ].sort()
+      boundaryMarker.compactMetadata.preCompactDiscoveredTools = [...preCompactDiscovered].sort()
     }
 
     const transcriptPath = getTranscriptPath()
@@ -1045,10 +925,7 @@ export async function partialCompactConversation(
     ]
 
     if (feature('PROMPT_CACHE_BREAK_DETECTION')) {
-      notifyCompaction(
-        context.options.querySource ?? 'compact',
-        context.agentId,
-      )
+      notifyCompaction(context.options.querySource ?? 'compact', context.agentId)
     }
     markPostCompaction()
 
@@ -1057,9 +934,7 @@ export async function partialCompactConversation(
     reAppendSessionMetadata()
 
     if (feature('KAIROS')) {
-      void sessionTranscriptModule?.writeSessionTranscriptSegment(
-        messagesToSummarize,
-      )
+      void sessionTranscriptModule?.writeSessionTranscriptSegment(messagesToSummarize)
     }
 
     context.onCompactProgress?.({
@@ -1076,15 +951,9 @@ export async function partialCompactConversation(
 
     // 'from': prefix-preserving → boundary; 'up_to': suffix → last summary
     const anchorUuid =
-      direction === 'up_to'
-        ? (summaryMessages.at(-1)?.uuid ?? boundaryMarker.uuid)
-        : boundaryMarker.uuid
+      direction === 'up_to' ? (summaryMessages.at(-1)?.uuid ?? boundaryMarker.uuid) : boundaryMarker.uuid
     return {
-      boundaryMarker: annotateBoundaryWithPreservedSegment(
-        boundaryMarker,
-        anchorUuid,
-        messagesToKeep,
-      ),
+      boundaryMarker: annotateBoundaryWithPreservedSegment(boundaryMarker, anchorUuid, messagesToKeep),
       summaryMessages,
       messagesToKeep,
       attachments: postCompactFileAttachments,
@@ -1105,10 +974,7 @@ export async function partialCompactConversation(
   }
 }
 
-function addErrorNotificationIfNeeded(
-  error: unknown,
-  context: Pick<ToolUseContext, 'addNotification'>,
-) {
+function addErrorNotificationIfNeeded(error: unknown, context: Pick<ToolUseContext, 'addNotification'>) {
   if (
     !hasExactErrorMessage(error, ERROR_MESSAGE_USER_ABORT) &&
     !hasExactErrorMessage(error, ERROR_MESSAGE_NOT_ENOUGH_MESSAGES)
@@ -1152,10 +1018,7 @@ async function streamCompactSummary({
   // main conversation's cached prefix (system prompt, tools, context messages).
   // Falls back to regular streaming path on failure.
   // 3P default: true — see comment at the other tengu_compact_cache_prefix read above.
-  const promptCacheSharingEnabled = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_compact_cache_prefix',
-    true,
-  )
+  const promptCacheSharingEnabled = getFeatureValue_CACHED_MAY_BE_STALE('tengu_compact_cache_prefix', true)
   // Send keep-alive signals during compaction to prevent remote session
   // WebSocket idle timeouts from dropping bridge connections. Compaction
   // API calls can take 5-10+ seconds, during which no other messages
@@ -1199,9 +1062,7 @@ async function streamCompactSummary({
           overrides: { abortController: context.abortController },
         })
         const assistantMsg = getLastAssistantMessage(result.messages)
-        const assistantText = assistantMsg
-          ? getAssistantMessageText(assistantMsg)
-          : null
+        const assistantText = assistantMsg ? getAssistantMessageText(assistantMsg) : null
         // Guard isApiErrorMessage: query() catches API errors (including
         // APIUserAbortError on ESC) and yields them as synthetic assistant
         // messages. Without this check, an aborted compact "succeeds" with
@@ -1215,8 +1076,7 @@ async function streamCompactSummary({
               preCompactTokenCount,
               outputTokens: result.totalUsage.output_tokens,
               cacheReadInputTokens: result.totalUsage.cache_read_input_tokens,
-              cacheCreationInputTokens:
-                result.totalUsage.cache_creation_input_tokens,
+              cacheCreationInputTokens: result.totalUsage.cache_creation_input_tokens,
               cacheHitRate:
                 result.totalUsage.cache_read_input_tokens > 0
                   ? result.totalUsage.cache_read_input_tokens /
@@ -1233,25 +1093,20 @@ async function streamCompactSummary({
           { level: 'warn' },
         )
         logEvent('tengu_compact_cache_sharing_fallback', {
-          reason:
-            'no_text_response' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          reason: 'no_text_response' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           preCompactTokenCount,
         })
       } catch (error) {
         logError(error)
         logEvent('tengu_compact_cache_sharing_fallback', {
-          reason:
-            'error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          reason: 'error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           preCompactTokenCount,
         })
       }
     }
 
     // Regular streaming path (fallback when cache sharing fails or is disabled)
-    const retryEnabled = getFeatureValue_CACHED_MAY_BE_STALE(
-      'tengu_compact_streaming_retry',
-      false,
-    )
+    const retryEnabled = getFeatureValue_CACHED_MAY_BE_STALE('tengu_compact_streaming_retry', false)
     const maxAttempts = retryEnabled ? MAX_COMPACT_STREAMING_RETRIES : 1
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -1279,29 +1134,17 @@ async function streamCompactSummary({
       // isToolSearchEnabled above and normalizeMessagesForAPI below.
       // Deduplicate by name to avoid API errors when MCP tools share names with built-in tools.
       const tools: Tool[] = useToolSearch
-        ? uniqBy(
-            [
-              FileReadTool,
-              ToolSearchTool,
-              ...context.options.tools.filter(t => t.isMcp),
-            ],
-            'name',
-          )
+        ? uniqBy([FileReadTool, ToolSearchTool, ...context.options.tools.filter((t) => t.isMcp)], 'name')
         : [FileReadTool]
 
       const streamingGen = queryModelWithStreaming({
         messages: normalizeMessagesForAPI(
           stripImagesFromMessages(
-            stripReinjectedAttachments([
-              ...getMessagesAfterCompactBoundary(messages),
-              summaryRequest,
-            ]),
+            stripReinjectedAttachments([...getMessagesAfterCompactBoundary(messages), summaryRequest]),
           ),
           context.options.tools,
         ),
-        systemPrompt: asSystemPrompt([
-          'You are a helpful AI assistant tasked with summarizing conversations.',
-        ]),
+        systemPrompt: asSystemPrompt(['You are a helpful AI assistant tasked with summarizing conversations.']),
         thinkingConfig: { type: 'disabled' as const },
         tools,
         signal: context.abortController.signal,
@@ -1346,7 +1189,7 @@ async function streamCompactSummary({
           event.event.delta.type === 'text_delta'
         ) {
           const charactersStreamed = event.event.delta.text.length
-          context.setResponseLength?.(length => length + charactersStreamed)
+          context.setResponseLength?.((length) => length + charactersStreamed)
         }
 
         if (event.type === 'assistant') {
@@ -1377,8 +1220,7 @@ async function streamCompactSummary({
         { level: 'error' },
       )
       logEvent('tengu_compact_failed', {
-        reason:
-          'no_streaming_response' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'no_streaming_response' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         preCompactTokenCount,
         hasStartedStreaming,
         retryEnabled,
@@ -1422,17 +1264,15 @@ export async function createPostCompactFileAttachments(
   const recentFiles = Object.entries(readFileState)
     .map(([filename, state]) => ({ filename, ...state }))
     .filter(
-      file =>
-        !shouldExcludeFromPostCompactRestore(
-          file.filename,
-          toolUseContext.agentId,
-        ) && !preservedReadPaths.has(expandPath(file.filename)),
+      (file) =>
+        !shouldExcludeFromPostCompactRestore(file.filename, toolUseContext.agentId) &&
+        !preservedReadPaths.has(expandPath(file.filename)),
     )
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, maxFiles)
 
   const results = await Promise.all(
-    recentFiles.map(async file => {
+    recentFiles.map(async (file) => {
       const attachment = await generateFileAttachment(
         file.filename,
         {
@@ -1467,9 +1307,7 @@ export async function createPostCompactFileAttachments(
  * Creates a plan file attachment if a plan file exists for the current session.
  * This ensures the plan is preserved after compaction.
  */
-export function createPlanAttachmentIfNeeded(
-  agentId?: AgentId,
-): AttachmentMessage | null {
+export function createPlanAttachmentIfNeeded(agentId?: AgentId): AttachmentMessage | null {
   const planContent = getPlan(agentId)
 
   if (!planContent) {
@@ -1491,9 +1329,7 @@ export function createPlanAttachmentIfNeeded(
  * This ensures skill guidelines remain available after the conversation is summarized
  * without leaking skills from other agent contexts.
  */
-export function createSkillAttachmentIfNeeded(
-  agentId?: string,
-): AttachmentMessage | null {
+export function createSkillAttachmentIfNeeded(agentId?: string): AttachmentMessage | null {
   const invokedSkills = getInvokedSkillsForAgent(agentId)
 
   if (invokedSkills.size === 0) {
@@ -1506,15 +1342,12 @@ export function createSkillAttachmentIfNeeded(
   let usedTokens = 0
   const skills = Array.from(invokedSkills.values())
     .sort((a, b) => b.invokedAt - a.invokedAt)
-    .map(skill => ({
+    .map((skill) => ({
       name: skill.skillName,
       path: skill.skillPath,
-      content: truncateToTokens(
-        skill.content,
-        POST_COMPACT_MAX_TOKENS_PER_SKILL,
-      ),
+      content: truncateToTokens(skill.content, POST_COMPACT_MAX_TOKENS_PER_SKILL),
     }))
-    .filter(skill => {
+    .filter((skill) => {
       const tokens = roughTokenCountEstimation(skill.content)
       if (usedTokens + tokens > POST_COMPACT_SKILLS_TOKEN_BUDGET) {
         return false
@@ -1539,9 +1372,7 @@ export function createSkillAttachmentIfNeeded(
  * (otherwise it would lose the plan mode instructions since those are
  * normally only injected on tool-use turns via getAttachmentMessages).
  */
-export async function createPlanModeAttachmentIfNeeded(
-  context: ToolUseContext,
-): Promise<AttachmentMessage | null> {
+export async function createPlanModeAttachmentIfNeeded(context: ToolUseContext): Promise<AttachmentMessage | null> {
   const appState = context.getAppState()
   if (appState.toolPermissionContext.mode !== 'plan') {
     return null
@@ -1565,20 +1396,14 @@ export async function createPlanModeAttachmentIfNeeded(
  * doesn't spawn a duplicate) and agents that have finished but whose results
  * haven't been retrieved yet.
  */
-export async function createAsyncAgentAttachmentsIfNeeded(
-  context: ToolUseContext,
-): Promise<AttachmentMessage[]> {
+export async function createAsyncAgentAttachmentsIfNeeded(context: ToolUseContext): Promise<AttachmentMessage[]> {
   const appState = context.getAppState()
   const asyncAgents = Object.values(appState.tasks).filter(
     (task): task is LocalAgentTaskState => task.type === 'local_agent',
   )
 
-  return asyncAgents.flatMap(agent => {
-    if (
-      agent.retrieved ||
-      agent.status === 'pending' ||
-      agent.agentId === context.agentId
-    ) {
+  return asyncAgents.flatMap((agent) => {
+    if (agent.retrieved || agent.status === 'pending' || agent.agentId === context.agentId) {
       return []
     }
     return [
@@ -1588,10 +1413,7 @@ export async function createAsyncAgentAttachmentsIfNeeded(
         taskType: 'local_agent',
         description: agent.description,
         status: agent.status,
-        deltaSummary:
-          agent.status === 'running'
-            ? (agent.progress?.summary ?? null)
-            : (agent.error ?? null),
+        deltaSummary: agent.status === 'running' ? (agent.progress?.summary ?? null) : (agent.error ?? null),
         outputFilePath: getTaskOutputPath(agent.agentId),
       }),
     ]
@@ -1626,27 +1448,15 @@ function collectReadToolFilePaths(messages: Message[]): Set<string> {
 
   const paths = new Set<string>()
   for (const message of messages) {
-    if (
-      message.type !== 'assistant' ||
-      !Array.isArray(message.message.content)
-    ) {
+    if (message.type !== 'assistant' || !Array.isArray(message.message.content)) {
       continue
     }
     for (const block of message.message.content) {
-      if (
-        block.type !== 'tool_use' ||
-        block.name !== FILE_READ_TOOL_NAME ||
-        stubIds.has(block.id)
-      ) {
+      if (block.type !== 'tool_use' || block.name !== FILE_READ_TOOL_NAME || stubIds.has(block.id)) {
         continue
       }
       const input = block.input
-      if (
-        input &&
-        typeof input === 'object' &&
-        'file_path' in input &&
-        typeof input.file_path === 'string'
-      ) {
+      if (input && typeof input === 'object' && 'file_path' in input && typeof input.file_path === 'string') {
         paths.add(expandPath(input.file_path))
       }
     }
@@ -1671,10 +1481,7 @@ function truncateToTokens(content: string, maxTokens: number): string {
   return content.slice(0, charBudget) + SKILL_TRUNCATION_MARKER
 }
 
-function shouldExcludeFromPostCompactRestore(
-  filename: string,
-  agentId?: AgentId,
-): boolean {
+function shouldExcludeFromPostCompactRestore(filename: string, agentId?: AgentId): boolean {
   const normalizedFilename = expandPath(filename)
   // Exclude plan files
   try {
@@ -1690,9 +1497,7 @@ function shouldExcludeFromPostCompactRestore(
   // TODO: Refactor to use isMemoryFilePath() from claudemd.ts for consistency
   // and to also match child directory memory files (.claude/rules/*.md, etc.)
   try {
-    const normalizedMemoryPaths = new Set(
-      MEMORY_TYPE_VALUES.map(type => expandPath(getMemoryPath(type))),
-    )
+    const normalizedMemoryPaths = new Set(MEMORY_TYPE_VALUES.map((type) => expandPath(getMemoryPath(type))))
 
     if (normalizedMemoryPaths.has(normalizedFilename)) {
       return true

@@ -1,5 +1,6 @@
 import { lstat, realpath } from 'fs/promises'
 import { dirname, join, resolve, sep } from 'path'
+
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import { getErrnoCode } from '../utils/errors.js'
 import { getAutoMemPath, isAutoMemoryEnabled } from './paths.js'
@@ -43,14 +44,9 @@ function sanitizePathKey(key: string): string {
   const normalized = key.normalize('NFKC')
   if (
     normalized !== key &&
-    (normalized.includes('..') ||
-      normalized.includes('/') ||
-      normalized.includes('\\') ||
-      normalized.includes('\0'))
+    (normalized.includes('..') || normalized.includes('/') || normalized.includes('\\') || normalized.includes('\0'))
   ) {
-    throw new PathTraversalError(
-      `Unicode-normalized traversal in path key: "${key}"`,
-    )
+    throw new PathTraversalError(`Unicode-normalized traversal in path key: "${key}"`)
   }
   // Reject backslashes (Windows path separator used as traversal vector)
   if (key.includes('\\')) {
@@ -114,17 +110,11 @@ async function realpathDeepestExisting(absolutePath: string): Promise<string> {
   // component sits in the middle of the path; pop and retry so we can realpath
   // the ancestor to detect symlink escapes.
   // Loop terminates when we reach the filesystem root (dirname('/') === '/').
-  for (
-    let parent = dirname(current);
-    current !== parent;
-    parent = dirname(current)
-  ) {
+  for (let parent = dirname(current); current !== parent; parent = dirname(current)) {
     try {
       const realCurrent = await realpath(current)
       // Rejoin the non-existing tail in reverse order (deepest popped first)
-      return tail.length === 0
-        ? realCurrent
-        : join(realCurrent, ...tail.reverse())
+      return tail.length === 0 ? realCurrent : join(realCurrent, ...tail.reverse())
     } catch (e: unknown) {
       const code = getErrnoCode(e)
       if (code === 'ENOENT') {
@@ -136,9 +126,7 @@ async function realpathDeepestExisting(absolutePath: string): Promise<string> {
         try {
           const st = await lstat(current)
           if (st.isSymbolicLink()) {
-            throw new PathTraversalError(
-              `Dangling symlink detected (target does not exist): "${current}"`,
-            )
+            throw new PathTraversalError(`Dangling symlink detected (target does not exist): "${current}"`)
           }
           // lstat succeeded but isn't a symlink — ENOENT from realpath was
           // caused by a dangling symlink in an ancestor. Walk up to find it.
@@ -150,16 +138,12 @@ async function realpathDeepestExisting(absolutePath: string): Promise<string> {
         }
       } else if (code === 'ELOOP') {
         // Symlink loop — corrupted or malicious filesystem state.
-        throw new PathTraversalError(
-          `Symlink loop detected in path: "${current}"`,
-        )
+        throw new PathTraversalError(`Symlink loop detected in path: "${current}"`)
       } else if (code !== 'ENOTDIR' && code !== 'ENAMETOOLONG') {
         // EACCES, EIO, etc. — cannot verify containment. Fail closed by wrapping
         // as PathTraversalError so the caller can skip this entry gracefully
         // instead of aborting the entire batch.
-        throw new PathTraversalError(
-          `Cannot verify path containment (${code}): "${current}"`,
-        )
+        throw new PathTraversalError(`Cannot verify path containment (${code}): "${current}"`)
       }
       tail.push(current.slice(parent.length + sep.length))
       current = parent
@@ -180,9 +164,7 @@ async function realpathDeepestExisting(absolutePath: string): Promise<string> {
  * requires teamDir to exist. If there's no directory, there's no symlink,
  * and the first-pass string-level containment check is sufficient.
  */
-async function isRealPathWithinTeamDir(
-  realCandidate: string,
-): Promise<boolean> {
+async function isRealPathWithinTeamDir(realCandidate: string): Promise<boolean> {
   let realTeamDir: string
   try {
     // getTeamMemPath() includes a trailing separator; strip it because
@@ -225,9 +207,7 @@ export function isTeamMemPath(filePath: string): boolean {
  * Throws PathTraversalError if the path contains injection vectors, escapes the
  * directory via .. segments, or escapes via a symlink (PSR M22186).
  */
-export async function validateTeamMemWritePath(
-  filePath: string,
-): Promise<string> {
+export async function validateTeamMemWritePath(filePath: string): Promise<string> {
   if (filePath.includes('\0')) {
     throw new PathTraversalError(`Null byte in path: "${filePath}"`)
   }
@@ -239,18 +219,14 @@ export async function validateTeamMemWritePath(
   // Prefix attack protection: teamDir already ends with sep (from getTeamMemPath),
   // so "team-evil/" won't match "team/"
   if (!resolvedPath.startsWith(teamDir)) {
-    throw new PathTraversalError(
-      `Path escapes team memory directory: "${filePath}"`,
-    )
+    throw new PathTraversalError(`Path escapes team memory directory: "${filePath}"`)
   }
   // Second pass: resolve symlinks on the deepest existing ancestor and verify
   // the real path is still within the real team dir. This catches symlink-based
   // escapes that path.resolve() alone cannot detect.
   const realPath = await realpathDeepestExisting(resolvedPath)
   if (!(await isRealPathWithinTeamDir(realPath))) {
-    throw new PathTraversalError(
-      `Path escapes team memory directory via symlink: "${filePath}"`,
-    )
+    throw new PathTraversalError(`Path escapes team memory directory via symlink: "${filePath}"`)
   }
   return resolvedPath
 }
@@ -269,16 +245,12 @@ export async function validateTeamMemKey(relativeKey: string): Promise<string> {
   // First pass: normalize .. segments and check string-level containment.
   const resolvedPath = resolve(fullPath)
   if (!resolvedPath.startsWith(teamDir)) {
-    throw new PathTraversalError(
-      `Key escapes team memory directory: "${relativeKey}"`,
-    )
+    throw new PathTraversalError(`Key escapes team memory directory: "${relativeKey}"`)
   }
   // Second pass: resolve symlinks and verify real containment.
   const realPath = await realpathDeepestExisting(resolvedPath)
   if (!(await isRealPathWithinTeamDir(realPath))) {
-    throw new PathTraversalError(
-      `Key escapes team memory directory via symlink: "${relativeKey}"`,
-    )
+    throw new PathTraversalError(`Key escapes team memory directory via symlink: "${relativeKey}"`)
   }
   return resolvedPath
 }

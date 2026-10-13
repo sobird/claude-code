@@ -1,6 +1,8 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
+
 import { z } from 'zod/v4'
+
 import { getCwd } from '../../utils/cwd.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -40,10 +42,7 @@ function getSyncedJsonPath(agentType: string, scope: AgentMemoryScope): string {
   return join(getAgentMemoryDir(agentType, scope), SYNCED_JSON)
 }
 
-async function readJsonFile<T>(
-  path: string,
-  schema: z.ZodType<T>,
-): Promise<T | null> {
+async function readJsonFile<T>(path: string, schema: z.ZodType<T>): Promise<T | null> {
   try {
     const content = await readFile(path, { encoding: 'utf-8' })
     const result = schema.safeParse(jsonParse(content))
@@ -53,10 +52,7 @@ async function readJsonFile<T>(
   }
 }
 
-async function copySnapshotToLocal(
-  agentType: string,
-  scope: AgentMemoryScope,
-): Promise<void> {
+async function copySnapshotToLocal(agentType: string, scope: AgentMemoryScope): Promise<void> {
   const snapshotMemDir = getSnapshotDirForAgent(agentType)
   const localMemDir = getAgentMemoryDir(agentType, scope)
 
@@ -76,11 +72,7 @@ async function copySnapshotToLocal(
   }
 }
 
-async function saveSyncedMeta(
-  agentType: string,
-  scope: AgentMemoryScope,
-  snapshotTimestamp: string,
-): Promise<void> {
+async function saveSyncedMeta(agentType: string, scope: AgentMemoryScope, snapshotTimestamp: string): Promise<void> {
   const syncedPath = getSyncedJsonPath(agentType, scope)
   const localMemDir = getAgentMemoryDir(agentType, scope)
   await mkdir(localMemDir, { recursive: true })
@@ -102,10 +94,7 @@ export async function checkAgentMemorySnapshot(
   action: 'none' | 'initialize' | 'prompt-update'
   snapshotTimestamp?: string
 }> {
-  const snapshotMeta = await readJsonFile(
-    getSnapshotJsonPath(agentType),
-    snapshotMetaSchema(),
-  )
+  const snapshotMeta = await readJsonFile(getSnapshotJsonPath(agentType), snapshotMetaSchema())
 
   if (!snapshotMeta) {
     return { action: 'none' }
@@ -116,7 +105,7 @@ export async function checkAgentMemorySnapshot(
   let hasLocalMemory = false
   try {
     const dirents = await readdir(localMemDir, { withFileTypes: true })
-    hasLocalMemory = dirents.some(d => d.isFile() && d.name.endsWith('.md'))
+    hasLocalMemory = dirents.some((d) => d.isFile() && d.name.endsWith('.md'))
   } catch {
     // Directory doesn't exist
   }
@@ -125,15 +114,9 @@ export async function checkAgentMemorySnapshot(
     return { action: 'initialize', snapshotTimestamp: snapshotMeta.updatedAt }
   }
 
-  const syncedMeta = await readJsonFile(
-    getSyncedJsonPath(agentType, scope),
-    syncedMetaSchema(),
-  )
+  const syncedMeta = await readJsonFile(getSyncedJsonPath(agentType, scope), syncedMetaSchema())
 
-  if (
-    !syncedMeta ||
-    new Date(snapshotMeta.updatedAt) > new Date(syncedMeta.syncedFrom)
-  ) {
+  if (!syncedMeta || new Date(snapshotMeta.updatedAt) > new Date(syncedMeta.syncedFrom)) {
     return {
       action: 'prompt-update',
       snapshotTimestamp: snapshotMeta.updatedAt,
@@ -151,9 +134,7 @@ export async function initializeFromSnapshot(
   scope: AgentMemoryScope,
   snapshotTimestamp: string,
 ): Promise<void> {
-  logForDebugging(
-    `Initializing agent memory for ${agentType} from project snapshot`,
-  )
+  logForDebugging(`Initializing agent memory for ${agentType} from project snapshot`)
   await copySnapshotToLocal(agentType, scope)
   await saveSyncedMeta(agentType, scope, snapshotTimestamp)
 }
@@ -166,9 +147,7 @@ export async function replaceFromSnapshot(
   scope: AgentMemoryScope,
   snapshotTimestamp: string,
 ): Promise<void> {
-  logForDebugging(
-    `Replacing agent memory for ${agentType} with project snapshot`,
-  )
+  logForDebugging(`Replacing agent memory for ${agentType} with project snapshot`)
   // Remove existing .md files before copying to avoid orphans
   const localMemDir = getAgentMemoryDir(agentType, scope)
   try {

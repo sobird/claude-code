@@ -1,9 +1,7 @@
 import * as React from 'react'
+
 import { Ansi, Box, Text, useAnimationFrame } from '../../ink.js'
-import {
-  segmentTextByHighlights,
-  type TextHighlight,
-} from '../../utils/textHighlighting.js'
+import { segmentTextByHighlights, type TextHighlight } from '../../utils/textHighlighting.js'
 import { ShimmerChar } from '../Spinner/ShimmerChar.js'
 
 type Props = {
@@ -53,7 +51,7 @@ export function HighlightedInput({ text, highlights }: Props): React.ReactNode {
 
     // Scope the sweep to shimmer-highlighted ranges so cycle time doesn't grow
     // with input length. Padding creates an offscreen pause between sweeps.
-    const hasShimmer = highlights.some(h => h.shimmerColor)
+    const hasShimmer = highlights.some((h) => h.shimmerColor)
     let sweepStart = 0
     let cycleLength = 1
     if (hasShimmer) {
@@ -74,9 +72,7 @@ export function HighlightedInput({ text, highlights }: Props): React.ReactNode {
   }, [text, highlights])
 
   const [ref, time] = useAnimationFrame(hasShimmer ? 50 : null)
-  const glimmerIndex = hasShimmer
-    ? sweepStart + (Math.floor(time / 50) % cycleLength)
-    : -100
+  const glimmerIndex = hasShimmer ? sweepStart + (Math.floor(time / 50) % cycleLength) : -100
 
   return (
     <Box ref={ref} flexDirection="column">

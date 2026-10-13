@@ -1,13 +1,11 @@
 import figures from 'figures'
 import type { RefObject } from 'react'
 import React, { useCallback, useMemo, useRef } from 'react'
+
 import { Box, Text } from '../ink.js'
 import { useKeybindings } from '../keybindings/useKeybinding.js'
 import { logEvent } from '../services/analytics/index.js'
-import type {
-  NormalizedUserMessage,
-  RenderableMessage,
-} from '../types/message.js'
+import type { NormalizedUserMessage, RenderableMessage } from '../types/message.js'
 import { isEmptyMessageText, SYNTHETIC_MESSAGES } from '../utils/messages.js'
 
 const NAVIGABLE_TYPES = [
@@ -20,10 +18,7 @@ const NAVIGABLE_TYPES = [
 ] as const
 export type NavigableType = (typeof NAVIGABLE_TYPES)[number]
 
-export type NavigableOf<T extends NavigableType> = Extract<
-  RenderableMessage,
-  { type: T }
->
+export type NavigableOf<T extends NavigableType> = Extract<RenderableMessage, { type: T }>
 export type NavigableMessage = RenderableMessage
 
 // Tier-2 blocklist (tier-1 is height > 0) — things that render but aren't actionable.
@@ -34,9 +29,7 @@ export function isNavigableMessage(msg: NavigableMessage): boolean {
       // Text responses (minus AssistantTextMessage's return-null cases — tier-1
       // misses unmeasured virtual items), or tool calls with extractable input.
       return (
-        (b?.type === 'text' &&
-          !isEmptyMessageText(b.text) &&
-          !SYNTHETIC_MESSAGES.has(b.text)) ||
+        (b?.type === 'text' && !isEmptyMessageText(b.text) && !SYNTHETIC_MESSAGES.has(b.text)) ||
         (b?.type === 'tool_use' && b.name in PRIMARY_INPUT)
       )
     }
@@ -82,8 +75,7 @@ type PrimaryInput = {
   label: string
   extract: (input: Record<string, unknown>) => string | undefined
 }
-const str = (k: string) => (i: Record<string, unknown>) =>
-  typeof i[k] === 'string' ? i[k] : undefined
+const str = (k: string) => (i: Record<string, unknown>) => (typeof i[k] === 'string' ? i[k] : undefined)
 const PRIMARY_INPUT: Record<string, PrimaryInput> = {
   Read: { label: 'path', extract: str('file_path') },
   Edit: { label: 'path', extract: str('file_path') },
@@ -98,24 +90,19 @@ const PRIMARY_INPUT: Record<string, PrimaryInput> = {
   Agent: { label: 'prompt', extract: str('prompt') },
   Tmux: {
     label: 'command',
-    extract: i =>
-      Array.isArray(i.args) ? `tmux ${i.args.join(' ')}` : undefined,
+    extract: (i) => (Array.isArray(i.args) ? `tmux ${i.args.join(' ')}` : undefined),
   },
 }
 
 // Only AgentTool has renderGroupedToolUse — Edit/Bash/etc. stay as assistant tool_use blocks.
-export function toolCallOf(
-  msg: NavigableMessage,
-): { name: string; input: Record<string, unknown> } | undefined {
+export function toolCallOf(msg: NavigableMessage): { name: string; input: Record<string, unknown> } | undefined {
   if (msg.type === 'assistant') {
     const b = msg.message.content[0]
-    if (b?.type === 'tool_use')
-      return { name: b.name, input: b.input as Record<string, unknown> }
+    if (b?.type === 'tool_use') return { name: b.name, input: b.input as Record<string, unknown> }
   }
   if (msg.type === 'grouped_tool_use') {
     const b = msg.messages[0]?.message.content[0]
-    if (b?.type === 'tool_use')
-      return { name: msg.toolName, input: b.input as Record<string, unknown> }
+    if (b?.type === 'tool_use') return { name: msg.toolName, input: b.input as Record<string, unknown> }
   }
   return undefined
 }
@@ -140,13 +127,8 @@ function action<const T extends NavigableType, const K extends string>(a: {
 export const MESSAGE_ACTIONS = [
   action({
     key: 'enter',
-    label: s => (s.expanded ? 'collapse' : 'expand'),
-    types: [
-      'grouped_tool_use',
-      'collapsed_read_search',
-      'attachment',
-      'system',
-    ],
+    label: (s) => (s.expanded ? 'collapse' : 'expand'),
+    types: ['grouped_tool_use', 'collapsed_read_search', 'attachment', 'system'],
     stays: true,
     // Empty — `stays` handled inline by dispatch.
     run: () => {},
@@ -166,9 +148,9 @@ export const MESSAGE_ACTIONS = [
   action({
     key: 'p',
     // `!` safe: applies() guarantees toolName ∈ PRIMARY_INPUT.
-    label: s => `copy ${PRIMARY_INPUT[s.toolName!]!.label}`,
+    label: (s) => `copy ${PRIMARY_INPUT[s.toolName!]!.label}`,
     types: ['grouped_tool_use', 'assistant'],
-    applies: s => s.toolName != null && s.toolName in PRIMARY_INPUT,
+    applies: (s) => s.toolName != null && s.toolName in PRIMARY_INPUT,
     run: (m, c) => {
       const tc = toolCallOf(m)
       if (!tc) return
@@ -178,10 +160,7 @@ export const MESSAGE_ACTIONS = [
   }),
 ] as const
 
-function isApplicable(
-  a: (typeof MESSAGE_ACTIONS)[number],
-  c: MessageActionsState,
-): boolean {
+function isApplicable(a: (typeof MESSAGE_ACTIONS)[number], c: MessageActionsState): boolean {
   if (!(a.types as readonly string[]).includes(c.msgType)) return false
   return !a.applies || a.applies(c)
 }
@@ -209,9 +188,7 @@ export const InVirtualListContext = React.createContext(false)
 
 // bg must go on the Box that HAS marginTop (margin stays outside paint) — that's inside each consumer.
 export function useSelectedMessageBg(): 'messageActionsBackground' | undefined {
-  return React.useContext(MessageActionsSelectedContext)
-    ? 'messageActionsBackground'
-    : undefined
+  return React.useContext(MessageActionsSelectedContext) ? 'messageActionsBackground' : undefined
 }
 
 // Can't call useKeybindings here — hook runs outside <KeybindingSetup> provider. Returns handlers instead.
@@ -238,28 +215,24 @@ export function useMessageActions(
       'messageActions:nextUser': () => navRef.current?.navigateNextUser(),
       'messageActions:top': () => navRef.current?.navigateTop(),
       'messageActions:bottom': () => navRef.current?.navigateBottom(),
-      'messageActions:escape': () =>
-        setCursor(c => (c?.expanded ? { ...c, expanded: false } : null)),
+      'messageActions:escape': () => setCursor((c) => (c?.expanded ? { ...c, expanded: false } : null)),
       // ctrl+c skips the collapse step — from expanded-during-streaming, two-stage
       // would mean 3 presses to interrupt (collapse→null→cancel).
       'messageActions:ctrlc': () => setCursor(null),
     }
-    for (const key of new Set(MESSAGE_ACTIONS.map(a => a.key))) {
+    for (const key of new Set(MESSAGE_ACTIONS.map((a) => a.key))) {
       h[`messageActions:${key}`] = () => {
         const c = cursorRef.current
         if (!c) return
-        const a = MESSAGE_ACTIONS.find(a => a.key === key && isApplicable(a, c))
+        const a = MESSAGE_ACTIONS.find((a) => a.key === key && isApplicable(a, c))
         if (!a) return
         if (a.stays) {
-          setCursor(c => (c ? { ...c, expanded: !c.expanded } : null))
+          setCursor((c) => (c ? { ...c, expanded: !c.expanded } : null))
           return
         }
         const m = navRef.current?.getSelected()
         if (!m) return
-        ;(a.run as (m: NavigableMessage, c: MessageActionCaps) => void)(
-          m,
-          capsRef.current,
-        )
+        ;(a.run as (m: NavigableMessage, c: MessageActionCaps) => void)(m, capsRef.current)
         setCursor(null)
       }
     }
@@ -287,26 +260,14 @@ export function MessageActionsKeybindings({
 }
 
 // borderTop-only Box matches PromptInput's ─── line for stable footer height.
-export function MessageActionsBar({
-  cursor,
-}: {
-  cursor: MessageActionsState
-}): React.ReactNode {
-  const applicable = MESSAGE_ACTIONS.filter(a => isApplicable(a, cursor))
+export function MessageActionsBar({ cursor }: { cursor: MessageActionsState }): React.ReactNode {
+  const applicable = MESSAGE_ACTIONS.filter((a) => isApplicable(a, cursor))
   return (
     <Box flexDirection="column" flexShrink={0} paddingY={1}>
-      <Box
-        borderStyle="single"
-        borderTop
-        borderBottom={false}
-        borderLeft={false}
-        borderRight={false}
-        borderDimColor
-      />
+      <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} borderDimColor />
       <Box paddingX={2} paddingY={1}>
         {applicable.map((a, i) => {
-          const label =
-            typeof a.label === 'function' ? a.label(cursor) : a.label
+          const label = typeof a.label === 'function' ? a.label(cursor) : a.label
           return (
             <React.Fragment key={a.key}>
               {i > 0 && <Text dimColor> · </Text>}
@@ -360,12 +321,8 @@ export function copyTextOf(msg: NavigableMessage): string {
       return msg.results.map(toolResultText).filter(Boolean).join('\n\n')
     case 'collapsed_read_search':
       return msg.messages
-        .flatMap(m =>
-          m.type === 'user'
-            ? [toolResultText(m)]
-            : m.type === 'grouped_tool_use'
-              ? m.results.map(toolResultText)
-              : [],
+        .flatMap((m) =>
+          m.type === 'user' ? [toolResultText(m)] : m.type === 'grouped_tool_use' ? m.results.map(toolResultText) : [],
         )
         .filter(Boolean)
         .join('\n\n')
@@ -377,9 +334,7 @@ export function copyTextOf(msg: NavigableMessage): string {
       const a = msg.attachment
       if (a.type === 'queued_command') {
         const p = a.prompt
-        return typeof p === 'string'
-          ? p
-          : p.flatMap(b => (b.type === 'text' ? [b.text] : [])).join('\n')
+        return typeof p === 'string' ? p : p.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n')
       }
       return `[${a.type}]`
     }
@@ -392,5 +347,5 @@ function toolResultText(r: NormalizedUserMessage): string {
   const c = b.content
   if (typeof c === 'string') return c
   if (!c) return ''
-  return c.flatMap(x => (x.type === 'text' ? [x.text] : [])).join('\n')
+  return c.flatMap((x) => (x.type === 'text' ? [x.text] : [])).join('\n')
 }

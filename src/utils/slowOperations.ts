@@ -1,21 +1,16 @@
 import { feature } from 'bun:bundle'
 import type { WriteFileOptions } from 'fs'
-import {
-  closeSync,
-  writeFileSync as fsWriteFileSync,
-  fsyncSync,
-  openSync,
-} from 'fs'
+import { closeSync, writeFileSync as fsWriteFileSync, fsyncSync, openSync } from 'fs'
+
 // biome-ignore lint: This file IS the cloneDeep wrapper - it must import the original
 import lodashCloneDeep from 'lodash-es/cloneDeep.js'
+
 import { addSlowOperation } from '../bootstrap/state.js'
 import { logForDebugging } from './debug.js'
 
 // Extended WriteFileOptions to include 'flush' which is available in Node.js 20.1.0+
 // but not yet in @types/node
-type WriteFileOptionsWithFlush =
-  | WriteFileOptions
-  | (WriteFileOptions & { flush?: boolean })
+type WriteFileOptionsWithFlush = WriteFileOptions | (WriteFileOptions & { flush?: boolean })
 
 // --- Slow operation logging infrastructure ---
 
@@ -111,11 +106,8 @@ class AntSlowLogger {
     if (duration > SLOW_OPERATION_THRESHOLD_MS && !isLogging) {
       isLogging = true
       try {
-        const description =
-          buildDescription(this.args) + callerFrame(this.err.stack)
-        logForDebugging(
-          `[SLOW OPERATION DETECTED] ${description} (${duration.toFixed(1)}ms)`,
-        )
+        const description = buildDescription(this.args) + callerFrame(this.err.stack)
+        logForDebugging(`[SLOW OPERATION DETECTED] ${description} (${duration.toFixed(1)}ms)`)
         addSlowOperation(description, duration)
       } finally {
         isLogging = false
@@ -127,10 +119,7 @@ class AntSlowLogger {
 const NOOP_LOGGER: Disposable = { [Symbol.dispose]() {} }
 
 // Must be regular functions (not arrows) to access `arguments`
-function slowLoggingAnt(
-  _strings: TemplateStringsArray,
-  ..._values: unknown[]
-): AntSlowLogger {
+function slowLoggingAnt(_strings: TemplateStringsArray, ..._values: unknown[]): AntSlowLogger {
   // eslint-disable-next-line prefer-rest-params
   return new AntSlowLogger(arguments)
 }
@@ -172,25 +161,14 @@ export function jsonStringify(
   replacer?: (this: unknown, key: string, value: unknown) => unknown,
   space?: string | number,
 ): string
+export function jsonStringify(value: unknown, replacer?: (number | string)[] | null, space?: string | number): string
 export function jsonStringify(
   value: unknown,
-  replacer?: (number | string)[] | null,
-  space?: string | number,
-): string
-export function jsonStringify(
-  value: unknown,
-  replacer?:
-    | ((this: unknown, key: string, value: unknown) => unknown)
-    | (number | string)[]
-    | null,
+  replacer?: ((this: unknown, key: string, value: unknown) => unknown) | (number | string)[] | null,
   space?: string | number,
 ): string {
   using _ = slowLogging`JSON.stringify(${value})`
-  return JSON.stringify(
-    value,
-    replacer as Parameters<typeof JSON.stringify>[1],
-    space,
-  )
+  return JSON.stringify(value, replacer as Parameters<typeof JSON.stringify>[1], space)
 }
 
 /**
@@ -205,9 +183,7 @@ export const jsonParse: typeof JSON.parse = (text, reviver) => {
   using _ = slowLogging`JSON.parse(${text})`
   // V8 de-opts JSON.parse when a second argument is passed, even if undefined.
   // Branch explicitly so the common (no-reviver) path stays on the fast path.
-  return typeof reviver === 'undefined'
-    ? JSON.parse(text)
-    : JSON.parse(text, reviver)
+  return typeof reviver === 'undefined' ? JSON.parse(text) : JSON.parse(text, reviver)
 }
 
 /**
@@ -253,22 +229,12 @@ export function writeFileSync_DEPRECATED(
   using _ = slowLogging`fs.writeFileSync(${filePath}, ${data})`
 
   // Check if flush is requested (for object-style options)
-  const needsFlush =
-    options !== null &&
-    typeof options === 'object' &&
-    'flush' in options &&
-    options.flush === true
+  const needsFlush = options !== null && typeof options === 'object' && 'flush' in options && options.flush === true
 
   if (needsFlush) {
     // Manual flush: open file, write, fsync, close
-    const encoding =
-      typeof options === 'object' && 'encoding' in options
-        ? options.encoding
-        : undefined
-    const mode =
-      typeof options === 'object' && 'mode' in options
-        ? options.mode
-        : undefined
+    const encoding = typeof options === 'object' && 'encoding' in options ? options.encoding : undefined
+    const mode = typeof options === 'object' && 'mode' in options ? options.mode : undefined
     let fd: number | undefined
     try {
       fd = openSync(filePath, 'w', mode)

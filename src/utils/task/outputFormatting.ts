@@ -19,10 +19,7 @@ export function getMaxTaskOutputLength(): number {
  * When truncated, includes a header with the file path and returns
  * the last N characters that fit within the limit.
  */
-export function formatTaskOutput(
-  output: string,
-  taskId: string,
-): { content: string; wasTruncated: boolean } {
+export function formatTaskOutput(output: string, taskId: string): { content: string; wasTruncated: boolean } {
   const maxLen = getMaxTaskOutputLength()
 
   if (output.length <= maxLen) {

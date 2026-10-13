@@ -1,7 +1,8 @@
 import { z } from 'zod/v4'
+
 import type { TaskStateBase } from '../../Task.js'
-import { buildTool, type ToolDef } from '../../Tool.js'
 import { stopTask } from '../../tasks/stopTask.js'
+import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { DESCRIPTION, TASK_STOP_TOOL_NAME } from './prompt.js'
@@ -9,10 +10,7 @@ import { renderToolResultMessage, renderToolUseMessage } from './UI.js'
 
 const inputSchema = lazySchema(() =>
   z.strictObject({
-    task_id: z
-      .string()
-      .optional()
-      .describe('The ID of the background task to stop'),
+    task_id: z.string().optional().describe('The ID of the background task to stop'),
     // shell_id is accepted for backward compatibility with the deprecated KillShell tool
     shell_id: z.string().optional().describe('Deprecated: use task_id instead'),
   }),
@@ -26,10 +24,7 @@ const outputSchema = lazySchema(() =>
     task_type: z.string().describe('The type of the task that was stopped'),
     // Optional: tool outputs are persisted to transcripts and replayed on --resume
     // without re-validation, so sessions from before this field was added lack it.
-    command: z
-      .string()
-      .optional()
-      .describe('The command or description of the stopped task'),
+    command: z.string().optional().describe('The command or description of the stopped task'),
   }),
 )
 type OutputSchema = ReturnType<typeof outputSchema>
@@ -104,10 +99,7 @@ export const TaskStopTool = buildTool({
   },
   renderToolUseMessage,
   renderToolResultMessage,
-  async call(
-    { task_id, shell_id },
-    { getAppState, setAppState, abortController },
-  ) {
+  async call({ task_id, shell_id }, { getAppState, setAppState, abortController }) {
     // Support both task_id and shell_id (deprecated KillShell compat)
     const id = task_id ?? shell_id
     if (!id) {

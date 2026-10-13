@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Box, Text } from '../ink.js'
 import {
   getCachedKeybindingWarnings,
@@ -25,8 +26,8 @@ export function KeybindingWarnings(): React.ReactNode {
     return null
   }
 
-  const errors = warnings.filter(w => w.severity === 'error')
-  const warns = warnings.filter(w => w.severity === 'warning')
+  const errors = warnings.filter((w) => w.severity === 'error')
+  const warns = warnings.filter((w) => w.severity === 'warning')
 
   return (
     <Box flexDirection="column" marginTop={1} marginBottom={1}>

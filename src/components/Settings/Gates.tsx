@@ -1,5 +1,6 @@
 // Auto-generated stub — replace with real implementation
-import React from 'react';
+import React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js'
 
@@ -8,21 +9,13 @@ type Props = {
   contentHeight?: number
 }
 
-export function Gates({
-  onOwnsEscChange,
-  contentHeight,
-}: Props): React.ReactNode {
+export function Gates({ onOwnsEscChange, contentHeight }: Props): React.ReactNode {
   return (
     <Box flexDirection="column" gap={1} width="100%">
       <Text dimColor>/gates is only available for anthropic staff.</Text>
 
       <Text dimColor>
-        <ConfigurableShortcutHint
-          action="confirm:no"
-          context="Settings"
-          fallback="Esc"
-          description="cancel"
-        />
+        <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
       </Text>
     </Box>
   )

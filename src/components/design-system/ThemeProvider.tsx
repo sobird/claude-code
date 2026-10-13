@@ -1,17 +1,10 @@
 import { feature } from 'bun:bundle'
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+
 import useStdin from '../../ink/hooks/use-stdin.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
-import {
-  getSystemThemeName,
-  type SystemTheme,
-} from '../../utils/systemTheme.js'
+import { getSystemThemeName, type SystemTheme } from '../../utils/systemTheme.js'
 import type { ThemeName, ThemeSetting } from '../../utils/theme.js'
 
 type ThemeContextValue = {
@@ -48,17 +41,11 @@ function defaultInitialTheme(): ThemeSetting {
 }
 
 function defaultSaveTheme(setting: ThemeSetting): void {
-  saveGlobalConfig(current => ({ ...current, theme: setting }))
+  saveGlobalConfig((current) => ({ ...current, theme: setting }))
 }
 
-export function ThemeProvider({
-  children,
-  initialState,
-  onThemeSave = defaultSaveTheme,
-}: Props) {
-  const [themeSetting, setThemeSetting] = useState(
-    initialState ?? defaultInitialTheme,
-  )
+export function ThemeProvider({ children, initialState, onThemeSave = defaultSaveTheme }: Props) {
+  const [themeSetting, setThemeSetting] = useState(initialState ?? defaultInitialTheme)
   const [previewTheme, setPreviewTheme] = useState<ThemeSetting | null>(null)
 
   // Track terminal theme for 'auto' resolution. Seeds from $COLORFGBG (or
@@ -80,12 +67,10 @@ export function ThemeProvider({
       if (activeSetting !== 'auto' || !internal_querier) return
       let cleanup: (() => void) | undefined
       let cancelled = false
-      void import('../../utils/systemThemeWatcher.js').then(
-        ({ watchSystemTheme }) => {
-          if (cancelled) return
-          cleanup = watchSystemTheme(internal_querier, setSystemTheme)
-        },
-      )
+      void import('../../utils/systemThemeWatcher.js').then(({ watchSystemTheme }) => {
+        if (cancelled) return
+        cleanup = watchSystemTheme(internal_querier, setSystemTheme)
+      })
       return () => {
         cancelled = true
         cleanup?.()
@@ -93,8 +78,7 @@ export function ThemeProvider({
     }
   }, [activeSetting, internal_querier])
 
-  const currentTheme: ThemeName =
-    activeSetting === 'auto' ? systemTheme : activeSetting
+  const currentTheme: ThemeName = activeSetting === 'auto' ? systemTheme : activeSetting
 
   const value = useMemo<ThemeContextValue>(
     () => ({
@@ -154,7 +138,6 @@ export function useThemeSetting(): ThemeSetting {
 }
 
 export function usePreviewTheme() {
-  const { setPreviewTheme, savePreview, cancelPreview } =
-    useContext(ThemeContext)
+  const { setPreviewTheme, savePreview, cancelPreview } = useContext(ThemeContext)
   return { setPreviewTheme, savePreview, cancelPreview }
 }

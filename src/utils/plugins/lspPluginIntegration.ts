@@ -1,10 +1,9 @@
 import { readFile } from 'fs/promises'
 import { join, relative, resolve } from 'path'
+
 import { z } from 'zod/v4'
-import type {
-  LspServerConfig,
-  ScopedLspServerConfig,
-} from '../../services/lsp/types.js'
+
+import type { LspServerConfig, ScopedLspServerConfig } from '../../services/lsp/types.js'
 import { expandEnvVarsInString } from '../../services/mcp/envExpansion.js'
 import type { LoadedPlugin, PluginError } from '../../types/plugin.js'
 import { logForDebugging } from '../debug.js'
@@ -25,10 +24,7 @@ import { LspServerConfigSchema } from './schemas.js'
  * Validate that a resolved path stays within the plugin directory.
  * Prevents path traversal attacks via .. or absolute paths.
  */
-function validatePathWithinPlugin(
-  pluginPath: string,
-  relativePath: string,
-): string | null {
+function validatePathWithinPlugin(pluginPath: string, relativePath: string): string | null {
   // Resolve both paths to absolute paths
   const resolvedPluginPath = resolve(pluginPath)
   const resolvedFilePath = resolve(pluginPath, relativePath)
@@ -65,9 +61,7 @@ export async function loadPluginLspServers(
   try {
     const content = await readFile(lspJsonPath, 'utf-8')
     const parsed = jsonParse(content)
-    const result = z
-      .record(z.string(), LspServerConfigSchema())
-      .safeParse(parsed)
+    const result = z.record(z.string(), LspServerConfigSchema()).safeParse(parsed)
 
     if (result.success) {
       Object.assign(servers, result.data)
@@ -97,9 +91,7 @@ export async function loadPluginLspServers(
         plugin: plugin.name,
         serverName: '.lsp.json',
         validationError:
-          error instanceof Error
-            ? `Failed to parse JSON: ${error.message}`
-            : 'Failed to parse JSON file',
+          error instanceof Error ? `Failed to parse JSON: ${error.message}` : 'Failed to parse JSON file',
         source: 'plugin',
       })
     }
@@ -125,10 +117,7 @@ export async function loadPluginLspServers(
  * Load LSP servers from manifest declaration (handles multiple formats).
  */
 async function loadLspServersFromManifest(
-  declaration:
-    | string
-    | Record<string, LspServerConfig>
-    | Array<string | Record<string, LspServerConfig>>,
+  declaration: string | Record<string, LspServerConfig> | Array<string | Record<string, LspServerConfig>>,
   pluginPath: string,
   pluginName: string,
   errors: PluginError[],
@@ -150,8 +139,7 @@ async function loadLspServersFromManifest(
           type: 'lsp-config-invalid',
           plugin: pluginName,
           serverName: decl,
-          validationError:
-            'Invalid path: must be relative and within plugin directory',
+          validationError: 'Invalid path: must be relative and within plugin directory',
           source: 'plugin',
         })
         continue
@@ -161,9 +149,7 @@ async function loadLspServersFromManifest(
       try {
         const content = await readFile(validatedPath, 'utf-8')
         const parsed = jsonParse(content)
-        const result = z
-          .record(z.string(), LspServerConfigSchema())
-          .safeParse(parsed)
+        const result = z.record(z.string(), LspServerConfigSchema()).safeParse(parsed)
 
         if (result.success) {
           Object.assign(servers, result.data)
@@ -191,9 +177,7 @@ async function loadLspServersFromManifest(
           plugin: pluginName,
           serverName: decl,
           validationError:
-            error instanceof Error
-              ? `Failed to parse JSON: ${error.message}`
-              : 'Failed to parse JSON file',
+            error instanceof Error ? `Failed to parse JSON: ${error.message}` : 'Failed to parse JSON file',
           source: 'plugin',
         })
       }
@@ -259,7 +243,7 @@ export function resolvePluginLspEnvironment(
 
   // Resolve args
   if (resolved.args) {
-    resolved.args = resolved.args.map(arg => resolveValue(arg))
+    resolved.args = resolved.args.map((arg) => resolveValue(arg))
   }
 
   // Resolve environment variables and add CLAUDE_PLUGIN_ROOT / CLAUDE_PLUGIN_DATA
@@ -328,8 +312,7 @@ export async function getPluginLspServers(
   }
 
   // Use cached servers if available
-  const servers =
-    plugin.lspServers || (await loadPluginLspServers(plugin, errors))
+  const servers = plugin.lspServers || (await loadPluginLspServers(plugin, errors))
   if (!servers) {
     return undefined
   }
@@ -340,17 +323,10 @@ export async function getPluginLspServers(
   // loadPluginOptions always returns {} so without this guard userConfig is
   // truthy for every plugin and substituteUserConfigVariables throws on any
   // unresolved ${user_config.X}. Also skips unneeded keychain reads.
-  const userConfig = plugin.manifest.userConfig
-    ? loadPluginOptions(getPluginStorageId(plugin))
-    : undefined
+  const userConfig = plugin.manifest.userConfig ? loadPluginOptions(getPluginStorageId(plugin)) : undefined
   const resolvedServers: Record<string, LspServerConfig> = {}
   for (const [name, config] of Object.entries(servers)) {
-    resolvedServers[name] = resolvePluginLspEnvironment(
-      config,
-      plugin,
-      userConfig,
-      errors,
-    )
+    resolvedServers[name] = resolvePluginLspEnvironment(config, plugin, userConfig, errors)
   }
 
   // Add plugin scope
@@ -377,9 +353,7 @@ export async function extractLspServersFromPlugins(
       // Store the servers on the plugin for caching
       plugin.lspServers = servers
 
-      logForDebugging(
-        `Loaded ${Object.keys(servers).length} LSP servers from plugin ${plugin.name}`,
-      )
+      logForDebugging(`Loaded ${Object.keys(servers).length} LSP servers from plugin ${plugin.name}`)
     }
   }
 

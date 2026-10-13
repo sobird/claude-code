@@ -1,14 +1,8 @@
 import type { BetaContentBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import type {
-  ContentBlock,
-  ContentBlockParam,
-} from '@anthropic-ai/sdk/resources/index.mjs'
+import type { ContentBlock, ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+
 import { roughTokenCountEstimation as countTokens } from '../services/tokenEstimation.js'
-import type {
-  AssistantMessage,
-  Message,
-  UserMessage,
-} from '../types/message.js'
+import type { AssistantMessage, Message, UserMessage } from '../types/message.js'
 import { normalizeMessagesForAPI } from './messages.js'
 import { jsonStringify } from './slowOperations.js'
 
@@ -39,12 +33,9 @@ export function analyzeContext(messages: Message[]): TokenStats {
 
   const toolIdsToToolNames = new Map<string, string>()
   const readToolIdToFilePath = new Map<string, string>()
-  const fileReadStats = new Map<
-    string,
-    { count: number; totalTokens: number }
-  >()
+  const fileReadStats = new Map<string, { count: number; totalTokens: number }>()
 
-  messages.forEach(msg => {
+  messages.forEach((msg) => {
     if (msg.type === 'attachment') {
       const type = msg.attachment.type || 'unknown'
       stats.attachments.set(type, (stats.attachments.get(type) || 0) + 1)
@@ -52,7 +43,7 @@ export function analyzeContext(messages: Message[]): TokenStats {
   })
 
   const normalizedMessages = normalizeMessagesForAPI(messages)
-  normalizedMessages.forEach(msg => {
+  normalizedMessages.forEach((msg) => {
     const { content } = msg.message
 
     // Not sure if this path is still used, but adding as a fallback
@@ -63,19 +54,11 @@ export function analyzeContext(messages: Message[]): TokenStats {
       if (msg.type === 'user' && content.includes('local-command-stdout')) {
         stats.localCommandOutputs += tokens
       } else {
-        stats[msg.type === 'user' ? 'humanMessages' : 'assistantMessages'] +=
-          tokens
+        stats[msg.type === 'user' ? 'humanMessages' : 'assistantMessages'] += tokens
       }
     } else {
-      content.forEach(block =>
-        processBlock(
-          block,
-          msg,
-          stats,
-          toolIdsToToolNames,
-          readToolIdToFilePath,
-          fileReadStats,
-        ),
+      content.forEach((block) =>
+        processBlock(block, msg, stats, toolIdsToToolNames, readToolIdToFilePath, fileReadStats),
       )
     }
   })
@@ -110,16 +93,10 @@ function processBlock(
   switch (block.type) {
     case 'text':
       // Check if this is a local command output
-      if (
-        message.type === 'user' &&
-        'text' in block &&
-        block.text.includes('local-command-stdout')
-      ) {
+      if (message.type === 'user' && 'text' in block && block.text.includes('local-command-stdout')) {
         stats.localCommandOutputs += tokens
       } else {
-        stats[
-          message.type === 'user' ? 'humanMessages' : 'assistantMessages'
-        ] += tokens
+        stats[message.type === 'user' ? 'humanMessages' : 'assistantMessages'] += tokens
       }
       break
 
@@ -137,9 +114,7 @@ function processBlock(
           typeof block.input === 'object' &&
           'file_path' in block.input
         ) {
-          const path = String(
-            (block.input as Record<string, unknown>).file_path,
-          )
+          const path = String((block.input as Record<string, unknown>).file_path)
           readToolPaths.set(block.id, path)
         }
       }
@@ -192,9 +167,7 @@ function increment(map: Map<string, number>, key: string, value: number): void {
   map.set(key, (map.get(key) || 0) + value)
 }
 
-export function tokenStatsToStatsigMetrics(
-  stats: TokenStats,
-): Record<string, number> {
+export function tokenStatsToStatsigMetrics(stats: TokenStats): Record<string, number> {
   const metrics: Record<string, number> = {
     total_tokens: stats.total,
     human_message_tokens: stats.humanMessages,
@@ -215,56 +188,31 @@ export function tokenStatsToStatsigMetrics(
     metrics[`tool_result_${tool}_tokens`] = tokens
   })
 
-  const duplicateTotal = [...stats.duplicateFileReads.values()].reduce(
-    (sum, d) => sum + d.tokens,
-    0,
-  )
+  const duplicateTotal = [...stats.duplicateFileReads.values()].reduce((sum, d) => sum + d.tokens, 0)
 
   metrics.duplicate_read_tokens = duplicateTotal
   metrics.duplicate_read_file_count = stats.duplicateFileReads.size
 
   if (stats.total > 0) {
-    metrics.human_message_percent = Math.round(
-      (stats.humanMessages / stats.total) * 100,
-    )
-    metrics.assistant_message_percent = Math.round(
-      (stats.assistantMessages / stats.total) * 100,
-    )
-    metrics.local_command_output_percent = Math.round(
-      (stats.localCommandOutputs / stats.total) * 100,
-    )
-    metrics.duplicate_read_percent = Math.round(
-      (duplicateTotal / stats.total) * 100,
-    )
+    metrics.human_message_percent = Math.round((stats.humanMessages / stats.total) * 100)
+    metrics.assistant_message_percent = Math.round((stats.assistantMessages / stats.total) * 100)
+    metrics.local_command_output_percent = Math.round((stats.localCommandOutputs / stats.total) * 100)
+    metrics.duplicate_read_percent = Math.round((duplicateTotal / stats.total) * 100)
 
-    const toolRequestTotal = [...stats.toolRequests.values()].reduce(
-      (sum, v) => sum + v,
-      0,
-    )
-    const toolResultTotal = [...stats.toolResults.values()].reduce(
-      (sum, v) => sum + v,
-      0,
-    )
+    const toolRequestTotal = [...stats.toolRequests.values()].reduce((sum, v) => sum + v, 0)
+    const toolResultTotal = [...stats.toolResults.values()].reduce((sum, v) => sum + v, 0)
 
-    metrics.tool_request_percent = Math.round(
-      (toolRequestTotal / stats.total) * 100,
-    )
-    metrics.tool_result_percent = Math.round(
-      (toolResultTotal / stats.total) * 100,
-    )
+    metrics.tool_request_percent = Math.round((toolRequestTotal / stats.total) * 100)
+    metrics.tool_result_percent = Math.round((toolResultTotal / stats.total) * 100)
 
     // Add individual tool request percentages
     stats.toolRequests.forEach((tokens, tool) => {
-      metrics[`tool_request_${tool}_percent`] = Math.round(
-        (tokens / stats.total) * 100,
-      )
+      metrics[`tool_request_${tool}_percent`] = Math.round((tokens / stats.total) * 100)
     })
 
     // Add individual tool result percentages
     stats.toolResults.forEach((tokens, tool) => {
-      metrics[`tool_result_${tool}_percent`] = Math.round(
-        (tokens / stats.total) * 100,
-      )
+      metrics[`tool_result_${tool}_percent`] = Math.round((tokens / stats.total) * 100)
     })
   }
 

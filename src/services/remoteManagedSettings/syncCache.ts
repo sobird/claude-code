@@ -8,19 +8,9 @@
  */
 
 import { CLAUDE_AI_INFERENCE_SCOPE } from '../../constants/oauth.js'
-import {
-  getAnthropicApiKeyWithSource,
-  getClaudeAIOAuthTokens,
-} from '../../utils/auth.js'
-import {
-  getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
-} from '../../utils/model/providers.js'
-
-import {
-  resetSyncCache as resetLeafCache,
-  setEligibility,
-} from './syncCacheState.js'
+import { getAnthropicApiKeyWithSource, getClaudeAIOAuthTokens } from '../../utils/auth.js'
+import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/providers.js'
+import { resetSyncCache as resetLeafCache, setEligibility } from './syncCacheState.js'
 
 let cached: boolean | undefined
 
@@ -87,8 +77,7 @@ export function isRemoteManagedSettingsEligible(): boolean {
   if (
     tokens?.accessToken &&
     tokens.scopes?.includes(CLAUDE_AI_INFERENCE_SCOPE) &&
-    (tokens.subscriptionType === 'enterprise' ||
-      tokens.subscriptionType === 'team')
+    (tokens.subscriptionType === 'enterprise' || tokens.subscriptionType === 'team')
   ) {
     return (cached = setEligibility(true))
   }

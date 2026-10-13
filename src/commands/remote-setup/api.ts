@@ -1,4 +1,5 @@
 import axios from 'axios'
+
 import { getOauthConfig } from '../../constants/oauth.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { getOAuthHeaders, prepareApiRequest } from '../../utils/teleport/api.js'
@@ -50,10 +51,7 @@ export type ImportTokenError =
  */
 export async function importGithubToken(
   token: RedactedGithubToken,
-): Promise<
-  | { ok: true; result: ImportTokenResult }
-  | { ok: false; error: ImportTokenError }
-> {
+): Promise<{ ok: true; result: ImportTokenResult } | { ok: false; error: ImportTokenError }> {
   let accessToken: string, orgUUID: string
   try {
     ;({ accessToken, orgUUID } = await prepareApiRequest())

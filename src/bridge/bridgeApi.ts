@@ -142,9 +142,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
     async registerBridgeEnvironment(
       config: BridgeConfig,
     ): Promise<{ environment_id: string; environment_secret: string }> {
-      debug(
-        `[bridge:api] POST /v1/environments/bridge bridgeId=${config.bridgeId}`,
-      )
+      debug(`[bridge:api] POST /v1/environments/bridge bridgeId=${config.bridgeId}`)
 
       const response = await withOAuthRetry(
         (token: string) =>
@@ -179,7 +177,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
             {
               headers: getHeaders(token),
               timeout: 15_000,
-              validateStatus: status => status < 500,
+              validateStatus: (status) => status < 500,
             },
           ),
         'Registration',
@@ -213,13 +211,10 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
         `${deps.baseUrl}/v1/environments/${environmentId}/work/poll`,
         {
           headers: getHeaders(environmentSecret),
-          params:
-            reclaimOlderThanMs !== undefined
-              ? { reclaim_older_than_ms: reclaimOlderThanMs }
-              : undefined,
+          params: reclaimOlderThanMs !== undefined ? { reclaim_older_than_ms: reclaimOlderThanMs } : undefined,
           timeout: 10_000,
           signal,
-          validateStatus: status => status < 500,
+          validateStatus: (status) => status < 500,
         },
       )
 
@@ -228,10 +223,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
       // Empty body or null = no work available
       if (!response.data) {
         consecutiveEmptyPolls = prevEmptyPolls + 1
-        if (
-          consecutiveEmptyPolls === 1 ||
-          consecutiveEmptyPolls % EMPTY_POLL_LOG_INTERVAL === 0
-        ) {
+        if (consecutiveEmptyPolls === 1 || consecutiveEmptyPolls % EMPTY_POLL_LOG_INTERVAL === 0) {
           debug(
             `[bridge:api] GET .../work/poll -> ${response.status} (no work, ${consecutiveEmptyPolls} consecutive empty polls)`,
           )
@@ -246,11 +238,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
       return response.data
     },
 
-    async acknowledgeWork(
-      environmentId: string,
-      workId: string,
-      sessionToken: string,
-    ): Promise<void> {
+    async acknowledgeWork(environmentId: string, workId: string, sessionToken: string): Promise<void> {
       validateBridgeId(environmentId, 'environmentId')
       validateBridgeId(workId, 'workId')
 
@@ -262,7 +250,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
         {
           headers: getHeaders(sessionToken),
           timeout: 10_000,
-          validateStatus: s => s < 500,
+          validateStatus: (s) => s < 500,
         },
       )
 
@@ -270,11 +258,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
       debug(`[bridge:api] POST .../work/${workId}/ack -> ${response.status}`)
     },
 
-    async stopWork(
-      environmentId: string,
-      workId: string,
-      force: boolean,
-    ): Promise<void> {
+    async stopWork(environmentId: string, workId: string, force: boolean): Promise<void> {
       validateBridgeId(environmentId, 'environmentId')
       validateBridgeId(workId, 'workId')
 
@@ -288,7 +272,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
             {
               headers: getHeaders(token),
               timeout: 10_000,
-              validateStatus: s => s < 500,
+              validateStatus: (s) => s < 500,
             },
           ),
         'StopWork',
@@ -305,21 +289,16 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
 
       const response = await withOAuthRetry(
         (token: string) =>
-          axios.delete(
-            `${deps.baseUrl}/v1/environments/bridge/${environmentId}`,
-            {
-              headers: getHeaders(token),
-              timeout: 10_000,
-              validateStatus: s => s < 500,
-            },
-          ),
+          axios.delete(`${deps.baseUrl}/v1/environments/bridge/${environmentId}`, {
+            headers: getHeaders(token),
+            timeout: 10_000,
+            validateStatus: (s) => s < 500,
+          }),
         'Deregister',
       )
 
       handleErrorStatus(response.status, response.data, 'Deregister')
-      debug(
-        `[bridge:api] DELETE /v1/environments/bridge/${environmentId} -> ${response.status}`,
-      )
+      debug(`[bridge:api] DELETE /v1/environments/bridge/${environmentId} -> ${response.status}`)
     },
 
     async archiveSession(sessionId: string): Promise<void> {
@@ -335,7 +314,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
             {
               headers: getHeaders(token),
               timeout: 10_000,
-              validateStatus: s => s < 500,
+              validateStatus: (s) => s < 500,
             },
           ),
         'ArchiveSession',
@@ -343,28 +322,19 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
 
       // 409 = already archived (idempotent, not an error)
       if (response.status === 409) {
-        debug(
-          `[bridge:api] POST /v1/sessions/${sessionId}/archive -> 409 (already archived)`,
-        )
+        debug(`[bridge:api] POST /v1/sessions/${sessionId}/archive -> 409 (already archived)`)
         return
       }
 
       handleErrorStatus(response.status, response.data, 'ArchiveSession')
-      debug(
-        `[bridge:api] POST /v1/sessions/${sessionId}/archive -> ${response.status}`,
-      )
+      debug(`[bridge:api] POST /v1/sessions/${sessionId}/archive -> ${response.status}`)
     },
 
-    async reconnectSession(
-      environmentId: string,
-      sessionId: string,
-    ): Promise<void> {
+    async reconnectSession(environmentId: string, sessionId: string): Promise<void> {
       validateBridgeId(environmentId, 'environmentId')
       validateBridgeId(sessionId, 'sessionId')
 
-      debug(
-        `[bridge:api] POST /v1/environments/${environmentId}/bridge/reconnect session_id=${sessionId}`,
-      )
+      debug(`[bridge:api] POST /v1/environments/${environmentId}/bridge/reconnect session_id=${sessionId}`)
 
       const response = await withOAuthRetry(
         (token: string) =>
@@ -374,7 +344,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
             {
               headers: getHeaders(token),
               timeout: 10_000,
-              validateStatus: s => s < 500,
+              validateStatus: (s) => s < 500,
             },
           ),
         'ReconnectSession',
@@ -405,7 +375,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
         {
           headers: getHeaders(sessionToken),
           timeout: 10_000,
-          validateStatus: s => s < 500,
+          validateStatus: (s) => s < 500,
         },
       )
 
@@ -423,9 +393,7 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
     ): Promise<void> {
       validateBridgeId(sessionId, 'sessionId')
 
-      debug(
-        `[bridge:api] POST /v1/sessions/${sessionId}/events type=${event.type}`,
-      )
+      debug(`[bridge:api] POST /v1/sessions/${sessionId}/events type=${event.type}`)
 
       const response = await axios.post(
         `${deps.baseUrl}/v1/sessions/${sessionId}/events`,
@@ -433,29 +401,19 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
         {
           headers: getHeaders(sessionToken),
           timeout: 10_000,
-          validateStatus: s => s < 500,
+          validateStatus: (s) => s < 500,
         },
       )
 
-      handleErrorStatus(
-        response.status,
-        response.data,
-        'SendPermissionResponseEvent',
-      )
-      debug(
-        `[bridge:api] POST /v1/sessions/${sessionId}/events -> ${response.status}`,
-      )
+      handleErrorStatus(response.status, response.data, 'SendPermissionResponseEvent')
+      debug(`[bridge:api] POST /v1/sessions/${sessionId}/events -> ${response.status}`)
       debug(`[bridge:api] >>> ${debugBody({ events: [event] })}`)
       debug(`[bridge:api] <<< ${debugBody(response.data)}`)
     },
   }
 }
 
-function handleErrorStatus(
-  status: number,
-  data: unknown,
-  context: string,
-): void {
+function handleErrorStatus(status: number, data: unknown, context: string): void {
   if (status === 200 || status === 204) {
     return
   }
@@ -478,24 +436,20 @@ function handleErrorStatus(
       )
     case 404:
       throw new BridgeFatalError(
-        detail ??
-          `${context}: Not found (404). Remote Control may not be available for this organization.`,
+        detail ?? `${context}: Not found (404). Remote Control may not be available for this organization.`,
         404,
         errorType,
       )
     case 410:
       throw new BridgeFatalError(
-        detail ??
-          'Remote Control session has expired. Please restart with `claude remote-control` or /remote-control.',
+        detail ?? 'Remote Control session has expired. Please restart with `claude remote-control` or /remote-control.',
         410,
         errorType ?? 'environment_expired',
       )
     case 429:
       throw new Error(`${context}: Rate limited (429). Polling too frequently.`)
     default:
-      throw new Error(
-        `${context}: Failed with status ${status}${detail ? `: ${detail}` : ''}`,
-      )
+      throw new Error(`${context}: Failed with status ${status}${detail ? `: ${detail}` : ''}`)
   }
 }
 
@@ -517,10 +471,7 @@ export function isSuppressible403(err: BridgeFatalError): boolean {
   if (err.status !== 403) {
     return false
   }
-  return (
-    err.message.includes('external_poll_sessions') ||
-    err.message.includes('environments:manage')
-  )
+  return err.message.includes('external_poll_sessions') || err.message.includes('environments:manage')
 }
 
 function extractErrorTypeFromData(data: unknown): string | undefined {

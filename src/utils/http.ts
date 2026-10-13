@@ -3,13 +3,9 @@
  */
 
 import axios from 'axios'
+
 import { OAUTH_BETA_HEADER } from '../constants/oauth.js'
-import {
-  getAnthropicApiKey,
-  getClaudeAIOAuthTokens,
-  handleOAuth401Error,
-  isClaudeAISubscriber,
-} from './auth.js'
+import { getAnthropicApiKey, getClaudeAIOAuthTokens, handleOAuth401Error, isClaudeAISubscriber } from './auth.js'
 import { getClaudeCodeUserAgent } from './userAgent.js'
 import { getWorkload } from './workloadContext.js'
 
@@ -112,10 +108,7 @@ export function getAuthHeaders(): AuthHeaders {
  * @param opts.also403Revoked - Also retry on 403 with "OAuth token has been
  *   revoked" body (some endpoints signal revocation this way instead of 401).
  */
-export async function withOAuth401Retry<T>(
-  request: () => Promise<T>,
-  opts?: { also403Revoked?: boolean },
-): Promise<T> {
+export async function withOAuth401Retry<T>(request: () => Promise<T>, opts?: { also403Revoked?: boolean }): Promise<T> {
   try {
     return await request()
   } catch (err) {

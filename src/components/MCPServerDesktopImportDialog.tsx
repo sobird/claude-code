@@ -1,13 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { gracefulShutdown } from 'src/utils/gracefulShutdown.js'
 import { writeToStdout } from 'src/utils/process.js'
+
 import { Box, color, Text, useTheme } from '../ink.js'
 import { addMcpConfig, getAllMcpConfigs } from '../services/mcp/config.js'
-import type {
-  ConfigScope,
-  McpServerConfig,
-  ScopedMcpServerConfig,
-} from '../services/mcp/types.js'
+import type { ConfigScope, McpServerConfig, ScopedMcpServerConfig } from '../services/mcp/types.js'
 import { plural } from '../utils/stringUtils.js'
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint.js'
 import { SelectMulti } from './CustomSelect/SelectMulti.js'
@@ -21,23 +18,15 @@ type Props = {
   onDone(): void
 }
 
-export function MCPServerDesktopImportDialog({
-  servers,
-  scope,
-  onDone,
-}: Props): React.ReactNode {
+export function MCPServerDesktopImportDialog({ servers, scope, onDone }: Props): React.ReactNode {
   const serverNames = Object.keys(servers)
-  const [existingServers, setExistingServers] = useState<
-    Record<string, ScopedMcpServerConfig>
-  >({})
+  const [existingServers, setExistingServers] = useState<Record<string, ScopedMcpServerConfig>>({})
 
   useEffect(() => {
     void getAllMcpConfigs().then(({ servers }) => setExistingServers(servers))
   }, [])
 
-  const collisions = serverNames.filter(
-    name => existingServers[name] !== undefined,
-  )
+  const collisions = serverNames.filter((name) => existingServers[name] !== undefined)
 
   async function onSubmit(selectedServers: string[]) {
     let importedCount = 0
@@ -98,18 +87,18 @@ export function MCPServerDesktopImportDialog({
       >
         {collisions.length > 0 && (
           <Text color="warning">
-            Note: Some servers already exist with the same name. If selected,
-            they will be imported with a numbered suffix.
+            Note: Some servers already exist with the same name. If selected, they will be imported with a numbered
+            suffix.
           </Text>
         )}
         <Text>Please select the servers you want to import:</Text>
 
         <SelectMulti
-          options={serverNames.map(server => ({
+          options={serverNames.map((server) => ({
             label: `${server}${collisions.includes(server) ? ' (already exists)' : ''}`,
             value: server,
           }))}
-          defaultValue={serverNames.filter(name => !collisions.includes(name))} // Only preselect non-colliding servers
+          defaultValue={serverNames.filter((name) => !collisions.includes(name))} // Only preselect non-colliding servers
           onSubmit={onSubmit}
           onCancel={handleEscCancel}
           hideIndexes
@@ -120,12 +109,7 @@ export function MCPServerDesktopImportDialog({
           <Byline>
             <KeyboardShortcutHint shortcut="Space" action="select" />
             <KeyboardShortcutHint shortcut="Enter" action="confirm" />
-            <ConfigurableShortcutHint
-              action="confirm:no"
-              context="Confirmation"
-              fallback="Esc"
-              description="cancel"
-            />
+            <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
           </Byline>
         </Text>
       </Box>

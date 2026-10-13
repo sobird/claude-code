@@ -1,5 +1,7 @@
 import { relative } from 'path'
+
 import React from 'react'
+
 import { Box, Text } from '../ink.js'
 import { DiagnosticTrackingService } from '../services/diagnosticTracking.js'
 import type { Attachment } from '../utils/attachments.js'
@@ -14,18 +16,12 @@ type DiagnosticsDisplayProps = {
   verbose: boolean
 }
 
-export function DiagnosticsDisplay({
-  attachment,
-  verbose,
-}: DiagnosticsDisplayProps): React.ReactNode {
+export function DiagnosticsDisplay({ attachment, verbose }: DiagnosticsDisplayProps): React.ReactNode {
   // Only show if there are diagnostics to report
   if (attachment.files.length === 0) return null
 
   // Count total issues
-  const totalIssues = attachment.files.reduce(
-    (sum, file) => sum + file.diagnostics.length,
-    0,
-  )
+  const totalIssues = attachment.files.reduce((sum, file) => sum + file.diagnostics.length, 0)
 
   const fileCount = attachment.files.length
 
@@ -37,14 +33,7 @@ export function DiagnosticsDisplay({
           <React.Fragment key={fileIndex}>
             <MessageResponse>
               <Text dimColor wrap="wrap">
-                <Text bold>
-                  {relative(
-                    getCwd(),
-                    file.uri
-                      .replace('file://', '')
-                      .replace('_claude_fs_right:', ''),
-                  )}
-                </Text>{' '}
+                <Text bold>{relative(getCwd(), file.uri.replace('file://', '').replace('_claude_fs_right:', ''))}</Text>{' '}
                 <Text dimColor>
                   {file.uri.startsWith('file://')
                     ? '(file://)'
@@ -59,12 +48,9 @@ export function DiagnosticsDisplay({
               <MessageResponse key={diagIndex}>
                 <Text dimColor wrap="wrap">
                   {'  '}
-                  {DiagnosticTrackingService.getSeveritySymbol(
-                    diagnostic.severity,
-                  )}
+                  {DiagnosticTrackingService.getSeveritySymbol(diagnostic.severity)}
                   {' [Line '}
-                  {diagnostic.range.start.line + 1}:
-                  {diagnostic.range.start.character + 1}
+                  {diagnostic.range.start.line + 1}:{diagnostic.range.start.character + 1}
                   {'] '}
                   {diagnostic.message}
                   {diagnostic.code ? ` [${diagnostic.code}]` : ''}
@@ -81,8 +67,7 @@ export function DiagnosticsDisplay({
     return (
       <MessageResponse>
         <Text dimColor wrap="wrap">
-          Found <Text bold>{totalIssues}</Text> new diagnostic{' '}
-          {totalIssues === 1 ? 'issue' : 'issues'} in {fileCount}{' '}
+          Found <Text bold>{totalIssues}</Text> new diagnostic {totalIssues === 1 ? 'issue' : 'issues'} in {fileCount}{' '}
           {fileCount === 1 ? 'file' : 'files'} <CtrlOToExpand />
         </Text>
       </MessageResponse>

@@ -1,4 +1,5 @@
 import type { Attachment } from 'src/utils/attachments.js'
+
 import type { Message, NormalizedMessage } from '../../types/message.js'
 
 /**
@@ -50,8 +51,7 @@ const NULL_RENDERING_TYPES = [
 
 export type NullRenderingAttachmentType = (typeof NULL_RENDERING_TYPES)[number]
 
-const NULL_RENDERING_ATTACHMENT_TYPES: ReadonlySet<Attachment['type']> =
-  new Set(NULL_RENDERING_TYPES)
+const NULL_RENDERING_ATTACHMENT_TYPES: ReadonlySet<Attachment['type']> = new Set(NULL_RENDERING_TYPES)
 
 /**
  * True when this message is an attachment that AttachmentMessage renders as
@@ -60,11 +60,6 @@ const NULL_RENDERING_ATTACHMENT_TYPES: ReadonlySet<Attachment['type']> =
  * attachments (hook_success, hook_additional_context, hook_cancelled) don't
  * inflate the "N messages" count or eat into the render budget (CC-724).
  */
-export function isNullRenderingAttachment(
-  msg: Message | NormalizedMessage,
-): boolean {
-  return (
-    msg.type === 'attachment' &&
-    NULL_RENDERING_ATTACHMENT_TYPES.has(msg.attachment.type)
-  )
+export function isNullRenderingAttachment(msg: Message | NormalizedMessage): boolean {
+  return msg.type === 'attachment' && NULL_RENDERING_ATTACHMENT_TYPES.has(msg.attachment.type)
 }

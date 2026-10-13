@@ -24,33 +24,25 @@
  *   This avoids module-level mutable state and gives tests natural isolation.
  */
 
-import axios from 'axios'
 import { createHash } from 'crypto'
 import { mkdir, readdir, readFile, stat, writeFile } from 'fs/promises'
 import { join, relative, sep } from 'path'
+
+import axios from 'axios'
+
 import {
   CLAUDE_AI_INFERENCE_SCOPE,
   CLAUDE_AI_PROFILE_SCOPE,
   getOauthConfig,
   OAUTH_BETA_HEADER,
 } from '../../constants/oauth.js'
-import {
-  getTeamMemPath,
-  PathTraversalError,
-  validateTeamMemKey,
-} from '../../memdir/teamMemPaths.js'
+import { getTeamMemPath, PathTraversalError, validateTeamMemKey } from '../../memdir/teamMemPaths.js'
 import { count } from '../../utils/array.js'
-import {
-  checkAndRefreshOAuthTokenIfNeeded,
-  getClaudeAIOAuthTokens,
-} from '../../utils/auth.js'
+import { checkAndRefreshOAuthTokenIfNeeded, getClaudeAIOAuthTokens } from '../../utils/auth.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { classifyAxiosError } from '../../utils/errors.js'
 import { getGithubRepo } from '../../utils/git.js'
-import {
-  getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
-} from '../../utils/model/providers.js'
+import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/providers.js'
 import { sleep } from '../../utils/sleep.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
@@ -155,14 +147,13 @@ function isUsingOAuth(): boolean {
   const tokens = getClaudeAIOAuthTokens()
   return Boolean(
     tokens?.accessToken &&
-      tokens.scopes?.includes(CLAUDE_AI_INFERENCE_SCOPE) &&
-      tokens.scopes.includes(CLAUDE_AI_PROFILE_SCOPE),
+    tokens.scopes?.includes(CLAUDE_AI_INFERENCE_SCOPE) &&
+    tokens.scopes.includes(CLAUDE_AI_PROFILE_SCOPE),
   )
 }
 
 function getTeamMemorySyncEndpoint(repoSlug: string): string {
-  const baseUrl =
-    process.env.TEAM_MEMORY_SYNC_URL || getOauthConfig().BASE_API_URL
+  const baseUrl = process.env.TEAM_MEMORY_SYNC_URL || getOauthConfig().BASE_API_URL
   return `${baseUrl}/api/claude_code/team_memory?repo=${encodeURIComponent(repoSlug)}`
 }
 
@@ -212,8 +203,7 @@ async function fetchTeamMemoryOnce(
     const response = await axios.get(endpoint, {
       headers,
       timeout: TEAM_MEMORY_SYNC_TIMEOUT_MS,
-      validateStatus: status =>
-        status === 200 || status === 304 || status === 404,
+      validateStatus: (status) => status === 200 || status === 304 || status === 404,
     })
 
     if (response.status === 304) {
@@ -245,18 +235,14 @@ async function fetchTeamMemoryOnce(
     }
 
     // Extract checksum from response data or ETag header
-    const responseChecksum =
-      parsed.data.checksum ||
-      response.headers['etag']?.replace(/^"|"$/g, '') ||
-      undefined
+    const responseChecksum = parsed.data.checksum || response.headers['etag']?.replace(/^"|"$/g, '') || undefined
     if (responseChecksum) {
       state.lastKnownChecksum = responseChecksum
     }
 
-    logForDebugging(
-      `team-memory-sync: fetched successfully (checksum: ${responseChecksum ?? 'none'})`,
-      { level: 'debug' },
-    )
+    logForDebugging(`team-memory-sync: fetched successfully (checksum: ${responseChecksum ?? 'none'})`, {
+      level: 'debug',
+    })
     return {
       success: true,
       data: parsed.data,
@@ -265,9 +251,7 @@ async function fetchTeamMemoryOnce(
     }
   } catch (error) {
     const { kind, status, message } = classifyAxiosError(error)
-    const body = axios.isAxiosError(error)
-      ? JSON.stringify(error.response?.data ?? '')
-      : ''
+    const body = axios.isAxiosError(error) ? JSON.stringify(error.response?.data ?? '') : ''
     if (kind !== 'other') {
       logForDebugging(`team-memory-sync: fetch error ${status}: ${body}`, {
         level: 'warn',
@@ -312,10 +296,7 @@ async function fetchTeamMemoryOnce(
  * Requires anthropic/anthropic#283027 deployed; on failure the caller fails the
  * push and the watcher retries on the next edit.
  */
-async function fetchTeamMemoryHashes(
-  state: SyncState,
-  repoSlug: string,
-): Promise<TeamMemoryHashesResult> {
+async function fetchTeamMemoryHashes(state: SyncState, repoSlug: string): Promise<TeamMemoryHashesResult> {
   try {
     await checkAndRefreshOAuthTokenIfNeeded()
     const auth = getAuthHeaders()
@@ -327,7 +308,7 @@ async function fetchTeamMemoryHashes(
     const response = await axios.get(endpoint, {
       headers: auth.headers,
       timeout: TEAM_MEMORY_SYNC_TIMEOUT_MS,
-      validateStatus: status => status === 200 || status === 404,
+      validateStatus: (status) => status === 200 || status === 404,
     })
 
     if (response.status === 404) {
@@ -335,8 +316,7 @@ async function fetchTeamMemoryHashes(
       return { success: true, entryChecksums: {} }
     }
 
-    const checksum =
-      response.data?.checksum || response.headers['etag']?.replace(/^"|"$/g, '')
+    const checksum = response.data?.checksum || response.headers['etag']?.replace(/^"|"$/g, '')
     const entryChecksums = response.data?.entryChecksums
 
     // Requires anthropic/anthropic#283027. If entryChecksums is missing,
@@ -344,8 +324,7 @@ async function fetchTeamMemoryHashes(
     if (!entryChecksums || typeof entryChecksums !== 'object') {
       return {
         success: false,
-        error:
-          'Server did not return entryChecksums (?view=hashes unsupported)',
+        error: 'Server did not return entryChecksums (?view=hashes unsupported)',
         errorType: 'parse',
       }
     }
@@ -423,9 +402,7 @@ async function fetchTeamMemory(
  * (MAX_FILE_SIZE_BYTES=250K already caps individual files; a ~250K solo body
  * is above our soft cap but below the gateway's observed real threshold).
  */
-export function batchDeltaByBytes(
-  delta: Record<string, string>,
-): Array<Record<string, string>> {
+export function batchDeltaByBytes(delta: Record<string, string>): Array<Record<string, string>> {
   const keys = Object.keys(delta).sort()
   if (keys.length === 0) return []
 
@@ -434,9 +411,7 @@ export function batchDeltaByBytes(
   // strings handles escaping so the count matches what axios serializes.
   const EMPTY_BODY_BYTES = Buffer.byteLength('{"entries":{}}', 'utf8')
   const entryBytes = (k: string, v: string): number =>
-    Buffer.byteLength(jsonStringify(k), 'utf8') +
-    Buffer.byteLength(jsonStringify(v), 'utf8') +
-    2 // colon + comma (comma over-counts by 1 on the last entry; harmless slack)
+    Buffer.byteLength(jsonStringify(k), 'utf8') + Buffer.byteLength(jsonStringify(v), 'utf8') + 2 // colon + comma (comma over-counts by 1 on the last entry; harmless slack)
 
   const batches: Array<Record<string, string>> = []
   let current: Record<string, string> = {}
@@ -444,10 +419,7 @@ export function batchDeltaByBytes(
 
   for (const key of keys) {
     const added = entryBytes(key, delta[key]!)
-    if (
-      currentBytes + added > MAX_PUT_BODY_BYTES &&
-      Object.keys(current).length > 0
-    ) {
+    if (currentBytes + added > MAX_PUT_BODY_BYTES && Object.keys(current).length > 0) {
       batches.push(current)
       current = {}
       currentBytes = EMPTY_BODY_BYTES
@@ -488,7 +460,7 @@ async function uploadTeamMemory(
       {
         headers,
         timeout: TEAM_MEMORY_SYNC_TIMEOUT_MS,
-        validateStatus: status => status === 200 || status === 412,
+        validateStatus: (status) => status === 200 || status === 412,
       },
     )
 
@@ -514,13 +486,10 @@ async function uploadTeamMemory(
       lastModified: response.data?.lastModified,
     }
   } catch (error) {
-    const body = axios.isAxiosError(error)
-      ? JSON.stringify(error.response?.data ?? '')
-      : ''
-    logForDebugging(
-      `team-memory-sync: upload failed: ${error instanceof Error ? error.message : ''} ${body}`,
-      { level: 'warn' },
-    )
+    const body = axios.isAxiosError(error) ? JSON.stringify(error.response?.data ?? '') : ''
+    logForDebugging(`team-memory-sync: upload failed: ${error instanceof Error ? error.message : ''} ${body}`, {
+      level: 'warn',
+    })
     const { kind, status: httpStatus, message } = classifyAxiosError(error)
     const errorType = kind === 'http' || kind === 'other' ? 'unknown' : kind
     let serverErrorCode: 'team_memory_too_many_entries' | undefined
@@ -531,9 +500,7 @@ async function uploadTeamMemory(
     // the effective max_entries (may be GB-tuned per-org). Cache it so
     // the next push trims to the right value.
     if (httpStatus === 413 && axios.isAxiosError(error)) {
-      const parsed = TeamMemoryTooManyEntriesSchema().safeParse(
-        error.response?.data,
-      )
+      const parsed = TeamMemoryTooManyEntriesSchema().safeParse(error.response?.data)
       if (parsed.success) {
         serverErrorCode = parsed.data.error.details.error_code
         serverMaxEntries = parsed.data.error.details.max_entries
@@ -576,7 +543,7 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
     try {
       const dirEntries = await readdir(dir, { withFileTypes: true })
       await Promise.all(
-        dirEntries.map(async entry => {
+        dirEntries.map(async (entry) => {
           const fullPath = join(dir, entry.name)
           if (entry.isDirectory()) {
             await walkDir(fullPath)
@@ -607,10 +574,9 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
                   ruleId: firstMatch.ruleId,
                   label: firstMatch.label,
                 })
-                logForDebugging(
-                  `team-memory-sync: skipping "${relPath}" — detected ${firstMatch.label}`,
-                  { level: 'warn' },
-                )
+                logForDebugging(`team-memory-sync: skipping "${relPath}" — detected ${firstMatch.label}`, {
+                  level: 'warn',
+                })
                 return
               }
 
@@ -686,9 +652,7 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
  *
  * Returns the number of files actually written.
  */
-async function writeRemoteEntriesToLocal(
-  entries: Record<string, string>,
-): Promise<number> {
+async function writeRemoteEntriesToLocal(entries: Record<string, string>): Promise<number> {
   const results = await Promise.all(
     Object.entries(entries).map(async ([relPath, content]) => {
       let validatedPath: string
@@ -704,10 +668,7 @@ async function writeRemoteEntriesToLocal(
 
       const sizeBytes = Buffer.byteLength(content, 'utf8')
       if (sizeBytes > MAX_FILE_SIZE_BYTES) {
-        logForDebugging(
-          `team-memory-sync: skipping oversized remote entry "${relPath}"`,
-          { level: 'info' },
-        )
+        logForDebugging(`team-memory-sync: skipping oversized remote entry "${relPath}"`, { level: 'info' })
         return false
       }
 
@@ -720,32 +681,19 @@ async function writeRemoteEntriesToLocal(
           return false
         }
       } catch (e) {
-        if (
-          isErrnoException(e) &&
-          e.code !== 'ENOENT' &&
-          e.code !== 'ENOTDIR'
-        ) {
-          logForDebugging(
-            `team-memory-sync: unexpected read error for "${relPath}": ${e.code}`,
-            { level: 'debug' },
-          )
+        if (isErrnoException(e) && e.code !== 'ENOENT' && e.code !== 'ENOTDIR') {
+          logForDebugging(`team-memory-sync: unexpected read error for "${relPath}": ${e.code}`, { level: 'debug' })
         }
         // Fall through to write for ENOENT/ENOTDIR (file doesn't exist yet)
       }
 
       try {
-        const parentDir = validatedPath.substring(
-          0,
-          validatedPath.lastIndexOf(sep),
-        )
+        const parentDir = validatedPath.substring(0, validatedPath.lastIndexOf(sep))
         await mkdir(parentDir, { recursive: true })
         await writeFile(validatedPath, content, 'utf8')
         return true
       } catch (e) {
-        logForDebugging(
-          `team-memory-sync: failed to write "${relPath}": ${e}`,
-          { level: 'warn' },
-        )
+        logForDebugging(`team-memory-sync: failed to write "${relPath}": ${e}`, { level: 'warn' })
         return false
       }
     }),
@@ -886,9 +834,7 @@ export async function pullTeamMemory(
  * changes, whereas silently discarding the local edit loses work the user
  * just did with no recourse.
  */
-export async function pushTeamMemory(
-  state: SyncState,
-): Promise<TeamMemorySyncPushResult> {
+export async function pushTeamMemory(state: SyncState): Promise<TeamMemorySyncPushResult> {
   const startTime = Date.now()
   let conflictRetries = 0
 
@@ -925,9 +871,7 @@ export async function pushTeamMemory(
     // Log a user-visible warning listing which files were skipped and why.
     // Don't block the push — just exclude those files. The secret VALUE is
     // never logged, only the type label.
-    const summary = skippedSecrets
-      .map(s => `"${s.path}" (${s.label})`)
-      .join(', ')
+    const summary = skippedSecrets.map((s) => `"${s.path}" (${s.label})`).join(', ')
     logForDebugging(
       `team-memory-sync: ${skippedSecrets.length} file(s) skipped due to detected secrets: ${summary}. Remove the secret(s) to enable sync for these files.`,
       { level: 'warn' },
@@ -937,10 +881,8 @@ export async function pushTeamMemory(
       // Only log gitleaks rule IDs (not values, not paths — paths could
       // leak repo structure). Comma-joined for compact single-field analytics.
       rule_ids: skippedSecrets
-        .map(s => s.ruleId)
-        .join(
-          ',',
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        .map((s) => s.ruleId)
+        .join(',') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
   }
 
@@ -953,11 +895,7 @@ export async function pushTeamMemory(
 
   let sawConflict = false
 
-  for (
-    let conflictAttempt = 0;
-    conflictAttempt <= MAX_CONFLICT_RETRIES;
-    conflictAttempt++
-  ) {
+  for (let conflictAttempt = 0; conflictAttempt <= MAX_CONFLICT_RETRIES; conflictAttempt++) {
     // Delta: only upload keys whose content hash differs from what we believe
     // the server holds. On first push after a fresh pull, this is exactly the
     // user's local edits. After a 412 probe, matching hashes are excluded —
@@ -1001,12 +939,7 @@ export async function pushTeamMemory(
     let result: TeamMemorySyncUploadResult | undefined
 
     for (const batch of batches) {
-      result = await uploadTeamMemory(
-        state,
-        repoSlug,
-        batch,
-        state.lastKnownChecksum,
-      )
+      result = await uploadTeamMemory(state, repoSlug, batch, state.lastKnownChecksum)
       if (!result.success) break
 
       for (const key of Object.keys(batch)) {
@@ -1086,10 +1019,7 @@ export async function pushTeamMemory(
     // 412 conflict — refresh serverChecksums and retry with a tighter delta.
     sawConflict = true
     if (conflictAttempt >= MAX_CONFLICT_RETRIES) {
-      logForDebugging(
-        `team-memory-sync: giving up after ${MAX_CONFLICT_RETRIES} conflict retries`,
-        { level: 'warn' },
-      )
+      logForDebugging(`team-memory-sync: giving up after ${MAX_CONFLICT_RETRIES} conflict retries`, { level: 'warn' })
       logPush(startTime, {
         success: false,
         conflict: true,
@@ -1178,10 +1108,9 @@ export async function syncTeamMemory(state: SyncState): Promise<{
     }
   }
 
-  logForDebugging(
-    `team-memory-sync: synced (pulled ${pullResult.filesWritten}, pushed ${pushResult.filesUploaded})`,
-    { level: 'info' },
-  )
+  logForDebugging(`team-memory-sync: synced (pulled ${pullResult.filesWritten}, pushed ${pushResult.filesUploaded})`, {
+    level: 'info',
+  })
 
   return {
     success: true,
@@ -1208,8 +1137,7 @@ function logPull(
     not_modified: outcome.notModified ?? false,
     duration_ms: Date.now() - startTime,
     ...(outcome.errorType && {
-      errorType:
-        outcome.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      errorType: outcome.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     }),
     ...(outcome.status && { status: outcome.status }),
   })
@@ -1237,14 +1165,12 @@ function logPush(
     conflict_retries: outcome.conflictRetries ?? 0,
     duration_ms: Date.now() - startTime,
     ...(outcome.errorType && {
-      errorType:
-        outcome.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      errorType: outcome.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     }),
     ...(outcome.status && { status: outcome.status }),
     ...(outcome.putBatches && { put_batches: outcome.putBatches }),
     ...(outcome.errorCode && {
-      error_code:
-        outcome.errorCode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      error_code: outcome.errorCode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     }),
     ...(outcome.serverMaxEntries !== undefined && {
       server_max_entries: outcome.serverMaxEntries,

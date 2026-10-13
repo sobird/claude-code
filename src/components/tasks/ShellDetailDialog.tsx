@@ -1,22 +1,13 @@
-import React, {
-  Suspense,
-  use,
-  useDeferredValue,
-  useEffect,
-  useState,
-} from 'react'
+import React, { Suspense, use, useDeferredValue, useEffect, useState } from 'react'
 import type { DeepImmutable } from 'src/types/utils.js'
+
 import type { CommandResultDisplay } from '../../commands.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { Box, Text } from '../../ink.js'
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { LocalShellTaskState } from '../../tasks/LocalShellTask/guards.js'
-import {
-  formatDuration,
-  formatFileSize,
-  truncateToWidth,
-} from '../../utils/format.js'
+import { formatDuration, formatFileSize, truncateToWidth } from '../../utils/format.js'
 import { tailFile } from '../../utils/fsOperations.js'
 import { getTaskOutputPath } from '../../utils/task/diskOutput.js'
 import { Byline } from '../design-system/Byline.js'
@@ -25,10 +16,7 @@ import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint.js'
 
 type Props = {
   shell: DeepImmutable<LocalShellTaskState>
-  onDone: (
-    result?: string,
-    options?: { display?: CommandResultDisplay },
-  ) => void
+  onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void
   onKillShell?: () => void
   onBack?: () => void
 }
@@ -44,9 +32,7 @@ type TaskOutputResult = {
  * Read the tail of the task output file. Only reads the last few KB,
  * not the entire file.
  */
-async function getTaskOutput(
-  shell: DeepImmutable<LocalShellTaskState>,
-): Promise<TaskOutputResult> {
+async function getTaskOutput(shell: DeepImmutable<LocalShellTaskState>): Promise<TaskOutputResult> {
   const path = getTaskOutputPath(shell.id)
   try {
     const result = await tailFile(path, SHELL_DETAIL_TAIL_BYTES)
@@ -56,21 +42,14 @@ async function getTaskOutput(
   }
 }
 
-export function ShellDetailDialog({
-  shell,
-  onDone,
-  onKillShell,
-  onBack,
-}: Props): React.ReactNode {
+export function ShellDetailDialog({ shell, onDone, onKillShell, onBack }: Props): React.ReactNode {
   const { columns } = useTerminalSize()
 
   // Promise created in initializer (not during render). For running shells,
   // the effect timer replaces it periodically to pick up new output.
   // useDeferredValue keeps showing the previous output while the new promise
   // resolves, preventing the Suspense fallback from flickering.
-  const [outputPromise, setOutputPromise] = useState<Promise<TaskOutputResult>>(
-    () => getTaskOutput(shell),
-  )
+  const [outputPromise, setOutputPromise] = useState<Promise<TaskOutputResult>>(() => getTaskOutput(shell))
   const deferredOutputPromise = useDeferredValue(outputPromise)
 
   useEffect(() => {
@@ -87,8 +66,7 @@ export function ShellDetailDialog({
   }, [shell.id, shell.status])
 
   // Handle standard close action
-  const handleClose = () =>
-    onDone('Shell details dismissed', { display: 'system' })
+  const handleClose = () => onDone('Shell details dismissed', { display: 'system' })
 
   // Handle additional close actions beyond Dialog's built-in Esc handler
   useKeybindings(
@@ -117,26 +95,19 @@ export function ShellDetailDialog({
   const displayCommand = truncateToWidth(shell.command, 280)
 
   return (
-    <Box
-      flexDirection="column"
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       <Dialog
         title={isMonitor ? 'Monitor details' : 'Shell details'}
         onCancel={handleClose}
         color="background"
-        inputGuide={exitState =>
+        inputGuide={(exitState) =>
           exitState.pending ? (
             <Text>Press {exitState.keyName} again to exit</Text>
           ) : (
             <Byline>
               {onBack && <KeyboardShortcutHint shortcut="←" action="go back" />}
               <KeyboardShortcutHint shortcut="Esc/Enter/Space" action="close" />
-              {shell.status === 'running' && onKillShell && (
-                <KeyboardShortcutHint shortcut="x" action="stop" />
-              )}
+              {shell.status === 'running' && onKillShell && <KeyboardShortcutHint shortcut="x" action="stop" />}
             </Byline>
           )
         }
@@ -147,40 +118,32 @@ export function ShellDetailDialog({
             {shell.status === 'running' ? (
               <Text color="background">
                 {shell.status}
-                {shell.result?.code !== undefined &&
-                  ` (exit code: ${shell.result.code})`}
+                {shell.result?.code !== undefined && ` (exit code: ${shell.result.code})`}
               </Text>
             ) : shell.status === 'completed' ? (
               <Text color="success">
                 {shell.status}
-                {shell.result?.code !== undefined &&
-                  ` (exit code: ${shell.result.code})`}
+                {shell.result?.code !== undefined && ` (exit code: ${shell.result.code})`}
               </Text>
             ) : (
               <Text color="error">
                 {shell.status}
-                {shell.result?.code !== undefined &&
-                  ` (exit code: ${shell.result.code})`}
+                {shell.result?.code !== undefined && ` (exit code: ${shell.result.code})`}
               </Text>
             )}
           </Text>
           <Text>
-            <Text bold>Runtime:</Text>{' '}
-            {formatDuration((shell.endTime ?? Date.now()) - shell.startTime)}
+            <Text bold>Runtime:</Text> {formatDuration((shell.endTime ?? Date.now()) - shell.startTime)}
           </Text>
           <Text wrap="wrap">
-            <Text bold>{isMonitor ? 'Script:' : 'Command:'}</Text>{' '}
-            {displayCommand}
+            <Text bold>{isMonitor ? 'Script:' : 'Command:'}</Text> {displayCommand}
           </Text>
         </Box>
 
         <Box flexDirection="column">
           <Text bold>Output:</Text>
           <Suspense fallback={<Text dimColor>Loading output…</Text>}>
-            <ShellOutputContent
-              outputPromise={deferredOutputPromise}
-              columns={columns}
-            />
+            <ShellOutputContent outputPromise={deferredOutputPromise} columns={columns} />
           </Suspense>
         </Box>
       </Dialog>
@@ -193,10 +156,7 @@ type ShellOutputContentProps = {
   columns: number
 }
 
-function ShellOutputContent({
-  outputPromise,
-  columns,
-}: ShellOutputContentProps): React.ReactNode {
+function ShellOutputContent({ outputPromise, columns }: ShellOutputContentProps): React.ReactNode {
   const { content, bytesTotal } = use(outputPromise)
 
   if (!content) {
@@ -225,13 +185,7 @@ function ShellOutputContent({
 
   return (
     <>
-      <Box
-        borderStyle="round"
-        paddingX={1}
-        flexDirection="column"
-        height={12}
-        maxWidth={columns - 6}
-      >
+      <Box borderStyle="round" paddingX={1} flexDirection="column" height={12} maxWidth={columns - 6}>
         {rendered.map((line, i) => (
           <Text key={i} wrap="truncate-end">
             {line}

@@ -1,16 +1,9 @@
 import { z } from 'zod/v4'
+
 import { buildTool, type ToolDef } from '../../Tool.js'
-import {
-  executeTaskCreatedHooks,
-  getTaskCreatedHookMessage,
-} from '../../utils/hooks.js'
+import { executeTaskCreatedHooks, getTaskCreatedHookMessage } from '../../utils/hooks.js'
 import { lazySchema } from '../../utils/lazySchema.js'
-import {
-  createTask,
-  deleteTask,
-  getTaskListId,
-  isTodoV2Enabled,
-} from '../../utils/tasks.js'
+import { createTask, deleteTask, getTaskListId, isTodoV2Enabled } from '../../utils/tasks.js'
 import { getAgentName, getTeamName } from '../../utils/teammate.js'
 import { TASK_CREATE_TOOL_NAME } from './constants.js'
 import { DESCRIPTION, getPrompt } from './prompt.js'
@@ -22,13 +15,8 @@ const inputSchema = lazySchema(() =>
     activeForm: z
       .string()
       .optional()
-      .describe(
-        'Present continuous form shown in spinner when in_progress (e.g., "Running tests")',
-      ),
-    metadata: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .describe('Arbitrary metadata to attach to the task'),
+      .describe('Present continuous form shown in spinner when in_progress (e.g., "Running tests")'),
+    metadata: z.record(z.string(), z.unknown()).optional().describe('Arbitrary metadata to attach to the task'),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -113,7 +101,7 @@ export const TaskCreateTool = buildTool({
     }
 
     // Auto-expand task list when creating tasks
-    context.setAppState(prev => {
+    context.setAppState((prev) => {
       if (prev.expandedView === 'tasks') return prev
       return { ...prev, expandedView: 'tasks' as const }
     })

@@ -7,9 +7,7 @@ import type { SystemMemorySavedMessage } from '../../types/message.js'
  * the teamCount property access for memoization. This module is only loaded
  * when feature('TEAMMEM') is true.
  */
-export function teamMemSavedPart(
-  message: SystemMemorySavedMessage,
-): { segment: string; count: number } | null {
+export function teamMemSavedPart(message: SystemMemorySavedMessage): { segment: string; count: number } | null {
   const count = message.teamCount ?? 0
   if (count === 0) return null
   return {

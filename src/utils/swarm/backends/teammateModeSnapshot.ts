@@ -43,9 +43,7 @@ export function getCliTeammateModeOverride(): TeammateMode | null {
 export function clearCliTeammateModeOverride(newMode: TeammateMode): void {
   cliTeammateModeOverride = null
   initialTeammateMode = newMode
-  logForDebugging(
-    `[TeammateModeSnapshot] CLI override cleared, new mode: ${newMode}`,
-  )
+  logForDebugging(`[TeammateModeSnapshot] CLI override cleared, new mode: ${newMode}`)
 }
 
 /**
@@ -56,15 +54,11 @@ export function clearCliTeammateModeOverride(newMode: TeammateMode): void {
 export function captureTeammateModeSnapshot(): void {
   if (cliTeammateModeOverride) {
     initialTeammateMode = cliTeammateModeOverride
-    logForDebugging(
-      `[TeammateModeSnapshot] Captured from CLI override: ${initialTeammateMode}`,
-    )
+    logForDebugging(`[TeammateModeSnapshot] Captured from CLI override: ${initialTeammateMode}`)
   } else {
     const config = getGlobalConfig()
     initialTeammateMode = config.teammateMode ?? 'auto'
-    logForDebugging(
-      `[TeammateModeSnapshot] Captured from config: ${initialTeammateMode}`,
-    )
+    logForDebugging(`[TeammateModeSnapshot] Captured from config: ${initialTeammateMode}`)
   }
 }
 
@@ -75,11 +69,7 @@ export function captureTeammateModeSnapshot(): void {
 export function getTeammateModeFromSnapshot(): TeammateMode {
   if (initialTeammateMode === null) {
     // This indicates an initialization bug - capture should happen in setup()
-    logError(
-      new Error(
-        'getTeammateModeFromSnapshot called before capture - this indicates an initialization bug',
-      ),
-    )
+    logError(new Error('getTeammateModeFromSnapshot called before capture - this indicates an initialization bug'))
     captureTeammateModeSnapshot()
   }
   // Fallback to 'auto' if somehow still null (shouldn't happen, but safe)

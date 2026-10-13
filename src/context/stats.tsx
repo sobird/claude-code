@@ -1,10 +1,5 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-} from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo } from 'react'
+
 import { saveCurrentProjectConfig } from '../utils/config.js'
 
 export type StatsStore = {
@@ -112,10 +107,7 @@ type Props = {
   children: React.ReactNode
 }
 
-export function StatsProvider({
-  store: externalStore,
-  children,
-}: Props): React.ReactNode {
+export function StatsProvider({ store: externalStore, children }: Props): React.ReactNode {
   const internalStore = useMemo(() => createStatsStore(), [])
   const store = externalStore ?? internalStore
 
@@ -123,7 +115,7 @@ export function StatsProvider({
     const flush = () => {
       const metrics = store.getAll()
       if (Object.keys(metrics).length > 0) {
-        saveCurrentProjectConfig(current => ({
+        saveCurrentProjectConfig((current) => ({
           ...current,
           lastSessionMetrics: metrics,
         }))
@@ -148,10 +140,7 @@ export function useStats(): StatsStore {
 
 export function useCounter(name: string): (value?: number) => void {
   const store = useStats()
-  return useCallback(
-    (value?: number) => store.increment(name, value),
-    [store, name],
-  )
+  return useCallback((value?: number) => store.increment(name, value), [store, name])
 }
 
 export function useGauge(name: string): (value: number) => void {
@@ -161,10 +150,7 @@ export function useGauge(name: string): (value: number) => void {
 
 export function useTimer(name: string): (value: number) => void {
   const store = useStats()
-  return useCallback(
-    (value: number) => store.observe(name, value),
-    [store, name],
-  )
+  return useCallback((value: number) => store.observe(name, value), [store, name])
 }
 
 export function useSet(name: string): (value: string) => void {

@@ -29,8 +29,7 @@ export function getTaskStatusIcon(
     shutdownRequested?: boolean
   },
 ): string {
-  const { isIdle, awaitingApproval, hasError, shutdownRequested } =
-    options ?? {}
+  const { isIdle, awaitingApproval, hasError, shutdownRequested } = options ?? {}
 
   if (hasError) return figures.cross
   if (awaitingApproval) return figures.questionMarkPrefix
@@ -57,8 +56,7 @@ export function getTaskStatusColor(
     shutdownRequested?: boolean
   },
 ): 'success' | 'error' | 'warning' | 'background' {
-  const { isIdle, awaitingApproval, hasError, shutdownRequested } =
-    options ?? {}
+  const { isIdle, awaitingApproval, hasError, shutdownRequested } = options ?? {}
 
   if (hasError) return 'error'
   if (awaitingApproval) return 'warning'
@@ -76,15 +74,12 @@ export function getTaskStatusColor(
  * accounting for shutdown/approval/idle states and falling back through
  * recent-activity summary → last activity description → 'working'.
  */
-export function describeTeammateActivity(
-  t: DeepImmutable<InProcessTeammateTaskState>,
-): string {
+export function describeTeammateActivity(t: DeepImmutable<InProcessTeammateTaskState>): string {
   if (t.shutdownRequested) return 'stopping'
   if (t.awaitingPlanApproval) return 'awaiting approval'
   if (t.isIdle) return 'idle'
   return (
-    (t.progress?.recentActivities &&
-      summarizeRecentActivities(t.progress.recentActivities)) ??
+    (t.progress?.recentActivities && summarizeRecentActivities(t.progress.recentActivities)) ??
     t.progress?.lastActivity?.activityDescription ??
     'working'
   )
@@ -99,17 +94,11 @@ export function describeTeammateActivity(
  * plus exclusion of panel-managed agent tasks for ants (those are shown
  * by CoordinatorTaskPanel).
  */
-export function shouldHideTasksFooter(
-  tasks: { [taskId: string]: TaskState },
-  showSpinnerTree: boolean,
-): boolean {
+export function shouldHideTasksFooter(tasks: { [taskId: string]: TaskState }, showSpinnerTree: boolean): boolean {
   if (!showSpinnerTree) return false
   let hasVisibleTask = false
   for (const t of Object.values(tasks) as TaskState[]) {
-    if (
-      !isBackgroundTask(t) ||
-      (process.env.USER_TYPE === 'ant' && isPanelAgentTask(t))
-    ) {
+    if (!isBackgroundTask(t) || (process.env.USER_TYPE === 'ant' && isPanelAgentTask(t))) {
       continue
     }
     hasVisibleTask = true

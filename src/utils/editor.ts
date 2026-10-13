@@ -1,11 +1,8 @@
-import {
-  type SpawnOptions,
-  type SpawnSyncOptions,
-  spawn,
-  spawnSync,
-} from 'child_process'
-import memoize from 'lodash-es/memoize.js'
+import { type SpawnOptions, type SpawnSyncOptions, spawn, spawnSync } from 'child_process'
 import { basename } from 'path'
+
+import memoize from 'lodash-es/memoize.js'
+
 import instances from '../ink/instances.js'
 import { logForDebugging } from './debug.js'
 import { whichSync } from './which.js'
@@ -17,17 +14,7 @@ function isCommandAvailable(command: string): boolean {
 // GUI editors that open in a separate window and can be spawned detached
 // without fighting the TUI for stdin. VS Code forks (cursor, windsurf, codium)
 // are listed explicitly since none contain 'code' as a substring.
-const GUI_EDITORS = [
-  'code',
-  'cursor',
-  'windsurf',
-  'codium',
-  'subl',
-  'atom',
-  'gedit',
-  'notepad++',
-  'notepad',
-]
+const GUI_EDITORS = ['code', 'cursor', 'windsurf', 'codium', 'subl', 'atom', 'gedit', 'notepad++', 'notepad']
 
 // Editors that accept +N as a goto-line argument. The Windows default
 // ('start /wait notepad') does not — notepad treats +42 as a filename.
@@ -48,18 +35,14 @@ const VSCODE_FAMILY = new Set(['code', 'cursor', 'windsurf', 'codium'])
  */
 export function classifyGuiEditor(editor: string): string | undefined {
   const base = basename(editor.split(' ')[0] ?? '')
-  return GUI_EDITORS.find(g => base.includes(g))
+  return GUI_EDITORS.find((g) => base.includes(g))
 }
 
 /**
  * Build goto-line argv for a GUI editor. VS Code family uses -g file:line;
  * subl uses bare file:line; others don't support goto-line.
  */
-function guiGotoArgv(
-  guiFamily: string,
-  filePath: string,
-  line: number | undefined,
-): string[] {
+function guiGotoArgv(guiFamily: string, filePath: string, line: number | undefined): string[] {
   if (!line) return [filePath]
   if (VSCODE_FAMILY.has(guiFamily)) return ['-g', `${filePath}:${line}`]
   if (guiFamily === 'subl') return [`${filePath}:${line}`]
@@ -78,10 +61,7 @@ function guiGotoArgv(
  *
  * Returns true if the editor was launched, false if no editor is available.
  */
-export function openFileInExternalEditor(
-  filePath: string,
-  line?: number,
-): boolean {
+export function openFileInExternalEditor(filePath: string, line?: number): boolean {
   const editor = getExternalEditor()
   if (!editor) return false
 
@@ -102,7 +82,7 @@ export function openFileInExternalEditor(
       // CreateProcess can't execute .cmd/.bat directly. Assemble quoted command
       // string; cmd.exe doesn't expand $() or backticks inside double quotes.
       // Quote each arg so paths with spaces survive the shell join.
-      const gotoStr = gotoArgv.map(a => `"${a}"`).join(' ')
+      const gotoStr = gotoArgv.map((a) => `"${a}"`).join(' ')
       child = spawn(`${editor} ${gotoStr}`, { ...detachedOpts, shell: true })
     } else {
       // POSIX: argv array with no shell — injection-safe. shell: true would
@@ -112,9 +92,7 @@ export function openFileInExternalEditor(
     }
     // spawn() emits ENOENT asynchronously. ENOENT on $VISUAL/$EDITOR is a
     // user-config error, not an internal bug — don't pollute error telemetry.
-    child.on('error', e =>
-      logForDebugging(`editor spawn failed: ${e}`, { level: 'error' }),
-    )
+    child.on('error', (e) => logForDebugging(`editor spawn failed: ${e}`, { level: 'error' }))
     child.unref()
     return true
   }
@@ -143,10 +121,7 @@ export function openFileInExternalEditor(
       })
     } else {
       // POSIX: spawn directly (no shell), argv array is quote-safe.
-      const args = [
-        ...editorArgs,
-        ...(useGotoLine ? [`+${line}`, filePath] : [filePath]),
-      ]
+      const args = [...editorArgs, ...(useGotoLine ? [`+${line}`, filePath] : [filePath])]
       result = spawnSync(base, args, syncOpts)
     }
     if (result.error) {
@@ -179,5 +154,5 @@ export const getExternalEditor = memoize((): string | undefined => {
 
   // Search for available editors in order of preference
   const editors = ['code', 'vi', 'nano']
-  return editors.find(command => isCommandAvailable(command))
+  return editors.find((command) => isCommandAvailable(command))
 })

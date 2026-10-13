@@ -30,12 +30,7 @@ export function startCapturingEarlyInput(): void {
   // Only capture in interactive mode: stdin must be a TTY, and we must not
   // be in print mode. Raw mode disables ISIG (terminal Ctrl+C → SIGINT),
   // which would make -p uninterruptible.
-  if (
-    !process.stdin.isTTY ||
-    isCapturing ||
-    process.argv.includes('-p') ||
-    process.argv.includes('--print')
-  ) {
+  if (!process.stdin.isTTY || isCapturing || process.argv.includes('-p') || process.argv.includes('--print')) {
     return
   }
 
@@ -106,10 +101,7 @@ function processChunk(str: string): void {
     if (code === 27) {
       i++ // Skip the ESC character
       // Skip until the terminating byte (@ to ~) or end of string
-      while (
-        i < str.length &&
-        !(str.charCodeAt(i) >= 64 && str.charCodeAt(i) <= 126)
-      ) {
+      while (i < str.length && !(str.charCodeAt(i) >= 64 && str.charCodeAt(i) <= 126)) {
         i++
       }
       if (i < str.length) i++ // Skip the terminating byte

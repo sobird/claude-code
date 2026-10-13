@@ -1,4 +1,5 @@
 import type { ToolUseBlock } from '@anthropic-ai/sdk/resources/index.mjs'
+
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import { findToolByName, type ToolUseContext } from '../../Tool.js'
 import type { AssistantMessage, Message } from '../../types/message.js'
@@ -6,9 +7,7 @@ import { all } from '../../utils/generators.js'
 import { type MessageUpdateLazy, runToolUse } from './toolExecution.js'
 
 function getMaxToolUseConcurrency(): number {
-  return (
-    parseInt(process.env.CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY || '', 10) || 10
-  )
+  return parseInt(process.env.CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY || '', 10) || 10
 }
 
 export type MessageUpdate = {
@@ -23,22 +22,11 @@ export async function* runTools(
   toolUseContext: ToolUseContext,
 ): AsyncGenerator<MessageUpdate, void> {
   let currentContext = toolUseContext
-  for (const { isConcurrencySafe, blocks } of partitionToolCalls(
-    toolUseMessages,
-    currentContext,
-  )) {
+  for (const { isConcurrencySafe, blocks } of partitionToolCalls(toolUseMessages, currentContext)) {
     if (isConcurrencySafe) {
-      const queuedContextModifiers: Record<
-        string,
-        ((context: ToolUseContext) => ToolUseContext)[]
-      > = {}
+      const queuedContextModifiers: Record<string, ((context: ToolUseContext) => ToolUseContext)[]> = {}
       // Run read-only batch concurrently
-      for await (const update of runToolsConcurrently(
-        blocks,
-        assistantMessages,
-        canUseTool,
-        currentContext,
-      )) {
+      for await (const update of runToolsConcurrently(blocks, assistantMessages, canUseTool, currentContext)) {
         if (update.contextModifier) {
           const { toolUseID, modifyContext } = update.contextModifier
           if (!queuedContextModifiers[toolUseID]) {
@@ -63,12 +51,7 @@ export async function* runTools(
       yield { newContext: currentContext }
     } else {
       // Run non-read-only batch serially
-      for await (const update of runToolsSerially(
-        blocks,
-        assistantMessages,
-        canUseTool,
-        currentContext,
-      )) {
+      for await (const update of runToolsSerially(blocks, assistantMessages, canUseTool, currentContext)) {
         if (update.newContext) {
           currentContext = update.newContext
         }
@@ -88,10 +71,7 @@ type Batch = { isConcurrencySafe: boolean; blocks: ToolUseBlock[] }
  * 1. A single non-read-only tool, or
  * 2. Multiple consecutive read-only tools
  */
-function partitionToolCalls(
-  toolUseMessages: ToolUseBlock[],
-  toolUseContext: ToolUseContext,
-): Batch[] {
+function partitionToolCalls(toolUseMessages: ToolUseBlock[], toolUseContext: ToolUseContext): Batch[] {
   return toolUseMessages.reduce((acc: Batch[], toolUse) => {
     const tool = findToolByName(toolUseContext.options.tools, toolUse.name)
     const parsedInput = tool?.inputSchema.safeParse(toolUse.input)
@@ -124,16 +104,10 @@ async function* runToolsSerially(
   let currentContext = toolUseContext
 
   for (const toolUse of toolUseMessages) {
-    toolUseContext.setInProgressToolUseIDs(prev =>
-      new Set(prev).add(toolUse.id),
-    )
+    toolUseContext.setInProgressToolUseIDs((prev) => new Set(prev).add(toolUse.id))
     for await (const update of runToolUse(
       toolUse,
-      assistantMessages.find(_ =>
-        _.message.content.some(
-          _ => _.type === 'tool_use' && _.id === toolUse.id,
-        ),
-      )!,
+      assistantMessages.find((_) => _.message.content.some((_) => _.type === 'tool_use' && _.id === toolUse.id))!,
       canUseTool,
       currentContext,
     )) {
@@ -157,16 +131,10 @@ async function* runToolsConcurrently(
 ): AsyncGenerator<MessageUpdateLazy, void> {
   yield* all(
     toolUseMessages.map(async function* (toolUse) {
-      toolUseContext.setInProgressToolUseIDs(prev =>
-        new Set(prev).add(toolUse.id),
-      )
+      toolUseContext.setInProgressToolUseIDs((prev) => new Set(prev).add(toolUse.id))
       yield* runToolUse(
         toolUse,
-        assistantMessages.find(_ =>
-          _.message.content.some(
-            _ => _.type === 'tool_use' && _.id === toolUse.id,
-          ),
-        )!,
+        assistantMessages.find((_) => _.message.content.some((_) => _.type === 'tool_use' && _.id === toolUse.id))!,
         canUseTool,
         toolUseContext,
       )
@@ -176,11 +144,8 @@ async function* runToolsConcurrently(
   )
 }
 
-function markToolUseAsComplete(
-  toolUseContext: ToolUseContext,
-  toolUseID: string,
-) {
-  toolUseContext.setInProgressToolUseIDs(prev => {
+function markToolUseAsComplete(toolUseContext: ToolUseContext, toolUseID: string) {
+  toolUseContext.setInProgressToolUseIDs((prev) => {
     const next = new Set(prev)
     next.delete(toolUseID)
     return next

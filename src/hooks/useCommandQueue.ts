@@ -1,9 +1,7 @@
 import { useSyncExternalStore } from 'react'
+
 import type { QueuedCommand } from '../types/textInputTypes.js'
-import {
-  getCommandQueueSnapshot,
-  subscribeToCommandQueue,
-} from '../utils/messageQueueManager.js'
+import { getCommandQueueSnapshot, subscribeToCommandQueue } from '../utils/messageQueueManager.js'
 
 /**
  * React hook to subscribe to the unified command queue.

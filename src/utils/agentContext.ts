@@ -22,6 +22,7 @@
  */
 
 import { AsyncLocalStorage } from 'async_hooks'
+
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../services/analytics/index.js'
 import { isAgentSwarmsEnabled } from './agentSwarmsEnabled.js'
 
@@ -112,18 +113,14 @@ export function runWithAgentContext<T>(context: AgentContext, fn: () => T): T {
 /**
  * Type guard to check if context is a SubagentContext.
  */
-export function isSubagentContext(
-  context: AgentContext | undefined,
-): context is SubagentContext {
+export function isSubagentContext(context: AgentContext | undefined): context is SubagentContext {
   return context?.agentType === 'subagent'
 }
 
 /**
  * Type guard to check if context is a TeammateAgentContext.
  */
-export function isTeammateAgentContext(
-  context: AgentContext | undefined,
-): context is TeammateAgentContext {
+export function isTeammateAgentContext(context: AgentContext | undefined): context is TeammateAgentContext {
   if (isAgentSwarmsEnabled()) {
     return context?.agentType === 'teammate'
   }
@@ -138,9 +135,7 @@ export function isTeammateAgentContext(
  * Safe for analytics metadata: built-in agent names are code constants,
  * and custom agents are always mapped to the literal "user-defined".
  */
-export function getSubagentLogName():
-  | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-  | undefined {
+export function getSubagentLogName(): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined {
   const context = getAgentContext()
   if (!isSubagentContext(context) || !context.subagentName) {
     return undefined

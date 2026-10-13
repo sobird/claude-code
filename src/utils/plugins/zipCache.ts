@@ -30,18 +30,10 @@
  */
 
 import { randomBytes } from 'crypto'
-import {
-  chmod,
-  lstat,
-  readdir,
-  readFile,
-  rename,
-  rm,
-  stat,
-  writeFile,
-} from 'fs/promises'
+import { chmod, lstat, readdir, readFile, rename, rm, stat, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { basename, dirname, join } from 'path'
+
 import { logForDebugging } from '../debug.js'
 import { parseZipModes, unzipFile } from '../dxt/zip.js'
 import { isEnvTruthy } from '../envUtils.js'
@@ -149,9 +141,7 @@ export async function cleanupSessionPluginCache(): Promise<void> {
   }
   try {
     await rm(sessionPluginCachePath, { recursive: true, force: true })
-    logForDebugging(
-      `Cleaned up session plugin cache at ${sessionPluginCachePath}`,
-    )
+    logForDebugging(`Cleaned up session plugin cache at ${sessionPluginCachePath}`)
   } catch (error) {
     logForDebugging(`Failed to clean up session plugin cache: ${error}`)
   } finally {
@@ -172,10 +162,7 @@ export function resetSessionPluginCache(): void {
  * Write data to a file in the zip cache atomically.
  * Writes to a temp file in the same directory, then renames.
  */
-export async function atomicWriteToZipCache(
-  targetPath: string,
-  data: string | Uint8Array,
-): Promise<void> {
+export async function atomicWriteToZipCache(targetPath: string, data: string | Uint8Array): Promise<void> {
   const dir = dirname(targetPath)
   await getFsImplementation().mkdir(dir)
 
@@ -213,18 +200,14 @@ type ZipEntry = [Uint8Array, { os: number; attrs: number }]
  * @param sourceDir - Directory to zip
  * @returns ZIP file as Uint8Array
  */
-export async function createZipFromDirectory(
-  sourceDir: string,
-): Promise<Uint8Array> {
+export async function createZipFromDirectory(sourceDir: string): Promise<Uint8Array> {
   const files: Record<string, ZipEntry> = {}
   const visited = new Set<string>()
   await collectFilesForZip(sourceDir, '', files, visited)
 
   const { zipSync } = await import('fflate')
   const zipData = zipSync(files, { level: 6 })
-  logForDebugging(
-    `Created ZIP from ${sourceDir}: ${Object.keys(files).length} files, ${zipData.length} bytes`,
-  )
+  logForDebugging(`Created ZIP from ${sourceDir}: ${Object.keys(files).length} files, ${zipData.length} bytes`)
   return zipData
 }
 
@@ -311,10 +294,7 @@ async function collectFilesForZip(
         // os=3 (Unix) + st_mode in high 16 bits of external_attr — this is
         // what parseZipModes reads back on extraction. fileStat is already
         // in hand from the lstat/stat above, so no extra syscall.
-        files[relPath] = [
-          new Uint8Array(content),
-          { os: 3, attrs: (fileStat.mode & 0xffff) << 16 },
-        ]
+        files[relPath] = [new Uint8Array(content), { os: 3, attrs: (fileStat.mode & 0xffff) << 16 }]
       } catch (error) {
         logForDebugging(`Failed to read file for zip: ${relPath}: ${error}`)
       }
@@ -328,10 +308,7 @@ async function collectFilesForZip(
  * @param zipPath - Path to the ZIP file
  * @param targetDir - Directory to extract into
  */
-export async function extractZipToDirectory(
-  zipPath: string,
-  targetDir: string,
-): Promise<void> {
+export async function extractZipToDirectory(zipPath: string, targetDir: string): Promise<void> {
   const zipBuf = await getFsImplementation().readFileBytes(zipPath)
   const files = await unzipFile(zipBuf)
   // fflate doesn't surface external_attr — parse the central directory so
@@ -358,9 +335,7 @@ export async function extractZipToDirectory(
     }
   }
 
-  logForDebugging(
-    `Extracted ZIP to ${targetDir}: ${Object.keys(files).length} entries`,
-  )
+  logForDebugging(`Extracted ZIP to ${targetDir}: ${Object.keys(files).length} entries`)
 }
 
 /**
@@ -368,10 +343,7 @@ export async function extractZipToDirectory(
  * Both call sites (cacheAndRegisterPlugin, copyPluginToVersionedCache) need the
  * same sequence; getting it wrong (non-atomic write, forgetting rm) corrupts cache.
  */
-export async function convertDirectoryToZipInPlace(
-  dirPath: string,
-  zipPath: string,
-): Promise<void> {
+export async function convertDirectoryToZipInPlace(dirPath: string, zipPath: string): Promise<void> {
   const zipData = await createZipFromDirectory(dirPath)
   await atomicWriteToZipCache(zipPath, zipData)
   await rm(dirPath, { recursive: true, force: true })
@@ -381,9 +353,7 @@ export async function convertDirectoryToZipInPlace(
  * Get the relative path for a marketplace JSON file within the zip cache.
  * Format: marketplaces/{marketplace-name}.json
  */
-export function getMarketplaceJsonRelativePath(
-  marketplaceName: string,
-): string {
+export function getMarketplaceJsonRelativePath(marketplaceName: string): string {
   const sanitized = marketplaceName.replace(/[^a-zA-Z0-9\-_]/g, '-')
   return join('marketplaces', `${sanitized}.json`)
 }
@@ -399,8 +369,6 @@ export function getMarketplaceJsonRelativePath(
  * Excluded: file/directory (installLocation is the user's path OUTSIDE cacheDir —
  * nonsensical in ephemeral containers), npm (node_modules bloat on Filestore mount).
  */
-export function isMarketplaceSourceSupportedByZipCache(
-  source: MarketplaceSource,
-): boolean {
+export function isMarketplaceSourceSupportedByZipCache(source: MarketplaceSource): boolean {
   return ['github', 'git', 'url', 'settings'].includes(source.source)
 }

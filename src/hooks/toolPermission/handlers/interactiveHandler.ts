@@ -1,7 +1,9 @@
 import { feature } from 'bun:bundle'
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { randomUUID } from 'crypto'
+
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { logForDebugging } from 'src/utils/debug.js'
+
 import { getAllowedChannels } from '../../../bootstrap/state.js'
 import type { BridgePermissionCallbacks } from '../../../bridge/bridgePermissionCallbacks.js'
 import { getTerminalFocused } from '../../../ink/terminal-focus-state.js'
@@ -26,8 +28,8 @@ import {
 } from '../../../utils/classifierApprovals.js'
 import { errorMessage } from '../../../utils/errors.js'
 import type { PermissionDecision } from '../../../utils/permissions/PermissionResult.js'
-import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
 import { hasPermissionsToUseTool } from '../../../utils/permissions/permissions.js'
+import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
 import type { PermissionContext } from '../PermissionContext.js'
 import { createResolveOnce } from '../PermissionContext.js'
 
@@ -58,14 +60,7 @@ function handleInteractivePermission(
   params: InteractivePermissionParams,
   resolve: (decision: PermissionDecision) => void,
 ): void {
-  const {
-    ctx,
-    description,
-    result,
-    awaitAutomatedChecksBeforeDialog,
-    bridgeCallbacks,
-    channelCallbacks,
-  } = params
+  const { ctx, description, result, awaitAutomatedChecksBeforeDialog, bridgeCallbacks, channelCallbacks } = params
 
   const { resolve: resolveOnce, isResolved, claim } = createResolveOnce(resolve)
   let userInteracted = false
@@ -100,9 +95,7 @@ function handleInteractivePermission(
     permissionPromptStartTimeMs,
     ...(feature('BASH_CLASSIFIER')
       ? {
-          classifierCheckInProgress:
-            !!result.pendingClassifierCheck &&
-            !awaitAutomatedChecksBeforeDialog,
+          classifierCheckInProgress: !!result.pendingClassifierCheck && !awaitAutomatedChecksBeforeDialog,
         }
       : {}),
     onUserInteraction() {
@@ -125,10 +118,7 @@ function handleInteractivePermission(
         clearTimeout(checkmarkTransitionTimer)
         checkmarkTransitionTimer = undefined
         if (checkmarkAbortHandler) {
-          ctx.toolUseContext.abortController.signal.removeEventListener(
-            'abort',
-            checkmarkAbortHandler,
-          )
+          ctx.toolUseContext.abortController.signal.removeEventListener('abort', checkmarkAbortHandler)
           checkmarkAbortHandler = undefined
         }
         ctx.removeFromQueue()
@@ -145,10 +135,7 @@ function handleInteractivePermission(
       }
       channelUnsubscribe?.()
       ctx.logCancelled()
-      ctx.logDecision(
-        { decision: 'reject', source: { type: 'user_abort' } },
-        { permissionPromptStartTimeMs },
-      )
+      ctx.logDecision({ decision: 'reject', source: { type: 'user_abort' } }, { permissionPromptStartTimeMs })
       resolveOnce(ctx.cancelAndAbort(undefined, true))
     },
     async onAllow(
@@ -253,46 +240,43 @@ function handleInteractivePermission(
     )
 
     const signal = ctx.toolUseContext.abortController.signal
-    const unsubscribe = bridgeCallbacks.onResponse(
-      bridgeRequestId,
-      response => {
-        if (!claim()) return // Local user/hook/classifier already responded
-        signal.removeEventListener('abort', unsubscribe)
-        clearClassifierChecking(ctx.toolUseID)
-        clearClassifierIndicator()
-        ctx.removeFromQueue()
-        channelUnsubscribe?.()
+    const unsubscribe = bridgeCallbacks.onResponse(bridgeRequestId, (response) => {
+      if (!claim()) return // Local user/hook/classifier already responded
+      signal.removeEventListener('abort', unsubscribe)
+      clearClassifierChecking(ctx.toolUseID)
+      clearClassifierIndicator()
+      ctx.removeFromQueue()
+      channelUnsubscribe?.()
 
-        if (response.behavior === 'allow') {
-          if (response.updatedPermissions?.length) {
-            void ctx.persistPermissions(response.updatedPermissions)
-          }
-          ctx.logDecision(
-            {
-              decision: 'accept',
-              source: {
-                type: 'user',
-                permanent: !!response.updatedPermissions?.length,
-              },
-            },
-            { permissionPromptStartTimeMs },
-          )
-          resolveOnce(ctx.buildAllow(response.updatedInput ?? displayInput))
-        } else {
-          ctx.logDecision(
-            {
-              decision: 'reject',
-              source: {
-                type: 'user_reject',
-                hasFeedback: !!response.message,
-              },
-            },
-            { permissionPromptStartTimeMs },
-          )
-          resolveOnce(ctx.cancelAndAbort(response.message))
+      if (response.behavior === 'allow') {
+        if (response.updatedPermissions?.length) {
+          void ctx.persistPermissions(response.updatedPermissions)
         }
-      },
-    )
+        ctx.logDecision(
+          {
+            decision: 'accept',
+            source: {
+              type: 'user',
+              permanent: !!response.updatedPermissions?.length,
+            },
+          },
+          { permissionPromptStartTimeMs },
+        )
+        resolveOnce(ctx.buildAllow(response.updatedInput ?? displayInput))
+      } else {
+        ctx.logDecision(
+          {
+            decision: 'reject',
+            source: {
+              type: 'user_reject',
+              hasFeedback: !!response.message,
+            },
+          },
+          { permissionPromptStartTimeMs },
+        )
+        resolveOnce(ctx.cancelAndAbort(response.message))
+      }
+    })
 
     signal.addEventListener('abort', unsubscribe, { once: true })
   }
@@ -313,16 +297,12 @@ function handleInteractivePermission(
   // Fire-and-forget send: if callTool fails (channel down, tool missing),
   // the subscription never fires and another racer wins. Graceful degradation
   // — the local dialog is always there as the floor.
-  if (
-    (feature('KAIROS') || feature('KAIROS_CHANNELS')) &&
-    channelCallbacks &&
-    !ctx.tool.requiresUserInteraction?.()
-  ) {
+  if ((feature('KAIROS') || feature('KAIROS_CHANNELS')) && channelCallbacks && !ctx.tool.requiresUserInteraction?.()) {
     const channelRequestId = shortRequestId(ctx.toolUseID)
     const allowedChannels = getAllowedChannels()
     const channelClients = filterPermissionRelayClients(
       ctx.toolUseContext.getAppState().mcp.clients,
-      name => findChannelEntry(name, allowedChannels) !== undefined,
+      (name) => findChannelEntry(name, allowedChannels) !== undefined,
     )
 
     if (channelClients.length > 0) {
@@ -345,11 +325,10 @@ function handleInteractivePermission(
             method: CHANNEL_PERMISSION_REQUEST_METHOD,
             params,
           })
-          .catch(e => {
-            logForDebugging(
-              `Channel permission_request failed for ${client.name}: ${errorMessage(e)}`,
-              { level: 'error' },
-            )
+          .catch((e) => {
+            logForDebugging(`Channel permission_request failed for ${client.name}: ${errorMessage(e)}`, {
+              level: 'error',
+            })
           })
       }
 
@@ -360,42 +339,37 @@ function handleInteractivePermission(
       // dead closure stayed registered on the session-scoped abort signal
       // until the session ended. Not a functional bug (Map.delete is
       // idempotent), but it held the closure alive.
-      const mapUnsub = channelCallbacks.onResponse(
-        channelRequestId,
-        response => {
-          if (!claim()) return // Another racer won
-          channelUnsubscribe?.() // both: map delete + listener remove
-          clearClassifierChecking(ctx.toolUseID)
-          clearClassifierIndicator()
-          ctx.removeFromQueue()
-          // Bridge is the other remote — tell it we're done.
-          if (bridgeCallbacks && bridgeRequestId) {
-            bridgeCallbacks.cancelRequest(bridgeRequestId)
-          }
+      const mapUnsub = channelCallbacks.onResponse(channelRequestId, (response) => {
+        if (!claim()) return // Another racer won
+        channelUnsubscribe?.() // both: map delete + listener remove
+        clearClassifierChecking(ctx.toolUseID)
+        clearClassifierIndicator()
+        ctx.removeFromQueue()
+        // Bridge is the other remote — tell it we're done.
+        if (bridgeCallbacks && bridgeRequestId) {
+          bridgeCallbacks.cancelRequest(bridgeRequestId)
+        }
 
-          if (response.behavior === 'allow') {
-            ctx.logDecision(
-              {
-                decision: 'accept',
-                source: { type: 'user', permanent: false },
-              },
-              { permissionPromptStartTimeMs },
-            )
-            resolveOnce(ctx.buildAllow(displayInput))
-          } else {
-            ctx.logDecision(
-              {
-                decision: 'reject',
-                source: { type: 'user_reject', hasFeedback: false },
-              },
-              { permissionPromptStartTimeMs },
-            )
-            resolveOnce(
-              ctx.cancelAndAbort(`Denied via channel ${response.fromServer}`),
-            )
-          }
-        },
-      )
+        if (response.behavior === 'allow') {
+          ctx.logDecision(
+            {
+              decision: 'accept',
+              source: { type: 'user', permanent: false },
+            },
+            { permissionPromptStartTimeMs },
+          )
+          resolveOnce(ctx.buildAllow(displayInput))
+        } else {
+          ctx.logDecision(
+            {
+              decision: 'reject',
+              source: { type: 'user_reject', hasFeedback: false },
+            },
+            { permissionPromptStartTimeMs },
+          )
+          resolveOnce(ctx.cancelAndAbort(`Denied via channel ${response.fromServer}`))
+        }
+      })
       channelUnsubscribe = () => {
         mapUnsub()
         channelSignal.removeEventListener('abort', channelUnsubscribe!)
@@ -451,7 +425,7 @@ function handleInteractivePermission(
           clearClassifierChecking(ctx.toolUseID)
           clearClassifierIndicator()
         },
-        onAllow: decisionReason => {
+        onAllow: (decisionReason) => {
           if (!claim()) return
           if (bridgeCallbacks && bridgeRequestId) {
             bridgeCallbacks.cancelRequest(bridgeRequestId)
@@ -461,9 +435,7 @@ function handleInteractivePermission(
 
           const matchedRule =
             decisionReason.type === 'classifier'
-              ? (decisionReason.reason.match(
-                  /^Allowed by prompt rule: "(.+)"$/,
-                )?.[1] ?? decisionReason.reason)
+              ? (decisionReason.reason.match(/^Allowed by prompt rule: "(.+)"$/)?.[1] ?? decisionReason.reason)
               : undefined
 
           // Show auto-approved transition with dimmed options
@@ -475,10 +447,7 @@ function handleInteractivePermission(
             })
           }
 
-          if (
-            feature('TRANSCRIPT_CLASSIFIER') &&
-            decisionReason.type === 'classifier'
-          ) {
+          if (feature('TRANSCRIPT_CLASSIFIER') && decisionReason.type === 'classifier') {
             if (decisionReason.classifier === 'auto-mode') {
               setYoloClassifierApproval(ctx.toolUseID, decisionReason.reason)
             } else if (matchedRule) {
@@ -486,10 +455,7 @@ function handleInteractivePermission(
             }
           }
 
-          ctx.logDecision(
-            { decision: 'accept', source: { type: 'classifier' } },
-            { permissionPromptStartTimeMs },
-          )
+          ctx.logDecision({ decision: 'accept', source: { type: 'classifier' } }, { permissionPromptStartTimeMs })
           resolveOnce(ctx.buildAllow(ctx.input, { decisionReason }))
 
           // Keep checkmark visible, then remove dialog.
@@ -520,7 +486,7 @@ function handleInteractivePermission(
           })
         },
       },
-    ).catch(error => {
+    ).catch((error) => {
       // Log classifier API errors for debugging but don't propagate them as interruptions
       // These errors can be network failures, rate limits, or model issues - not user cancellations
       logForDebugging(`Async classifier check failed: ${errorMessage(error)}`, {

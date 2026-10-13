@@ -1,6 +1,8 @@
 import { homedir } from 'os'
+
 import React from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
+
 import { setSessionTrustAccepted } from '../../bootstrap/state.js'
 import type { Command } from '../../commands.js'
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js'
@@ -8,10 +10,7 @@ import { Box, Link, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import { getMcpConfigsByScope } from '../../services/mcp/config.js'
 import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
-import {
-  checkHasTrustDialogAccepted,
-  saveCurrentProjectConfig,
-} from '../../utils/config.js'
+import { checkHasTrustDialogAccepted, saveCurrentProjectConfig } from '../../utils/config.js'
 import { getCwd } from '../../utils/cwd.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'
 import { gracefulShutdownSync } from '../../utils/gracefulShutdown.js'
@@ -64,33 +63,23 @@ export function TrustDialog({ onDone, commands }: Props): React.ReactNode {
 
   const hasSlashCommandBash =
     commands?.some(
-      command =>
+      (command) =>
         command.type === 'prompt' &&
         command.loadedFrom === 'commands_DEPRECATED' &&
-        (command.source === 'projectSettings' ||
-          command.source === 'localSettings') &&
-        command.allowedTools?.some(
-          (tool: string) =>
-            tool === BASH_TOOL_NAME || tool.startsWith(BASH_TOOL_NAME + '('),
-        ),
+        (command.source === 'projectSettings' || command.source === 'localSettings') &&
+        command.allowedTools?.some((tool: string) => tool === BASH_TOOL_NAME || tool.startsWith(BASH_TOOL_NAME + '(')),
     ) ?? false
 
   const hasSkillsBash =
     commands?.some(
-      command =>
+      (command) =>
         command.type === 'prompt' &&
         (command.loadedFrom === 'skills' || command.loadedFrom === 'plugin') &&
-        (command.source === 'projectSettings' ||
-          command.source === 'localSettings' ||
-          command.source === 'plugin') &&
-        command.allowedTools?.some(
-          (tool: string) =>
-            tool === BASH_TOOL_NAME || tool.startsWith(BASH_TOOL_NAME + '('),
-        ),
+        (command.source === 'projectSettings' || command.source === 'localSettings' || command.source === 'plugin') &&
+        command.allowedTools?.some((tool: string) => tool === BASH_TOOL_NAME || tool.startsWith(BASH_TOOL_NAME + '(')),
     ) ?? false
 
-  const hasAnyBashExecution =
-    bashSettingSources.length > 0 || hasSlashCommandBash || hasSkillsBash
+  const hasAnyBashExecution = bashSettingSources.length > 0 || hasSlashCommandBash || hasSkillsBash
 
   const hasTrustDialogAccepted = checkHasTrustDialogAccepted()
 
@@ -144,7 +133,7 @@ export function TrustDialog({ onDone, commands }: Props): React.ReactNode {
       // while preserving the security intent of not permanently trusting home dir
       setSessionTrustAccepted(true)
     } else {
-      saveCurrentProjectConfig(current => ({
+      saveCurrentProjectConfig((current) => ({
         ...current,
         hasTrustDialogAccepted: true,
       }))
@@ -164,9 +153,7 @@ export function TrustDialog({ onDone, commands }: Props): React.ReactNode {
   // so the default would hang the await forever. With keybinding
   // customization enabled, the chokidar watcher (persistent: true) keeps the
   // event loop alive and the process freezes. Explicitly exit 1 like "No".
-  const exitState = useExitOnCtrlCDWithKeybindings(() =>
-    gracefulShutdownSync(1),
-  )
+  const exitState = useExitOnCtrlCDWithKeybindings(() => gracefulShutdownSync(1))
 
   // Use configurable keybinding for ESC to cancel/exit
   useKeybinding(
@@ -184,28 +171,18 @@ export function TrustDialog({ onDone, commands }: Props): React.ReactNode {
   }
 
   return (
-    <PermissionDialog
-      color="warning"
-      titleColor="warning"
-      title="Accessing workspace:"
-    >
+    <PermissionDialog color="warning" titleColor="warning" title="Accessing workspace:">
       <Box flexDirection="column" gap={1} paddingTop={1}>
         <Text bold>{getFsImplementation().cwd()}</Text>
 
         <Text>
-          Quick safety check: Is this a project you created or one you trust?
-          (Like your own code, a well-known open source project, or work from
-          your team). If not, take a moment to review what{"'"}s in this folder
-          first.
+          Quick safety check: Is this a project you created or one you trust? (Like your own code, a well-known open
+          source project, or work from your team). If not, take a moment to review what{"'"}s in this folder first.
         </Text>
-        <Text>
-          Claude Code{"'"}ll be able to read, edit, and execute files here.
-        </Text>
+        <Text>Claude Code{"'"}ll be able to read, edit, and execute files here.</Text>
 
         <Text dimColor>
-          <Link url="https://code.claude.com/docs/en/security">
-            Security guide
-          </Link>
+          <Link url="https://code.claude.com/docs/en/security">Security guide</Link>
         </Text>
 
         <Select
@@ -213,16 +190,12 @@ export function TrustDialog({ onDone, commands }: Props): React.ReactNode {
             { label: 'Yes, I trust this folder', value: 'enable_all' },
             { label: 'No, exit', value: 'exit' },
           ]}
-          onChange={value => onChange(value as 'enable_all' | 'exit')}
+          onChange={(value) => onChange(value as 'enable_all' | 'exit')}
           onCancel={() => onChange('exit')}
         />
 
         <Text dimColor>
-          {exitState.pending ? (
-            <>Press {exitState.keyName} again to exit</>
-          ) : (
-            <>Enter to confirm · Esc to cancel</>
-          )}
+          {exitState.pending ? <>Press {exitState.keyName} again to exit</> : <>Enter to confirm · Esc to cancel</>}
         </Text>
       </Box>
     </PermissionDialog>

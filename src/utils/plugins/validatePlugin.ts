@@ -1,7 +1,9 @@
 import type { Dirent, Stats } from 'fs'
 import { readdir, readFile, stat } from 'fs/promises'
 import * as path from 'path'
+
 import { z } from 'zod/v4'
+
 import { errorMessage, getErrnoCode, isENOENT } from '../errors.js'
 import { FRONTMATTER_REGEX } from '../frontmatterParser.js'
 import { jsonParse } from '../slowOperations.js'
@@ -21,13 +23,7 @@ import {
  * keys via zod's default behavior, so they're harmless at runtime but worth
  * flagging to authors.
  */
-const MARKETPLACE_ONLY_MANIFEST_FIELDS = new Set([
-  'category',
-  'source',
-  'tags',
-  'strict',
-  'id',
-])
+const MARKETPLACE_ONLY_MANIFEST_FIELDS = new Set(['category', 'source', 'tags', 'strict', 'id'])
 
 export type ValidationResult = {
   success: boolean
@@ -51,9 +47,7 @@ export type ValidationWarning = {
 /**
  * Detect whether a file is a plugin manifest or marketplace manifest
  */
-function detectManifestType(
-  filePath: string,
-): 'plugin' | 'marketplace' | 'unknown' {
+function detectManifestType(filePath: string): 'plugin' | 'marketplace' | 'unknown' {
   const fileName = path.basename(filePath)
   const dirName = path.basename(path.dirname(filePath))
 
@@ -73,7 +67,7 @@ function detectManifestType(
  * Format Zod validation errors into a readable format
  */
 function formatZodErrors(zodError: z.ZodError): ValidationError[] {
-  return zodError.issues.map(error => ({
+  return zodError.issues.map((error) => ({
     path: error.path.join('.') || 'root',
     message: error.message,
     code: error.code,
@@ -89,12 +83,7 @@ function formatZodErrors(zodError: z.ZodError): ValidationError[] {
  * '..' a user added to "climb out of .claude-plugin/" is unnecessary. Callers pass `hint`
  * to attach the right explanation.
  */
-function checkPathTraversal(
-  p: string,
-  field: string,
-  errors: ValidationError[],
-  hint?: string,
-): void {
+function checkPathTraversal(p: string, field: string, errors: ValidationError[], hint?: string): void {
   if (p.includes('..')) {
     errors.push({
       path: field,
@@ -126,9 +115,7 @@ function marketplaceSourceHint(p: string): string {
 /**
  * Validate a plugin manifest file (plugin.json)
  */
-export async function validatePluginManifest(
-  filePath: string,
-): Promise<ValidationResult> {
+export async function validatePluginManifest(filePath: string): Promise<ValidationResult> {
   const errors: ValidationError[] = []
   const warnings: ValidationWarning[] = []
   const absolutePath = path.resolve(filePath)
@@ -181,9 +168,7 @@ export async function validatePluginManifest(
 
     // Check commands
     if (obj.commands) {
-      const commands = Array.isArray(obj.commands)
-        ? obj.commands
-        : [obj.commands]
+      const commands = Array.isArray(obj.commands) ? obj.commands : [obj.commands]
       commands.forEach((cmd, i) => {
         if (typeof cmd === 'string') {
           checkPathTraversal(cmd, `commands[${i}]`, errors)
@@ -221,9 +206,7 @@ export async function validatePluginManifest(
   let toValidate = parsed
   if (typeof parsed === 'object' && parsed !== null) {
     const obj = parsed as Record<string, unknown>
-    const strayKeys = Object.keys(obj).filter(k =>
-      MARKETPLACE_ONLY_MANIFEST_FIELDS.has(k),
-    )
+    const strayKeys = Object.keys(obj).filter((k) => MARKETPLACE_ONLY_MANIFEST_FIELDS.has(k))
     if (strayKeys.length > 0) {
       const stripped = { ...obj }
       for (const key of strayKeys) {
@@ -271,8 +254,7 @@ export async function validatePluginManifest(
     if (!manifest.version) {
       warnings.push({
         path: 'version',
-        message:
-          'No version specified. Consider adding a version following semver (e.g., "1.0.0")',
+        message: 'No version specified. Consider adding a version following semver (e.g., "1.0.0")',
       })
     }
 
@@ -280,8 +262,7 @@ export async function validatePluginManifest(
     if (!manifest.description) {
       warnings.push({
         path: 'description',
-        message:
-          'No description provided. Adding a description helps users understand what your plugin does',
+        message: 'No description provided. Adding a description helps users understand what your plugin does',
       })
     }
 
@@ -289,8 +270,7 @@ export async function validatePluginManifest(
     if (!manifest.author) {
       warnings.push({
         path: 'author',
-        message:
-          'No author information provided. Consider adding author details for plugin attribution',
+        message: 'No author information provided. Consider adding author details for plugin attribution',
       })
     }
   }
@@ -307,9 +287,7 @@ export async function validatePluginManifest(
 /**
  * Validate a marketplace manifest file (marketplace.json)
  */
-export async function validateMarketplaceManifest(
-  filePath: string,
-): Promise<ValidationResult> {
+export async function validateMarketplaceManifest(filePath: string): Promise<ValidationResult> {
   const errors: ValidationError[] = []
   const warnings: ValidationWarning[] = []
   const absolutePath = path.resolve(filePath)
@@ -366,12 +344,7 @@ export async function validateMarketplaceManifest(
           const source = (plugin as { source: unknown }).source
           // Check string sources (relative paths)
           if (typeof source === 'string') {
-            checkPathTraversal(
-              source,
-              `plugins[${i}].source`,
-              errors,
-              marketplaceSourceHint(source),
-            )
+            checkPathTraversal(source, `plugins[${i}].source`, errors, marketplaceSourceHint(source))
           }
           // Check object-source .path (git-subdir: subdirectory within the
           // remote repo, sparse-cloned). '..' here is a genuine traversal attempt
@@ -383,11 +356,7 @@ export async function validateMarketplaceManifest(
             'path' in source &&
             typeof (source as { path: unknown }).path === 'string'
           ) {
-            checkPathTraversal(
-              (source as { path: string }).path,
-              `plugins[${i}].source.path`,
-              errors,
-            )
+            checkPathTraversal((source as { path: string }).path, `plugins[${i}].source.path`, errors)
           }
         }
       })
@@ -427,9 +396,7 @@ export async function validateMarketplaceManifest(
     if (marketplace.plugins) {
       marketplace.plugins.forEach((plugin, i) => {
         // Check for duplicate plugin names
-        const duplicates = marketplace.plugins.filter(
-          p => p.name === plugin.name,
-        )
+        const duplicates = marketplace.plugins.filter((p) => p.name === plugin.name)
         if (duplicates.length > 1) {
           errors.push({
             path: `plugins[${i}].name`,
@@ -446,24 +413,12 @@ export async function validateMarketplaceManifest(
       // shows one version, /status shows another after install).
       // Only local sources: remote sources would need cloning to check.
       const manifestDir = path.dirname(absolutePath)
-      const marketplaceRoot =
-        path.basename(manifestDir) === '.claude-plugin'
-          ? path.dirname(manifestDir)
-          : manifestDir
+      const marketplaceRoot = path.basename(manifestDir) === '.claude-plugin' ? path.dirname(manifestDir) : manifestDir
       for (const [i, entry] of marketplace.plugins.entries()) {
-        if (
-          !entry.version ||
-          typeof entry.source !== 'string' ||
-          !entry.source.startsWith('./')
-        ) {
+        if (!entry.version || typeof entry.source !== 'string' || !entry.source.startsWith('./')) {
           continue
         }
-        const pluginJsonPath = path.join(
-          marketplaceRoot,
-          entry.source,
-          '.claude-plugin',
-          'plugin.json',
-        )
+        const pluginJsonPath = path.join(marketplaceRoot, entry.source, '.claude-plugin', 'plugin.json')
         let manifestVersion: string | undefined
         try {
           const raw = await readFile(pluginJsonPath, { encoding: 'utf-8' })
@@ -563,12 +518,7 @@ function validateComponentFile(
   // description: must be scalar. coerceDescriptionToString logs+drops arrays/objects at runtime.
   if (fm.description !== undefined) {
     const d = fm.description
-    if (
-      typeof d !== 'string' &&
-      typeof d !== 'number' &&
-      typeof d !== 'boolean' &&
-      d !== null
-    ) {
+    if (typeof d !== 'string' && typeof d !== 'number' && typeof d !== 'boolean' && d !== null) {
       errors.push({
         path: 'description',
         message:
@@ -587,11 +537,7 @@ function validateComponentFile(
 
   // name: if present, must be a string (skills/commands use it as displayName;
   // plugin agents use it as the agentType stem — non-strings would stringify to garbage)
-  if (
-    fm.name !== undefined &&
-    fm.name !== null &&
-    typeof fm.name !== 'string'
-  ) {
+  if (fm.name !== undefined && fm.name !== null && typeof fm.name !== 'string') {
     errors.push({
       path: 'name',
       message: `name must be a string, got ${typeof fm.name}.`,
@@ -606,7 +552,7 @@ function validateComponentFile(
         path: 'allowed-tools',
         message: `allowed-tools must be a string or array of strings, got ${typeof at}.`,
       })
-    } else if (Array.isArray(at) && at.some(t => typeof t !== 'string')) {
+    } else if (Array.isArray(at) && at.some((t) => typeof t !== 'string')) {
       errors.push({
         path: 'allowed-tools',
         message: 'allowed-tools array must contain only strings.',
@@ -661,9 +607,7 @@ async function validateHooksJson(filePath: string): Promise<ValidationResult> {
     }
     return {
       success: false,
-      errors: [
-        { path: 'file', message: `Failed to read file: ${errorMessage(e)}` },
-      ],
+      errors: [{ path: 'file', message: `Failed to read file: ${errorMessage(e)}` }],
       warnings: [],
       filePath,
       fileType: 'hooks',
@@ -679,9 +623,7 @@ async function validateHooksJson(filePath: string): Promise<ValidationResult> {
       errors: [
         {
           path: 'json',
-          message:
-            `Invalid JSON syntax: ${errorMessage(e)}. ` +
-            `At runtime this breaks the entire plugin load.`,
+          message: `Invalid JSON syntax: ${errorMessage(e)}. ` + `At runtime this breaks the entire plugin load.`,
         },
       ],
       warnings: [],
@@ -715,10 +657,7 @@ async function validateHooksJson(filePath: string): Promise<ValidationResult> {
  * avoid a stat per entry. Returns absolute paths so error messages stay
  * readable.
  */
-async function collectMarkdown(
-  dir: string,
-  isSkillsDir: boolean,
-): Promise<string[]> {
+async function collectMarkdown(dir: string, isSkillsDir: boolean): Promise<string[]> {
   let entries: Dirent[]
   try {
     entries = await readdir(dir, { withFileTypes: true })
@@ -733,9 +672,7 @@ async function collectMarkdown(
   // and subdirectories of a skill dir aren't scanned. Paths are speculative
   // (the subdir may lack SKILL.md); the caller handles ENOENT.
   if (isSkillsDir) {
-    return entries
-      .filter(e => e.isDirectory())
-      .map(e => path.join(dir, e.name, 'SKILL.md'))
+    return entries.filter((e) => e.isDirectory()).map((e) => path.join(dir, e.name, 'SKILL.md'))
   }
 
   // Commands/agents: recurse and collect all .md files.
@@ -760,9 +697,7 @@ async function collectMarkdown(
  * Returns one ValidationResult per file that has errors or warnings. A clean
  * plugin returns an empty array.
  */
-export async function validatePluginContents(
-  pluginDir: string,
-): Promise<ValidationResult[]> {
+export async function validatePluginContents(pluginDir: string): Promise<ValidationResult[]> {
   const results: ValidationResult[] = []
 
   const dirs: Array<['skill' | 'agent' | 'command', string]> = [
@@ -782,9 +717,7 @@ export async function validatePluginContents(
         if (isENOENT(e)) continue
         results.push({
           success: false,
-          errors: [
-            { path: 'file', message: `Failed to read: ${errorMessage(e)}` },
-          ],
+          errors: [{ path: 'file', message: `Failed to read: ${errorMessage(e)}` }],
           warnings: [],
           filePath,
           fileType,
@@ -798,9 +731,7 @@ export async function validatePluginContents(
     }
   }
 
-  const hooksResult = await validateHooksJson(
-    path.join(pluginDir, 'hooks', 'hooks.json'),
-  )
+  const hooksResult = await validateHooksJson(path.join(pluginDir, 'hooks', 'hooks.json'))
   if (hooksResult.errors.length > 0 || hooksResult.warnings.length > 0) {
     results.push(hooksResult)
   }
@@ -811,9 +742,7 @@ export async function validatePluginContents(
 /**
  * Validate a manifest file or directory (auto-detects type)
  */
-export async function validateManifest(
-  filePath: string,
-): Promise<ValidationResult> {
+export async function validateManifest(filePath: string): Promise<ValidationResult> {
   const absolutePath = path.resolve(filePath)
 
   // Stat path to check if it's a directory — handle ENOENT inline
@@ -829,11 +758,7 @@ export async function validateManifest(
   if (stats?.isDirectory()) {
     // Look for manifest files in .claude-plugin directory
     // Prefer marketplace.json over plugin.json
-    const marketplacePath = path.join(
-      absolutePath,
-      '.claude-plugin',
-      'marketplace.json',
-    )
+    const marketplacePath = path.join(absolutePath, '.claude-plugin', 'marketplace.json')
     const marketplaceResult = await validateMarketplaceManifest(marketplacePath)
     // Only fall through if the marketplace file was not found (ENOENT)
     if (marketplaceResult.errors[0]?.code !== 'ENOENT') {

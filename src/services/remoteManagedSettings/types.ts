@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+
 import { lazySchema } from '../../utils/lazySchema.js'
 import type { SettingsJson } from '../../utils/settings/types.js'
 
@@ -15,9 +16,7 @@ export const RemoteManagedSettingsResponseSchema = lazySchema(() =>
   }),
 )
 
-export type RemoteManagedSettingsResponse = z.infer<
-  ReturnType<typeof RemoteManagedSettingsResponseSchema>
->
+export type RemoteManagedSettingsResponse = z.infer<ReturnType<typeof RemoteManagedSettingsResponseSchema>>
 
 /**
  * Result of fetching remotely managed settings

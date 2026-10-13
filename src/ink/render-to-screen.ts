@@ -1,14 +1,13 @@
 import noop from 'lodash-es/noop.js'
 import type { ReactElement } from 'react'
 import { LegacyRoot } from 'react-reconciler/constants.js'
+
 import { logForDebugging } from '../utils/debug.js'
 import { createNode, type DOMElement } from './dom.js'
 import { FocusManager } from './focus.js'
 import Output from './output.js'
 import reconciler from './reconciler.js'
-import renderNodeToOutput, {
-  resetLayoutShifted,
-} from './render-node-to-output.js'
+import renderNodeToOutput, { resetLayoutShifted } from './render-node-to-output.js'
 import {
   CellWidth,
   CharPool,
@@ -56,10 +55,7 @@ const LOG_EVERY = 20
  *  8k-upfront. Cache per (msg, query, width) upstream.
  *
  *  Unmounts between calls. Root/container/pools persist for reuse. */
-export function renderToScreen(
-  el: ReactElement,
-  width: number,
-): { screen: Screen; height: number } {
+export function renderToScreen(el: ReactElement, width: number): { screen: Screen; height: number } {
   if (!root) {
     root = createNode('ink-root')
     root.focusManager = new FocusManager(() => false)
@@ -67,18 +63,7 @@ export function renderToScreen(
     charPool = new CharPool()
     hyperlinkPool = new HyperlinkPool()
     // @ts-expect-error react-reconciler 0.33 takes 10 args; @types says 11
-    container = reconciler.createContainer(
-      root,
-      LegacyRoot,
-      null,
-      false,
-      null,
-      'search-render',
-      noop,
-      noop,
-      noop,
-      noop,
-    )
+    container = reconciler.createContainer(root, LegacyRoot, null, false, null, 'search-render', noop, noop, noop, noop)
   }
 
   const t0 = performance.now()
@@ -169,11 +154,7 @@ export function scanPositions(screen: Screen, query: string): MatchPosition[] {
     for (let col = 0; col < w; col++) {
       const idx = rowOff + col
       const cell = cellAtIndex(screen, idx)
-      if (
-        cell.width === CellWidth.SpacerTail ||
-        cell.width === CellWidth.SpacerHead ||
-        noSelect[idx] === 1
-      ) {
+      if (cell.width === CellWidth.SpacerTail || cell.width === CellWidth.SpacerHead || noSelect[idx] === 1) {
         continue
       }
       const lc = cell.char.toLowerCase()

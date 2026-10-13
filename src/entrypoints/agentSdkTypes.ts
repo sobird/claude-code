@@ -9,17 +9,11 @@
  * sdk/controlTypes.ts directly.
  */
 
-import type {
-  CallToolResult,
-  ToolAnnotations,
-} from '@modelcontextprotocol/sdk/types.js'
+import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/sdk/types.js'
 
 // Control protocol types for SDK builders (bridge subpath consumers)
 /** @alpha */
-export type {
-  SDKControlRequest,
-  SDKControlResponse,
-} from './sdk/controlTypes.js'
+export type { SDKControlRequest, SDKControlResponse } from './sdk/controlTypes.js'
 // Re-export core types (common serializable types)
 export * from './sdk/coreTypes.js'
 // Re-export runtime types (callbacks, interfaces with methods)
@@ -34,12 +28,7 @@ export * from './sdk/toolTypes.js'
 // Functions
 // ============================================================================
 
-import type {
-  SDKMessage,
-  SDKResultMessage,
-  SDKSessionInfo,
-  SDKUserMessage,
-} from './sdk/coreTypes.js'
+import type { SDKMessage, SDKResultMessage, SDKSessionInfo, SDKUserMessage } from './sdk/coreTypes.js'
 // Import types needed for function signatures
 import type {
   AnyZodRawShape,
@@ -74,10 +63,7 @@ export function tool<Schema extends AnyZodRawShape>(
   _name: string,
   _description: string,
   _inputSchema: Schema,
-  _handler: (
-    args: InferShape<Schema>,
-    extra: unknown,
-  ) => Promise<CallToolResult>,
+  _handler: (args: InferShape<Schema>, extra: unknown) => Promise<CallToolResult>,
   _extras?: {
     annotations?: ToolAnnotations
     searchHint?: string
@@ -100,9 +86,7 @@ type CreateSdkMcpServerOptions = {
  *
  * If your SDK MCP calls will run longer than 60s, override CLAUDE_CODE_STREAM_CLOSE_TIMEOUT
  */
-export function createSdkMcpServer(
-  _options: CreateSdkMcpServerOptions,
-): McpSdkServerConfigWithInstance {
+export function createSdkMcpServer(_options: CreateSdkMcpServerOptions): McpSdkServerConfigWithInstance {
   throw new Error('not implemented')
 }
 
@@ -113,10 +97,7 @@ export function query(_params: {
   prompt: string | AsyncIterable<SDKUserMessage>
   options?: InternalOptions
 }): InternalQuery
-export function query(_params: {
-  prompt: string | AsyncIterable<SDKUserMessage>
-  options?: Options
-}): Query
+export function query(_params: { prompt: string | AsyncIterable<SDKUserMessage>; options?: Options }): Query
 export function query(): Query {
   throw new Error('query is not implemented in the SDK')
 }
@@ -126,9 +107,7 @@ export function query(): Query {
  * Create a persistent session for multi-turn conversations.
  * @alpha
  */
-export function unstable_v2_createSession(
-  _options: SDKSessionOptions,
-): SDKSession {
+export function unstable_v2_createSession(_options: SDKSessionOptions): SDKSession {
   throw new Error('unstable_v2_createSession is not implemented in the SDK')
 }
 
@@ -137,10 +116,7 @@ export function unstable_v2_createSession(
  * Resume an existing session by ID.
  * @alpha
  */
-export function unstable_v2_resumeSession(
-  _sessionId: string,
-  _options: SDKSessionOptions,
-): SDKSession {
+export function unstable_v2_resumeSession(_sessionId: string, _options: SDKSessionOptions): SDKSession {
   throw new Error('unstable_v2_resumeSession is not implemented in the SDK')
 }
 
@@ -157,10 +133,7 @@ export function unstable_v2_resumeSession(
  * })
  * ```
  */
-export async function unstable_v2_prompt(
-  _message: string,
-  _options: SDKSessionOptions,
-): Promise<SDKResultMessage> {
+export async function unstable_v2_prompt(_message: string, _options: SDKSessionOptions): Promise<SDKResultMessage> {
   throw new Error('unstable_v2_prompt is not implemented in the SDK')
 }
 
@@ -201,9 +174,7 @@ export async function getSessionMessages(
  * const page2 = await listSessions({ limit: 50, offset: 50 })
  * ```
  */
-export async function listSessions(
-  _options?: ListSessionsOptions,
-): Promise<SDKSessionInfo[]> {
+export async function listSessions(_options?: ListSessionsOptions): Promise<SDKSessionInfo[]> {
   throw new Error('listSessions is not implemented in the SDK')
 }
 
@@ -265,10 +236,7 @@ export async function tagSession(
  * @param options - `{ dir?, upToMessageId?, title? }`
  * @returns `{ sessionId }` — UUID of the new forked session
  */
-export async function forkSession(
-  _sessionId: string,
-  _options?: ForkSessionOptions,
-): Promise<ForkSessionResult> {
+export async function forkSession(_sessionId: string, _options?: ForkSessionOptions): Promise<ForkSessionResult> {
   throw new Error('forkSession is not implemented in the SDK')
 }
 
@@ -308,9 +276,7 @@ export type CronJitterConfig = {
  * Event yielded by `watchScheduledTasks()`.
  * @internal
  */
-export type ScheduledTaskEvent =
-  | { type: 'fire'; task: CronTask }
-  | { type: 'missed'; tasks: CronTask[] }
+export type ScheduledTaskEvent = { type: 'fire'; task: CronTask } | { type: 'missed'; tasks: CronTask[] }
 
 /**
  * Handle returned by `watchScheduledTasks()`.
@@ -407,12 +373,7 @@ export type RemoteControlHandle = {
   inboundPrompts(): AsyncGenerator<InboundPrompt>
   controlRequests(): AsyncGenerator<unknown>
   permissionResponses(): AsyncGenerator<unknown>
-  onStateChange(
-    cb: (
-      state: 'ready' | 'connected' | 'reconnecting' | 'failed',
-      detail?: string,
-    ) => void,
-  ): void
+  onStateChange(cb: (state: 'ready' | 'connected' | 'reconnecting' | 'failed', detail?: string) => void): void
   teardown(): Promise<void>
 }
 
@@ -436,11 +397,9 @@ export type RemoteControlHandle = {
  *
  * @internal
  */
-export async function connectRemoteControl(
-  _opts: ConnectRemoteControlOptions,
-): Promise<RemoteControlHandle | null> {
+export async function connectRemoteControl(_opts: ConnectRemoteControlOptions): Promise<RemoteControlHandle | null> {
   throw new Error('not implemented')
 }
 
-export type HookEvent = string;
-export type ExitReason = string;
+export type HookEvent = string
+export type ExitReason = string

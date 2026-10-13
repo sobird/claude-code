@@ -1,7 +1,4 @@
-import {
-  DANGEROUS_SHELL_SETTINGS,
-  SAFE_ENV_VARS,
-} from '../../utils/managedEnvConstants.js'
+import { DANGEROUS_SHELL_SETTINGS, SAFE_ENV_VARS } from '../../utils/managedEnvConstants.js'
 import type { SettingsJson } from '../../utils/settings/types.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 
@@ -21,9 +18,7 @@ export type DangerousSettings = {
  * any env var NOT in SAFE_ENV_VARS is considered dangerous.
  * See managedEnv.ts for the authoritative list and threat categories.
  */
-export function extractDangerousSettings(
-  settings: SettingsJson | null | undefined,
-): DangerousSettings {
+export function extractDangerousSettings(settings: SettingsJson | null | undefined): DangerousSettings {
   if (!settings) {
     return {
       shellSettings: {},
@@ -74,9 +69,7 @@ export function extractDangerousSettings(
  */
 export function hasDangerousSettings(dangerous: DangerousSettings): boolean {
   return (
-    Object.keys(dangerous.shellSettings).length > 0 ||
-    Object.keys(dangerous.envVars).length > 0 ||
-    dangerous.hasHooks
+    Object.keys(dangerous.shellSettings).length > 0 || Object.keys(dangerous.envVars).length > 0 || dangerous.hasHooks
   )
 }
 
@@ -120,9 +113,7 @@ export function hasDangerousSettingsChanged(
  * Format dangerous settings as a human-readable list for the UI
  * Only returns setting names, not values
  */
-export function formatDangerousSettingsList(
-  dangerous: DangerousSettings,
-): string[] {
+export function formatDangerousSettingsList(dangerous: DangerousSettings): string[] {
   const items: string[] = []
 
   // Shell settings (names only)

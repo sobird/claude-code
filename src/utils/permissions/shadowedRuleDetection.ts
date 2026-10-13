@@ -1,12 +1,7 @@
 import type { ToolPermissionContext } from '../../Tool.js'
 import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
 import type { PermissionRule, PermissionRuleSource } from './PermissionRule.js'
-import {
-  getAllowRules,
-  getAskRules,
-  getDenyRules,
-  permissionRuleSourceDisplayString,
-} from './permissions.js'
+import { getAllowRules, getAskRules, getDenyRules, permissionRuleSourceDisplayString } from './permissions.js'
 
 /**
  * Type of shadowing that makes a rule unreachable
@@ -40,9 +35,7 @@ export type DetectUnreachableRulesOptions = {
  * Result of checking if a rule is shadowed.
  * Uses discriminated union for type safety.
  */
-type ShadowResult =
-  | { shadowed: false }
-  | { shadowed: true; shadowedBy: PermissionRule; shadowType: ShadowType }
+type ShadowResult = { shadowed: false } | { shadowed: true; shadowedBy: PermissionRule; shadowType: ShadowType }
 
 /**
  * Check if a permission rule source is shared (visible to other users).
@@ -59,11 +52,7 @@ type ShadowResult =
  * - flagSettings: From --settings flag (runtime)
  */
 export function isSharedSettingSource(source: PermissionRuleSource): boolean {
-  return (
-    source === 'projectSettings' ||
-    source === 'policySettings' ||
-    source === 'command'
-  )
+  return source === 'projectSettings' || source === 'policySettings' || source === 'command'
 }
 
 /**
@@ -123,9 +112,7 @@ function isAllowRuleShadowedByAskRule(
 
   // Find any tool-wide ask rule for the same tool
   const shadowingAskRule = askRules.find(
-    askRule =>
-      askRule.ruleValue.toolName === toolName &&
-      askRule.ruleValue.ruleContent === undefined,
+    (askRule) => askRule.ruleValue.toolName === toolName && askRule.ruleValue.ruleContent === undefined,
   )
 
   if (!shadowingAskRule) {
@@ -157,10 +144,7 @@ function isAllowRuleShadowedByAskRule(
  * so the allow rule will never be reached - the tool is always denied.
  * This is more severe than ask-shadowing because the rule is truly blocked.
  */
-function isAllowRuleShadowedByDenyRule(
-  allowRule: PermissionRule,
-  denyRules: PermissionRule[],
-): ShadowResult {
+function isAllowRuleShadowedByDenyRule(allowRule: PermissionRule, denyRules: PermissionRule[]): ShadowResult {
   const { toolName, ruleContent } = allowRule.ruleValue
 
   // Only check allow rules that have specific content (e.g., "Bash(ls:*)")
@@ -171,9 +155,7 @@ function isAllowRuleShadowedByDenyRule(
 
   // Find any tool-wide deny rule for the same tool
   const shadowingDenyRule = denyRules.find(
-    denyRule =>
-      denyRule.ruleValue.toolName === toolName &&
-      denyRule.ruleValue.ruleContent === undefined,
+    (denyRule) => denyRule.ruleValue.toolName === toolName && denyRule.ruleValue.ruleContent === undefined,
   )
 
   if (!shadowingDenyRule) {

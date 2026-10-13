@@ -1,9 +1,4 @@
-import {
-  getAnthropicApiKey,
-  getAuthTokenSource,
-  getSubscriptionType,
-  isClaudeAISubscriber,
-} from './auth.js'
+import { getAnthropicApiKey, getAuthTokenSource, getSubscriptionType, isClaudeAISubscriber } from './auth.js'
 import { getGlobalConfig } from './config.js'
 import { isEnvTruthy } from './envUtils.js'
 
@@ -37,10 +32,7 @@ export function hasConsoleBillingAccess(): boolean {
   }
 
   // Users have billing access if they are admins or billing roles at either workspace or organization level
-  return (
-    ['admin', 'billing'].includes(orgRole) ||
-    ['workspace_admin', 'workspace_billing'].includes(workspaceRole)
-  )
+  return ['admin', 'billing'].includes(orgRole) || ['workspace_admin', 'workspace_billing'].includes(workspaceRole)
 }
 
 // Mock billing access for /mock-limits testing (set by mockRateLimits.ts)
@@ -71,8 +63,5 @@ export function hasClaudeAiBillingAccess(): boolean {
   const config = getGlobalConfig()
   const orgRole = config.oauthAccount?.organizationRole
 
-  return (
-    !!orgRole &&
-    ['admin', 'billing', 'owner', 'primary_owner'].includes(orgRole)
-  )
+  return !!orgRole && ['admin', 'billing', 'owner', 'primary_owner'].includes(orgRole)
 }

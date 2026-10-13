@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+
 import { buildTool, type ToolDef } from '../../Tool.js'
 import type { PermissionUpdate } from '../../types/permissions.js'
 import { formatFileSize } from '../../utils/format.js'
@@ -7,12 +8,7 @@ import type { PermissionDecision } from '../../utils/permissions/PermissionResul
 import { getRuleByContentsForTool } from '../../utils/permissions/permissions.js'
 import { isPreapprovedHost } from './preapproved.js'
 import { DESCRIPTION, WEB_FETCH_TOOL_NAME } from './prompt.js'
-import {
-  getToolUseSummary,
-  renderToolResultMessage,
-  renderToolUseMessage,
-  renderToolUseProgressMessage,
-} from './UI.js'
+import { getToolUseSummary, renderToolResultMessage, renderToolUseMessage, renderToolUseProgressMessage } from './UI.js'
 import {
   applyPromptToMarkdown,
   type FetchedContent,
@@ -34,12 +30,8 @@ const outputSchema = lazySchema(() =>
     bytes: z.number().describe('Size of the fetched content in bytes'),
     code: z.number().describe('HTTP response code'),
     codeText: z.string().describe('HTTP response code text'),
-    result: z
-      .string()
-      .describe('Processed result from applying the prompt to the content'),
-    durationMs: z
-      .number()
-      .describe('Time taken to fetch and process the content'),
+    result: z.string().describe('Processed result from applying the prompt to the content'),
+    durationMs: z.number().describe('Time taken to fetch and process the content'),
     url: z.string().describe('The URL that was fetched'),
   }),
 )
@@ -47,9 +39,7 @@ type OutputSchema = ReturnType<typeof outputSchema>
 
 export type Output = z.infer<OutputSchema>
 
-function webFetchToolInputToPermissionRuleContent(input: {
-  [k: string]: unknown
-}): string {
+function webFetchToolInputToPermissionRuleContent(input: { [k: string]: unknown }): string {
   try {
     const parsedInput = WebFetchTool.inputSchema.safeParse(input)
     if (!parsedInput.success) {
@@ -123,11 +113,7 @@ export const WebFetchTool = buildTool({
     // Check for a rule specific to the tool input (matching hostname)
     const ruleContent = webFetchToolInputToPermissionRuleContent(input)
 
-    const denyRule = getRuleByContentsForTool(
-      permissionContext,
-      WebFetchTool,
-      'deny',
-    ).get(ruleContent)
+    const denyRule = getRuleByContentsForTool(permissionContext, WebFetchTool, 'deny').get(ruleContent)
     if (denyRule) {
       return {
         behavior: 'deny',
@@ -139,11 +125,7 @@ export const WebFetchTool = buildTool({
       }
     }
 
-    const askRule = getRuleByContentsForTool(
-      permissionContext,
-      WebFetchTool,
-      'ask',
-    ).get(ruleContent)
+    const askRule = getRuleByContentsForTool(permissionContext, WebFetchTool, 'ask').get(ruleContent)
     if (askRule) {
       return {
         behavior: 'ask',
@@ -156,11 +138,7 @@ export const WebFetchTool = buildTool({
       }
     }
 
-    const allowRule = getRuleByContentsForTool(
-      permissionContext,
-      WebFetchTool,
-      'allow',
-    ).get(ruleContent)
+    const allowRule = getRuleByContentsForTool(permissionContext, WebFetchTool, 'allow').get(ruleContent)
     if (allowRule) {
       return {
         behavior: 'allow',
@@ -205,10 +183,7 @@ ${DESCRIPTION}`
   renderToolUseMessage,
   renderToolUseProgressMessage,
   renderToolResultMessage,
-  async call(
-    { url, prompt },
-    { abortController, options: { isNonInteractiveSession } },
-  ) {
+  async call({ url, prompt }, { abortController, options: { isNonInteractiveSession } }) {
     const start = Date.now()
 
     const response = await getURLMarkdownContent(url, abortController)
@@ -248,24 +223,12 @@ To complete your request, I need to fetch content from the redirected URL. Pleas
       }
     }
 
-    const {
-      content,
-      bytes,
-      code,
-      codeText,
-      contentType,
-      persistedPath,
-      persistedSize,
-    } = response as FetchedContent
+    const { content, bytes, code, codeText, contentType, persistedPath, persistedSize } = response as FetchedContent
 
     const isPreapproved = isPreapprovedUrl(url)
 
     let result: string
-    if (
-      isPreapproved &&
-      contentType.includes('text/markdown') &&
-      content.length < MAX_MARKDOWN_LENGTH
-    ) {
+    if (isPreapproved && contentType.includes('text/markdown') && content.length < MAX_MARKDOWN_LENGTH) {
       result = content
     } else {
       result = await applyPromptToMarkdown(

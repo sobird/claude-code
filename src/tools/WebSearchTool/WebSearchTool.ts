@@ -5,6 +5,7 @@ import type {
 import { getAPIProvider } from 'src/utils/model/providers.js'
 import type { PermissionResult } from 'src/utils/permissions/PermissionResult.js'
 import { z } from 'zod/v4'
+
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { queryModelWithStreaming } from '../../services/api/claude.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
@@ -15,24 +16,13 @@ import { getMainLoopModel, getSmallFastModel } from '../../utils/model/model.js'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import { asSystemPrompt } from '../../utils/systemPromptType.js'
 import { getWebSearchPrompt, WEB_SEARCH_TOOL_NAME } from './prompt.js'
-import {
-  getToolUseSummary,
-  renderToolResultMessage,
-  renderToolUseMessage,
-  renderToolUseProgressMessage,
-} from './UI.js'
+import { getToolUseSummary, renderToolResultMessage, renderToolUseMessage, renderToolUseProgressMessage } from './UI.js'
 
 const inputSchema = lazySchema(() =>
   z.strictObject({
     query: z.string().min(2).describe('The search query to use'),
-    allowed_domains: z
-      .array(z.string())
-      .optional()
-      .describe('Only include search results from these domains'),
-    blocked_domains: z
-      .array(z.string())
-      .optional()
-      .describe('Never include search results from these domains'),
+    allowed_domains: z.array(z.string()).optional().describe('Only include search results from these domains'),
+    blocked_domains: z.array(z.string()).optional().describe('Never include search results from these domains'),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -59,9 +49,7 @@ const outputSchema = lazySchema(() =>
     results: z
       .array(z.union([searchResultSchema(), z.string()]))
       .describe('Search results and/or text commentary from the model'),
-    durationSeconds: z
-      .number()
-      .describe('Time taken to complete the search operation'),
+    durationSeconds: z.number().describe('Time taken to complete the search operation'),
   }),
 )
 type OutputSchema = ReturnType<typeof outputSchema>
@@ -83,11 +71,7 @@ function makeToolSchema(input: Input): BetaWebSearchTool20250305 {
   }
 }
 
-function makeOutputFromSearchResponse(
-  result: BetaContentBlock[],
-  query: string,
-  durationSeconds: number,
-): Output {
+function makeOutputFromSearchResponse(result: BetaContentBlock[], query: string, durationSeconds: number): Output {
   // The result is a sequence of these blocks:
   // - text to start -- always?
   // [
@@ -121,7 +105,7 @@ function makeOutputFromSearchResponse(
         continue
       }
       // Success case - add results to our collection
-      const hits = block.content.map(r => ({ title: r.title, url: r.url }))
+      const hits = block.content.map((r) => ({ title: r.title, url: r.url }))
       results.push({
         tool_use_id: block.tool_use_id,
         content: hits,
@@ -177,9 +161,7 @@ export const WebSearchTool = buildTool({
     // Enable for Vertex AI with supported models (Claude 4.0+)
     if (provider === 'vertex') {
       const supportsWebSearch =
-        model.includes('claude-opus-4') ||
-        model.includes('claude-sonnet-4') ||
-        model.includes('claude-haiku-4')
+        model.includes('claude-opus-4') || model.includes('claude-sonnet-4') || model.includes('claude-haiku-4')
 
       return supportsWebSearch
     }
@@ -244,8 +226,7 @@ export const WebSearchTool = buildTool({
     if (allowed_domains?.length && blocked_domains?.length) {
       return {
         result: false,
-        message:
-          'Error: Cannot specify both allowed_domains and blocked_domains in the same request',
+        message: 'Error: Cannot specify both allowed_domains and blocked_domains in the same request',
         errorCode: 2,
       }
     }
@@ -259,20 +240,13 @@ export const WebSearchTool = buildTool({
     })
     const toolSchema = makeToolSchema(input)
 
-    const useHaiku = getFeatureValue_CACHED_MAY_BE_STALE(
-      'tengu_plum_vx3',
-      false,
-    )
+    const useHaiku = getFeatureValue_CACHED_MAY_BE_STALE('tengu_plum_vx3', false)
 
     const appState = context.getAppState()
     const queryStream = queryModelWithStreaming({
       messages: [userMessage],
-      systemPrompt: asSystemPrompt([
-        'You are an assistant for performing a web search tool use',
-      ]),
-      thinkingConfig: useHaiku
-        ? { type: 'disabled' as const }
-        : context.options.thinkingConfig,
+      systemPrompt: asSystemPrompt(['You are an assistant for performing a web search tool use']),
+      thinkingConfig: useHaiku ? { type: 'disabled' as const } : context.options.thinkingConfig,
       tools: [],
       signal: context.abortController.signal,
       options: {
@@ -303,10 +277,7 @@ export const WebSearchTool = buildTool({
       }
 
       // Track tool use ID when server_tool_use starts
-      if (
-        event.type === 'stream_event' &&
-        event.event?.type === 'content_block_start'
-      ) {
+      if (event.type === 'stream_event' && event.event?.type === 'content_block_start') {
         const contentBlock = event.event.content_block
         if (contentBlock && contentBlock.type === 'server_tool_use') {
           currentToolUseId = contentBlock.id
@@ -318,11 +289,7 @@ export const WebSearchTool = buildTool({
       }
 
       // Accumulate JSON for current tool use
-      if (
-        currentToolUseId &&
-        event.type === 'stream_event' &&
-        event.event?.type === 'content_block_delta'
-      ) {
+      if (currentToolUseId && event.type === 'stream_event' && event.event?.type === 'content_block_delta') {
         const delta = event.event.delta
         if (delta?.type === 'input_json_delta' && delta.partial_json) {
           currentToolUseJson += delta.partial_json
@@ -330,17 +297,12 @@ export const WebSearchTool = buildTool({
           // Try to extract query from partial JSON for progress updates
           try {
             // Look for a complete query field
-            const queryMatch = currentToolUseJson.match(
-              /"query"\s*:\s*"((?:[^"\\]|\\.)*)"/,
-            )
+            const queryMatch = currentToolUseJson.match(/"query"\s*:\s*"((?:[^"\\]|\\.)*)"/)
             if (queryMatch && queryMatch[1]) {
               // The regex properly handles escaped characters
               const query = jsonParse('"' + queryMatch[1] + '"')
 
-              if (
-                !toolUseQueries.has(currentToolUseId) ||
-                toolUseQueries.get(currentToolUseId) !== query
-              ) {
+              if (!toolUseQueries.has(currentToolUseId) || toolUseQueries.get(currentToolUseId) !== query) {
                 toolUseQueries.set(currentToolUseId, query)
                 progressCounter++
                 if (onProgress) {
@@ -361,10 +323,7 @@ export const WebSearchTool = buildTool({
       }
 
       // Yield progress when search results come in
-      if (
-        event.type === 'stream_event' &&
-        event.event?.type === 'content_block_start'
-      ) {
+      if (event.type === 'stream_event' && event.event?.type === 'content_block_start') {
         const contentBlock = event.event.content_block
         if (contentBlock && contentBlock.type === 'web_search_tool_result') {
           // Get the actual query that was used for this search
@@ -391,11 +350,7 @@ export const WebSearchTool = buildTool({
     const endTime = performance.now()
     const durationSeconds = (endTime - startTime) / 1000
 
-    const data = makeOutputFromSearchResponse(
-      allContentBlocks,
-      query,
-      durationSeconds,
-    )
+    const data = makeOutputFromSearchResponse(allContentBlocks, query, durationSeconds)
     return { data }
   },
   mapToolResultToToolResultBlockParam(output, toolUseID) {
@@ -406,7 +361,7 @@ export const WebSearchTool = buildTool({
     // Process the results array - it can contain both string summaries and search result objects.
     // Guard against null/undefined entries that can appear after JSON round-tripping
     // (e.g., from compaction or transcript deserialization).
-    ;(results ?? []).forEach(result => {
+    ;(results ?? []).forEach((result) => {
       if (result == null) {
         return
       }

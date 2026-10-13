@@ -1,5 +1,7 @@
-import axios from 'axios'
 import { readFile, stat } from 'fs/promises'
+
+import axios from 'axios'
+
 import type { Message } from '../../types/message.js'
 import { checkAndRefreshOAuthTokenIfNeeded } from '../../utils/auth.js'
 import { logForDebugging } from '../../utils/debug.js'
@@ -20,11 +22,7 @@ type TranscriptShareResult = {
   transcriptId?: string
 }
 
-export type TranscriptShareTrigger =
-  | 'bad_feedback_survey'
-  | 'good_feedback_survey'
-  | 'frustration'
-  | 'memory_survey'
+export type TranscriptShareTrigger = 'bad_feedback_survey' | 'good_feedback_survey' | 'frustration' | 'memory_survey'
 
 export async function submitTranscriptShare(
   messages: Message[],
@@ -48,10 +46,7 @@ export async function submitTranscriptShare(
       if (size <= MAX_TRANSCRIPT_READ_BYTES) {
         rawTranscriptJsonl = await readFile(transcriptPath, 'utf-8')
       } else {
-        logForDebugging(
-          `Skipping raw transcript read: file too large (${size} bytes)`,
-          { level: 'warn' },
-        )
+        logForDebugging(`Skipping raw transcript read: file too large (${size} bytes)`, { level: 'warn' })
       }
     } catch {
       // File may not exist
@@ -62,10 +57,7 @@ export async function submitTranscriptShare(
       version: MACRO.VERSION,
       platform: process.platform,
       transcript,
-      subagentTranscripts:
-        Object.keys(subagentTranscripts).length > 0
-          ? subagentTranscripts
-          : undefined,
+      subagentTranscripts: Object.keys(subagentTranscripts).length > 0 ? subagentTranscripts : undefined,
       rawTranscriptJsonl,
     }
 

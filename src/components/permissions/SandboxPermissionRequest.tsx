@@ -1,9 +1,7 @@
 import * as React from 'react'
 import { Box, Text } from 'src/ink.js'
-import {
-  type NetworkHostPattern,
-  shouldAllowManagedSandboxDomainsOnly,
-} from 'src/utils/sandbox/sandbox-adapter.js'
+import { type NetworkHostPattern, shouldAllowManagedSandboxDomainsOnly } from 'src/utils/sandbox/sandbox-adapter.js'
+
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -13,10 +11,7 @@ import { PermissionDialog } from './PermissionDialog.js'
 
 export type SandboxPermissionRequestProps = {
   hostPattern: NetworkHostPattern
-  onUserResponse: (response: {
-    allow: boolean
-    persistToSettings: boolean
-  }) => void
+  onUserResponse: (response: { allow: boolean; persistToSettings: boolean }) => void
 }
 
 export function SandboxPermissionRequest({
@@ -30,8 +25,7 @@ export function SandboxPermissionRequest({
     if (process.env.USER_TYPE === 'ant') {
       logEvent('tengu_sandbox_network_dialog_result', {
         host: host as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        result:
-          value as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        result: value as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
     }
 
@@ -92,8 +86,7 @@ export function SandboxPermissionRequest({
               if (process.env.USER_TYPE === 'ant') {
                 logEvent('tengu_sandbox_network_dialog_result', {
                   host: host as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                  result:
-                    'cancel' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  result: 'cancel' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 })
               }
               onUserResponse({ allow: false, persistToSettings: false })

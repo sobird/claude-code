@@ -1,22 +1,19 @@
+import type { LookupOptions } from 'dns'
+import type { Agent } from 'http'
+
 // @aws-sdk/credential-provider-node and @smithy/node-http-handler are imported
 // dynamically in getAWSClientProxyConfig() to defer ~929KB of AWS SDK.
 // undici is lazy-required inside getProxyAgent/configureGlobalAgents to defer
 // ~1.5MB when no HTTPS_PROXY/mTLS env vars are set (the common case).
 import axios, { type AxiosInstance } from 'axios'
-import type { LookupOptions } from 'dns'
-import type { Agent } from 'http'
 import { HttpsProxyAgent, type HttpsProxyAgentOptions } from 'https-proxy-agent'
 import memoize from 'lodash-es/memoize.js'
 import type * as undici from 'undici'
+
 import { getCACertificates } from './caCerts.js'
 import { logForDebugging } from './debug.js'
 import { isEnvTruthy } from './envUtils.js'
-import {
-  getMTLSAgent,
-  getMTLSConfig,
-  getTLSFetchOptions,
-  type TLSConfig,
-} from './mtls.js'
+import { getMTLSAgent, getMTLSConfig, getTLSFetchOptions, type TLSConfig } from './mtls.js'
 
 // Disable fetch keep-alive after a stale-pool ECONNRESET so retries open a
 // fresh TCP connection instead of reusing the dead pooled socket. Sticky for
@@ -85,10 +82,7 @@ export function getNoProxy(env: EnvLike = process.env): string | undefined {
  * @param urlString URL to check
  * @param noProxy NO_PROXY value (defaults to getNoProxy() for production use)
  */
-export function shouldBypassProxy(
-  urlString: string,
-  noProxy: string | undefined = getNoProxy(),
-): boolean {
+export function shouldBypassProxy(urlString: string, noProxy: string | undefined = getNoProxy()): boolean {
   if (!noProxy) return false
 
   // Handle wildcard
@@ -103,7 +97,7 @@ export function shouldBypassProxy(
     // Split by comma or space and trim each entry
     const noProxyList = noProxy.split(/[,\s]+/).filter(Boolean)
 
-    return noProxyList.some(pattern => {
+    return noProxyList.some((pattern) => {
       pattern = pattern.toLowerCase().trim()
 
       // Check for port-specific match
@@ -132,10 +126,7 @@ export function shouldBypassProxy(
  * Create an HttpsProxyAgent with optional mTLS configuration
  * Skips local DNS resolution to let the proxy handle it
  */
-function createHttpsProxyAgent(
-  proxyUrl: string,
-  extra: HttpsProxyAgentOptions<string> = {},
-): HttpsProxyAgent<string> {
+function createHttpsProxyAgent(proxyUrl: string, extra: HttpsProxyAgentOptions<string> = {}): HttpsProxyAgent<string> {
   const mtlsConfig = getMTLSConfig()
   const caCerts = getCACertificates()
 
@@ -165,9 +156,7 @@ function createHttpsProxyAgent(
  * resolution as the global interceptor, but agent options stay
  * scoped to this instance.
  */
-export function createAxiosInstance(
-  extra: HttpsProxyAgentOptions<string> = {},
-): AxiosInstance {
+export function createAxiosInstance(extra: HttpsProxyAgentOptions<string> = {}): AxiosInstance {
   const proxyUrl = getProxyUrl()
   const mtlsAgent = getMTLSAgent()
   const instance = axios.create({ proxy: false })
@@ -178,7 +167,7 @@ export function createAxiosInstance(
   }
 
   const proxyAgent = createHttpsProxyAgent(proxyUrl, extra)
-  instance.interceptors.request.use(config => {
+  instance.interceptors.request.use((config) => {
     if (config.url && shouldBypassProxy(config.url)) {
       config.httpsAgent = mtlsAgent
       config.httpAgent = mtlsAgent
@@ -347,7 +336,7 @@ export function configureGlobalAgents(): void {
     const proxyAgent = createHttpsProxyAgent(proxyUrl)
 
     // Add axios request interceptor to handle NO_PROXY
-    proxyInterceptorId = axios.interceptors.request.use(config => {
+    proxyInterceptorId = axios.interceptors.request.use((config) => {
       // Check if URL should bypass proxy based on NO_PROXY
       if (config.url && shouldBypassProxy(config.url)) {
         // Bypass proxy - use mTLS agent if configured, otherwise undefined
@@ -369,9 +358,7 @@ export function configureGlobalAgents(): void {
 
     // Set global dispatcher that now respects NO_PROXY via EnvHttpProxyAgent
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    ;(require('undici') as typeof undici).setGlobalDispatcher(
-      getProxyAgent(proxyUrl),
-    )
+    ;(require('undici') as typeof undici).setGlobalDispatcher(getProxyAgent(proxyUrl))
   } else if (mtlsAgent) {
     // No proxy but mTLS is configured
     axios.defaults.httpsAgent = mtlsAgent
@@ -380,9 +367,7 @@ export function configureGlobalAgents(): void {
     const mtlsOptions = getTLSFetchOptions()
     if (mtlsOptions.dispatcher) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      ;(require('undici') as typeof undici).setGlobalDispatcher(
-        mtlsOptions.dispatcher,
-      )
+      ;(require('undici') as typeof undici).setGlobalDispatcher(mtlsOptions.dispatcher)
     }
   }
 }

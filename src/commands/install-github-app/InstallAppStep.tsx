@@ -1,5 +1,6 @@
 import figures from 'figures'
 import React from 'react'
+
 import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app.js'
 import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
@@ -33,9 +34,7 @@ export function InstallAppStep({ repoUrl, onSubmit }: InstallAppStepProps) {
         </Text>
       </Box>
       <Box marginBottom={1}>
-        <Text dimColor>
-          Important: Make sure to grant access to this specific repository
-        </Text>
+        <Text dimColor>Important: Make sure to grant access to this specific repository</Text>
       </Box>
       <Box>
         <Text bold color="permission">
@@ -44,8 +43,7 @@ export function InstallAppStep({ repoUrl, onSubmit }: InstallAppStepProps) {
       </Box>
       <Box marginTop={1}>
         <Text dimColor>
-          Having trouble? See manual setup instructions at:{' '}
-          <Text color="claude">{GITHUB_ACTION_SETUP_DOCS_URL}</Text>
+          Having trouble? See manual setup instructions at: <Text color="claude">{GITHUB_ACTION_SETUP_DOCS_URL}</Text>
         </Text>
       </Box>
     </Box>

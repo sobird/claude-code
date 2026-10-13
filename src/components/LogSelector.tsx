@@ -2,13 +2,14 @@ import chalk from 'chalk'
 import figures from 'figures'
 import Fuse from 'fuse.js'
 import React from 'react'
+
 import { getOriginalCwd, getSessionId } from '../bootstrap/state.js'
 import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeybindings.js'
 import { useSearchInput } from '../hooks/useSearchInput.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
+import { Box, Text, useInput, useTerminalFocus, useTheme } from '../ink.js'
 import { applyColor } from '../ink/colorize.js'
 import type { Color } from '../ink/styles.js'
-import { Box, Text, useInput, useTerminalFocus, useTheme } from '../ink.js'
 import { useKeybinding } from '../keybindings/useKeybinding.js'
 import { logEvent } from '../services/analytics/index.js'
 import type { LogOption, SerializedMessage } from '../types/logs.js'
@@ -52,11 +53,7 @@ export type LogSelectorProps = {
   initialSearchQuery?: string
   showAllProjects?: boolean
   onToggleAllProjects?: () => void
-  onAgenticSearch?: (
-    query: string,
-    logs: LogOption[],
-    signal?: AbortSignal,
-  ) => Promise<LogOption[]>
+  onAgenticSearch?: (query: string, logs: LogOption[], signal?: AbortSignal) => Promise<LogOption[]>
 }
 
 type LogTreeNode = TreeNode<{ log: LogOption; indexInFiltered: number }>
@@ -80,18 +77,11 @@ const SNIPPET_CONTEXT_CHARS = 50 // Characters to show before/after match
 
 type Snippet = { before: string; match: string; after: string }
 
-function formatSnippet(
-  { before, match, after }: Snippet,
-  highlightColor: (text: string) => string,
-): string {
+function formatSnippet({ before, match, after }: Snippet, highlightColor: (text: string) => string): string {
   return chalk.dim(before) + highlightColor(match) + chalk.dim(after)
 }
 
-function extractSnippet(
-  text: string,
-  query: string,
-  contextChars: number,
-): Snippet | null {
+function extractSnippet(text: string, query: string, contextChars: number): Snippet | null {
   // Find exact query occurrence (case-insensitive).
   // Note: Fuse does fuzzy matching, so this may miss some fuzzy matches.
   // This is acceptable for now - in the future we could use Fuse's includeMatches
@@ -108,13 +98,9 @@ function extractSnippet(
   const afterRaw = text.slice(matchEnd, snippetEnd)
 
   return {
-    before:
-      (snippetStart > 0 ? '…' : '') +
-      beforeRaw.replace(/\s+/g, ' ').trimStart(),
+    before: (snippetStart > 0 ? '…' : '') + beforeRaw.replace(/\s+/g, ' ').trimStart(),
     match: matchText.trim(),
-    after:
-      afterRaw.replace(/\s+/g, ' ').trimEnd() +
-      (snippetEnd < text.length ? '…' : ''),
+    after: afterRaw.replace(/\s+/g, ' ').trimEnd() + (snippetEnd < text.length ? '…' : ''),
   }
 }
 
@@ -127,49 +113,27 @@ function buildLogLabel(
     forkCount?: number
   },
 ): string {
-  const {
-    isGroupHeader = false,
-    isChild = false,
-    forkCount = 0,
-  } = options || {}
+  const { isGroupHeader = false, isChild = false, forkCount = 0 } = options || {}
 
   // TreeSelect will add the prefix, so we just need to account for its width
-  const prefixWidth =
-    isGroupHeader && forkCount > 0
-      ? PARENT_PREFIX_WIDTH
-      : isChild
-        ? CHILD_PREFIX_WIDTH
-        : 0
+  const prefixWidth = isGroupHeader && forkCount > 0 ? PARENT_PREFIX_WIDTH : isChild ? CHILD_PREFIX_WIDTH : 0
 
   const sessionCountSuffix =
-    isGroupHeader && forkCount > 0
-      ? ` (+${forkCount} other ${forkCount === 1 ? 'session' : 'sessions'})`
-      : ''
+    isGroupHeader && forkCount > 0 ? ` (+${forkCount} other ${forkCount === 1 ? 'session' : 'sessions'})` : ''
 
   const sidechainSuffix = log.isSidechain ? ' (sidechain)' : ''
 
-  const maxSummaryWidth =
-    maxLabelWidth -
-    prefixWidth -
-    sidechainSuffix.length -
-    sessionCountSuffix.length
-  const truncatedSummary = normalizeAndTruncateToWidth(
-    getLogDisplayTitle(log),
-    maxSummaryWidth,
-  )
+  const maxSummaryWidth = maxLabelWidth - prefixWidth - sidechainSuffix.length - sessionCountSuffix.length
+  const truncatedSummary = normalizeAndTruncateToWidth(getLogDisplayTitle(log), maxSummaryWidth)
   return `${truncatedSummary}${sidechainSuffix}${sessionCountSuffix}`
 }
 
-function buildLogMetadata(
-  log: LogOption,
-  options?: { isChild?: boolean; showProjectPath?: boolean },
-): string {
+function buildLogMetadata(log: LogOption, options?: { isChild?: boolean; showProjectPath?: boolean }): string {
   const { isChild = false, showProjectPath = false } = options || {}
   // Match the child prefix width for proper alignment
   const childPadding = isChild ? '    ' : '' // 4 spaces to match '  ▸ '
   const baseMetadata = formatLogMetadata(log)
-  const projectSuffix =
-    showProjectPath && log.projectPath ? ` · ${log.projectPath}` : ''
+  const projectSuffix = showProjectPath && log.projectPath ? ` · ${log.projectPath}` : ''
   return childPadding + baseMetadata + projectSuffix
 }
 
@@ -207,25 +171,19 @@ export function LogSelector({
   const currentCwd = React.useMemo(() => getOriginalCwd(), [])
   const [renameValue, setRenameValue] = React.useState('')
   const [renameCursorOffset, setRenameCursorOffset] = React.useState(0)
-  const [expandedGroupSessionIds, setExpandedGroupSessionIds] = React.useState<
-    Set<string>
-  >(new Set())
+  const [expandedGroupSessionIds, setExpandedGroupSessionIds] = React.useState<Set<string>>(new Set())
   const [focusedNode, setFocusedNode] = React.useState<LogTreeNode | null>(null)
   // Track focused index for scroll position display in title
   const [focusedIndex, setFocusedIndex] = React.useState(1)
-  const [viewMode, setViewMode] = React.useState<
-    'list' | 'preview' | 'rename' | 'search'
-  >('list')
+  const [viewMode, setViewMode] = React.useState<'list' | 'preview' | 'rename' | 'search'>('list')
   const [previewLog, setPreviewLog] = React.useState<LogOption | null>(null)
   const prevFocusedIdRef = React.useRef<string | null>(null)
   const [selectedTagIndex, setSelectedTagIndex] = React.useState(0)
 
   // Agentic search state
-  const [agenticSearchState, setAgenticSearchState] =
-    React.useState<AgenticSearchState>({ status: 'idle' })
+  const [agenticSearchState, setAgenticSearchState] = React.useState<AgenticSearchState>({ status: 'idle' })
   // Track if the "Search deeply using Claude" option is focused
-  const [isAgenticSearchOptionFocused, setIsAgenticSearchOptionFocused] =
-    React.useState(false)
+  const [isAgenticSearchOptionFocused, setIsAgenticSearchOptionFocused] = React.useState(false)
   // AbortController for cancelling agentic search
   const agenticSearchAbortRef = React.useRef<AbortController | null>(null)
 
@@ -234,8 +192,7 @@ export function LogSelector({
     setQuery: setSearchQuery,
     cursorOffset: searchCursorOffset,
   } = useSearchInput({
-    isActive:
-      viewMode === 'search' && agenticSearchState.status !== 'searching',
+    isActive: viewMode === 'search' && agenticSearchState.status !== 'searching',
     onExit: () => {
       setViewMode('list')
       logEvent('tengu_session_search_toggled', { enabled: false })
@@ -252,18 +209,13 @@ export function LogSelector({
   const deferredSearchQuery = React.useDeferredValue(searchQuery)
 
   // Additional debounce for deep search - wait 300ms after typing stops
-  const [debouncedDeepSearchQuery, setDebouncedDeepSearchQuery] =
-    React.useState('')
+  const [debouncedDeepSearchQuery, setDebouncedDeepSearchQuery] = React.useState('')
   React.useEffect(() => {
     if (!deferredSearchQuery) {
       setDebouncedDeepSearchQuery('')
       return
     }
-    const timeoutId = setTimeout(
-      setDebouncedDeepSearchQuery,
-      300,
-      deferredSearchQuery,
-    )
+    const timeoutId = setTimeout(setDebouncedDeepSearchQuery, 300, deferredSearchQuery)
     return () => clearTimeout(timeoutId)
   }, [deferredSearchQuery])
 
@@ -275,28 +227,25 @@ export function LogSelector({
   const [isSearching, setIsSearching] = React.useState(false)
 
   React.useEffect(() => {
-    void getBranch().then(branch => setCurrentBranch(branch))
-    void getWorktreePaths(currentCwd).then(paths => {
+    void getBranch().then((branch) => setCurrentBranch(branch))
+    void getWorktreePaths(currentCwd).then((paths) => {
       setHasMultipleWorktrees(paths.length > 1)
     })
   }, [currentCwd])
 
   // Memoize searchable text extraction - only recompute when logs change
-  const searchableTextByLog = React.useMemo(
-    () => new Map(logs.map(log => [log, buildSearchableText(log)])),
-    [logs],
-  )
+  const searchableTextByLog = React.useMemo(() => new Map(logs.map((log) => [log, buildSearchableText(log)])), [logs])
 
   // Pre-build Fuse index once when logs change (not on every search query)
   const fuseIndex = React.useMemo(() => {
     if (!isDeepSearchEnabled) return null
 
     const logsWithText = logs
-      .map(log => ({
+      .map((log) => ({
         log,
         searchableText: searchableTextByLog.get(log) ?? '',
       }))
-      .filter(item => item.searchableText)
+      .filter((item) => item.searchableText)
 
     return new Fuse(logsWithText, {
       keys: ['searchableText'],
@@ -309,16 +258,10 @@ export function LogSelector({
   // Compute unique tags from logs (before any filtering)
   const uniqueTags = React.useMemo(() => getUniqueTags(logs), [logs])
   const hasTags = uniqueTags.length > 0
-  const tagTabs = React.useMemo(
-    () => (hasTags ? ['All', ...uniqueTags] : []),
-    [hasTags, uniqueTags],
-  )
+  const tagTabs = React.useMemo(() => (hasTags ? ['All', ...uniqueTags] : []), [hasTags, uniqueTags])
 
   // Clamp out-of-bounds index (e.g., after logs change) without an extra render
-  const effectiveTagIndex =
-    tagTabs.length > 0 && selectedTagIndex < tagTabs.length
-      ? selectedTagIndex
-      : 0
+  const effectiveTagIndex = tagTabs.length > 0 && selectedTagIndex < tagTabs.length ? selectedTagIndex : 0
   const selectedTab = tagTabs[effectiveTagIndex]
   const tagFilter = selectedTab === 'All' ? undefined : selectedTab
 
@@ -329,11 +272,10 @@ export function LogSelector({
   const baseFilteredLogs = React.useMemo(() => {
     let filtered = logs
     if (isResumeWithRenameEnabled) {
-      filtered = logs.filter(log => {
+      filtered = logs.filter((log) => {
         const currentSessionId = getSessionId()
         const logSessionId = getSessionIdFromLog(log)
-        const isCurrentSession =
-          currentSessionId && logSessionId === currentSessionId
+        const isCurrentSession = currentSessionId && logSessionId === currentSessionId
         // Always show current session
         if (isCurrentSession) {
           return true
@@ -343,9 +285,7 @@ export function LogSelector({
           return true
         }
         // For full logs, check messages array
-        const fromMessages = getFirstMeaningfulUserMessageTextContent(
-          log.messages,
-        )
+        const fromMessages = getFirstMeaningfulUserMessageTextContent(log.messages)
         if (fromMessages) {
           return true
         }
@@ -360,15 +300,15 @@ export function LogSelector({
 
     // Apply tag filter if specified
     if (tagFilter !== undefined) {
-      filtered = filtered.filter(log => log.tag === tagFilter)
+      filtered = filtered.filter((log) => log.tag === tagFilter)
     }
 
     if (branchFilterEnabled && currentBranch) {
-      filtered = filtered.filter(log => log.gitBranch === currentBranch)
+      filtered = filtered.filter((log) => log.gitBranch === currentBranch)
     }
 
     if (hasMultipleWorktrees && !showAllWorktrees) {
-      filtered = filtered.filter(log => log.projectPath === currentCwd)
+      filtered = filtered.filter((log) => log.projectPath === currentCwd)
     }
 
     return filtered
@@ -389,29 +329,18 @@ export function LogSelector({
       return baseFilteredLogs
     }
     const query = searchQuery.toLowerCase()
-    return baseFilteredLogs.filter(log => {
+    return baseFilteredLogs.filter((log) => {
       const displayedTitle = getLogDisplayTitle(log).toLowerCase()
       const branch = (log.gitBranch || '').toLowerCase()
       const tag = (log.tag || '').toLowerCase()
-      const prInfo = log.prNumber
-        ? `pr #${log.prNumber} ${log.prRepository || ''}`.toLowerCase()
-        : ''
-      return (
-        displayedTitle.includes(query) ||
-        branch.includes(query) ||
-        tag.includes(query) ||
-        prInfo.includes(query)
-      )
+      const prInfo = log.prNumber ? `pr #${log.prNumber} ${log.prRepository || ''}`.toLowerCase() : ''
+      return displayedTitle.includes(query) || branch.includes(query) || tag.includes(query) || prInfo.includes(query)
     })
   }, [baseFilteredLogs, searchQuery])
 
   // Show searching indicator when query is pending debounce
   React.useEffect(() => {
-    if (
-      isDeepSearchEnabled &&
-      deferredSearchQuery &&
-      deferredSearchQuery !== debouncedDeepSearchQuery
-    ) {
+    if (isDeepSearchEnabled && deferredSearchQuery && deferredSearchQuery !== debouncedDeepSearchQuery) {
       setIsSearching(true)
     }
   }, [deferredSearchQuery, debouncedDeepSearchQuery, isDeepSearchEnabled])
@@ -426,12 +355,7 @@ export function LogSelector({
 
     // Use setTimeout(0) to yield to the event loop - prevents UI freeze
     const timeoutId = setTimeout(
-      (
-        fuseIndex,
-        debouncedDeepSearchQuery,
-        setDeepSearchResults,
-        setIsSearching,
-      ) => {
+      (fuseIndex, debouncedDeepSearchQuery, setDeepSearchResults, setIsSearching) => {
         const results = fuseIndex.search(debouncedDeepSearchQuery)
 
         // Sort by date (newest first), with relevance as tie-breaker within same minute
@@ -447,7 +371,7 @@ export function LogSelector({
         })
 
         setDeepSearchResults({
-          results: results.map(r => ({
+          results: results.map((r) => ({
             log: r.item.log,
             score: r.score,
             searchableText: r.item.searchableText,
@@ -476,19 +400,11 @@ export function LogSelector({
     let filtered = titleFilteredLogs
 
     // Merge in deep search results if available and query matches
-    if (
-      deepSearchResults &&
-      debouncedDeepSearchQuery &&
-      deepSearchResults.query === debouncedDeepSearchQuery
-    ) {
+    if (deepSearchResults && debouncedDeepSearchQuery && deepSearchResults.query === debouncedDeepSearchQuery) {
       // Extract snippets from deep search results
       for (const result of deepSearchResults.results) {
         if (result.searchableText) {
-          const snippet = extractSnippet(
-            result.searchableText,
-            debouncedDeepSearchQuery,
-            SNIPPET_CONTEXT_CHARS,
-          )
+          const snippet = extractSnippet(result.searchableText, debouncedDeepSearchQuery, SNIPPET_CONTEXT_CHARS)
           if (snippet) {
             snippetMap.set(result.log, snippet)
           }
@@ -496,10 +412,10 @@ export function LogSelector({
       }
 
       // Add transcript-only matches (not already in title matches)
-      const titleMatchIds = new Set(filtered.map(log => log.messages[0]?.uuid))
+      const titleMatchIds = new Set(filtered.map((log) => log.messages[0]?.uuid))
       const transcriptOnlyMatches = deepSearchResults.results
-        .map(r => r.log)
-        .filter(log => !titleMatchIds.has(log.messages[0]?.uuid))
+        .map((r) => r.log)
+        .filter((log) => !titleMatchIds.has(log.messages[0]?.uuid))
       filtered = [...filtered, ...transcriptOnlyMatches]
     }
 
@@ -508,10 +424,7 @@ export function LogSelector({
 
   // Use agentic search results when available and non-empty, otherwise use regular filtered logs
   const displayedLogs = React.useMemo(() => {
-    if (
-      agenticSearchState.status === 'results' &&
-      agenticSearchState.results.length > 0
-    ) {
+    if (agenticSearchState.status === 'results' && agenticSearchState.results.length > 0) {
       return agenticSearchState.results
     }
     return filteredLogs
@@ -528,78 +441,61 @@ export function LogSelector({
 
     const sessionGroups = groupLogsBySessionId(displayedLogs)
 
-    return Array.from(sessionGroups.entries()).map(
-      ([sessionId, groupLogs]): LogTreeNode => {
-        const latestLog = groupLogs[0]!
-        const indexInFiltered = displayedLogs.indexOf(latestLog)
-        const snippet = snippets.get(latestLog)
-        const snippetStr = snippet
-          ? formatSnippet(snippet, highlightColor)
-          : null
+    return Array.from(sessionGroups.entries()).map(([sessionId, groupLogs]): LogTreeNode => {
+      const latestLog = groupLogs[0]!
+      const indexInFiltered = displayedLogs.indexOf(latestLog)
+      const snippet = snippets.get(latestLog)
+      const snippetStr = snippet ? formatSnippet(snippet, highlightColor) : null
 
-        if (groupLogs.length === 1) {
-          // Single log - no children
-          const metadata = buildLogMetadata(latestLog, {
-            showProjectPath: showAllProjects,
-          })
-          return {
-            id: `log:${sessionId}:0`,
-            value: { log: latestLog, indexInFiltered },
-            label: buildLogLabel(latestLog, maxLabelWidth),
-            description: snippetStr ? `${metadata}\n  ${snippetStr}` : metadata,
-            dimDescription: true,
-          }
-        }
-
-        // Multiple logs - parent with children
-        const forkCount = groupLogs.length - 1
-        const children: LogTreeNode[] = groupLogs.slice(1).map((log, index) => {
-          const childIndexInFiltered = displayedLogs.indexOf(log)
-          const childSnippet = snippets.get(log)
-          const childSnippetStr = childSnippet
-            ? formatSnippet(childSnippet, highlightColor)
-            : null
-          const childMetadata = buildLogMetadata(log, {
-            isChild: true,
-            showProjectPath: showAllProjects,
-          })
-          return {
-            id: `log:${sessionId}:${index + 1}`,
-            value: { log, indexInFiltered: childIndexInFiltered },
-            label: buildLogLabel(log, maxLabelWidth, { isChild: true }),
-            description: childSnippetStr
-              ? `${childMetadata}\n      ${childSnippetStr}`
-              : childMetadata,
-            dimDescription: true,
-          }
-        })
-
-        const parentMetadata = buildLogMetadata(latestLog, {
+      if (groupLogs.length === 1) {
+        // Single log - no children
+        const metadata = buildLogMetadata(latestLog, {
           showProjectPath: showAllProjects,
         })
         return {
-          id: `group:${sessionId}`,
+          id: `log:${sessionId}:0`,
           value: { log: latestLog, indexInFiltered },
-          label: buildLogLabel(latestLog, maxLabelWidth, {
-            isGroupHeader: true,
-            forkCount,
-          }),
-          description: snippetStr
-            ? `${parentMetadata}\n  ${snippetStr}`
-            : parentMetadata,
+          label: buildLogLabel(latestLog, maxLabelWidth),
+          description: snippetStr ? `${metadata}\n  ${snippetStr}` : metadata,
           dimDescription: true,
-          children,
         }
-      },
-    )
-  }, [
-    isResumeWithRenameEnabled,
-    displayedLogs,
-    maxLabelWidth,
-    showAllProjects,
-    snippets,
-    highlightColor,
-  ])
+      }
+
+      // Multiple logs - parent with children
+      const forkCount = groupLogs.length - 1
+      const children: LogTreeNode[] = groupLogs.slice(1).map((log, index) => {
+        const childIndexInFiltered = displayedLogs.indexOf(log)
+        const childSnippet = snippets.get(log)
+        const childSnippetStr = childSnippet ? formatSnippet(childSnippet, highlightColor) : null
+        const childMetadata = buildLogMetadata(log, {
+          isChild: true,
+          showProjectPath: showAllProjects,
+        })
+        return {
+          id: `log:${sessionId}:${index + 1}`,
+          value: { log, indexInFiltered: childIndexInFiltered },
+          label: buildLogLabel(log, maxLabelWidth, { isChild: true }),
+          description: childSnippetStr ? `${childMetadata}\n      ${childSnippetStr}` : childMetadata,
+          dimDescription: true,
+        }
+      })
+
+      const parentMetadata = buildLogMetadata(latestLog, {
+        showProjectPath: showAllProjects,
+      })
+      return {
+        id: `group:${sessionId}`,
+        value: { log: latestLog, indexInFiltered },
+        label: buildLogLabel(latestLog, maxLabelWidth, {
+          isGroupHeader: true,
+          forkCount,
+        }),
+        description: snippetStr ? `${parentMetadata}\n  ${snippetStr}` : parentMetadata,
+        dimDescription: true,
+        children,
+      }
+    })
+  }, [isResumeWithRenameEnabled, displayedLogs, maxLabelWidth, showAllProjects, snippets, highlightColor])
 
   // Build options for old flat list view
   const flatOptions = React.useMemo(() => {
@@ -609,16 +505,11 @@ export function LogSelector({
 
     return displayedLogs.map((log, index) => {
       const rawSummary = getLogDisplayTitle(log)
-      const summaryWithSidechain =
-        rawSummary + (log.isSidechain ? ' (sidechain)' : '')
-      const summary = normalizeAndTruncateToWidth(
-        summaryWithSidechain,
-        maxLabelWidth,
-      )
+      const summaryWithSidechain = rawSummary + (log.isSidechain ? ' (sidechain)' : '')
+      const summary = normalizeAndTruncateToWidth(summaryWithSidechain, maxLabelWidth)
 
       const baseDescription = formatLogMetadata(log)
-      const projectSuffix =
-        showAllProjects && log.projectPath ? ` · ${log.projectPath}` : ''
+      const projectSuffix = showAllProjects && log.projectPath ? ` · ${log.projectPath}` : ''
       const snippet = snippets.get(log)
       const snippetStr = snippet ? formatSnippet(snippet, highlightColor) : null
 
@@ -631,14 +522,7 @@ export function LogSelector({
         value: index.toString(),
       }
     })
-  }, [
-    isResumeWithRenameEnabled,
-    displayedLogs,
-    highlightColor,
-    maxLabelWidth,
-    showAllProjects,
-    snippets,
-  ])
+  }, [isResumeWithRenameEnabled, displayedLogs, highlightColor, maxLabelWidth, showAllProjects, snippets])
 
   // Derive the focused log from focusedNode
   const focusedLog = focusedNode?.value.log ?? null
@@ -648,9 +532,7 @@ export function LogSelector({
     const sessionId = getSessionIdFromLog(focusedLog)
     if (!sessionId) return ''
 
-    const sessionLogs = displayedLogs.filter(
-      log => getSessionIdFromLog(log) === sessionId,
-    )
+    const sessionLogs = displayedLogs.filter((log) => getSessionIdFromLog(log) === sessionId)
     const hasMultipleLogs = sessionLogs.length > 1
 
     if (!hasMultipleLogs) return ''
@@ -711,11 +593,7 @@ export function LogSelector({
     })
 
     try {
-      const results = await onAgenticSearch(
-        searchQuery,
-        logs,
-        abortController.signal,
-      )
+      const results = await onAgenticSearch(searchQuery, logs, abortController.signal)
       // Check if aborted before updating state
       if (abortController.signal.aborted) {
         return
@@ -742,14 +620,10 @@ export function LogSelector({
 
   // Clear agentic search results/error when query changes
   React.useEffect(() => {
-    if (
-      agenticSearchState.status !== 'idle' &&
-      agenticSearchState.status !== 'searching'
-    ) {
+    if (agenticSearchState.status !== 'idle' && agenticSearchState.status !== 'searching') {
       // Clear if the query has changed from the one used for results/error
       if (
-        (agenticSearchState.status === 'results' &&
-          agenticSearchState.query !== searchQuery) ||
+        (agenticSearchState.status === 'results' && agenticSearchState.query !== searchQuery) ||
         agenticSearchState.status === 'error'
       ) {
         setAgenticSearchState({ status: 'idle' })
@@ -783,12 +657,7 @@ export function LogSelector({
         })
       }
     }
-  }, [
-    agenticSearchState.status,
-    isResumeWithRenameEnabled,
-    treeNodes,
-    displayedLogs,
-  ])
+  }, [agenticSearchState.status, isResumeWithRenameEnabled, treeNodes, displayedLogs])
 
   const handleFlatOptionsSelectFocus = React.useCallback(
     (value: string) => {
@@ -812,9 +681,7 @@ export function LogSelector({
     (node: LogTreeNode) => {
       setFocusedNode(node)
       // Update focused index for scroll position display
-      const index = displayedLogs.findIndex(
-        log => getSessionIdFromLog(log) === getSessionIdFromLog(node.value.log),
-      )
+      const index = displayedLogs.findIndex((log) => getSessionIdFromLog(log) === getSessionIdFromLog(node.value.log))
       if (index >= 0) {
         setFocusedIndex(index + 1)
       }
@@ -832,8 +699,7 @@ export function LogSelector({
     },
     {
       context: 'Confirmation',
-      isActive:
-        viewMode !== 'preview' && agenticSearchState.status === 'searching',
+      isActive: viewMode !== 'preview' && agenticSearchState.status === 'searching',
     },
   )
 
@@ -847,8 +713,7 @@ export function LogSelector({
     },
     {
       context: 'Settings',
-      isActive:
-        viewMode === 'rename' && agenticSearchState.status !== 'searching',
+      isActive: viewMode === 'rename' && agenticSearchState.status !== 'searching',
     },
   )
 
@@ -925,10 +790,9 @@ export function LogSelector({
         // Handle tab cycling for tag tabs
         if (hasTags && key.tab) {
           const offset = key.shift ? -1 : 1
-          setSelectedTagIndex(prev => {
+          setSelectedTagIndex((prev) => {
             const current = prev < tagTabs.length ? prev : 0
-            const newIndex =
-              (current + tagTabs.length + offset) % tagTabs.length
+            const newIndex = (current + tagTabs.length + offset) % tagTabs.length
             const newTab = tagTabs[newIndex]
             logEvent('tengu_session_tag_filter_changed', {
               is_all: newTab === 'All',
@@ -972,12 +836,7 @@ export function LogSelector({
           logEvent('tengu_session_preview_opened', {
             messageCount: focusedLog.messageCount,
           })
-        } else if (
-          focusedLog &&
-          keyIsNotCtrlOrMeta &&
-          input.length > 0 &&
-          !/^\s+$/.test(input)
-        ) {
+        } else if (focusedLog && keyIsNotCtrlOrMeta && input.length > 0 && !/^\s+$/.test(input)) {
           // Any printable character enters search mode and starts typing
           setViewMode('search')
           setSearchQuery(input)
@@ -996,18 +855,13 @@ export function LogSelector({
     filterIndicators.push('current worktree')
   }
 
-  const showAdditionalFilterLine =
-    filterIndicators.length > 0 && viewMode !== 'search'
+  const showAdditionalFilterLine = filterIndicators.length > 0 && viewMode !== 'search'
 
   // Search box takes 3 lines (border top, content, border bottom)
   const searchBoxLines = 3
-  const headerLines =
-    5 + searchBoxLines + (showAdditionalFilterLine ? 1 : 0) + tagTabsLines
+  const headerLines = 5 + searchBoxLines + (showAdditionalFilterLine ? 1 : 0) + tagTabsLines
   const footerLines = 2
-  const visibleCount = Math.max(
-    1,
-    Math.floor((maxHeight - headerLines - footerLines) / 3),
-  )
+  const visibleCount = Math.max(1, Math.floor((maxHeight - headerLines - footerLines) / 3))
 
   // Progressive loading: request more logs when user scrolls near the end
   React.useEffect(() => {
@@ -1092,14 +946,13 @@ export function LogSelector({
       )}
 
       {/* Results header when agentic search completed with results */}
-      {agenticSearchState.status === 'results' &&
-        agenticSearchState.results.length > 0 && (
-          <Box paddingLeft={1} marginBottom={1} flexShrink={0}>
-            <Text dimColor italic>
-              Claude found these results:
-            </Text>
-          </Box>
-        )}
+      {agenticSearchState.status === 'results' && agenticSearchState.results.length > 0 && (
+        <Box paddingLeft={1} marginBottom={1} flexShrink={0}>
+          <Text dimColor italic>
+            Claude found these results:
+          </Text>
+        </Box>
+      )}
 
       {/* Fallback message when agentic search found no results and deep search also has nothing */}
       {agenticSearchState.status === 'results' &&
@@ -1130,15 +983,10 @@ export function LogSelector({
         agenticSearchState.status !== 'error' && (
           <Box flexShrink={0} flexDirection="column">
             <Box flexDirection="row" gap={1}>
-              <Text
-                color={isAgenticSearchOptionFocused ? 'suggestion' : undefined}
-              >
+              <Text color={isAgenticSearchOptionFocused ? 'suggestion' : undefined}>
                 {isAgenticSearchOptionFocused ? figures.pointer : ' '}
               </Text>
-              <Text
-                color={isAgenticSearchOptionFocused ? 'suggestion' : undefined}
-                bold={isAgenticSearchOptionFocused}
-              >
+              <Text color={isAgenticSearchOptionFocused ? 'suggestion' : undefined} bold={isAgenticSearchOptionFocused}>
                 Search deeply using Claude →
               </Text>
             </Box>
@@ -1147,8 +995,7 @@ export function LogSelector({
         )}
 
       {/* Hide session list when agentic search is in progress */}
-      {agenticSearchState.status === 'searching' ? null : viewMode ===
-          'rename' && focusedLog ? (
+      {agenticSearchState.status === 'searching' ? null : viewMode === 'rename' && focusedLog ? (
         <Box paddingLeft={2} flexDirection="column">
           <Text bold>Rename session:</Text>
           <Box paddingTop={1}>
@@ -1156,10 +1003,7 @@ export function LogSelector({
               value={renameValue}
               onChange={setRenameValue}
               onSubmit={handleRenameSubmit}
-              placeholder={getLogDisplayTitle(
-                focusedLog!,
-                'Enter new session name',
-              )}
+              placeholder={getLogDisplayTitle(focusedLog!, 'Enter new session name')}
               columns={columns}
               cursorOffset={renameCursorOffset}
               onChangeCursorOffset={setRenameCursorOffset}
@@ -1170,7 +1014,7 @@ export function LogSelector({
       ) : isResumeWithRenameEnabled ? (
         <TreeSelect
           nodes={treeNodes}
-          onSelect={node => {
+          onSelect={(node) => {
             onSelect(node.value.log)
           }}
           onFocus={handleTreeSelectFocus}
@@ -1180,35 +1024,26 @@ export function LogSelector({
           layout="expanded"
           isDisabled={viewMode === 'search' || isAgenticSearchOptionFocused}
           hideIndexes={false}
-          isNodeExpanded={nodeId => {
+          isNodeExpanded={(nodeId) => {
             // Always expand if in search or branch filter mode
             if (viewMode === 'search' || branchFilterEnabled) {
               return true
             }
             // Extract sessionId from node ID (format: "group:sessionId")
-            const sessionId =
-              typeof nodeId === 'string' && nodeId.startsWith('group:')
-                ? nodeId.substring(6)
-                : null
+            const sessionId = typeof nodeId === 'string' && nodeId.startsWith('group:') ? nodeId.substring(6) : null
             return sessionId ? expandedGroupSessionIds.has(sessionId) : false
           }}
-          onExpand={nodeId => {
-            const sessionId =
-              typeof nodeId === 'string' && nodeId.startsWith('group:')
-                ? nodeId.substring(6)
-                : null
+          onExpand={(nodeId) => {
+            const sessionId = typeof nodeId === 'string' && nodeId.startsWith('group:') ? nodeId.substring(6) : null
             if (sessionId) {
-              setExpandedGroupSessionIds(prev => new Set(prev).add(sessionId))
+              setExpandedGroupSessionIds((prev) => new Set(prev).add(sessionId))
               logEvent('tengu_session_group_expanded', {})
             }
           }}
-          onCollapse={nodeId => {
-            const sessionId =
-              typeof nodeId === 'string' && nodeId.startsWith('group:')
-                ? nodeId.substring(6)
-                : null
+          onCollapse={(nodeId) => {
+            const sessionId = typeof nodeId === 'string' && nodeId.startsWith('group:') ? nodeId.substring(6) : null
             if (sessionId) {
-              setExpandedGroupSessionIds(prev => {
+              setExpandedGroupSessionIds((prev) => {
                 const newSet = new Set(prev)
                 newSet.delete(sessionId)
                 return newSet
@@ -1220,7 +1055,7 @@ export function LogSelector({
       ) : (
         <Select
           options={flatOptions}
-          onChange={value => {
+          onChange={(value) => {
             // Old flat list mode - index directly maps to displayedLogs
             const itemIndex = parseInt(value, 10)
             const log = displayedLogs[itemIndex]
@@ -1280,18 +1115,9 @@ export function LogSelector({
         ) : viewMode === 'search' ? (
           <Text dimColor>
             <Byline>
-              <Text>
-                {isSearching && isDeepSearchEnabled
-                  ? 'Searching…'
-                  : 'Type to Search'}
-              </Text>
+              <Text>{isSearching && isDeepSearchEnabled ? 'Searching…' : 'Type to Search'}</Text>
               <KeyboardShortcutHint shortcut="Enter" action="select" />
-              <ConfigurableShortcutHint
-                action="confirm:no"
-                context="Confirmation"
-                fallback="Esc"
-                description="clear"
-              />
+              <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="clear" />
             </Byline>
           </Text>
         ) : (
@@ -1303,12 +1129,7 @@ export function LogSelector({
                   action={`show ${showAllProjects ? 'current dir' : 'all projects'}`}
                 />
               )}
-              {currentBranch && (
-                <KeyboardShortcutHint
-                  shortcut="Ctrl+B"
-                  action="toggle branch"
-                />
-              )}
+              {currentBranch && <KeyboardShortcutHint shortcut="Ctrl+B" action="toggle branch" />}
               {hasMultipleWorktrees && (
                 <KeyboardShortcutHint
                   shortcut="Ctrl+W"
@@ -1324,9 +1145,7 @@ export function LogSelector({
                 fallback="Esc"
                 description="cancel"
               />
-              {getExpandCollapseHint() && (
-                <Text>{getExpandCollapseHint()}</Text>
-              )}
+              {getExpandCollapseHint() && <Text>{getExpandCollapseHint()}</Text>}
             </Byline>
           </Text>
         )}
@@ -1356,7 +1175,7 @@ function extractSearchableText(message: SerializedMessage): string {
   // Handle array of content blocks
   if (Array.isArray(content)) {
     return content
-      .map(block => {
+      .map((block) => {
         if (typeof block === 'string') return block
         if ('text' in block && typeof block.text === 'string') return block.text
         return ''
@@ -1378,14 +1197,8 @@ function buildSearchableText(log: LogOption): string {
   const searchableMessages =
     log.messages.length <= DEEP_SEARCH_MAX_MESSAGES
       ? log.messages
-      : [
-          ...log.messages.slice(0, DEEP_SEARCH_CROP_SIZE),
-          ...log.messages.slice(-DEEP_SEARCH_CROP_SIZE),
-        ]
-  const messageText = searchableMessages
-    .map(extractSearchableText)
-    .filter(Boolean)
-    .join(' ')
+      : [...log.messages.slice(0, DEEP_SEARCH_CROP_SIZE), ...log.messages.slice(-DEEP_SEARCH_CROP_SIZE)]
+  const messageText = searchableMessages.map(extractSearchableText).filter(Boolean).join(' ')
 
   const metadata = [
     log.customTitle,
@@ -1400,14 +1213,10 @@ function buildSearchableText(log: LogOption): string {
     .join(' ')
 
   const fullText = `${metadata} ${messageText}`.trim()
-  return fullText.length > DEEP_SEARCH_MAX_TEXT_LENGTH
-    ? fullText.slice(0, DEEP_SEARCH_MAX_TEXT_LENGTH)
-    : fullText
+  return fullText.length > DEEP_SEARCH_MAX_TEXT_LENGTH ? fullText.slice(0, DEEP_SEARCH_MAX_TEXT_LENGTH) : fullText
 }
 
-function groupLogsBySessionId(
-  filteredLogs: LogOption[],
-): Map<string, LogOption[]> {
+function groupLogsBySessionId(filteredLogs: LogOption[]): Map<string, LogOption[]> {
   const groups = new Map<string, LogOption[]>()
 
   for (const log of filteredLogs) {
@@ -1423,11 +1232,7 @@ function groupLogsBySessionId(
   }
 
   // Sort logs within each group by modified date (newest first)
-  groups.forEach(logs =>
-    logs.sort(
-      (a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime(),
-    ),
-  )
+  groups.forEach((logs) => logs.sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime()))
 
   return groups
 }

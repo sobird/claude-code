@@ -15,10 +15,7 @@ import { updateAgentSummary } from '../../tasks/LocalAgentTask/LocalAgentTask.js
 import { filterIncompleteToolCalls } from '../../tools/AgentTool/runAgent.js'
 import type { AgentId } from '../../types/ids.js'
 import { logForDebugging } from '../../utils/debug.js'
-import {
-  type CacheSafeParams,
-  runForkedAgent,
-} from '../../utils/forkedAgent.js'
+import { type CacheSafeParams, runForkedAgent } from '../../utils/forkedAgent.js'
 import { logError } from '../../utils/log.js'
 import { createUserMessage } from '../../utils/messages.js'
 import { getAgentTranscript } from '../../utils/sessionStorage.js'
@@ -26,9 +23,7 @@ import { getAgentTranscript } from '../../utils/sessionStorage.js'
 const SUMMARY_INTERVAL_MS = 30_000
 
 function buildSummaryPrompt(previousSummary: string | null): string {
-  const prevLine = previousSummary
-    ? `\nPrevious: "${previousSummary}" — say something NEW.\n`
-    : ''
+  const prevLine = previousSummary ? `\nPrevious: "${previousSummary}" — say something NEW.\n` : ''
 
   return `Describe your most recent action in 3-5 words using present tense (-ing). Name the file or function, not the branch. Do not use tools.
 ${prevLine}
@@ -83,9 +78,7 @@ export function startAgentSummarization(
         forkContextMessages: cleanMessages,
       }
 
-      logForDebugging(
-        `[AgentSummary] Forking for summary, ${cleanMessages.length} messages in context`,
-      )
+      logForDebugging(`[AgentSummary] Forking for summary, ${cleanMessages.length} messages in context`)
 
       // Create abort controller for this summary
       summaryAbortController = new AbortController()
@@ -107,9 +100,7 @@ export function startAgentSummarization(
       // from forkParams.toolUseContext (the subagent's LIVE state captured at
       // onCacheSafeParams time). No explicit override needed.
       const result = await runForkedAgent({
-        promptMessages: [
-          createUserMessage({ content: buildSummaryPrompt(previousSummary) }),
-        ],
+        promptMessages: [createUserMessage({ content: buildSummaryPrompt(previousSummary) })],
         cacheSafeParams: forkParams,
         canUseTool,
         querySource: 'agent_summary',
@@ -125,17 +116,13 @@ export function startAgentSummarization(
         if (msg.type !== 'assistant') continue
         // Skip API error messages
         if (msg.isApiErrorMessage) {
-          logForDebugging(
-            `[AgentSummary] Skipping API error message for ${taskId}`,
-          )
+          logForDebugging(`[AgentSummary] Skipping API error message for ${taskId}`)
           continue
         }
-        const textBlock = msg.message.content.find(b => b.type === 'text')
+        const textBlock = msg.message.content.find((b) => b.type === 'text')
         if (textBlock?.type === 'text' && textBlock.text.trim()) {
           const summaryText = textBlock.text.trim()
-          logForDebugging(
-            `[AgentSummary] Summary result for ${taskId}: ${summaryText}`,
-          )
+          logForDebugging(`[AgentSummary] Summary result for ${taskId}: ${summaryText}`)
           previousSummary = summaryText
           updateAgentSummary(taskId, summaryText, setAppState)
           break

@@ -1,9 +1,4 @@
-import type {
-  Chord,
-  KeybindingBlock,
-  ParsedBinding,
-  ParsedKeystroke,
-} from './types.js'
+import type { Chord, KeybindingBlock, ParsedBinding, ParsedKeystroke } from './types.js'
 
 /**
  * Parse a keystroke string like "ctrl+shift+k" into a ParsedKeystroke.
@@ -154,10 +149,7 @@ type DisplayPlatform = 'macos' | 'windows' | 'linux' | 'wsl' | 'unknown'
  * Convert a ParsedKeystroke to a platform-appropriate display string.
  * Uses "opt" for alt on macOS, "alt" elsewhere.
  */
-export function keystrokeToDisplayString(
-  ks: ParsedKeystroke,
-  platform: DisplayPlatform = 'linux',
-): string {
+export function keystrokeToDisplayString(ks: ParsedKeystroke, platform: DisplayPlatform = 'linux'): string {
   const parts: string[] = []
   if (ks.ctrl) parts.push('ctrl')
   // Alt/meta are equivalent in terminals, show platform-appropriate name
@@ -178,11 +170,8 @@ export function keystrokeToDisplayString(
 /**
  * Convert a Chord to a platform-appropriate display string.
  */
-export function chordToDisplayString(
-  chord: Chord,
-  platform: DisplayPlatform = 'linux',
-): string {
-  return chord.map(ks => keystrokeToDisplayString(ks, platform)).join(' ')
+export function chordToDisplayString(chord: Chord, platform: DisplayPlatform = 'linux'): string {
+  return chord.map((ks) => keystrokeToDisplayString(ks, platform)).join(' ')
 }
 
 /**

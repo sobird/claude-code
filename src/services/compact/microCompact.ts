@@ -1,5 +1,7 @@
 import { feature } from 'bun:bundle'
+
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+
 import type { QuerySource } from '../../constants/querySource.js'
 import type { ToolUseContext } from '../../Tool.js'
 import { FILE_EDIT_TOOL_NAME } from '../../tools/FileEditTool/constants.js'
@@ -14,20 +16,11 @@ import { logForDebugging } from '../../utils/debug.js'
 import { getMainLoopModel } from '../../utils/model/model.js'
 import { SHELL_TOOL_NAMES } from '../../utils/shell/shellToolUtils.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
-import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  logEvent,
-} from '../analytics/index.js'
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../analytics/index.js'
 import { notifyCacheDeletion } from '../api/promptCacheBreakDetection.js'
 import { roughTokenCountEstimation } from '../tokenEstimation.js'
-import {
-  clearCompactWarningSuppression,
-  suppressCompactWarning,
-} from './compactWarningState.js'
-import {
-  getTimeBasedMCConfig,
-  type TimeBasedMCConfig,
-} from './timeBasedMCConfig.js'
+import { clearCompactWarningSuppression, suppressCompactWarning } from './compactWarningState.js'
+import { getTimeBasedMCConfig, type TimeBasedMCConfig } from './timeBasedMCConfig.js'
 
 // Inline from utils/toolResultStorage.ts — importing that file pulls in
 // sessionStorage → utils/messages → services/api/errors, completing a
@@ -55,13 +48,9 @@ const COMPACTABLE_TOOLS = new Set<string>([
 // The imports and state live inside feature() checks for dead code elimination.
 let cachedMCModule: typeof import('./cachedMicrocompact.js') | null = null
 let cachedMCState: import('./cachedMicrocompact.js').CachedMCState | null = null
-let pendingCacheEdits:
-  | import('./cachedMicrocompact.js').CacheEditsBlock
-  | null = null
+let pendingCacheEdits: import('./cachedMicrocompact.js').CacheEditsBlock | null = null
 
-async function getCachedMCModule(): Promise<
-  typeof import('./cachedMicrocompact.js')
-> {
+async function getCachedMCModule(): Promise<typeof import('./cachedMicrocompact.js')> {
   if (!cachedMCModule) {
     cachedMCModule = await import('./cachedMicrocompact.js')
   }
@@ -73,9 +62,7 @@ function ensureCachedMCState(): import('./cachedMicrocompact.js').CachedMCState 
     cachedMCState = cachedMCModule.createCachedMCState()
   }
   if (!cachedMCState) {
-    throw new Error(
-      'cachedMCState not initialized — getCachedMCModule() must be called first',
-    )
+    throw new Error('cachedMCState not initialized — getCachedMCModule() must be called first')
   }
   return cachedMCState
 }
@@ -85,9 +72,7 @@ function ensureCachedMCState(): import('./cachedMicrocompact.js').CachedMCState 
  * Returns null if there are no new pending edits.
  * Clears the pending state (caller must pin them after insertion).
  */
-export function consumePendingCacheEdits():
-  | import('./cachedMicrocompact.js').CacheEditsBlock
-  | null {
+export function consumePendingCacheEdits(): import('./cachedMicrocompact.js').CacheEditsBlock | null {
   const edits = pendingCacheEdits
   pendingCacheEdits = null
   return edits
@@ -190,9 +175,7 @@ export function estimateMessageTokens(messages: Message[]): number {
       } else if (block.type === 'tool_use') {
         // Match roughTokenCountEstimationForBlock: count name + input,
         // not the JSON wrapper or id field.
-        totalTokens += roughTokenCountEstimation(
-          block.name + jsonStringify(block.input ?? {}),
-        )
+        totalTokens += roughTokenCountEstimation(block.name + jsonStringify(block.input ?? {}))
       } else {
         // server_tool_use, web_search_tool_result, etc.
         totalTokens += roughTokenCountEstimation(jsonStringify(block))
@@ -226,10 +209,7 @@ export type MicrocompactResult = {
 function collectCompactableToolIds(messages: Message[]): string[] {
   const ids: string[] = []
   for (const message of messages) {
-    if (
-      message.type === 'assistant' &&
-      Array.isArray(message.message.content)
-    ) {
+    if (message.type === 'assistant' && Array.isArray(message.message.content)) {
       for (const block of message.message.content) {
         if (block.type === 'tool_use' && COMPACTABLE_TOOLS.has(block.name)) {
           ids.push(block.id)
@@ -338,19 +318,14 @@ async function cachedMicrocompactPath(
       pendingCacheEdits = cacheEdits
     }
 
-    logForDebugging(
-      `Cached MC deleting ${toolsToDelete.length} tool(s): ${toolsToDelete.join(', ')}`,
-    )
+    logForDebugging(`Cached MC deleting ${toolsToDelete.length} tool(s): ${toolsToDelete.join(', ')}`)
 
     // Log the event
     logEvent('tengu_cached_microcompact', {
       toolsDeleted: toolsToDelete.length,
-      deletedToolIds: toolsToDelete.join(
-        ',',
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      deletedToolIds: toolsToDelete.join(',') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       activeToolCount: state.toolOrder.length - state.deletedRefs.size,
-      triggerType:
-        'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      triggerType: 'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       threshold: config.triggerThreshold,
       keepRecent: config.keepRecent,
     })
@@ -371,15 +346,10 @@ async function cachedMicrocompactPath(
     // actual cache_deleted_input_tokens from the API instead of client-side estimates
     // Capture the baseline cumulative cache_deleted_input_tokens from the last
     // assistant message so we can compute a per-operation delta after the API call
-    const lastAsst = messages.findLast(m => m.type === 'assistant')
+    const lastAsst = messages.findLast((m) => m.type === 'assistant')
     const baseline =
       lastAsst?.type === 'assistant'
-        ? ((
-            lastAsst.message.usage as unknown as Record<
-              string,
-              number | undefined
-            >
-          )?.cache_deleted_input_tokens ?? 0)
+        ? ((lastAsst.message.usage as unknown as Record<string, number | undefined>)?.cache_deleted_input_tokens ?? 0)
         : 0
 
     return {
@@ -431,12 +401,11 @@ export function evaluateTimeBasedTrigger(
   if (!config.enabled || !querySource || !isMainThreadSource(querySource)) {
     return null
   }
-  const lastAssistant = messages.findLast(m => m.type === 'assistant')
+  const lastAssistant = messages.findLast((m) => m.type === 'assistant')
   if (!lastAssistant) {
     return null
   }
-  const gapMinutes =
-    (Date.now() - new Date(lastAssistant.timestamp).getTime()) / 60_000
+  const gapMinutes = (Date.now() - new Date(lastAssistant.timestamp).getTime()) / 60_000
   if (!Number.isFinite(gapMinutes) || gapMinutes < config.gapThresholdMinutes) {
     return null
   }
@@ -460,19 +429,19 @@ function maybeTimeBasedMicrocompact(
   // context. Neither degenerate is sensible — always keep at least the last.
   const keepRecent = Math.max(1, config.keepRecent)
   const keepSet = new Set(compactableIds.slice(-keepRecent))
-  const clearSet = new Set(compactableIds.filter(id => !keepSet.has(id)))
+  const clearSet = new Set(compactableIds.filter((id) => !keepSet.has(id)))
 
   if (clearSet.size === 0) {
     return null
   }
 
   let tokensSaved = 0
-  const result: Message[] = messages.map(message => {
+  const result: Message[] = messages.map((message) => {
     if (message.type !== 'user' || !Array.isArray(message.message.content)) {
       return message
     }
     let touched = false
-    const newContent = message.message.content.map(block => {
+    const newContent = message.message.content.map((block) => {
       if (
         block.type === 'tool_result' &&
         clearSet.has(block.tool_use_id) &&

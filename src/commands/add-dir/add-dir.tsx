@@ -1,25 +1,17 @@
 import chalk from 'chalk'
 import figures from 'figures'
 import React, { useEffect } from 'react'
-import {
-  getAdditionalDirectoriesForClaudeMd,
-  setAdditionalDirectoriesForClaudeMd,
-} from '../../bootstrap/state.js'
+
+import { getAdditionalDirectoriesForClaudeMd, setAdditionalDirectoriesForClaudeMd } from '../../bootstrap/state.js'
 import type { LocalJSXCommandContext } from '../../commands.js'
 import { MessageResponse } from '../../components/MessageResponse.js'
 import { AddWorkspaceDirectory } from '../../components/permissions/rules/AddWorkspaceDirectory.js'
 import { Box, Text } from '../../ink.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
-import {
-  applyPermissionUpdate,
-  persistPermissionUpdate,
-} from '../../utils/permissions/PermissionUpdate.js'
+import { applyPermissionUpdate, persistPermissionUpdate } from '../../utils/permissions/PermissionUpdate.js'
 import type { PermissionUpdateDestination } from '../../utils/permissions/PermissionUpdateSchema.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
-import {
-  addDirHelpMessage,
-  validateDirectoryForWorkspace,
-} from './validation.js'
+import { addDirHelpMessage, validateDirectoryForWorkspace } from './validation.js'
 
 function AddDirError({
   message,
@@ -60,9 +52,7 @@ export async function call(
 
   // Helper to handle adding a directory (shared by both with-path and no-path cases)
   const handleAddDirectory = async (path: string, remember = false) => {
-    const destination: PermissionUpdateDestination = remember
-      ? 'localSettings'
-      : 'session'
+    const destination: PermissionUpdateDestination = remember ? 'localSettings' : 'session'
 
     const permissionUpdate = {
       type: 'addDirectories' as const,
@@ -72,11 +62,8 @@ export async function call(
 
     // Apply to session context
     const latestAppState = context.getAppState()
-    const updatedContext = applyPermissionUpdate(
-      latestAppState.toolPermissionContext,
-      permissionUpdate,
-    )
-    context.setAppState(prev => ({
+    const updatedContext = applyPermissionUpdate(latestAppState.toolPermissionContext, permissionUpdate)
+    context.setAppState((prev) => ({
       ...prev,
       toolPermissionContext: updatedContext,
     }))
@@ -122,21 +109,12 @@ export async function call(
     )
   }
 
-  const result = await validateDirectoryForWorkspace(
-    directoryPath,
-    appState.toolPermissionContext,
-  )
+  const result = await validateDirectoryForWorkspace(directoryPath, appState.toolPermissionContext)
 
   if (result.resultType !== 'success') {
     const message = addDirHelpMessage(result)
 
-    return (
-      <AddDirError
-        message={message}
-        args={args ?? ''}
-        onDone={() => onDone(message)}
-      />
-    )
+    return <AddDirError message={message} args={args ?? ''} onDone={() => onDone(message)} />
   }
 
   return (
@@ -145,9 +123,7 @@ export async function call(
       permissionContext={appState.toolPermissionContext}
       onAddDirectory={handleAddDirectory}
       onCancel={() => {
-        onDone(
-          `Did not add ${chalk.bold(result.absolutePath)} as a working directory.`,
-        )
+        onDone(`Did not add ${chalk.bold(result.absolutePath)} as a working directory.`)
       }}
     />
   )

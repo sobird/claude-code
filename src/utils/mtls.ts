@@ -1,8 +1,10 @@
 import type * as https from 'https'
 import { Agent as HttpsAgent } from 'https'
-import memoize from 'lodash-es/memoize.js'
 import type * as tls from 'tls'
+
+import memoize from 'lodash-es/memoize.js'
 import type * as undici from 'undici'
+
 import { getCACertificates } from './caCerts.js'
 import { logForDebugging } from './debug.js'
 import { getFsImplementation } from './fsOperations.js'
@@ -29,13 +31,8 @@ export const getMTLSConfig = memoize((): MTLSConfig | undefined => {
   // Client certificate
   if (process.env.CLAUDE_CODE_CLIENT_CERT) {
     try {
-      config.cert = getFsImplementation().readFileSync(
-        process.env.CLAUDE_CODE_CLIENT_CERT,
-        { encoding: 'utf8' },
-      )
-      logForDebugging(
-        'mTLS: Loaded client certificate from CLAUDE_CODE_CLIENT_CERT',
-      )
+      config.cert = getFsImplementation().readFileSync(process.env.CLAUDE_CODE_CLIENT_CERT, { encoding: 'utf8' })
+      logForDebugging('mTLS: Loaded client certificate from CLAUDE_CODE_CLIENT_CERT')
     } catch (error) {
       logForDebugging(`mTLS: Failed to load client certificate: ${error}`, {
         level: 'error',
@@ -46,10 +43,7 @@ export const getMTLSConfig = memoize((): MTLSConfig | undefined => {
   // Client key
   if (process.env.CLAUDE_CODE_CLIENT_KEY) {
     try {
-      config.key = getFsImplementation().readFileSync(
-        process.env.CLAUDE_CODE_CLIENT_KEY,
-        { encoding: 'utf8' },
-      )
+      config.key = getFsImplementation().readFileSync(process.env.CLAUDE_CODE_CLIENT_KEY, { encoding: 'utf8' })
       logForDebugging('mTLS: Loaded client key from CLAUDE_CODE_CLIENT_KEY')
     } catch (error) {
       logForDebugging(`mTLS: Failed to load client key: ${error}`, {
@@ -172,8 +166,6 @@ export function configureGlobalMTLS(): void {
 
   // NODE_EXTRA_CA_CERTS is automatically handled by Node.js at runtime
   if (process.env.NODE_EXTRA_CA_CERTS) {
-    logForDebugging(
-      'NODE_EXTRA_CA_CERTS detected - Node.js will automatically append to built-in CAs',
-    )
+    logForDebugging('NODE_EXTRA_CA_CERTS detected - Node.js will automatically append to built-in CAs')
   }
 }

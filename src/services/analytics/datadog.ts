@@ -1,6 +1,8 @@
-import axios from 'axios'
 import { createHash } from 'crypto'
+
+import axios from 'axios'
 import memoize from 'lodash-es/memoize.js'
+
 import { getOrCreateUserID } from '../../utils/config.js'
 import { logError } from '../../utils/log.js'
 import { getCanonicalName } from '../../utils/model/model.js'
@@ -9,8 +11,7 @@ import { MODEL_COSTS } from '../../utils/modelCost.js'
 import { isAnalyticsDisabled } from './config.js'
 import { getEventMetadata } from './metadata.js'
 
-const DATADOG_LOGS_ENDPOINT =
-  'https://http-intake.logs.us5.datadoghq.com/api/v2/logs'
+const DATADOG_LOGS_ENDPOINT = 'https://http-intake.logs.us5.datadoghq.com/api/v2/logs'
 const DATADOG_CLIENT_TOKEN = 'pubbbf48e6d78dae54bceaa4acf463299bf'
 const DEFAULT_FLUSH_INTERVAL_MS = 15000
 const MAX_BATCH_SIZE = 100
@@ -83,7 +84,7 @@ const TAG_FIELDS = [
 ]
 
 function camelToSnakeCase(str: string): string {
-  return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 }
 
 type DatadogLog = {
@@ -194,10 +195,7 @@ export async function trackDatadogEvent(
     }
 
     // Normalize MCP tool names to "mcp" for cardinality reduction
-    if (
-      typeof allData.toolName === 'string' &&
-      allData.toolName.startsWith('mcp__')
-    ) {
+    if (typeof allData.toolName === 'string' && allData.toolName.startsWith('mcp__')) {
       allData.toolName = 'mcp'
     }
 
@@ -210,10 +208,7 @@ export async function trackDatadogEvent(
     // Truncate dev version to base + date (remove timestamp and sha for cardinality reduction)
     // e.g. "2.0.53-dev.20251124.t173302.sha526cc6a" -> "2.0.53-dev.20251124"
     if (typeof allData.version === 'string') {
-      allData.version = allData.version.replace(
-        /^(\d+\.\d+\.\d+-dev\.\d{8})\.t\d+\.sha[a-f0-9]+$/,
-        '$1',
-      )
+      allData.version = allData.version.replace(/^(\d+\.\d+\.\d+-dev\.\d{8})\.t\d+\.sha[a-f0-9]+$/, '$1')
     }
 
     // Transform status to http_status and http_status_range to avoid Datadog reserved field
@@ -239,10 +234,9 @@ export async function trackDatadogEvent(
     const allDataRecord = allData
     const tags = [
       `event:${eventName}`,
-      ...TAG_FIELDS.filter(
-        field =>
-          allDataRecord[field] !== undefined && allDataRecord[field] !== null,
-      ).map(field => `${camelToSnakeCase(field)}:${allDataRecord[field]}`),
+      ...TAG_FIELDS.filter((field) => allDataRecord[field] !== undefined && allDataRecord[field] !== null).map(
+        (field) => `${camelToSnakeCase(field)}:${allDataRecord[field]}`,
+      ),
     ]
 
     const log: DatadogLog = {
@@ -300,8 +294,5 @@ const getUserBucket = memoize((): number => {
 
 function getFlushIntervalMs(): number {
   // Allow tests to override to not block on the default flush interval.
-  return (
-    parseInt(process.env.CLAUDE_CODE_DATADOG_FLUSH_INTERVAL_MS || '', 10) ||
-    DEFAULT_FLUSH_INTERVAL_MS
-  )
+  return parseInt(process.env.CLAUDE_CODE_DATADOG_FLUSH_INTERVAL_MS || '', 10) || DEFAULT_FLUSH_INTERVAL_MS
 }

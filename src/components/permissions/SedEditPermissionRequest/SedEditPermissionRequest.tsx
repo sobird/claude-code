@@ -1,16 +1,15 @@
 import { basename, relative } from 'path'
+
 import React, { Suspense, use, useMemo } from 'react'
 import { FileEditToolDiff } from 'src/components/FileEditToolDiff.js'
 import { getCwd } from 'src/utils/cwd.js'
 import { isENOENT } from 'src/utils/errors.js'
 import { detectEncodingForResolvedPath } from 'src/utils/fileRead.js'
 import { getFsImplementation } from 'src/utils/fsOperations.js'
+
 import { Text } from '../../../ink.js'
 import { BashTool } from '../../../tools/BashTool/BashTool.js'
-import {
-  applySedSubstitution,
-  type SedEditInfo,
-} from '../../../tools/BashTool/sedEditParser.js'
+import { applySedSubstitution, type SedEditInfo } from '../../../tools/BashTool/sedEditParser.js'
 import { FilePermissionDialog } from '../FilePermissionDialog/FilePermissionDialog.js'
 import type { PermissionRequestProps } from '../PermissionRequest.js'
 
@@ -20,10 +19,7 @@ type SedEditPermissionRequestProps = PermissionRequestProps & {
 
 type FileReadResult = { oldContent: string; fileExists: boolean }
 
-export function SedEditPermissionRequest({
-  sedInfo,
-  ...props
-}: SedEditPermissionRequestProps): React.ReactNode {
+export function SedEditPermissionRequest({ sedInfo, ...props }: SedEditPermissionRequestProps): React.ReactNode {
   const { filePath } = sedInfo
 
   // Read file content async so mount doesn't block React commit on disk I/O.
@@ -50,11 +46,7 @@ export function SedEditPermissionRequest({
 
   return (
     <Suspense fallback={null}>
-      <SedEditPermissionRequestInner
-        sedInfo={sedInfo}
-        contentPromise={contentPromise}
-        {...props}
-      />
+      <SedEditPermissionRequestInner sedInfo={sedInfo} contentPromise={contentPromise} {...props} />
     </Suspense>
   )
 }
@@ -119,8 +111,7 @@ function SedEditPermissionRequestInner({
       subtitle={relative(getCwd(), filePath)}
       question={
         <Text>
-          Do you want to make this edit to{' '}
-          <Text bold>{basename(filePath)}</Text>?
+          Do you want to make this edit to <Text bold>{basename(filePath)}</Text>?
         </Text>
       }
       content={

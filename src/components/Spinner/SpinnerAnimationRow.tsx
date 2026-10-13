@@ -1,8 +1,9 @@
 import figures from 'figures'
 import * as React from 'react'
 import { useMemo, useRef } from 'react'
-import { stringWidth } from '../../ink/stringWidth.js'
+
 import { Box, Text, useAnimationFrame } from '../../ink.js'
+import { stringWidth } from '../../ink/stringWidth.js'
 import type { InProcessTeammateTaskState } from '../../tasks/InProcessTeammateTask/types.js'
 import { formatDuration, formatNumber } from '../../utils/format.js'
 import { toInkColor } from '../../utils/ink.js'
@@ -62,7 +63,6 @@ export type SpinnerAnimationRowProps = {
 
   // API metrics (for TTFT display, ant users only)
   ttftText?: string | null
-
 }
 
 /**
@@ -104,9 +104,7 @@ export function SpinnerAnimationRow({
   const now = Date.now()
   const elapsedTimeMs =
     pauseStartTimeRef.current !== null
-      ? pauseStartTimeRef.current -
-        loadingStartTimeRef.current -
-        totalPausedMsRef.current
+      ? pauseStartTimeRef.current - loadingStartTimeRef.current - totalPausedMsRef.current
       : now - loadingStartTimeRef.current - totalPausedMsRef.current
 
   // Track wall-clock turn start for teammates. While a swarm is running the
@@ -150,11 +148,7 @@ export function SpinnerAnimationRow({
         ? (cyclePosition % cycleLength) - 10
         : glimmerMessageWidth + 10 - (cyclePosition % cycleLength)
 
-  const flashOpacity = reducedMotion
-    ? 0
-    : mode === 'tool-use'
-      ? (Math.sin((time / 1000) * Math.PI) + 1) / 2
-      : 0
+  const flashOpacity = reducedMotion ? 0 : mode === 'tool-use' ? (Math.sin((time / 1000) * Math.PI) + 1) / 2 : 0
 
   // === Token counter animation (smooth increment, driven by 50ms clock) ===
   const tokenCounterRef = useRef(currentResponseLength)
@@ -171,18 +165,13 @@ export function SpinnerAnimationRow({
       } else {
         increment = 50
       }
-      tokenCounterRef.current = Math.min(
-        tokenCounterRef.current + increment,
-        currentResponseLength,
-      )
+      tokenCounterRef.current = Math.min(tokenCounterRef.current + increment, currentResponseLength)
     }
   }
   const displayedResponseLength = tokenCounterRef.current
   const leaderTokens = Math.round(displayedResponseLength / 4)
 
-  const effectiveElapsedMs = hasRunningTeammates
-    ? Math.max(elapsedTimeMs, now - turnStartRef.current)
-    : elapsedTimeMs
+  const effectiveElapsedMs = hasRunningTeammates ? Math.max(elapsedTimeMs, now - turnStartRef.current) : elapsedTimeMs
   const timerText = formatDuration(effectiveElapsedMs)
   const timerWidth = stringWidth(timerText)
 
@@ -192,9 +181,7 @@ export function SpinnerAnimationRow({
       ? (foregroundedTeammate.progress?.tokenCount ?? 0)
       : leaderTokens + teammateTokens
   const tokenCount = formatNumber(totalTokens)
-  const tokensText = hasRunningTeammates
-    ? `${tokenCount} tokens`
-    : `${figures.arrowDown} ${tokenCount} tokens`
+  const tokensText = hasRunningTeammates ? `${tokenCount} tokens` : `${figures.arrowDown} ${tokenCount} tokens`
   const tokensWidth = stringWidth(tokensText)
 
   // === Thinking text (may shrink to fit) ===
@@ -216,18 +203,12 @@ export function SpinnerAnimationRow({
   const sep = SEP_WIDTH
 
   const wantsThinking = thinkingStatus !== null
-  const wantsTimerAndTokens =
-    verbose || hasRunningTeammates || effectiveElapsedMs > SHOW_TOKENS_AFTER_MS
+  const wantsTimerAndTokens = verbose || hasRunningTeammates || effectiveElapsedMs > SHOW_TOKENS_AFTER_MS
 
   const availableSpace = columns - messageWidth - 5
 
   let showThinking = wantsThinking && availableSpace > thinkingWidthValue
-  if (
-    !showThinking &&
-    wantsThinking &&
-    thinkingStatus === 'thinking' &&
-    effortSuffix
-  ) {
+  if (!showThinking && wantsThinking && thinkingStatus === 'thinking' && effortSuffix) {
     if (availableSpace > THINKING_BARE_WIDTH) {
       thinkingText = 'thinking'
       thinkingWidthValue = THINKING_BARE_WIDTH
@@ -236,43 +217,24 @@ export function SpinnerAnimationRow({
   }
   const usedAfterThinking = showThinking ? thinkingWidthValue + sep : 0
 
-  const showTimer =
-    wantsTimerAndTokens && availableSpace > usedAfterThinking + timerWidth
+  const showTimer = wantsTimerAndTokens && availableSpace > usedAfterThinking + timerWidth
   const usedAfterTimer = usedAfterThinking + (showTimer ? timerWidth + sep : 0)
 
-  const showTokens =
-    wantsTimerAndTokens &&
-    totalTokens > 0 &&
-    availableSpace > usedAfterTimer + tokensWidth
+  const showTokens = wantsTimerAndTokens && totalTokens > 0 && availableSpace > usedAfterTimer + tokensWidth
 
-  const showTtft =
-    wantsTtft &&
-    availableSpace > usedAfterTimer + tokensWidth + (showTokens ? sep : 0) + ttftWidthValue
+  const showTtft = wantsTtft && availableSpace > usedAfterTimer + tokensWidth + (showTokens ? sep : 0) + ttftWidthValue
 
   const thinkingOnly =
-    showThinking &&
-    thinkingStatus === 'thinking' &&
-    !spinnerSuffix &&
-    !showTimer &&
-    !showTokens &&
-    true
+    showThinking && thinkingStatus === 'thinking' && !spinnerSuffix && !showTimer && !showTokens && true
 
   // === Thinking shimmer color (formerly ThinkingShimmerText's own timer) ===
   // Same sine-wave opacity, but derived from our shared `time` instead of a
   // second useAnimationFrame(50) subscription.
   const thinkingElapsedSec = (time - THINKING_DELAY_MS) / 1000
   const thinkingOpacity =
-    time < THINKING_DELAY_MS
-      ? 0
-      : (Math.sin((thinkingElapsedSec * Math.PI * 2) / THINKING_GLOW_PERIOD_S) +
-          1) /
-        2
+    time < THINKING_DELAY_MS ? 0 : (Math.sin((thinkingElapsedSec * Math.PI * 2) / THINKING_GLOW_PERIOD_S) + 1) / 2
   const thinkingShimmerColor = toRGBColor(
-    interpolateColor(
-      THINKING_INACTIVE,
-      THINKING_INACTIVE_SHIMMER,
-      thinkingOpacity,
-    ),
+    interpolateColor(THINKING_INACTIVE, THINKING_INACTIVE_SHIMMER, thinkingOpacity),
   )
 
   // === Build status parts ===
@@ -325,9 +287,7 @@ export function SpinnerAnimationRow({
     foregroundedTeammate && !foregroundedTeammate.isIdle ? (
       <>
         <Text dimColor>(esc to interrupt </Text>
-        <Text color={toInkColor(foregroundedTeammate.identity.color)}>
-          {foregroundedTeammate.identity.agentName}
-        </Text>
+        <Text color={toInkColor(foregroundedTeammate.identity.color)}>{foregroundedTeammate.identity.agentName}</Text>
         <Text dimColor>)</Text>
       </>
     ) : !foregroundedTeammate && parts.length > 0 ? (
@@ -343,13 +303,7 @@ export function SpinnerAnimationRow({
     ) : null
 
   return (
-    <Box
-      ref={viewportRef}
-      flexDirection="row"
-      flexWrap="wrap"
-      marginTop={1}
-      width="100%"
-    >
+    <Box ref={viewportRef} flexDirection="row" flexWrap="wrap" marginTop={1} width="100%">
       <SpinnerGlyph
         frame={frame}
         messageColor={messageColor}

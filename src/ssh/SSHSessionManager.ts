@@ -26,5 +26,8 @@ export interface SSHSessionManager {
   disconnect(): void
   sendMessage(content: RemoteMessageContent): Promise<boolean>
   sendInterrupt(): void
-  respondToPermissionRequest(requestId: string, response: { behavior: string; message?: string; updatedInput?: unknown }): void
+  respondToPermissionRequest(
+    requestId: string,
+    response: { behavior: string; message?: string; updatedInput?: unknown },
+  ): void
 }

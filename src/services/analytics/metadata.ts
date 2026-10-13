@@ -6,12 +6,12 @@
  * event metadata across all analytics systems (Datadog, 1P).
  */
 
+import { feature } from 'bun:bundle'
 import { extname } from 'path'
+
 import memoize from 'lodash-es/memoize.js'
-import { env, getHostPlatformForAnalytics } from '../../utils/env.js'
-import { envDynamic } from '../../utils/envDynamic.js'
-import { getModelBetas } from '../../utils/betas.js'
-import { getMainLoopModel } from '../../utils/model/model.js'
+import type { CoreUserData } from 'src/utils/user.js'
+
 import {
   getSessionId,
   getIsInteractive,
@@ -19,19 +19,17 @@ import {
   getClientType,
   getParentSessionId as getParentSessionIdFromState,
 } from '../../bootstrap/state.js'
-import { isEnvTruthy } from '../../utils/envUtils.js'
-import { isOfficialMcpUrl } from '../mcp/officialRegistry.js'
-import { isClaudeAISubscriber, getSubscriptionType } from '../../utils/auth.js'
-import { getRepoRemoteHash } from '../../utils/git.js'
-import {
-  getWslVersion,
-  getLinuxDistroInfo,
-  detectVcs,
-} from '../../utils/platform.js'
-import type { CoreUserData } from 'src/utils/user.js'
-import { getAgentContext } from '../../utils/agentContext.js'
 import type { EnvironmentMetadata } from '../../types/generated/events_mono/claude_code/v1/claude_code_internal_event.js'
 import type { PublicApiAuth } from '../../types/generated/events_mono/common/v1/auth.js'
+import { getAgentContext } from '../../utils/agentContext.js'
+import { isClaudeAISubscriber, getSubscriptionType } from '../../utils/auth.js'
+import { getModelBetas } from '../../utils/betas.js'
+import { env, getHostPlatformForAnalytics } from '../../utils/env.js'
+import { envDynamic } from '../../utils/envDynamic.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
+import { getRepoRemoteHash } from '../../utils/git.js'
+import { getMainLoopModel } from '../../utils/model/model.js'
+import { getWslVersion, getLinuxDistroInfo, detectVcs } from '../../utils/platform.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import {
   getAgentId,
@@ -39,7 +37,7 @@ import {
   getTeamName,
   isTeammate,
 } from '../../utils/teammate.js'
-import { feature } from 'bun:bundle'
+import { isOfficialMcpUrl } from '../mcp/officialRegistry.js'
 
 /**
  * Marker type for verifying analytics metadata doesn't contain sensitive data
@@ -129,9 +127,8 @@ export function isAnalyticsToolDetailsLoggingEnabled(
 const BUILTIN_MCP_SERVER_NAMES: ReadonlySet<string> = new Set(
   feature('CHICAGO_MCP')
     ? [
-        (
-          require('../../utils/computerUse/common.js') as typeof import('../../utils/computerUse/common.js')
-        ).COMPUTER_USE_MCP_SERVER_NAME,
+        (require('../../utils/computerUse/common.js') as typeof import('../../utils/computerUse/common.js'))
+          .COMPUTER_USE_MCP_SERVER_NAME,
       ]
     : [],
 )
@@ -198,10 +195,8 @@ export function extractMcpToolDetails(toolName: string):
   }
 
   return {
-    serverName:
-      serverName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    mcpToolName:
-      mcpToolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    serverName: serverName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    mcpToolName: mcpToolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   }
 }
 
@@ -226,8 +221,7 @@ export function extractSkillName(
     'skill' in input &&
     typeof (input as { skill: unknown }).skill === 'string'
   ) {
-    return (input as { skill: string })
-      .skill as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    return (input as { skill: string }).skill as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
   }
 
   return undefined
@@ -246,21 +240,14 @@ function truncateToolInputValue(value: unknown, depth = 0): unknown {
     }
     return value
   }
-  if (
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    value === null ||
-    value === undefined
-  ) {
+  if (typeof value === 'number' || typeof value === 'boolean' || value === null || value === undefined) {
     return value
   }
   if (depth >= TOOL_INPUT_MAX_DEPTH) {
     return '<nested>'
   }
   if (Array.isArray(value)) {
-    const mapped = value
-      .slice(0, TOOL_INPUT_MAX_COLLECTION_ITEMS)
-      .map(v => truncateToolInputValue(v, depth + 1))
+    const mapped = value.slice(0, TOOL_INPUT_MAX_COLLECTION_ITEMS).map((v) => truncateToolInputValue(v, depth + 1))
     if (value.length > TOOL_INPUT_MAX_COLLECTION_ITEMS) {
       mapped.push(`…[${value.length} items]`)
     }
@@ -288,9 +275,7 @@ function truncateToolInputValue(value: unknown, depth = 0): unknown {
  * preserving forensically useful fields like file paths, URLs, and MCP args.
  * Returns undefined when OTEL_LOG_TOOL_DETAILS is not enabled.
  */
-export function extractToolInputForTelemetry(
-  input: unknown,
-): string | undefined {
+export function extractToolInputForTelemetry(input: unknown): string | undefined {
   if (!isToolDetailsLoggingEnabled()) {
     return undefined
   }
@@ -537,11 +522,7 @@ function getAgentIdentification(): {
   const teamName = getTeamName()
   const isSwarmAgent = isTeammate()
   // For standalone agents (have agent ID but not a teammate), set agentType to 'standalone'
-  const agentType = isSwarmAgent
-    ? ('teammate' as const)
-    : agentId
-      ? ('standalone' as const)
-      : undefined
+  const agentType = isSwarmAgent ? ('teammate' as const) : agentId ? ('standalone' as const) : undefined
   if (agentId || agentType || parentSessionId || teamName) {
     return {
       ...(agentId ? { agentId } : {}),
@@ -625,9 +606,7 @@ const buildEnvContext = memoize(async (): Promise<EnvContext> => {
       githubEventName: process.env.GITHUB_EVENT_NAME,
       githubActionsRunnerEnvironment: process.env.RUNNER_ENVIRONMENT,
       githubActionsRunnerOs: process.env.RUNNER_OS,
-      githubActionRef: process.env.GITHUB_ACTION_PATH?.includes(
-        'claude-code-action/',
-      )
+      githubActionRef: process.env.GITHUB_ACTION_PATH?.includes('claude-code-action/')
         ? process.env.GITHUB_ACTION_PATH.split('claude-code-action/')[1]
         : undefined,
     }),
@@ -657,8 +636,7 @@ function buildProcessMetrics(): ProcessMetrics | undefined {
       if (wallDeltaMs > 0) {
         const userDeltaUs = cpu.user - prevCpuUsage.user
         const systemDeltaUs = cpu.system - prevCpuUsage.system
-        cpuPercent =
-          ((userDeltaUs + systemDeltaUs) / (wallDeltaMs * 1000)) * 100
+        cpuPercent = ((userDeltaUs + systemDeltaUs) / (wallDeltaMs * 1000)) * 100
       }
     }
     prevCpuUsage = cpu
@@ -690,18 +668,10 @@ function buildProcessMetrics(): ProcessMetrics | undefined {
  * @param options - Configuration options
  * @returns Promise resolving to enriched metadata object
  */
-export async function getEventMetadata(
-  options: EnrichMetadataOptions = {},
-): Promise<EventMetadata> {
+export async function getEventMetadata(options: EnrichMetadataOptions = {}): Promise<EventMetadata> {
   const model = options.model ? String(options.model) : getMainLoopModel()
-  const betas =
-    typeof options.betas === 'string'
-      ? options.betas
-      : getModelBetas(model).join(',')
-  const [envContext, repoRemoteHash] = await Promise.all([
-    buildEnvContext(),
-    getRepoRemoteHash(),
-  ])
+  const betas = typeof options.betas === 'string' ? options.betas : getModelBetas(model).join(',')
+  const [envContext, repoRemoteHash] = await Promise.all([buildEnvContext(), getRepoRemoteHash()])
   const processMetrics = buildProcessMetrics()
 
   const metadata: EventMetadata = {
@@ -732,16 +702,13 @@ export async function getEventMetadata(
     // Assistant mode tag — lives outside memoized buildEnvContext() because
     // setKairosActive() runs at main.tsx:~1648, after the first event may
     // have already fired and memoized the env. Read fresh per-event instead.
-    ...(feature('KAIROS') && getKairosActive()
-      ? { kairosActive: true as const }
-      : {}),
+    ...(feature('KAIROS') && getKairosActive() ? { kairosActive: true as const } : {}),
     // Repo remote hash for joining with server-side repo bundle data
     ...(repoRemoteHash && { rh: repoRemoteHash }),
   }
 
   return metadata
 }
-
 
 /**
  * Core event metadata for 1P event logging (snake_case format).
@@ -798,15 +765,7 @@ export function to1PEventFormat(
   userMetadata: CoreUserData,
   additionalMetadata: Record<string, unknown> = {},
 ): FirstPartyEventLoggingMetadata {
-  const {
-    envContext,
-    processMetrics,
-    rh,
-    kairosActive,
-    skillMode,
-    observerMode,
-    ...coreFields
-  } = metadata
+  const { envContext, processMetrics, rh, kairosActive, skillMode, observerMode, ...coreFields } = metadata
 
   // Convert envContext to snake_case.
   // IMPORTANT: env is typed as the proto-generated EnvironmentMetadata so that
@@ -855,15 +814,14 @@ export function to1PEventFormat(
   if (envContext.tags) {
     env.tags = envContext.tags
       .split(',')
-      .map(t => t.trim())
+      .map((t) => t.trim())
       .filter(Boolean)
   }
   if (envContext.githubEventName) {
     env.github_event_name = envContext.githubEventName
   }
   if (envContext.githubActionsRunnerEnvironment) {
-    env.github_actions_runner_environment =
-      envContext.githubActionsRunnerEnvironment
+    env.github_actions_runner_environment = envContext.githubActionsRunnerEnvironment
   }
   if (envContext.githubActionsRunnerOs) {
     env.github_actions_runner_os = envContext.githubActionsRunnerOs

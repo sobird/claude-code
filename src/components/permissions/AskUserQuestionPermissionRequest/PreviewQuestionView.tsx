@@ -1,12 +1,10 @@
 import figures from 'figures'
 import React, { useCallback, useMemo, useRef, useState } from 'react'
+
 import { useTerminalSize } from '../../../hooks/useTerminalSize.js'
-import type { KeyboardEvent } from '../../../ink/events/keyboard-event.js'
 import { Box, Text } from '../../../ink.js'
-import {
-  useKeybinding,
-  useKeybindings,
-} from '../../../keybindings/useKeybinding.js'
+import type { KeyboardEvent } from '../../../ink/events/keyboard-event.js'
+import { useKeybinding, useKeybindings } from '../../../keybindings/useKeybinding.js'
 import { useAppState } from '../../../state/AppState.js'
 import type { Question } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js'
 import { getExternalEditor } from '../../../utils/editor.js'
@@ -28,17 +26,8 @@ type Props = {
   hideSubmitTab?: boolean
   minContentHeight?: number
   minContentWidth?: number
-  onUpdateQuestionState: (
-    questionText: string,
-    updates: Partial<QuestionState>,
-    isMultiSelect: boolean,
-  ) => void
-  onAnswer: (
-    questionText: string,
-    label: string | string[],
-    textInput?: string,
-    shouldAdvance?: boolean,
-  ) => void
+  onUpdateQuestionState: (questionText: string, updates: Partial<QuestionState>, isMultiSelect: boolean) => void
+  onAnswer: (questionText: string, label: string | string[], textInput?: string, shouldAdvance?: boolean) => void
   onTextInputFocus: (isInInput: boolean) => void
   onCancel: () => void
   onTabPrev?: () => void
@@ -69,7 +58,7 @@ export function PreviewQuestionView({
   onRespondToClaude,
   onFinishPlanInterview,
 }: Props): React.ReactNode {
-  const isInPlanMode = useAppState(s => s.toolPermissionContext.mode) === 'plan'
+  const isInPlanMode = useAppState((s) => s.toolPermissionContext.mode) === 'plan'
   const [isFooterFocused, setIsFooterFocused] = useState(false)
   const [footerIndex, setFooterIndex] = useState(0)
   const [isInNotesInput, setIsInNotesInput] = useState(false)
@@ -92,9 +81,7 @@ export function PreviewQuestionView({
   if (prevQuestionText.current !== questionText) {
     prevQuestionText.current = questionText
     const selected = questionState?.selectedValue as string | undefined
-    const idx = selected
-      ? allOptions.findIndex(opt => opt.label === selected)
-      : -1
+    const idx = selected ? allOptions.findIndex((opt) => opt.label === selected) : -1
     setFocusedIndex(idx >= 0 ? idx : 0)
   }
 
@@ -108,11 +95,7 @@ export function PreviewQuestionView({
       if (!option) return
 
       setFocusedIndex(index)
-      onUpdateQuestionState(
-        questionText,
-        { selectedValue: option.label },
-        false,
-      )
+      onUpdateQuestionState(questionText, { selectedValue: option.label }, false)
 
       onAnswer(questionText, option.label)
     },
@@ -129,8 +112,7 @@ export function PreviewQuestionView({
       } else if (direction === 'up') {
         newIndex = focusedIndex > 0 ? focusedIndex - 1 : focusedIndex
       } else {
-        newIndex =
-          focusedIndex < allOptions.length - 1 ? focusedIndex + 1 : focusedIndex
+        newIndex = focusedIndex < allOptions.length - 1 ? focusedIndex + 1 : focusedIndex
       }
 
       if (newIndex >= 0 && newIndex < allOptions.length) {
@@ -147,11 +129,7 @@ export function PreviewQuestionView({
       const currentValue = questionState?.textInputValue || ''
       const result = await editPromptInEditor(currentValue)
       if (result.content !== null && result.content !== currentValue) {
-        onUpdateQuestionState(
-          questionText,
-          { textInputValue: result.content },
-          false,
-        )
+        onUpdateQuestionState(questionText, { textInputValue: result.content }, false)
       }
     },
     { context: 'Chat', isActive: isInNotesInput && !!editor },
@@ -312,19 +290,11 @@ export function PreviewQuestionView({
   // to match the tallest — the outer box's minHeight handles cross-question
   // layout consistency, and within-question shifts are acceptable.
   const previewMaxLines = useMemo(() => {
-    return minContentHeight
-      ? Math.max(1, minContentHeight - PREVIEW_OVERHEAD)
-      : undefined
+    return minContentHeight ? Math.max(1, minContentHeight - PREVIEW_OVERHEAD) : undefined
   }, [minContentHeight])
 
   return (
-    <Box
-      flexDirection="column"
-      marginTop={1}
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" marginTop={1} tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       <Divider color="inactive" />
       <Box flexDirection="column" paddingTop={0}>
         <QuestionNavigationBar
@@ -346,22 +316,9 @@ export function PreviewQuestionView({
 
                 return (
                   <Box key={option.label} flexDirection="row">
-                    {isFocused ? (
-                      <Text color="suggestion">{figures.pointer}</Text>
-                    ) : (
-                      <Text> </Text>
-                    )}
+                    {isFocused ? <Text color="suggestion">{figures.pointer}</Text> : <Text> </Text>}
                     <Text dimColor> {index + 1}.</Text>
-                    <Text
-                      color={
-                        isSelected
-                          ? 'success'
-                          : isFocused
-                            ? 'suggestion'
-                            : undefined
-                      }
-                      bold={isFocused}
-                    >
+                    <Text color={isSelected ? 'success' : isFocused ? 'suggestion' : undefined} bold={isFocused}>
                       {' '}
                       {option.label}
                     </Text>
@@ -385,12 +342,8 @@ export function PreviewQuestionView({
                   <TextInput
                     value={notesValue}
                     placeholder="Add notes on this design…"
-                    onChange={value => {
-                      onUpdateQuestionState(
-                        questionText,
-                        { textInputValue: value },
-                        false,
-                      )
+                    onChange={(value) => {
+                      onUpdateQuestionState(questionText, { textInputValue: value }, false)
                     }}
                     onSubmit={handleNotesExit}
                     onExit={handleNotesExit}
@@ -418,15 +371,7 @@ export function PreviewQuestionView({
               ) : (
                 <Text> </Text>
               )}
-              <Text
-                color={
-                  isFooterFocused && footerIndex === 0
-                    ? 'suggestion'
-                    : undefined
-                }
-              >
-                Chat about this
-              </Text>
+              <Text color={isFooterFocused && footerIndex === 0 ? 'suggestion' : undefined}>Chat about this</Text>
             </Box>
             {isInPlanMode && (
               <Box flexDirection="row" gap={1}>
@@ -435,13 +380,7 @@ export function PreviewQuestionView({
                 ) : (
                   <Text> </Text>
                 )}
-                <Text
-                  color={
-                    isFooterFocused && footerIndex === 1
-                      ? 'suggestion'
-                      : undefined
-                  }
-                >
+                <Text color={isFooterFocused && footerIndex === 1 ? 'suggestion' : undefined}>
                   Skip interview and plan immediately
                 </Text>
               </Box>
@@ -449,13 +388,9 @@ export function PreviewQuestionView({
           </Box>
           <Box marginTop={1}>
             <Text color="inactive" dimColor>
-              Enter to select · {figures.arrowUp}/{figures.arrowDown} to
-              navigate · n to add notes
+              Enter to select · {figures.arrowUp}/{figures.arrowDown} to navigate · n to add notes
               {questions.length > 1 && <> · Tab to switch questions</>}
-              {isInNotesInput && editorName && (
-                <> · ctrl+g to edit in {editorName}</>
-              )}{' '}
-              · Esc to cancel
+              {isInNotesInput && editorName && <> · ctrl+g to edit in {editorName}</>} · Esc to cancel
             </Text>
           </Box>
         </Box>

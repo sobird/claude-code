@@ -1,8 +1,10 @@
 import { readdir, readFile as readFileAsync } from 'fs/promises'
 import * as path from 'path'
 import { posix, win32 } from 'path'
+
 import type { Base64ImageSource } from '@anthropic-ai/sdk/resources/index.mjs'
 import { z } from 'zod/v4'
+
 import {
   PDF_AT_MENTION_INLINE_THRESHOLD,
   PDF_EXTRACT_SIZE_THRESHOLD,

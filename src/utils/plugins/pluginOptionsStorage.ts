@@ -13,19 +13,13 @@
  */
 
 import memoize from 'lodash-es/memoize.js'
+
 import type { LoadedPlugin } from '../../types/plugin.js'
 import { logForDebugging } from '../debug.js'
 import { logError } from '../log.js'
 import { getSecureStorage } from '../secureStorage/index.js'
-import {
-  getSettings_DEPRECATED,
-  updateSettingsForSource,
-} from '../settings/settings.js'
-import {
-  type UserConfigSchema,
-  type UserConfigValues,
-  validateUserConfig,
-} from './mcpbHandler.js'
+import { getSettings_DEPRECATED, updateSettingsForSource } from '../settings/settings.js'
+import { type UserConfigSchema, type UserConfigValues, validateUserConfig } from './mcpbHandler.js'
 import { getPluginDataDir } from './pluginDirectories.js'
 
 export type PluginOptionValues = UserConfigValues
@@ -53,28 +47,23 @@ export function getPluginStorageId(plugin: LoadedPlugin): string {
  * would otherwise do a settings read + keychain spawn. Cache cleared via
  * `clearPluginOptionsCache` when settings change or plugins reload.
  */
-export const loadPluginOptions = memoize(
-  (pluginId: string): PluginOptionValues => {
-    const settings = getSettings_DEPRECATED()
-    const nonSensitive =
-      settings.pluginConfigs?.[pluginId]?.options ?? ({} as PluginOptionValues)
+export const loadPluginOptions = memoize((pluginId: string): PluginOptionValues => {
+  const settings = getSettings_DEPRECATED()
+  const nonSensitive = settings.pluginConfigs?.[pluginId]?.options ?? ({} as PluginOptionValues)
 
-    // NOTE: storage.read() spawns `security find-generic-password` on macOS
-    // (~50-100ms, synchronous). Mitigated by the memoize above (per-pluginId,
-    // session-lifetime) + keychain's own 30s TTL cache — so one blocking spawn
-    // per session per plugin-with-options. /reload-plugins clears the memoize
-    // and the next hook/MCP-load after that eats a fresh spawn.
-    const storage = getSecureStorage()
-    const sensitive =
-      storage.read()?.pluginSecrets?.[pluginId] ??
-      ({} as Record<string, string>)
+  // NOTE: storage.read() spawns `security find-generic-password` on macOS
+  // (~50-100ms, synchronous). Mitigated by the memoize above (per-pluginId,
+  // session-lifetime) + keychain's own 30s TTL cache — so one blocking spawn
+  // per session per plugin-with-options. /reload-plugins clears the memoize
+  // and the next hook/MCP-load after that eats a fresh spawn.
+  const storage = getSecureStorage()
+  const sensitive = storage.read()?.pluginSecrets?.[pluginId] ?? ({} as Record<string, string>)
 
-    // secureStorage wins on collision — schema determines destination so
-    // collision shouldn't happen, but if a user hand-edits settings.json we
-    // trust the more secure source.
-    return { ...nonSensitive, ...sensitive }
-  },
-)
+  // secureStorage wins on collision — schema determines destination so
+  // collision shouldn't happen, but if a user hand-edits settings.json we
+  // trust the more secure source.
+  return { ...nonSensitive, ...sensitive }
+})
 
 export function clearPluginOptionsCache(): void {
   loadPluginOptions.cache?.clear?.()
@@ -87,11 +76,7 @@ export function clearPluginOptionsCache(): void {
  *
  * Clears the load cache on success so the next `loadPluginOptions` sees fresh.
  */
-export function savePluginOptions(
-  pluginId: string,
-  values: PluginOptionValues,
-  schema: PluginOptionSchema,
-): void {
+export function savePluginOptions(pluginId: string, values: PluginOptionValues, schema: PluginOptionSchema): void {
   const nonSensitive: PluginOptionValues = {}
   const sensitive: Record<string, string> = {}
 
@@ -112,20 +97,14 @@ export function savePluginOptions(
   // secureStorage FIRST — if keychain fails, throw before touching
   // settings.json so old plaintext (if any) stays as fallback.
   const storage = getSecureStorage()
-  const existingInSecureStorage =
-    storage.read()?.pluginSecrets?.[pluginId] ?? undefined
+  const existingInSecureStorage = storage.read()?.pluginSecrets?.[pluginId] ?? undefined
   const secureScrubbed = existingInSecureStorage
-    ? Object.fromEntries(
-        Object.entries(existingInSecureStorage).filter(
-          ([k]) => !nonSensitiveKeysInThisSave.has(k),
-        ),
-      )
+    ? Object.fromEntries(Object.entries(existingInSecureStorage).filter(([k]) => !nonSensitiveKeysInThisSave.has(k)))
     : undefined
   const needSecureScrub =
     secureScrubbed &&
     existingInSecureStorage &&
-    Object.keys(secureScrubbed).length !==
-      Object.keys(existingInSecureStorage).length
+    Object.keys(secureScrubbed).length !== Object.keys(existingInSecureStorage).length
   if (Object.keys(sensitive).length > 0 || needSecureScrub) {
     const existing = storage.read() ?? {}
     if (!existing.pluginSecrets) {
@@ -137,9 +116,7 @@ export function savePluginOptions(
     }
     const result = storage.update(existing)
     if (!result.success) {
-      const err = new Error(
-        `Failed to save sensitive plugin options for ${pluginId} to secure storage`,
-      )
+      const err = new Error(`Failed to save sensitive plugin options for ${pluginId} to secure storage`)
       logError(err)
       throw err
     }
@@ -161,22 +138,15 @@ export function savePluginOptions(
   // plugin options.
   const settings = getSettings_DEPRECATED()
   const existingInSettings = settings.pluginConfigs?.[pluginId]?.options ?? {}
-  const keysToScrubFromSettings = Object.keys(existingInSettings).filter(k =>
-    sensitiveKeysInThisSave.has(k),
-  )
-  if (
-    Object.keys(nonSensitive).length > 0 ||
-    keysToScrubFromSettings.length > 0
-  ) {
+  const keysToScrubFromSettings = Object.keys(existingInSettings).filter((k) => sensitiveKeysInThisSave.has(k))
+  if (Object.keys(nonSensitive).length > 0 || keysToScrubFromSettings.length > 0) {
     if (!settings.pluginConfigs) {
       settings.pluginConfigs = {}
     }
     if (!settings.pluginConfigs[pluginId]) {
       settings.pluginConfigs[pluginId] = {}
     }
-    const scrubbed = Object.fromEntries(
-      keysToScrubFromSettings.map(k => [k, undefined]),
-    ) as Record<string, undefined>
+    const scrubbed = Object.fromEntries(keysToScrubFromSettings.map((k) => [k, undefined])) as Record<string, undefined>
     settings.pluginConfigs[pluginId].options = {
       ...nonSensitive,
       ...scrubbed,
@@ -184,9 +154,7 @@ export function savePluginOptions(
     const result = updateSettingsForSource('userSettings', settings)
     if (result.error) {
       logError(result.error)
-      throw new Error(
-        `Failed to save plugin options for ${pluginId}: ${result.error.message}`,
-      )
+      throw new Error(`Failed to save plugin options for ${pluginId}: ${result.error.message}`)
     }
   }
 
@@ -231,10 +199,9 @@ export function deletePluginOptions(pluginId: string): void {
       pluginConfigs: pluginConfigs as PluginConfigs,
     })
     if (error) {
-      logForDebugging(
-        `deletePluginOptions: failed to clear settings.pluginConfigs[${pluginId}]: ${error.message}`,
-        { level: 'warn' },
-      )
+      logForDebugging(`deletePluginOptions: failed to clear settings.pluginConfigs[${pluginId}]: ${error.message}`, {
+        level: 'warn',
+      })
     }
   }
 
@@ -250,21 +217,15 @@ export function deletePluginOptions(pluginId: string): void {
     const survivingEntries = Object.entries(existing.pluginSecrets).filter(
       ([k]) => k !== pluginId && !k.startsWith(prefix),
     )
-    if (
-      survivingEntries.length !== Object.keys(existing.pluginSecrets).length
-    ) {
+    if (survivingEntries.length !== Object.keys(existing.pluginSecrets).length) {
       const result = storage.update({
         ...existing,
-        pluginSecrets:
-          survivingEntries.length > 0
-            ? Object.fromEntries(survivingEntries)
-            : undefined,
+        pluginSecrets: survivingEntries.length > 0 ? Object.fromEntries(survivingEntries) : undefined,
       })
       if (!result.success) {
-        logForDebugging(
-          `deletePluginOptions: failed to clear pluginSecrets for ${pluginId} from keychain`,
-          { level: 'warn' },
-        )
+        logForDebugging(`deletePluginOptions: failed to clear pluginSecrets for ${pluginId} from keychain`, {
+          level: 'warn',
+        })
       }
     }
   }
@@ -279,9 +240,7 @@ export function deletePluginOptions(pluginId: string): void {
  *
  * Used by PluginOptionsFlow to decide whether to show the prompt after enable.
  */
-export function getUnconfiguredOptions(
-  plugin: LoadedPlugin,
-): PluginOptionSchema {
+export function getUnconfiguredOptions(plugin: LoadedPlugin): PluginOptionSchema {
   const manifestSchema = plugin.manifest.userConfig
   if (!manifestSchema || Object.keys(manifestSchema).length === 0) {
     return {}
@@ -298,10 +257,7 @@ export function getUnconfiguredOptions(
   // parse error strings.
   const unconfigured: PluginOptionSchema = {}
   for (const [key, fieldSchema] of Object.entries(manifestSchema)) {
-    const single = validateUserConfig(
-      { [key]: saved[key] } as PluginOptionValues,
-      { [key]: fieldSchema },
-    )
+    const single = validateUserConfig({ [key]: saved[key] } as PluginOptionValues, { [key]: fieldSchema })
     if (!single.valid) {
       unconfigured[key] = fieldSchema
     }
@@ -323,22 +279,14 @@ export function getUnconfiguredOptions(
  *
  * Used in MCP/LSP server command/args/env, hook commands, skill/agent content.
  */
-export function substitutePluginVariables(
-  value: string,
-  plugin: { path: string; source?: string },
-): string {
-  const normalize = (p: string) =>
-    process.platform === 'win32' ? p.replace(/\\/g, '/') : p
-  let out = value.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, () =>
-    normalize(plugin.path),
-  )
+export function substitutePluginVariables(value: string, plugin: { path: string; source?: string }): string {
+  const normalize = (p: string) => (process.platform === 'win32' ? p.replace(/\\/g, '/') : p)
+  let out = value.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, () => normalize(plugin.path))
   // source can be absent (e.g. hooks where pluginRoot is a skill root without
   // a plugin context). In that case ${CLAUDE_PLUGIN_DATA} is left literal.
   if (plugin.source) {
     const source = plugin.source
-    out = out.replace(/\$\{CLAUDE_PLUGIN_DATA\}/g, () =>
-      normalize(getPluginDataDir(source)),
-    )
+    out = out.replace(/\$\{CLAUDE_PLUGIN_DATA\}/g, () => normalize(getPluginDataDir(source)))
   }
   return out
 }
@@ -353,10 +301,7 @@ export function substitutePluginVariables(
  * Use `substituteUserConfigInContent` for skill/agent prose — it handles
  * missing keys and sensitive-filtering instead of throwing.
  */
-export function substituteUserConfigVariables(
-  value: string,
-  userConfig: PluginOptionValues,
-): string {
+export function substituteUserConfigVariables(value: string, userConfig: PluginOptionValues): string {
   return value.replace(/\$\{user_config\.([^}]+)\}/g, (_match, key) => {
     const configValue = userConfig[key]
     if (configValue === undefined) {

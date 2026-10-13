@@ -1,14 +1,13 @@
 import { mkdir, readFile, stat, unlink, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
+
 import { z } from 'zod/v4'
+
 import { logForDebugging } from '../utils/debug.js'
 import { isENOENT } from '../utils/errors.js'
 import { getWorktreePathsPortable } from '../utils/getWorktreePathsPortable.js'
 import { lazySchema } from '../utils/lazySchema.js'
-import {
-  getProjectsDir,
-  sanitizePath,
-} from '../utils/sessionStoragePortable.js'
+import { getProjectsDir, sanitizePath } from '../utils/sessionStoragePortable.js'
 import { jsonParse, jsonStringify } from '../utils/slowOperations.js'
 
 /**
@@ -59,10 +58,7 @@ export function getBridgePointerPath(dir: string): string {
  * the staleness clock. Best-effort — a crash-recovery file must never
  * itself cause a crash. Logs and swallows on error.
  */
-export async function writeBridgePointer(
-  dir: string,
-  pointer: BridgePointer,
-): Promise<void> {
+export async function writeBridgePointer(dir: string, pointer: BridgePointer): Promise<void> {
   const path = getBridgePointerPath(dir)
   try {
     await mkdir(dirname(path), { recursive: true })
@@ -80,9 +76,7 @@ export async function writeBridgePointer(
  * stale (mtime > 4h ago). Stale/invalid pointers are deleted so they don't
  * keep re-prompting after the backend has already GC'd the env.
  */
-export async function readBridgePointer(
-  dir: string,
-): Promise<(BridgePointer & { ageMs: number }) | null> {
+export async function readBridgePointer(dir: string): Promise<(BridgePointer & { ageMs: number }) | null> {
   const path = getBridgePointerPath(dir)
   let raw: string
   let mtimeMs: number
@@ -151,13 +145,13 @@ export async function readBridgePointerAcrossWorktrees(
   // case/separators so worktree-list output matches our fast-path key even
   // on Windows where git may emit C:/ vs stored c:/.
   const dirKey = sanitizePath(dir)
-  const candidates = worktrees.filter(wt => sanitizePath(wt) !== dirKey)
+  const candidates = worktrees.filter((wt) => sanitizePath(wt) !== dirKey)
 
   // Parallel stat+read. Each readBridgePointer is a stat() that ENOENTs
   // for worktrees with no pointer (cheap) plus a ~100-byte read for the
   // rare ones that have one. Promise.all → latency ≈ slowest single stat.
   const results = await Promise.all(
-    candidates.map(async wt => {
+    candidates.map(async (wt) => {
       const p = await readBridgePointer(wt)
       return p ? { pointer: p, dir: wt } : null
     }),

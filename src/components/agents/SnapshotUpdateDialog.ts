@@ -1,5 +1,6 @@
 // Auto-generated stub — replace with real implementation
 import type React from 'react'
+
 import type { AgentMemoryScope } from '../../tools/AgentTool/agentMemory.js'
 
 export const SnapshotUpdateDialog: React.FC<{

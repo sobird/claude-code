@@ -1,9 +1,6 @@
 /* eslint-disable custom-rules/no-process-exit -- CLI subcommand handler intentionally exits */
 
-import {
-  clearAuthRelatedCaches,
-  performLogout,
-} from '../../commands/logout/logout.js'
+import { clearAuthRelatedCaches, performLogout } from '../../commands/logout/logout.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -38,10 +35,7 @@ import { logError } from '../../utils/log.js'
 import { getAPIProvider } from '../../utils/model/providers.js'
 import { getInitialSettings } from '../../utils/settings/settings.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
-import {
-  buildAccountProperties,
-  buildAPIProviderProperties,
-} from '../../utils/status.js'
+import { buildAccountProperties, buildAPIProviderProperties } from '../../utils/status.js'
 
 /**
  * Shared post-token-acquisition logic. Saves tokens, fetches profile/roles,
@@ -52,19 +46,16 @@ export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
   await performLogout({ clearOnboarding: false })
 
   // Reuse pre-fetched profile if available, otherwise fetch fresh
-  const profile =
-    tokens.profile ?? (await getOauthProfileFromOauthToken(tokens.accessToken))
+  const profile = tokens.profile ?? (await getOauthProfileFromOauthToken(tokens.accessToken))
   if (profile) {
     storeOAuthAccountInfo({
       accountUuid: profile.account.uuid,
       emailAddress: profile.account.email,
       organizationUuid: profile.organization.uuid,
       displayName: profile.account.display_name || undefined,
-      hasExtraUsageEnabled:
-        profile.organization.has_extra_usage_enabled ?? undefined,
+      hasExtraUsageEnabled: profile.organization.has_extra_usage_enabled ?? undefined,
       billingType: profile.organization.billing_type ?? undefined,
-      subscriptionCreatedAt:
-        profile.organization.subscription_created_at ?? undefined,
+      subscriptionCreatedAt: profile.organization.subscription_created_at ?? undefined,
       accountCreatedAt: profile.account.created_at,
     })
   } else if (tokens.tokenAccount) {
@@ -81,28 +72,21 @@ export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
 
   if (storageResult.warning) {
     logEvent('tengu_oauth_storage_warning', {
-      warning:
-        storageResult.warning as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      warning: storageResult.warning as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
   }
 
   // Roles and first-token-date may fail for limited-scope tokens (e.g.
   // inference-only from setup-token). They're not required for core auth.
-  await fetchAndStoreUserRoles(tokens.accessToken).catch(err =>
-    logForDebugging(String(err), { level: 'error' }),
-  )
+  await fetchAndStoreUserRoles(tokens.accessToken).catch((err) => logForDebugging(String(err), { level: 'error' }))
 
   if (shouldUseClaudeAIAuth(tokens.scopes)) {
-    await fetchAndStoreClaudeCodeFirstTokenDate().catch(err =>
-      logForDebugging(String(err), { level: 'error' }),
-    )
+    await fetchAndStoreClaudeCodeFirstTokenDate().catch((err) => logForDebugging(String(err), { level: 'error' }))
   } else {
     // API key creation is critical for Console users — let it throw.
     const apiKey = await createAndStoreApiKey(tokens.accessToken)
     if (!apiKey) {
-      throw new Error(
-        'Unable to create API key. The server accepted the request but did not return a key.',
-      )
+      throw new Error('Unable to create API key. The server accepted the request but did not return a key.')
     }
   }
 
@@ -121,18 +105,14 @@ export async function authLogin({
   claudeai?: boolean
 }): Promise<void> {
   if (useConsole && claudeai) {
-    process.stderr.write(
-      'Error: --console and --claudeai cannot be used together.\n',
-    )
+    process.stderr.write('Error: --console and --claudeai cannot be used together.\n')
     process.exit(1)
   }
 
   const settings = getInitialSettings()
   // forceLoginMethod is a hard constraint (enterprise setting) — matches ConsoleOAuthFlow behavior.
   // Without it, --console selects Console; --claudeai (or no flag) selects claude.ai.
-  const loginWithClaudeAi = settings.forceLoginMethod
-    ? settings.forceLoginMethod === 'claudeai'
-    : !useConsole
+  const loginWithClaudeAi = settings.forceLoginMethod ? settings.forceLoginMethod === 'claudeai' : !useConsole
   const orgUUID = settings.forceLoginOrgUUID
 
   // Fast path: if a refresh token is provided via env var, skip the browser
@@ -165,7 +145,7 @@ export async function authLogin({
 
       // Mark onboarding complete — interactive paths handle this via
       // the Onboarding component, but the env var path skips it.
-      saveGlobalConfig(current => {
+      saveGlobalConfig((current) => {
         if (current.hasCompletedOnboarding) return current
         return { ...current, hasCompletedOnboarding: true }
       })
@@ -178,9 +158,7 @@ export async function authLogin({
     } catch (err) {
       logError(err)
       const sslHint = getSSLErrorHint(err)
-      process.stderr.write(
-        `Login failed: ${errorMessage(err)}\n${sslHint ? sslHint + '\n' : ''}`,
-      )
+      process.stderr.write(`Login failed: ${errorMessage(err)}\n${sslHint ? sslHint + '\n' : ''}`)
       process.exit(1)
     }
   }
@@ -193,7 +171,7 @@ export async function authLogin({
     logEvent('tengu_oauth_flow_start', { loginWithClaudeAi })
 
     const result = await oauthService.startOAuthFlow(
-      async url => {
+      async (url) => {
         process.stdout.write('Opening browser to sign in…\n')
         process.stdout.write(`If the browser didn't open, visit: ${url}\n`)
       },
@@ -220,28 +198,21 @@ export async function authLogin({
   } catch (err) {
     logError(err)
     const sslHint = getSSLErrorHint(err)
-    process.stderr.write(
-      `Login failed: ${errorMessage(err)}\n${sslHint ? sslHint + '\n' : ''}`,
-    )
+    process.stderr.write(`Login failed: ${errorMessage(err)}\n${sslHint ? sslHint + '\n' : ''}`)
     process.exit(1)
   } finally {
     oauthService.cleanup()
   }
 }
 
-export async function authStatus(opts: {
-  json?: boolean
-  text?: boolean
-}): Promise<void> {
+export async function authStatus(opts: { json?: boolean; text?: boolean }): Promise<void> {
   const { source: authTokenSource, hasToken } = getAuthTokenSource()
   const { source: apiKeySource } = getAnthropicApiKeyWithSource()
-  const hasApiKeyEnvVar =
-    !!process.env.ANTHROPIC_API_KEY && !isRunningOnHomespace()
+  const hasApiKeyEnvVar = !!process.env.ANTHROPIC_API_KEY && !isRunningOnHomespace()
   const oauthAccount = getOauthAccountInfo()
   const subscriptionType = getSubscriptionType()
   const using3P = isUsing3PServices()
-  const loggedIn =
-    hasToken || apiKeySource !== 'none' || hasApiKeyEnvVar || using3P
+  const loggedIn = hasToken || apiKeySource !== 'none' || hasApiKeyEnvVar || using3P
 
   // Determine auth method
   let authMethod: string = 'none'
@@ -260,18 +231,11 @@ export async function authStatus(opts: {
   }
 
   if (opts.text) {
-    const properties = [
-      ...buildAccountProperties(),
-      ...buildAPIProviderProperties(),
-    ]
+    const properties = [...buildAccountProperties(), ...buildAPIProviderProperties()]
     let hasAuthProperty = false
     for (const prop of properties) {
       const value =
-        typeof prop.value === 'string'
-          ? prop.value
-          : Array.isArray(prop.value)
-            ? prop.value.join(', ')
-            : null
+        typeof prop.value === 'string' ? prop.value : Array.isArray(prop.value) ? prop.value.join(', ') : null
       if (value === null || value === 'none') {
         continue
       }
@@ -286,18 +250,11 @@ export async function authStatus(opts: {
       process.stdout.write('API key: ANTHROPIC_API_KEY\n')
     }
     if (!loggedIn) {
-      process.stdout.write(
-        'Not logged in. Run claude auth login to authenticate.\n',
-      )
+      process.stdout.write('Not logged in. Run claude auth login to authenticate.\n')
     }
   } else {
     const apiProvider = getAPIProvider()
-    const resolvedApiKeySource =
-      apiKeySource !== 'none'
-        ? apiKeySource
-        : hasApiKeyEnvVar
-          ? 'ANTHROPIC_API_KEY'
-          : null
+    const resolvedApiKeySource = apiKeySource !== 'none' ? apiKeySource : hasApiKeyEnvVar ? 'ANTHROPIC_API_KEY' : null
     const output: Record<string, string | boolean | null> = {
       loggedIn,
       authMethod,

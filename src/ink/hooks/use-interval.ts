@@ -1,4 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react'
+
 import { ClockContext } from '../components/ClockContext.js'
 
 /**
@@ -40,10 +41,7 @@ export function useAnimationTimer(intervalMs: number): number {
  * this piggybacks on the single shared clock so all timers consolidate into
  * one wake-up. Pass `null` for intervalMs to pause.
  */
-export function useInterval(
-  callback: () => void,
-  intervalMs: number | null,
-): void {
+export function useInterval(callback: () => void, intervalMs: number | null): void {
   const callbackRef = useRef(callback)
   callbackRef.current = callback
 

@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { useMainLoopModel } from '../../hooks/useMainLoopModel.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -36,8 +37,7 @@ function setEffortValue(effortValue: EffortValue): EffortCommandResult {
     }
   }
   logEvent('tengu_effort_command', {
-    effort:
-      effortValue as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    effort: effortValue as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 
   // Env var wins at resolveAppliedEffort time. Only flag it when it actually
@@ -66,13 +66,9 @@ function setEffortValue(effortValue: EffortValue): EffortCommandResult {
   }
 }
 
-export function showCurrentEffort(
-  appStateEffort: EffortValue | undefined,
-  model: string,
-): EffortCommandResult {
+export function showCurrentEffort(appStateEffort: EffortValue | undefined, model: string): EffortCommandResult {
   const envOverride = getEffortEnvOverride()
-  const effectiveValue =
-    envOverride === null ? undefined : (envOverride ?? appStateEffort)
+  const effectiveValue = envOverride === null ? undefined : (envOverride ?? appStateEffort)
   if (effectiveValue === undefined) {
     const level = getDisplayedEffortLevel(model, appStateEffort)
     return { message: `Effort level: auto (currently ${level})` }
@@ -93,8 +89,7 @@ function unsetEffortLevel(): EffortCommandResult {
     }
   }
   logEvent('tengu_effort_command', {
-    effort:
-      'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    effort: 'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
   // env=auto/unset (null) matches what /effort auto asks for, so only warn
   // when env is pinning a specific level that will keep overriding.
@@ -127,12 +122,8 @@ export function executeEffort(args: string): EffortCommandResult {
   return setEffortValue(normalized)
 }
 
-function ShowCurrentEffort({
-  onDone,
-}: {
-  onDone: (result: string) => void
-}): React.ReactNode {
-  const effortValue = useAppState(s => s.effortValue)
+function ShowCurrentEffort({ onDone }: { onDone: (result: string) => void }): React.ReactNode {
+  const effortValue = useAppState((s) => s.effortValue)
   const model = useMainLoopModel()
   const { message } = showCurrentEffort(effortValue, model)
   onDone(message)
@@ -150,7 +141,7 @@ function ApplyEffortAndClose({
   const { effortUpdate, message } = result
   React.useEffect(() => {
     if (effortUpdate) {
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
         effortValue: effortUpdate.value,
       }))
@@ -160,11 +151,7 @@ function ApplyEffortAndClose({
   return null
 }
 
-export async function call(
-  onDone: LocalJSXCommandOnDone,
-  _context: unknown,
-  args?: string,
-): Promise<React.ReactNode> {
+export async function call(onDone: LocalJSXCommandOnDone, _context: unknown, args?: string): Promise<React.ReactNode> {
   args = args?.trim() || ''
 
   if (COMMON_HELP_ARGS.includes(args)) {

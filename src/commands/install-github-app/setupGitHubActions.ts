@@ -3,12 +3,8 @@ import {
   logEvent,
 } from 'src/services/analytics/index.js'
 import { saveGlobalConfig } from 'src/utils/config.js'
-import {
-  CODE_REVIEW_PLUGIN_WORKFLOW_CONTENT,
-  PR_BODY,
-  PR_TITLE,
-  WORKFLOW_CONTENT,
-} from '../../constants/github-app.js'
+
+import { CODE_REVIEW_PLUGIN_WORKFLOW_CONTENT, PR_BODY, PR_TITLE, WORKFLOW_CONTENT } from '../../constants/github-app.js'
 import { openBrowser } from '../../utils/browser.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { logError } from '../../utils/log.js'
@@ -75,13 +71,9 @@ async function createWorkflowFile(
 
   const createFileResult = await execFileNoThrow('gh', apiParams)
   if (createFileResult.code !== 0) {
-    if (
-      createFileResult.stderr.includes('422') &&
-      createFileResult.stderr.includes('sha')
-    ) {
+    if (createFileResult.stderr.includes('422') && createFileResult.stderr.includes('sha')) {
       logEvent('tengu_setup_github_actions_failed', {
-        reason:
-          'failed_to_create_workflow_file' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'failed_to_create_workflow_file' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         exit_code: createFileResult.code,
         ...context,
       })
@@ -91,8 +83,7 @@ async function createWorkflowFile(
     }
 
     logEvent('tengu_setup_github_actions_failed', {
-      reason:
-        'failed_to_create_workflow_file' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      reason: 'failed_to_create_workflow_file' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       exit_code: createFileResult.code,
       ...context,
     })
@@ -103,9 +94,7 @@ async function createWorkflowFile(
       '· Not authorized → Ensure you have admin access to the repository\n' +
       '· For manual setup → Visit: https://github.com/anthropics/claude-code-action'
 
-    throw new Error(
-      `Failed to create workflow file ${workflowPath}: ${createFileResult.stderr}${helpText}`,
-    )
+    throw new Error(`Failed to create workflow file ${workflowPath}: ${createFileResult.stderr}${helpText}`)
   }
 }
 
@@ -129,47 +118,30 @@ export async function setupGitHubActions(
       has_api_key: !!apiKeyOrOAuthToken,
       using_default_secret_name: secretName === 'ANTHROPIC_API_KEY',
       selected_claude_workflow: selectedWorkflows.includes('claude'),
-      selected_claude_review_workflow:
-        selectedWorkflows.includes('claude-review'),
+      selected_claude_review_workflow: selectedWorkflows.includes('claude-review'),
       ...context,
     })
 
     // Check if repository exists
-    const repoCheckResult = await execFileNoThrow('gh', [
-      'api',
-      `repos/${repoName}`,
-      '--jq',
-      '.id',
-    ])
+    const repoCheckResult = await execFileNoThrow('gh', ['api', `repos/${repoName}`, '--jq', '.id'])
     if (repoCheckResult.code !== 0) {
       logEvent('tengu_setup_github_actions_failed', {
-        reason:
-          'repo_not_found' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'repo_not_found' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         exit_code: repoCheckResult.code,
         ...context,
       })
-      throw new Error(
-        `Failed to access repository ${repoName}: ${repoCheckResult.stderr}`,
-      )
+      throw new Error(`Failed to access repository ${repoName}: ${repoCheckResult.stderr}`)
     }
 
     // Get default branch
-    const defaultBranchResult = await execFileNoThrow('gh', [
-      'api',
-      `repos/${repoName}`,
-      '--jq',
-      '.default_branch',
-    ])
+    const defaultBranchResult = await execFileNoThrow('gh', ['api', `repos/${repoName}`, '--jq', '.default_branch'])
     if (defaultBranchResult.code !== 0) {
       logEvent('tengu_setup_github_actions_failed', {
-        reason:
-          'failed_to_get_default_branch' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'failed_to_get_default_branch' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         exit_code: defaultBranchResult.code,
         ...context,
       })
-      throw new Error(
-        `Failed to get default branch: ${defaultBranchResult.stderr}`,
-      )
+      throw new Error(`Failed to get default branch: ${defaultBranchResult.stderr}`)
     }
     const defaultBranch = defaultBranchResult.stdout.trim()
 
@@ -182,8 +154,7 @@ export async function setupGitHubActions(
     ])
     if (shaResult.code !== 0) {
       logEvent('tengu_setup_github_actions_failed', {
-        reason:
-          'failed_to_get_branch_sha' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'failed_to_get_branch_sha' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         exit_code: shaResult.code,
         ...context,
       })
@@ -209,8 +180,7 @@ export async function setupGitHubActions(
       ])
       if (createBranchResult.code !== 0) {
         logEvent('tengu_setup_github_actions_failed', {
-          reason:
-            'failed_to_create_branch' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          reason: 'failed_to_create_branch' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           exit_code: createBranchResult.code,
           ...context,
         })
@@ -264,8 +234,7 @@ export async function setupGitHubActions(
       ])
       if (setSecretResult.code !== 0) {
         logEvent('tengu_setup_github_actions_failed', {
-          reason:
-            'failed_to_set_api_key_secret' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          reason: 'failed_to_set_api_key_secret' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           exit_code: setSecretResult.code,
           ...context,
         })
@@ -276,9 +245,7 @@ export async function setupGitHubActions(
           '· Not authorized → Ensure you have admin access to the repository\n' +
           '· For manual setup → Visit: https://github.com/anthropics/claude-code-action'
 
-        throw new Error(
-          `Failed to set API key secret: ${setSecretResult.stderr || 'Unknown error'}${helpText}`,
-        )
+        throw new Error(`Failed to set API key secret: ${setSecretResult.stderr || 'Unknown error'}${helpText}`)
       }
     }
 
@@ -293,27 +260,20 @@ export async function setupGitHubActions(
     logEvent('tengu_setup_github_actions_completed', {
       skip_workflow: skipWorkflow,
       has_api_key: !!apiKeyOrOAuthToken,
-      auth_type:
-        authType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      auth_type: authType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       using_default_secret_name: secretName === 'ANTHROPIC_API_KEY',
       selected_claude_workflow: selectedWorkflows.includes('claude'),
-      selected_claude_review_workflow:
-        selectedWorkflows.includes('claude-review'),
+      selected_claude_review_workflow: selectedWorkflows.includes('claude-review'),
       ...context,
     })
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       githubActionSetupCount: (current.githubActionSetupCount ?? 0) + 1,
     }))
   } catch (error) {
-    if (
-      !error ||
-      !(error instanceof Error) ||
-      !error.message.includes('Failed to')
-    ) {
+    if (!error || !(error instanceof Error) || !error.message.includes('Failed to')) {
       logEvent('tengu_setup_github_actions_failed', {
-        reason:
-          'unexpected_error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason: 'unexpected_error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         ...context,
       })
     }

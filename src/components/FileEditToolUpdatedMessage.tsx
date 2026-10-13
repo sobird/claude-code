@@ -1,5 +1,6 @@
 import type { StructuredPatchHunk } from 'diff'
 import * as React from 'react'
+
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { Box, Text } from '../ink.js'
 import { count } from '../utils/array.js'
@@ -26,28 +27,20 @@ export function FileEditToolUpdatedMessage({
   previewHint,
 }: Props): React.ReactNode {
   const { columns } = useTerminalSize()
-  const numAdditions = structuredPatch.reduce(
-    (acc, hunk) => acc + count(hunk.lines, _ => _.startsWith('+')),
-    0,
-  )
-  const numRemovals = structuredPatch.reduce(
-    (acc, hunk) => acc + count(hunk.lines, _ => _.startsWith('-')),
-    0,
-  )
+  const numAdditions = structuredPatch.reduce((acc, hunk) => acc + count(hunk.lines, (_) => _.startsWith('+')), 0)
+  const numRemovals = structuredPatch.reduce((acc, hunk) => acc + count(hunk.lines, (_) => _.startsWith('-')), 0)
 
   const text = (
     <Text>
       {numAdditions > 0 ? (
         <>
-          Added <Text bold>{numAdditions}</Text>{' '}
-          {numAdditions > 1 ? 'lines' : 'line'}
+          Added <Text bold>{numAdditions}</Text> {numAdditions > 1 ? 'lines' : 'line'}
         </>
       ) : null}
       {numAdditions > 0 && numRemovals > 0 ? ', ' : null}
       {numRemovals > 0 ? (
         <>
-          {numAdditions === 0 ? 'R' : 'r'}emoved <Text bold>{numRemovals}</Text>{' '}
-          {numRemovals > 1 ? 'lines' : 'line'}
+          {numAdditions === 0 ? 'R' : 'r'}emoved <Text bold>{numRemovals}</Text> {numRemovals > 1 ? 'lines' : 'line'}
         </>
       ) : null}
     </Text>

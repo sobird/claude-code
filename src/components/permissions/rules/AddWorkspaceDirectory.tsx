@@ -2,13 +2,11 @@ import figures from 'figures'
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebounceCallback } from 'usehooks-ts'
-import {
-  addDirHelpMessage,
-  validateDirectoryForWorkspace,
-} from '../../../commands/add-dir/validation.js'
+
+import { addDirHelpMessage, validateDirectoryForWorkspace } from '../../../commands/add-dir/validation.js'
 import TextInput from '../../../components/TextInput.js'
-import type { KeyboardEvent } from '../../../ink/events/keyboard-event.js'
 import { Box, Text } from '../../../ink.js'
+import type { KeyboardEvent } from '../../../ink/events/keyboard-event.js'
 import { useKeybinding } from '../../../keybindings/useKeybinding.js'
 import type { ToolPermissionContext } from '../../../Tool.js'
 import { getDirectoryCompletions } from '../../../utils/suggestions/directoryCompletion.js'
@@ -17,10 +15,7 @@ import { Select } from '../../CustomSelect/select.js'
 import { Byline } from '../../design-system/Byline.js'
 import { Dialog } from '../../design-system/Dialog.js'
 import { KeyboardShortcutHint } from '../../design-system/KeyboardShortcutHint.js'
-import {
-  PromptInputFooterSuggestions,
-  type SuggestionItem,
-} from '../../PromptInput/PromptInputFooterSuggestions.js'
+import { PromptInputFooterSuggestions, type SuggestionItem } from '../../PromptInput/PromptInputFooterSuggestions.js'
 
 type Props = {
   onAddDirectory: (path: string, remember?: boolean) => void
@@ -52,8 +47,7 @@ const REMEMBER_DIRECTORY_OPTIONS: Array<{
 function PermissionDescription(): React.ReactNode {
   return (
     <Text dimColor>
-      Claude Code will be able to read files in this directory and make edits
-      when auto-accept edits is on.
+      Claude Code will be able to read files in this directory and make edits when auto-accept edits is on.
     </Text>
   )
 }
@@ -99,10 +93,7 @@ function DirectoryInput({
       </Box>
       {suggestions.length > 0 && (
         <Box marginBottom={1}>
-          <PromptInputFooterSuggestions
-            suggestions={suggestions}
-            selectedSuggestion={selectedSuggestion}
-          />
+          <PromptInputFooterSuggestions suggestions={suggestions} selectedSuggestion={selectedSuggestion} />
         </Box>
       )}
       {error && <Text color="error">{error}</Text>}
@@ -150,10 +141,7 @@ export function AddWorkspaceDirectory({
   // Handle directory submission from input
   const handleSubmit = useCallback(
     async (newPath: string) => {
-      const result = await validateDirectoryForWorkspace(
-        newPath,
-        permissionContext,
-      )
+      const result = await validateDirectoryForWorkspace(newPath, permissionContext)
 
       if (result.resultType === 'success') {
         onAddDirectory(result.absolutePath, false)
@@ -193,17 +181,13 @@ export function AddWorkspaceDirectory({
 
         if (e.key === 'up' || (e.ctrl && e.key === 'p')) {
           e.preventDefault()
-          setSelectedSuggestion(prev =>
-            prev <= 0 ? suggestions.length - 1 : prev - 1,
-          )
+          setSelectedSuggestion((prev) => (prev <= 0 ? suggestions.length - 1 : prev - 1))
           return
         }
 
         if (e.key === 'down' || (e.ctrl && e.key === 'n')) {
           e.preventDefault()
-          setSelectedSuggestion(prev =>
-            prev >= suggestions.length - 1 ? 0 : prev + 1,
-          )
+          setSelectedSuggestion((prev) => (prev >= suggestions.length - 1 ? 0 : prev + 1))
           return
         }
       }
@@ -233,12 +217,7 @@ export function AddWorkspaceDirectory({
   )
 
   return (
-    <Box
-      flexDirection="column"
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       <Dialog
         title="Add directory to workspace"
         onCancel={onCancel}
@@ -247,7 +226,7 @@ export function AddWorkspaceDirectory({
         inputGuide={
           directoryPath
             ? undefined
-            : exitState =>
+            : (exitState) =>
                 exitState.pending ? (
                   <Text>Press {exitState.keyName} again to exit</Text>
                 ) : (
@@ -267,11 +246,7 @@ export function AddWorkspaceDirectory({
         {directoryPath ? (
           <Box flexDirection="column" gap={1}>
             <DirectoryDisplay path={directoryPath} />
-            <Select
-              options={options}
-              onChange={handleSelect}
-              onCancel={() => handleSelect('no')}
-            />
+            <Select options={options} onChange={handleSelect} onCancel={() => handleSelect('no')} />
           </Box>
         ) : (
           <Box flexDirection="column" gap={1} marginX={2}>

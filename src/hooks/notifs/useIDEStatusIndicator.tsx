@@ -3,12 +3,8 @@ import { useNotifications } from 'src/context/notifications.js'
 import { Text } from 'src/ink.js'
 import type { MCPServerConnection } from 'src/services/mcp/types.js'
 import { getGlobalConfig, saveGlobalConfig } from 'src/utils/config.js'
-import {
-  detectIDEs,
-  type IDEExtensionInstallationStatus,
-  isJetBrainsIde,
-  isSupportedTerminal,
-} from 'src/utils/ide.js'
+import { detectIDEs, type IDEExtensionInstallationStatus, isJetBrainsIde, isSupportedTerminal } from 'src/utils/ide.js'
+
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 import { useIdeConnectionStatus } from '../useIdeConnectionStatus.js'
 import type { IDESelection } from '../useIdeSelection.js'
@@ -21,41 +17,25 @@ type Props = {
   mcpClients: MCPServerConnection[]
 }
 
-export function useIDEStatusIndicator({
-  ideSelection,
-  mcpClients,
-  ideInstallationStatus,
-}: Props): void {
+export function useIDEStatusIndicator({ ideSelection, mcpClients, ideInstallationStatus }: Props): void {
   const { addNotification, removeNotification } = useNotifications()
   const { status: ideStatus, ideName } = useIdeConnectionStatus(mcpClients)
   const hasShownHintRef = useRef(false)
 
-  const isJetBrains = ideInstallationStatus
-    ? isJetBrainsIde(ideInstallationStatus?.ideType)
-    : false
-  const showIDEInstallErrorOrJetBrainsInfo =
-    ideInstallationStatus?.error || isJetBrains
+  const isJetBrains = ideInstallationStatus ? isJetBrainsIde(ideInstallationStatus?.ideType) : false
+  const showIDEInstallErrorOrJetBrainsInfo = ideInstallationStatus?.error || isJetBrains
 
   const shouldShowIdeSelection =
-    ideStatus === 'connected' &&
-    (ideSelection?.filePath ||
-      (ideSelection?.text && ideSelection.lineCount > 0))
+    ideStatus === 'connected' && (ideSelection?.filePath || (ideSelection?.text && ideSelection.lineCount > 0))
 
   // Only show the connected if not showing context
-  const shouldShowConnected =
-    ideStatus === 'connected' && !shouldShowIdeSelection
+  const shouldShowConnected = ideStatus === 'connected' && !shouldShowIdeSelection
 
   const showIDEInstallError =
-    showIDEInstallErrorOrJetBrainsInfo &&
-    !isJetBrains &&
-    !shouldShowConnected &&
-    !shouldShowIdeSelection
+    showIDEInstallErrorOrJetBrainsInfo && !isJetBrains && !shouldShowConnected && !shouldShowIdeSelection
 
   const showJetBrainsInfo =
-    showIDEInstallErrorOrJetBrainsInfo &&
-    isJetBrains &&
-    !shouldShowConnected &&
-    !shouldShowIdeSelection
+    showIDEInstallErrorOrJetBrainsInfo && isJetBrains && !shouldShowConnected && !shouldShowIdeSelection
 
   // Show the /ide command hint if running from an external terminal and found running IDE(s)
   // Delay showing hint to avoid brief flash during auto-connect startup
@@ -66,19 +46,16 @@ export function useIDEStatusIndicator({
       return
     }
     // Wait a bit to let auto-connect happen first, avoiding brief hint flash
-    if (
-      hasShownHintRef.current ||
-      (getGlobalConfig().ideHintShownCount ?? 0) >= MAX_IDE_HINT_SHOW_COUNT
-    ) {
+    if (hasShownHintRef.current || (getGlobalConfig().ideHintShownCount ?? 0) >= MAX_IDE_HINT_SHOW_COUNT) {
       return
     }
     const timeoutId = setTimeout(
       (hasShownHintRef, addNotification) => {
-        void detectIDEs(true).then(infos => {
+        void detectIDEs(true).then((infos) => {
           const ideName = infos[0]?.name
           if (ideName && !hasShownHintRef.current) {
             hasShownHintRef.current = true
-            saveGlobalConfig(current => ({
+            saveGlobalConfig((current) => ({
               ...current,
               ideHintShownCount: (current.ideHintShownCount ?? 0) + 1,
             }))
@@ -104,12 +81,7 @@ export function useIDEStatusIndicator({
   // Show IDE disconnected/failed notification when status is disconnected
   useEffect(() => {
     if (getIsRemoteMode()) return
-    if (
-      showIDEInstallError ||
-      showJetBrainsInfo ||
-      ideStatus !== 'disconnected' ||
-      !ideName
-    ) {
+    if (showIDEInstallError || showJetBrainsInfo || ideStatus !== 'disconnected' || !ideName) {
       removeNotification('ide-status-disconnected')
       return
     }
@@ -119,14 +91,7 @@ export function useIDEStatusIndicator({
       color: 'error',
       priority: 'medium',
     })
-  }, [
-    addNotification,
-    removeNotification,
-    ideStatus,
-    ideName,
-    showIDEInstallError,
-    showJetBrainsInfo,
-  ])
+  }, [addNotification, removeNotification, ideStatus, ideName, showIDEInstallError, showJetBrainsInfo])
 
   // Show JetBrains plugin not connected hint
   useEffect(() => {

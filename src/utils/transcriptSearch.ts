@@ -1,18 +1,12 @@
 import type { RenderableMessage } from '../types/message.js'
-import {
-  INTERRUPT_MESSAGE,
-  INTERRUPT_MESSAGE_FOR_TOOL_USE,
-} from './messages.js'
+import { INTERRUPT_MESSAGE, INTERRUPT_MESSAGE_FOR_TOOL_USE } from './messages.js'
 
 const SYSTEM_REMINDER_CLOSE = '</system-reminder>'
 
 // UserTextMessage.tsx:~84 replaces these with <InterruptedByUser />
 // (renders 'Interrupted · /issue...'). Raw text never appears on screen;
 // searching it yields phantom matches — /terr → in[terr]upted.
-const RENDERED_AS_SENTINEL = new Set([
-  INTERRUPT_MESSAGE,
-  INTERRUPT_MESSAGE_FOR_TOOL_USE,
-])
+const RENDERED_AS_SENTINEL = new Set([INTERRUPT_MESSAGE, INTERRUPT_MESSAGE_FOR_TOOL_USE])
 
 const searchTextCache = new WeakMap<RenderableMessage, string>()
 
@@ -70,7 +64,7 @@ function computeSearchText(msg: RenderableMessage): string {
         // — the command/pattern/path is visible and searchable-expected.
         // Skip thinking (hidden by hidePastThinking in transcript mount).
         raw = c
-          .flatMap(b => {
+          .flatMap((b) => {
             if (b.type === 'text') return [b.text]
             if (b.type === 'tool_use') return [toolUseSearchText(b.input)]
             return []
@@ -84,7 +78,7 @@ function computeSearchText(msg: RenderableMessage): string {
       // (AttachmentMessage.tsx <Ansi>{m.content}</Ansi>). Visible but
       // unsearchable without this — [ dump finds it, / doesn't.
       if (msg.attachment.type === 'relevant_memories') {
-        raw = msg.attachment.memories.map(m => m.content).join('\n')
+        raw = msg.attachment.memories.map((m) => m.content).join('\n')
       } else if (
         // Mid-turn prompts — queued while an agent is running. Render via
         // UserTextMessage (AttachmentMessage.tsx:~348). stickyPromptText
@@ -94,10 +88,7 @@ function computeSearchText(msg: RenderableMessage): string {
         !msg.attachment.isMeta
       ) {
         const p = msg.attachment.prompt
-        raw =
-          typeof p === 'string'
-            ? p
-            : p.flatMap(b => (b.type === 'text' ? [b.text] : [])).join('\n')
+        raw = typeof p === 'string' ? p : p.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n')
       }
       break
     }
@@ -106,7 +97,7 @@ function computeSearchText(msg: RenderableMessage): string {
       // (collapseReadSearch.ts); their content is visible in transcript mode
       // via CollapsedReadSearchContent, so mirror it here for / search.
       if (msg.relevantMemories) {
-        raw = msg.relevantMemories.map(m => m.content).join('\n')
+        raw = msg.relevantMemories.map((m) => m.content).join('\n')
       }
       break
     }
@@ -156,7 +147,7 @@ export function toolUseSearchText(input: unknown): string {
   // renders the joined array as the primary display. Under-count > skip.
   for (const k of ['args', 'files']) {
     const v = o[k]
-    if (Array.isArray(v) && v.every(x => typeof x === 'string')) {
+    if (Array.isArray(v) && v.every((x) => typeof x === 'string')) {
       parts.push((v as string[]).join(' '))
     }
   }
@@ -176,11 +167,7 @@ export function toolResultSearchText(r: unknown): string {
     const err = typeof o.stderr === 'string' ? o.stderr : ''
     return o.stdout + (err ? '\n' + err : '')
   }
-  if (
-    o.file &&
-    typeof o.file === 'object' &&
-    typeof (o.file as { content?: unknown }).content === 'string'
-  ) {
+  if (o.file && typeof o.file === 'object' && typeof (o.file as { content?: unknown }).content === 'string') {
     return (o.file as { content: string }).content
   }
   // Known output-field names only. A blind walk would index metadata
@@ -194,7 +181,7 @@ export function toolResultSearchText(r: unknown): string {
   }
   for (const k of ['filenames', 'lines', 'results']) {
     const v = o[k]
-    if (Array.isArray(v) && v.every(x => typeof x === 'string')) {
+    if (Array.isArray(v) && v.every((x) => typeof x === 'string')) {
       parts.push((v as string[]).join('\n'))
     }
   }

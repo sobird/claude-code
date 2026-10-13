@@ -1,5 +1,6 @@
 import figures from 'figures'
 import React, { useMemo } from 'react'
+
 import type { DiffFile } from '../../hooks/useDiffData.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { Box, Text } from '../../ink.js'
@@ -51,11 +52,7 @@ export function DiffFileList({ files, selectedIndex }: Props): React.ReactNode {
   return (
     <Box flexDirection="column">
       {needsPagination && (
-        <Text dimColor>
-          {hasMoreAbove
-            ? ` ↑ ${startIndex} more ${plural(startIndex, 'file')}`
-            : ' '}
-        </Text>
+        <Text dimColor>{hasMoreAbove ? ` ↑ ${startIndex} more ${plural(startIndex, 'file')}` : ' '}</Text>
       )}
       {visibleFiles.map((file, index) => (
         <FileItem
@@ -67,9 +64,7 @@ export function DiffFileList({ files, selectedIndex }: Props): React.ReactNode {
       ))}
       {needsPagination && (
         <Text dimColor>
-          {hasMoreBelow
-            ? ` ↓ ${files.length - endIndex} more ${plural(files.length - endIndex, 'file')}`
-            : ' '}
+          {hasMoreBelow ? ` ↓ ${files.length - endIndex} more ${plural(files.length - endIndex, 'file')}` : ' '}
         </Text>
       )}
     </Box>
@@ -92,11 +87,7 @@ function FileItem({
 
   return (
     <Box flexDirection="row">
-      <Text
-        bold={isSelected}
-        color={isSelected ? 'background' : undefined}
-        inverse={isSelected}
-      >
+      <Text bold={isSelected} color={isSelected ? 'background' : undefined} inverse={isSelected}>
         {line}
       </Text>
       <Box flexGrow={1} />
@@ -105,13 +96,7 @@ function FileItem({
   )
 }
 
-function FileStats({
-  file,
-  isSelected,
-}: {
-  file: DiffFile
-  isSelected: boolean
-}): React.ReactNode {
+function FileStats({ file, isSelected }: { file: DiffFile; isSelected: boolean }): React.ReactNode {
   if (file.isUntracked) {
     return (
       <Text dimColor={!isSelected} italic>

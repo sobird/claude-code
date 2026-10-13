@@ -3,6 +3,7 @@ import { logForDebugging } from 'src/utils/debug.js'
 import { errorMessage } from 'src/utils/errors.js'
 import { fileHistoryEnabled } from 'src/utils/fileHistory.js'
 import { getInitialSettings, getSettings_DEPRECATED, getSettingsForSource } from 'src/utils/settings/settings.js'
+
 import { shouldOfferTerminalSetup } from '../../commands/terminalSetup/terminalSetup.js'
 import { color } from '../../components/design-system/color.js'
 import { getDesktopUpsellConfig } from '../../components/DesktopUpsell/DesktopUpsellStartup.js'

@@ -1,4 +1,5 @@
 import { execaSync } from 'execa'
+
 import { logForDebugging } from '../debug.js'
 import { execFileNoThrow } from '../execFileNoThrow.js'
 import { execSyncWithDefaults_DEPRECATED } from '../execFileNoThrowPortable.js'
@@ -32,9 +33,7 @@ export const macOsKeychainStorage = {
     }
 
     try {
-      const storageServiceName = getMacOsKeychainStorageServiceName(
-        CREDENTIALS_SERVICE_SUFFIX,
-      )
+      const storageServiceName = getMacOsKeychainStorageServiceName(CREDENTIALS_SERVICE_SUFFIX)
       const username = getUsername()
       const result = execSyncWithDefaults_DEPRECATED(
         `security find-generic-password -a "${username}" -w -s "${storageServiceName}"`,
@@ -74,7 +73,7 @@ export const macOsKeychainStorage = {
     }
 
     const gen = keychainCacheState.generation
-    const promise = doReadAsync().then(data => {
+    const promise = doReadAsync().then((data) => {
       // If the cache was invalidated or updated while we were reading,
       // our subprocess result is stale — don't overwrite the newer entry.
       if (gen === keychainCacheState.generation) {
@@ -99,9 +98,7 @@ export const macOsKeychainStorage = {
     clearKeychainCache()
 
     try {
-      const storageServiceName = getMacOsKeychainStorageServiceName(
-        CREDENTIALS_SERVICE_SUFFIX,
-      )
+      const storageServiceName = getMacOsKeychainStorageServiceName(CREDENTIALS_SERVICE_SUFFIX)
       const username = getUsername()
       const jsonString = jsonStringify(data)
 
@@ -125,22 +122,12 @@ export const macOsKeychainStorage = {
           reject: false,
         })
       } else {
-        logForDebugging(
-          `Keychain payload (${jsonString.length}B JSON) exceeds security -i stdin limit; using argv`,
-          { level: 'warn' },
-        )
+        logForDebugging(`Keychain payload (${jsonString.length}B JSON) exceeds security -i stdin limit; using argv`, {
+          level: 'warn',
+        })
         result = execaSync(
           'security',
-          [
-            'add-generic-password',
-            '-U',
-            '-a',
-            username,
-            '-s',
-            storageServiceName,
-            '-X',
-            hexValue,
-          ],
+          ['add-generic-password', '-U', '-a', username, '-s', storageServiceName, '-X', hexValue],
           { stdio: ['ignore', 'pipe', 'pipe'], reject: false },
         )
       }
@@ -161,13 +148,9 @@ export const macOsKeychainStorage = {
     clearKeychainCache()
 
     try {
-      const storageServiceName = getMacOsKeychainStorageServiceName(
-        CREDENTIALS_SERVICE_SUFFIX,
-      )
+      const storageServiceName = getMacOsKeychainStorageServiceName(CREDENTIALS_SERVICE_SUFFIX)
       const username = getUsername()
-      execSyncWithDefaults_DEPRECATED(
-        `security delete-generic-password -a "${username}" -s "${storageServiceName}"`,
-      )
+      execSyncWithDefaults_DEPRECATED(`security delete-generic-password -a "${username}" -s "${storageServiceName}"`)
       return true
     } catch (_e) {
       return false
@@ -177,9 +160,7 @@ export const macOsKeychainStorage = {
 
 async function doReadAsync(): Promise<SecureStorageData | null> {
   try {
-    const storageServiceName = getMacOsKeychainStorageServiceName(
-      CREDENTIALS_SERVICE_SUFFIX,
-    )
+    const storageServiceName = getMacOsKeychainStorageServiceName(CREDENTIALS_SERVICE_SUFFIX)
     const username = getUsername()
     const { stdout, code } = await execFileNoThrow(
       'security',

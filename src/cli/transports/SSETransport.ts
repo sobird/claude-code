@@ -1,5 +1,6 @@
 import axios, { type AxiosError } from 'axios'
 import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
+
 import { logForDebugging } from '../../utils/debug.js'
 import { logForDiagnosticsNoPII } from '../../utils/diagLogs.js'
 import { errorMessage } from '../../utils/errors.js'
@@ -86,10 +87,7 @@ export function parseSSEFrames(buffer: string): {
 
       const field = line.slice(0, colonIdx)
       // Per SSE spec, strip one leading space after colon if present
-      const value =
-        line[colonIdx + 1] === ' '
-          ? line.slice(colonIdx + 2)
-          : line.slice(colonIdx + 1)
+      const value = line[colonIdx + 1] === ' ' ? line.slice(colonIdx + 2) : line.slice(colonIdx + 1)
 
       switch (field) {
         case 'event':
@@ -119,12 +117,7 @@ export function parseSSEFrames(buffer: string): {
 // Types
 // ---------------------------------------------------------------------------
 
-type SSETransportState =
-  | 'idle'
-  | 'connected'
-  | 'reconnecting'
-  | 'closing'
-  | 'closed'
+type SSETransportState = 'idle' | 'connected' | 'reconnecting' | 'closing' | 'closed'
 
 /**
  * Payload for `event: client_event` frames, matching the StreamClientEvent
@@ -230,10 +223,7 @@ export class SSETransport implements Transport {
 
   async connect(): Promise<void> {
     if (this.state !== 'idle' && this.state !== 'reconnecting') {
-      logForDebugging(
-        `SSETransport: Cannot connect, current state is ${this.state}`,
-        { level: 'error' },
-      )
+      logForDebugging(`SSETransport: Cannot connect, current state is ${this.state}`, { level: 'error' })
       logForDiagnosticsNoPII('error', 'cli_sse_connect_failed')
       return
     }
@@ -279,10 +269,7 @@ export class SSETransport implements Transport {
 
       if (!response.ok) {
         const isPermanent = PERMANENT_HTTP_CODES.has(response.status)
-        logForDebugging(
-          `SSETransport: HTTP ${response.status}${isPermanent ? ' (permanent)' : ''}`,
-          { level: 'error' },
-        )
+        logForDebugging(`SSETransport: HTTP ${response.status}${isPermanent ? ' (permanent)' : ''}`, { level: 'error' })
         logForDiagnosticsNoPII('error', 'cli_sse_connect_http_error', {
           status: response.status,
         })
@@ -323,10 +310,7 @@ export class SSETransport implements Transport {
         return
       }
 
-      logForDebugging(
-        `SSETransport: Connection error: ${errorMessage(error)}`,
-        { level: 'error' },
-      )
+      logForDebugging(`SSETransport: Connection error: ${errorMessage(error)}`, { level: 'error' })
       logForDiagnosticsNoPII('error', 'cli_sse_connect_error')
       this.handleConnectionError()
     }
@@ -388,20 +372,14 @@ export class SSETransport implements Transport {
           } else if (frame.data) {
             // data: without event: — server is emitting the old envelope format
             // or a bug. Log so incidents show as a signal instead of silent drops.
-            logForDebugging(
-              'SSETransport: Frame has data: but no event: field — dropped',
-              { level: 'warn' },
-            )
+            logForDebugging('SSETransport: Frame has data: but no event: field — dropped', { level: 'warn' })
             logForDiagnosticsNoPII('warn', 'cli_sse_frame_missing_event_field')
           }
         }
       }
     } catch (error) {
       if (this.abortController?.signal.aborted) return
-      logForDebugging(
-        `SSETransport: Stream read error: ${errorMessage(error)}`,
-        { level: 'error' },
-      )
+      logForDebugging(`SSETransport: Stream read error: ${errorMessage(error)}`, { level: 'error' })
       logForDiagnosticsNoPII('error', 'cli_sse_stream_read_error')
     } finally {
       reader.releaseLock()
@@ -424,10 +402,7 @@ export class SSETransport implements Transport {
    */
   private handleSSEFrame(eventType: string, data: string): void {
     if (eventType !== 'client_event') {
-      logForDebugging(
-        `SSETransport: Unexpected SSE event type '${eventType}' on worker stream`,
-        { level: 'warn' },
-      )
+      logForDebugging(`SSETransport: Unexpected SSE event type '${eventType}' on worker stream`, { level: 'warn' })
       logForDiagnosticsNoPII('warn', 'cli_sse_unexpected_event_type', {
         event_type: eventType,
       })
@@ -438,10 +413,7 @@ export class SSETransport implements Transport {
     try {
       ev = jsonParse(data) as StreamClientEvent
     } catch (error) {
-      logForDebugging(
-        `SSETransport: Failed to parse client_event data: ${errorMessage(error)}`,
-        { level: 'error' },
-      )
+      logForDebugging(`SSETransport: Failed to parse client_event data: ${errorMessage(error)}`, { level: 'error' })
       return
     }
 
@@ -456,9 +428,7 @@ export class SSETransport implements Transport {
       // matching the format that StructuredIO/WebSocketTransport consumers expect
       this.onData?.(jsonStringify(payload) + '\n')
     } else {
-      logForDebugging(
-        `SSETransport: Ignoring client_event with no type in payload: event_id=${ev.event_id}`,
-      )
+      logForDebugging(`SSETransport: Ignoring client_event with no type in payload: event_id=${ev.event_id}`)
     }
 
     this.onEventCallback?.(ev)
@@ -504,10 +474,7 @@ export class SSETransport implements Transport {
         RECONNECT_MAX_DELAY_MS,
       )
       // Add ±25% jitter
-      const delay = Math.max(
-        0,
-        baseDelay + baseDelay * 0.25 * (2 * Math.random() - 1),
-      )
+      const delay = Math.max(0, baseDelay + baseDelay * 0.25 * (2 * Math.random() - 1))
 
       logForDebugging(
         `SSETransport: Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts}, ${Math.round(elapsed / 1000)}s elapsed)`,
@@ -521,10 +488,9 @@ export class SSETransport implements Transport {
         void this.connect()
       }, delay)
     } else {
-      logForDebugging(
-        `SSETransport: Reconnection time budget exhausted after ${Math.round(elapsed / 1000)}s`,
-        { level: 'error' },
-      )
+      logForDebugging(`SSETransport: Reconnection time budget exhausted after ${Math.round(elapsed / 1000)}s`, {
+        level: 'error',
+      })
       logForDiagnosticsNoPII('error', 'cli_sse_reconnect_exhausted', {
         reconnectAttempts: this.reconnectAttempts,
         elapsedMs: elapsed,
@@ -584,9 +550,7 @@ export class SSETransport implements Transport {
       'User-Agent': getClaudeCodeUserAgent(),
     }
 
-    logForDebugging(
-      `SSETransport: POST body keys=${Object.keys(message as Record<string, unknown>).join(',')}`,
-    )
+    logForDebugging(`SSETransport: POST body keys=${Object.keys(message as Record<string, unknown>).join(',')}`)
 
     for (let attempt = 1; attempt <= POST_MAX_RETRIES; attempt++) {
       try {
@@ -600,18 +564,10 @@ export class SSETransport implements Transport {
           return
         }
 
-        logForDebugging(
-          `SSETransport: POST ${response.status} body=${jsonStringify(response.data).slice(0, 200)}`,
-        )
+        logForDebugging(`SSETransport: POST ${response.status} body=${jsonStringify(response.data).slice(0, 200)}`)
         // 4xx errors (except 429) are permanent - don't retry
-        if (
-          response.status >= 400 &&
-          response.status < 500 &&
-          response.status !== 429
-        ) {
-          logForDebugging(
-            `SSETransport: POST returned ${response.status} (client error), not retrying`,
-          )
+        if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+          logForDebugging(`SSETransport: POST returned ${response.status} (client error), not retrying`)
           logForDiagnosticsNoPII('warn', 'cli_sse_post_client_error', {
             status: response.status,
           })
@@ -619,35 +575,26 @@ export class SSETransport implements Transport {
         }
 
         // 429 or 5xx - retry
-        logForDebugging(
-          `SSETransport: POST returned ${response.status}, attempt ${attempt}/${POST_MAX_RETRIES}`,
-        )
+        logForDebugging(`SSETransport: POST returned ${response.status}, attempt ${attempt}/${POST_MAX_RETRIES}`)
         logForDiagnosticsNoPII('warn', 'cli_sse_post_retryable_error', {
           status: response.status,
           attempt,
         })
       } catch (error) {
         const axiosError = error as AxiosError
-        logForDebugging(
-          `SSETransport: POST error: ${axiosError.message}, attempt ${attempt}/${POST_MAX_RETRIES}`,
-        )
+        logForDebugging(`SSETransport: POST error: ${axiosError.message}, attempt ${attempt}/${POST_MAX_RETRIES}`)
         logForDiagnosticsNoPII('warn', 'cli_sse_post_network_error', {
           attempt,
         })
       }
 
       if (attempt === POST_MAX_RETRIES) {
-        logForDebugging(
-          `SSETransport: POST failed after ${POST_MAX_RETRIES} attempts, continuing`,
-        )
+        logForDebugging(`SSETransport: POST failed after ${POST_MAX_RETRIES} attempts, continuing`)
         logForDiagnosticsNoPII('warn', 'cli_sse_post_retries_exhausted')
         return
       }
 
-      const delayMs = Math.min(
-        POST_BASE_DELAY_MS * Math.pow(2, attempt - 1),
-        POST_MAX_DELAY_MS,
-      )
+      const delayMs = Math.min(POST_BASE_DELAY_MS * Math.pow(2, attempt - 1), POST_MAX_DELAY_MS)
       await sleep(delayMs)
     }
   }

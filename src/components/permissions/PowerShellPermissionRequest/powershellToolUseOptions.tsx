@@ -1,14 +1,10 @@
 import { POWERSHELL_TOOL_NAME } from '../../../tools/PowerShellTool/toolName.js'
-import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
 import { shouldShowAlwaysAllowOptions } from '../../../utils/permissions/permissionsLoader.js'
+import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
 import type { OptionWithDescription } from '../../CustomSelect/select.js'
 import { generateShellSuggestionsLabel } from '../shellPermissionHelpers.js'
 
-export type PowerShellToolUseOption =
-  | 'yes'
-  | 'yes-apply-suggestions'
-  | 'yes-prefix-edited'
-  | 'no'
+export type PowerShellToolUseOption = 'yes' | 'yes-apply-suggestions' | 'yes-prefix-edited' | 'no'
 
 export function powershellToolUseOptions({
   suggestions = [],
@@ -55,16 +51,11 @@ export function powershellToolUseOptions({
   // those are present.
   if (shouldShowAlwaysAllowOptions() && suggestions.length > 0) {
     const hasNonPowerShellSuggestions = suggestions.some(
-      s =>
+      (s) =>
         s.type === 'addDirectories' ||
-        (s.type === 'addRules' &&
-          s.rules?.some(r => r.toolName !== POWERSHELL_TOOL_NAME)),
+        (s.type === 'addRules' && s.rules?.some((r) => r.toolName !== POWERSHELL_TOOL_NAME)),
     )
-    if (
-      editablePrefix !== undefined &&
-      onEditablePrefixChange &&
-      !hasNonPowerShellSuggestions
-    ) {
+    if (editablePrefix !== undefined && onEditablePrefixChange && !hasNonPowerShellSuggestions) {
       options.push({
         type: 'input',
         label: 'Yes, and don\u2019t ask again for',
@@ -78,10 +69,7 @@ export function powershellToolUseOptions({
         resetCursorOnUpdate: true,
       })
     } else {
-      const label = generateShellSuggestionsLabel(
-        suggestions,
-        POWERSHELL_TOOL_NAME,
-      )
+      const label = generateShellSuggestionsLabel(suggestions, POWERSHELL_TOOL_NAME)
       if (label) {
         options.push({
           label,

@@ -1,16 +1,8 @@
-import React, {
-  createContext,
-  type ReactNode,
-  useContext,
-  useMemo,
-} from 'react'
+import React, { createContext, type ReactNode, useContext, useMemo } from 'react'
+
 import type { Command } from '../../commands.js'
 import type { Tool } from '../../Tool.js'
-import type {
-  MCPServerConnection,
-  ScopedMcpServerConfig,
-  ServerResource,
-} from './types.js'
+import type { MCPServerConnection, ScopedMcpServerConfig, ServerResource } from './types.js'
 import { useManageMCPConnections } from './useManageMCPConnections.js'
 
 interface MCPConnectionContextValue {
@@ -23,9 +15,7 @@ interface MCPConnectionContextValue {
   toggleMcpServer: (serverName: string) => Promise<void>
 }
 
-const MCPConnectionContext = createContext<MCPConnectionContextValue | null>(
-  null,
-)
+const MCPConnectionContext = createContext<MCPConnectionContextValue | null>(null)
 
 export function useMcpReconnect() {
   const context = useContext(MCPConnectionContext)
@@ -38,9 +28,7 @@ export function useMcpReconnect() {
 export function useMcpToggleEnabled() {
   const context = useContext(MCPConnectionContext)
   if (!context) {
-    throw new Error(
-      'useMcpToggleEnabled must be used within MCPConnectionManager',
-    )
+    throw new Error('useMcpToggleEnabled must be used within MCPConnectionManager')
   }
   return context.toggleMcpServer
 }
@@ -57,18 +45,8 @@ export function MCPConnectionManager({
   dynamicMcpConfig,
   isStrictMcpConfig,
 }: MCPConnectionManagerProps): React.ReactNode {
-  const { reconnectMcpServer, toggleMcpServer } = useManageMCPConnections(
-    dynamicMcpConfig,
-    isStrictMcpConfig,
-  )
-  const value = useMemo(
-    () => ({ reconnectMcpServer, toggleMcpServer }),
-    [reconnectMcpServer, toggleMcpServer],
-  )
+  const { reconnectMcpServer, toggleMcpServer } = useManageMCPConnections(dynamicMcpConfig, isStrictMcpConfig)
+  const value = useMemo(() => ({ reconnectMcpServer, toggleMcpServer }), [reconnectMcpServer, toggleMcpServer])
 
-  return (
-    <MCPConnectionContext.Provider value={value}>
-      {children}
-    </MCPConnectionContext.Provider>
-  )
+  return <MCPConnectionContext.Provider value={value}>{children}</MCPConnectionContext.Provider>
 }

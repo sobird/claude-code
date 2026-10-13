@@ -1,9 +1,5 @@
-import {
-  type AnsiCode,
-  type StyledChar,
-  styledCharsFromTokens,
-  tokenize,
-} from '@alcalzone/ansi-tokenize'
+import { type AnsiCode, type StyledChar, styledCharsFromTokens, tokenize } from '@alcalzone/ansi-tokenize'
+
 import { logForDebugging } from '../utils/debug.js'
 import { getGraphemeSegmenter } from '../utils/intl.js'
 import sliceAnsi from '../utils/sliceAnsi.js'
@@ -111,19 +107,13 @@ function intersectClip(parent: Clip | undefined, child: Clip): Clip {
   }
 }
 
-function maxDefined(
-  a: number | undefined,
-  b: number | undefined,
-): number | undefined {
+function maxDefined(a: number | undefined, b: number | undefined): number | undefined {
   if (a === undefined) return b
   if (b === undefined) return a
   return Math.max(a, b)
 }
 
-function minDefined(
-  a: number | undefined,
-  b: number | undefined,
-): number | undefined {
+function minDefined(a: number | undefined, b: number | undefined): number | undefined {
   if (a === undefined) return b
   if (b === undefined) return a
   return Math.min(a, b)
@@ -331,13 +321,7 @@ export default class Output {
           // Bulk-copy cells from source screen region using TypedArray.set().
           // Tracking damage ensures diff() checks blitted cells for stale content
           // when a parent blits an area that previously contained child content.
-          const {
-            src,
-            x: regionX,
-            y: regionY,
-            width: regionWidth,
-            height: regionHeight,
-          } = operation
+          const { src, x: regionX, y: regionY, width: regionWidth, height: regionHeight } = operation
           // Intersect with active clip — a child's clean-blit passes its full
           // cached rect, but the parent ScrollBox may have shrunk (pill mount).
           // Without this, the blit writes past the ScrollBox's new bottom edge
@@ -345,18 +329,8 @@ export default class Output {
           const clip = clips.at(-1)
           const startX = Math.max(regionX, clip?.x1 ?? 0)
           const startY = Math.max(regionY, clip?.y1 ?? 0)
-          const maxY = Math.min(
-            regionY + regionHeight,
-            screenHeight,
-            src.height,
-            clip?.y2 ?? Infinity,
-          )
-          const maxX = Math.min(
-            regionX + regionWidth,
-            screenWidth,
-            src.width,
-            clip?.x2 ?? Infinity,
-          )
+          const maxY = Math.min(regionY + regionHeight, screenHeight, src.height, clip?.y2 ?? Infinity)
+          const maxX = Math.min(regionX + regionWidth, screenWidth, src.width, clip?.x2 ?? Infinity)
           if (startX >= maxX || startY >= maxY) continue
           // Skip rows covered by an absolute-positioned node's clear.
           // Absolute nodes overlay normal-flow siblings, so prevScreen in
@@ -371,13 +345,7 @@ export default class Output {
           for (let row = startY; row <= maxY; row++) {
             const excluded =
               row < maxY &&
-              absoluteClears.some(
-                r =>
-                  row >= r.y &&
-                  row < r.y + r.height &&
-                  startX >= r.x &&
-                  maxX <= r.x + r.width,
-              )
+              absoluteClears.some((r) => row >= r.y && row < r.y + r.height && startX >= r.x && maxX <= r.x + r.width)
             if (excluded || row === maxY) {
               if (row > rowStart) {
                 blitRegion(screen, src, startX, rowStart, maxX, row)
@@ -404,11 +372,9 @@ export default class Output {
           const clip = clips.at(-1)
 
           if (clip) {
-            const clipHorizontally =
-              typeof clip?.x1 === 'number' && typeof clip?.x2 === 'number'
+            const clipHorizontally = typeof clip?.x1 === 'number' && typeof clip?.x2 === 'number'
 
-            const clipVertically =
-              typeof clip?.y1 === 'number' && typeof clip?.y2 === 'number'
+            const clipVertically = typeof clip?.y1 === 'number' && typeof clip?.y2 === 'number'
 
             // If text is positioned outside of clipping area altogether,
             // skip to the next operation to avoid unnecessary calculations
@@ -429,7 +395,7 @@ export default class Output {
             }
 
             if (clipHorizontally) {
-              lines = lines.map(line => {
+              lines = lines.map((line) => {
                 const from = x < clip.x1! ? clip.x1! - x : 0
                 const width = stringWidth(line)
                 const to = x + width > clip.x2! ? clip.x2! - x : width
@@ -482,15 +448,7 @@ export default class Output {
             if (lineY >= screenHeight) {
               break
             }
-            const contentEnd = writeLineToScreen(
-              screen,
-              line,
-              x,
-              lineY,
-              screenWidth,
-              this.stylePool,
-              this.charCache,
-            )
+            const contentEnd = writeLineToScreen(screen, line, x, lineY, screenWidth, this.stylePool, this.charCache)
             writeCells += contentEnd - x
             // See Screen.softWrap docstring for the encoding. contentEnd
             // from writeLineToScreen is tab-expansion-aware, unlike
@@ -550,10 +508,7 @@ function stylesEqual(a: AnsiCode[], b: AnsiCode[]): boolean {
  * Also precomputes styleId + hyperlink per style run (not per char) — an
  * 80-char line with 3 style runs does 3 intern calls instead of 80.
  */
-function styledCharsWithGraphemeClustering(
-  chars: StyledChar[],
-  stylePool: StylePool,
-): ClusteredChar[] {
+function styledCharsWithGraphemeClustering(chars: StyledChar[], stylePool: StylePool): ClusteredChar[] {
   const charCount = chars.length
   if (charCount === 0) return []
 
@@ -583,12 +538,7 @@ function styledCharsWithGraphemeClustering(
   return result
 }
 
-function flushBuffer(
-  buffer: string,
-  styles: AnsiCode[],
-  stylePool: StylePool,
-  out: ClusteredChar[],
-): void {
+function flushBuffer(buffer: string, styles: AnsiCode[], stylePool: StylePool, out: ClusteredChar[]): void {
   // Compute styleId + hyperlink ONCE for the whole style run.
   // Every grapheme in this buffer shares the same styles.
   //
@@ -599,14 +549,8 @@ function flushBuffer(
   // URL is present.
   const hyperlink = extractHyperlinkFromStyles(styles) ?? undefined
   const hasOsc8Styles =
-    hyperlink !== undefined ||
-    styles.some(
-      s =>
-        s.code.length >= OSC8_PREFIX.length && s.code.startsWith(OSC8_PREFIX),
-    )
-  const filteredStyles = hasOsc8Styles
-    ? filterOutHyperlinkStyles(styles)
-    : styles
+    hyperlink !== undefined || styles.some((s) => s.code.length >= OSC8_PREFIX.length && s.code.startsWith(OSC8_PREFIX))
+  const filteredStyles = hasOsc8Styles ? filterOutHyperlinkStyles(styles) : styles
   const styleId = stylePool.intern(filteredStyles)
 
   for (const { segment: grapheme } of getGraphemeSegmenter().segment(buffer)) {
@@ -641,12 +585,7 @@ function writeLineToScreen(
 ): number {
   let characters = charCache.get(line)
   if (!characters) {
-    characters = reorderBidi(
-      styledCharsWithGraphemeClustering(
-        styledCharsFromTokens(tokenize(line)),
-        stylePool,
-      ),
-    )
+    characters = reorderBidi(styledCharsWithGraphemeClustering(styledCharsFromTokens(tokenize(line)), stylePool))
     charCache.set(line, characters)
   }
 
@@ -682,12 +621,7 @@ function writeLineToScreen(
       else if (codePoint === 0x1b) {
         const nextChar = characters[charIdx + 1]?.value
         const nextCode = nextChar?.codePointAt(0)
-        if (
-          nextChar === '(' ||
-          nextChar === ')' ||
-          nextChar === '*' ||
-          nextChar === '+'
-        ) {
+        if (nextChar === '(' || nextChar === ')' || nextChar === '*' || nextChar === '+') {
           // Charset selection: ESC ( X, ESC ) X, etc.
           // Skip the intermediate char and the charset designator
           charIdx += 2
@@ -704,13 +638,7 @@ function writeLineToScreen(
               break
             }
           }
-        } else if (
-          nextChar === ']' ||
-          nextChar === 'P' ||
-          nextChar === '_' ||
-          nextChar === '^' ||
-          nextChar === 'X'
-        ) {
+        } else if (nextChar === ']' || nextChar === 'P' || nextChar === '_' || nextChar === '^' || nextChar === 'X') {
           // String-based sequences terminated by BEL (0x07) or ST (ESC \):
           // - OSC: ESC ] ... (Operating System Command)
           // - DCS: ESC P ... (Device Control String)
@@ -735,11 +663,7 @@ function writeLineToScreen(
               }
             }
           }
-        } else if (
-          nextCode !== undefined &&
-          nextCode >= 0x30 &&
-          nextCode <= 0x7e
-        ) {
+        } else if (nextCode !== undefined && nextCode >= 0x30 && nextCode <= 0x7e) {
           // Single-character escape sequences: ESC followed by 0x30-0x7E
           // (excluding the multi-char introducers already handled above)
           // - Fp range (0x30-0x3F): ESC 7 (save cursor), ESC 8 (restore)

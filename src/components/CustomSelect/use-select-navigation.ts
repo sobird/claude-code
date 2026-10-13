@@ -1,12 +1,7 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from 'react'
 import { isDeepStrictEqual } from 'util'
+
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+
 import OptionMap from './option-map.js'
 import type { OptionWithDescription } from './select.js'
 
@@ -110,10 +105,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
         }
       }
 
-      const nextVisibleToIndex = Math.min(
-        state.optionMap.size,
-        state.visibleToIndex + 1,
-      )
+      const nextVisibleToIndex = Math.min(state.optionMap.size, state.visibleToIndex + 1)
 
       const nextVisibleFromIndex = nextVisibleToIndex - state.visibleOptionCount
 
@@ -146,10 +138,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
       // When wrapping to last, reset viewport to end
       if (!item.previous && previous === state.optionMap.last) {
         const nextVisibleToIndex = state.optionMap.size
-        const nextVisibleFromIndex = Math.max(
-          0,
-          nextVisibleToIndex - state.visibleOptionCount,
-        )
+        const nextVisibleFromIndex = Math.max(0, nextVisibleToIndex - state.visibleOptionCount)
         return {
           ...state,
           focusedValue: previous.value,
@@ -191,10 +180,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
       }
 
       // Move by a full page (visibleOptionCount items)
-      const targetIndex = Math.min(
-        state.optionMap.size - 1,
-        item.index + state.visibleOptionCount,
-      )
+      const targetIndex = Math.min(state.optionMap.size - 1, item.index + state.visibleOptionCount)
 
       // Find the item at the target index
       let targetItem = state.optionMap.first
@@ -211,14 +197,8 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
       }
 
       // Update the visible range to include the new focused item
-      const nextVisibleToIndex = Math.min(
-        state.optionMap.size,
-        targetItem.index + 1,
-      )
-      const nextVisibleFromIndex = Math.max(
-        0,
-        nextVisibleToIndex - state.visibleOptionCount,
-      )
+      const nextVisibleToIndex = Math.min(state.optionMap.size, targetItem.index + 1)
+      const nextVisibleFromIndex = Math.max(0, nextVisibleToIndex - state.visibleOptionCount)
 
       return {
         ...state,
@@ -258,10 +238,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
 
       // Update the visible range to include the new focused item
       const nextVisibleFromIndex = Math.max(0, targetItem.index)
-      const nextVisibleToIndex = Math.min(
-        state.optionMap.size,
-        nextVisibleFromIndex + state.visibleOptionCount,
-      )
+      const nextVisibleToIndex = Math.min(state.optionMap.size, nextVisibleFromIndex + state.visibleOptionCount)
 
       return {
         ...state,
@@ -287,10 +264,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
       }
 
       // Check if the item is already in view
-      if (
-        item.index >= state.visibleFromIndex &&
-        item.index < state.visibleToIndex
-      ) {
+      if (item.index >= state.visibleFromIndex && item.index < state.visibleToIndex) {
         // Already visible, just update focus
         return {
           ...state,
@@ -306,17 +280,11 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
       if (item.index < state.visibleFromIndex) {
         // Item is above viewport - scroll up to put it at the top
         nextVisibleFromIndex = item.index
-        nextVisibleToIndex = Math.min(
-          state.optionMap.size,
-          nextVisibleFromIndex + state.visibleOptionCount,
-        )
+        nextVisibleToIndex = Math.min(state.optionMap.size, nextVisibleFromIndex + state.visibleOptionCount)
       } else {
         // Item is below viewport - scroll down to put it at the bottom
         nextVisibleToIndex = Math.min(state.optionMap.size, item.index + 1)
-        nextVisibleFromIndex = Math.max(
-          0,
-          nextVisibleToIndex - state.visibleOptionCount,
-        )
+        nextVisibleFromIndex = Math.max(0, nextVisibleToIndex - state.visibleOptionCount)
       }
 
       return {
@@ -431,13 +399,10 @@ const createDefaultState = <T>({
   currentViewport?: { visibleFromIndex: number; visibleToIndex: number }
 }): State<T> => {
   const visibleOptionCount =
-    typeof customVisibleOptionCount === 'number'
-      ? Math.min(customVisibleOptionCount, options.length)
-      : options.length
+    typeof customVisibleOptionCount === 'number' ? Math.min(customVisibleOptionCount, options.length) : options.length
 
   const optionMap = new OptionMap<T>(options)
-  const focusedItem =
-    initialFocusValue !== undefined && optionMap.get(initialFocusValue)
+  const focusedItem = initialFocusValue !== undefined && optionMap.get(initialFocusValue)
   const focusedValue = focusedItem ? initialFocusValue : optionMap.first?.value
 
   let visibleFromIndex = 0
@@ -449,26 +414,17 @@ const createDefaultState = <T>({
 
     if (currentViewport) {
       // If focused item is already in the current viewport range, try to preserve it
-      if (
-        focusedIndex >= currentViewport.visibleFromIndex &&
-        focusedIndex < currentViewport.visibleToIndex
-      ) {
+      if (focusedIndex >= currentViewport.visibleFromIndex && focusedIndex < currentViewport.visibleToIndex) {
         // Keep the same viewport if it's valid
         visibleFromIndex = currentViewport.visibleFromIndex
-        visibleToIndex = Math.min(
-          optionMap.size,
-          currentViewport.visibleToIndex,
-        )
+        visibleToIndex = Math.min(optionMap.size, currentViewport.visibleToIndex)
       } else {
         // Need to adjust viewport to show focused item
         // Use minimal scrolling - put item at edge of viewport
         if (focusedIndex < currentViewport.visibleFromIndex) {
           // Item is above current viewport - scroll up to put it at the top
           visibleFromIndex = focusedIndex
-          visibleToIndex = Math.min(
-            optionMap.size,
-            visibleFromIndex + visibleOptionCount,
-          )
+          visibleToIndex = Math.min(optionMap.size, visibleFromIndex + visibleOptionCount)
         } else {
           // Item is below current viewport - scroll down to put it at the bottom
           visibleToIndex = Math.min(optionMap.size, focusedIndex + 1)
@@ -483,14 +439,8 @@ const createDefaultState = <T>({
     }
 
     // Ensure viewport bounds are valid
-    visibleFromIndex = Math.max(
-      0,
-      Math.min(visibleFromIndex, optionMap.size - 1),
-    )
-    visibleToIndex = Math.min(
-      optionMap.size,
-      Math.max(visibleOptionCount, visibleToIndex),
-    )
+    visibleFromIndex = Math.max(0, Math.min(visibleFromIndex, optionMap.size - 1))
+    visibleToIndex = Math.min(optionMap.size, Math.max(visibleOptionCount, visibleToIndex))
   }
 
   return {
@@ -531,8 +481,7 @@ export function useSelectNavigation<T>({
       state: createDefaultState({
         visibleOptionCount,
         options,
-        initialFocusValue:
-          focusValue ?? state.focusedValue ?? initialFocusValue,
+        initialFocusValue: focusValue ?? state.focusedValue ?? initialFocusValue,
         currentViewport: {
           visibleFromIndex: state.visibleFromIndex,
           visibleToIndex: state.visibleToIndex,
@@ -593,7 +542,7 @@ export function useSelectNavigation<T>({
     if (state.focusedValue === undefined) {
       return undefined
     }
-    const exists = options.some(opt => opt.value === state.focusedValue)
+    const exists = options.some((opt) => opt.value === state.focusedValue)
     if (exists) {
       return state.focusedValue
     }
@@ -602,9 +551,7 @@ export function useSelectNavigation<T>({
   }, [state.focusedValue, options])
 
   const isInInput = useMemo(() => {
-    const focusedOption = options.find(
-      opt => opt.value === validatedFocusedValue,
-    )
+    const focusedOption = options.find((opt) => opt.value === validatedFocusedValue)
     return focusedOption?.type === 'input'
   }, [validatedFocusedValue, options])
 
@@ -632,7 +579,7 @@ export function useSelectNavigation<T>({
     if (validatedFocusedValue === undefined) {
       return 0
     }
-    const index = options.findIndex(opt => opt.value === validatedFocusedValue)
+    const index = options.findIndex((opt) => opt.value === validatedFocusedValue)
     return index >= 0 ? index + 1 : 0
   }, [validatedFocusedValue, options])
 

@@ -12,6 +12,7 @@ import {
 } from 'fs/promises'
 import { homedir } from 'os'
 import * as nodePath from 'path'
+
 import { getErrnoCode } from './errors.js'
 import { slowLogging } from './slowOperations.js'
 
@@ -35,10 +36,7 @@ export type FsOperations = {
   /** Removes an empty directory asynchronously */
   rmdir(path: string): Promise<void>
   /** Removes files and directories asynchronously (with recursive option) */
-  rm(
-    path: string,
-    options?: { recursive?: boolean; force?: boolean },
-  ): Promise<void>
+  rm(path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void>
   /** Creates directory recursively asynchronously. */
   mkdir(path: string, options?: { mode?: number }): Promise<void>
   /** Reads file content as string asynchronously */
@@ -81,11 +79,7 @@ export type FsOperations = {
   /** Creates hard link */
   linkSync(target: string, path: string): void
   /** Creates symbolic link */
-  symlinkSync(
-    target: string,
-    path: string,
-    type?: 'dir' | 'file' | 'junction',
-  ): void
+  symlinkSync(target: string, path: string, type?: 'dir' | 'file' | 'junction'): void
   /** Reads symbolic link */
   readlinkSync(path: string): string
   /** Resolves symbolic links and returns the canonical pathname */
@@ -151,12 +145,7 @@ export function safeResolvePath(
     // If the file doesn't exist, lstatSync throws ENOENT which the catch
     // below handles by returning the original path (allows file creation).
     const stats = fs.lstatSync(filePath)
-    if (
-      stats.isFIFO() ||
-      stats.isSocket() ||
-      stats.isCharacterDevice() ||
-      stats.isBlockDevice()
-    ) {
+    if (stats.isFIFO() || stats.isSocket() || stats.isCharacterDevice() || stats.isBlockDevice()) {
       return { resolvedPath: filePath, isSymlink: false, isCanonical: false }
     }
 
@@ -184,11 +173,7 @@ export function safeResolvePath(
  *
  * @returns true if the file should be skipped (is duplicate)
  */
-export function isDuplicatePath(
-  fs: FsOperations,
-  filePath: string,
-  loadedPaths: Set<string>,
-): boolean {
+export function isDuplicatePath(fs: FsOperations, filePath: string, loadedPaths: Set<string>): boolean {
   const { resolvedPath } = safeResolvePath(fs, filePath)
   if (loadedPaths.has(resolvedPath)) {
     return true
@@ -212,10 +197,7 @@ export function isDuplicatePath(
  * Handles: live parent symlinks, dangling file symlinks, dangling parent
  * symlinks. Same core algorithm as teamMemPaths.ts:realpathDeepestExisting.
  */
-export function resolveDeepestExistingAncestorSync(
-  fs: FsOperations,
-  absolutePath: string,
-): string | undefined {
+export function resolveDeepestExistingAncestorSync(fs: FsOperations, absolutePath: string): string | undefined {
   let dir = absolutePath
   const segments: string[] = []
   // Walk up using lstat (cheap, O(1)) to find the first existing component.
@@ -236,18 +218,12 @@ export function resolveDeepestExistingAncestorSync(
       // chained symlinks); fall back to readlink for dangling symlinks.
       try {
         const resolved = fs.realpathSync(dir)
-        return segments.length === 0
-          ? resolved
-          : nodePath.join(resolved, ...segments)
+        return segments.length === 0 ? resolved : nodePath.join(resolved, ...segments)
       } catch {
         // Dangling: realpath failed but lstat saw the link entry.
         const target = fs.readlinkSync(dir)
-        const absTarget = nodePath.isAbsolute(target)
-          ? target
-          : nodePath.resolve(nodePath.dirname(dir), target)
-        return segments.length === 0
-          ? absTarget
-          : nodePath.join(absTarget, ...segments)
+        const absTarget = nodePath.isAbsolute(target) ? target : nodePath.resolve(nodePath.dirname(dir), target)
+        return segments.length === 0 ? absTarget : nodePath.join(absTarget, ...segments)
       }
     }
     // Existing non-symlink component. One realpath call resolves any
@@ -255,9 +231,7 @@ export function resolveDeepestExistingAncestorSync(
     try {
       const resolved = fs.realpathSync(dir)
       if (resolved !== dir) {
-        return segments.length === 0
-          ? resolved
-          : nodePath.join(resolved, ...segments)
+        return segments.length === 0 ? resolved : nodePath.join(resolved, ...segments)
       }
     } catch {
       // realpath can still fail (e.g. EACCES in ancestors). Return
@@ -342,12 +316,7 @@ export function getPathsForPermissionCheck(inputPath: string): string[] {
       const stats = fsImpl.lstatSync(currentPath)
 
       // Skip special file types that can cause issues
-      if (
-        stats.isFIFO() ||
-        stats.isSocket() ||
-        stats.isCharacterDevice() ||
-        stats.isBlockDevice()
-      ) {
+      if (stats.isFIFO() || stats.isSocket() || stats.isCharacterDevice() || stats.isBlockDevice()) {
         break
       }
 
@@ -506,11 +475,7 @@ export const NodeFsOperations: FsOperations = {
     fs.linkSync(target, path)
   },
 
-  symlinkSync(
-    target: string,
-    path: string,
-    type?: 'dir' | 'file' | 'junction',
-  ) {
+  symlinkSync(target: string, path: string, type?: 'dir' | 'file' | 'junction') {
     using _ = slowLogging`fs.symlinkSync(${target} → ${path})`
     fs.symlinkSync(target, path, type)
   },
@@ -586,12 +551,7 @@ export const NodeFsOperations: FsOperations = {
       const buffer = Buffer.allocUnsafe(readSize)
       let offset = 0
       while (offset < readSize) {
-        const { bytesRead } = await handle.read(
-          buffer,
-          offset,
-          readSize - offset,
-          offset,
-        )
+        const { bytesRead } = await handle.read(buffer, offset, readSize - offset, offset)
         if (bytesRead === 0) break
         offset += bytesRead
       }
@@ -656,12 +616,7 @@ export async function readFileRange(
 
   let totalRead = 0
   while (totalRead < bytesToRead) {
-    const { bytesRead } = await fh.read(
-      buffer,
-      totalRead,
-      bytesToRead - totalRead,
-      offset + totalRead,
-    )
+    const { bytesRead } = await fh.read(buffer, totalRead, bytesToRead - totalRead, offset + totalRead)
     if (bytesRead === 0) {
       break
     }
@@ -679,10 +634,7 @@ export async function readFileRange(
  * Read the last `maxBytes` of a file.
  * Returns the whole file if it's smaller than maxBytes.
  */
-export async function tailFile(
-  path: string,
-  maxBytes: number,
-): Promise<ReadFileRangeResult> {
+export async function tailFile(path: string, maxBytes: number): Promise<ReadFileRangeResult> {
   await using fh = await open(path, 'r')
   const size = (await fh.stat()).size
   if (size === 0) {
@@ -694,12 +646,7 @@ export async function tailFile(
 
   let totalRead = 0
   while (totalRead < bytesToRead) {
-    const { bytesRead } = await fh.read(
-      buffer,
-      totalRead,
-      bytesToRead - totalRead,
-      offset + totalRead,
-    )
+    const { bytesRead } = await fh.read(buffer, totalRead, bytesToRead - totalRead, offset + totalRead)
     if (bytesRead === 0) {
       break
     }
@@ -719,9 +666,7 @@ export async function tailFile(
  * @param path - The path to the file to read
  * @returns An async generator that yields lines in reverse order
  */
-export async function* readLinesReverse(
-  path: string,
-): AsyncGenerator<string, void, undefined> {
+export async function* readLinesReverse(path: string): AsyncGenerator<string, void, undefined> {
   const CHUNK_SIZE = 1024 * 4
   const fileHandle = await open(path, 'r')
   try {
@@ -739,10 +684,7 @@ export async function* readLinesReverse(
       position -= currentChunkSize
 
       await fileHandle.read(buffer, 0, currentChunkSize, position)
-      const combined = Buffer.concat([
-        buffer.subarray(0, currentChunkSize),
-        remainder,
-      ])
+      const combined = Buffer.concat([buffer.subarray(0, currentChunkSize), remainder])
 
       const firstNewline = combined.indexOf(0x0a)
       if (firstNewline === -1) {

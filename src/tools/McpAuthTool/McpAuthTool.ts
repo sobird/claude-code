@@ -1,19 +1,10 @@
 import reject from 'lodash-es/reject.js'
 import { z } from 'zod/v4'
+
 import { performMCPOAuthFlow } from '../../services/mcp/auth.js'
-import {
-  clearMcpAuthCache,
-  reconnectMcpServerImpl,
-} from '../../services/mcp/client.js'
-import {
-  buildMcpToolName,
-  getMcpPrefix,
-} from '../../services/mcp/mcpStringUtils.js'
-import type {
-  McpHTTPServerConfig,
-  McpSSEServerConfig,
-  ScopedMcpServerConfig,
-} from '../../services/mcp/types.js'
+import { clearMcpAuthCache, reconnectMcpServerImpl } from '../../services/mcp/client.js'
+import { buildMcpToolName, getMcpPrefix } from '../../services/mcp/mcpStringUtils.js'
+import type { McpHTTPServerConfig, McpSSEServerConfig, ScopedMcpServerConfig } from '../../services/mcp/types.js'
 import type { Tool } from '../../Tool.js'
 import { errorMessage } from '../../utils/errors.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -46,10 +37,7 @@ function getConfigUrl(config: ScopedMcpServerConfig): string | undefined {
  * replacement (useManageMCPConnections.updateServer wipes anything matching
  * mcp__<server>__*, so this pseudo-tool is removed automatically).
  */
-export function createMcpAuthTool(
-  serverName: string,
-  config: ScopedMcpServerConfig,
-): Tool<InputSchema, McpAuthOutput> {
+export function createMcpAuthTool(serverName: string, config: ScopedMcpServerConfig): Tool<InputSchema, McpAuthOutput> {
   const url = getConfigUrl(config)
   const transport = config.type ?? 'stdio'
   const location = url ? `${transport} at ${url}` : transport
@@ -107,16 +95,15 @@ export function createMcpAuthTool(
         }
       }
 
-      const sseOrHttpConfig = config as (
-        | McpSSEServerConfig
-        | McpHTTPServerConfig
-      ) & { scope: ScopedMcpServerConfig['scope'] }
+      const sseOrHttpConfig = config as (McpSSEServerConfig | McpHTTPServerConfig) & {
+        scope: ScopedMcpServerConfig['scope']
+      }
 
       // Mirror cli/print.ts mcp_authenticate: start the flow, capture the
       // URL via onAuthorizationUrl, return it immediately. The flow's
       // Promise resolves later when the browser callback fires.
       let resolveAuthUrl: ((url: string) => void) | undefined
-      const authUrlPromise = new Promise<string>(resolve => {
+      const authUrlPromise = new Promise<string>((resolve) => {
         resolveAuthUrl = resolve
       })
 
@@ -126,7 +113,7 @@ export function createMcpAuthTool(
       const oauthPromise = performMCPOAuthFlow(
         serverName,
         sseOrHttpConfig,
-        u => resolveAuthUrl?.(u),
+        (u) => resolveAuthUrl?.(u),
         controller.signal,
         { skipBrowserOpen: true },
       )
@@ -139,45 +126,28 @@ export function createMcpAuthTool(
           clearMcpAuthCache()
           const result = await reconnectMcpServerImpl(serverName, config)
           const prefix = getMcpPrefix(serverName)
-          setAppState(prev => ({
+          setAppState((prev) => ({
             ...prev,
             mcp: {
               ...prev.mcp,
-              clients: prev.mcp.clients.map(c =>
-                c.name === serverName ? result.client : c,
-              ),
-              tools: [
-                ...reject(prev.mcp.tools, t => t.name?.startsWith(prefix)),
-                ...result.tools,
-              ],
-              commands: [
-                ...reject(prev.mcp.commands, c => c.name?.startsWith(prefix)),
-                ...result.commands,
-              ],
+              clients: prev.mcp.clients.map((c) => (c.name === serverName ? result.client : c)),
+              tools: [...reject(prev.mcp.tools, (t) => t.name?.startsWith(prefix)), ...result.tools],
+              commands: [...reject(prev.mcp.commands, (c) => c.name?.startsWith(prefix)), ...result.commands],
               resources: result.resources
                 ? { ...prev.mcp.resources, [serverName]: result.resources }
                 : prev.mcp.resources,
             },
           }))
-          logMCPDebug(
-            serverName,
-            `OAuth complete, reconnected with ${result.tools.length} tool(s)`,
-          )
+          logMCPDebug(serverName, `OAuth complete, reconnected with ${result.tools.length} tool(s)`)
         })
-        .catch(err => {
-          logMCPError(
-            serverName,
-            `OAuth flow failed after tool-triggered start: ${errorMessage(err)}`,
-          )
+        .catch((err) => {
+          logMCPError(serverName, `OAuth flow failed after tool-triggered start: ${errorMessage(err)}`)
         })
 
       try {
         // Race: get the URL, or the flow completes without needing one
         // (e.g. XAA with cached IdP token — silent auth).
-        const authUrl = await Promise.race([
-          authUrlPromise,
-          oauthPromise.then(() => null as string | null),
-        ])
+        const authUrl = await Promise.race([authUrlPromise, oauthPromise.then(() => null as string | null)])
 
         if (authUrl) {
           return {

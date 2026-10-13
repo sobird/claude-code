@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+
 import { useTheme } from '../components/design-system/ThemeProvider.js'
 import type { useSelection } from '../ink/hooks/use-selection.js'
 import { getGlobalConfig } from '../utils/config.js'
@@ -23,11 +24,7 @@ type Selection = ReturnType<typeof useSelection>
  * but no toast/notification fires). FleetView uses this silent mode; the
  * fullscreen REPL passes showCopiedToast for user feedback.
  */
-export function useCopyOnSelect(
-  selection: Selection,
-  isActive: boolean,
-  onCopied?: (text: string) => void,
-): void {
+export function useCopyOnSelect(selection: Selection, isActive: boolean, onCopied?: (text: string) => void): void {
   // Tracks whether the *previous* notification had a visible selection with
   // isDragging=false (i.e., we already auto-copied it). Without this, the
   // finish→clear transition would look like a fresh selection-gone-idle

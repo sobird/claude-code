@@ -1,10 +1,7 @@
 import axios from 'axios'
+
 import { getOauthConfig } from '../../constants/oauth.js'
-import {
-  getOauthAccountInfo,
-  getSubscriptionType,
-  isClaudeAISubscriber,
-} from '../../utils/auth.js'
+import { getOauthAccountInfo, getSubscriptionType, isClaudeAISubscriber } from '../../utils/auth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { logError } from '../../utils/log.js'
@@ -69,11 +66,7 @@ export async function fetchReferralRedemptions(
  * Prechecks for if user can access guest passes feature
  */
 function shouldCheckForPasses(): boolean {
-  return !!(
-    getOauthAccountInfo()?.organizationUuid &&
-    isClaudeAISubscriber() &&
-    getSubscriptionType() === 'max'
-  )
+  return !!(getOauthAccountInfo()?.organizationUuid && isClaudeAISubscriber() && getSubscriptionType() === 'max')
 }
 
 /**
@@ -194,7 +187,7 @@ export async function fetchAndStorePassesEligibility(): Promise<ReferralEligibil
         timestamp: Date.now(),
       }
 
-      saveGlobalConfig(current => ({
+      saveGlobalConfig((current) => ({
         ...current,
         passesEligibilityCache: {
           ...current.passesEligibilityCache,
@@ -202,9 +195,7 @@ export async function fetchAndStorePassesEligibility(): Promise<ReferralEligibil
         },
       }))
 
-      logForDebugging(
-        `Passes eligibility cached for org ${orgId}: ${response.eligible}`,
-      )
+      logForDebugging(`Passes eligibility cached for org ${orgId}: ${response.eligible}`)
 
       return response
     } catch (error) {
@@ -245,18 +236,14 @@ export async function getCachedOrFetchPassesEligibility(): Promise<ReferralEligi
   // No cache - trigger background fetch and return null (non-blocking)
   // The passes command won't be available this session, but will be next time
   if (!cachedEntry) {
-    logForDebugging(
-      'Passes: No cache, fetching eligibility in background (command unavailable this session)',
-    )
+    logForDebugging('Passes: No cache, fetching eligibility in background (command unavailable this session)')
     void fetchAndStorePassesEligibility()
     return null
   }
 
   // Cache exists but is stale - return stale cache and trigger background refresh
   if (now - cachedEntry.timestamp > CACHE_EXPIRATION_MS) {
-    logForDebugging(
-      'Passes: Cache stale, returning cached data and refreshing in background',
-    )
+    logForDebugging('Passes: Cache stale, returning cached data and refreshing in background')
     void fetchAndStorePassesEligibility() // Background refresh
     const { timestamp, ...response } = cachedEntry
     return response as ReferralEligibilityResponse

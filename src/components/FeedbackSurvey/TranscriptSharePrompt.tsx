@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { BLACK_CIRCLE } from '../../constants/figures.js'
 import { Box, Text } from '../../ink.js'
 import { useDebouncedDigitInput } from './useDebouncedDigitInput.js'
@@ -23,33 +24,23 @@ const inputToResponse: Record<ResponseInput, TranscriptShareResponse> = {
 const isValidResponseInput = (input: string): input is ResponseInput =>
   (RESPONSE_INPUTS as readonly string[]).includes(input)
 
-export function TranscriptSharePrompt({
-  onSelect,
-  inputValue,
-  setInputValue,
-}: Props): React.ReactNode {
+export function TranscriptSharePrompt({ onSelect, inputValue, setInputValue }: Props): React.ReactNode {
   useDebouncedDigitInput({
     inputValue,
     setInputValue,
     isValidDigit: isValidResponseInput,
-    onDigit: digit => onSelect(inputToResponse[digit]),
+    onDigit: (digit) => onSelect(inputToResponse[digit]),
   })
 
   return (
     <Box flexDirection="column" marginTop={1}>
       <Box>
         <Text color="ansi:cyan">{BLACK_CIRCLE} </Text>
-        <Text bold>
-          Can Anthropic look at your session transcript to help us improve
-          Claude Code?
-        </Text>
+        <Text bold>Can Anthropic look at your session transcript to help us improve Claude Code?</Text>
       </Box>
 
       <Box marginLeft={2}>
-        <Text dimColor>
-          Learn more:
-          https://code.claude.com/docs/en/data-usage#session-quality-surveys
-        </Text>
+        <Text dimColor>Learn more: https://code.claude.com/docs/en/data-usage#session-quality-surveys</Text>
       </Box>
 
       <Box marginLeft={2}>

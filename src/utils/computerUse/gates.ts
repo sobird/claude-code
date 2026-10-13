@@ -26,10 +26,7 @@ const DEFAULTS: ChicagoConfig = {
 function readConfig(): ChicagoConfig {
   return {
     ...DEFAULTS,
-    ...getDynamicConfig_CACHED_MAY_BE_STALE<Partial<ChicagoConfig>>(
-      'tengu_malort_pedway',
-      DEFAULTS,
-    ),
+    ...getDynamicConfig_CACHED_MAY_BE_STALE<Partial<ChicagoConfig>>('tengu_malort_pedway', DEFAULTS),
   }
 }
 

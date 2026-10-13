@@ -1,10 +1,9 @@
 import { feature } from 'bun:bundle'
+
 import type { Anthropic } from '@anthropic-ai/sdk'
-import {
-  getSystemPrompt,
-  SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
-} from 'src/constants/prompts.js'
+import { getSystemPrompt, SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from 'src/constants/prompts.js'
 import { microcompactMessages } from 'src/services/compact/microCompact.js'
+
 import { getSdkBetas } from '../bootstrap/state.js'
 import { getCommandName } from '../commands.js'
 import { getSystemContext } from '../context.js'
@@ -29,15 +28,9 @@ import {
   type ToolUseContext,
   toolMatchesName,
 } from '../Tool.js'
-import type {
-  AgentDefinition,
-  AgentDefinitionsResult,
-} from '../tools/AgentTool/loadAgentsDir.js'
+import type { AgentDefinition, AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir.js'
 import { SKILL_TOOL_NAME } from '../tools/SkillTool/constants.js'
-import {
-  getLimitedSkillToolCommands,
-  getSkillToolInfo as getSlashCommandInfo,
-} from '../tools/SkillTool/prompt.js'
+import { getLimitedSkillToolCommands, getSkillToolInfo as getSlashCommandInfo } from '../tools/SkillTool/prompt.js'
 import type {
   AssistantMessage,
   AttachmentMessage,
@@ -83,9 +76,7 @@ async function countTokensWithFallback(
     if (result !== null) {
       return result
     }
-    logForDebugging(
-      `countTokensWithFallback: API returned null, trying haiku fallback (${tools.length} tools)`,
-    )
+    logForDebugging(`countTokensWithFallback: API returned null, trying haiku fallback (${tools.length} tools)`)
   } catch (err) {
     logForDebugging(`countTokensWithFallback: API failed: ${errorMessage(err)}`)
     logError(err)
@@ -94,15 +85,11 @@ async function countTokensWithFallback(
   try {
     const fallbackResult = await countTokensViaHaikuFallback(messages, tools)
     if (fallbackResult === null) {
-      logForDebugging(
-        `countTokensWithFallback: haiku fallback also returned null (${tools.length} tools)`,
-      )
+      logForDebugging(`countTokensWithFallback: haiku fallback also returned null (${tools.length} tools)`)
     }
     return fallbackResult
   } catch (err) {
-    logForDebugging(
-      `countTokensWithFallback: haiku fallback failed: ${errorMessage(err)}`,
-    )
+    logForDebugging(`countTokensWithFallback: haiku fallback failed: ${errorMessage(err)}`)
     logError(err)
     return null
   }
@@ -238,7 +225,7 @@ export async function countToolDefinitionTokens(
   model?: string,
 ): Promise<number> {
   const toolSchemas = await Promise.all(
-    tools.map(tool =>
+    tools.map((tool) =>
       toolToAPISchema(tool, {
         getToolPermissionContext,
         tools,
@@ -249,7 +236,7 @@ export async function countToolDefinitionTokens(
   )
   const result = await countTokensWithFallback([], toolSchemas)
   if (result === null || result === 0) {
-    const toolNames = tools.map(t => t.name).join(', ')
+    const toolNames = tools.map((t) => t.name).join(', ')
     logForDebugging(
       `countToolDefinitionTokens returned ${result} for ${tools.length} tools: ${toolNames.slice(0, 100)}${toolNames.length > 100 ? '...' : ''}`,
     )
@@ -265,13 +252,11 @@ function extractSectionName(content: string): string {
     return headingMatch[1]!.trim()
   }
   // Fall back to a truncated preview of the first non-empty line
-  const firstLine = content.split('\n').find(l => l.trim().length > 0) ?? ''
+  const firstLine = content.split('\n').find((l) => l.trim().length > 0) ?? ''
   return firstLine.length > 40 ? firstLine.slice(0, 40) + '…' : firstLine
 }
 
-async function countSystemTokens(
-  effectiveSystemPrompt: readonly string[],
-): Promise<{
+async function countSystemTokens(effectiveSystemPrompt: readonly string[]): Promise<{
   systemPromptTokens: number
   systemPromptSections: SystemPromptSectionDetail[]
 }> {
@@ -282,11 +267,8 @@ async function countSystemTokens(
   // Skip empty strings and the global-cache boundary marker
   const namedEntries: Array<{ name: string; content: string }> = [
     ...effectiveSystemPrompt
-      .filter(
-        content =>
-          content.length > 0 && content !== SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
-      )
-      .map(content => ({ name: extractSectionName(content), content })),
+      .filter((content) => content.length > 0 && content !== SYSTEM_PROMPT_DYNAMIC_BOUNDARY)
+      .map((content) => ({ name: extractSectionName(content), content })),
     ...Object.entries(systemContext)
       .filter(([, content]) => content.length > 0)
       .map(([name, content]) => ({ name, content })),
@@ -297,22 +279,15 @@ async function countSystemTokens(
   }
 
   const systemTokenCounts = await Promise.all(
-    namedEntries.map(({ content }) =>
-      countTokensWithFallback([{ role: 'user', content }], []),
-    ),
+    namedEntries.map(({ content }) => countTokensWithFallback([{ role: 'user', content }], [])),
   )
 
-  const systemPromptSections: SystemPromptSectionDetail[] = namedEntries.map(
-    (entry, i) => ({
-      name: entry.name,
-      tokens: systemTokenCounts[i] || 0,
-    }),
-  )
+  const systemPromptSections: SystemPromptSectionDetail[] = namedEntries.map((entry, i) => ({
+    name: entry.name,
+    tokens: systemTokenCounts[i] || 0,
+  }))
 
-  const systemPromptTokens = systemTokenCounts.reduce(
-    (sum: number, tokens) => sum + (tokens || 0),
-    0,
-  )
+  const systemPromptTokens = systemTokenCounts.reduce((sum: number, tokens) => sum + (tokens || 0), 0)
 
   return { systemPromptTokens, systemPromptSections }
 }
@@ -338,11 +313,8 @@ async function countMemoryFileTokens(): Promise<{
   }
 
   const claudeMdTokenCounts = await Promise.all(
-    memoryFilesData.map(async file => {
-      const tokens = await countTokensWithFallback(
-        [{ role: 'user', content: file.content }],
-        [],
-      )
+    memoryFilesData.map(async (file) => {
+      const tokens = await countTokensWithFallback([{ role: 'user', content: file.content }], [])
 
       return { file, tokens: tokens || 0 }
     }),
@@ -372,7 +344,7 @@ async function countBuiltInToolTokens(
   deferredBuiltinTokens: number
   systemToolDetails: SystemToolDetail[]
 }> {
-  const builtInTools = tools.filter(tool => !tool.isMcp)
+  const builtInTools = tools.filter((tool) => !tool.isMcp)
   if (builtInTools.length < 1) {
     return {
       builtInToolTokens: 0,
@@ -394,18 +366,13 @@ async function countBuiltInToolTokens(
   )
 
   // Separate always-loaded and deferred builtin tools using dynamic isDeferredTool check
-  const alwaysLoadedTools = builtInTools.filter(t => !isDeferredTool(t))
-  const deferredBuiltinTools = builtInTools.filter(t => isDeferredTool(t))
+  const alwaysLoadedTools = builtInTools.filter((t) => !isDeferredTool(t))
+  const deferredBuiltinTools = builtInTools.filter((t) => isDeferredTool(t))
 
   // Count always-loaded tools
   const alwaysLoadedTokens =
     alwaysLoadedTools.length > 0
-      ? await countToolDefinitionTokens(
-          alwaysLoadedTools,
-          getToolPermissionContext,
-          agentInfo,
-          model,
-        )
+      ? await countToolDefinitionTokens(alwaysLoadedTools, getToolPermissionContext, agentInfo, model)
       : 0
 
   // Build per-tool breakdown for always-loaded tools (ant-only, proportional
@@ -413,18 +380,11 @@ async function countBuiltInToolTokens(
   // SkillTool since its tokens are shown in the separate Skills category.
   let systemToolDetails: SystemToolDetail[] = []
   if (process.env.USER_TYPE === 'ant') {
-    const toolsForBreakdown = alwaysLoadedTools.filter(
-      t => !toolMatchesName(t, SKILL_TOOL_NAME),
-    )
+    const toolsForBreakdown = alwaysLoadedTools.filter((t) => !toolMatchesName(t, SKILL_TOOL_NAME))
     if (toolsForBreakdown.length > 0) {
-      const estimates = toolsForBreakdown.map(t =>
-        roughTokenCountEstimation(jsonStringify(t.inputSchema ?? {})),
-      )
+      const estimates = toolsForBreakdown.map((t) => roughTokenCountEstimation(jsonStringify(t.inputSchema ?? {})))
       const estimateTotal = estimates.reduce((s, e) => s + e, 0) || 1
-      const distributable = Math.max(
-        0,
-        alwaysLoadedTokens - TOOL_TOKEN_COUNT_OVERHEAD,
-      )
+      const distributable = Math.max(0, alwaysLoadedTokens - TOOL_TOKEN_COUNT_OVERHEAD)
       systemToolDetails = toolsForBreakdown
         .map((t, i) => ({
           name: t.name,
@@ -443,7 +403,7 @@ async function countBuiltInToolTokens(
     // Find which deferred tools have been used in messages
     const loadedToolNames = new Set<string>()
     if (messages) {
-      const deferredToolNameSet = new Set(deferredBuiltinTools.map(t => t.name))
+      const deferredToolNameSet = new Set(deferredBuiltinTools.map((t) => t.name))
       for (const msg of messages) {
         if (msg.type === 'assistant') {
           for (const block of msg.message.content) {
@@ -463,21 +423,11 @@ async function countBuiltInToolTokens(
 
     // Count each deferred tool
     const tokensByTool = await Promise.all(
-      deferredBuiltinTools.map(t =>
-        countToolDefinitionTokens(
-          [t],
-          getToolPermissionContext,
-          agentInfo,
-          model,
-        ),
-      ),
+      deferredBuiltinTools.map((t) => countToolDefinitionTokens([t], getToolPermissionContext, agentInfo, model)),
     )
 
     for (const [i, tool] of deferredBuiltinTools.entries()) {
-      const tokens = Math.max(
-        0,
-        (tokensByTool[i] || 0) - TOOL_TOKEN_COUNT_OVERHEAD,
-      )
+      const tokens = Math.max(0, (tokensByTool[i] || 0) - TOOL_TOKEN_COUNT_OVERHEAD)
       const isLoaded = loadedToolNames.has(tool.name)
       deferredBuiltinDetails.push({
         name: tool.name,
@@ -536,11 +486,7 @@ async function countSlashCommandTokens(
     }
   }
 
-  const slashCommandTokens = await countToolDefinitionTokens(
-    [slashCommandTool],
-    getToolPermissionContext,
-    agentInfo,
-  )
+  const slashCommandTokens = await countToolDefinitionTokens([slashCommandTool], getToolPermissionContext, agentInfo)
 
   return {
     slashCommandTokens,
@@ -578,19 +524,13 @@ async function countSkillTokens(
     // This is the same tool counted by countSlashCommandTokens(), but we track it separately
     // here for display purposes. These tokens should NOT be added to context categories
     // to avoid double-counting.
-    const skillTokens = await countToolDefinitionTokens(
-      [slashCommandTool],
-      getToolPermissionContext,
-      agentInfo,
-    )
+    const skillTokens = await countToolDefinitionTokens([slashCommandTool], getToolPermissionContext, agentInfo)
 
     // Calculate per-skill token estimates based on frontmatter only
     // (name, description, whenToUse) since full content is only loaded on invocation
-    const skillFrontmatter: SkillFrontmatter[] = skills.map(skill => ({
+    const skillFrontmatter: SkillFrontmatter[] = skills.map((skill) => ({
       name: getCommandName(skill),
-      source: (skill.type === 'prompt' ? skill.source : 'plugin') as
-        | SettingSource
-        | 'plugin',
+      source: (skill.type === 'prompt' ? skill.source : 'plugin') as SettingSource | 'plugin',
       tokens: estimateSkillFrontmatterTokens(skill),
     }))
 
@@ -625,27 +565,19 @@ export async function countMcpToolTokens(
   deferredToolTokens: number
   loadedMcpToolNames: Set<string>
 }> {
-  const mcpTools = tools.filter(tool => tool.isMcp)
+  const mcpTools = tools.filter((tool) => tool.isMcp)
   const mcpToolDetails: McpTool[] = []
   // Single bulk API call for all MCP tools (instead of N individual calls)
-  const totalTokensRaw = await countToolDefinitionTokens(
-    mcpTools,
-    getToolPermissionContext,
-    agentInfo,
-    model,
-  )
+  const totalTokensRaw = await countToolDefinitionTokens(mcpTools, getToolPermissionContext, agentInfo, model)
   // Subtract the single overhead since we made one bulk call
-  const totalTokens = Math.max(
-    0,
-    (totalTokensRaw || 0) - TOOL_TOKEN_COUNT_OVERHEAD,
-  )
+  const totalTokens = Math.max(0, (totalTokensRaw || 0) - TOOL_TOKEN_COUNT_OVERHEAD)
 
   // Estimate per-tool proportions for display using local estimation.
   // Include name + description + input schema to match what toolToAPISchema
   // sends — otherwise tools with similar schemas but different descriptions
   // get identical counts (MCP tools share the same base Zod inputSchema).
   const estimates = await Promise.all(
-    mcpTools.map(async t =>
+    mcpTools.map(async (t) =>
       roughTokenCountEstimation(
         jsonStringify({
           name: t.name,
@@ -660,9 +592,7 @@ export async function countMcpToolTokens(
     ),
   )
   const estimateTotal = estimates.reduce((s, e) => s + e, 0) || 1
-  const mcpToolTokensByTool = estimates.map(e =>
-    Math.round((e / estimateTotal) * totalTokens),
-  )
+  const mcpToolTokensByTool = estimates.map((e) => Math.round((e / estimateTotal) * totalTokens))
 
   // Check if tool search is enabled - if so, MCP tools are deferred
   // isToolSearchEnabled handles threshold calculation internally for TstAuto mode
@@ -680,7 +610,7 @@ export async function countMcpToolTokens(
   // Find MCP tools that have been used in messages (loaded via ToolSearchTool)
   const loadedMcpToolNames = new Set<string>()
   if (isDeferred && messages) {
-    const mcpToolNameSet = new Set(mcpTools.map(t => t.name))
+    const mcpToolNameSet = new Set(mcpTools.map((t) => t.name))
     for (const msg of messages) {
       if (msg.type === 'assistant') {
         for (const block of msg.message.content) {
@@ -729,20 +659,16 @@ export async function countMcpToolTokens(
   }
 }
 
-async function countCustomAgentTokens(agentDefinitions: {
-  activeAgents: AgentDefinition[]
-}): Promise<{
+async function countCustomAgentTokens(agentDefinitions: { activeAgents: AgentDefinition[] }): Promise<{
   agentTokens: number
   agentDetails: Agent[]
 }> {
-  const customAgents = agentDefinitions.activeAgents.filter(
-    a => a.source !== 'built-in',
-  )
+  const customAgents = agentDefinitions.activeAgents.filter((a) => a.source !== 'built-in')
   const agentDetails: Agent[] = []
   let agentTokens = 0
 
   const tokenCounts = await Promise.all(
-    customAgents.map(agent =>
+    customAgents.map((agent) =>
       countTokensWithFallback(
         [
           {
@@ -791,10 +717,7 @@ function processAssistantMessage(
     if ('type' in block && block.type === 'tool_use') {
       breakdown.toolCallTokens += blockTokens
       const toolName = ('name' in block ? block.name : undefined) || 'unknown'
-      breakdown.toolCallsByType.set(
-        toolName,
-        (breakdown.toolCallsByType.get(toolName) || 0) + blockTokens,
-      )
+      breakdown.toolCallsByType.set(toolName, (breakdown.toolCallsByType.get(toolName) || 0) + blockTokens)
     } else {
       // Text blocks or other non-tool content
       breakdown.assistantMessageTokens += blockTokens
@@ -823,12 +746,8 @@ function processUserMessage(
     if ('type' in block && block.type === 'tool_result') {
       breakdown.toolResultTokens += blockTokens
       const toolUseId = 'tool_use_id' in block ? block.tool_use_id : undefined
-      const toolName =
-        (toolUseId ? toolUseIdToName.get(toolUseId) : undefined) || 'unknown'
-      breakdown.toolResultsByType.set(
-        toolName,
-        (breakdown.toolResultsByType.get(toolName) || 0) + blockTokens,
-      )
+      const toolName = (toolUseId ? toolUseIdToName.get(toolUseId) : undefined) || 'unknown'
+      breakdown.toolResultsByType.set(toolName, (breakdown.toolResultsByType.get(toolName) || 0) + blockTokens)
     } else {
       // Text blocks or other non-tool content
       breakdown.userMessageTokens += blockTokens
@@ -836,23 +755,15 @@ function processUserMessage(
   }
 }
 
-function processAttachment(
-  msg: AttachmentMessage,
-  breakdown: MessageBreakdown,
-): void {
+function processAttachment(msg: AttachmentMessage, breakdown: MessageBreakdown): void {
   const contentStr = jsonStringify(msg.attachment)
   const tokens = roughTokenCountEstimation(contentStr)
   breakdown.attachmentTokens += tokens
   const attachType = msg.attachment.type || 'unknown'
-  breakdown.attachmentsByType.set(
-    attachType,
-    (breakdown.attachmentsByType.get(attachType) || 0) + tokens,
-  )
+  breakdown.attachmentsByType.set(attachType, (breakdown.attachmentsByType.get(attachType) || 0) + tokens)
 }
 
-async function approximateMessageTokens(
-  messages: Message[],
-): Promise<MessageBreakdown> {
+async function approximateMessageTokens(messages: Message[]): Promise<MessageBreakdown> {
   const microcompactResult = await microcompactMessages(messages)
 
   // Initialize tracking
@@ -875,8 +786,7 @@ async function approximateMessageTokens(
       for (const block of msg.message.content) {
         if ('type' in block && block.type === 'tool_use') {
           const toolUseId = 'id' in block ? block.id : undefined
-          const toolName =
-            ('name' in block ? block.name : undefined) || 'unknown'
+          const toolName = ('name' in block ? block.name : undefined) || 'unknown'
           if (toolUseId) {
             toolUseIdToName.set(toolUseId, toolName)
           }
@@ -898,7 +808,7 @@ async function approximateMessageTokens(
 
   // Calculate total tokens using the API for accuracy
   const approximateMessageTokens = await countTokensWithFallback(
-    normalizeMessagesForAPI(microcompactResult.messages).map(_ => {
+    normalizeMessagesForAPI(microcompactResult.messages).map((_) => {
       if (_.type === 'assistant') {
         return {
           // Important: strip out fields like id, etc. -- the counting API errors if they're present
@@ -950,12 +860,7 @@ export async function analyzeContextUsage(
   const [
     { systemPromptTokens, systemPromptSections },
     { claudeMdTokens, memoryFileDetails },
-    {
-      builtInToolTokens,
-      deferredBuiltinDetails,
-      deferredBuiltinTokens,
-      systemToolDetails,
-    },
+    { builtInToolTokens, deferredBuiltinDetails, deferredBuiltinTokens, systemToolDetails },
     { mcpToolTokens, mcpToolDetails, deferredToolTokens },
     { agentTokens, agentDetails },
     { slashCommandTokens, commandInfo },
@@ -963,38 +868,19 @@ export async function analyzeContextUsage(
   ] = await Promise.all([
     countSystemTokens(effectiveSystemPrompt),
     countMemoryFileTokens(),
-    countBuiltInToolTokens(
-      tools,
-      getToolPermissionContext,
-      agentDefinitions,
-      runtimeModel,
-      messages,
-    ),
-    countMcpToolTokens(
-      tools,
-      getToolPermissionContext,
-      agentDefinitions,
-      runtimeModel,
-      messages,
-    ),
+    countBuiltInToolTokens(tools, getToolPermissionContext, agentDefinitions, runtimeModel, messages),
+    countMcpToolTokens(tools, getToolPermissionContext, agentDefinitions, runtimeModel, messages),
     countCustomAgentTokens(agentDefinitions),
     countSlashCommandTokens(tools, getToolPermissionContext, agentDefinitions),
     approximateMessageTokens(messages),
   ])
 
   // Count skills separately with error isolation
-  const skillResult = await countSkillTokens(
-    tools,
-    getToolPermissionContext,
-    agentDefinitions,
-  )
+  const skillResult = await countSkillTokens(tools, getToolPermissionContext, agentDefinitions)
   const skillInfo = skillResult.skillInfo
   // Use sum of individual skill token estimates (matches what's shown in details)
   // rather than skillResult.skillTokens which includes tool schema overhead
-  const skillFrontmatterTokens = skillInfo.skillFrontmatter.reduce(
-    (sum, skill) => sum + skill.tokens,
-    0,
-  )
+  const skillFrontmatterTokens = skillInfo.skillFrontmatter.reduce((sum, skill) => sum + skill.tokens, 0)
 
   const messageTokens = messageBreakdown.totalTokens
 
@@ -1021,10 +907,7 @@ export async function analyzeContextUsage(
   const systemToolsTokens = builtInToolTokens - skillFrontmatterTokens
   if (systemToolsTokens > 0) {
     cats.push({
-      name:
-        process.env.USER_TYPE === 'ant'
-          ? '[ANT-ONLY] System tools'
-          : 'System tools',
+      name: process.env.USER_TYPE === 'ant' ? '[ANT-ONLY] System tools' : 'System tools',
       tokens: systemToolsTokens,
       color: 'inactive',
     })
@@ -1097,10 +980,7 @@ export async function analyzeContextUsage(
 
   // Calculate actual content usage (before adding reserved buffers)
   // Exclude deferred categories from the usage calculation
-  const actualUsage = cats.reduce(
-    (sum, cat) => sum + (cat.isDeferred ? 0 : cat.tokens),
-    0,
-  )
+  const actualUsage = cats.reduce((sum, cat) => sum + (cat.isDeferred ? 0 : cat.tokens), 0)
 
   // Reserved space after messages (not counted in actualUsage shown to user).
   // Under reactive-only mode (cobalt_raccoon), proactive autocompact never
@@ -1165,9 +1045,7 @@ export async function analyzeContextUsage(
   // When API usage is available, use it for total to match status line calculation
   // Status line uses: input_tokens + cache_creation_input_tokens + cache_read_input_tokens
   const totalFromAPI = apiUsage
-    ? apiUsage.input_tokens +
-      apiUsage.cache_creation_input_tokens +
-      apiUsage.cache_read_input_tokens
+    ? apiUsage.input_tokens + apiUsage.cache_creation_input_tokens + apiUsage.cache_read_input_tokens
     : null
 
   // Use API total if available, otherwise fall back to estimated total
@@ -1177,23 +1055,16 @@ export async function analyzeContextUsage(
   // For narrow screens (< 80 cols), use 5x5 for 200k models, 5x10 for 1M+ models
   // For normal screens, use 10x10 for 200k models, 20x10 for 1M+ models
   const isNarrowScreen = terminalWidth && terminalWidth < 80
-  const GRID_WIDTH =
-    contextWindow >= 1000000
-      ? isNarrowScreen
-        ? 5
-        : 20
-      : isNarrowScreen
-        ? 5
-        : 10
+  const GRID_WIDTH = contextWindow >= 1000000 ? (isNarrowScreen ? 5 : 20) : isNarrowScreen ? 5 : 10
   const GRID_HEIGHT = contextWindow >= 1000000 ? 10 : isNarrowScreen ? 5 : 10
   const TOTAL_SQUARES = GRID_WIDTH * GRID_HEIGHT
 
   // Filter out deferred categories - they don't take up actual context space
   // (e.g., MCP tools when tool search is enabled)
-  const nonDeferredCats = cats.filter(cat => !cat.isDeferred)
+  const nonDeferredCats = cats.filter((cat) => !cat.isDeferred)
 
   // Calculate squares per category (use rawEffectiveMax for visualization to show full context)
-  const categorySquares = nonDeferredCats.map(cat => ({
+  const categorySquares = nonDeferredCats.map((cat) => ({
     ...cat,
     squares:
       cat.name === 'Free space'
@@ -1203,9 +1074,7 @@ export async function analyzeContextUsage(
   }))
 
   // Helper function to create grid squares for a category
-  function createCategorySquares(
-    category: (typeof categorySquares)[0],
-  ): GridSquare[] {
+  function createCategorySquares(category: (typeof categorySquares)[0]): GridSquare[] {
     const squares: GridSquare[] = []
     const exactSquares = (category.tokens / contextWindow) * TOTAL_SQUARES
     const wholeSquares = Math.floor(exactSquares)
@@ -1237,15 +1106,11 @@ export async function analyzeContextUsage(
 
   // Separate reserved category for end placement (either autocompact or manual compact buffer)
   const reservedCategory = categorySquares.find(
-    cat =>
-      cat.name === RESERVED_CATEGORY_NAME ||
-      cat.name === MANUAL_COMPACT_BUFFER_NAME,
+    (cat) => cat.name === RESERVED_CATEGORY_NAME || cat.name === MANUAL_COMPACT_BUFFER_NAME,
   )
   const nonReservedCategories = categorySquares.filter(
-    cat =>
-      cat.name !== RESERVED_CATEGORY_NAME &&
-      cat.name !== MANUAL_COMPACT_BUFFER_NAME &&
-      cat.name !== 'Free space',
+    (cat) =>
+      cat.name !== RESERVED_CATEGORY_NAME && cat.name !== MANUAL_COMPACT_BUFFER_NAME && cat.name !== 'Free space',
   )
 
   // Add all non-reserved, non-free-space squares first
@@ -1262,7 +1127,7 @@ export async function analyzeContextUsage(
   const reservedSquareCount = reservedCategory ? reservedCategory.squares : 0
 
   // Fill with free space, leaving room for reserved at the end
-  const freeSpaceCat = cats.find(c => c.name === 'Free space')
+  const freeSpaceCat = cats.find((c) => c.name === 'Free space')
   const freeSpaceTarget = TOTAL_SQUARES - reservedSquareCount
 
   while (gridSquares.length < freeSpaceTarget) {
@@ -1271,9 +1136,7 @@ export async function analyzeContextUsage(
       isFilled: true,
       categoryName: 'Free space',
       tokens: freeSpaceCat?.tokens || 0,
-      percentage: freeSpaceCat
-        ? Math.round((freeSpaceCat.tokens / contextWindow) * 100)
-        : 0,
+      percentage: freeSpaceCat ? Math.round((freeSpaceCat.tokens / contextWindow) * 100) : 0,
       squareFullness: 1.0, // Free space is always "full"
     })
   }
@@ -1296,10 +1159,7 @@ export async function analyzeContextUsage(
 
   // Format message breakdown (used by context suggestions for all users)
   // Combine tool calls and results, then get top 5
-  const toolsMap = new Map<
-    string,
-    { callTokens: number; resultTokens: number }
-  >()
+  const toolsMap = new Map<string, { callTokens: number; resultTokens: number }>()
 
   // Add call tokens
   for (const [name, tokens] of messageBreakdown.toolCallsByType.entries()) {
@@ -1320,13 +1180,9 @@ export async function analyzeContextUsage(
       callTokens,
       resultTokens,
     }))
-    .sort(
-      (a, b) => b.callTokens + b.resultTokens - (a.callTokens + a.resultTokens),
-    )
+    .sort((a, b) => b.callTokens + b.resultTokens - (a.callTokens + a.resultTokens))
 
-  const attachmentsByTypeArray = Array.from(
-    messageBreakdown.attachmentsByType.entries(),
-  )
+  const attachmentsByTypeArray = Array.from(messageBreakdown.attachmentsByType.entries())
     .map(([name, tokens]) => ({ name, tokens }))
     .sort((a, b) => b.tokens - a.tokens)
 
@@ -1350,12 +1206,9 @@ export async function analyzeContextUsage(
     model: runtimeModel,
     memoryFiles: memoryFileDetails,
     mcpTools: mcpToolDetails,
-    deferredBuiltinTools:
-      process.env.USER_TYPE === 'ant' ? deferredBuiltinDetails : undefined,
-    systemTools:
-      process.env.USER_TYPE === 'ant' ? systemToolDetails : undefined,
-    systemPromptSections:
-      process.env.USER_TYPE === 'ant' ? systemPromptSections : undefined,
+    deferredBuiltinTools: process.env.USER_TYPE === 'ant' ? deferredBuiltinDetails : undefined,
+    systemTools: process.env.USER_TYPE === 'ant' ? systemToolDetails : undefined,
+    systemPromptSections: process.env.USER_TYPE === 'ant' ? systemPromptSections : undefined,
     agents: agentDetails,
     slashCommands:
       slashCommandTokens > 0

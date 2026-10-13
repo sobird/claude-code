@@ -18,6 +18,7 @@
  */
 
 import { basename, extname } from 'path'
+
 import { diffArrays } from 'diff'
 import type * as hljsNamespace from 'highlight.js'
 

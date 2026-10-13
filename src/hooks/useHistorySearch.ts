@@ -1,13 +1,12 @@
 import { feature } from 'bun:bundle'
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  getModeFromInput,
-  getValueFromInput,
-} from '../components/PromptInput/inputModes.js'
+
+import { getModeFromInput, getValueFromInput } from '../components/PromptInput/inputModes.js'
 import { makeHistoryReader } from '../history.js'
-import { KeyboardEvent } from '../ink/events/keyboard-event.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- backward-compat bridge until consumers wire handleKeyDown to <Box onKeyDown>
 import { useInput } from '../ink.js'
+import { KeyboardEvent } from '../ink/events/keyboard-event.js'
 import { useKeybinding, useKeybindings } from '../keybindings/useKeybinding.js'
 import type { PromptInputMode } from '../types/textInputTypes.js'
 import type { HistoryEntry } from '../utils/config.js'
@@ -36,15 +35,9 @@ export function useHistorySearch(
   const [originalInput, setOriginalInput] = useState('')
   const [originalCursorOffset, setOriginalCursorOffset] = useState(0)
   const [originalMode, setOriginalMode] = useState<PromptInputMode>('prompt')
-  const [originalPastedContents, setOriginalPastedContents] = useState<
-    HistoryEntry['pastedContents']
-  >({})
-  const [historyMatch, setHistoryMatch] = useState<HistoryEntry | undefined>(
-    undefined,
-  )
-  const historyReader = useRef<AsyncGenerator<HistoryEntry> | undefined>(
-    undefined,
-  )
+  const [originalPastedContents, setOriginalPastedContents] = useState<HistoryEntry['pastedContents']>({})
+  const [historyMatch, setHistoryMatch] = useState<HistoryEntry | undefined>(undefined)
+  const historyReader = useRef<AsyncGenerator<HistoryEntry> | undefined>(undefined)
   const seenPrompts = useRef<Set<string>>(new Set())
   const searchAbortController = useRef<AbortController | null>(null)
 
@@ -125,9 +118,7 @@ export function useHistorySearch(
           // Position cursor relative to the clean value, not the display
           const value = getValueFromInput(display)
           const cleanMatchPosition = value.lastIndexOf(historyQuery)
-          onCursorChange(
-            cleanMatchPosition !== -1 ? cleanMatchPosition : matchPosition,
-          )
+          onCursorChange(cleanMatchPosition !== -1 ? cleanMatchPosition : matchPosition)
           return
         }
       }
@@ -156,13 +147,7 @@ export function useHistorySearch(
     setOriginalPastedContents(currentPastedContents)
     historyReader.current = makeHistoryReader()
     seenPrompts.current.clear()
-  }, [
-    setIsSearching,
-    currentInput,
-    currentCursorOffset,
-    currentMode,
-    currentPastedContents,
-  ])
+  }, [setIsSearching, currentInput, currentCursorOffset, currentMode, currentPastedContents])
 
   // Handler: Find next match (when searching)
   const handleNextMatch = useCallback(() => {
@@ -182,14 +167,7 @@ export function useHistorySearch(
       setPastedContents(originalPastedContents)
     }
     reset()
-  }, [
-    historyMatch,
-    onInputChange,
-    onModeChange,
-    setPastedContents,
-    originalPastedContents,
-    reset,
-  ])
+  }, [historyMatch, onInputChange, onModeChange, setPastedContents, originalPastedContents, reset])
 
   // Handler: Cancel search and restore original input
   const handleCancel = useCallback(() => {
@@ -224,15 +202,7 @@ export function useHistorySearch(
       })
     }
     reset()
-  }, [
-    historyQuery,
-    historyMatch,
-    onAcceptHistory,
-    onModeChange,
-    originalInput,
-    originalPastedContents,
-    reset,
-  ])
+  }, [historyQuery, historyMatch, onAcceptHistory, onModeChange, originalInput, originalPastedContents, reset])
 
   // Gated off under HISTORY_PICKER — the modal dialog owns ctrl+r there.
   useKeybinding('history:search', handleStartSearch, {

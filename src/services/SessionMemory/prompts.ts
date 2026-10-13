@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises'
 import { join } from 'path'
+
 import { roughTokenCountEstimation } from '../../services/tokenEstimation.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { getErrnoCode, toError } from '../../utils/errors.js'
@@ -84,12 +85,7 @@ REMEMBER: Use the Edit tool in parallel and stop. Do not continue after the edit
  * Load custom session memory template from file if it exists
  */
 export async function loadSessionMemoryTemplate(): Promise<string> {
-  const templatePath = join(
-    getClaudeConfigHomeDir(),
-    'session-memory',
-    'config',
-    'template.md',
-  )
+  const templatePath = join(getClaudeConfigHomeDir(), 'session-memory', 'config', 'template.md')
 
   try {
     return await readFile(templatePath, { encoding: 'utf-8' })
@@ -109,12 +105,7 @@ export async function loadSessionMemoryTemplate(): Promise<string> {
  * Use {{variableName}} syntax for variable substitution (e.g., {{currentNotes}}, {{notesPath}})
  */
 export async function loadSessionMemoryPrompt(): Promise<string> {
-  const promptPath = join(
-    getClaudeConfigHomeDir(),
-    'session-memory',
-    'config',
-    'prompt.md',
-  )
+  const promptPath = join(getClaudeConfigHomeDir(), 'session-memory', 'config', 'prompt.md')
 
   try {
     return await readFile(promptPath, { encoding: 'utf-8' })
@@ -161,18 +152,12 @@ function analyzeSectionSizes(content: string): Record<string, number> {
 /**
  * Generate reminders for sections that are too long
  */
-function generateSectionReminders(
-  sectionSizes: Record<string, number>,
-  totalTokens: number,
-): string {
+function generateSectionReminders(sectionSizes: Record<string, number>, totalTokens: number): string {
   const overBudget = totalTokens > MAX_TOTAL_SESSION_MEMORY_TOKENS
   const oversizedSections = Object.entries(sectionSizes)
     .filter(([_, tokens]) => tokens > MAX_SECTION_LENGTH)
     .sort(([, a], [, b]) => b - a)
-    .map(
-      ([section, tokens]) =>
-        `- "${section}" is ~${tokens} tokens (limit: ${MAX_SECTION_LENGTH})`,
-    )
+    .map(([section, tokens]) => `- "${section}" is ~${tokens} tokens (limit: ${MAX_SECTION_LENGTH})`)
 
   if (oversizedSections.length === 0 && !overBudget) {
     return ''
@@ -198,17 +183,12 @@ function generateSectionReminders(
 /**
  * Substitute variables in the prompt template using {{variable}} syntax
  */
-function substituteVariables(
-  template: string,
-  variables: Record<string, string>,
-): string {
+function substituteVariables(template: string, variables: Record<string, string>): string {
   // Single-pass replacement avoids two bugs: (1) $ backreference corruption
   // (replacer fn treats $ literally), and (2) double-substitution when user
   // content happens to contain {{varName}} matching a later variable.
   return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
-    Object.prototype.hasOwnProperty.call(variables, key)
-      ? variables[key]!
-      : match,
+    Object.prototype.hasOwnProperty.call(variables, key) ? variables[key]! : match,
   )
 }
 
@@ -223,10 +203,7 @@ export async function isSessionMemoryEmpty(content: string): Promise<boolean> {
   return content.trim() === template.trim()
 }
 
-export async function buildSessionMemoryUpdatePrompt(
-  currentNotes: string,
-  notesPath: string,
-): Promise<string> {
+export async function buildSessionMemoryUpdatePrompt(currentNotes: string, notesPath: string): Promise<string> {
   const promptTemplate = await loadSessionMemoryPrompt()
 
   // Analyze section sizes and generate reminders if needed
@@ -266,11 +243,7 @@ export function truncateSessionMemoryForCompact(content: string): {
 
   for (const line of lines) {
     if (line.startsWith('# ')) {
-      const result = flushSessionSection(
-        currentSectionHeader,
-        currentSectionLines,
-        maxCharsPerSection,
-      )
+      const result = flushSessionSection(currentSectionHeader, currentSectionLines, maxCharsPerSection)
       outputLines.push(...result.lines)
       wasTruncated = wasTruncated || result.wasTruncated
       currentSectionHeader = line
@@ -281,11 +254,7 @@ export function truncateSessionMemoryForCompact(content: string): {
   }
 
   // Flush the last section
-  const result = flushSessionSection(
-    currentSectionHeader,
-    currentSectionLines,
-    maxCharsPerSection,
-  )
+  const result = flushSessionSection(currentSectionHeader, currentSectionLines, maxCharsPerSection)
   outputLines.push(...result.lines)
   wasTruncated = wasTruncated || result.wasTruncated
 

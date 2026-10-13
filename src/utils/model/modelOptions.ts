@@ -1,21 +1,11 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { getInitialMainLoopModel } from '../../bootstrap/state.js'
-import {
-  isClaudeAISubscriber,
-  isMaxSubscriber,
-  isTeamPremiumSubscriber,
-} from '../auth.js'
-import { getModelStrings } from './modelStrings.js'
-import {
-  COST_TIER_3_15,
-  COST_HAIKU_35,
-  COST_HAIKU_45,
-  formatModelPricing,
-} from '../modelCost.js'
+import { isClaudeAISubscriber, isMaxSubscriber, isTeamPremiumSubscriber } from '../auth.js'
+import { getGlobalConfig } from '../config.js'
+import { has1mContext } from '../context.js'
+import { COST_TIER_3_15, COST_HAIKU_35, COST_HAIKU_45, formatModelPricing } from '../modelCost.js'
 import { getSettings_DEPRECATED } from '../settings/settings.js'
 import { checkOpus1mAccess, checkSonnet1mAccess } from './check1mAccess.js'
-import { getAPIProvider } from './providers.js'
-import { isModelAllowed } from './modelAllowlist.js'
 import {
   getCanonicalName,
   getClaudeAiUserDefaultModelDescription,
@@ -30,8 +20,9 @@ import {
   renderDefaultModelSetting,
   type ModelSetting,
 } from './model.js'
-import { has1mContext } from '../context.js'
-import { getGlobalConfig } from '../config.js'
+import { isModelAllowed } from './modelAllowlist.js'
+import { getModelStrings } from './modelStrings.js'
+import { getAPIProvider } from './providers.js'
 
 // @[MODEL LAUNCH]: Update all the available and default model option strings below.
 
@@ -44,9 +35,7 @@ export type ModelOption = {
 
 export function getDefaultOptionForUser(fastMode = false): ModelOption {
   if (process.env.USER_TYPE === 'ant') {
-    const currentModel = renderDefaultModelSetting(
-      getDefaultMainLoopModelSetting(),
-    )
+    const currentModel = renderDefaultModelSetting(getDefaultMainLoopModelSetting())
     return {
       value: null,
       label: 'Default (recommended)',
@@ -81,11 +70,9 @@ function getCustomSonnetOption(): ModelOption | undefined {
     const is1m = has1mContext(customSonnetModel)
     return {
       value: 'sonnet',
-      label:
-        process.env.ANTHROPIC_DEFAULT_SONNET_MODEL_NAME ?? customSonnetModel,
+      label: process.env.ANTHROPIC_DEFAULT_SONNET_MODEL_NAME ?? customSonnetModel,
       description:
-        process.env.ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION ??
-        `Custom Sonnet model${is1m ? ' (1M context)' : ''}`,
+        process.env.ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION ?? `Custom Sonnet model${is1m ? ' (1M context)' : ''}`,
       descriptionForModel: `${process.env.ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION ?? `Custom Sonnet model${is1m ? ' with 1M context' : ''}`} (${customSonnetModel})`,
     }
   }
@@ -99,8 +86,7 @@ function getSonnet46Option(): ModelOption {
     value: is3P ? getModelStrings().sonnet46 : 'sonnet',
     label: 'Sonnet',
     description: `Sonnet 4.6 · Best for everyday tasks${is3P ? '' : ` · ${formatModelPricing(COST_TIER_3_15)}`}`,
-    descriptionForModel:
-      'Sonnet 4.6 - best for everyday tasks. Generally recommended for most coding tasks',
+    descriptionForModel: 'Sonnet 4.6 - best for everyday tasks. Generally recommended for most coding tasks',
   }
 }
 
@@ -114,8 +100,7 @@ function getCustomOpusOption(): ModelOption | undefined {
       value: 'opus',
       label: process.env.ANTHROPIC_DEFAULT_OPUS_MODEL_NAME ?? customOpusModel,
       description:
-        process.env.ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION ??
-        `Custom Opus model${is1m ? ' (1M context)' : ''}`,
+        process.env.ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION ?? `Custom Opus model${is1m ? ' (1M context)' : ''}`,
       descriptionForModel: `${process.env.ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION ?? `Custom Opus model${is1m ? ' with 1M context' : ''}`} (${customOpusModel})`,
     }
   }
@@ -146,8 +131,7 @@ export function getSonnet46_1MOption(): ModelOption {
     value: is3P ? getModelStrings().sonnet46 + '[1m]' : 'sonnet[1m]',
     label: 'Sonnet (1M context)',
     description: `Sonnet 4.6 for long sessions${is3P ? '' : ` · ${formatModelPricing(COST_TIER_3_15)}`}`,
-    descriptionForModel:
-      'Sonnet 4.6 with 1M context window - for long sessions with large codebases',
+    descriptionForModel: 'Sonnet 4.6 with 1M context window - for long sessions with large codebases',
   }
 }
 
@@ -157,8 +141,7 @@ export function getOpus46_1MOption(fastMode = false): ModelOption {
     value: is3P ? getModelStrings().opus46 + '[1m]' : 'opus[1m]',
     label: 'Opus (1M context)',
     description: `Opus 4.6 for long sessions${getOpus46PricingSuffix(fastMode)}`,
-    descriptionForModel:
-      'Opus 4.6 with 1M context window - for long sessions with large codebases',
+    descriptionForModel: 'Opus 4.6 with 1M context window - for long sessions with large codebases',
   }
 }
 
@@ -170,9 +153,7 @@ function getCustomHaikuOption(): ModelOption | undefined {
     return {
       value: 'haiku',
       label: process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME ?? customHaikuModel,
-      description:
-        process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION ??
-        'Custom Haiku model',
+      description: process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION ?? 'Custom Haiku model',
       descriptionForModel: `${process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION ?? 'Custom Haiku model'} (${customHaikuModel})`,
     }
   }
@@ -184,8 +165,7 @@ function getHaiku45Option(): ModelOption {
     value: 'haiku',
     label: 'Haiku',
     description: `Haiku 4.5 · Fastest for quick answers${is3P ? '' : ` · ${formatModelPricing(COST_HAIKU_45)}`}`,
-    descriptionForModel:
-      'Haiku 4.5 - fastest for quick answers. Lower cost but less capable than Sonnet 4.6.',
+    descriptionForModel: 'Haiku 4.5 - fastest for quick answers. Lower cost but less capable than Sonnet 4.6.',
   }
 }
 
@@ -195,17 +175,14 @@ function getHaiku35Option(): ModelOption {
     value: 'haiku',
     label: 'Haiku',
     description: `Haiku 3.5 for simple tasks${is3P ? '' : ` · ${formatModelPricing(COST_HAIKU_35)}`}`,
-    descriptionForModel:
-      'Haiku 3.5 - faster and lower cost, but less capable than Sonnet. Use for simple tasks.',
+    descriptionForModel: 'Haiku 3.5 - faster and lower cost, but less capable than Sonnet. Use for simple tasks.',
   }
 }
 
 function getHaikuOption(): ModelOption {
   // Return correct Haiku option based on provider
   const haikuModel = getDefaultHaikuModel()
-  return haikuModel === getModelStrings().haiku45
-    ? getHaiku45Option()
-    : getHaiku35Option()
+  return haikuModel === getModelStrings().haiku45 ? getHaiku45Option() : getHaiku35Option()
 }
 
 function getMaxOpusOption(fastMode = false): ModelOption {
@@ -241,8 +218,7 @@ function getMergedOpus1MOption(fastMode = false): ModelOption {
     value: is3P ? getModelStrings().opus46 + '[1m]' : 'opus[1m]',
     label: 'Opus (1M context)',
     description: `Opus 4.6 with 1M context · Most capable for complex work${!is3P && fastMode ? getOpus46PricingSuffix(fastMode) : ''}`,
-    descriptionForModel:
-      'Opus 4.6 with 1M context - most capable for complex work',
+    descriptionForModel: 'Opus 4.6 with 1M context - most capable for complex work',
   }
 }
 
@@ -271,7 +247,7 @@ function getOpusPlanOption(): ModelOption {
 function getModelOptionsBase(fastMode = false): ModelOption[] {
   if (process.env.USER_TYPE === 'ant') {
     // Build options from antModels config
-    const antModelOptions: ModelOption[] = getAntModels().map(m => ({
+    const antModelOptions: ModelOption[] = getAntModels().map((m) => ({
       value: m.alias,
       label: m.label,
       description: m.description ?? `[ANT-ONLY] ${m.label} (${m.model})`,
@@ -382,9 +358,7 @@ function getModelOptionsBase(fastMode = false): ModelOption[] {
  * version the alias currently resolves to. Used to detect when a user has
  * a specific older version pinned and a newer one is available.
  */
-function getModelFamilyInfo(
-  model: string,
-): { alias: string; currentVersionName: string } | null {
+function getModelFamilyInfo(model: string): { alias: string; currentVersionName: string } | null {
   const canonical = getCanonicalName(model)
 
   // Sonnet family
@@ -410,10 +384,7 @@ function getModelFamilyInfo(
   }
 
   // Haiku family
-  if (
-    canonical.includes('claude-haiku') ||
-    canonical.includes('claude-3-5-haiku')
-  ) {
+  if (canonical.includes('claude-haiku') || canonical.includes('claude-3-5-haiku')) {
     const currentName = getMarketingNameForModel(getDefaultHaikuModel())
     if (currentName) {
       return { alias: 'Haiku', currentVersionName: currentName }
@@ -463,22 +434,17 @@ export function getModelOptions(fastMode = false): ModelOption[] {
 
   // Add the custom model from the ANTHROPIC_CUSTOM_MODEL_OPTION env var
   const envCustomModel = process.env.ANTHROPIC_CUSTOM_MODEL_OPTION
-  if (
-    envCustomModel &&
-    !options.some(existing => existing.value === envCustomModel)
-  ) {
+  if (envCustomModel && !options.some((existing) => existing.value === envCustomModel)) {
     options.push({
       value: envCustomModel,
       label: process.env.ANTHROPIC_CUSTOM_MODEL_OPTION_NAME ?? envCustomModel,
-      description:
-        process.env.ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION ??
-        `Custom model (${envCustomModel})`,
+      description: process.env.ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION ?? `Custom model (${envCustomModel})`,
     })
   }
 
   // Append additional model options fetched during bootstrap
   for (const opt of getGlobalConfig().additionalModelOptionsCache ?? []) {
-    if (!options.some(existing => existing.value === opt.value)) {
+    if (!options.some((existing) => existing.value === opt.value)) {
       options.push(opt)
     }
   }
@@ -493,20 +459,14 @@ export function getModelOptions(fastMode = false): ModelOption[] {
   } else if (initialMainLoopModel !== null) {
     customModel = initialMainLoopModel
   }
-  if (customModel === null || options.some(opt => opt.value === customModel)) {
+  if (customModel === null || options.some((opt) => opt.value === customModel)) {
     return filterModelOptionsByAllowlist(options)
   } else if (customModel === 'opusplan') {
     return filterModelOptionsByAllowlist([...options, getOpusPlanOption()])
   } else if (customModel === 'opus' && getAPIProvider() === 'firstParty') {
-    return filterModelOptionsByAllowlist([
-      ...options,
-      getMaxOpusOption(fastMode),
-    ])
+    return filterModelOptionsByAllowlist([...options, getMaxOpusOption(fastMode)])
   } else if (customModel === 'opus[1m]' && getAPIProvider() === 'firstParty') {
-    return filterModelOptionsByAllowlist([
-      ...options,
-      getMergedOpus1MOption(fastMode),
-    ])
+    return filterModelOptionsByAllowlist([...options, getMergedOpus1MOption(fastMode)])
   } else {
     // Try to show a human-readable label for known Anthropic models, with an
     // upgrade hint if the alias now resolves to a newer version.
@@ -533,8 +493,5 @@ function filterModelOptionsByAllowlist(options: ModelOption[]): ModelOption[] {
   if (!settings.availableModels) {
     return options // No restrictions
   }
-  return options.filter(
-    opt =>
-      opt.value === null || (opt.value !== null && isModelAllowed(opt.value)),
-  )
+  return options.filter((opt) => opt.value === null || (opt.value !== null && isModelAllowed(opt.value)))
 }

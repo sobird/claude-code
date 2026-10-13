@@ -1,22 +1,16 @@
 import { feature } from 'bun:bundle'
+
 import * as React from 'react'
 import { useMemo } from 'react'
 import { Box } from 'src/ink.js'
 import { useAppState } from 'src/state/AppState.js'
-import {
-  STATUS_TAG,
-  SUMMARY_TAG,
-  TASK_NOTIFICATION_TAG,
-} from '../../constants/xml.js'
+
+import { STATUS_TAG, SUMMARY_TAG, TASK_NOTIFICATION_TAG } from '../../constants/xml.js'
 import { QueuedMessageProvider } from '../../context/QueuedMessageContext.js'
 import { useCommandQueue } from '../../hooks/useCommandQueue.js'
 import type { QueuedCommand } from '../../types/textInputTypes.js'
 import { isQueuedCommandVisible } from '../../utils/messageQueueManager.js'
-import {
-  createUserMessage,
-  EMPTY_LOOKUPS,
-  normalizeMessages,
-} from '../../utils/messages.js'
+import { createUserMessage, EMPTY_LOOKUPS, normalizeMessages } from '../../utils/messages.js'
 import { jsonParse } from '../../utils/slowOperations.js'
 import { Message } from '../Message.js'
 
@@ -53,21 +47,15 @@ function createOverflowNotificationMessage(count: number): string {
  * Other command types are always shown in full.
  * Idle notifications are filtered out entirely.
  */
-function processQueuedCommands(
-  queuedCommands: QueuedCommand[],
-): QueuedCommand[] {
+function processQueuedCommands(queuedCommands: QueuedCommand[]): QueuedCommand[] {
   // Filter out idle notifications - they are processed silently
   const filteredCommands = queuedCommands.filter(
-    cmd => typeof cmd.value !== 'string' || !isIdleNotification(cmd.value),
+    (cmd) => typeof cmd.value !== 'string' || !isIdleNotification(cmd.value),
   )
 
   // Separate task notifications from other commands
-  const taskNotifications = filteredCommands.filter(
-    cmd => cmd.mode === 'task-notification',
-  )
-  const otherCommands = filteredCommands.filter(
-    cmd => cmd.mode !== 'task-notification',
-  )
+  const taskNotifications = filteredCommands.filter((cmd) => cmd.mode === 'task-notification')
+  const otherCommands = filteredCommands.filter((cmd) => cmd.mode !== 'task-notification')
 
   // If notifications fit within limit, return all commands as-is
   if (taskNotifications.length <= MAX_VISIBLE_NOTIFICATIONS) {
@@ -75,12 +63,8 @@ function processQueuedCommands(
   }
 
   // Show first (MAX_VISIBLE_NOTIFICATIONS - 1) notifications, then a summary
-  const visibleNotifications = taskNotifications.slice(
-    0,
-    MAX_VISIBLE_NOTIFICATIONS - 1,
-  )
-  const overflowCount =
-    taskNotifications.length - (MAX_VISIBLE_NOTIFICATIONS - 1)
+  const visibleNotifications = taskNotifications.slice(0, MAX_VISIBLE_NOTIFICATIONS - 1)
+  const overflowCount = taskNotifications.length - (MAX_VISIBLE_NOTIFICATIONS - 1)
 
   // Create synthetic overflow message
   const overflowCommand: QueuedCommand = {
@@ -93,7 +77,7 @@ function processQueuedCommands(
 
 function PromptInputQueuedCommandsImpl(): React.ReactNode {
   const queuedCommands = useCommandQueue()
-  const viewingAgent = useAppState(s => !!s.viewingAgentTaskId)
+  const viewingAgent = useAppState((s) => !!s.viewingAgentTaskId)
   // Brief layout: dim queue items + skip the paddingX (brief messages
   // already indent themselves). Gate mirrors the brief-spinner/message
   // check elsewhere — no teammate-view override needed since this
@@ -101,7 +85,7 @@ function PromptInputQueuedCommandsImpl(): React.ReactNode {
   const useBriefLayout =
     feature('KAIROS') || feature('KAIROS_BRIEF')
       ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-        useAppState(s => s.isBriefOnly)
+        useAppState((s) => s.isBriefOnly)
       : false
 
   // createUserMessage mints a fresh UUID per call; without memoization, streaming
@@ -116,7 +100,7 @@ function PromptInputQueuedCommandsImpl(): React.ReactNode {
     if (visibleCommands.length === 0) return null
     const processedCommands = processQueuedCommands(visibleCommands)
     return normalizeMessages(
-      processedCommands.map(cmd => {
+      processedCommands.map((cmd) => {
         let content = cmd.value
         if (cmd.mode === 'bash' && typeof content === 'string') {
           content = `<bash-input>${content}</bash-input>`
@@ -136,11 +120,7 @@ function PromptInputQueuedCommandsImpl(): React.ReactNode {
   return (
     <Box marginTop={1} flexDirection="column">
       {messages.map((message, i) => (
-        <QueuedMessageProvider
-          key={i}
-          isFirst={i === 0}
-          useBriefLayout={useBriefLayout}
-        >
+        <QueuedMessageProvider key={i} isFirst={i === 0} useBriefLayout={useBriefLayout}>
           <Message
             message={message}
             lookups={EMPTY_LOOKUPS}
@@ -161,6 +141,4 @@ function PromptInputQueuedCommandsImpl(): React.ReactNode {
   )
 }
 
-export const PromptInputQueuedCommands = React.memo(
-  PromptInputQueuedCommandsImpl,
-)
+export const PromptInputQueuedCommands = React.memo(PromptInputQueuedCommandsImpl)

@@ -1,18 +1,11 @@
 import type { z } from 'zod/v4'
+
 import type { ToolPermissionContext } from '../../Tool.js'
 import { splitCommand_DEPRECATED } from '../../utils/bash/commands.js'
 import type { PermissionResult } from '../../utils/permissions/PermissionResult.js'
 import type { BashTool } from './BashTool.js'
 
-const ACCEPT_EDITS_ALLOWED_COMMANDS = [
-  'mkdir',
-  'touch',
-  'rm',
-  'rmdir',
-  'mv',
-  'cp',
-  'sed',
-] as const
+const ACCEPT_EDITS_ALLOWED_COMMANDS = ['mkdir', 'touch', 'rm', 'rmdir', 'mv', 'cp', 'sed'] as const
 
 type FilesystemCommand = (typeof ACCEPT_EDITS_ALLOWED_COMMANDS)[number]
 
@@ -20,10 +13,7 @@ function isFilesystemCommand(command: string): command is FilesystemCommand {
   return ACCEPT_EDITS_ALLOWED_COMMANDS.includes(command as FilesystemCommand)
 }
 
-function validateCommandForMode(
-  cmd: string,
-  toolPermissionContext: ToolPermissionContext,
-): PermissionResult {
+function validateCommandForMode(cmd: string, toolPermissionContext: ToolPermissionContext): PermissionResult {
   const trimmedCmd = cmd.trim()
   const [baseCmd] = trimmedCmd.split(/\s+/)
 
@@ -35,10 +25,7 @@ function validateCommandForMode(
   }
 
   // In Accept Edits mode, auto-allow filesystem operations
-  if (
-    toolPermissionContext.mode === 'acceptEdits' &&
-    isFilesystemCommand(baseCmd)
-  ) {
+  if (toolPermissionContext.mode === 'acceptEdits' && isFilesystemCommand(baseCmd)) {
     return {
       behavior: 'allow',
       updatedInput: { command: cmd },
@@ -108,8 +95,6 @@ export function checkPermissionMode(
   }
 }
 
-export function getAutoAllowedCommands(
-  mode: ToolPermissionContext['mode'],
-): readonly string[] {
+export function getAutoAllowedCommands(mode: ToolPermissionContext['mode']): readonly string[] {
   return mode === 'acceptEdits' ? ACCEPT_EDITS_ALLOWED_COMMANDS : []
 }

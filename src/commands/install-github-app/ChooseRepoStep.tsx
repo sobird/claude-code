@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react'
+
 import TextInput from '../../components/TextInput.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { Box, Text } from '../../ink.js'
@@ -73,10 +74,7 @@ export function ChooseRepoStep({
         </Box>
         {currentRepo && (
           <Box marginBottom={1}>
-            <Text
-              bold={useCurrentRepo}
-              color={useCurrentRepo ? 'permission' : undefined}
-            >
+            <Text bold={useCurrentRepo} color={useCurrentRepo ? 'permission' : undefined}>
               {useCurrentRepo ? '> ' : '  '}
               Use current repository: {currentRepo}
             </Text>
@@ -95,7 +93,7 @@ export function ChooseRepoStep({
           <Box marginLeft={2} marginBottom={1}>
             <TextInput
               value={repoUrl}
-              onChange={value => {
+              onChange={(value) => {
                 onRepoUrlChange(value)
                 setShowEmptyError(false)
               }}
@@ -116,9 +114,7 @@ export function ChooseRepoStep({
         </Box>
       )}
       <Box marginLeft={3}>
-        <Text dimColor>
-          {currentRepo ? '↑/↓ to select · ' : ''}Enter to continue
-        </Text>
+        <Text dimColor>{currentRepo ? '↑/↓ to select · ' : ''}Enter to continue</Text>
       </Box>
     </>
   )

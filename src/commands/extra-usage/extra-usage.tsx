@@ -1,4 +1,5 @@
 import React from 'react'
+
 import type { LocalJSXCommandContext } from '../../commands.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
 import { Login } from '../login/login.js'
@@ -17,10 +18,8 @@ export async function call(
 
   return (
     <Login
-      startingMessage={
-        'Starting new login following /extra-usage. Exit with Ctrl-C to use existing account.'
-      }
-      onDone={success => {
+      startingMessage={'Starting new login following /extra-usage. Exit with Ctrl-C to use existing account.'}
+      onDone={(success) => {
         context.onChangeAPIKey()
         onDone(success ? 'Login successful' : 'Login interrupted')
       }}

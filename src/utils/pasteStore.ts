@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
 import { mkdir, readdir, readFile, stat, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
+
 import { logForDebugging } from './debug.js'
 import { getClaudeConfigHomeDir } from './envUtils.js'
 import { isENOENT } from './errors.js'
@@ -34,10 +35,7 @@ function getPastePath(hash: string): string {
  * The hash should be pre-computed with hashPastedText() so the caller
  * can use it immediately without waiting for the async disk write.
  */
-export async function storePastedText(
-  hash: string,
-  content: string,
-): Promise<void> {
+export async function storePastedText(hash: string, content: string): Promise<void> {
   try {
     const dir = getPasteStoreDir()
     await mkdir(dir, { recursive: true })

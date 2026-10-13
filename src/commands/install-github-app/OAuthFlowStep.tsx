@@ -3,13 +3,14 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from 'src/services/analytics/index.js'
+
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint.js'
 import { Spinner } from '../../components/Spinner.js'
 import TextInput from '../../components/TextInput.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
+import { Box, Link, Text } from '../../ink.js'
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
 import { setClipboard } from '../../ink/termio/osc.js'
-import { Box, Link, Text } from '../../ink.js'
 import { OAuthService } from '../../services/oauth/index.js'
 import { saveOAuthTokensIfNeeded } from '../../utils/auth.js'
 import { logError } from '../../utils/log.js'
@@ -29,10 +30,7 @@ type OAuthStatus =
 
 const PASTE_HERE_MSG = 'Paste code here if prompted > '
 
-export function OAuthFlowStep({
-  onSuccess,
-  onCancel,
-}: OAuthFlowStepProps): React.ReactNode {
+export function OAuthFlowStep({ onSuccess, onCancel }: OAuthFlowStepProps): React.ReactNode {
   const [oauthStatus, setOAuthStatus] = useState<OAuthStatus>({
     state: 'starting',
   })
@@ -46,10 +44,7 @@ export function OAuthFlowStep({
   const urlCopiedTimerRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const terminalSize = useTerminalSize()
-  const textInputColumns = Math.max(
-    50,
-    terminalSize.columns - PASTE_HERE_MSG.length - 4,
-  )
+  const textInputColumns = Math.max(50, terminalSize.columns - PASTE_HERE_MSG.length - 4)
 
   function handleKeyDown(e: KeyboardEvent): void {
     if (oauthStatus.state !== 'error') return
@@ -98,12 +93,12 @@ export function OAuthFlowStep({
 
   const startOAuth = useCallback(async () => {
     // Clear any existing timers when starting new OAuth flow
-    timersRef.current.forEach(timer => clearTimeout(timer))
+    timersRef.current.forEach((timer) => clearTimeout(timer))
     timersRef.current.clear()
 
     try {
       const result = await oauthService.startOAuthFlow(
-        async url => {
+        async (url) => {
           setOAuthStatus({ state: 'waiting_for_login', url })
           const timer = setTimeout(setShowPastePrompt, 3000, true)
           timersRef.current.add(timer)
@@ -147,8 +142,7 @@ export function OAuthFlowStep({
       })
       logError(err)
       logEvent('tengu_oauth_error', {
-        error:
-          errorMessage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error: errorMessage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
     }
   }, [oauthService, onSuccess])
@@ -178,13 +172,8 @@ export function OAuthFlowStep({
   }, [oauthStatus])
 
   useEffect(() => {
-    if (
-      pastedCode === 'c' &&
-      oauthStatus.state === 'waiting_for_login' &&
-      showPastePrompt &&
-      !urlCopied
-    ) {
-      void setClipboard(oauthStatus.url).then(raw => {
+    if (pastedCode === 'c' && oauthStatus.state === 'waiting_for_login' && showPastePrompt && !urlCopied) {
+      void setClipboard(oauthStatus.url).then((raw) => {
         if (raw) process.stdout.write(raw)
         setUrlCopied(true)
         clearTimeout(urlCopiedTimerRef.current)
@@ -200,7 +189,7 @@ export function OAuthFlowStep({
     return () => {
       oauthService.cleanup()
       // Clear all timers
-      timers.forEach(timer => clearTimeout(timer))
+      timers.forEach((timer) => clearTimeout(timer))
       timers.clear()
       clearTimeout(urlCopiedTimerRef.current)
     }
@@ -223,9 +212,7 @@ export function OAuthFlowStep({
             {!showPastePrompt && (
               <Box>
                 <Spinner />
-                <Text>
-                  Opening browser to sign in with your Claude account…
-                </Text>
+                <Text>Opening browser to sign in with your Claude account…</Text>
               </Box>
             )}
 
@@ -235,9 +222,7 @@ export function OAuthFlowStep({
                 <TextInput
                   value={pastedCode}
                   onChange={setPastedCode}
-                  onSubmit={(value: string) =>
-                    handleSubmitCode(value, oauthStatus.url)
-                  }
+                  onSubmit={(value: string) => handleSubmitCode(value, oauthStatus.url)}
                   cursorOffset={cursorOffset}
                   onChangeCursorOffset={setCursorOffset}
                   columns={textInputColumns}
@@ -258,9 +243,7 @@ export function OAuthFlowStep({
       case 'success':
         return (
           <Box flexDirection="column" gap={1}>
-            <Text color="success">
-              ✓ Authentication token created successfully!
-            </Text>
+            <Text color="success">✓ Authentication token created successfully!</Text>
             <Text dimColor>Using token for GitHub Actions setup…</Text>
           </Box>
         )
@@ -270,9 +253,7 @@ export function OAuthFlowStep({
           <Box flexDirection="column" gap={1}>
             <Text color="error">OAuth error: {oauthStatus.message}</Text>
             {oauthStatus.toRetry ? (
-              <Text dimColor>
-                Press Enter to try again, or any other key to cancel
-              </Text>
+              <Text dimColor>Press Enter to try again, or any other key to cancel</Text>
             ) : (
               <Text dimColor>Press any key to return to API key selection</Text>
             )}
@@ -292,13 +273,7 @@ export function OAuthFlowStep({
   }
 
   return (
-    <Box
-      flexDirection="column"
-      gap={1}
-      tabIndex={0}
-      autoFocus
-      onKeyDown={handleKeyDown}
-    >
+    <Box flexDirection="column" gap={1} tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
       {/* Show header inline only for initial starting state */}
       {oauthStatus.state === 'starting' && (
         <Box flexDirection="column" gap={1} paddingBottom={1}>
@@ -307,21 +282,17 @@ export function OAuthFlowStep({
         </Box>
       )}
       {/* Show header for non-starting states (to avoid duplicate with inline header)*/}
-      {oauthStatus.state !== 'success' &&
-        oauthStatus.state !== 'starting' &&
-        oauthStatus.state !== 'processing' && (
-          <Box key="header" flexDirection="column" gap={1} paddingBottom={1}>
-            <Text bold>Create Authentication Token</Text>
-            <Text dimColor>Creating a long-lived token for GitHub Actions</Text>
-          </Box>
-        )}
+      {oauthStatus.state !== 'success' && oauthStatus.state !== 'starting' && oauthStatus.state !== 'processing' && (
+        <Box key="header" flexDirection="column" gap={1} paddingBottom={1}>
+          <Text bold>Create Authentication Token</Text>
+          <Text dimColor>Creating a long-lived token for GitHub Actions</Text>
+        </Box>
+      )}
       {/* Show URL when paste prompt is visible */}
       {oauthStatus.state === 'waiting_for_login' && showPastePrompt && (
         <Box flexDirection="column" key="urlToCopy" gap={1} paddingBottom={1}>
           <Box paddingX={1}>
-            <Text dimColor>
-              Browser didn&apos;t open? Use the url below to sign in{' '}
-            </Text>
+            <Text dimColor>Browser didn&apos;t open? Use the url below to sign in </Text>
             {urlCopied ? (
               <Text color="success">(Copied!)</Text>
             ) : (

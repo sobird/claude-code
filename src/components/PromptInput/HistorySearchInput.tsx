@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { stringWidth } from '../../ink/stringWidth.js'
+
 import { Box, Text } from '../../ink.js'
+import { stringWidth } from '../../ink/stringWidth.js'
 import TextInput from '../TextInput.js'
 
 type Props = {
@@ -9,16 +10,10 @@ type Props = {
   historyFailedMatch: boolean
 }
 
-function HistorySearchInput({
-  value,
-  onChange,
-  historyFailedMatch,
-}: Props): React.ReactNode {
+function HistorySearchInput({ value, onChange, historyFailedMatch }: Props): React.ReactNode {
   return (
     <Box gap={1}>
-      <Text dimColor>
-        {historyFailedMatch ? 'no matching prompt:' : 'search prompts:'}
-      </Text>
+      <Text dimColor>{historyFailedMatch ? 'no matching prompt:' : 'search prompts:'}</Text>
       <TextInput
         value={value}
         onChange={onChange}

@@ -1,7 +1,9 @@
-import codeExcerpt, { type CodeExcerpt } from 'code-excerpt'
 import { readFileSync } from 'fs'
+
+import codeExcerpt, { type CodeExcerpt } from 'code-excerpt'
 import React from 'react'
 import StackUtils from 'stack-utils'
+
 import Box from './Box.js'
 import Text from './Text.js'
 
@@ -76,9 +78,7 @@ export default function ErrorOverview({ error }: Props) {
               <Box width={lineWidth + 1}>
                 <Text
                   dim={line !== origin.line}
-                  backgroundColor={
-                    line === origin.line ? 'ansi:red' : undefined
-                  }
+                  backgroundColor={line === origin.line ? 'ansi:red' : undefined}
                   color={line === origin.line ? 'ansi:white' : undefined}
                 >
                   {String(line).padStart(lineWidth, ' ')}:
@@ -102,7 +102,7 @@ export default function ErrorOverview({ error }: Props) {
           {error.stack
             .split('\n')
             .slice(1)
-            .map(line => {
+            .map((line) => {
               const parsedLine = getStackUtils().parseLine(line)
 
               // If the line from the stack cannot be parsed, we print out the unparsed line.
@@ -121,8 +121,7 @@ export default function ErrorOverview({ error }: Props) {
                   <Text bold>{parsedLine.function}</Text>
                   <Text dim>
                     {' '}
-                    ({cleanupPath(parsedLine.file) ?? ''}:{parsedLine.line}:
-                    {parsedLine.column})
+                    ({cleanupPath(parsedLine.file) ?? ''}:{parsedLine.line}:{parsedLine.column})
                   </Text>
                 </Box>
               )

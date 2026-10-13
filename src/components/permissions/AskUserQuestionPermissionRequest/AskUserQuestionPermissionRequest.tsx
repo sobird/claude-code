@@ -1,19 +1,10 @@
-import type {
-  Base64ImageSource,
-  ImageBlockParam,
-} from '@anthropic-ai/sdk/resources/messages.mjs'
-import React, {
-  Suspense,
-  use,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import type { Base64ImageSource, ImageBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
+import React, { Suspense, use, useCallback, useMemo, useRef, useState } from 'react'
+
 import { useSettings } from '../../../hooks/useSettings.js'
 import { useTerminalSize } from '../../../hooks/useTerminalSize.js'
-import { stringWidth } from '../../../ink/stringWidth.js'
 import { useTheme } from '../../../ink.js'
+import { stringWidth } from '../../../ink/stringWidth.js'
 import { useKeybindings } from '../../../keybindings/useKeybinding.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -22,10 +13,7 @@ import {
 import { useAppState } from '../../../state/AppState.js'
 import type { Question } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js'
 import { AskUserQuestionTool } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js'
-import {
-  type CliHighlight,
-  getCliHighlightPromise,
-} from '../../../utils/cliHighlight.js'
+import { type CliHighlight, getCliHighlightPromise } from '../../../utils/cliHighlight.js'
 import type { PastedContent } from '../../../utils/config.js'
 import type { ImageDimensions } from '../../../utils/imageResizer.js'
 import { maybeResizeAndDownsampleImageBlock } from '../../../utils/imageResizer.js'
@@ -44,31 +32,21 @@ const MIN_CONTENT_WIDTH = 40
 // Lines used by chrome around the content area (nav bar, title, footer, help text, etc.)
 const CONTENT_CHROME_OVERHEAD = 15
 
-export function AskUserQuestionPermissionRequest(
-  props: PermissionRequestProps,
-): React.ReactNode {
+export function AskUserQuestionPermissionRequest(props: PermissionRequestProps): React.ReactNode {
   const settings = useSettings()
   if (settings.syntaxHighlightingDisabled) {
     return <AskUserQuestionPermissionRequestBody {...props} highlight={null} />
   }
   return (
-    <Suspense
-      fallback={
-        <AskUserQuestionPermissionRequestBody {...props} highlight={null} />
-      }
-    >
+    <Suspense fallback={<AskUserQuestionPermissionRequestBody {...props} highlight={null} />}>
       <AskUserQuestionWithHighlight {...props} />
     </Suspense>
   )
 }
 
-function AskUserQuestionWithHighlight(
-  props: PermissionRequestProps,
-): React.ReactNode {
+function AskUserQuestionWithHighlight(props: PermissionRequestProps): React.ReactNode {
   const highlight = use(getCliHighlightPromise())
-  return (
-    <AskUserQuestionPermissionRequestBody {...props} highlight={highlight} />
-  )
+  return <AskUserQuestionPermissionRequestBody {...props} highlight={highlight} />
 }
 
 function AskUserQuestionPermissionRequestBody({
@@ -86,10 +64,7 @@ function AskUserQuestionPermissionRequestBody({
   // useMemo (which runs applyMarkdown over every preview) never hits its cache.
   // `toolUseConfirm.input` is stable for the dialog's lifetime (this tool
   // returns `behavior: 'ask'` directly and never goes through the classifier).
-  const result = useMemo(
-    () => AskUserQuestionTool.inputSchema.safeParse(toolUseConfirm.input),
-    [toolUseConfirm.input],
-  )
+  const result = useMemo(() => AskUserQuestionTool.inputSchema.safeParse(toolUseConfirm.input), [toolUseConfirm.input])
   const questions = result.success ? result.data.questions || [] : []
   const { rows: terminalRows } = useTerminalSize()
   const [theme] = useTheme()
@@ -105,10 +80,7 @@ function AskUserQuestionPermissionRequestBody({
     const FOOTER_HELP_LINES = 7
 
     // Cap at terminal height minus chrome overhead, but ensure at least MIN_CONTENT_HEIGHT
-    const maxAllowedHeight = Math.max(
-      MIN_CONTENT_HEIGHT,
-      terminalRows - CONTENT_CHROME_OVERHEAD,
-    )
+    const maxAllowedHeight = Math.max(MIN_CONTENT_HEIGHT, terminalRows - CONTENT_CHROME_OVERHEAD)
 
     // PREVIEW_OVERHEAD matches the constant in PreviewQuestionView.tsx — lines
     // used by non-preview elements within the content area (margins, borders,
@@ -117,15 +89,12 @@ function AskUserQuestionPermissionRequestBody({
     const PREVIEW_OVERHEAD = 11
 
     for (const q of questions) {
-      const hasPreview = q.options.some(opt => opt.preview)
+      const hasPreview = q.options.some((opt) => opt.preview)
 
       if (hasPreview) {
         // Compute the max preview content lines that would actually display
         // after truncation, matching the logic in PreviewQuestionView.
-        const maxPreviewContentLines = Math.max(
-          1,
-          maxAllowedHeight - PREVIEW_OVERHEAD,
-        )
+        const maxPreviewContentLines = Math.max(1, maxAllowedHeight - PREVIEW_OVERHEAD)
 
         // For preview questions, total = side-by-side height + footer/help
         // Side-by-side = max(left panel, right panel)
@@ -139,14 +108,9 @@ function AskUserQuestionPermissionRequestBody({
             const rendered = applyMarkdown(opt.preview, theme, highlight)
             const previewLines = rendered.split('\n')
             const isTruncated = previewLines.length > maxPreviewContentLines
-            const displayedLines = isTruncated
-              ? maxPreviewContentLines
-              : previewLines.length
+            const displayedLines = isTruncated ? maxPreviewContentLines : previewLines.length
             // Preview box: displayed content + truncation indicator + 2 borders
-            maxPreviewBoxHeight = Math.max(
-              maxPreviewBoxHeight,
-              displayedLines + (isTruncated ? 1 : 0) + 2,
-            )
+            maxPreviewBoxHeight = Math.max(maxPreviewBoxHeight, displayedLines + (isTruncated ? 1 : 0) + 2)
             for (const line of previewLines) {
               maxWidth = Math.max(maxWidth, stringWidth(line))
             }
@@ -160,24 +124,16 @@ function AskUserQuestionPermissionRequestBody({
         maxHeight = Math.max(maxHeight, sideByHeight + FOOTER_HELP_LINES)
       } else {
         // For regular questions: options + "Other" + footer/help
-        maxHeight = Math.max(
-          maxHeight,
-          q.options.length + 3 + FOOTER_HELP_LINES,
-        )
+        maxHeight = Math.max(maxHeight, q.options.length + 3 + FOOTER_HELP_LINES)
       }
     }
 
     return {
-      globalContentHeight: Math.min(
-        Math.max(maxHeight, MIN_CONTENT_HEIGHT),
-        maxAllowedHeight,
-      ),
+      globalContentHeight: Math.min(Math.max(maxHeight, MIN_CONTENT_HEIGHT), maxAllowedHeight),
       globalContentWidth: Math.max(maxWidth, MIN_CONTENT_WIDTH),
     }
   }, [questions, terminalRows, theme, highlight])
-  const metadataSource = result.success
-    ? result.data.metadata?.source
-    : undefined
+  const metadataSource = result.success ? result.data.metadata?.source : undefined
 
   const [pastedContentsByQuestion, setPastedContentsByQuestion] = useState<
     Record<string, Record<number, PastedContent>>
@@ -203,14 +159,14 @@ function AskUserQuestionPermissionRequestBody({
     }
     cacheImagePath(newContent)
     void storeImage(newContent)
-    setPastedContentsByQuestion(prev => ({
+    setPastedContentsByQuestion((prev) => ({
       ...prev,
       [questionText]: { ...(prev[questionText] ?? {}), [pasteId]: newContent },
     }))
   }
 
   const onRemoveImage = useCallback((questionText: string, id: number) => {
-    setPastedContentsByQuestion(prev => {
+    setPastedContentsByQuestion((prev) => {
       const questionContents = { ...(prev[questionText] ?? {}) }
       delete questionContents[id]
       return { ...prev, [questionText]: questionContents }
@@ -218,12 +174,10 @@ function AskUserQuestionPermissionRequestBody({
   }, [])
 
   const allImageAttachments = Object.values(pastedContentsByQuestion)
-    .flatMap(contents => Object.values(contents))
-    .filter(c => c.type === 'image')
+    .flatMap((contents) => Object.values(contents))
+    .filter((c) => c.type === 'image')
 
-  const toolPermissionContextMode = useAppState(
-    s => s.toolPermissionContext.mode,
-  )
+  const toolPermissionContextMode = useAppState((s) => s.toolPermissionContext.mode)
   const isInPlanMode = toolPermissionContextMode === 'plan'
   const planFilePath = isInPlanMode ? getPlanFilePath() : undefined
 
@@ -240,15 +194,10 @@ function AskUserQuestionPermissionRequestBody({
     setTextInputMode,
   } = state
 
-  const currentQuestion =
-    currentQuestionIndex < (questions?.length || 0)
-      ? questions?.[currentQuestionIndex]
-      : null
+  const currentQuestion = currentQuestionIndex < (questions?.length || 0) ? questions?.[currentQuestionIndex] : null
 
   const isInSubmitView = currentQuestionIndex === (questions?.length || 0)
-  const allQuestionsAnswered =
-    questions?.every((q: Question) => q?.question && !!answers[q.question]) ??
-    false
+  const allQuestionsAnswered = questions?.every((q: Question) => q?.question && !!answers[q.question]) ?? false
 
   // Hide submit tab when there's only one question and it's single-select (auto-submit scenario)
   const hideSubmitTab = questions.length === 1 && !questions[0]?.multiSelect
@@ -257,25 +206,16 @@ function AskUserQuestionPermissionRequestBody({
     // Log rejection with metadata source if present
     if (metadataSource) {
       logEvent('tengu_ask_user_question_rejected', {
-        source:
-          metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        source: metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         questionCount: questions.length,
         isInPlanMode,
-        interviewPhaseEnabled:
-          isInPlanMode && isPlanModeInterviewPhaseEnabled(),
+        interviewPhaseEnabled: isInPlanMode && isPlanModeInterviewPhaseEnabled(),
       })
     }
     onDone()
     onReject()
     toolUseConfirm.onReject()
-  }, [
-    onDone,
-    onReject,
-    toolUseConfirm,
-    metadataSource,
-    questions.length,
-    isInPlanMode,
-  ])
+  }, [onDone, onReject, toolUseConfirm, metadataSource, questions.length, isInPlanMode])
 
   const handleRespondToClaude = useCallback(async () => {
     const questionsWithAnswers = questions
@@ -297,31 +237,18 @@ function AskUserQuestionPermissionRequestBody({
 
     if (metadataSource) {
       logEvent('tengu_ask_user_question_respond_to_claude', {
-        source:
-          metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        source: metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         questionCount: questions.length,
         isInPlanMode,
-        interviewPhaseEnabled:
-          isInPlanMode && isPlanModeInterviewPhaseEnabled(),
+        interviewPhaseEnabled: isInPlanMode && isPlanModeInterviewPhaseEnabled(),
       })
     }
 
     const imageBlocks = await convertImagesToBlocks(allImageAttachments)
 
     onDone()
-    toolUseConfirm.onReject(
-      feedback,
-      imageBlocks && imageBlocks.length > 0 ? imageBlocks : undefined,
-    )
-  }, [
-    questions,
-    answers,
-    onDone,
-    toolUseConfirm,
-    metadataSource,
-    isInPlanMode,
-    allImageAttachments,
-  ])
+    toolUseConfirm.onReject(feedback, imageBlocks && imageBlocks.length > 0 ? imageBlocks : undefined)
+  }, [questions, answers, onDone, toolUseConfirm, metadataSource, isInPlanMode, allImageAttachments])
 
   const handleFinishPlanInterview = useCallback(async () => {
     const questionsWithAnswers = questions
@@ -341,56 +268,38 @@ Questions asked and answers provided:\n${questionsWithAnswers}`
 
     if (metadataSource) {
       logEvent('tengu_ask_user_question_finish_plan_interview', {
-        source:
-          metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        source: metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         questionCount: questions.length,
         isInPlanMode,
-        interviewPhaseEnabled:
-          isInPlanMode && isPlanModeInterviewPhaseEnabled(),
+        interviewPhaseEnabled: isInPlanMode && isPlanModeInterviewPhaseEnabled(),
       })
     }
 
     const imageBlocks = await convertImagesToBlocks(allImageAttachments)
 
     onDone()
-    toolUseConfirm.onReject(
-      feedback,
-      imageBlocks && imageBlocks.length > 0 ? imageBlocks : undefined,
-    )
-  }, [
-    questions,
-    answers,
-    onDone,
-    toolUseConfirm,
-    metadataSource,
-    isInPlanMode,
-    allImageAttachments,
-  ])
+    toolUseConfirm.onReject(feedback, imageBlocks && imageBlocks.length > 0 ? imageBlocks : undefined)
+  }, [questions, answers, onDone, toolUseConfirm, metadataSource, isInPlanMode, allImageAttachments])
 
   const submitAnswers = useCallback(
     async (answersToSubmit: Record<string, string>) => {
       // Log acceptance with metadata source if present
       if (metadataSource) {
         logEvent('tengu_ask_user_question_accepted', {
-          source:
-            metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          source: metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           questionCount: questions.length,
           answerCount: Object.keys(answersToSubmit).length,
           isInPlanMode,
-          interviewPhaseEnabled:
-            isInPlanMode && isPlanModeInterviewPhaseEnabled(),
+          interviewPhaseEnabled: isInPlanMode && isPlanModeInterviewPhaseEnabled(),
         })
       }
       // Build annotations from questionStates (e.g., selected preview, user notes)
-      const annotations: Record<string, { preview?: string; notes?: string }> =
-        {}
+      const annotations: Record<string, { preview?: string; notes?: string }> = {}
       for (const q of questions) {
         const answer = answersToSubmit[q.question]
         const notes = questionStates[q.question]?.textInputValue
         // Find the selected option's preview content
-        const selectedOption = answer
-          ? q.options.find(opt => opt.label === answer)
-          : undefined
+        const selectedOption = answer ? q.options.find((opt) => opt.label === answer) : undefined
         const preview = selectedOption?.preview
         if (preview || notes?.trim()) {
           annotations[q.question] = {
@@ -416,42 +325,26 @@ Questions asked and answers provided:\n${questionsWithAnswers}`
         contentBlocks && contentBlocks.length > 0 ? contentBlocks : undefined,
       )
     },
-    [
-      toolUseConfirm,
-      onDone,
-      metadataSource,
-      questions,
-      questionStates,
-      isInPlanMode,
-      allImageAttachments,
-    ],
+    [toolUseConfirm, onDone, metadataSource, questions, questionStates, isInPlanMode, allImageAttachments],
   )
 
   const handleQuestionAnswer = useCallback(
-    (
-      questionText: string,
-      label: string | string[],
-      textInput?: string,
-      shouldAdvance: boolean = true,
-    ) => {
+    (questionText: string, label: string | string[], textInput?: string, shouldAdvance: boolean = true) => {
       let answer: string
       const isMultiSelect = Array.isArray(label)
       if (isMultiSelect) {
         answer = label.join(', ')
       } else {
         if (textInput) {
-          const questionImages = Object.values(
-            pastedContentsByQuestion[questionText] ?? {},
-          ).filter(c => c.type === 'image')
-          answer =
-            questionImages.length > 0
-              ? `${textInput} (Image attached)`
-              : textInput
+          const questionImages = Object.values(pastedContentsByQuestion[questionText] ?? {}).filter(
+            (c) => c.type === 'image',
+          )
+          answer = questionImages.length > 0 ? `${textInput} (Image attached)` : textInput
         } else if (label === '__other__') {
           // Image-only submission — check if this question has images
-          const questionImages = Object.values(
-            pastedContentsByQuestion[questionText] ?? {},
-          ).filter(c => c.type === 'image')
+          const questionImages = Object.values(pastedContentsByQuestion[questionText] ?? {}).filter(
+            (c) => c.type === 'image',
+          )
           answer = questionImages.length > 0 ? '(Image attached)' : label
         } else {
           answer = label
@@ -471,13 +364,7 @@ Questions asked and answers provided:\n${questionsWithAnswers}`
 
       setAnswer(questionText, answer, shouldAdvance)
     },
-    [
-      setAnswer,
-      questions.length,
-      answers,
-      submitAnswers,
-      pastedContentsByQuestion,
-    ],
+    [setAnswer, questions.length, answers, submitAnswers, pastedContentsByQuestion],
   )
 
   function handleFinalResponse(value: 'submit' | 'cancel'): void {
@@ -492,9 +379,7 @@ Questions asked and answers provided:\n${questionsWithAnswers}`
   }
 
   // When submit tab is hidden, don't allow navigating past the last question
-  const maxIndex = hideSubmitTab
-    ? (questions?.length || 1) - 1
-    : questions?.length || 0
+  const maxIndex = hideSubmitTab ? (questions?.length || 1) - 1 : questions?.length || 0
 
   // Bounded navigation callbacks for question tabs
   const handleTabPrev = useCallback(() => {
@@ -545,19 +430,10 @@ Questions asked and answers provided:\n${questionsWithAnswers}`
           onRespondToClaude={handleRespondToClaude}
           onFinishPlanInterview={handleFinishPlanInterview}
           onImagePaste={(base64, mediaType, filename, dims, path) =>
-            onImagePaste(
-              currentQuestion.question,
-              base64,
-              mediaType,
-              filename,
-              dims,
-              path,
-            )
+            onImagePaste(currentQuestion.question, base64, mediaType, filename, dims, path)
           }
-          pastedContents={
-            pastedContentsByQuestion[currentQuestion.question] ?? {}
-          }
-          onRemoveImage={id => onRemoveImage(currentQuestion.question, id)}
+          pastedContents={pastedContentsByQuestion[currentQuestion.question] ?? {}}
+          onRemoveImage={(id) => onRemoveImage(currentQuestion.question, id)}
         />
       </>
     )
@@ -583,18 +459,15 @@ Questions asked and answers provided:\n${questionsWithAnswers}`
   return null
 }
 
-async function convertImagesToBlocks(
-  images: PastedContent[],
-): Promise<ImageBlockParam[] | undefined> {
+async function convertImagesToBlocks(images: PastedContent[]): Promise<ImageBlockParam[] | undefined> {
   if (images.length === 0) return undefined
   return Promise.all(
-    images.map(async img => {
+    images.map(async (img) => {
       const block: ImageBlockParam = {
         type: 'image',
         source: {
           type: 'base64',
-          media_type: (img.mediaType ||
-            'image/png') as Base64ImageSource['media_type'],
+          media_type: (img.mediaType || 'image/png') as Base64ImageSource['media_type'],
           data: img.content,
         },
       }

@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+
 import { AGENT_TOOL_NAME } from '../../tools/AgentTool/constants.js'
 import { TASK_OUTPUT_TOOL_NAME } from '../../tools/TaskOutputTool/constants.js'
 import { TASK_STOP_TOOL_NAME } from '../../tools/TaskStopTool/prompt.js'
@@ -9,9 +10,7 @@ import type { PermissionRuleValue } from './PermissionRule.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
-    ? (
-        require('../../tools/BriefTool/prompt.js') as typeof import('../../tools/BriefTool/prompt.js')
-      ).BRIEF_TOOL_NAME
+    ? (require('../../tools/BriefTool/prompt.js') as typeof import('../../tools/BriefTool/prompt.js')).BRIEF_TOOL_NAME
     : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -23,9 +22,7 @@ const LEGACY_TOOL_NAME_ALIASES: Record<string, string> = {
   KillShell: TASK_STOP_TOOL_NAME,
   AgentOutputTool: TASK_OUTPUT_TOOL_NAME,
   BashOutputTool: TASK_OUTPUT_TOOL_NAME,
-  ...((feature('KAIROS') || feature('KAIROS_BRIEF')) && BRIEF_TOOL_NAME
-    ? { Brief: BRIEF_TOOL_NAME }
-    : {}),
+  ...((feature('KAIROS') || feature('KAIROS_BRIEF')) && BRIEF_TOOL_NAME ? { Brief: BRIEF_TOOL_NAME } : {}),
 }
 
 export function normalizeLegacyToolName(name: string): string {
@@ -90,9 +87,7 @@ export function unescapeRuleContent(content: string): string {
  * permissionRuleValueFromString('Bash(npm install)') // => { toolName: 'Bash', ruleContent: 'npm install' }
  * permissionRuleValueFromString('Bash(python -c "print\\(1\\)")') // => { toolName: 'Bash', ruleContent: 'python -c "print(1)"' }
  */
-export function permissionRuleValueFromString(
-  ruleString: string,
-): PermissionRuleValue {
+export function permissionRuleValueFromString(ruleString: string): PermissionRuleValue {
   // Find the first unescaped opening parenthesis
   const openParenIndex = findFirstUnescapedChar(ruleString, '(')
   if (openParenIndex === -1) {
@@ -141,9 +136,7 @@ export function permissionRuleValueFromString(
  * permissionRuleValueToString({ toolName: 'Bash', ruleContent: 'npm install' }) // => 'Bash(npm install)'
  * permissionRuleValueToString({ toolName: 'Bash', ruleContent: 'python -c "print(1)"' }) // => 'Bash(python -c "print\\(1\\)")'
  */
-export function permissionRuleValueToString(
-  ruleValue: PermissionRuleValue,
-): string {
+export function permissionRuleValueToString(ruleValue: PermissionRuleValue): string {
   if (!ruleValue.ruleContent) {
     return ruleValue.toolName
   }

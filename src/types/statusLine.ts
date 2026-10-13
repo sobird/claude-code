@@ -1,2 +1,2 @@
 // Auto-generated stub — replace with real implementation
-export type StatusLineCommandInput = unknown;
+export type StatusLineCommandInput = unknown

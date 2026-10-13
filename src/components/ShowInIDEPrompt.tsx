@@ -1,5 +1,7 @@
 import { basename, relative } from 'path'
+
 import React from 'react'
+
 import { Box, Text } from '../ink.js'
 import { getCwd } from '../utils/cwd.js'
 import { isSupportedVSCodeTerminal } from '../utils/ide.js'
@@ -54,19 +56,16 @@ export function ShowInIDEPrompt<A>({
               : `Symlink target: ${symlinkTarget}`}
           </Text>
         )}
-        {isSupportedVSCodeTerminal() && (
-          <Text dimColor>Save file to continue…</Text>
-        )}
+        {isSupportedVSCodeTerminal() && <Text dimColor>Save file to continue…</Text>}
         <Box flexDirection="column">
           <Text>
-            Do you want to make this edit to{' '}
-            <Text bold>{basename(filePath)}</Text>?
+            Do you want to make this edit to <Text bold>{basename(filePath)}</Text>?
           </Text>
           <Select
             options={options}
             inlineDescriptions
-            onChange={value => {
-              const selected = options.find(opt => opt.value === value)
+            onChange={(value) => {
+              const selected = options.find((opt) => opt.value === value)
               if (selected) {
                 // For reject option
                 if (selected.option.type === 'reject') {
@@ -84,15 +83,14 @@ export function ShowInIDEPrompt<A>({
               }
             }}
             onCancel={() => onChange({ type: 'reject' }, input)}
-            onFocus={value => setFocusedOption(value)}
+            onFocus={(value) => setFocusedOption(value)}
             onInputModeToggle={onInputModeToggle}
           />
         </Box>
         <Box marginTop={1}>
           <Text dimColor>
             Esc to cancel
-            {((focusedOption === 'yes' && !yesInputMode) ||
-              (focusedOption === 'no' && !noInputMode)) &&
+            {((focusedOption === 'yes' && !yesInputMode) || (focusedOption === 'no' && !noInputMode)) &&
               ' · Tab to amend'}
           </Text>
         </Box>

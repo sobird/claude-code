@@ -1,5 +1,6 @@
 import { APIUserAbortError } from '@anthropic-ai/sdk'
 import React, { type ReactNode, useCallback, useRef, useState } from 'react'
+
 import { useMainLoopModel } from '../../../../hooks/useMainLoopModel.js'
 import { Box, Text } from '../../../../ink.js'
 import { useKeybinding } from '../../../../keybindings/useKeybinding.js'
@@ -15,8 +16,7 @@ import { generateAgent } from '../../generateAgent.js'
 import type { AgentWizardData } from '../types.js'
 
 export function GenerateStep(): ReactNode {
-  const { updateWizardData, goBack, goToStep, wizardData } =
-    useWizard<AgentWizardData>()
+  const { updateWizardData, goBack, goToStep, wizardData } = useWizard<AgentWizardData>()
   const [prompt, setPrompt] = useState(wizardData.generationPrompt || '')
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -93,12 +93,7 @@ export function GenerateStep(): ReactNode {
     abortControllerRef.current = controller
 
     try {
-      const generated = await generateAgent(
-        trimmedPrompt,
-        model,
-        [],
-        controller.signal,
-      )
+      const generated = await generateAgent(trimmedPrompt, model, [], controller.signal)
 
       updateWizardData({
         agentType: generated.identifier,
@@ -115,10 +110,7 @@ export function GenerateStep(): ReactNode {
       // Don't show error if it was cancelled (already set in escape handler)
       if (err instanceof APIUserAbortError) {
         // User cancelled - no error to show
-      } else if (
-        err instanceof Error &&
-        !err.message.includes('No assistant message found')
-      ) {
+      } else if (err instanceof Error && !err.message.includes('No assistant message found')) {
         setError(err.message || 'Failed to generate agent')
       }
       updateWizardData({ isGenerating: false })
@@ -128,20 +120,14 @@ export function GenerateStep(): ReactNode {
     }
   }
 
-  const subtitle =
-    'Describe what this agent should do and when it should be used (be comprehensive for best results)'
+  const subtitle = 'Describe what this agent should do and when it should be used (be comprehensive for best results)'
 
   if (isGenerating) {
     return (
       <WizardDialogLayout
         subtitle={subtitle}
         footerText={
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Settings"
-            fallback="Esc"
-            description="cancel"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
         }
       >
         <Box flexDirection="row" alignItems="center">
@@ -157,24 +143,14 @@ export function GenerateStep(): ReactNode {
       subtitle={subtitle}
       footerText={
         <Byline>
-          <ConfigurableShortcutHint
-            action="confirm:yes"
-            context="Confirmation"
-            fallback="Enter"
-            description="submit"
-          />
+          <ConfigurableShortcutHint action="confirm:yes" context="Confirmation" fallback="Enter" description="submit" />
           <ConfigurableShortcutHint
             action="chat:externalEditor"
             context="Chat"
             fallback="ctrl+g"
             description="open in editor"
           />
-          <ConfigurableShortcutHint
-            action="confirm:no"
-            context="Settings"
-            fallback="Esc"
-            description="go back"
-          />
+          <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="go back" />
         </Byline>
       }
     >

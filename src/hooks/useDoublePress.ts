@@ -30,9 +30,7 @@ export function useDoublePress(
   return useCallback(() => {
     const now = Date.now()
     const timeSinceLastPress = now - lastPressRef.current
-    const isDoublePress =
-      timeSinceLastPress <= DOUBLE_PRESS_TIMEOUT_MS &&
-      timeoutRef.current !== undefined
+    const isDoublePress = timeSinceLastPress <= DOUBLE_PRESS_TIMEOUT_MS && timeoutRef.current !== undefined
 
     if (isDoublePress) {
       // Double press detected

@@ -1,4 +1,5 @@
 import * as React from 'react'
+
 import { Box, Text } from '../ink.js'
 import { formatNumber } from '../utils/format.js'
 import type { Theme } from '../utils/theme.js'
@@ -64,20 +65,13 @@ export function AgentProgressLine({
             </>
           ) : (
             <>
-              <Text
-                bold
-                backgroundColor={color}
-                color={color ? 'inverseText' : undefined}
-              >
+              <Text bold backgroundColor={color} color={color ? 'inverseText' : undefined}>
                 {agentType}
               </Text>
               {description && (
                 <>
                   {' ('}
-                  <Text
-                    backgroundColor={descriptionColor}
-                    color={descriptionColor ? 'inverseText' : undefined}
-                  >
+                  <Text backgroundColor={descriptionColor} color={descriptionColor ? 'inverseText' : undefined}>
                     {description}
                   </Text>
                   {')'}

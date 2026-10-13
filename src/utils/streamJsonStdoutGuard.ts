@@ -52,17 +52,14 @@ export function installStreamJsonStdoutGuard(): void {
   }
   installed = true
 
-  originalWrite = process.stdout.write.bind(
-    process.stdout,
-  ) as typeof process.stdout.write
+  originalWrite = process.stdout.write.bind(process.stdout) as typeof process.stdout.write
 
   process.stdout.write = function (
     chunk: string | Uint8Array,
     encodingOrCb?: BufferEncoding | ((err?: Error) => void),
     cb?: (err?: Error) => void,
   ): boolean {
-    const text =
-      typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf-8')
+    const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf-8')
 
     buffer += text
     let newlineIdx: number
@@ -74,9 +71,7 @@ export function installStreamJsonStdoutGuard(): void {
         wrote = originalWrite!(line + '\n')
       } else {
         process.stderr.write(`${STDOUT_GUARD_MARKER} ${line}\n`)
-        logForDebugging(
-          `streamJsonStdoutGuard diverted non-JSON stdout line: ${line.slice(0, 200)}`,
-        )
+        logForDebugging(`streamJsonStdoutGuard diverted non-JSON stdout line: ${line.slice(0, 200)}`)
       }
     }
 

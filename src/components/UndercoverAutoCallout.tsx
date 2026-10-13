@@ -1,6 +1,7 @@
+import { Dialog } from 'src/components/design-system/Dialog.js'
+
 import { Box, Text } from '../ink.js'
 import { saveGlobalConfig, getGlobalConfig } from '../utils/config.js'
-import { Dialog } from 'src/components/design-system/Dialog.js'
 import { Select } from './CustomSelect/index.js'
 
 interface Props {
@@ -11,7 +12,7 @@ export function UndercoverAutoCallout({ onDone }: Props): React.ReactNode {
   const handleConfirm = () => {
     onDone()
 
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       hasSeenUndercoverAutoNotice: true,
     }))
@@ -35,12 +36,8 @@ export function UndercoverAutoCallout({ onDone }: Props): React.ReactNode {
       </Box>
 
       <Box flexDirection="column">
-        <Text dimColor>
-          You can disable undercover mode for this session by setting CLAUDE_CODE_UNDERCOVER=0
-        </Text>
-        <Text color="error">
-          Violating undercover mode requirements may result in immediate session termination.
-        </Text>
+        <Text dimColor>You can disable undercover mode for this session by setting CLAUDE_CODE_UNDERCOVER=0</Text>
+        <Text color="error">Violating undercover mode requirements may result in immediate session termination.</Text>
       </Box>
 
       <Select

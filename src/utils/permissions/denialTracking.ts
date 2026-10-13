@@ -38,8 +38,5 @@ export function recordSuccess(state: DenialTrackingState): DenialTrackingState {
 }
 
 export function shouldFallbackToPrompting(state: DenialTrackingState): boolean {
-  return (
-    state.consecutiveDenials >= DENIAL_LIMITS.maxConsecutive ||
-    state.totalDenials >= DENIAL_LIMITS.maxTotal
-  )
+  return state.consecutiveDenials >= DENIAL_LIMITS.maxConsecutive || state.totalDenials >= DENIAL_LIMITS.maxTotal
 }

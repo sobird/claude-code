@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { handlePlanModeTransition } from '../../../bootstrap/state.js'
 import { Box, Text } from '../../../ink.js'
 import {
@@ -17,22 +18,17 @@ export function EnterPlanModePermissionRequest({
   onReject,
   workerBadge,
 }: PermissionRequestProps): React.ReactNode {
-  const toolPermissionContextMode = useAppState(
-    s => s.toolPermissionContext.mode,
-  )
+  const toolPermissionContextMode = useAppState((s) => s.toolPermissionContext.mode)
 
   function handleResponse(value: 'yes' | 'no'): void {
     if (value === 'yes') {
       logEvent('tengu_plan_enter', {
         interviewPhaseEnabled: isPlanModeInterviewPhaseEnabled(),
-        entryMethod:
-          'tool' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        entryMethod: 'tool' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
       handlePlanModeTransition(toolPermissionContextMode, 'plan')
       onDone()
-      toolUseConfirm.onAllow({}, [
-        { type: 'setMode', mode: 'plan', destination: 'session' },
-      ])
+      toolUseConfirm.onAllow({}, [{ type: 'setMode', mode: 'plan', destination: 'session' }])
     } else {
       onDone()
       onReject()
@@ -41,16 +37,9 @@ export function EnterPlanModePermissionRequest({
   }
 
   return (
-    <PermissionDialog
-      color="planMode"
-      title="Enter plan mode?"
-      workerBadge={workerBadge}
-    >
+    <PermissionDialog color="planMode" title="Enter plan mode?" workerBadge={workerBadge}>
       <Box flexDirection="column" marginTop={1} paddingX={1}>
-        <Text>
-          Claude wants to enter plan mode to explore and design an
-          implementation approach.
-        </Text>
+        <Text>Claude wants to enter plan mode to explore and design an implementation approach.</Text>
 
         <Box marginTop={1} flexDirection="column">
           <Text dimColor>In plan mode, Claude will:</Text>
@@ -61,9 +50,7 @@ export function EnterPlanModePermissionRequest({
         </Box>
 
         <Box marginTop={1}>
-          <Text dimColor>
-            No code changes will be made until you approve the plan.
-          </Text>
+          <Text dimColor>No code changes will be made until you approve the plan.</Text>
         </Box>
 
         <Box marginTop={1}>

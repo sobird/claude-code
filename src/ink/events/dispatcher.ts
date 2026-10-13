@@ -4,6 +4,7 @@ import {
   DiscreteEventPriority,
   NoEventPriority,
 } from 'react-reconciler/constants.js'
+
 import { logError } from '../../utils/log.js'
 import { HANDLER_FOR_EVENT } from './event-handlers.js'
 import type { EventTarget, TerminalEvent } from './terminal-event.js'
@@ -43,10 +44,7 @@ function getHandler(
  *
  * Result: [root-cap, ..., parent-cap, target-cap, target-bub, parent-bub, ..., root-bub]
  */
-function collectListeners(
-  target: EventTarget,
-  event: TerminalEvent,
-): DispatchListener[] {
+function collectListeners(target: EventTarget, event: TerminalEvent): DispatchListener[] {
   const listeners: DispatchListener[] = []
 
   let node: EventTarget | undefined = target
@@ -84,10 +82,7 @@ function collectListeners(
  * Before each handler, calls event._prepareForTarget(node) so event
  * subclasses can do per-node setup.
  */
-function processDispatchQueue(
-  listeners: DispatchListener[],
-  event: TerminalEvent,
-): void {
+function processDispatchQueue(listeners: DispatchListener[], event: TerminalEvent): void {
   let previousNode: EventTarget | undefined
 
   for (const { node, handler, phase } of listeners) {
@@ -139,13 +134,7 @@ function getEventPriority(eventType: string): number {
 
 // --
 
-type DiscreteUpdates = <A, B>(
-  fn: (a: A, b: B) => boolean,
-  a: A,
-  b: B,
-  c: undefined,
-  d: undefined,
-) => boolean
+type DiscreteUpdates = <A, B>(fn: (a: A, b: B) => boolean, a: A, b: B, c: undefined, d: undefined) => boolean
 
 /**
  * Owns event dispatch state and the capture/bubble dispatch loop.
@@ -208,13 +197,7 @@ export class Dispatcher {
     if (!this.discreteUpdates) {
       return this.dispatch(target, event)
     }
-    return this.discreteUpdates(
-      (t, e) => this.dispatch(t, e),
-      target,
-      event,
-      undefined,
-      undefined,
-    )
+    return this.discreteUpdates((t, e) => this.dispatch(t, e), target, event, undefined, undefined)
   }
 
   /**

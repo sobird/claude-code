@@ -1,15 +1,8 @@
 import * as React from 'react'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
+
 import { useSettings } from '../hooks/useSettings.js'
-import {
-  Ansi,
-  Box,
-  type DOMElement,
-  measureElement,
-  NoSelect,
-  Text,
-  useTheme,
-} from '../ink.js'
+import { Ansi, Box, type DOMElement, measureElement, NoSelect, Text, useTheme } from '../ink.js'
 import { isFullscreenEnvEnabled } from '../utils/fullscreen.js'
 import sliceAnsi from '../utils/sliceAnsi.js'
 import { countCharInString } from '../utils/stringUtils.js'
@@ -35,8 +28,7 @@ export const HighlightedCode = memo(function HighlightedCode({
   const [measuredWidth, setMeasuredWidth] = useState(width || DEFAULT_WIDTH)
   const [theme] = useTheme()
   const settings = useSettings()
-  const syntaxHighlightingDisabled =
-    settings.syntaxHighlightingDisabled ?? false
+  const syntaxHighlightingDisabled = settings.syntaxHighlightingDisabled ?? false
 
   const colorFile = useMemo(() => {
     if (syntaxHighlightingDisabled) {
@@ -92,24 +84,13 @@ export const HighlightedCode = memo(function HighlightedCode({
           )}
         </Box>
       ) : (
-        <HighlightedCodeFallback
-          code={code}
-          filePath={filePath}
-          dim={dim}
-          skipColoring={syntaxHighlightingDisabled}
-        />
+        <HighlightedCodeFallback code={code} filePath={filePath} dim={dim} skipColoring={syntaxHighlightingDisabled} />
       )}
     </Box>
   )
 })
 
-function CodeLine({
-  line,
-  gutterWidth,
-}: {
-  line: string
-  gutterWidth: number
-}): React.ReactNode {
+function CodeLine({ line, gutterWidth }: { line: string; gutterWidth: number }): React.ReactNode {
   const gutter = sliceAnsi(line, 0, gutterWidth)
   const content = sliceAnsi(line, gutterWidth)
   return (

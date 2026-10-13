@@ -54,7 +54,6 @@ stop_reason=$(echo "$response" | jq -r '.stop_reason')
 echo "$response" | jq -r '.content[] | select(.type == "text") | .text'
 ```
 
-
 ---
 
 ## Streaming (SSE)
@@ -214,6 +213,7 @@ curl https://api.anthropic.com/v1/messages \\
 | `x-api-key`         | Your API key       | Authentication             |
 | `anthropic-version` | `2023-06-01`       | API version                |
 | `anthropic-beta`    | Beta feature IDs   | Required for beta features |
+
 `;var D85=()=>{};var G85=`# Claude API — Go
 
 > **Note:** The Go SDK supports the Claude API and beta tool use with `BetaToolRunner`. Agent SDK is not yet available for Go.
@@ -303,7 +303,6 @@ for stream.Next() {
 if err := stream.Err(); err != nil { log.Fatal(err) }
 // message.Content now has the complete response
 ```
-
 
 ---
 
@@ -476,15 +475,15 @@ func main() {
 
 **Key API surface:**
 
-| Symbol | Purpose |
-|---|---|
-| `resp.ToParam()` | Convert `Message` response → `MessageParam` for history |
-| `block.AsAny().(type)` | Type-switch on `ContentBlockUnion` variants |
-| `variant.JSON.Input.Raw()` | Raw JSON string of tool input (for `json.Unmarshal`) |
-| `anthropic.NewToolResultBlock(id, content, isError)` | Build `tool_result` block |
-| `anthropic.NewUserMessage(blocks...)` | Wrap tool results as a user turn |
-| `anthropic.StopReasonToolUse` | `StopReason` constant to check loop termination |
-| `anthropic.ToolUnionParam{OfTool: &t}` | Wrap `ToolParam` in the union for `Tools:` |
+| Symbol                                               | Purpose                                                 |
+| ---------------------------------------------------- | ------------------------------------------------------- |
+| `resp.ToParam()`                                     | Convert `Message` response → `MessageParam` for history |
+| `block.AsAny().(type)`                               | Type-switch on `ContentBlockUnion` variants             |
+| `variant.JSON.Input.Raw()`                           | Raw JSON string of tool input (for `json.Unmarshal`)    |
+| `anthropic.NewToolResultBlock(id, content, isError)` | Build `tool_result` block                               |
+| `anthropic.NewUserMessage(blocks...)`                | Wrap tool results as a user turn                        |
+| `anthropic.StopReasonToolUse`                        | `StopReason` constant to check loop termination         |
+| `anthropic.ToolUnionParam{OfTool: &t}`               | Wrap `ToolParam` in the union for `Tools:`              |
 
 ---
 

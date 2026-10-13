@@ -104,11 +104,8 @@ export class SerialBatchEventUploader<T> {
     if (items.length === 0) return
 
     // Backpressure: wait until there's space
-    while (
-      this.pending.length + items.length > this.config.maxQueueSize &&
-      !this.closed
-    ) {
-      await new Promise<void>(resolve => {
+    while (this.pending.length + items.length > this.config.maxQueueSize && !this.closed) {
+      await new Promise<void>((resolve) => {
         this.backpressureResolvers.push(resolve)
       })
     }
@@ -127,7 +124,7 @@ export class SerialBatchEventUploader<T> {
       return Promise.resolve()
     }
     void this.drain()
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve) => {
       this.flushResolvers.push(resolve)
     })
   }
@@ -168,10 +165,7 @@ export class SerialBatchEventUploader<T> {
           failures = 0
         } catch (err) {
           failures++
-          if (
-            this.config.maxConsecutiveFailures !== undefined &&
-            failures >= this.config.maxConsecutiveFailures
-          ) {
+          if (this.config.maxConsecutiveFailures !== undefined && failures >= this.config.maxConsecutiveFailures) {
             this.droppedBatches++
             this.config.onBatchDropped?.(batch.length, failures)
             failures = 0
@@ -182,8 +176,7 @@ export class SerialBatchEventUploader<T> {
           // allocation) instead of unshift(...batch) which shifts every
           // pending item batch.length times. Only hit on failure path.
           this.pending = batch.concat(this.pending)
-          const retryAfterMs =
-            err instanceof RetryableError ? err.retryAfterMs : undefined
+          const retryAfterMs = err instanceof RetryableError ? err.retryAfterMs : undefined
           await this.sleep(this.retryDelay(failures, retryAfterMs))
           continue
         }
@@ -239,16 +232,10 @@ export class SerialBatchEventUploader<T> {
       // many sessions share a rate limit and all receive the same
       // Retry-After. Clamp first, then spread — same shape as the
       // exponential path (effective ceiling is maxDelayMs + jitterMs).
-      const clamped = Math.max(
-        this.config.baseDelayMs,
-        Math.min(retryAfterMs, this.config.maxDelayMs),
-      )
+      const clamped = Math.max(this.config.baseDelayMs, Math.min(retryAfterMs, this.config.maxDelayMs))
       return clamped + jitter
     }
-    const exponential = Math.min(
-      this.config.baseDelayMs * 2 ** (failures - 1),
-      this.config.maxDelayMs,
-    )
+    const exponential = Math.min(this.config.baseDelayMs * 2 ** (failures - 1), this.config.maxDelayMs)
     return exponential + jitter
   }
 
@@ -259,7 +246,7 @@ export class SerialBatchEventUploader<T> {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       this.sleepResolve = resolve
       setTimeout(
         (self, resolve) => {

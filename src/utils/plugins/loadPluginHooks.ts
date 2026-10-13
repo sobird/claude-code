@@ -1,17 +1,11 @@
 import memoize from 'lodash-es/memoize.js'
 import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
-import {
-  clearRegisteredPluginHooks,
-  getRegisteredHooks,
-  registerHookCallbacks,
-} from '../../bootstrap/state.js'
+
+import { clearRegisteredPluginHooks, getRegisteredHooks, registerHookCallbacks } from '../../bootstrap/state.js'
 import type { LoadedPlugin } from '../../types/plugin.js'
 import { logForDebugging } from '../debug.js'
 import { settingsChangeDetector } from '../settings/changeDetector.js'
-import {
-  getSettings_DEPRECATED,
-  getSettingsForSource,
-} from '../settings/settings.js'
+import { getSettings_DEPRECATED, getSettingsForSource } from '../settings/settings.js'
 import type { PluginHookMatcher } from '../settings/types.js'
 import { jsonStringify } from '../slowOperations.js'
 import { clearPluginCache, loadAllPluginsCacheOnly } from './pluginLoader.js'
@@ -25,9 +19,7 @@ let lastPluginSettingsSnapshot: string | undefined
 /**
  * Convert plugin hooks configuration to native matchers with plugin context
  */
-function convertPluginHooksToMatchers(
-  plugin: LoadedPlugin,
-): Record<HookEvent, PluginHookMatcher[]> {
+function convertPluginHooksToMatchers(plugin: LoadedPlugin): Record<HookEvent, PluginHookMatcher[]> {
   const pluginMatchers: Record<HookEvent, PluginHookMatcher[]> = {
     PreToolUse: [],
     PostToolUse: [],
@@ -151,9 +143,7 @@ export const loadPluginHooks = memoize(async (): Promise<void> => {
     (sum, matchers) => sum + matchers.reduce((s, m) => s + m.hooks.length, 0),
     0,
   )
-  logForDebugging(
-    `Registered ${totalHooks} hooks from ${enabled.length} plugins`,
-  )
+  logForDebugging(`Registered ${totalHooks} hooks from ${enabled.length} plugins`)
 })
 
 export function clearPluginHookCache(): void {
@@ -181,7 +171,7 @@ export async function pruneRemovedPluginHooks(): Promise<void> {
   // memoize in test/preload.ts beforeEach (which clears registeredHooks).
   if (!getRegisteredHooks()) return
   const { enabled } = await loadAllPluginsCacheOnly()
-  const enabledRoots = new Set(enabled.map(p => p.path))
+  const enabledRoots = new Set(enabled.map((p) => p.path))
 
   // Re-read after the await: a concurrent loadPluginHooks() (hot-reload)
   // could have swapped STATE.registeredHooks during the gap. Holding the
@@ -195,10 +185,7 @@ export async function pruneRemovedPluginHooks(): Promise<void> {
   // clearRegisteredPluginHooks; we only need to re-register survivors.
   const survivors: Partial<Record<HookEvent, PluginHookMatcher[]>> = {}
   for (const [event, matchers] of Object.entries(current)) {
-    const kept = matchers.filter(
-      (m): m is PluginHookMatcher =>
-        'pluginRoot' in m && enabledRoots.has(m.pluginRoot),
-    )
+    const kept = matchers.filter((m): m is PluginHookMatcher => 'pluginRoot' in m && enabledRoots.has(m.pluginRoot))
     if (kept.length > 0) survivors[event as HookEvent] = kept
   }
 
@@ -261,20 +248,16 @@ export function setupPluginHookHotReload(): void {
   // Capture the initial snapshot so the first policySettings change can compare
   lastPluginSettingsSnapshot = getPluginAffectingSettingsSnapshot()
 
-  settingsChangeDetector.subscribe(source => {
+  settingsChangeDetector.subscribe((source) => {
     if (source === 'policySettings') {
       const newSnapshot = getPluginAffectingSettingsSnapshot()
       if (newSnapshot === lastPluginSettingsSnapshot) {
-        logForDebugging(
-          'Plugin hooks: skipping reload, plugin-affecting settings unchanged',
-        )
+        logForDebugging('Plugin hooks: skipping reload, plugin-affecting settings unchanged')
         return
       }
 
       lastPluginSettingsSnapshot = newSnapshot
-      logForDebugging(
-        'Plugin hooks: reloading due to plugin-affecting settings change',
-      )
+      logForDebugging('Plugin hooks: reloading due to plugin-affecting settings change')
 
       // Clear all plugin-related caches
       clearPluginCache('loadPluginHooks: plugin-affecting settings changed')

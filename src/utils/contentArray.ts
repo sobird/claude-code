@@ -18,20 +18,12 @@
  * @param content - The content array to modify
  * @param block - The block to insert
  */
-export function insertBlockAfterToolResults(
-  content: unknown[],
-  block: unknown,
-): void {
+export function insertBlockAfterToolResults(content: unknown[], block: unknown): void {
   // Find position after the last tool_result block
   let lastToolResultIndex = -1
   for (let i = 0; i < content.length; i++) {
     const item = content[i]
-    if (
-      item &&
-      typeof item === 'object' &&
-      'type' in item &&
-      (item as { type: string }).type === 'tool_result'
-    ) {
+    if (item && typeof item === 'object' && 'type' in item && (item as { type: string }).type === 'tool_result') {
       lastToolResultIndex = i
     }
   }

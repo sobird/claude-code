@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { getIsInteractive } from '../../bootstrap/state.js'
 import { ManagedSettingsSecurityDialog } from '../../components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog.js'
 import {
@@ -29,10 +30,7 @@ export async function checkManagedSettingsSecurity(
   newSettings: SettingsJson | null,
 ): Promise<SecurityCheckResult> {
   // If new settings don't have dangerous settings, no check needed
-  if (
-    !newSettings ||
-    !hasDangerousSettings(extractDangerousSettings(newSettings))
-  ) {
+  if (!newSettings || !hasDangerousSettings(extractDangerousSettings(newSettings))) {
     return 'no_check_needed'
   }
 
@@ -50,7 +48,7 @@ export async function checkManagedSettingsSecurity(
   logEvent('tengu_managed_settings_security_dialog_shown', {})
 
   // Show blocking dialog
-  return new Promise<SecurityCheckResult>(resolve => {
+  return new Promise<SecurityCheckResult>((resolve) => {
     void (async () => {
       const { unmount } = await render(
         <AppStateProvider>
@@ -80,9 +78,7 @@ export async function checkManagedSettingsSecurity(
  * Handle the security check result by exiting if rejected
  * Returns true if we should continue, false if we should stop
  */
-export function handleSecurityCheckResult(
-  result: SecurityCheckResult,
-): boolean {
+export function handleSecurityCheckResult(result: SecurityCheckResult): boolean {
   if (result === 'rejected') {
     gracefulShutdownSync(1)
     return false

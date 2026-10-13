@@ -1,5 +1,7 @@
 import { basename } from 'path'
+
 import * as React from 'react'
+
 import { useIdeConnectionStatus } from '../hooks/useIdeConnectionStatus.js'
 import type { IDESelection } from '../hooks/useIdeSelection.js'
 import { Text } from '../ink.js'
@@ -10,17 +12,12 @@ type IdeStatusIndicatorProps = {
   mcpClients?: MCPServerConnection[]
 }
 
-export function IdeStatusIndicator({
-  ideSelection,
-  mcpClients,
-}: IdeStatusIndicatorProps): React.ReactNode {
+export function IdeStatusIndicator({ ideSelection, mcpClients }: IdeStatusIndicatorProps): React.ReactNode {
   const { status: ideStatus } = useIdeConnectionStatus(mcpClients)
 
   // Check if we should show the IDE selection indicator
   const shouldShowIdeSelection =
-    ideStatus === 'connected' &&
-    (ideSelection?.filePath ||
-      (ideSelection?.text && ideSelection.lineCount > 0))
+    ideStatus === 'connected' && (ideSelection?.filePath || (ideSelection?.text && ideSelection.lineCount > 0))
 
   if (ideStatus === null || !shouldShowIdeSelection || !ideSelection) {
     return null
@@ -29,8 +26,7 @@ export function IdeStatusIndicator({
   if (ideSelection.text && ideSelection.lineCount > 0) {
     return (
       <Text color="ide" key="selection-indicator" wrap="truncate">
-        ⧉ {ideSelection.lineCount}{' '}
-        {ideSelection.lineCount === 1 ? 'line' : 'lines'} selected
+        ⧉ {ideSelection.lineCount} {ideSelection.lineCount === 1 ? 'line' : 'lines'} selected
       </Text>
     )
   }

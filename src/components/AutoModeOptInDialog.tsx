@@ -1,5 +1,6 @@
 import React from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
+
 import { Box, Link, Text } from '../ink.js'
 import { updateSettingsForSource } from '../utils/settings/settings.js'
 import { Select } from './CustomSelect/index.js'
@@ -16,11 +17,7 @@ type Props = {
   declineExits?: boolean
 }
 
-export function AutoModeOptInDialog({
-  onAccept,
-  onDecline,
-  declineExits,
-}: Props): React.ReactNode {
+export function AutoModeOptInDialog({ onAccept, onDecline, declineExits }: Props): React.ReactNode {
   React.useEffect(() => {
     logEvent('tengu_auto_mode_opt_in_dialog_shown', {})
   }, [])
@@ -76,9 +73,7 @@ export function AutoModeOptInDialog({
             value: 'decline' as const,
           },
         ]}
-        onChange={value =>
-          onChange(value as 'accept' | 'accept-default' | 'decline')
-        }
+        onChange={(value) => onChange(value as 'accept' | 'accept-default' | 'decline')}
         onCancel={onDecline}
       />
     </Dialog>

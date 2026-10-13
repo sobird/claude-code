@@ -11,13 +11,11 @@ import { openBrowser } from '../../utils/browser.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { logError } from '../../utils/log.js'
 
-type ExtraUsageResult =
-  | { type: 'message'; value: string }
-  | { type: 'browser-opened'; url: string; opened: boolean }
+type ExtraUsageResult = { type: 'message'; value: string } | { type: 'browser-opened'; url: string; opened: boolean }
 
 export async function runExtraUsage(): Promise<ExtraUsageResult> {
   if (!getGlobalConfig().hasVisitedExtraUsage) {
-    saveGlobalConfig(prev => ({ ...prev, hasVisitedExtraUsage: true }))
+    saveGlobalConfig((prev) => ({ ...prev, hasVisitedExtraUsage: true }))
   }
   // Invalidate only the current org's entry so a follow-up read refetches
   // the granted state. Separate from the visited flag since users may run
@@ -25,8 +23,7 @@ export async function runExtraUsage(): Promise<ExtraUsageResult> {
   invalidateOverageCreditGrantCache()
 
   const subscriptionType = getSubscriptionType()
-  const isTeamOrEnterprise =
-    subscriptionType === 'team' || subscriptionType === 'enterprise'
+  const isTeamOrEnterprise = subscriptionType === 'team' || subscriptionType === 'enterprise'
   const hasBillingAccess = hasClaudeAiBillingAccess()
 
   if (!hasBillingAccess && isTeamOrEnterprise) {
@@ -44,8 +41,7 @@ export async function runExtraUsage(): Promise<ExtraUsageResult> {
     if (extraUsage?.is_enabled && extraUsage.monthly_limit === null) {
       return {
         type: 'message',
-        value:
-          'Your organization already has unlimited extra usage. No request needed.',
+        value: 'Your organization already has unlimited extra usage. No request needed.',
       }
     }
 
@@ -63,15 +59,11 @@ export async function runExtraUsage(): Promise<ExtraUsageResult> {
     }
 
     try {
-      const pendingOrDismissedRequests = await getMyAdminRequests(
-        'limit_increase',
-        ['pending', 'dismissed'],
-      )
+      const pendingOrDismissedRequests = await getMyAdminRequests('limit_increase', ['pending', 'dismissed'])
       if (pendingOrDismissedRequests && pendingOrDismissedRequests.length > 0) {
         return {
           type: 'message',
-          value:
-            'You have already submitted a request for extra usage to your admin.',
+          value: 'You have already submitted a request for extra usage to your admin.',
         }
       }
     } catch (error) {
@@ -101,9 +93,7 @@ export async function runExtraUsage(): Promise<ExtraUsageResult> {
     }
   }
 
-  const url = isTeamOrEnterprise
-    ? 'https://claude.ai/admin-settings/usage'
-    : 'https://claude.ai/settings/usage'
+  const url = isTeamOrEnterprise ? 'https://claude.ai/admin-settings/usage' : 'https://claude.ai/settings/usage'
 
   try {
     const opened = await openBrowser(url)

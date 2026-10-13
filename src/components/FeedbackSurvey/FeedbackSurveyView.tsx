@@ -1,4 +1,5 @@
 import React from 'react'
+
 import { Box, Text } from '../../ink.js'
 import { useDebouncedDigitInput } from './useDebouncedDigitInput.js'
 import type { FeedbackSurveyResponse } from './utils.js'
@@ -35,7 +36,7 @@ export function FeedbackSurveyView({
     inputValue,
     setInputValue,
     isValidDigit: isValidResponseInput,
-    onDigit: digit => onSelect(inputToResponse[digit]),
+    onDigit: (digit) => onSelect(inputToResponse[digit]),
   })
 
   return (

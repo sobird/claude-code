@@ -1,3 +1,5 @@
+import { format } from 'util'
+
 import {
   type ClaudeForChromeContext,
   createClaudeForChromeMcpServer,
@@ -5,7 +7,7 @@ import {
   type PermissionMode,
 } from '@ant/claude-for-chrome-mcp'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { format } from 'util'
+
 import { shutdownDatadog } from '../../services/analytics/datadog.js'
 import { shutdown1PEventLogging } from '../../services/analytics/firstPartyEventLogger.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
@@ -22,25 +24,16 @@ import { sideQuery } from '../sideQuery.js'
 import { getAllSocketPaths, getSecureSocketPath } from './common.js'
 
 const EXTENSION_DOWNLOAD_URL = 'https://claude.ai/chrome'
-const BUG_REPORT_URL =
-  'https://github.com/anthropics/claude-code/issues/new?labels=bug,claude-in-chrome'
+const BUG_REPORT_URL = 'https://github.com/anthropics/claude-code/issues/new?labels=bug,claude-in-chrome'
 
 // String metadata keys safe to forward to analytics. Keys like error_message
 // are excluded because they could contain page content or user data.
-const SAFE_BRIDGE_STRING_KEYS = new Set([
-  'bridge_status',
-  'error_type',
-  'tool_name',
-])
+const SAFE_BRIDGE_STRING_KEYS = new Set(['bridge_status', 'error_type', 'tool_name'])
 
-const PERMISSION_MODES: readonly PermissionMode[] = [
-  'ask',
-  'skip_all_permission_checks',
-  'follow_a_plan',
-]
+const PERMISSION_MODES: readonly PermissionMode[] = ['ask', 'skip_all_permission_checks', 'follow_a_plan']
 
 function isPermissionMode(raw: string): raw is PermissionMode {
-  return PERMISSION_MODES.some(m => m === raw)
+  return PERMISSION_MODES.some((m) => m === raw)
 }
 
 /**
@@ -50,17 +43,13 @@ function isPermissionMode(raw: string): raw is PermissionMode {
  */
 function getChromeBridgeUrl(): string | undefined {
   const bridgeEnabled =
-    process.env.USER_TYPE === 'ant' ||
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_copper_bridge', false)
+    process.env.USER_TYPE === 'ant' || getFeatureValue_CACHED_MAY_BE_STALE('tengu_copper_bridge', false)
 
   if (!bridgeEnabled) {
     return undefined
   }
 
-  if (
-    isEnvTruthy(process.env.USE_LOCAL_OAUTH) ||
-    isEnvTruthy(process.env.LOCAL_BRIDGE)
-  ) {
+  if (isEnvTruthy(process.env.USE_LOCAL_OAUTH) || isEnvTruthy(process.env.LOCAL_BRIDGE)) {
     return 'ws://localhost:8765'
   }
 
@@ -72,25 +61,18 @@ function getChromeBridgeUrl(): string | undefined {
 }
 
 function isLocalBridge(): boolean {
-  return (
-    isEnvTruthy(process.env.USE_LOCAL_OAUTH) ||
-    isEnvTruthy(process.env.LOCAL_BRIDGE)
-  )
+  return isEnvTruthy(process.env.USE_LOCAL_OAUTH) || isEnvTruthy(process.env.LOCAL_BRIDGE)
 }
 
 /**
  * Build the ClaudeForChromeContext used by both the subprocess MCP server
  * and the in-process path in the MCP client.
  */
-export function createChromeContext(
-  env?: Record<string, string>,
-): ClaudeForChromeContext {
+export function createChromeContext(env?: Record<string, string>): ClaudeForChromeContext {
   const logger = new DebugLogger()
   const chromeBridgeUrl = getChromeBridgeUrl()
   logger.info(`Bridge URL: ${chromeBridgeUrl ?? 'none (using native socket)'}`)
-  const rawPermissionMode =
-    env?.CLAUDE_CHROME_PERMISSION_MODE ??
-    process.env.CLAUDE_CHROME_PERMISSION_MODE
+  const rawPermissionMode = env?.CLAUDE_CHROME_PERMISSION_MODE ?? process.env.CLAUDE_CHROME_PERMISSION_MODE
   let initialPermissionMode: PermissionMode | undefined
   if (rawPermissionMode) {
     if (isPermissionMode(rawPermissionMode)) {
@@ -116,11 +98,8 @@ export function createChromeContext(
       return `Browser extension is not connected. Please ensure the Claude browser extension is installed and running (${EXTENSION_DOWNLOAD_URL}), and that you are logged into claude.ai with the same account as Claude Code. If this is your first time connecting to Chrome, you may need to restart Chrome for the installation to take effect. If you continue to experience issues, please report a bug: ${BUG_REPORT_URL}`
     },
     onExtensionPaired: (deviceId: string, name: string) => {
-      saveGlobalConfig(config => {
-        if (
-          config.chromeExtension?.pairedDeviceId === deviceId &&
-          config.chromeExtension?.pairedDeviceName === name
-        ) {
+      saveGlobalConfig((config) => {
+        if (config.chromeExtension?.pairedDeviceId === deviceId && config.chromeExtension?.pairedDeviceName === name) {
           return config
         }
         return {
@@ -217,11 +196,7 @@ export function createChromeContext(
     }),
     trackEvent: (eventName, metadata) => {
       const safeMetadata: {
-        [key: string]:
-          | boolean
-          | number
-          | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-          | undefined
+        [key: string]: boolean | number | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined
       } = {}
       if (metadata) {
         for (const [key, value] of Object.entries(metadata)) {
@@ -229,14 +204,10 @@ export function createChromeContext(
           const safeKey = key === 'status' ? 'bridge_status' : key
           if (typeof value === 'boolean' || typeof value === 'number') {
             safeMetadata[safeKey] = value
-          } else if (
-            typeof value === 'string' &&
-            SAFE_BRIDGE_STRING_KEYS.has(safeKey)
-          ) {
+          } else if (typeof value === 'string' && SAFE_BRIDGE_STRING_KEYS.has(safeKey)) {
             // Only forward allowlisted string keys — fields like error_message
             // could contain page content or user data
-            safeMetadata[safeKey] =
-              value as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            safeMetadata[safeKey] = value as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
           }
         }
       }

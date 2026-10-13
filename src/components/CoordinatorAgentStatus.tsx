@@ -8,23 +8,14 @@
 
 import figures from 'figures'
 import * as React from 'react'
+
 import { BLACK_CIRCLE, PAUSE_ICON, PLAY_ICON } from '../constants/figures.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
-import { stringWidth } from '../ink/stringWidth.js'
 import { Box, Text, wrapText } from '../ink.js'
-import {
-  type AppState,
-  useAppState,
-  useSetAppState,
-} from '../state/AppState.js'
-import {
-  enterTeammateView,
-  exitTeammateView,
-} from '../state/teammateViewHelpers.js'
-import {
-  isPanelAgentTask,
-  type LocalAgentTaskState,
-} from '../tasks/LocalAgentTask/LocalAgentTask.js'
+import { stringWidth } from '../ink/stringWidth.js'
+import { type AppState, useAppState, useSetAppState } from '../state/AppState.js'
+import { enterTeammateView, exitTeammateView } from '../state/teammateViewHelpers.js'
+import { isPanelAgentTask, type LocalAgentTaskState } from '../tasks/LocalAgentTask/LocalAgentTask.js'
 import { formatDuration, formatNumber } from '../utils/format.js'
 import { evictTerminalTask } from '../utils/task/framework.js'
 import { isTerminalStatus } from './tasks/taskStatusUtils.js'
@@ -37,23 +28,18 @@ import { isTerminalStatus } from './tasks/taskStatusUtils.js'
  * the filter time-dependent. Shared by panel render, useCoordinatorTaskCount,
  * and index resolvers so the math can't drift.
  */
-export function getVisibleAgentTasks(
-  tasks: AppState['tasks'],
-): LocalAgentTaskState[] {
+export function getVisibleAgentTasks(tasks: AppState['tasks']): LocalAgentTaskState[] {
   return Object.values(tasks)
-    .filter(
-      (t): t is LocalAgentTaskState =>
-        isPanelAgentTask(t) && t.evictAfter !== 0,
-    )
+    .filter((t): t is LocalAgentTaskState => isPanelAgentTask(t) && t.evictAfter !== 0)
     .sort((a, b) => a.startTime - b.startTime)
 }
 
 export function CoordinatorTaskPanel(): React.ReactNode {
-  const tasks = useAppState(s => s.tasks)
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId)
-  const agentNameRegistry = useAppState(s => s.agentNameRegistry)
-  const coordinatorTaskIndex = useAppState(s => s.coordinatorTaskIndex)
-  const tasksSelected = useAppState(s => s.footerSelection === 'tasks')
+  const tasks = useAppState((s) => s.tasks)
+  const viewingAgentTaskId = useAppState((s) => s.viewingAgentTaskId)
+  const agentNameRegistry = useAppState((s) => s.agentNameRegistry)
+  const coordinatorTaskIndex = useAppState((s) => s.coordinatorTaskIndex)
+  const tasksSelected = useAppState((s) => s.footerSelection === 'tasks')
   const selectedIndex = tasksSelected ? coordinatorTaskIndex : undefined
   const setAppState = useSetAppState()
 
@@ -122,7 +108,7 @@ export function CoordinatorTaskPanel(): React.ReactNode {
  * stays accurate without needing its own tick.
  */
 export function useCoordinatorTaskCount(): number {
-  const tasks = useAppState(s => s.tasks)
+  const tasks = useAppState((s) => s.tasks)
   return React.useMemo(() => {
     if (process.env.USER_TYPE !== 'ant') return 0
     const count = getVisibleAgentTasks(tasks).length
@@ -143,11 +129,7 @@ function MainLine({
   const prefix = isSelected || hover ? figures.pointer + ' ' : '  '
   const bullet = isViewed ? BLACK_CIRCLE : figures.circle
   return (
-    <Box
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
+    <Box onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       <Text dimColor={!isSelected && !isViewed && !hover} bold={isViewed}>
         {prefix}
         {bullet} main
@@ -164,22 +146,14 @@ type AgentLineProps = {
   onClick?: () => void
 }
 
-function AgentLine({
-  task,
-  name,
-  isSelected,
-  isViewed,
-  onClick,
-}: AgentLineProps): React.ReactNode {
+function AgentLine({ task, name, isSelected, isViewed, onClick }: AgentLineProps): React.ReactNode {
   const { columns } = useTerminalSize()
   const [hover, setHover] = React.useState(false)
   const isRunning = !isTerminalStatus(task.status)
   const pausedMs = task.totalPausedMs ?? 0
   const elapsedMs = Math.max(
     0,
-    isRunning
-      ? Date.now() - task.startTime - pausedMs
-      : (task.endTime ?? task.startTime) - task.startTime - pausedMs,
+    isRunning ? Date.now() - task.startTime - pausedMs : (task.endTime ?? task.startTime) - task.startTime - pausedMs,
   )
 
   const elapsed = formatDuration(elapsedMs)
@@ -189,10 +163,7 @@ function AgentLine({
   const lastActivity = task.progress?.lastActivity
   const arrow = lastActivity ? figures.arrowDown : figures.arrowUp
 
-  const tokenText =
-    tokenCount !== undefined && tokenCount > 0
-      ? ` · ${arrow} ${formatNumber(tokenCount)} tokens`
-      : ''
+  const tokenText = tokenCount !== undefined && tokenCount > 0 ? ` · ${arrow} ${formatNumber(tokenCount)} tokens` : ''
 
   const queuedCount = task.pendingMessages.length
   const queuedText = queuedCount > 0 ? ` · ${queuedCount} queued` : ''
@@ -210,20 +181,11 @@ function AgentLine({
   // stays readable even when the row is inactive. Short by convention (the
   // Agent tool prompt asks for "one or two words, lowercase").
   const namePart = name ? `${name}: ` : ''
-  const hintPart =
-    isSelected && !isViewed ? ` · x to ${isRunning ? 'stop' : 'clear'}` : ''
+  const hintPart = isSelected && !isViewed ? ` · x to ${isRunning ? 'stop' : 'clear'}` : ''
   const suffixPart = ` ${sep} ${elapsed}${tokenText}${queuedText}${hintPart}`
   const availableForDesc =
-    columns -
-    stringWidth(prefix) -
-    stringWidth(`${bullet} `) -
-    stringWidth(namePart) -
-    stringWidth(suffixPart)
-  const truncated = wrapText(
-    displayDescription,
-    Math.max(0, availableForDesc),
-    'truncate-end',
-  )
+    columns - stringWidth(prefix) - stringWidth(`${bullet} `) - stringWidth(namePart) - stringWidth(suffixPart)
+  const truncated = wrapText(displayDescription, Math.max(0, availableForDesc), 'truncate-end')
 
   const line = (
     <Text dimColor={dim} bold={isViewed}>
@@ -246,11 +208,7 @@ function AgentLine({
 
   if (!onClick) return line
   return (
-    <Box
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
+    <Box onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {line}
     </Box>
   )

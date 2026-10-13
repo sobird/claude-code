@@ -9,6 +9,7 @@
  */
 
 import * as React from 'react'
+
 import { useNotifications } from '../context/notifications.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -29,10 +30,7 @@ import {
   resolvePluginHint,
 } from '../utils/plugins/hintRecommendation.js'
 import { installPluginFromMarketplace } from '../utils/plugins/pluginInstallationHelpers.js'
-import {
-  installPluginAndNotify,
-  usePluginRecommendationBase,
-} from './usePluginRecommendationBase.js'
+import { installPluginAndNotify, usePluginRecommendationBase } from './usePluginRecommendationBase.js'
 
 type UseClaudeCodeHintRecommendationResult = {
   recommendation: PluginHintRecommendation | null
@@ -40,13 +38,9 @@ type UseClaudeCodeHintRecommendationResult = {
 }
 
 export function useClaudeCodeHintRecommendation(): UseClaudeCodeHintRecommendationResult {
-  const pendingHint = React.useSyncExternalStore(
-    subscribeToPendingHint,
-    getPendingHintSnapshot,
-  )
+  const pendingHint = React.useSyncExternalStore(subscribeToPendingHint, getPendingHintSnapshot)
   const { addNotification } = useNotifications()
-  const { recommendation, clearRecommendation, tryResolve } =
-    usePluginRecommendationBase<PluginHintRecommendation>()
+  const { recommendation, clearRecommendation, tryResolve } = usePluginRecommendationBase<PluginHintRecommendation>()
 
   React.useEffect(() => {
     if (!pendingHint) return
@@ -77,35 +71,26 @@ export function useClaudeCodeHintRecommendation(): UseClaudeCodeHintRecommendati
       // rendered. Auto-dismiss reaches this via onResponse('no').
       markHintPluginShown(recommendation.pluginId)
       logEvent('tengu_plugin_hint_response', {
-        _PROTO_plugin_name:
-          recommendation.pluginName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
-        _PROTO_marketplace_name:
-          recommendation.marketplaceName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
-        response:
-          response as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        _PROTO_plugin_name: recommendation.pluginName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        _PROTO_marketplace_name: recommendation.marketplaceName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        response: response as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
 
       switch (response) {
         case 'yes': {
           const { pluginId, pluginName, marketplaceName } = recommendation
-          void installPluginAndNotify(
-            pluginId,
-            pluginName,
-            'hint-plugin',
-            addNotification,
-            async pluginData => {
-              const result = await installPluginFromMarketplace({
-                pluginId,
-                entry: pluginData.entry,
-                marketplaceName,
-                scope: 'user',
-                trigger: 'hint',
-              })
-              if (!result.success) {
-                throw new Error(result.error)
-              }
-            },
-          )
+          void installPluginAndNotify(pluginId, pluginName, 'hint-plugin', addNotification, async (pluginData) => {
+            const result = await installPluginFromMarketplace({
+              pluginId,
+              entry: pluginData.entry,
+              marketplaceName,
+              scope: 'user',
+              trigger: 'hint',
+            })
+            if (!result.success) {
+              throw new Error(result.error)
+            }
+          })
           break
         }
         case 'disable':

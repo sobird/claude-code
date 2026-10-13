@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
 import { verifyApiKey } from '../services/api/claude.js'
 import {
@@ -8,12 +9,7 @@ import {
   isClaudeAISubscriber,
 } from '../utils/auth.js'
 
-export type VerificationStatus =
-  | 'loading'
-  | 'valid'
-  | 'invalid'
-  | 'missing'
-  | 'error'
+export type VerificationStatus = 'loading' | 'valid' | 'invalid' | 'missing' | 'error'
 
 export type ApiKeyVerificationResult = {
   status: VerificationStatus

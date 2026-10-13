@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto'
+
 import { LRUCache } from 'lru-cache'
+
 import { logForDebugging } from '../../utils/debug.js'
 import { toError } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'
@@ -133,9 +135,7 @@ function createDiagnosticKey(diag: {
  * - Severity
  * - Source and code (if present)
  */
-function deduplicateDiagnosticFiles(
-  allFiles: DiagnosticFile[],
-): DiagnosticFile[] {
+function deduplicateDiagnosticFiles(allFiles: DiagnosticFile[]): DiagnosticFile[] {
   // Group diagnostics by file URI
   const fileMap = new Map<string, Set<string>>()
   const dedupedFiles: DiagnosticFile[] = []
@@ -147,7 +147,7 @@ function deduplicateDiagnosticFiles(
     }
 
     const seenDiagnostics = fileMap.get(file.uri)!
-    const dedupedFile = dedupedFiles.find(f => f.uri === file.uri)!
+    const dedupedFile = dedupedFiles.find((f) => f.uri === file.uri)!
 
     // Get previously delivered diagnostics for this file (for cross-turn dedup)
     const previouslyDelivered = deliveredDiagnostics.get(file.uri) || new Set()
@@ -165,8 +165,7 @@ function deduplicateDiagnosticFiles(
         dedupedFile.diagnostics.push(diag)
       } catch (error: unknown) {
         const err = toError(error)
-        const truncatedMessage =
-          diag.message?.substring(0, 100) || '<no message>'
+        const truncatedMessage = diag.message?.substring(0, 100) || '<no message>'
         logError(
           new Error(
             `Failed to deduplicate diagnostic in ${file.uri}: ${err.message}. ` +
@@ -180,7 +179,7 @@ function deduplicateDiagnosticFiles(
   }
 
   // Filter out files with no diagnostics after deduplication
-  return dedupedFiles.filter(f => f.diagnostics.length > 0)
+  return dedupedFiles.filter((f) => f.diagnostics.length > 0)
 }
 
 /**
@@ -194,9 +193,7 @@ export function checkForLSPDiagnostics(): Array<{
   serverName: string
   files: DiagnosticFile[]
 }> {
-  logForDebugging(
-    `LSP Diagnostics: Checking registry - ${pendingDiagnostics.size} pending`,
-  )
+  logForDebugging(`LSP Diagnostics: Checking registry - ${pendingDiagnostics.size} pending`)
 
   // Collect all diagnostic files from all pending notifications
   const allFiles: DiagnosticFile[] = []
@@ -238,19 +235,11 @@ export function checkForLSPDiagnostics(): Array<{
     }
   }
 
-  const originalCount = allFiles.reduce(
-    (sum, f) => sum + f.diagnostics.length,
-    0,
-  )
-  const dedupedCount = dedupedFiles.reduce(
-    (sum, f) => sum + f.diagnostics.length,
-    0,
-  )
+  const originalCount = allFiles.reduce((sum, f) => sum + f.diagnostics.length, 0)
+  const dedupedCount = dedupedFiles.reduce((sum, f) => sum + f.diagnostics.length, 0)
 
   if (originalCount > dedupedCount) {
-    logForDebugging(
-      `LSP Diagnostics: Deduplication removed ${originalCount - dedupedCount} duplicate diagnostic(s)`,
-    )
+    logForDebugging(`LSP Diagnostics: Deduplication removed ${originalCount - dedupedCount} duplicate diagnostic(s)`)
   }
 
   // Apply volume limiting: cap per file and total
@@ -258,9 +247,7 @@ export function checkForLSPDiagnostics(): Array<{
   let truncatedCount = 0
   for (const file of dedupedFiles) {
     // Sort by severity (Error=1 < Warning=2 < Info=3 < Hint=4) to prioritize errors
-    file.diagnostics.sort(
-      (a, b) => severityToNumber(a.severity) - severityToNumber(b.severity),
-    )
+    file.diagnostics.sort((a, b) => severityToNumber(a.severity) - severityToNumber(b.severity))
 
     // Cap per file
     if (file.diagnostics.length > MAX_DIAGNOSTICS_PER_FILE) {
@@ -279,7 +266,7 @@ export function checkForLSPDiagnostics(): Array<{
   }
 
   // Filter out files that ended up with no diagnostics after limiting
-  dedupedFiles = dedupedFiles.filter(f => f.diagnostics.length > 0)
+  dedupedFiles = dedupedFiles.filter((f) => f.diagnostics.length > 0)
 
   if (truncatedCount > 0) {
     logForDebugging(
@@ -299,8 +286,7 @@ export function checkForLSPDiagnostics(): Array<{
       } catch (error: unknown) {
         // Log but continue - failure to track shouldn't prevent delivery
         const err = toError(error)
-        const truncatedMessage =
-          diag.message?.substring(0, 100) || '<no message>'
+        const truncatedMessage = diag.message?.substring(0, 100) || '<no message>'
         logError(
           new Error(
             `Failed to track delivered diagnostic in ${file.uri}: ${err.message}. ` +
@@ -311,16 +297,11 @@ export function checkForLSPDiagnostics(): Array<{
     }
   }
 
-  const finalCount = dedupedFiles.reduce(
-    (sum, f) => sum + f.diagnostics.length,
-    0,
-  )
+  const finalCount = dedupedFiles.reduce((sum, f) => sum + f.diagnostics.length, 0)
 
   // Return empty if no diagnostics to deliver (all filtered by deduplication)
   if (finalCount === 0) {
-    logForDebugging(
-      `LSP Diagnostics: No new diagnostics to deliver (all filtered by deduplication)`,
-    )
+    logForDebugging(`LSP Diagnostics: No new diagnostics to deliver (all filtered by deduplication)`)
     return []
   }
 
@@ -344,9 +325,7 @@ export function checkForLSPDiagnostics(): Array<{
  * and should only be cleared when files are edited or on session reset.
  */
 export function clearAllLSPDiagnostics(): void {
-  logForDebugging(
-    `LSP Diagnostics: Clearing ${pendingDiagnostics.size} pending diagnostic(s)`,
-  )
+  logForDebugging(`LSP Diagnostics: Clearing ${pendingDiagnostics.size} pending diagnostic(s)`)
   pendingDiagnostics.clear()
 }
 
@@ -371,9 +350,7 @@ export function resetAllLSPDiagnosticState(): void {
  */
 export function clearDeliveredDiagnosticsForFile(fileUri: string): void {
   if (deliveredDiagnostics.has(fileUri)) {
-    logForDebugging(
-      `LSP Diagnostics: Clearing delivered diagnostics for ${fileUri}`,
-    )
+    logForDebugging(`LSP Diagnostics: Clearing delivered diagnostics for ${fileUri}`)
     deliveredDiagnostics.delete(fileUri)
   }
 }

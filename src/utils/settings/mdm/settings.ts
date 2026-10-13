@@ -19,32 +19,22 @@
  */
 
 import { join } from 'path'
+
 import { logForDebugging } from '../../debug.js'
 import { logForDiagnosticsNoPII } from '../../diagLogs.js'
 import { readFileSync } from '../../fileRead.js'
 import { getFsImplementation } from '../../fsOperations.js'
 import { safeParseJSON } from '../../json.js'
 import { profileCheckpoint } from '../../startupProfiler.js'
-import {
-  getManagedFilePath,
-  getManagedSettingsDropInDir,
-} from '../managedPath.js'
+import { getManagedFilePath, getManagedSettingsDropInDir } from '../managedPath.js'
 import { type SettingsJson, SettingsSchema } from '../types.js'
-import {
-  filterInvalidPermissionRules,
-  formatZodError,
-  type ValidationError,
-} from '../validation.js'
+import { filterInvalidPermissionRules, formatZodError, type ValidationError } from '../validation.js'
 import {
   WINDOWS_REGISTRY_KEY_PATH_HKCU,
   WINDOWS_REGISTRY_KEY_PATH_HKLM,
   WINDOWS_REGISTRY_VALUE_NAME,
 } from './constants.js'
-import {
-  fireRawRead,
-  getMdmRawReadPromise,
-  type RawReadResult,
-} from './rawRead.js'
+import { fireRawRead, getMdmRawReadPromise, type RawReadResult } from './rawRead.js'
 
 // ---------------------------------------------------------------------------
 // Types and cache
@@ -81,9 +71,7 @@ export function startMdmSettingsLoad(): void {
     const duration = Date.now() - startTime
     logForDebugging(`MDM settings load completed in ${duration}ms`)
     if (Object.keys(mdm.settings).length > 0) {
-      logForDebugging(
-        `MDM settings found: ${Object.keys(mdm.settings).join(', ')}`,
-      )
+      logForDebugging(`MDM settings found: ${Object.keys(mdm.settings).join(', ')}`)
       try {
         logForDiagnosticsNoPII('info', 'mdm_settings_loaded', {
           duration_ms: duration,
@@ -205,10 +193,7 @@ export function parseCommandOutputAsSettings(
  * Expected format:
  *     Settings    REG_SZ    {"json":"value"}
  */
-export function parseRegQueryStdout(
-  stdout: string,
-  valueName = 'Settings',
-): string | null {
+export function parseRegQueryStdout(stdout: string, valueName = 'Settings'): string | null {
   const lines = stdout.split(/\r?\n/)
   const escaped = valueName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const re = new RegExp(`^\\s+${escaped}\\s+REG_(?:EXPAND_)?SZ\\s+(.*)$`, 'i')
@@ -292,11 +277,7 @@ function hasManagedSettingsFile(): boolean {
     const dropInDir = getManagedSettingsDropInDir()
     const entries = getFsImplementation().readdirSync(dropInDir)
     for (const d of entries) {
-      if (
-        !(d.isFile() || d.isSymbolicLink()) ||
-        !d.name.endsWith('.json') ||
-        d.name.startsWith('.')
-      ) {
+      if (!(d.isFile() || d.isSymbolicLink()) || !d.name.endsWith('.json') || d.name.startsWith('.')) {
         continue
       }
       try {

@@ -1,10 +1,8 @@
 import { readdir, readFile, stat } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
-import {
-  type McpServerConfig,
-  McpStdioServerConfigSchema,
-} from '../services/mcp/types.js'
+
+import { type McpServerConfig, McpStdioServerConfigSchema } from '../services/mcp/types.js'
 import { getErrnoCode } from './errors.js'
 import { safeParseJSON } from './json.js'
 import { logError } from './log.js'
@@ -14,19 +12,11 @@ export async function getClaudeDesktopConfigPath(): Promise<string> {
   const platform = getPlatform()
 
   if (!SUPPORTED_PLATFORMS.includes(platform)) {
-    throw new Error(
-      `Unsupported platform: ${platform} - Claude Desktop integration only works on macOS and WSL.`,
-    )
+    throw new Error(`Unsupported platform: ${platform} - Claude Desktop integration only works on macOS and WSL.`)
   }
 
   if (platform === 'macos') {
-    return join(
-      homedir(),
-      'Library',
-      'Application Support',
-      'Claude',
-      'claude_desktop_config.json',
-    )
+    return join(homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json')
   }
 
   // First, try using USERPROFILE environment variable if available
@@ -95,13 +85,9 @@ export async function getClaudeDesktopConfigPath(): Promise<string> {
   )
 }
 
-export async function readClaudeDesktopMcpServers(): Promise<
-  Record<string, McpServerConfig>
-> {
+export async function readClaudeDesktopMcpServers(): Promise<Record<string, McpServerConfig>> {
   if (!SUPPORTED_PLATFORMS.includes(getPlatform())) {
-    throw new Error(
-      'Unsupported platform - Claude Desktop integration only works on macOS and WSL.',
-    )
+    throw new Error('Unsupported platform - Claude Desktop integration only works on macOS and WSL.')
   }
   try {
     const configPath = await getClaudeDesktopConfigPath()
@@ -130,9 +116,7 @@ export async function readClaudeDesktopMcpServers(): Promise<
 
     const servers: Record<string, McpServerConfig> = {}
 
-    for (const [name, serverConfig] of Object.entries(
-      mcpServers as Record<string, unknown>,
-    )) {
+    for (const [name, serverConfig] of Object.entries(mcpServers as Record<string, unknown>)) {
       if (!serverConfig || typeof serverConfig !== 'object') {
         continue
       }

@@ -6,6 +6,7 @@
 
 import { mkdir, readFile, stat, unlink, utimes, writeFile } from 'fs/promises'
 import { join } from 'path'
+
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import { getAutoMemPath } from '../../memdir/paths.js'
 import { logForDebugging } from '../../utils/debug.js'
@@ -88,9 +89,7 @@ export async function tryAcquireConsolidationLock(): Promise<number | null> {
  * otherwise our still-running process would look like it's holding.
  * priorMtime 0 → unlink (restore no-file).
  */
-export async function rollbackConsolidationLock(
-  priorMtime: number,
-): Promise<void> {
+export async function rollbackConsolidationLock(priorMtime: number): Promise<void> {
   const path = lockPath()
   try {
     if (priorMtime === 0) {
@@ -101,9 +100,7 @@ export async function rollbackConsolidationLock(
     const t = priorMtime / 1000 // utimes wants seconds
     await utimes(path, t, t)
   } catch (e: unknown) {
-    logForDebugging(
-      `[autoDream] rollback failed: ${(e as Error).message} — next trigger delayed to minHours`,
-    )
+    logForDebugging(`[autoDream] rollback failed: ${(e as Error).message} — next trigger delayed to minHours`)
   }
 }
 
@@ -115,12 +112,10 @@ export async function rollbackConsolidationLock(
  * Caller excludes the current session. Scans per-cwd transcripts — it's
  * a skip-gate, so undercounting worktree sessions is safe.
  */
-export async function listSessionsTouchedSince(
-  sinceMs: number,
-): Promise<string[]> {
+export async function listSessionsTouchedSince(sinceMs: number): Promise<string[]> {
   const dir = getProjectDir(getOriginalCwd())
   const candidates = await listCandidates(dir, true)
-  return candidates.filter(c => c.mtime > sinceMs).map(c => c.sessionId)
+  return candidates.filter((c) => c.mtime > sinceMs).map((c) => c.sessionId)
 }
 
 /**
@@ -133,8 +128,6 @@ export async function recordConsolidation(): Promise<void> {
     await mkdir(getAutoMemPath(), { recursive: true })
     await writeFile(lockPath(), String(process.pid))
   } catch (e: unknown) {
-    logForDebugging(
-      `[autoDream] recordConsolidation write failed: ${(e as Error).message}`,
-    )
+    logForDebugging(`[autoDream] recordConsolidation write failed: ${(e as Error).message}`)
   }
 }
