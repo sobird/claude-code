@@ -3,15 +3,11 @@
   "options": {
     "typeAware": true
   },
-  "plugins": [
-    "unicorn",
-    "typescript",
-    "oxc"
-  ],
+  "plugins": ["unicorn", "typescript", "oxc"],
   "categories": {
     "correctness": "error",
     "perf": "error",
-    "suspicious": "error",
+    "suspicious": "error"
   },
   "rules": {
     // "curly": "off",
@@ -27,12 +23,8 @@
     "typescript/no-extraneous-class": "off",
     "typescript/no-unsafe-type-assertion": "off",
     "unicorn/consistent-function-scoping": "off",
-    "unicorn/require-post-message-target-origin": "off"
+    "unicorn/require-post-message-target-origin": "off",
+    "unicorn/prefer-node-protocol": "error"
   },
-  "ignorePatterns": [
-    "assets/",
-    "dist/",
-    "node_modules/",
-    "vendor/"
-  ]
+  "ignorePatterns": ["dist/", "node_modules/", "vendor/"]
 }
