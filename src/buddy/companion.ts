@@ -37,7 +37,7 @@ function hashString(s: string): number {
 }
 
 function pick<T>(rng: () => number, arr: readonly T[]): T {
-  return arr[Math.floor(rng() * arr.length)]!
+  return arr[Math.floor(rng() * arr.length)]
 }
 
 function rollRarity(rng: () => number): Rarity {

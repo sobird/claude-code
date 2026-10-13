@@ -1,8 +1,8 @@
-import { createHash, type UUID } from 'crypto'
-import type { Stats } from 'fs'
-import { chmod, copyFile, link, mkdir, readFile, stat, unlink } from 'fs/promises'
-import { dirname, isAbsolute, join, relative } from 'path'
-import { inspect } from 'util'
+import { createHash, type UUID } from 'node:crypto'
+import type { Stats } from 'node:fs'
+import { chmod, copyFile, link, mkdir, readFile, stat, unlink } from 'node:fs/promises'
+import { dirname, isAbsolute, join, relative } from 'node:path'
+import { inspect } from 'node:util'
 
 import { diffLines } from 'diff'
 import { getIsNonInteractiveSession, getOriginalCwd, getSessionId } from 'src/bootstrap/state.js'
@@ -54,10 +54,7 @@ export function fileHistoryEnabled(): boolean {
   if (getIsNonInteractiveSession()) {
     return fileHistoryEnabledSdk()
   }
-  return (
-    getGlobalConfig().fileCheckpointingEnabled !== false &&
-    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING)
-  )
+  return getGlobalConfig().fileCheckpointingEnabled && !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING)
 }
 
 function fileHistoryEnabledSdk(): boolean {

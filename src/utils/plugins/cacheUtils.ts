@@ -1,5 +1,5 @@
-import { readdir, rm, stat, unlink, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { readdir, rm, stat, unlink, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { clearCommandsCache } from '../../commands.js'
 import { clearAllOutputStylesCache } from '../../constants/outputStyles.js'

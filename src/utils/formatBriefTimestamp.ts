@@ -58,7 +58,7 @@ function getLocale(): string | undefined {
     return undefined
   }
   // Strip codeset (.UTF-8) and modifier (@euro), replace _ with -
-  const base = raw.split('.')[0]!.split('@')[0]!
+  const base = raw.split('.')[0].split('@')[0]
   if (!base) {
     return undefined
   }

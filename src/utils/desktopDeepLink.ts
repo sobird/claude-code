@@ -1,5 +1,5 @@
-import { readdir } from 'fs/promises'
-import { join } from 'path'
+import { readdir } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { coerce as semverCoerce } from 'semver'
 
@@ -101,12 +101,12 @@ async function getDesktopVersion(): Promise<string | null> {
         .filter((e) => e.startsWith('app-'))
         .map((e) => e.slice(4))
         .filter((v) => semverCoerce(v) !== null)
-        .sort((a, b) => {
+        .toSorted((a, b) => {
           const ca = semverCoerce(a)!
           const cb = semverCoerce(b)!
           return ca.compare(cb)
         })
-      return versions.length > 0 ? versions[versions.length - 1]! : null
+      return versions.length > 0 ? versions[versions.length - 1] : null
     } catch {
       return null
     }

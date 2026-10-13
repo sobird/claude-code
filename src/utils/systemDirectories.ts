@@ -1,5 +1,5 @@
-import { homedir } from 'os'
-import { join } from 'path'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 import { logForDebugging } from './debug.js'
 import { getPlatform, type Platform } from './platform.js'

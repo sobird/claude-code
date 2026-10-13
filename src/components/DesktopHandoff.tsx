@@ -30,7 +30,7 @@ type Props = {
 export function DesktopHandoff({ onDone }: Props): React.ReactNode {
   const [state, setState] = useState<DesktopHandoffState>('checking')
   const [error, setError] = useState<string | null>(null)
-  const [downloadMessage, setDownloadMessage] = useState<string>('')
+  const [downloadMessage, setDownloadMessage] = useState('')
 
   // Handle keyboard input for error and prompt-download states
   useInput((input) => {

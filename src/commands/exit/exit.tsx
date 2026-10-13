@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { spawnSync } from 'child_process'
+import { spawnSync } from 'node:child_process'
 
 import sample from 'lodash-es/sample.js'
 import * as React from 'react'

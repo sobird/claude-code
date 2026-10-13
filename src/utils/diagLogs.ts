@@ -1,4 +1,4 @@
-import { dirname } from 'path'
+import { dirname } from 'node:path'
 
 import { getFsImplementation } from './fsOperations.js'
 import { jsonStringify } from './slowOperations.js'

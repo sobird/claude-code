@@ -1,8 +1,8 @@
-import { randomBytes } from 'crypto'
-import { copyFile, mkdir, readFile, writeFile } from 'fs/promises'
-import { homedir, platform } from 'os'
-import { dirname, join } from 'path'
-import { pathToFileURL } from 'url'
+import { randomBytes } from 'node:crypto'
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { homedir, platform } from 'node:os'
+import { dirname, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import chalk from 'chalk'
 import type { ThemeName } from 'src/utils/theme.js'
@@ -326,7 +326,7 @@ async function installBindingsForVSCodeTerminal(
     )}${EOL}${chalk.dim(`See ${formatPathLink(keybindingsPath)}`)}${EOL}`
   } catch (error) {
     logError(error)
-    throw new Error(`Failed to install ${editor} terminal Shift+Enter key binding`)
+    throw new Error(`Failed to install ${editor} terminal Shift+Enter key binding`, { cause: error })
   }
 }
 
@@ -456,13 +456,14 @@ async function enableOptionAsMetaForTerminal(theme: ThemeName): Promise<string> 
 
     const errorMessage = 'Failed to enable Option as Meta key for Terminal.app.'
     if (restoreResult.status === 'restored') {
-      throw new Error(`${errorMessage} Your settings have been restored from backup.`)
+      throw new Error(`${errorMessage} Your settings have been restored from backup.`, { cause: error })
     } else if (restoreResult.status === 'failed') {
       throw new Error(
         `${errorMessage} Restoring from backup failed, try manually with: defaults import com.apple.Terminal ${restoreResult.backupPath}`,
+        { cause: error },
       )
     } else {
-      throw new Error(`${errorMessage} No backup was available to restore from.`)
+      throw new Error(`${errorMessage} No backup was available to restore from.`, { cause: error })
     }
   }
 }
@@ -566,7 +567,7 @@ chars = "\\u001B\\r"`
     )}${EOL}${chalk.dim(`See ${formatPathLink(configPath)}`)}${EOL}`
   } catch (error) {
     logError(error)
-    throw new Error('Failed to install Alacritty Shift+Enter key binding')
+    throw new Error('Failed to install Alacritty Shift+Enter key binding', { cause: error })
   }
 }
 
@@ -648,6 +649,6 @@ async function installBindingsForZed(theme: ThemeName): Promise<string> {
     )('Installed Zed Shift+Enter key binding')}${EOL}${chalk.dim(`See ${formatPathLink(keymapPath)}`)}${EOL}`
   } catch (error) {
     logError(error)
-    throw new Error('Failed to install Zed Shift+Enter key binding')
+    throw new Error('Failed to install Zed Shift+Enter key binding', { cause: error })
   }
 }

@@ -1,6 +1,6 @@
-import { randomUUID, type UUID } from 'crypto'
-import { readdir, stat } from 'fs/promises'
-import { dirname, parse, relative, resolve } from 'path'
+import { randomUUID, type UUID } from 'node:crypto'
+import { readdir, stat } from 'node:fs/promises'
+import { dirname, parse, relative, resolve } from 'node:path'
 
 import type { ContentBlockParam, ImageBlockParam, Base64ImageSource } from '@anthropic-ai/sdk/resources/messages.mjs'
 import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
@@ -3195,7 +3195,7 @@ async function getTeammateMailboxAttachments(toolUseContext: ToolUseContext): Pr
   const idleAgentByIndex = new Map<number, string>()
   const latestIdleByAgent = new Map<string, number>()
   for (let i = 0; i < allMessages.length; i++) {
-    const idle = isIdleNotification(allMessages[i]!.text)
+    const idle = isIdleNotification(allMessages[i].text)
     if (idle) {
       idleAgentByIndex.set(i, idle.from)
       latestIdleByAgent.set(idle.from, i)

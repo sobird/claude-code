@@ -2,7 +2,7 @@
  * OSC (Operating System Command) Types and Parser
  */
 
-import { Buffer } from 'buffer'
+import { Buffer } from 'node:buffer'
 
 import { env } from '../../utils/env.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
@@ -312,9 +312,9 @@ export function parseOscColor(spec: string): Color | null {
   if (hex) {
     return {
       type: 'rgb',
-      r: parseInt(hex[1]!, 16),
-      g: parseInt(hex[2]!, 16),
-      b: parseInt(hex[3]!, 16),
+      r: parseInt(hex[1], 16),
+      g: parseInt(hex[2], 16),
+      b: parseInt(hex[3], 16),
     }
   }
   const rgb = spec.match(/^rgb:([0-9a-f]{1,4})\/([0-9a-f]{1,4})\/([0-9a-f]{1,4})$/i)
@@ -323,9 +323,9 @@ export function parseOscColor(spec: string): Color | null {
     const scale = (s: string) => Math.round((parseInt(s, 16) / (16 ** s.length - 1)) * 255)
     return {
       type: 'rgb',
-      r: scale(rgb[1]!),
-      g: scale(rgb[2]!),
-      b: scale(rgb[3]!),
+      r: scale(rgb[1]),
+      g: scale(rgb[2]),
+      b: scale(rgb[3]),
     }
   }
   return null

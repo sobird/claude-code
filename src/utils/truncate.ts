@@ -86,7 +86,7 @@ export function truncateStartToWidth(text: string, maxWidth: number): string {
   let width = 0
   let startIdx = segments.length
   for (let i = segments.length - 1; i >= 0; i--) {
-    const segWidth = stringWidth(segments[i]!.segment)
+    const segWidth = stringWidth(segments[i].segment)
     if (width + segWidth > maxWidth - 1) break // -1 for '…'
     width += segWidth
     startIdx = i

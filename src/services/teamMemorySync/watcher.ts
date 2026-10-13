@@ -8,9 +8,9 @@
  */
 
 import { feature } from 'bun:bundle'
-import { type FSWatcher, watch } from 'fs'
-import { mkdir, stat } from 'fs/promises'
-import { join } from 'path'
+import { type FSWatcher, watch } from 'node:fs'
+import { mkdir, stat } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { getTeamMemPath, isTeamMemoryEnabled } from '../../memdir/teamMemPaths.js'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'

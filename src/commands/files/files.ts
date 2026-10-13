@@ -1,4 +1,4 @@
-import { relative } from 'path'
+import { relative } from 'node:path'
 
 import type { ToolUseContext } from '../../Tool.js'
 import type { LocalCommandResult } from '../../types/command.js'

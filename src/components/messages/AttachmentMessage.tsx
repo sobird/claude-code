@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { basename, sep } from 'path'
+import { basename, sep } from 'node:path'
 
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import React, { useMemo } from 'react'

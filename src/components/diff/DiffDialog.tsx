@@ -35,7 +35,7 @@ function turnDiffToDiffData(turn: TurnDiff): DiffData {
       isTruncated: false,
       isNewFile: f.isNewFile,
     }))
-    .sort((a, b) => a.path.localeCompare(b.path))
+    .toSorted((a, b) => a.path.localeCompare(b.path))
 
   const hunks = new Map<string, StructuredPatchHunk[]>()
   for (const f of turn.files.values()) {
@@ -59,8 +59,8 @@ export function DiffDialog({ messages, onDone }: Props): React.ReactNode {
   const turnDiffs = useTurnDiffs(messages)
 
   const [viewMode, setViewMode] = useState<ViewMode>('list')
-  const [selectedIndex, setSelectedIndex] = useState<number>(0)
-  const [sourceIndex, setSourceIndex] = useState<number>(0)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [sourceIndex, setSourceIndex] = useState(0)
 
   const sources: DiffSource[] = useMemo(
     () => [{ type: 'current' }, ...turnDiffs.map((turn): DiffSource => ({ type: 'turn', turn }))],

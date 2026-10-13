@@ -1,4 +1,4 @@
-import { open, stat } from 'fs/promises'
+import { open, stat } from 'node:fs/promises'
 
 import { CLAUDE_CODE_GUIDE_AGENT_TYPE } from 'src/tools/AgentTool/built-in/claudeCodeGuideAgent.js'
 import { getSettingsFilePathForSource } from 'src/utils/settings/settings.js'

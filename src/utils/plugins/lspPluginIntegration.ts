@@ -1,5 +1,5 @@
-import { readFile } from 'fs/promises'
-import { join, relative, resolve } from 'path'
+import { readFile } from 'node:fs/promises'
+import { join, relative, resolve } from 'node:path'
 
 import { z } from 'zod/v4'
 
@@ -250,7 +250,7 @@ export function resolvePluginLspEnvironment(
   const resolvedEnv: Record<string, string> = {
     CLAUDE_PLUGIN_ROOT: plugin.path,
     CLAUDE_PLUGIN_DATA: getPluginDataDir(plugin.source),
-    ...(resolved.env || {}),
+    ...resolved.env,
   }
   for (const [key, value] of Object.entries(resolvedEnv)) {
     if (key !== 'CLAUDE_PLUGIN_ROOT' && key !== 'CLAUDE_PLUGIN_DATA') {

@@ -1,10 +1,10 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
-import type { Dirent } from 'fs'
+import type { UUID } from 'node:crypto'
+import type { Dirent } from 'node:fs'
 // Sync fs primitives for readFileTailSync — separate from fs/promises
 // imports above. Named (not wildcard) per CLAUDE.md style; no collisions
 // with the async-suffixed names.
-import { closeSync, fstatSync, openSync, readSync } from 'fs'
+import { closeSync, fstatSync, openSync, readSync } from 'node:fs'
 import {
   appendFile as fsAppendFile,
   open as fsOpen,
@@ -14,8 +14,8 @@ import {
   stat,
   unlink,
   writeFile,
-} from 'fs/promises'
-import { basename, dirname, join } from 'path'
+} from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
 
 import memoize from 'lodash-es/memoize.js'
 import {
@@ -1322,11 +1322,11 @@ export async function recordTranscript(
   let startingParentUuid: UUID | undefined = startingParentUuidHint
   let seenNewMessage = false
   for (const m of cleanedMessages) {
-    if (messageSet.has(m.uuid as UUID)) {
+    if (messageSet.has(m.uuid)) {
       // Only track skipped messages that form a prefix. After compaction,
       // messagesToKeep appear AFTER new CB/summary, so this skips them.
       if (!seenNewMessage && isChainParticipant(m)) {
-        startingParentUuid = m.uuid as UUID
+        startingParentUuid = m.uuid
       }
     } else {
       newMessages.push(m)
@@ -1343,7 +1343,7 @@ export async function recordTranscript(
   // already in messageSet). Progress is skipped — it's written to the JSONL
   // but nothing chains TO it (see isChainParticipant).
   const lastRecorded = newMessages.findLast(isChainParticipant)
-  return (lastRecorded?.uuid as UUID | undefined) ?? startingParentUuid ?? null
+  return lastRecorded?.uuid ?? startingParentUuid ?? null
 }
 
 export async function recordSidechainTranscript(
@@ -2074,7 +2074,7 @@ function recoverOrphanedParallelToolResults(
  */
 export function checkResumeConsistency(chain: Message[]): void {
   for (let i = chain.length - 1; i >= 0; i--) {
-    const m = chain[i]!
+    const m = chain[i]
     if (m.type !== 'system' || m.subtype !== 'turn_duration') continue
     const expected = m.messageCount
     if (expected === undefined) return
@@ -2200,7 +2200,7 @@ export async function loadTranscriptFromFile(filePath: string): Promise<LogOptio
   try {
     parsed = jsonParse(content)
   } catch (error) {
-    throw new Error(`Invalid JSON in transcript file: ${error}`)
+    throw new Error(`Invalid JSON in transcript file: ${error}`, { cause: error })
   }
 
   let messages: TranscriptMessage[]
@@ -2309,7 +2309,7 @@ function convertToLogOption(
   contentReplacements?: ContentReplacementRecord[],
 ): LogOption {
   const lastMessage = transcript.at(-1)!
-  const firstMessage = transcript[0]!
+  const firstMessage = transcript[0]
 
   // Get the first user message for the prompt
   const firstPrompt = extractFirstPrompt(transcript)
@@ -2932,7 +2932,7 @@ function resolveMetadataBuf(carry: Buffer | null, chunkBuf: Buffer): Buffer | nu
  * are <50 per session), the entire chunk is skipped without line splitting.
  */
 async function scanPreBoundaryMetadata(filePath: string, endOffset: number): Promise<string[]> {
-  const { createReadStream } = await import('fs')
+  const { createReadStream } = await import('node:fs')
   const NEWLINE = 0x0a
 
   const stream = createReadStream(filePath, { end: endOffset - 1 })
@@ -3057,10 +3057,10 @@ function pickDepthOneUuidCandidate(buf: Buffer, lineStart: number, candidates: n
   let ci = 0
   for (let i = lineStart; ci < candidates.length; i++) {
     if (i === candidates[ci]) {
-      if (depth === 1 && !inString) return candidates[ci]!
+      if (depth === 1 && !inString) return candidates[ci]
       ci++
     }
-    const b = buf[i]!
+    const b = buf[i]
     if (escapeNext) {
       escapeNext = false
     } else if (inString) {
@@ -3161,8 +3161,8 @@ function walkChainBeforeParse(buf: Buffer): Buffer {
   // into the next line, caught by the bounds check.
   let leafSlot = -1
   for (let i = msgIdx.length - 3; i >= 0; i -= 3) {
-    const sc = buf.indexOf(SIDECHAIN_TRUE, msgIdx[i]!)
-    if (sc === -1 || sc >= msgIdx[i + 1]!) {
+    const sc = buf.indexOf(SIDECHAIN_TRUE, msgIdx[i])
+    if (sc === -1 || sc >= msgIdx[i + 1]) {
       leafSlot = i
       break
     }
@@ -3182,9 +3182,9 @@ function walkChainBeforeParse(buf: Buffer): Buffer {
   while (slot !== undefined) {
     if (seen.has(slot)) break
     seen.add(slot)
-    chain.add(msgIdx[slot]!)
-    chainBytes += msgIdx[slot + 1]! - msgIdx[slot]!
-    const parentStart = msgIdx[slot + 2]!
+    chain.add(msgIdx[slot])
+    chainBytes += msgIdx[slot + 1] - msgIdx[slot]
+    const parentStart = msgIdx[slot + 2]
     if (parentStart < 0) break
     const parent = buf.toString('latin1', parentStart, parentStart + UUID_LEN)
     slot = uuidToSlot.get(parent)
@@ -3208,17 +3208,17 @@ function walkChainBeforeParse(buf: Buffer): Buffer {
   const parts: Buffer[] = []
   let m = 0
   for (let i = 0; i < msgIdx.length; i += 3) {
-    const start = msgIdx[i]!
-    while (m < metaRanges.length && metaRanges[m]! < start) {
-      parts.push(buf.subarray(metaRanges[m]!, metaRanges[m + 1]!))
+    const start = msgIdx[i]
+    while (m < metaRanges.length && metaRanges[m] < start) {
+      parts.push(buf.subarray(metaRanges[m], metaRanges[m + 1]))
       m += 2
     }
     if (chain.has(start)) {
-      parts.push(buf.subarray(start, msgIdx[i + 1]!))
+      parts.push(buf.subarray(start, msgIdx[i + 1]))
     }
   }
   while (m < metaRanges.length) {
-    parts.push(buf.subarray(metaRanges[m]!, metaRanges[m + 1]!))
+    parts.push(buf.subarray(metaRanges[m], metaRanges[m + 1]))
     m += 2
   }
   return Buffer.concat(parts)
@@ -4286,7 +4286,7 @@ export async function loadAllLogsFromSessionFile(
       chain.push(...trailingMessages)
     }
 
-    const firstMessage = chain[0]!
+    const firstMessage = chain[0]
     const sessionId = leafMessage.sessionId as UUID
 
     logs.push({
@@ -4334,7 +4334,7 @@ async function getLogsWithoutIndex(projectDir: string, limit?: number): Promise<
   // If limit specified, only load N most recent files by mtime
   let filesToProcess: Array<{ path: string; mtime: number }>
   if (limit && sessionFilesMap.size > limit) {
-    filesToProcess = [...sessionFilesMap.values()].sort((a, b) => b.mtime - a.mtime).slice(0, limit)
+    filesToProcess = [...sessionFilesMap.values()].toSorted((a, b) => b.mtime - a.mtime).slice(0, limit)
   } else {
     filesToProcess = [...sessionFilesMap.values()]
   }
@@ -4466,7 +4466,7 @@ function extractFirstPromptFromChunk(chunk: string): string {
         for (const block of content) {
           const b = block as Record<string, unknown>
           if (b.type === 'text' && typeof b.text === 'string') {
-            texts.push(b.text as string)
+            texts.push(b.text)
           }
         }
       }
@@ -4584,7 +4584,7 @@ export async function getSessionFilesLite(
   const sessionFilesMap = await getSessionFilesWithMtime(projectDir)
 
   // Sort by mtime descending and apply limit
-  let entries = [...sessionFilesMap.entries()].sort((a, b) => b[1].mtime - a[1].mtime)
+  let entries = [...sessionFilesMap.entries()].toSorted((a, b) => b[1].mtime - a[1].mtime)
   if (limit && entries.length > limit) {
     entries = entries.slice(0, limit)
   }
@@ -4679,7 +4679,7 @@ export async function enrichLogs(
   let i = startIndex
 
   while (i < allLogs.length && result.length < count) {
-    const log = allLogs[i]!
+    const log = allLogs[i]
     i++
 
     const enriched = await enrichLog(log, readBuf)

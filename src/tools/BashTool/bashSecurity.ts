@@ -374,7 +374,7 @@ function isSafeHeredoc(command: string): boolean {
     let closeParenColIdx = -1 // Column index of `)` on that line
 
     for (let i = 0; i < bodyLines.length; i++) {
-      const rawLine = bodyLines[i]!
+      const rawLine = bodyLines[i]
       const line = isDash ? rawLine.replace(/^\t*/, '') : rawLine
 
       // Form 1: delimiter alone on a line
@@ -386,7 +386,7 @@ function isSafeHeredoc(command: string): boolean {
         const parenMatch = nextLine.match(/^([ \t]*)\)/)
         if (!parenMatch) return false // `)` not at start of next line
         closeParenLineIdx = i + 1
-        closeParenColIdx = parenMatch[1]!.length // Position of `)`
+        closeParenColIdx = parenMatch[1].length // Position of `)`
         break
       }
 
@@ -400,7 +400,7 @@ function isSafeHeredoc(command: string): boolean {
           closeParenLineIdx = i
           // Column is in rawLine (pre-tab-strip), so recompute
           const tabPrefix = isDash ? (rawLine.match(/^\t*/)?.[0] ?? '') : ''
-          closeParenColIdx = tabPrefix.length + delimiter.length + parenMatch[1]!.length
+          closeParenColIdx = tabPrefix.length + delimiter.length + parenMatch[1].length
           break
         }
         // Line starts with delimiter but has other trailing content —
@@ -420,7 +420,7 @@ function isSafeHeredoc(command: string): boolean {
     // Compute the absolute end position (one past the `)` character)
     let endPos = bodyStart
     for (let i = 0; i < closeParenLineIdx; i++) {
-      endPos += bodyLines[i]!.length + 1 // +1 for newline
+      endPos += bodyLines[i].length + 1 // +1 for newline
     }
     endPos += closeParenColIdx + 1 // +1 to include the `)` itself
 
@@ -449,7 +449,7 @@ function isSafeHeredoc(command: string): boolean {
 
   // Strip all verified heredocs from the command, building `remaining`.
   // Process in reverse order so earlier indices stay valid.
-  const sortedVerified = [...verified].sort((a, b) => b.start - a.start)
+  const sortedVerified = [...verified].toSorted((a, b) => b.start - a.start)
   let remaining = command
   for (const { start, end } of sortedVerified) {
     remaining = remaining.slice(0, start) + remaining.slice(end)
@@ -531,7 +531,7 @@ export function stripSafeHeredocSubstitutions(command: string): string | null {
     const bodyStart = operatorEnd + openLineEnd + 1
     const bodyLines = command.slice(bodyStart).split('\n')
     for (let i = 0; i < bodyLines.length; i++) {
-      const rawLine = bodyLines[i]!
+      const rawLine = bodyLines[i]
       const line = isDash ? rawLine.replace(/^\t*/, '') : rawLine
       if (line.startsWith(delimiter)) {
         const after = line.slice(delimiter.length)
@@ -556,7 +556,7 @@ export function stripSafeHeredocSubstitutions(command: string): string | null {
   }
   if (!found) return null
   for (let i = ranges.length - 1; i >= 0; i--) {
-    const r = ranges[i]!
+    const r = ranges[i]
     result = result.slice(0, r.start) + result.slice(r.end)
   }
   return result
@@ -1272,7 +1272,7 @@ function validateObfuscatedFlags(context: ValidationContext): PermissionResult {
 
       // Collect content inside the quote
       while (j < originalCommand.length && originalCommand[j] !== quoteChar) {
-        insideQuote += originalCommand[j]!
+        insideQuote += originalCommand[j]
         j++
       }
 
@@ -1316,8 +1316,8 @@ function validateObfuscatedFlags(context: ValidationContext): PermissionResult {
         (() => {
           let pos = j + 1 // Start at charAfterQuote (an opening quote)
           let combinedContent = insideQuote // Track what the shell will see
-          while (pos < originalCommand.length && /['"`]/.test(originalCommand[pos]!)) {
-            const segQuote = originalCommand[pos]!
+          while (pos < originalCommand.length && /['"`]/.test(originalCommand[pos])) {
+            const segQuote = originalCommand[pos]
             let end = pos + 1
             while (end < originalCommand.length && originalCommand[end] !== segQuote) {
               end++
@@ -1342,11 +1342,11 @@ function validateObfuscatedFlags(context: ValidationContext): PermissionResult {
             pos = end + 1 // Move past closing quote to check next segment
           }
           // Also check the unquoted char at the end of the chain
-          if (pos < originalCommand.length && FLAG_CONTINUATION_CHARS.test(originalCommand[pos]!)) {
+          if (pos < originalCommand.length && FLAG_CONTINUATION_CHARS.test(originalCommand[pos])) {
             // If we have dashes in combined content, the trailing char completes a flag
             if (/^-+$/.test(combinedContent) || combinedContent === '') {
               // Check if we're about to form a flag with the following content
-              const nextChar = originalCommand[pos]!
+              const nextChar = originalCommand[pos]
               if (nextChar === '-') {
                 // More dashes, could still form a flag
                 return true
@@ -1357,7 +1357,7 @@ function validateObfuscatedFlags(context: ValidationContext): PermissionResult {
               }
             }
             // Original check for dashes followed by alphanumeric
-            if (/^-/.test(combinedContent)) {
+            if (combinedContent.startsWith('-')) {
               return true
             }
           }

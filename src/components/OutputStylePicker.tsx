@@ -54,7 +54,7 @@ export function OutputStylePicker({
 
   const handleStyleSelect = useCallback(
     (style: string) => {
-      const outputStyle = style as OutputStyle
+      const outputStyle = style
       onComplete(outputStyle)
     },
     [onComplete],

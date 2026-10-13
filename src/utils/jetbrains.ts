@@ -1,5 +1,5 @@
-import { homedir, platform } from 'os'
-import { join } from 'path'
+import { homedir, platform } from 'node:os'
+import { join } from 'node:path'
 
 import { getFsImplementation } from '../utils/fsOperations.js'
 import type { IdeType } from './ide.js'

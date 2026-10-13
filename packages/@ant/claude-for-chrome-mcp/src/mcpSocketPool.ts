@@ -91,7 +91,7 @@ export class McpSocketPool {
     if (connected.length === 0) {
       throw new SocketConnectionError(`[${this.context.serverName}] No connected sockets available`)
     }
-    return connected[0]!.callTool(name, args)
+    return connected[0].callTool(name, args)
   }
 
   public async setPermissionMode(mode: PermissionMode, allowedDomains?: string[]): Promise<void> {
@@ -129,8 +129,8 @@ export class McpSocketPool {
 
     // If only one client, skip merging overhead
     if (connected.length === 1) {
-      const result = await connected[0]!.callTool('tabs_context_mcp', args)
-      this.updateTabRoutes(result, this.getSocketPathForClient(connected[0]!))
+      const result = await connected[0].callTool('tabs_context_mcp', args)
+      this.updateTabRoutes(result, this.getSocketPathForClient(connected[0]))
       return result
     }
 

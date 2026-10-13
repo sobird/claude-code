@@ -47,7 +47,7 @@ function IndentedContent({ children }: { children: string }): React.ReactNode {
 }
 
 function CloudLaunchContent({ children }: { children: string }): React.ReactNode {
-  const diamond = children[0]!
+  const diamond = children[0]
   const nl = children.indexOf('\n')
   const header = nl === -1 ? children.slice(2) : children.slice(2, nl)
   const rest = nl === -1 ? '' : children.slice(nl + 1).trim()

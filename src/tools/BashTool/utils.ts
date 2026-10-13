@@ -1,4 +1,4 @@
-import { readFile, stat } from 'fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 
 import type { Base64ImageSource, ContentBlockParam, ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { getOriginalCwd } from 'src/bootstrap/state.js'

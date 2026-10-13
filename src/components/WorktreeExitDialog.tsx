@@ -29,7 +29,7 @@ type Props = {
 export function WorktreeExitDialog({ onDone, onCancel }: Props): React.ReactNode {
   const [status, setStatus] = useState<'loading' | 'asking' | 'keeping' | 'removing' | 'done'>('loading')
   const [changes, setChanges] = useState<string[]>([])
-  const [commitCount, setCommitCount] = useState<number>(0)
+  const [commitCount, setCommitCount] = useState(0)
   const [resultMessage, setResultMessage] = useState<string | undefined>()
   const worktreeSession = getCurrentWorktreeSession()
 

@@ -1,4 +1,4 @@
-import * as platformPath from 'path'
+import * as platformPath from 'node:path'
 
 import chokidar, { type FSWatcher } from 'chokidar'
 
@@ -254,7 +254,7 @@ function scheduleReload(changedPath: string): void {
     // operation) just spams the hook matcher with identical queries. Pass the
     // first path as a representative; hooks can inspect all paths via the
     // skills directory if they need the full set.
-    const results = await executeConfigChangeHooks('skills', paths[0]!)
+    const results = await executeConfigChangeHooks('skills', paths[0])
     if (hasBlockingResult(results)) {
       logForDebugging(`ConfigChange hook blocked skill reload (${paths.length} paths)`)
       return

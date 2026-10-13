@@ -1,5 +1,5 @@
-import { homedir } from 'os'
-import { basename, join, sep } from 'path'
+import { homedir } from 'node:os'
+import { basename, join, sep } from 'node:path'
 
 import React, { type ReactNode } from 'react'
 
@@ -53,7 +53,7 @@ export type PermissionOption =
   | { type: 'accept-session'; scope?: 'claude-folder' | 'global-claude-folder' }
   | { type: 'reject' }
 
-export type PermissionOptionWithLabel = OptionWithDescription<string> & {
+export type PermissionOptionWithLabel = OptionWithDescription & {
   option: PermissionOption
 }
 

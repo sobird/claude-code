@@ -1,4 +1,4 @@
-const path = require('path')
+const path = require('node:path')
 
 if (process.platform !== 'darwin') {
   throw new Error('@ant/computer-use-swift is only available on macOS')

@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join } from 'node:path'
 
 import { getCwd } from '../cwd.js'
 import { logForDebugging } from '../debug.js'

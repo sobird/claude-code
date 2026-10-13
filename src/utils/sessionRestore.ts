@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
-import { dirname } from 'path'
+import type { UUID } from 'node:crypto'
+import { dirname } from 'node:path'
 
 import {
   getMainLoopModelOverride,

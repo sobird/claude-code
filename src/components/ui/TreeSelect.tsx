@@ -128,7 +128,7 @@ export function TreeSelect<T>({
   onUpFromFirstItem,
 }: TreeSelectProps<T>): React.ReactNode {
   // Track which nodes are expanded (internal state if not controlled externally)
-  const [internalExpandedIds, setInternalExpandedIds] = React.useState<Set<string | number>>(new Set())
+  const [internalExpandedIds, setInternalExpandedIds] = React.useState(new Set())
 
   // Track if we're programmatically setting focus to avoid infinite loops
   const isProgrammaticFocusRef = React.useRef(false)

@@ -11,8 +11,8 @@
  * redacted column can't, without exposing user-defined names.
  */
 
-import { createHash } from 'crypto'
-import { sep } from 'path'
+import { createHash } from 'node:crypto'
+import { sep } from 'node:path'
 
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

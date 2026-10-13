@@ -40,7 +40,7 @@ import type { ClaudeAIServerInfo, HTTPServerInfo, SSEServerInfo } from './types.
 import { handleReconnectError, handleReconnectResult } from './utils/reconnectHelpers.js'
 
 type Props = {
-  server: SSEServerInfo | HTTPServerInfo | ClaudeAIServerInfo
+  server: SSEServerInfo
   serverToolsCount: number
   onViewTools: () => void
   onCancel: () => void

@@ -79,12 +79,12 @@ export function ValidationErrorsList({ errors }: { errors: ValidationError[] }):
     if (!acc[file]) {
       acc[file] = []
     }
-    acc[file]!.push(error)
+    acc[file].push(error)
     return acc
   }, {})
 
   // Sort files alphabetically
-  const sortedFiles = Object.keys(errorsByFile).sort()
+  const sortedFiles = Object.keys(errorsByFile).toSorted()
 
   return (
     <Box flexDirection="column">

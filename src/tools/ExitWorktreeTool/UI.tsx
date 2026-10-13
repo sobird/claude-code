@@ -12,7 +12,7 @@ export function renderToolUseMessage(): React.ReactNode {
 
 export function renderToolResultMessage(
   output: Output,
-  _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
+  _progressMessagesForMessage: ProgressMessage[],
   _options: { theme: ThemeName },
 ): React.ReactNode {
   const actionLabel = output.action === 'keep' ? 'Kept worktree' : 'Removed worktree'

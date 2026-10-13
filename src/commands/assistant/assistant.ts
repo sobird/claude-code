@@ -1,7 +1,6 @@
 // Auto-generated stub — replace with real implementation
 import type React from 'react'
 
-export {}
 export const NewInstallWizard: React.FC<{
   defaultDir: string
   onInstalled: (dir: string) => void

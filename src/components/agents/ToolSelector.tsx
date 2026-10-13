@@ -110,7 +110,7 @@ function getMcpServerBuckets(tools: Tools): Array<{
 
   return Array.from(serverMap.entries())
     .map(([serverName, tools]) => ({ serverName, tools }))
-    .sort((a, b) => a.serverName.localeCompare(b.serverName))
+    .toSorted((a, b) => a.serverName.localeCompare(b.serverName))
 }
 
 export function ToolSelector({ tools, initialTools, onComplete, onCancel }: Props): React.ReactNode {
@@ -121,7 +121,7 @@ export function ToolSelector({ tools, initialTools, onComplete, onCancel }: Prop
   const expandedInitialTools =
     !initialTools || initialTools.includes('*') ? customAgentTools.map((t) => t.name) : initialTools
 
-  const [selectedTools, setSelectedTools] = useState<string[]>(expandedInitialTools)
+  const [selectedTools, setSelectedTools] = useState(expandedInitialTools)
   const [focusIndex, setFocusIndex] = useState(0)
   const [showIndividualTools, setShowIndividualTools] = useState(false)
 

@@ -1,5 +1,5 @@
-import { mkdir, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import type { BetaToolUnion } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
@@ -197,7 +197,7 @@ function buildDiffableContent(system: TextBlockParam[], tools: BetaToolUnion[], 
       const schema = 'input_schema' in t ? jsonStringify(t.input_schema) : ''
       return `${t.name}\n  description: ${desc}\n  input_schema: ${schema}`
     })
-    .sort()
+    .toSorted()
     .join('\n\n')
   return `Model: ${model}\n\n=== System Prompt ===\n\n${systemText}\n\n=== Tools (${tools.length}) ===\n\n${toolDetails}\n`
 }
@@ -261,7 +261,7 @@ export function recordPromptState(snapshot: PromptStateSnapshot): void {
     const systemCharCount = getSystemCharCount(system)
     const lazyDiffableContent = () => buildDiffableContent(system, toolSchemas, model)
     const isFastMode = fastMode ?? false
-    const sortedBetas = [...betas].sort()
+    const sortedBetas = [...betas].toSorted()
     const effortStr = effortValue === undefined ? '' : String(effortValue)
     const extraBodyHash = extraBodyParams === undefined ? 0 : computeHash(extraBodyParams)
 

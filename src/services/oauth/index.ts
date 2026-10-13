@@ -92,7 +92,7 @@ export class OAuthService {
         authorizationCode,
         state,
         this.codeVerifier,
-        this.port!,
+        this.port,
         !isAutomaticFlow, // Pass isManual=true if it's NOT automatic flow
         options?.expiresIn,
       )

@@ -1,5 +1,5 @@
-import { readFile } from 'fs/promises'
-import { join } from 'path'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { roughTokenCountEstimation } from '../../services/tokenEstimation.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
@@ -156,7 +156,7 @@ function generateSectionReminders(sectionSizes: Record<string, number>, totalTok
   const overBudget = totalTokens > MAX_TOTAL_SESSION_MEMORY_TOKENS
   const oversizedSections = Object.entries(sectionSizes)
     .filter(([_, tokens]) => tokens > MAX_SECTION_LENGTH)
-    .sort(([, a], [, b]) => b - a)
+    .toSorted(([, a], [, b]) => b - a)
     .map(([section, tokens]) => `- "${section}" is ~${tokens} tokens (limit: ${MAX_SECTION_LENGTH})`)
 
   if (oversizedSections.length === 0 && !overBudget) {
@@ -188,7 +188,7 @@ function substituteVariables(template: string, variables: Record<string, string>
   // (replacer fn treats $ literally), and (2) double-substitution when user
   // content happens to contain {{varName}} matching a later variable.
   return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
-    Object.prototype.hasOwnProperty.call(variables, key) ? variables[key]! : match,
+    Object.prototype.hasOwnProperty.call(variables, key) ? variables[key] : match,
   )
 }
 

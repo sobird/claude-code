@@ -21,7 +21,7 @@
  * subsequent read hits the cached bool instead of re-running the auth chain.
  */
 
-import { join } from 'path'
+import { join } from 'node:path'
 
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { readFileSync } from '../../utils/fileRead.js'

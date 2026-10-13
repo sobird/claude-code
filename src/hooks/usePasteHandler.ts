@@ -1,4 +1,4 @@
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import React from 'react'
 import { logError } from 'src/utils/log.js'

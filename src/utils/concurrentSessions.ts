@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import { chmod, mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { chmod, mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { getOriginalCwd, getSessionId, onSessionSwitch } from '../bootstrap/state.js'
 import { registerCleanup } from './cleanupRegistry.js'

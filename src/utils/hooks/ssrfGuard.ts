@@ -1,5 +1,5 @@
-import { lookup as dnsLookup } from 'dns'
-import { isIP } from 'net'
+import { lookup as dnsLookup } from 'node:dns'
+import { isIP } from 'node:net'
 
 import type { AddressFamily, LookupAddress as AxiosLookupAddress } from 'axios'
 
@@ -133,7 +133,7 @@ function expandIPv6Groups(addr: string): number[] | null {
     if (octets.length !== 4 || octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) {
       return null
     }
-    tailHextets = [(octets[0]! << 8) | octets[1]!, (octets[2]! << 8) | octets[3]!]
+    tailHextets = [(octets[0] << 8) | octets[1], (octets[2] << 8) | octets[3]]
   }
 
   // Expand `::` (at most one) into the right number of zero groups.
@@ -174,8 +174,8 @@ function extractMappedIPv4(addr: string): string | null {
   if (!g) return null
   // IPv4-mapped: first 80 bits zero, next 16 bits ffff, last 32 bits = IPv4
   if (g[0] === 0 && g[1] === 0 && g[2] === 0 && g[3] === 0 && g[4] === 0 && g[5] === 0xffff) {
-    const hi = g[6]!
-    const lo = g[7]!
+    const hi = g[6]
+    const lo = g[7]
     return `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`
   }
   return null

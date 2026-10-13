@@ -9,9 +9,9 @@
  * The base directory can be overridden via CLAUDE_CODE_PLUGIN_CACHE_DIR.
  */
 
-import { mkdirSync } from 'fs'
-import { readdir, rm, stat } from 'fs/promises'
-import { delimiter, join } from 'path'
+import { mkdirSync } from 'node:fs'
+import { readdir, rm, stat } from 'node:fs/promises'
+import { delimiter, join } from 'node:path'
 
 import { getUseCoworkPlugins } from '../../bootstrap/state.js'
 import { logForDebugging } from '../debug.js'

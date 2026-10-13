@@ -49,7 +49,7 @@ export function extractArgsAfterDoubleDash(
 ): { command: string; args: string[] } {
   if (commandOrValue === '--' && args.length > 0) {
     return {
-      command: args[0]!,
+      command: args[0],
       args: args.slice(1),
     }
   }

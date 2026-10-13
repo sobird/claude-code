@@ -1,5 +1,5 @@
-import * as path from 'path'
-import { pathToFileURL } from 'url'
+import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
@@ -138,7 +138,7 @@ export function createLSPServerManager(): LSPServerManager {
     openedFiles.clear()
 
     const errors = results
-      .map((r, i) => (r.status === 'rejected' ? `${toStop[i]![0]}: ${errorMessage(r.reason)}` : null))
+      .map((r, i) => (r.status === 'rejected' ? `${toStop[i][0]}: ${errorMessage(r.reason)}` : null))
       .filter((e): e is string => e !== null)
 
     if (errors.length > 0) {

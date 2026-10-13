@@ -18,10 +18,10 @@ export function collapseTeammateShutdowns(messages: RenderableMessage[]): Render
   let i = 0
 
   while (i < messages.length) {
-    const msg = messages[i]!
+    const msg = messages[i]
     if (isTeammateShutdownAttachment(msg)) {
       let count = 0
-      while (i < messages.length && isTeammateShutdownAttachment(messages[i]!)) {
+      while (i < messages.length && isTeammateShutdownAttachment(messages[i])) {
         count++
         i++
       }

@@ -135,7 +135,7 @@ export class ExitPlanModeScanner {
       | null = null
     if (shouldScan) {
       for (let i = this.exitPlanCalls.length - 1; i >= 0; i--) {
-        const id = this.exitPlanCalls[i]!
+        const id = this.exitPlanCalls[i]
         if (this.rejectedIds.has(id)) continue
         const tr = this.results.get(id)
         if (!tr) {

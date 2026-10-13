@@ -9,7 +9,7 @@
  *   5. Caller sets seed_bundle_file_id on SessionContext
  */
 
-import { stat, unlink } from 'fs/promises'
+import { stat, unlink } from 'node:fs/promises'
 
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

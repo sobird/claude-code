@@ -36,7 +36,7 @@ export function optimize(diff: Diff): Diff {
     // Try to merge with previous patch
     if (len > 0) {
       const lastIdx = len - 1
-      const last = result[lastIdx]!
+      const last = result[lastIdx]
       const lastType = last.type
 
       // Merge consecutive cursorMove

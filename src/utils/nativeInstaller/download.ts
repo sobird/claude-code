@@ -7,9 +7,9 @@
  */
 
 import { feature } from 'bun:bundle'
-import { createHash } from 'crypto'
-import { chmod, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { createHash } from 'node:crypto'
+import { chmod, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import axios from 'axios'
 import { logEvent } from 'src/services/analytics/index.js'
@@ -112,7 +112,7 @@ export async function getLatestVersion(channelOrVersion: string): Promise<string
     // feature() is false in all shipped builds — DCE collapses this to an
     // unconditional throw. Only `bun --feature=ALLOW_TEST_VERSIONS` (the
     // smoke test's source-level invocation) bypasses.
-    if (/^99\.99\./.test(normalized) && !feature('ALLOW_TEST_VERSIONS')) {
+    if (normalized.startsWith('99.99.') && !feature('ALLOW_TEST_VERSIONS')) {
       throw new Error(`Version ${normalized} is not available for installation. Use 'stable' or 'latest'.`)
     }
     return normalized
@@ -178,7 +178,7 @@ export async function downloadVersionFromArtifactory(version: string, stagingPat
     name: 'claude-native-installer',
     version: '0.0.1',
     dependencies: {
-      [MACRO.NATIVE_PACKAGE_URL!]: version,
+      [MACRO.NATIVE_PACKAGE_URL]: version,
     },
   }
 
@@ -193,7 +193,7 @@ export async function downloadVersionFromArtifactory(version: string, stagingPat
         name: 'claude-native-installer',
         version: '0.0.1',
         dependencies: {
-          [MACRO.NATIVE_PACKAGE_URL!]: version,
+          [MACRO.NATIVE_PACKAGE_URL]: version,
         },
       },
       [`node_modules/${MACRO.NATIVE_PACKAGE_URL}`]: {
@@ -436,7 +436,7 @@ export async function downloadVersion(version: string, stagingPath: string): Pro
   // shipped builds — the string 'claude-code-ci-sentinel' and the gcloud call
   // never exist in compiled binaries. Same gcloud-token pattern as
   // remoteSkillLoader.ts:175-195.
-  if (feature('ALLOW_TEST_VERSIONS') && /^99\.99\./.test(version)) {
+  if (feature('ALLOW_TEST_VERSIONS') && version.startsWith('99.99.')) {
     const { stdout } = await execFileNoThrowWithCwd('gcloud', ['auth', 'print-access-token'])
     await downloadVersionFromBinaryRepo(
       version,

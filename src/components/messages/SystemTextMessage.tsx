@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import figures from 'figures'
 import sample from 'lodash-es/sample.js'
@@ -298,7 +298,7 @@ function TurnDurationMessage({
   const store = useAppStateStore()
   const [backgroundTaskSummary] = useState(() => {
     const tasks = store.getState().tasks
-    const running = (Object.values(tasks ?? {}) as TaskState[]).filter(isBackgroundTask)
+    const running = Object.values(tasks ?? {}).filter(isBackgroundTask)
     return running.length > 0 ? getPillLabel(running) : null
   })
 

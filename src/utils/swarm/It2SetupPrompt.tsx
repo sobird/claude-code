@@ -120,7 +120,7 @@ export function It2SetupPrompt({ onDone, tmuxAvailable }: Props): React.ReactNod
   }
 
   function renderInitialPrompt(): React.ReactNode {
-    const options: OptionWithDescription<string>[] = [
+    const options: OptionWithDescription[] = [
       {
         label: 'Install it2 now',
         value: 'install',
@@ -186,7 +186,7 @@ export function It2SetupPrompt({ onDone, tmuxAvailable }: Props): React.ReactNod
   }
 
   function renderInstallFailed(): React.ReactNode {
-    const options: OptionWithDescription<string>[] = [
+    const options: OptionWithDescription[] = [
       {
         label: 'Try again',
         value: 'retry',
@@ -279,7 +279,7 @@ export function It2SetupPrompt({ onDone, tmuxAvailable }: Props): React.ReactNod
   }
 
   function renderFailed(): React.ReactNode {
-    const options: OptionWithDescription<string>[] = [
+    const options: OptionWithDescription[] = [
       {
         label: 'Try again',
         value: 'retry',

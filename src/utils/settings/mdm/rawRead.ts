@@ -9,8 +9,8 @@
  * Raw stdout is consumed by mdmSettings.ts via consumeRawReadResult().
  */
 
-import { execFile } from 'child_process'
-import { existsSync } from 'fs'
+import { execFile } from 'node:child_process'
+import { existsSync } from 'node:fs'
 
 import {
   getMacOSPlistPaths,

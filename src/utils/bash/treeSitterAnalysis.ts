@@ -170,7 +170,7 @@ function removeSpans(command: string, spans: Array<[number, number]>): string {
 
   // Drop inner spans that are fully contained in an outer one, then sort by
   // start index descending so we can splice without offset shifts.
-  const sorted = dropContainedSpans(spans).sort((a, b) => b[0] - a[0])
+  const sorted = dropContainedSpans(spans).toSorted((a, b) => b[0] - a[0])
   let result = command
   for (const [start, end] of sorted) {
     result = result.slice(0, start) + result.slice(end)
@@ -184,7 +184,7 @@ function removeSpans(command: string, spans: Array<[number, number]>): string {
 function replaceSpansKeepQuotes(command: string, spans: Array<[number, number, string, string]>): string {
   if (spans.length === 0) return command
 
-  const sorted = dropContainedSpans(spans).sort((a, b) => b[0] - a[0])
+  const sorted = dropContainedSpans(spans).toSorted((a, b) => b[0] - a[0])
   let result = command
   for (const [start, end, open, close] of sorted) {
     // Replace content but keep the quote delimiters

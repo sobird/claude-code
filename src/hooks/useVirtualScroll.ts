@@ -290,12 +290,12 @@ export function useVirtualScroll(
     const arr = offsetsRef.current.arr.length >= n + 1 ? offsetsRef.current.arr : new Float64Array(n + 1)
     arr[0] = 0
     for (let i = 0; i < n; i++) {
-      arr[i + 1] = arr[i]! + (heightCache.current.get(itemKeys[i]!) ?? DEFAULT_ESTIMATE)
+      arr[i + 1] = arr[i] + (heightCache.current.get(itemKeys[i]) ?? DEFAULT_ESTIMATE)
     }
     offsetsRef.current = { arr, version: offsetVersionRef.current, n }
   }
   const offsets = offsetsRef.current.arr
-  const totalHeight = offsets[n]!
+  const totalHeight = offsets[n]
 
   let start: number
   let end: number
@@ -320,7 +320,7 @@ export function useVirtualScroll(
       // Walk back from the tail until we've covered viewport + overscan.
       const budget = viewportH + OVERSCAN_ROWS
       start = n
-      while (start > 0 && totalHeight - offsets[start - 1]! < budget) {
+      while (start > 0 && totalHeight - offsets[start - 1] < budget) {
         start--
       }
       end = n
@@ -390,7 +390,7 @@ export function useVirtualScroll(
         let r = n
         while (l < r) {
           const m = (l + r) >> 1
-          if (offsets[m + 1]! <= lo) l = m + 1
+          if (offsets[m + 1] <= lo) l = m + 1
           else r = m
         }
         start = l
@@ -404,7 +404,7 @@ export function useVirtualScroll(
         const p = prevRangeRef.current
         if (p && p[0] < start) {
           for (let i = p[0]; i < Math.min(start, p[1]); i++) {
-            const k = itemKeys[i]!
+            const k = itemKeys[i]
             if (itemRefs.current.has(k) && !heightCache.current.has(k)) {
               start = i
               break
@@ -417,8 +417,8 @@ export function useVirtualScroll(
       const maxEnd = Math.min(n, start + MAX_MOUNTED_ITEMS)
       let coverage = 0
       end = start
-      while (end < maxEnd && (coverage < needed || offsets[end]! < effHi + viewportH + OVERSCAN_ROWS)) {
-        coverage += heightCache.current.get(itemKeys[end]!) ?? PESSIMISTIC_HEIGHT
+      while (end < maxEnd && (coverage < needed || offsets[end] < effHi + viewportH + OVERSCAN_ROWS)) {
+        coverage += heightCache.current.get(itemKeys[end]) ?? PESSIMISTIC_HEIGHT
         end++
       }
     }
@@ -428,11 +428,11 @@ export function useVirtualScroll(
     const minStart = Math.max(0, end - MAX_MOUNTED_ITEMS)
     let coverage = 0
     for (let i = start; i < end; i++) {
-      coverage += heightCache.current.get(itemKeys[i]!) ?? PESSIMISTIC_HEIGHT
+      coverage += heightCache.current.get(itemKeys[i]) ?? PESSIMISTIC_HEIGHT
     }
     while (start > minStart && coverage < needed) {
       start--
-      coverage += heightCache.current.get(itemKeys[start]!) ?? PESSIMISTIC_HEIGHT
+      coverage += heightCache.current.get(itemKeys[start]) ?? PESSIMISTIC_HEIGHT
     }
     // Slide cap: limit how many NEW items mount this commit. Scrolling into
     // a fresh range would otherwise mount 194 items at PESSIMISTIC_HEIGHT=1
@@ -523,7 +523,7 @@ export function useVirtualScroll(
     // tail" to "trim head" mid-settle, bumping effStart → effTopSpacer →
     // clampMin → setClampBounds yanks scrollTop down → scrollback vanishes.
     // Position-based: keep whichever end the viewport is closer to.
-    const mid = (offsets[effStart]! + offsets[effEnd]!) / 2
+    const mid = (offsets[effStart] + offsets[effEnd]) / 2
     if (scrollTop - listOriginRef.current < mid) {
       effEnd = effStart + MAX_MOUNTED_ITEMS
     } else {
@@ -551,7 +551,7 @@ export function useVirtualScroll(
   // scrollTop, measurement fires, offsets rebuild with real heights, second
   // render's clamp differs → scrollTop clamp-adjusts → content shifts.
   const listOrigin = listOriginRef.current
-  const effTopSpacer = offsets[effStart]!
+  const effTopSpacer = offsets[effStart]
   // At effStart=0 there's no unmounted content above — the clamp must allow
   // scrolling past listOrigin to see pre-list content (logo, header) that
   // sits in the ScrollBox but outside VirtualMessageList. Only clamp when
@@ -564,7 +564,7 @@ export function useVirtualScroll(
   // scrollTop below the real max, pushing the streaming text off-viewport
   // (the "scrolled up, response disappeared" bug). Infinity = unbounded:
   // render-node-to-output's own Math.min(cur, maxScroll) governs instead.
-  const clampMax = effEnd === n ? Infinity : Math.max(effTopSpacer, offsets[effEnd]! - viewportH) + listOrigin
+  const clampMax = effEnd === n ? Infinity : Math.max(effTopSpacer, offsets[effEnd] - viewportH) + listOrigin
   useLayoutEffect(() => {
     if (isSticky) {
       scrollRef.current?.setClampBounds(undefined, undefined)
@@ -652,27 +652,27 @@ export function useVirtualScroll(
 
   const getItemTop = useCallback(
     (index: number) => {
-      const yoga = itemRefs.current.get(itemKeys[index]!)?.yogaNode
+      const yoga = itemRefs.current.get(itemKeys[index])?.yogaNode
       if (!yoga || yoga.getComputedWidth() === 0) return -1
       return yoga.getComputedTop()
     },
     [itemKeys],
   )
 
-  const getItemElement = useCallback((index: number) => itemRefs.current.get(itemKeys[index]!) ?? null, [itemKeys])
-  const getItemHeight = useCallback((index: number) => heightCache.current.get(itemKeys[index]!), [itemKeys])
+  const getItemElement = useCallback((index: number) => itemRefs.current.get(itemKeys[index]) ?? null, [itemKeys])
+  const getItemHeight = useCallback((index: number) => heightCache.current.get(itemKeys[index]), [itemKeys])
   const scrollToIndex = useCallback(
     (i: number) => {
       // offsetsRef.current holds latest cached offsets (event handlers run
       // between renders; a render-time closure would be stale).
       const o = offsetsRef.current
       if (i < 0 || i >= o.n) return
-      scrollRef.current?.scrollTo(o.arr[i]! + listOriginRef.current)
+      scrollRef.current?.scrollTo(o.arr[i] + listOriginRef.current)
     },
     [scrollRef],
   )
 
-  const effBottomSpacer = totalHeight - offsets[effEnd]!
+  const effBottomSpacer = totalHeight - offsets[effEnd]
 
   return {
     range: [effStart, effEnd],

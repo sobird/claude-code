@@ -1,11 +1,11 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
-import { randomUUID } from 'crypto'
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 /**
  * Hooks are user-defined shell commands that can be executed at various points
  * in Claude Code's lifecycle.
  */
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import type { ElicitResult } from '@modelcontextprotocol/sdk/types.js'
 import chalk from 'chalk'
@@ -894,7 +894,7 @@ async function execCommandHook(
       cwd: safeCwd,
       // Prevent visible console window on Windows (no-op on other platforms)
       windowsHide: true,
-    }) as ChildProcessWithoutNullStreams
+    })
   } else {
     // On Windows, use Git Bash explicitly (cmd.exe can't run bash syntax).
     // On other platforms, shell: true uses /bin/sh.
@@ -905,7 +905,7 @@ async function execCommandHook(
       shell,
       // Prevent visible console window on Windows (no-op on other platforms)
       windowsHide: true,
-    }) as ChildProcessWithoutNullStreams
+    })
   }
 
   // Hooks use pipe mode — stdout must be streamed into JS so we can parse
@@ -2766,7 +2766,7 @@ async function executeHooksOutsideREPL({
   hookInput,
   matchQuery,
   signal,
-  timeoutMs = TOOL_HOOK_EXECUTION_TIMEOUT_MS,
+  timeoutMs,
 }: {
   getAppState?: () => AppState
   hookInput: HookInput
@@ -3358,7 +3358,7 @@ export async function* executeStopHooks(
     ? extractTextContent(lastAssistantMessage.message.content, '\n').trim() || undefined
     : undefined
 
-  const hookInput: StopHookInput | SubagentStopHookInput = subagentId
+  const hookInput: StopHookInput = subagentId
     ? {
         ...createBaseHookInput(permissionMode),
         hook_event_name: 'SubagentStop',

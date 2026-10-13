@@ -69,7 +69,7 @@ export function ResumeTask({ onSelect, onCancel, isEmbedded = false }: Props): R
       }
 
       // Sort by updated_at (newest first)
-      const sortedSessions = [...filteredSessions].sort((a, b) => {
+      const sortedSessions = [...filteredSessions].toSorted((a, b) => {
         const dateA = new Date(a.updated_at)
         const dateB = new Date(b.updated_at)
         return dateB.getTime() - dateA.getTime()

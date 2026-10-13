@@ -19,9 +19,9 @@
  * Design doc: api-go/ccr/docs/plans/CCR_AUTH_DESIGN.md § "Week-1 pilot scope".
  */
 
-import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
-import { homedir } from 'os'
-import { join } from 'path'
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 import { registerCleanup } from '../utils/cleanupRegistry.js'
 import { logForDebugging } from '../utils/debug.js'

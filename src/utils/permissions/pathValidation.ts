@@ -1,5 +1,5 @@
-import { homedir } from 'os'
-import { dirname, isAbsolute, resolve } from 'path'
+import { homedir } from 'node:os'
+import { dirname, isAbsolute, resolve } from 'node:path'
 
 import memoize from 'lodash-es/memoize.js'
 

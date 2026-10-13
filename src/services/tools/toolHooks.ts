@@ -179,7 +179,7 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
 
 export async function* runPostToolUseFailureHooks<Input extends AnyObject>(
   toolUseContext: ToolUseContext,
-  tool: Tool<Input, unknown>,
+  tool: Tool<Input>,
   toolUseID: string,
   messageId: string,
   processedInput: z.infer<Input>,

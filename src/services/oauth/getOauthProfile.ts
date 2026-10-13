@@ -16,7 +16,7 @@ export async function getOauthProfileFromApiKey(): Promise<OAuthProfileResponse 
   }
   const endpoint = `${getOauthConfig().BASE_API_URL}/api/claude_cli_profile`
   try {
-    const response = await axios.get<OAuthProfileResponse>(endpoint, {
+    const response = await axios.get(endpoint, {
       headers: {
         'x-api-key': apiKey,
         'anthropic-beta': OAUTH_BETA_HEADER,
@@ -35,7 +35,7 @@ export async function getOauthProfileFromApiKey(): Promise<OAuthProfileResponse 
 export async function getOauthProfileFromOauthToken(accessToken: string): Promise<OAuthProfileResponse | undefined> {
   const endpoint = `${getOauthConfig().BASE_API_URL}/api/oauth/profile`
   try {
-    const response = await axios.get<OAuthProfileResponse>(endpoint, {
+    const response = await axios.get(endpoint, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import { mkdir } from 'fs/promises'
-import { join } from 'path'
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import chalk from 'chalk'
 import * as React from 'react'

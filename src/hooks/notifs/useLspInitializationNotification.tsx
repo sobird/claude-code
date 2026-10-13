@@ -29,7 +29,7 @@ export function useLspInitializationNotification(): void {
   // after #24498 swapped cheap !!process.env.X for isEnvTruthy().
   const [shouldPoll, setShouldPoll] = React.useState(() => isEnvTruthy('true'))
   // Track which errors we've already notified about to avoid duplicates
-  const notifiedErrorsRef = React.useRef<Set<string>>(new Set())
+  const notifiedErrorsRef = React.useRef(new Set())
 
   const addError = React.useCallback(
     (source: string, errorMessage: string) => {

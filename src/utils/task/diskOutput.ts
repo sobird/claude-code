@@ -1,6 +1,6 @@
-import { constants as fsConstants } from 'fs'
-import { type FileHandle, mkdir, open, stat, symlink, unlink } from 'fs/promises'
-import { join } from 'path'
+import { constants as fsConstants } from 'node:fs'
+import { type FileHandle, mkdir, open, stat, symlink, unlink } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { getSessionId } from '../../bootstrap/state.js'
 import { getErrnoCode } from '../errors.js'
@@ -236,7 +236,7 @@ export async function _clearOutputsForTest(): Promise<void> {
     output.cancel()
   }
   while (_pendingOps.size > 0) {
-    await Promise.allSettled([..._pendingOps])
+    await Promise.allSettled(_pendingOps)
   }
   outputs.clear()
 }

@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import { randomBytes } from 'crypto'
-import { basename, extname, isAbsolute, join } from 'path'
+import { randomBytes } from 'node:crypto'
+import { basename, extname, isAbsolute, join } from 'node:path'
 
 import { execa } from 'execa'
 

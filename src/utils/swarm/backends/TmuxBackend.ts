@@ -472,7 +472,7 @@ export class TmuxBackend implements PaneBackend {
       splitResult = await execFileNoThrow(TMUX_COMMAND, [
         'split-window',
         '-t',
-        targetPane!,
+        targetPane,
         splitVertically ? '-v' : '-h',
         '-P',
         '-F',
@@ -533,7 +533,7 @@ export class TmuxBackend implements PaneBackend {
       const splitResult = await runTmuxInSwarm([
         'split-window',
         '-t',
-        targetPane!,
+        targetPane,
         splitVertically ? '-v' : '-h',
         '-P',
         '-F',
@@ -572,7 +572,7 @@ export class TmuxBackend implements PaneBackend {
     await runTmuxInUserSession(['select-layout', '-t', windowTarget, 'main-vertical'])
 
     const leaderPane = panes[0]
-    await runTmuxInUserSession(['resize-pane', '-t', leaderPane!, '-x', '30%'])
+    await runTmuxInUserSession(['resize-pane', '-t', leaderPane, '-x', '30%'])
 
     logForDebugging(`[TmuxBackend] Rebalanced ${panes.length - 1} teammate panes with leader`)
   }

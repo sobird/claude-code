@@ -63,7 +63,7 @@ export function useMemorySurvey(
 } {
   // Track assistant message UUIDs that were already evaluated so we don't
   // re-roll probability on re-renders or re-scan messages for the same turn.
-  const seenAssistantUuids = useRef<Set<string>>(new Set())
+  const seenAssistantUuids = useRef(new Set())
   // Once a memory file read is observed it stays true for the session —
   // skip the O(n) scan on subsequent turns.
   const memoryReadSeen = useRef(false)

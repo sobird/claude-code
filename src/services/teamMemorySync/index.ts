@@ -24,9 +24,9 @@
  *   This avoids module-level mutable state and gives tests natural isolation.
  */
 
-import { createHash } from 'crypto'
-import { mkdir, readdir, readFile, stat, writeFile } from 'fs/promises'
-import { join, relative, sep } from 'path'
+import { createHash } from 'node:crypto'
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { join, relative, sep } from 'node:path'
 
 import axios from 'axios'
 
@@ -403,7 +403,7 @@ async function fetchTeamMemory(
  * is above our soft cap but below the gateway's observed real threshold).
  */
 export function batchDeltaByBytes(delta: Record<string, string>): Array<Record<string, string>> {
-  const keys = Object.keys(delta).sort()
+  const keys = Object.keys(delta).toSorted()
   if (keys.length === 0) return []
 
   // Fixed overhead for `{"entries":{}}` — each entry then adds its marginal
@@ -418,7 +418,7 @@ export function batchDeltaByBytes(delta: Record<string, string>): Array<Record<s
   let currentBytes = EMPTY_BODY_BYTES
 
   for (const key of keys) {
-    const added = entryBytes(key, delta[key]!)
+    const added = entryBytes(key, delta[key])
     if (currentBytes + added > MAX_PUT_BODY_BYTES && Object.keys(current).length > 0) {
       batches.push(current)
       current = {}
@@ -568,7 +568,7 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
                 // Report only the first match per file — one secret is
                 // enough to skip the file and we don't want to log more
                 // than necessary about credential locations.
-                const firstMatch = secretMatches[0]!
+                const firstMatch = secretMatches[0]
                 skippedSecrets.push({
                   path: relPath,
                   ruleId: firstMatch.ruleId,
@@ -617,7 +617,7 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
   // When disk has more files than the learned cap, alphabetically-last ones
   // consistently never sync.  When the merged (server + delta) count exceeds
   // the cap we still fail — recovering requires soft_delete_keys.
-  const keys = Object.keys(entries).sort()
+  const keys = Object.keys(entries).toSorted()
   if (maxEntries !== null && keys.length > maxEntries) {
     const dropped = keys.slice(maxEntries)
     logForDebugging(

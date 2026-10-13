@@ -136,7 +136,7 @@ function sanitizeCore(raw: readonly string[], applyCharFilter: boolean): string[
       seen.add(trimmed)
       return true
     })
-    .sort((a, b) => a.localeCompare(b))
+    .toSorted((a, b) => a.localeCompare(b))
 }
 
 function sanitizeAppNames(raw: readonly string[]): string[] {

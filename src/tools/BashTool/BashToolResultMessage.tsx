@@ -62,8 +62,8 @@ function extractCwdResetWarning(stderr: string): {
 
 export default function BashToolResultMessage({
   content: {
-    stdout = '',
-    stderr: stdErrWithViolations = '',
+    stdout,
+    stderr: stdErrWithViolations,
     isImage,
     returnCodeInterpretation,
     noOutputExpected,

@@ -117,7 +117,7 @@ export function PluginOptionsFlow({ plugin, pluginId, onDone }: Props): React.Re
     return null
   }
 
-  const current = steps[index]!
+  const current = steps[index]
 
   function handleSave(values: PluginOptionValues): void {
     try {

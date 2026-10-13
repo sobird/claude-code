@@ -65,7 +65,7 @@ function getMessagePreview(messages: InProcessTeammateTaskState['messages']): st
         }
         allLines.push(truncateToWidth(toolLine, maxLineLength))
       } else if ('type' in block && block.type === 'text' && 'text' in block) {
-        const textLines = (block.text as string).split('\n').filter((l) => l.trim())
+        const textLines = block.text.split('\n').filter((l) => l.trim())
         // Take from end of text (most recent lines)
         for (let j = textLines.length - 1; j >= 0 && allLines.length < 3; j--) {
           const line = textLines[j]
@@ -77,7 +77,7 @@ function getMessagePreview(messages: InProcessTeammateTaskState['messages']): st
   }
 
   // Reverse so oldest of the 3 is first (reading order)
-  return allLines.reverse()
+  return allLines.toReversed()
 }
 
 export function TeammateSpinnerLine({

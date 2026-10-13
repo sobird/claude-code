@@ -155,7 +155,7 @@ export function registerElicitationHandler(
         if (idx === -1) return prev
         found = true
         const queue = [...prev.elicitation.queue]
-        queue[idx] = { ...queue[idx]!, completed: true }
+        queue[idx] = { ...queue[idx], completed: true }
         return { ...prev, elicitation: { queue } }
       })
       if (!found) {
@@ -175,7 +175,7 @@ export async function runElicitationHooks(
 ): Promise<ElicitResult | undefined> {
   try {
     const mode = params.mode === 'url' ? 'url' : 'form'
-    const url = 'url' in params ? (params.url as string) : undefined
+    const url = 'url' in params ? params.url : undefined
     const elicitationId = 'elicitationId' in params ? (params.elicitationId as string | undefined) : undefined
 
     const { elicitationResponse, blockingError } = await executeElicitationHooks({

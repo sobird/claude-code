@@ -39,7 +39,7 @@ export async function parseAndValidateManifestFromText(manifestText: string): Pr
   try {
     manifestJson = jsonParse(manifestText)
   } catch (error) {
-    throw new Error(`Invalid JSON in manifest.json: ${errorMessage(error)}`)
+    throw new Error(`Invalid JSON in manifest.json: ${errorMessage(error)}`, { cause: error })
   }
 
   return validateManifest(manifestJson)

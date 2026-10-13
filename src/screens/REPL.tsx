@@ -1,9 +1,9 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle'
-import { spawnSync } from 'child_process'
-import { writeFile } from 'fs/promises'
-import { tmpdir } from 'os'
-import { dirname, join } from 'path'
+import { spawnSync } from 'node:child_process'
+import { writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 
 import figures from 'figures'
 import * as React from 'react'
@@ -197,7 +197,7 @@ const getCoordinatorUserContext: (
 ) => { [k: string]: string } = feature('COORDINATOR_MODE')
   ? require('../coordinator/coordinatorMode.js').getCoordinatorUserContext
   : () => ({})
-import { randomUUID, type UUID } from 'crypto'
+import { randomUUID, type UUID } from 'node:crypto'
 
 import type { ContentBlockParam, ImageBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
@@ -489,9 +489,9 @@ const RECENT_SCROLL_REPIN_WINDOW_MS = 3000
 // memory issues when working across many files in large projects
 
 function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b)
+  const sorted = [...values].toSorted((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1]! + sorted[mid]!) / 2) : sorted[mid]!
+  return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid]
 }
 
 /**
@@ -919,9 +919,7 @@ export function REPL({
   useKickOffCheckAndDisableBypassPermissionsIfNeeded()
   useKickOffCheckAndDisableAutoModeIfNeeded()
 
-  const [dynamicMcpConfig, setDynamicMcpConfig] = useState<Record<string, ScopedMcpServerConfig> | undefined>(
-    initialDynamicMcpConfig,
-  )
+  const [dynamicMcpConfig, setDynamicMcpConfig] = useState(initialDynamicMcpConfig)
 
   const onChangeDynamicMcpConfig = useCallback(
     (config: Record<string, ScopedMcpServerConfig>) => {
@@ -1042,8 +1040,8 @@ export function REPL({
   }, [mainThreadAgentDefinition, mergedTools])
 
   // Merge commands from local state, plugins, and MCP
-  const commandsWithPlugins = useMergedCommands(localCommands, plugins.commands as Command[])
-  const mergedCommands = useMergedCommands(commandsWithPlugins, mcp.commands as Command[])
+  const commandsWithPlugins = useMergedCommands(localCommands, plugins.commands)
+  const mergedCommands = useMergedCommands(commandsWithPlugins, mcp.commands)
   // Filter out all commands if disableSlashCommands is true
   const commands = useMemo(() => (disableSlashCommands ? [] : mergedCommands), [disableSlashCommands, mergedCommands])
 
@@ -1145,7 +1143,7 @@ export function REPL({
   const userMessagePendingRef = React.useRef(false)
 
   // Wall-clock time tracking refs for accurate elapsed time calculation
-  const loadingStartTimeRef = React.useRef<number>(0)
+  const loadingStartTimeRef = React.useRef(0)
   const totalPausedMsRef = React.useRef(0)
   const pauseStartTimeRef = React.useRef<number | null>(null)
   const resetTimingRefs = React.useCallback(() => {
@@ -1336,7 +1334,7 @@ export function REPL({
   // Track bridge cleanup functions for sandbox permission requests so the
   // local dialog handler can cancel the remote prompt when the local user
   // responds first. Keyed by host to support concurrent same-host requests.
-  const sandboxBridgeCleanupRef = useRef<Map<string, Array<() => void>>>(new Map())
+  const sandboxBridgeCleanupRef = useRef(new Map())
 
   // -- Terminal title management
   // Session title (set via /rename or restored on resume) wins over
@@ -1379,7 +1377,7 @@ export function REPL({
     sessionStatus !== 'waiting'
       ? undefined
       : toolUseConfirmQueue.length > 0
-        ? `approve ${toolUseConfirmQueue[0]!.tool.name}`
+        ? `approve ${toolUseConfirmQueue[0].tool.name}`
         : pendingWorkerRequest
           ? 'worker request'
           : pendingSandboxRequest
@@ -1410,7 +1408,7 @@ export function REPL({
     return () => unregisterLeaderToolUseConfirmQueue()
   }, [setToolUseConfirmQueue])
 
-  const [messages, rawSetMessages] = useState<MessageType[]>(initialMessages ?? [])
+  const [messages, rawSetMessages] = useState(initialMessages ?? [])
   const messagesRef = useRef(messages)
   // Stores the willowMode variant that was shown (or false if no hint shown).
   // Captured at hint_shown time so hint_converted telemetry reports the same
@@ -1628,7 +1626,7 @@ export function REPL({
     [setLocalCommands],
   )
 
-  const [inProgressToolUseIDs, setInProgressToolUseIDs] = useState<Set<string>>(new Set())
+  const [inProgressToolUseIDs, setInProgressToolUseIDs] = useState(new Set())
   const hasInterruptibleToolInProgressRef = useRef(false)
 
   // Remote session hook - manages WebSocket connection and message handling for --remote mode
@@ -3133,7 +3131,7 @@ export function REPL({
       }
 
       // Mark onboarding as complete when any user message is sent to Claude
-      void maybeMarkProjectOnboardingComplete()
+      maybeMarkProjectOnboardingComplete()
 
       // Extract a session title from the first real user message. One-shot
       // via ref (was tengu_birch_mist experiment: first-message-only to save
@@ -3299,7 +3297,7 @@ export function REPL({
       }
 
       if (feature('BUDDY')) {
-        void fireCompanionObserver(messagesRef.current, (reaction) =>
+        fireCompanionObserver(messagesRef.current, (reaction) =>
           setAppState((prev) =>
             prev.companionReaction === reaction ? prev : { ...prev, companionReaction: reaction },
           ),
@@ -3334,8 +3332,8 @@ export function REPL({
         setMessages((prev) => [
           ...prev,
           createApiMetricsMessage({
-            ttftMs: isMultiRequest ? median(ttfts) : ttfts[0]!,
-            otps: isMultiRequest ? median(otpsValues) : otpsValues[0]!,
+            ttftMs: isMultiRequest ? median(ttfts) : ttfts[0],
+            otps: isMultiRequest ? median(otpsValues) : otpsValues[0],
             isP50: isMultiRequest,
             hookDurationMs: hookMs > 0 ? hookMs : undefined,
             hookCount: hookCount > 0 ? hookCount : undefined,
@@ -4024,7 +4022,7 @@ export function REPL({
           isSlashCommand &&
           commands.find((c) => {
             const name = input.trim().slice(1).split(/\s/)[0]
-            return isCommandEnabled(c) && (c.name === name || c.aliases?.includes(name!) || getCommandName(c) === name)
+            return isCommandEnabled(c) && (c.name === name || c.aliases?.includes(name) || getCommandName(c) === name)
           })?.type === 'local-jsx'
         )
       ) {
@@ -5326,7 +5324,7 @@ export function REPL({
         key={toolUseConfirmQueue[0]?.toolUseID}
         onDone={() => setToolUseConfirmQueue(([_, ...tail]) => tail)}
         onReject={handleQueuedCommandOnCancel}
-        toolUseConfirm={toolUseConfirmQueue[0]!}
+        toolUseConfirm={toolUseConfirmQueue[0]}
         toolUseContext={getToolUseContext(
           messages,
           messages,
@@ -5359,7 +5357,7 @@ export function REPL({
   // (immediate: /model, /mcp, /btw, ...) and scrollable (non-immediate:
   // /config, /theme, /diff, ...) both go here now.
   const toolJsxCentered = isFullscreenEnvEnabled() && toolJSX?.isLocalJSXCommand === true
-  const centeredModal: React.ReactNode = toolJsxCentered ? toolJSX!.jsx : null
+  const centeredModal: React.ReactNode = toolJsxCentered ? toolJSX.jsx : null
 
   // <AlternateScreen> at the root: everything below is inside its
   // <Box height={rows}>. Handlers/contexts are zero-height so ScrollBox's
@@ -5527,8 +5525,8 @@ export function REPL({
                 )}
                 {focusedInputDialog === 'sandbox-permission' && (
                   <SandboxPermissionRequest
-                    key={sandboxPermissionRequestQueue[0]!.hostPattern.host}
-                    hostPattern={sandboxPermissionRequestQueue[0]!.hostPattern}
+                    key={sandboxPermissionRequestQueue[0].hostPattern.host}
+                    hostPattern={sandboxPermissionRequestQueue[0].hostPattern}
                     onUserResponse={(response: { allow: boolean; persistToSettings: boolean }) => {
                       const { allow, persistToSettings } = response
                       const currentRequest = sandboxPermissionRequestQueue[0]
@@ -5545,7 +5543,7 @@ export function REPL({
                               ruleContent: `domain:${approvedHost}`,
                             },
                           ],
-                          behavior: (allow ? 'allow' : 'deny') as 'allow' | 'deny',
+                          behavior: allow ? 'allow' : 'deny',
                           destination: 'localSettings' as const,
                         }
 
@@ -5584,10 +5582,10 @@ export function REPL({
                 )}
                 {focusedInputDialog === 'prompt' && (
                   <PromptDialog
-                    key={promptQueue[0]!.request.prompt}
-                    title={promptQueue[0]!.title}
-                    toolInputSummary={promptQueue[0]!.toolInputSummary}
-                    request={promptQueue[0]!.request}
+                    key={promptQueue[0].request.prompt}
+                    title={promptQueue[0].title}
+                    toolInputSummary={promptQueue[0].toolInputSummary}
+                    request={promptQueue[0].request}
                     onRespond={(selectedKey) => {
                       const item = promptQueue[0]
                       if (!item) return
@@ -5622,10 +5620,10 @@ export function REPL({
                 {/* Worker sandbox permission requests from swarm workers */}
                 {focusedInputDialog === 'worker-sandbox-permission' && (
                   <SandboxPermissionRequest
-                    key={workerSandboxPermissions.queue[0]!.requestId}
+                    key={workerSandboxPermissions.queue[0].requestId}
                     hostPattern={
                       {
-                        host: workerSandboxPermissions.queue[0]!.host,
+                        host: workerSandboxPermissions.queue[0].host,
                         port: undefined,
                       } as NetworkHostPattern
                     }
@@ -5680,8 +5678,8 @@ export function REPL({
                 )}
                 {focusedInputDialog === 'elicitation' && (
                   <ElicitationDialog
-                    key={elicitation.queue[0]!.serverName + ':' + String(elicitation.queue[0]!.requestId)}
-                    event={elicitation.queue[0]!}
+                    key={elicitation.queue[0].serverName + ':' + String(elicitation.queue[0].requestId)}
+                    event={elicitation.queue[0]}
                     onResponse={(action, content) => {
                       const currentRequest = elicitation.queue[0]
                       if (!currentRequest) return

@@ -17,7 +17,7 @@ const ENCODED_LENGTH = 22
  */
 function base58Encode(n: bigint): string {
   const base = BigInt(BASE_58_CHARS.length)
-  const result = new Array<string>(ENCODED_LENGTH).fill(BASE_58_CHARS[0]!)
+  const result = new Array<string>(ENCODED_LENGTH).fill(BASE_58_CHARS[0])
   let i = ENCODED_LENGTH - 1
   let value = n
   while (value > 0n) {

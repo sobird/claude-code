@@ -39,7 +39,7 @@ export function isBackgroundTask(task: TaskState): task is BackgroundTaskState {
     return false
   }
   // Foreground tasks (isBackgrounded === false) are not yet "background tasks"
-  if ('isBackgrounded' in task && task.isBackgrounded === false) {
+  if ('isBackgrounded' in task && !task.isBackgrounded) {
     return false
   }
   return true

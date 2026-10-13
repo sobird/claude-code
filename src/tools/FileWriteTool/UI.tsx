@@ -1,4 +1,4 @@
-import { isAbsolute, relative, resolve } from 'path'
+import { isAbsolute, relative, resolve } from 'node:path'
 
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { StructuredPatchHunk } from 'diff'
@@ -255,7 +255,7 @@ export function renderToolUseErrorMessage(
 
 export function renderToolResultMessage(
   { filePath, content, structuredPatch, type, originalFile }: Output,
-  _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
+  _progressMessagesForMessage: ProgressMessage[],
   { style, verbose }: { style?: 'condensed'; verbose: boolean },
 ): React.ReactNode {
   switch (type) {

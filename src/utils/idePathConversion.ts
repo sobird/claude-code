@@ -3,7 +3,7 @@
  * Handles conversions between Claude's environment and the IDE's environment
  */
 
-import { execFileSync } from 'child_process'
+import { execFileSync } from 'node:child_process'
 
 export interface IDEPathConverter {
   /**

@@ -9,7 +9,7 @@
  * Uses Node.js built-in performance hooks API for standard timing measurement.
  */
 
-import { dirname, join } from 'path'
+import { dirname, join } from 'node:path'
 
 import { getSessionId } from 'src/bootstrap/state.js'
 

@@ -201,6 +201,6 @@ export function useTurnDiffs(messages: Message[]): TurnDiff[] {
     }
 
     // Return in reverse order (most recent first)
-    return result.reverse()
+    return result.toReversed()
   }, [messages])
 }

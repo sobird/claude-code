@@ -1,4 +1,4 @@
-import { realpath, stat } from 'fs/promises'
+import { realpath, stat } from 'node:fs/promises'
 
 import { getPlatform } from '../platform.js'
 import { which } from '../which.js'

@@ -23,7 +23,7 @@
  * user's TMUX in all child processes spawned by Shell.ts.
  */
 
-import { posix } from 'path'
+import { posix } from 'node:path'
 
 import { registerCleanup } from './cleanupRegistry.js'
 import { logForDebugging } from './debug.js'

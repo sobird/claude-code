@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import * as path from 'path'
+import * as path from 'node:path'
 
 import chalk from 'chalk'
 import * as React from 'react'
@@ -284,7 +284,7 @@ function PromptInput({
     show: boolean
     key?: string
   }>({ show: false })
-  const [cursorOffset, setCursorOffset] = useState<number>(input.length)
+  const [cursorOffset, setCursorOffset] = useState(input.length)
   // Track the last input value set via internal handlers so we can detect
   // external input changes (e.g. speech-to-text injection) and move cursor to end.
   const lastInternalInputRef = React.useRef(input)
@@ -1094,7 +1094,7 @@ function PromptInput({
 
     // At bottom of history → enter footer at first visible pill
     if (onHistoryDown() && footerItems.length > 0) {
-      const first = footerItems[0]!
+      const first = footerItems[0]
       selectFooterItem(first)
       if (first === 'tasks' && !getGlobalConfig().hasSeenTasksHint) {
         saveGlobalConfig((c) => (c.hasSeenTasksHint ? c : { ...c, hasSeenTasksHint: true }))

@@ -65,7 +65,7 @@ export type { TaskOutputProgress as Progress } from '../../types/tools.js'
 async function getTaskOutputData(task: TaskState): Promise<TaskOutput> {
   let output: string
   if (task.type === 'local_bash') {
-    const bashTask = task as LocalShellTaskState
+    const bashTask = task
     const taskOutputObj = bashTask.shellCommand?.taskOutput
     if (taskOutputObj) {
       const stdout = await taskOutputObj.getStdout()
@@ -88,7 +88,7 @@ async function getTaskOutputData(task: TaskState): Promise<TaskOutput> {
 
   // Add type-specific fields
   if (task.type === 'local_bash') {
-    const bashTask = task as LocalShellTaskState
+    const bashTask = task
     return {
       ...baseOutput,
       exitCode: bashTask.result?.code ?? null,
@@ -96,7 +96,7 @@ async function getTaskOutputData(task: TaskState): Promise<TaskOutput> {
   }
 
   if (task.type === 'local_agent') {
-    const agentTask = task as LocalAgentTaskState
+    const agentTask = task
     // Prefer the clean final answer from the in-memory result over the raw
     // JSONL transcript on disk. The disk output is a symlink to the full
     // session transcript (every message, tool use, etc.), not just the
@@ -113,7 +113,7 @@ async function getTaskOutputData(task: TaskState): Promise<TaskOutput> {
   }
 
   if (task.type === 'remote_agent') {
-    const remoteTask = task as RemoteAgentTaskState
+    const remoteTask = task
     return {
       ...baseOutput,
       prompt: remoteTask.command,
@@ -139,7 +139,7 @@ async function waitForTaskCompletion(
     }
 
     const state = getAppState()
-    const task = state.tasks?.[taskId] as TaskState | undefined
+    const task = state.tasks?.[taskId]
 
     if (!task) {
       return null

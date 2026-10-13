@@ -8,8 +8,8 @@
 // Pattern mirrors computerUseLock.ts: O_EXCL atomic create, PID liveness
 // probe, stale-lock recovery, cleanup-on-exit.
 
-import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import { z } from 'zod/v4'
 

@@ -1,4 +1,4 @@
-import type { UUID } from 'crypto'
+import type { UUID } from 'node:crypto'
 
 import type { Base64ImageSource, ContentBlockParam, ImageBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 

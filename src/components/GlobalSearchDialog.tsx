@@ -1,4 +1,4 @@
-import { resolve as resolvePath } from 'path'
+import { resolve as resolvePath } from 'node:path'
 
 import * as React from 'react'
 import { useEffect, useRef, useState } from 'react'

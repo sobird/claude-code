@@ -25,7 +25,7 @@ export function assignTeammateColor(teammateId: string): AgentColorName {
     return existing
   }
 
-  const color = AGENT_COLORS[colorIndex % AGENT_COLORS.length]!
+  const color = AGENT_COLORS[colorIndex % AGENT_COLORS.length]
   teammateColorAssignments.set(teammateId, color)
   colorIndex++
 

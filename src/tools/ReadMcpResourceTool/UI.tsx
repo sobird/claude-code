@@ -22,7 +22,7 @@ export function userFacingName(): string {
 
 export function renderToolResultMessage(
   output: Output,
-  _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
+  _progressMessagesForMessage: ProgressMessage[],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
   if (!output || !output.contents || output.contents.length === 0) {

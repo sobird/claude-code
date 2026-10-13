@@ -59,11 +59,11 @@ export function SelectEventMode({
         <Box flexDirection="column">
           <Select
             onChange={(value) => {
-              onSelectEvent(value as HookEvent)
+              onSelectEvent(value)
             }}
             onCancel={onCancel}
             options={Object.entries(hookEventMetadata).map(([name, metadata]) => {
-              const count = hooksByEvent[name as HookEvent] || 0
+              const count = hooksByEvent[name] || 0
               return {
                 label:
                   count > 0 ? (

@@ -1305,7 +1305,7 @@ export function isAllowlistedCommand(cmd: ParsedCommandElement, originalCommand:
   // CommandParameterAst → 'Parameter' regardless of dash char.
   // elementTypes[0] is the name element; args start at elementTypes[1].
   for (let i = 0; i < cmd.args.length; i++) {
-    const arg = cmd.args[i]!
+    const arg = cmd.args[i]
     // For cmdlets: trust elementTypes (AST ground truth, catches Unicode dashes).
     // For native exes on Windows: also check `/` prefix (argv convention, not
     // tokenizer — the parser sees `/S` as a positional, not CommandParameterAst).

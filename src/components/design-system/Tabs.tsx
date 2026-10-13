@@ -184,7 +184,7 @@ export function Tabs({
   return (
     <TabsContext.Provider
       value={{
-        selectedTab: tabs[selectedTabIndex]![0],
+        selectedTab: tabs[selectedTabIndex][0],
         width: contentWidth,
         headerFocused,
         focusHeader,

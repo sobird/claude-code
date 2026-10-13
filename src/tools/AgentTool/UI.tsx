@@ -780,9 +780,7 @@ export function renderGroupedAgentToolUse(
       description = isCustomSubagentType(subagentType) ? subagentType : undefined
       taskDescription = parsedInput.data.description
       // Use the custom agent definition's color on the type, not the name
-      descriptionColor = isCustomSubagentType(subagentType)
-        ? (getAgentColor(subagentType) as keyof Theme | undefined)
-        : undefined
+      descriptionColor = isCustomSubagentType(subagentType) ? getAgentColor(subagentType) : undefined
     } else {
       agentType = parsedInput.success ? userFacingName(parsedInput.data) : 'Agent'
       description = parsedInput.success ? parsedInput.data.description : undefined
@@ -906,7 +904,7 @@ export function userFacingNameBackgroundColor(
   }
 
   // Get the color for this agent
-  return getAgentColor(input.subagent_type) as keyof Theme | undefined
+  return getAgentColor(input.subagent_type)
 }
 
 export function extractLastToolInfo(progressMessages: ProgressMessage<Progress>[], tools: Tools): string | null {
@@ -929,7 +927,7 @@ export function extractLastToolInfo(progressMessages: ProgressMessage<Progress>[
   let searchCount = 0
   let readCount = 0
   for (let i = progressMessages.length - 1; i >= 0; i--) {
-    const msg = progressMessages[i]!
+    const msg = progressMessages[i]
     if (!hasProgressMessage(msg.data)) {
       continue
     }

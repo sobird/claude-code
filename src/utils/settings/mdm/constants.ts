@@ -5,8 +5,8 @@
  * Both mdmRawRead.ts and mdmSettings.ts import from here to avoid duplication.
  */
 
-import { homedir, userInfo } from 'os'
-import { join } from 'path'
+import { homedir, userInfo } from 'node:os'
+import { join } from 'node:path'
 
 /** macOS preference domain for Claude Code MDM profiles. */
 export const MACOS_PREFERENCE_DOMAIN = 'com.anthropic.claudecode'

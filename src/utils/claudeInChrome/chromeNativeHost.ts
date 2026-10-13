@@ -6,10 +6,10 @@
  * previously implemented as a Rust NAPI binding but now in pure TypeScript.
  */
 
-import { appendFile, chmod, mkdir, readdir, rmdir, stat, unlink } from 'fs/promises'
-import { createServer, type Server, type Socket } from 'net'
-import { homedir, platform } from 'os'
-import { join } from 'path'
+import { appendFile, chmod, mkdir, readdir, rmdir, stat, unlink } from 'node:fs/promises'
+import { createServer, type Server, type Socket } from 'node:net'
+import { homedir, platform } from 'node:os'
+import { join } from 'node:path'
 
 import { z } from 'zod'
 
@@ -174,7 +174,7 @@ class ChromeNativeHost {
     // Set permissions on Unix (after listen resolves so socket file exists)
     if (platform() !== 'win32') {
       try {
-        await chmod(this.socketPath!, 0o600)
+        await chmod(this.socketPath, 0o600)
         log('Socket permissions set to 0600')
       } catch (e) {
         log('Failed to set socket permissions:', e)

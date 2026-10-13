@@ -1,7 +1,7 @@
 import { feature } from 'bun:bundle'
-import { spawnSync } from 'child_process'
-import { copyFile, mkdir, readdir, readFile, stat, symlink, utimes } from 'fs/promises'
-import { basename, dirname, join } from 'path'
+import { spawnSync } from 'node:child_process'
+import { copyFile, mkdir, readdir, readFile, stat, symlink, utimes } from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
 
 import chalk from 'chalk'
 import ignore from 'ignore'

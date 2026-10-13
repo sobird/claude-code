@@ -120,7 +120,7 @@ async function updateMagicDoc(docInfo: MagicDocInfo, context: REPLHookContext): 
   let currentDoc = ''
   try {
     const result = await FileReadTool.call({ file_path: docInfo.path }, clonedToolUseContext)
-    const output = result.data as FileReadToolOutput
+    const output = result.data
     if (output.type === 'text') {
       currentDoc = output.file.content
     }

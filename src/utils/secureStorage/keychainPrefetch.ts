@@ -21,7 +21,7 @@
  * startupProfiler.ts at main.tsx:5, so no new module-init cost lands here.
  */
 
-import { execFile } from 'child_process'
+import { execFile } from 'node:child_process'
 
 import { isBareMode } from '../envUtils.js'
 import {

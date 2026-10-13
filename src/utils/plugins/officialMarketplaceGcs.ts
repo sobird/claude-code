@@ -8,8 +8,8 @@
  * when there's a new SHA. Callers decide fallback behavior on failure.
  */
 
-import { chmod, mkdir, readFile, rename, rm, writeFile } from 'fs/promises'
-import { dirname, join, resolve, sep } from 'path'
+import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { dirname, join, resolve, sep } from 'node:path'
 
 import axios from 'axios'
 

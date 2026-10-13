@@ -1,5 +1,5 @@
-import { readdir, readFile } from 'fs/promises'
-import { release as osRelease } from 'os'
+import { readdir, readFile } from 'node:fs/promises'
+import { release as osRelease } from 'node:os'
 
 import memoize from 'lodash-es/memoize.js'
 

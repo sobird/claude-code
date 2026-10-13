@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { ContentBlockParam, TextBlockParam } from '@anthropic-ai/sdk/resources'
 import { setPromptId } from 'src/bootstrap/state.js'
@@ -530,9 +530,9 @@ export async function processSlashCommand(
   // For invalid commands, preserve both the user message and error
   if (
     newMessages.length === 2 &&
-    newMessages[1]!.type === 'user' &&
-    typeof newMessages[1]!.message.content === 'string' &&
-    newMessages[1]!.message.content.startsWith('Unknown command:')
+    newMessages[1].type === 'user' &&
+    typeof newMessages[1].message.content === 'string' &&
+    newMessages[1].message.content.startsWith('Unknown command:')
   ) {
     // Don't log as invalid if it looks like a common file path
     const looksLikeFilePath =
@@ -670,7 +670,7 @@ async function getMessagesForSlashCommand(
             doneWasCalled = true
             // If display is 'skip', don't add any messages to the conversation
             if (options?.display === 'skip') {
-              void resolve({
+              resolve({
                 messages: [],
                 shouldQuery: false,
                 command,
@@ -698,7 +698,7 @@ async function getMessagesForSlashCommand(
             const skipTranscript =
               isFullscreenEnvEnabled() && typeof result === 'string' && result.endsWith(' dismissed')
 
-            void resolve({
+            resolve({
               messages:
                 options?.display === 'system'
                   ? skipTranscript
@@ -737,7 +737,7 @@ async function getMessagesForSlashCommand(
             .then((jsx) => {
               if (jsx == null) return
               if (context.options.isNonInteractiveSession) {
-                void resolve({
+                resolve({
                   messages: [],
                   shouldQuery: false,
                   command,
@@ -772,7 +772,7 @@ async function getMessagesForSlashCommand(
                 shouldHidePromptInput: false,
                 clearLocalJSX: true,
               })
-              void resolve({ messages: [], shouldQuery: false, command })
+              resolve({ messages: [], shouldQuery: false, command })
             })
         })
       }

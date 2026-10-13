@@ -127,7 +127,7 @@ export function TagTabs({ tabs, selectedIndex, availableWidth, showAllProjects =
         </Text>
       )}
       {visibleTabs.map((tab, i) => {
-        const actualIndex = visibleIndices[i]!
+        const actualIndex = visibleIndices[i]
         const isSelected = actualIndex === safeSelectedIndex
         const displayText = tab === ALL_TAB_LABEL ? tab : `#${truncateTag(tab, maxSingleTabWidth - TAB_PADDING)}`
         return (

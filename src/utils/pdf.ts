@@ -1,6 +1,6 @@
-import { randomUUID } from 'crypto'
-import { mkdir, readdir, readFile } from 'fs/promises'
-import { join } from 'path'
+import { randomUUID } from 'node:crypto'
+import { mkdir, readdir, readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { PDF_MAX_EXTRACT_SIZE, PDF_TARGET_RAW_SIZE } from '../constants/apiLimits.js'
 import { errorMessage } from './errors.js'
@@ -118,7 +118,7 @@ export async function getPDFPageCount(filePath: string): Promise<number | null> 
   if (!match) {
     return null
   }
-  const count = parseInt(match[1]!, 10)
+  const count = parseInt(match[1], 10)
   return isNaN(count) ? null : count
 }
 
@@ -248,7 +248,7 @@ export async function extractPDFPages(
 
     // Read generated image files and sort naturally
     const entries = await readdir(outputDir)
-    const imageFiles = entries.filter((f) => f.endsWith('.jpg')).sort()
+    const imageFiles = entries.filter((f) => f.endsWith('.jpg')).toSorted()
     const pageCount = imageFiles.length
 
     if (pageCount === 0) {

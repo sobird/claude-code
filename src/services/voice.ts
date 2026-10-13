@@ -4,8 +4,8 @@
 // for in-process mic access. Falls back to SoX `rec` or arecord (ALSA)
 // on Linux if the native module is unavailable.
 
-import { type ChildProcess, spawn, spawnSync } from 'child_process'
-import { readFile } from 'fs/promises'
+import { type ChildProcess, spawn, spawnSync } from 'node:child_process'
+import { readFile } from 'node:fs/promises'
 
 import { logForDebugging } from '../utils/debug.js'
 import { isEnvTruthy, isRunningOnHomespace } from '../utils/envUtils.js'
@@ -98,11 +98,11 @@ function probeArecord(): Promise<ArecordProbeResult> {
       // SIGTERM close (code=null) after timer fired is already resolved.
       // Early close with code=0 is unusual (arecord shouldn't exit on its
       // own) but treat as ok.
-      void resolve({ ok: code === 0, stderr: stderr.trim() })
+      resolve({ ok: code === 0, stderr: stderr.trim() })
     })
     child.once('error', () => {
       clearTimeout(timer)
-      void resolve({ ok: false, stderr: 'arecord: command not found' })
+      resolve({ ok: false, stderr: 'arecord: command not found' })
     })
   })
   return arecordProbe

@@ -112,6 +112,6 @@ export function getMcpInstructionsDelta(
   return {
     addedNames: added.map((a) => a.name),
     addedBlocks: added.map((a) => a.block),
-    removedNames: removed.sort(),
+    removedNames: removed.toSorted(),
   }
 }

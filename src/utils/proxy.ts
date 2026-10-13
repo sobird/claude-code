@@ -1,5 +1,5 @@
-import type { LookupOptions } from 'dns'
-import type { Agent } from 'http'
+import type { LookupOptions } from 'node:dns'
+import type { Agent } from 'node:http'
 
 // @aws-sdk/credential-provider-node and @smithy/node-http-handler are imported
 // dynamically in getAWSClientProxyConfig() to defer ~929KB of AWS SDK.

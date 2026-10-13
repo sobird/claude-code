@@ -101,7 +101,7 @@ async function extractPrefixFromElement(cmd: ParsedCommandElement): Promise<stri
   for (const word of prefix.split(' ').slice(1)) {
     if (word.includes('\\')) return null
     while (argIdx < cmd.args.length) {
-      const a = cmd.args[argIdx]!
+      const a = cmd.args[argIdx]
       if (a === word) break
       if (a.startsWith('-')) {
         argIdx++
@@ -112,7 +112,7 @@ async function extractPrefixFromElement(cmd: ParsedCommandElement): Promise<stri
           spec?.options &&
           argIdx < cmd.args.length &&
           cmd.args[argIdx] !== word &&
-          !cmd.args[argIdx]!.startsWith('-')
+          !cmd.args[argIdx].startsWith('-')
         ) {
           const flagLower = a.toLowerCase()
           const opt = spec.options.find((o) =>
@@ -235,7 +235,7 @@ export async function getCompoundCommandPrefixesStatic(
   // is lowercased; the emitted prefix keeps the first-seen casing.
   const groups = new Map<string, string[]>()
   for (const prefix of prefixes) {
-    const root = prefix.split(' ')[0]!
+    const root = prefix.split(' ')[0]
     const key = root.toLowerCase()
     const group = groups.get(key)
     if (group) {
@@ -274,18 +274,18 @@ export async function getCompoundCommandPrefixesStatic(
  */
 function wordAlignedLCP(strings: string[]): string {
   if (strings.length === 0) return ''
-  if (strings.length === 1) return strings[0]!
+  if (strings.length === 1) return strings[0]
 
-  const firstWords = strings[0]!.split(' ')
+  const firstWords = strings[0].split(' ')
   let commonWordCount = firstWords.length
 
   for (let i = 1; i < strings.length; i++) {
-    const words = strings[i]!.split(' ')
+    const words = strings[i].split(' ')
     let matchCount = 0
     while (
       matchCount < commonWordCount &&
       matchCount < words.length &&
-      words[matchCount]!.toLowerCase() === firstWords[matchCount]!.toLowerCase()
+      words[matchCount].toLowerCase() === firstWords[matchCount].toLowerCase()
     ) {
       matchCount++
     }

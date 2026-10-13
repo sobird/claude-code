@@ -105,7 +105,7 @@ export function registerTask(task: TaskState, setAppState: SetAppState): void {
     description: task.description,
     task_type: task.type,
     workflow_name: 'workflowName' in task ? (task.workflowName as string | undefined) : undefined,
-    prompt: 'prompt' in task ? (task.prompt as string) : undefined,
+    prompt: 'prompt' in task ? task.prompt : undefined,
   })
 }
 
@@ -214,7 +214,7 @@ export function applyTaskOffsetsAndEvictions(
       // Re-check status on fresh state — task may have completed during the
       // await. If it's no longer running, the offset update is moot.
       if (fresh?.status === 'running') {
-        newTasks[id] = { ...fresh, outputOffset: updatedTaskOffsets[id]! }
+        newTasks[id] = { ...fresh, outputOffset: updatedTaskOffsets[id] }
         changed = true
       }
     }

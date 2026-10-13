@@ -42,7 +42,7 @@ export type { SpinnerMode } from './Spinner/index.js'
 
 const DEFAULT_CHARACTERS = getDefaultCharacters()
 
-const SPINNER_FRAMES = [...DEFAULT_CHARACTERS, ...[...DEFAULT_CHARACTERS].reverse()]
+const SPINNER_FRAMES = [...DEFAULT_CHARACTERS, ...[...DEFAULT_CHARACTERS].toReversed()]
 
 type Props = {
   mode: SpinnerMode

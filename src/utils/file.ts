@@ -1,7 +1,7 @@
-import { chmodSync, writeFileSync as fsWriteFileSync } from 'fs'
-import { realpath, stat } from 'fs/promises'
-import { homedir } from 'os'
-import { basename, dirname, extname, isAbsolute, join, normalize, relative, resolve, sep } from 'path'
+import { chmodSync, writeFileSync as fsWriteFileSync } from 'node:fs'
+import { realpath, stat } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { basename, dirname, extname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path'
 
 import { logEvent } from 'src/services/analytics/index.js'
 

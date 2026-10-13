@@ -25,7 +25,7 @@ const PLATFORMS: Record<Platform, { url: string }> = {
 
 function MobileQRCode({ onDone }: Props): React.ReactNode {
   const [platform, setPlatform] = useState<Platform>('ios')
-  const [qrCodes, setQrCodes] = useState<Record<Platform, string>>({
+  const [qrCodes, setQrCodes] = useState({
     ios: '',
     android: '',
   })

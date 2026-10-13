@@ -1,5 +1,5 @@
-import { chmodSync } from 'fs'
-import { join } from 'path'
+import { chmodSync } from 'node:fs'
+import { join } from 'node:path'
 
 import { getClaudeConfigHomeDir } from '../envUtils.js'
 import { getErrnoCode } from '../errors.js'

@@ -30,7 +30,7 @@ export function segmentTextByHighlights(text: string, highlights: TextHighlight[
     return [{ text, start: 0 }]
   }
 
-  const sortedHighlights = [...highlights].sort((a, b) => {
+  const sortedHighlights = [...highlights].toSorted((a, b) => {
     if (a.start !== b.start) return a.start - b.start
     return b.priority - a.priority
   })
@@ -100,7 +100,7 @@ class HighlightSegmenter {
 
     // Consume leading ANSI codes before first visible char
     while (this.tokenIdx < this.tokens.length) {
-      const token = this.tokens[this.tokenIdx]!
+      const token = this.tokens[this.tokenIdx]
       if (token.type !== 'ansi') break
       this.codes.push(token)
       this.stringPos += token.code.length
@@ -112,7 +112,7 @@ class HighlightSegmenter {
 
     // Advance through tokens until we reach target
     while (this.visiblePos < targetVisiblePos && this.tokenIdx < this.tokens.length) {
-      const token = this.tokens[this.tokenIdx]!
+      const token = this.tokens[this.tokenIdx]
 
       if (token.type === 'ansi') {
         this.codes.push(token)

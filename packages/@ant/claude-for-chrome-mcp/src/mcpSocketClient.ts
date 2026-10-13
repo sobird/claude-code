@@ -1,8 +1,8 @@
-import { promises as fsPromises } from 'fs'
-import { createConnection } from 'net'
-import type { Socket } from 'net'
-import { platform } from 'os'
-import { dirname } from 'path'
+import { promises as fsPromises } from 'node:fs'
+import { createConnection } from 'node:net'
+import type { Socket } from 'node:net'
+import { platform } from 'node:os'
+import { dirname } from 'node:path'
 
 import type { ClaudeForChromeContext, PermissionMode, PermissionOverrides } from './types.js'
 

@@ -1,4 +1,4 @@
-import { basename, dirname } from 'path'
+import { basename, dirname } from 'node:path'
 
 /**
  * Plugin and marketplace subcommand handlers — extracted from main.tsx for lazy loading.
@@ -173,7 +173,7 @@ export async function pluginListHandler(options: {
       errors?: string[]
     }> = []
 
-    for (const pluginId of pluginIds.sort()) {
+    for (const pluginId of pluginIds.toSorted()) {
       const installations = installedData.plugins[pluginId]
       if (!installations || installations.length === 0) continue
 
@@ -307,7 +307,7 @@ export async function pluginListHandler(options: {
     console.log('Installed plugins:\n')
   }
 
-  for (const pluginId of pluginIds.sort()) {
+  for (const pluginId of pluginIds.toSorted()) {
     const installations = installedData.plugins[pluginId]
     if (!installations || installations.length === 0) continue
 
@@ -455,7 +455,7 @@ export async function marketplaceListHandler(options: { json?: boolean; cowork?:
     const names = Object.keys(config)
 
     if (options.json) {
-      const marketplaces = names.sort().map((name) => {
+      const marketplaces = names.toSorted().map((name) => {
         const marketplace = config[name]
         const source = marketplace?.source
         return {

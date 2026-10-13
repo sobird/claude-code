@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { normalize, posix, win32 } from 'path'
+import { normalize, posix, win32 } from 'node:path'
 
 import { getAutoMemPath, getMemoryBaseDir, isAutoMemoryEnabled, isAutoMemPath } from '../memdir/paths.js'
 import { isAgentMemoryPath } from '../tools/AgentTool/agentMemory.js'

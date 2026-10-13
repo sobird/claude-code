@@ -20,11 +20,9 @@ type RateLimitOptionsMenuOptionType = 'upgrade' | 'extra-usage' | 'cancel'
 type RateLimitOptionsMenuProps = {
   onDone: (
     result?: string,
-    options?:
-      | {
-          display?: CommandResultDisplay | undefined
-        }
-      | undefined,
+    options?: {
+      display?: CommandResultDisplay | undefined
+    },
   ) => void
   context: ToolUseContext & LocalJSXCommandContext
 }

@@ -136,12 +136,12 @@ export function MarkdownTable({ token, highlight, forceWidth }: Props): React.Re
   } else if (totalMin <= availableWidth) {
     // Need to shrink - give each column its min, distribute remaining space
     const extraSpace = availableWidth - totalMin
-    const overflows = idealWidths.map((ideal, i) => ideal - minWidths[i]!)
+    const overflows = idealWidths.map((ideal, i) => ideal - minWidths[i])
     const totalOverflow = overflows.reduce((sum, o) => sum + o, 0)
 
     columnWidths = minWidths.map((min, i) => {
       if (totalOverflow === 0) return min
-      const extra = Math.floor((overflows[i]! / totalOverflow) * extraSpace)
+      const extra = Math.floor((overflows[i] / totalOverflow) * extraSpace)
       return min + extra
     })
   } else {
@@ -157,8 +157,8 @@ export function MarkdownTable({ token, highlight, forceWidth }: Props): React.Re
     let maxLines = 1
     // Check header
     for (let i = 0; i < token.header.length; i++) {
-      const content = formatCell(token.header[i]!.tokens)
-      const wrapped = wrapText(content, columnWidths[i]!, {
+      const content = formatCell(token.header[i].tokens)
+      const wrapped = wrapText(content, columnWidths[i], {
         hard: needsHardWrap,
       })
       maxLines = Math.max(maxLines, wrapped.length)
@@ -167,7 +167,7 @@ export function MarkdownTable({ token, highlight, forceWidth }: Props): React.Re
     for (const row of token.rows) {
       for (let i = 0; i < row.length; i++) {
         const content = formatCell(row[i]?.tokens)
-        const wrapped = wrapText(content, columnWidths[i]!, {
+        const wrapped = wrapText(content, columnWidths[i], {
           hard: needsHardWrap,
         })
         maxLines = Math.max(maxLines, wrapped.length)
@@ -186,7 +186,7 @@ export function MarkdownTable({ token, highlight, forceWidth }: Props): React.Re
     // Get wrapped lines for each cell (preserving ANSI formatting)
     const cellLines = cells.map((cell, colIndex) => {
       const formattedText = formatCell(cell.tokens)
-      const width = columnWidths[colIndex]!
+      const width = columnWidths[colIndex]
       return wrapText(formattedText, width, { hard: needsHardWrap })
     })
 
@@ -201,11 +201,11 @@ export function MarkdownTable({ token, highlight, forceWidth }: Props): React.Re
     for (let lineIdx = 0; lineIdx < maxLines; lineIdx++) {
       let line = '│'
       for (let colIndex = 0; colIndex < cells.length; colIndex++) {
-        const lines = cellLines[colIndex]!
-        const offset = verticalOffsets[colIndex]!
+        const lines = cellLines[colIndex]
+        const offset = verticalOffsets[colIndex]
         const contentLineIdx = lineIdx - offset
-        const lineText = contentLineIdx >= 0 && contentLineIdx < lines.length ? lines[contentLineIdx]! : ''
-        const width = columnWidths[colIndex]!
+        const lineText = contentLineIdx >= 0 && contentLineIdx < lines.length ? lines[contentLineIdx] : ''
+        const width = columnWidths[colIndex]
         // Headers always centered; data uses table alignment
         const align = isHeader ? 'center' : (token.align?.[colIndex] ?? 'left')
 
@@ -280,7 +280,7 @@ export function MarkdownTable({ token, highlight, forceWidth }: Props): React.Re
 
         // Subsequent lines with small indent (skip empty lines)
         for (let i = 1; i < wrappedValue.length; i++) {
-          const line = wrappedValue[i]!
+          const line = wrappedValue[i]
           if (!line.trim()) continue
           lines.push(`${wrapIndent}${line}`)
         }

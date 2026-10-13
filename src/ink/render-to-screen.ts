@@ -168,10 +168,10 @@ export function scanPositions(screen: Screen, query: string): MatchPosition[] {
     // Non-overlapping — same advance as applySearchHighlight.
     let pos = text.indexOf(lq)
     while (pos >= 0) {
-      const startCi = codeUnitToCell[pos]!
-      const endCi = codeUnitToCell[pos + qlen - 1]!
-      const col = colOf[startCi]!
-      const endCol = colOf[endCi]! + 1
+      const startCi = codeUnitToCell[pos]
+      const endCi = codeUnitToCell[pos + qlen - 1]
+      const col = colOf[startCi]
+      const endCol = colOf[endCi] + 1
       positions.push({ row, col, len: endCol - col })
       pos = text.indexOf(lq, pos + qlen)
     }
@@ -198,7 +198,7 @@ export function applyPositionedHighlight(
   currentIdx: number,
 ): boolean {
   if (currentIdx < 0 || currentIdx >= positions.length) return false
-  const p = positions[currentIdx]!
+  const p = positions[currentIdx]
   const row = p.row + rowOffset
   if (row < 0 || row >= screen.height) return false
   const transform = (id: number) => stylePool.withCurrentMatch(id)

@@ -1,4 +1,4 @@
-import { randomBytes, type UUID } from 'crypto'
+import { randomBytes, type UUID } from 'node:crypto'
 
 import type { AgentId } from 'src/types/ids.js'
 

@@ -1,7 +1,7 @@
 import { feature } from 'bun:bundle'
-import { randomUUID } from 'crypto'
-import { hostname, tmpdir } from 'os'
-import { basename, join, resolve } from 'path'
+import { randomUUID } from 'node:crypto'
+import { hostname, tmpdir } from 'node:os'
+import { basename, join, resolve } from 'node:path'
 
 import { getRemoteSessionUrl } from '../constants/product.js'
 import { shutdownDatadog } from '../services/analytics/datadog.js'
@@ -1288,7 +1288,7 @@ export async function runBridgeLoop(
   // onSessionDone completes before deregistering — otherwise
   // process.exit() can kill them mid-flight.
   if (pendingCleanups.size > 0) {
-    await Promise.allSettled([...pendingCleanups])
+    await Promise.allSettled(pendingCleanups)
   }
 
   // In single-session mode with a known session, leave the session and
@@ -1488,7 +1488,7 @@ export function parseArgs(args: string[]): ParsedArgs {
   let continueSession = false
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i]!
+    const arg = args[i]
     if (arg === '--help' || arg === '-h') {
       help = true
     } else if (arg === '--verbose' || arg === '-v') {
@@ -1498,11 +1498,11 @@ export function parseArgs(args: string[]): ParsedArgs {
     } else if (arg === '--no-sandbox') {
       sandbox = false
     } else if (arg === '--debug-file' && i + 1 < args.length) {
-      debugFile = resolve(args[++i]!)
+      debugFile = resolve(args[++i])
     } else if (arg.startsWith('--debug-file=')) {
       debugFile = resolve(arg.slice('--debug-file='.length))
     } else if (arg === '--session-timeout' && i + 1 < args.length) {
-      sessionTimeoutMs = parseInt(args[++i]!, 10) * 1000
+      sessionTimeoutMs = parseInt(args[++i], 10) * 1000
     } else if (arg.startsWith('--session-timeout=')) {
       sessionTimeoutMs = parseInt(arg.slice('--session-timeout='.length), 10) * 1000
     } else if (arg === '--permission-mode' && i + 1 < args.length) {
@@ -1819,7 +1819,7 @@ export async function bridgeMain(args: string[]): Promise<void> {
   const { getGlobalConfig, saveGlobalConfig, getCurrentProjectConfig, saveCurrentProjectConfig } =
     await import('../utils/config.js')
   if (!getGlobalConfig().remoteDialogSeen) {
-    const readline = await import('readline')
+    const readline = await import('node:readline')
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -1934,7 +1934,7 @@ export async function bridgeMain(args: string[]): Promise<void> {
     !resumeSessionId &&
     process.stdin.isTTY
   ) {
-    const readline = await import('readline')
+    const readline = await import('node:readline')
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -2546,7 +2546,7 @@ export async function runBridgeHeadless(opts: HeadlessBridgeOpts, signal: AbortS
     environmentSecret = reg.environment_secret
   } catch (err) {
     // Transient — let supervisor backoff-retry.
-    throw new Error(`Bridge registration failed: ${errorMessage(err)}`)
+    throw new Error(`Bridge registration failed: ${errorMessage(err)}`, { cause: err })
   }
 
   const spawner = createSessionSpawner({

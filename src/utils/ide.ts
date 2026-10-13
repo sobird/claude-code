@@ -1,6 +1,6 @@
-import { createConnection } from 'net'
-import * as os from 'os'
-import { basename, join, sep as pathSeparator, resolve } from 'path'
+import { createConnection } from 'node:net'
+import * as os from 'node:os'
+import { basename, join, sep as pathSeparator, resolve } from 'node:path'
 
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import axios from 'axios'
@@ -317,7 +317,7 @@ export async function getSortedIdeLockfiles(): Promise<string[]> {
     // Flatten and sort all lockfiles by last modified date (newest first)
     return allLockfiles
       .flat()
-      .sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+      .toSorted((a, b) => b.mtime.getTime() - a.mtime.getTime())
       .map((file) => file.path)
   } catch (error) {
     logError(error as Error)
@@ -392,16 +392,16 @@ async function checkIdeConnection(host: string, port: number, timeout = 500): Pr
 
       socket.on('connect', () => {
         socket.destroy()
-        void resolve(true)
+        resolve(true)
       })
 
       socket.on('error', () => {
-        void resolve(false)
+        resolve(false)
       })
 
       socket.on('timeout', () => {
         socket.destroy()
-        void resolve(false)
+        resolve(false)
       })
     })
   } catch (_) {
@@ -615,7 +615,7 @@ export async function findAvailableIDE(): Promise<DetectedIDEInfo | null> {
     // use /ide to select an IDE. When running from a supported built-in terminal, detectIDEs()
     // should return at most one IDE.
     if (ides.length === 1) {
-      return ides[0]!
+      return ides[0]
     }
     await sleep(1000, signal)
   }
@@ -1264,7 +1264,7 @@ const detectHostIP = memoize(
       if (routeResult.exitCode === 0 && routeResult.stdout) {
         const gatewayMatch = routeResult.stdout.match(/default via (\d+\.\d+\.\d+\.\d+)/)
         if (gatewayMatch) {
-          const gatewayIP = gatewayMatch[1]!
+          const gatewayIP = gatewayMatch[1]
           if (await checkIdeConnection(gatewayIP, port)) {
             return gatewayIP
           }
@@ -1301,7 +1301,7 @@ async function installFromArtifactory(command: string): Promise<string> {
     }
   } catch (error) {
     logError(error as Error)
-    throw new Error(`Failed to read npm authentication: ${error}`)
+    throw new Error(`Failed to read npm authentication: ${error}`, { cause: error })
   }
 
   if (!authToken) {
@@ -1367,7 +1367,7 @@ async function installFromArtifactory(command: string): Promise<string> {
     }
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(`Failed to fetch extension version from artifactory: ${error.message}`)
+      throw new Error(`Failed to fetch extension version from artifactory: ${error.message}`, { cause: error })
     }
     throw error
   }

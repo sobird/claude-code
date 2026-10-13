@@ -143,9 +143,9 @@ export function ManageMarketplaces({
               setSelectedIndex(targetIndex + 1) // +1 because "Add Marketplace" is at index 0
               const newStates = [...states]
               if (action === 'update') {
-                newStates[targetIndex]!.pendingUpdate = true
+                newStates[targetIndex].pendingUpdate = true
               } else if (action === 'remove') {
-                newStates[targetIndex]!.pendingRemove = true
+                newStates[targetIndex].pendingRemove = true
               }
               setMarketplaceStates(newStates)
               // Apply the change immediately

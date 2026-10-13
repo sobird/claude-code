@@ -1,7 +1,7 @@
 import { feature } from 'bun:bundle'
-import { randomBytes } from 'crypto'
-import { homedir, tmpdir } from 'os'
-import { join, normalize, posix, sep } from 'path'
+import { randomBytes } from 'node:crypto'
+import { homedir, tmpdir } from 'node:os'
+import { join, normalize, posix, sep } from 'node:path'
 
 import ignore from 'ignore'
 import memoize from 'lodash-es/memoize.js'
@@ -406,7 +406,7 @@ function isDangerousFilePathToAutoEdit(path: string): boolean {
 
   // Check if path is within dangerous directories (case-insensitive to prevent bypasses)
   for (let i = 0; i < pathSegments.length; i++) {
-    const segment = pathSegments[i]!
+    const segment = pathSegments[i]
     const normalizedSegment = normalizeCaseForComparison(segment)
 
     for (const dir of DANGEROUS_DIRECTORIES) {

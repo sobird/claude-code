@@ -178,7 +178,7 @@ function ElicitationFormDialog({
     }))
   }, [requestedSchema])
 
-  const [currentFieldIndex, setCurrentFieldIndex] = useState<number | undefined>(hasFields ? 0 : undefined)
+  const [currentFieldIndex, setCurrentFieldIndex] = useState(hasFields ? 0 : undefined)
   const [textInputValue, setTextInputValue] = useState(() => {
     // Initialize from the first field's value if it's a text field
     const firstField = schemaFields[0]
@@ -196,7 +196,7 @@ function ElicitationFormDialog({
   const [accordionOptionIndex, setAccordionOptionIndex] = useState(0)
 
   const dateDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const resolveAbortRef = useRef<Map<string, AbortController>>(new Map())
+  const resolveAbortRef = useRef(new Map())
   const enumTypeaheadRef = useRef({
     buffer: '',
     timer: undefined as ReturnType<typeof setTimeout> | undefined,
@@ -1197,7 +1197,7 @@ function ElicitationURLDialog({
         setFocusedButton((prev) => {
           const idx = waitingButtons.indexOf(prev)
           const delta = key.rightArrow ? 1 : -1
-          return waitingButtons[(idx + delta + waitingButtons.length) % waitingButtons.length]!
+          return waitingButtons[(idx + delta + waitingButtons.length) % waitingButtons.length]
         })
         return
       }

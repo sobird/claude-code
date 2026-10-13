@@ -1,4 +1,4 @@
-import { join, normalize, sep } from 'path'
+import { join, normalize, sep } from 'node:path'
 
 import { getProjectRoot } from '../../bootstrap/state.js'
 import { buildMemoryPrompt, ensureMemoryDirExists } from '../../memdir/memdir.js'

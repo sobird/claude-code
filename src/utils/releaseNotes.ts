@@ -1,5 +1,5 @@
-import { mkdir, readFile, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import axios from 'axios'
 import { coerce } from 'semver'
@@ -220,7 +220,7 @@ export function getRecentReleaseNotes(
       // Get all versions that are newer than the last seen version
       return Object.entries(releaseNotes)
         .filter(([version]) => !basePreviousVersion || gt(version, basePreviousVersion.version))
-        .sort(([versionA], [versionB]) => (gt(versionA, versionB) ? -1 : 1)) // Sort newest first
+        .toSorted(([versionA], [versionB]) => (gt(versionA, versionB) ? -1 : 1)) // Sort newest first
         .flatMap(([_, notes]) => notes)
         .filter(Boolean)
         .slice(0, MAX_RELEASE_NOTES_SHOWN)
@@ -246,7 +246,7 @@ export function getAllReleaseNotes(
     const releaseNotes = parseChangelog(changelogContent)
 
     // Sort versions with oldest first
-    const sortedVersions = Object.keys(releaseNotes).sort((a, b) => (gt(a, b) ? 1 : -1))
+    const sortedVersions = Object.keys(releaseNotes).toSorted((a, b) => (gt(a, b) ? 1 : -1))
 
     // Return array of [version, notes] arrays
     return sortedVersions

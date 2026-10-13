@@ -273,7 +273,7 @@ export function finalizeAgentTool(
   let content = lastAssistantMessage.message.content.filter((_) => _.type === 'text')
   if (content.length === 0) {
     for (let i = agentMessages.length - 1; i >= 0; i--) {
-      const m = agentMessages[i]!
+      const m = agentMessages[i]
       if (m.type !== 'assistant') continue
       const textBlocks = m.message.content.filter((_) => _.type === 'text')
       if (textBlocks.length > 0) {
@@ -382,7 +382,7 @@ export async function classifyHandoffIfNeeded({
         ],
       },
       tools,
-      toolPermissionContext as ToolPermissionContext,
+      toolPermissionContext,
       abortSignal,
     )
 
@@ -438,7 +438,7 @@ export async function classifyHandoffIfNeeded({
  */
 export function extractPartialResult(messages: MessageType[]): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i]!
+    const m = messages[i]
     if (m.type !== 'assistant') continue
     const text = extractTextContent(m.message.content, '\n')
     if (text) {

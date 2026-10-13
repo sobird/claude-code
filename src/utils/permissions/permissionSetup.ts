@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { relative } from 'path'
+import { relative } from 'node:path'
 
 import {
   getOriginalCwd,
@@ -28,7 +28,7 @@ const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
   ? (require('./autoModeState.js') as typeof import('./autoModeState.js'))
   : null
 
-import { resolve } from 'path'
+import { resolve } from 'node:path'
 
 import {
   checkSecurityRestrictionGate,
@@ -287,7 +287,7 @@ export function findDangerousClassifierPermissions(
     // Parse tool spec: "Bash" or "Bash(pattern)" or "Agent" or "Agent(subagent_type)"
     const match = toolSpec.match(/^([^(]+)(?:\(([^)]*)\))?$/)
     if (match) {
-      const toolName = match[1]!.trim()
+      const toolName = match[1].trim()
       const ruleContent = match[2]?.trim()
 
       if (isDangerousClassifierPermission(toolName, ruleContent)) {

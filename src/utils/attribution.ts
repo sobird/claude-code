@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { stat } from 'fs/promises'
+import { stat } from 'node:fs/promises'
 
 import { getClientType } from '../bootstrap/state.js'
 import { getRemoteSessionUrl, isRemoteSessionLocal, PRODUCT_URL } from '../constants/product.js'

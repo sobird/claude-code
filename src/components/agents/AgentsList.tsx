@@ -31,7 +31,7 @@ export function AgentsList({ source, agents, onBack, onSelect, onCreateNew, chan
   const [isCreateNewSelected, setIsCreateNewSelected] = React.useState(true)
 
   // Sort agents alphabetically by name within each source group
-  const sortedAgents = React.useMemo(() => [...agents].sort(compareAgentsByName), [agents])
+  const sortedAgents = React.useMemo(() => [...agents].toSorted(compareAgentsByName), [agents])
 
   const getOverrideInfo = (agent: ResolvedAgent) => {
     return {

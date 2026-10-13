@@ -162,7 +162,7 @@ export const TaskUpdateTool = buildTool({
       }
     }
     if (metadata !== undefined) {
-      const merged = { ...(existingTask.metadata ?? {}) }
+      const merged = { ...existingTask.metadata }
       for (const [key, value] of Object.entries(metadata)) {
         if (value === null) {
           delete merged[key]
@@ -311,7 +311,7 @@ export const TaskUpdateTool = buildTool({
     }
   },
   mapToolResultToToolResultBlockParam(content, toolUseID) {
-    const { success, taskId, updatedFields, error, statusChange, verificationNudgeNeeded } = content as Output
+    const { success, taskId, updatedFields, error, statusChange, verificationNudgeNeeded } = content
     if (!success) {
       // Return as non-error so it doesn't trigger sibling tool cancellation
       // in StreamingToolExecutor. "Task not found" is a benign condition

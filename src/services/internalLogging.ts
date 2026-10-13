@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises'
+import { readFile } from 'node:fs/promises'
 
 import memoize from 'lodash-es/memoize.js'
 
@@ -71,7 +71,7 @@ export async function logPermissionContextForAnts(
     return
   }
 
-  void logEvent('tengu_internal_record_permission_context', {
+  logEvent('tengu_internal_record_permission_context', {
     moment: moment as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     namespace: (await getKubernetesNamespace()) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     toolPermissionContext: jsonStringify(

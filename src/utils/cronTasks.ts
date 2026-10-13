@@ -9,10 +9,10 @@
 // File format:
 //   { "tasks": [{ id, cron, prompt, createdAt, recurring?, permanent? }] }
 
-import { randomUUID } from 'crypto'
-import { readFileSync } from 'fs'
-import { mkdir, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { addSessionCronTask, getProjectRoot, getSessionCronTasks, removeSessionCronTasks } from '../bootstrap/state.js'
 import { computeNextCronRun, parseCronExpression } from './cron.js'

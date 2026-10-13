@@ -1,6 +1,6 @@
-import { open } from 'fs/promises'
-import * as path from 'path'
-import { pathToFileURL } from 'url'
+import { open } from 'node:fs/promises'
+import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import type {
   CallHierarchyIncomingCall,

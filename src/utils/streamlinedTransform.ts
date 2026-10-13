@@ -99,7 +99,7 @@ function accumulateToolUses(message: SDKAssistantMessage, counts: ToolCounts): v
 
   for (const block of content) {
     if (block.type === 'tool_use' && 'name' in block) {
-      const category = categorizeToolName(block.name as string)
+      const category = categorizeToolName(block.name)
       counts[category]++
     }
   }

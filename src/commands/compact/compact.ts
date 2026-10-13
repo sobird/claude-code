@@ -112,14 +112,14 @@ export const call: LocalCommandCall = async (args, context) => {
     }
   } catch (error) {
     if (abortController.signal.aborted) {
-      throw new Error('Compaction canceled.')
+      throw new Error('Compaction canceled.', { cause: error })
     } else if (hasExactErrorMessage(error, ERROR_MESSAGE_NOT_ENOUGH_MESSAGES)) {
-      throw new Error(ERROR_MESSAGE_NOT_ENOUGH_MESSAGES)
+      throw new Error(ERROR_MESSAGE_NOT_ENOUGH_MESSAGES, { cause: error })
     } else if (hasExactErrorMessage(error, ERROR_MESSAGE_INCOMPLETE_RESPONSE)) {
-      throw new Error(ERROR_MESSAGE_INCOMPLETE_RESPONSE)
+      throw new Error(ERROR_MESSAGE_INCOMPLETE_RESPONSE, { cause: error })
     } else {
       logError(error)
-      throw new Error(`Error during compaction: ${error}`)
+      throw new Error(`Error during compaction: ${error}`, { cause: error })
     }
   }
 }

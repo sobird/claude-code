@@ -1,4 +1,4 @@
-import { format } from 'util'
+import { format } from 'node:util'
 
 import type { ComputerUseHostAdapter, Logger } from '@ant/computer-use-mcp/types'
 

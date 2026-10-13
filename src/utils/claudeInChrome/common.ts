@@ -1,7 +1,7 @@
-import { readdirSync } from 'fs'
-import { stat } from 'fs/promises'
-import { homedir, platform, tmpdir, userInfo } from 'os'
-import { join } from 'path'
+import { readdirSync } from 'node:fs'
+import { stat } from 'node:fs/promises'
+import { homedir, platform, tmpdir, userInfo } from 'node:os'
+import { join } from 'node:path'
 
 import { normalizeNameForMCP } from '../../services/mcp/normalization.js'
 import { logForDebugging } from '../debug.js'

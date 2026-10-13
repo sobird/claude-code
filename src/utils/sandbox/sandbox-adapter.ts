@@ -4,9 +4,9 @@
  * settings system, tool integration, and additional features.
  */
 
-import { rmSync, statSync } from 'fs'
-import { readFile } from 'fs/promises'
-import { join, resolve, sep } from 'path'
+import { rmSync, statSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
+import { join, resolve, sep } from 'node:path'
 
 import type {
   FsReadRestrictionConfig,
@@ -794,8 +794,8 @@ export function addToExcludedCommands(
       (update) => update.type === 'addRules' && update.rules.some((rule) => rule.toolName === BASH_TOOL_NAME),
     )
 
-    if (bashSuggestions.length > 0 && bashSuggestions[0]!.type === 'addRules') {
-      const firstBashRule = bashSuggestions[0]!.rules.find((rule) => rule.toolName === BASH_TOOL_NAME)
+    if (bashSuggestions.length > 0 && bashSuggestions[0].type === 'addRules') {
+      const firstBashRule = bashSuggestions[0].rules.find((rule) => rule.toolName === BASH_TOOL_NAME)
       if (firstBashRule?.ruleContent) {
         // Extract pattern from Bash(command) or Bash(command:*) format
         const prefix = permissionRuleExtractPrefix(firstBashRule.ruleContent)

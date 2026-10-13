@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
-import { relative } from 'path'
+import type { UUID } from 'node:crypto'
+import { relative } from 'node:path'
 
 import { getCwd } from 'src/utils/cwd.js'
 
@@ -164,16 +164,16 @@ export function deserializeMessagesWithInterruptDetection(serializedMessages: Me
     }
 
     // Filter out unresolved tool uses and any synthetic messages that follow them
-    const filteredToolUses = filterUnresolvedToolUses(migratedMessages) as NormalizedMessage[]
+    const filteredToolUses = filterUnresolvedToolUses(migratedMessages)
 
     // Filter out orphaned thinking-only assistant messages that can cause API errors
     // during resume. These occur when streaming yields separate messages per content
     // block and interleaved user messages prevent proper merging by message.id.
-    const filteredThinking = filterOrphanedThinkingOnlyMessages(filteredToolUses) as NormalizedMessage[]
+    const filteredThinking = filterOrphanedThinkingOnlyMessages(filteredToolUses)
 
     // Filter out assistant messages with only whitespace text content.
     // This can happen when model outputs "\n\n" before thinking, user cancels mid-stream.
-    const filteredMessages = filterWhitespaceOnlyAssistantMessages(filteredThinking) as NormalizedMessage[]
+    const filteredMessages = filterWhitespaceOnlyAssistantMessages(filteredThinking)
 
     const internalState = detectTurnInterruption(filteredMessages)
 
@@ -188,10 +188,10 @@ export function deserializeMessagesWithInterruptDetection(serializedMessages: Me
           isMeta: true,
         }),
       ])
-      filteredMessages.push(continuationMessage!)
+      filteredMessages.push(continuationMessage)
       turnInterruptionState = {
         kind: 'interrupted_prompt',
-        message: continuationMessage!,
+        message: continuationMessage,
       }
     } else {
       turnInterruptionState = internalState
@@ -203,7 +203,7 @@ export function deserializeMessagesWithInterruptDetection(serializedMessages: Me
     // message so removeInterruptedMessage's splice(idx, 2) removes the
     // correct pair.
     const lastRelevantIdx = filteredMessages.findLastIndex((m) => m.type !== 'system' && m.type !== 'progress')
-    if (lastRelevantIdx !== -1 && filteredMessages[lastRelevantIdx]!.type === 'user') {
+    if (lastRelevantIdx !== -1 && filteredMessages[lastRelevantIdx].type === 'user') {
       filteredMessages.splice(
         lastRelevantIdx + 1,
         0,
@@ -318,7 +318,7 @@ function isTerminalToolResult(
   const toolUseId = block.tool_use_id
 
   for (let i = resultIdx - 1; i >= 0; i--) {
-    const msg = messages[i]!
+    const msg = messages[i]
     if (msg.type !== 'assistant') continue
     for (const b of msg.message.content) {
       if (b.type === 'tool_use' && b.id === toolUseId) {

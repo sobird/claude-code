@@ -25,7 +25,7 @@
  * - Detailed new_context attributes for LLM requests
  */
 
-import { createHash } from 'crypto'
+import { createHash } from 'node:crypto'
 
 import type { Span } from '@opentelemetry/api'
 

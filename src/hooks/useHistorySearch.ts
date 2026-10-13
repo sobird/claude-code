@@ -38,7 +38,7 @@ export function useHistorySearch(
   const [originalPastedContents, setOriginalPastedContents] = useState<HistoryEntry['pastedContents']>({})
   const [historyMatch, setHistoryMatch] = useState<HistoryEntry | undefined>(undefined)
   const historyReader = useRef<AsyncGenerator<HistoryEntry> | undefined>(undefined)
-  const seenPrompts = useRef<Set<string>>(new Set())
+  const seenPrompts = useRef(new Set())
   const searchAbortController = useRef<AbortController | null>(null)
 
   const closeHistoryReader = useCallback((): void => {

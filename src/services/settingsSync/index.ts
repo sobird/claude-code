@@ -10,8 +10,8 @@
  */
 
 import { feature } from 'bun:bundle'
-import { mkdir, readFile, stat, writeFile } from 'fs/promises'
-import { dirname } from 'path'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 
 import axios from 'axios'
 import pickBy from 'lodash-es/pickBy.js'

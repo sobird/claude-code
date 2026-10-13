@@ -60,6 +60,6 @@ const NULL_RENDERING_ATTACHMENT_TYPES: ReadonlySet<Attachment['type']> = new Set
  * attachments (hook_success, hook_additional_context, hook_cancelled) don't
  * inflate the "N messages" count or eat into the render budget (CC-724).
  */
-export function isNullRenderingAttachment(msg: Message | NormalizedMessage): boolean {
+export function isNullRenderingAttachment(msg: Message): boolean {
   return msg.type === 'attachment' && NULL_RENDERING_ATTACHMENT_TYPES.has(msg.attachment.type)
 }

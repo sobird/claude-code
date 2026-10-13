@@ -122,7 +122,7 @@ export function applyGrouping(
       if (group) {
         if (!emittedGroups.has(key)) {
           emittedGroups.add(key)
-          const firstMsg = group[0]!
+          const firstMsg = group[0]
 
           // Collect results for this group
           const results: NormalizedUserMessage[] = []

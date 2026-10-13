@@ -1,6 +1,6 @@
-import type { Dirent } from 'fs'
-import * as fs from 'fs/promises'
-import * as path from 'path'
+import type { Dirent } from 'node:fs'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 
 import figures from 'figures'
 import * as React from 'react'
@@ -514,7 +514,7 @@ export function ManagePlugins({
   const [marketplaces, setMarketplaces] = useState<MarketplaceInfo[]>([])
   const [pluginStates, setPluginStates] = useState<PluginState[]>([])
   const [loading, setLoading] = useState(true)
-  const [pendingToggles, setPendingToggles] = useState<Map<string, 'will-enable' | 'will-disable'>>(new Map())
+  const [pendingToggles, setPendingToggles] = useState(new Map())
 
   // Guard to prevent auto-navigation from re-triggering after the user
   // navigates away (targetPlugin is never cleared by the parent).
@@ -605,7 +605,7 @@ export function ManagePlugins({
       if (client.name.startsWith('plugin:')) {
         const parts = client.name.split(':')
         if (parts.length >= 3) {
-          const pluginName = parts[1]!
+          const pluginName = parts[1]
           const serverName = parts.slice(2).join(':')
           const existing = pluginMcpMap.get(pluginName) || []
           existing.push({ displayName: serverName, client })
@@ -798,7 +798,7 @@ export function ManagePlugins({
     }
 
     // Sort scopes and build final list
-    const sortedScopes = [...itemsByScope.keys()].sort((a, b) => (scopeOrder[a] ?? 99) - (scopeOrder[b] ?? 99))
+    const sortedScopes = [...itemsByScope.keys()].toSorted((a, b) => (scopeOrder[a] ?? 99) - (scopeOrder[b] ?? 99))
 
     for (const scope of sortedScopes) {
       const items = itemsByScope.get(scope)!
@@ -957,7 +957,7 @@ export function ManagePlugins({
           if (!pluginsByMarketplace[marketplace]) {
             pluginsByMarketplace[marketplace] = []
           }
-          pluginsByMarketplace[marketplace]!.push(plugin)
+          pluginsByMarketplace[marketplace].push(plugin)
         }
 
         // Create marketplace info array with enabled/disabled counts
@@ -1415,7 +1415,7 @@ export function ManagePlugins({
               (s) => s.plugin.name === selectedPlugin.plugin.name && s.marketplace === selectedPlugin.marketplace,
             )
             if (index !== -1) {
-              newStates[index]!.pendingUpdate = !selectedPlugin.pendingUpdate
+              newStates[index].pendingUpdate = !selectedPlugin.pendingUpdate
               setPluginStates(newStates)
               setSelectedPlugin({
                 ...selectedPlugin,
@@ -1550,7 +1550,7 @@ export function ManagePlugins({
       },
       'select:accept': () => {
         if (detailsMenuItems[detailsMenuIndex]) {
-          detailsMenuItems[detailsMenuIndex]!.action()
+          detailsMenuItems[detailsMenuIndex].action()
         }
       },
     },
@@ -2291,7 +2291,7 @@ export function ManagePlugins({
     const configType = client.config.type
 
     // Build ServerInfo for MCPToolListView
-    let server: StdioServerInfo | SSEServerInfo | HTTPServerInfo | ClaudeAIServerInfo
+    let server: StdioServerInfo
     if (configType === 'stdio') {
       server = {
         name: client.name,
@@ -2347,7 +2347,7 @@ export function ManagePlugins({
     const configType = client.config.type
 
     // Build ServerInfo for MCPToolDetailView
-    let server: StdioServerInfo | SSEServerInfo | HTTPServerInfo | ClaudeAIServerInfo
+    let server: StdioServerInfo
     if (configType === 'stdio') {
       server = {
         name: client.name,

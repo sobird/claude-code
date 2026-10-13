@@ -53,7 +53,7 @@ export async function fetchReferralRedemptions(
 
   const url = `${getOauthConfig().BASE_API_URL}/api/oauth/organizations/${orgUUID}/referral/redemptions`
 
-  const response = await axios.get<ReferralRedemptionsResponse>(url, {
+  const response = await axios.get(url, {
     headers,
     params: { campaign },
     timeout: 10000, // 10 second timeout
@@ -246,13 +246,13 @@ export async function getCachedOrFetchPassesEligibility(): Promise<ReferralEligi
     logForDebugging('Passes: Cache stale, returning cached data and refreshing in background')
     void fetchAndStorePassesEligibility() // Background refresh
     const { timestamp, ...response } = cachedEntry
-    return response as ReferralEligibilityResponse
+    return response
   }
 
   // Cache is fresh - return it immediately
   logForDebugging('Passes: Using fresh cached eligibility data')
   const { timestamp, ...response } = cachedEntry
-  return response as ReferralEligibilityResponse
+  return response
 }
 
 /**

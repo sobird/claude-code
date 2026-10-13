@@ -20,7 +20,7 @@ export function TeleportRepoMismatchDialog({
   onSelectPath,
   onCancel,
 }: Props): React.ReactNode {
-  const [availablePaths, setAvailablePaths] = useState<string[]>(initialPaths)
+  const [availablePaths, setAvailablePaths] = useState(initialPaths)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [validating, setValidating] = useState(false)
 

@@ -52,7 +52,7 @@ export function installStreamJsonStdoutGuard(): void {
   }
   installed = true
 
-  originalWrite = process.stdout.write.bind(process.stdout) as typeof process.stdout.write
+  originalWrite = process.stdout.write.bind(process.stdout)
 
   process.stdout.write = function (
     chunk: string | Uint8Array,

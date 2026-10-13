@@ -12,8 +12,8 @@
  * - API returns empty settings for users without managed settings
  */
 
-import { createHash } from 'crypto'
-import { open, unlink } from 'fs/promises'
+import { createHash } from 'node:crypto'
+import { open, unlink } from 'node:fs/promises'
 
 import axios from 'axios'
 
@@ -102,7 +102,7 @@ function sortKeysDeep(obj: unknown): unknown {
   }
   if (obj !== null && typeof obj === 'object') {
     const sorted: Record<string, unknown> = {}
-    for (const key of Object.keys(obj).sort()) {
+    for (const key of Object.keys(obj).toSorted()) {
       sorted[key] = sortKeysDeep((obj as Record<string, unknown>)[key])
     }
     return sorted

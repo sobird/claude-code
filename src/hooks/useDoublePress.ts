@@ -10,7 +10,7 @@ export function useDoublePress(
   onDoublePress: () => void,
   onFirstPress?: () => void,
 ): () => void {
-  const lastPressRef = useRef<number>(0)
+  const lastPressRef = useRef(0)
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const clearTimeoutSafe = useCallback(() => {

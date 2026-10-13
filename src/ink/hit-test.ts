@@ -23,7 +23,7 @@ export function hitTest(node: DOMElement, col: number, row: number): DOMElement 
   }
   // Later siblings paint on top; reversed traversal returns topmost hit.
   for (let i = node.childNodes.length - 1; i >= 0; i--) {
-    const child = node.childNodes[i]!
+    const child = node.childNodes[i]
     if (child.nodeName === '#text') continue
     const hit = hitTest(child, col, row)
     if (hit) return hit

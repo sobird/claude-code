@@ -29,7 +29,7 @@ export type DiffData = {
  */
 export function useDiffData(): DiffData {
   const [diffResult, setDiffResult] = useState<GitDiffResult | null>(null)
-  const [hunks, setHunks] = useState<Map<string, StructuredPatchHunk[]>>(new Map())
+  const [hunks, setHunks] = useState(new Map())
   const [loading, setLoading] = useState(true)
 
   // Fetch diff data on mount

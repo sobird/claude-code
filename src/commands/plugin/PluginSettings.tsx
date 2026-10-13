@@ -641,7 +641,7 @@ function getInitialTab(viewState: ViewState): TabId {
 export function PluginSettings({ onComplete, args, showMcpRedirectMessage }: PluginSettingsProps): React.ReactNode {
   const parsedCommand = parsePluginArgs(args)
   const initialViewState = getInitialViewState(parsedCommand)
-  const [viewState, setViewState] = useState<ViewState>(initialViewState)
+  const [viewState, setViewState] = useState(initialViewState)
   const [activeTab, setActiveTab] = useState<TabId>(getInitialTab(initialViewState))
   const [inputValue, setInputValue] = useState(viewState.type === 'add-marketplace' ? viewState.initialValue || '' : '')
   const [cursorOffset, setCursorOffset] = useState(0)

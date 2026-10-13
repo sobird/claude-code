@@ -86,7 +86,7 @@ function containsExcludedCommand(command: string): boolean {
     while (startIdx < candidates.length) {
       const endIdx = candidates.length
       for (let i = startIdx; i < endIdx; i++) {
-        const cmd = candidates[i]!
+        const cmd = candidates[i]
         const envStripped = stripAllLeadingEnvVars(cmd, BINARY_HIJACK_VARS)
         if (!seen.has(envStripped)) {
           candidates.push(envStripped)

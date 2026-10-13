@@ -157,9 +157,7 @@ export function useFilePermissionDialog<T extends ToolInput>({
   const handleInputModeToggle = useCallback(
     (value: string) => {
       const analyticsProps = {
-        toolName: sanitizeToolNameForAnalytics(
-          toolUseConfirm.tool.name,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        toolName: sanitizeToolNameForAnalytics(toolUseConfirm.tool.name),
         isMcp: toolUseConfirm.tool.isMcp ?? false,
       }
 

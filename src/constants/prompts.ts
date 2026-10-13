@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import { type as osType, version as osVersion, release as osRelease } from 'os'
+import { type as osType, version as osVersion, release as osRelease } from 'node:os'
 
 import { getSkillToolCommands } from 'src/commands.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'

@@ -97,7 +97,7 @@ export class FileIndex {
     const paths: string[] = []
     let chunkStart = performance.now()
     for (let i = 0; i < fileList.length; i++) {
-      const line = fileList[i]!
+      const line = fileList[i]
       if (line.length > 0 && !seen.has(line)) {
         seen.add(line)
         paths.push(line)
@@ -151,7 +151,7 @@ export class FileIndex {
   // of paths missing any needle letter (89% survival for broad queries like
   // "test" → still a 10%+ free win; 90%+ rejection for rare chars).
   private indexPath(i: number): void {
-    const lp = this.paths[i]!.toLowerCase()
+    const lp = this.paths[i].toLowerCase()
     this.lowerPaths[i] = lp
     const len = lp.length
     this.pathLens[i] = len
@@ -203,22 +203,22 @@ export class FileIndex {
 
     outer: for (let i = 0; i < readyCount; i++) {
       // O(1) bitmap reject: path must contain every letter in the needle
-      if ((charBits[i]! & needleBitmap) !== needleBitmap) continue
+      if ((charBits[i] & needleBitmap) !== needleBitmap) continue
 
-      const haystack = caseSensitive ? paths[i]! : lowerPaths[i]!
+      const haystack = caseSensitive ? paths[i] : lowerPaths[i]
 
       // Fused indexOf scan: find positions (SIMD-accelerated in JSC/V8) AND
       // accumulate gap/consecutive terms inline. The greedy-earliest positions
       // found here are identical to what the charCodeAt scorer would find, so
       // we score directly from them — no second scan.
-      let pos = haystack.indexOf(needleChars[0]!)
+      let pos = haystack.indexOf(needleChars[0])
       if (pos === -1) continue
       posBuf[0] = pos
       let gapPenalty = 0
       let consecBonus = 0
       let prev = pos
       for (let j = 1; j < nLen; j++) {
-        pos = haystack.indexOf(needleChars[j]!, prev + 1)
+        pos = haystack.indexOf(needleChars[j], prev + 1)
         if (pos === -1) continue outer
         posBuf[j] = pos
         const gap = pos - prev - 1
@@ -234,12 +234,12 @@ export class FileIndex {
       }
 
       // Boundary/camelCase scoring: check the char before each match position.
-      const path = paths[i]!
-      const hLen = pathLens[i]!
+      const path = paths[i]
+      const hLen = pathLens[i]
       let score = nLen * SCORE_MATCH + consecBonus - gapPenalty
-      score += scoreBonusAt(path, posBuf[0]!, true)
+      score += scoreBonusAt(path, posBuf[0], true)
       for (let j = 1; j < nLen; j++) {
-        score += scoreBonusAt(path, posBuf[j]!, false)
+        score += scoreBonusAt(path, posBuf[j], false)
       }
       score += Math.max(0, 32 - (hLen >> 2))
 
@@ -247,19 +247,19 @@ export class FileIndex {
         topK.push({ path, fuzzScore: score })
         if (topK.length === limit) {
           topK.sort((a, b) => a.fuzzScore - b.fuzzScore)
-          threshold = topK[0]!.fuzzScore
+          threshold = topK[0].fuzzScore
         }
       } else if (score > threshold) {
         let lo = 0
         let hi = topK.length
         while (lo < hi) {
           const mid = (lo + hi) >> 1
-          if (topK[mid]!.fuzzScore < score) lo = mid + 1
+          if (topK[mid].fuzzScore < score) lo = mid + 1
           else hi = mid
         }
         topK.splice(lo, 0, { path, fuzzScore: score })
         topK.shift()
-        threshold = topK[0]!.fuzzScore
+        threshold = topK[0].fuzzScore
       }
     }
 
@@ -271,7 +271,7 @@ export class FileIndex {
     const results: SearchResult[] = new Array(matchCount)
 
     for (let i = 0; i < matchCount; i++) {
-      const path = topK[i]!.path
+      const path = topK[i].path
       const positionScore = i / denom
       const finalScore = path.includes('test') ? Math.min(positionScore * 1.05, 1.0) : positionScore
       results[i] = { path, score: finalScore }

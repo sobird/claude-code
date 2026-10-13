@@ -101,5 +101,5 @@ export function scopeToSettingSource(scope: PluginScope): EditableSettingSource 
  * @returns The corresponding plugin scope
  */
 export function settingSourceToScope(source: EditableSettingSource): Exclude<PluginScope, 'managed'> {
-  return SETTING_SOURCE_TO_SCOPE[source] as Exclude<PluginScope, 'managed'>
+  return SETTING_SOURCE_TO_SCOPE[source]
 }

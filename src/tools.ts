@@ -320,7 +320,7 @@ export function assembleToolPool(permissionContext: ToolPermissionContext, mcpTo
   // Avoid Array.toSorted (Node 20+) — we support Node 18. builtInTools is
   // readonly so copy-then-sort; allowedMcpTools is a fresh .filter() result.
   const byName = (a: Tool, b: Tool) => a.name.localeCompare(b.name)
-  return uniqBy([...builtInTools].sort(byName).concat(allowedMcpTools.sort(byName)), 'name')
+  return uniqBy([...builtInTools].toSorted(byName).concat(allowedMcpTools.toSorted(byName)), 'name')
 }
 
 /**

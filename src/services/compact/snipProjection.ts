@@ -1,5 +1,4 @@
 // Auto-generated stub — replace with real implementation
-export {}
 
 import type { Message } from 'src/types/message'
 

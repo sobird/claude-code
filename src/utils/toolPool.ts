@@ -55,7 +55,7 @@ export function mergeAndFilterTools(initialTools: Tools, assembled: Tools, mode:
   // built-ins must stay a contiguous prefix for the server's cache policy.
   const [mcp, builtIn] = partition(uniqBy([...initialTools, ...assembled], 'name'), isMcpTool)
   const byName = (a: Tool, b: Tool) => a.name.localeCompare(b.name)
-  const tools = [...builtIn.sort(byName), ...mcp.sort(byName)]
+  const tools = [...builtIn.toSorted(byName), ...mcp.toSorted(byName)]
 
   if (feature('COORDINATOR_MODE') && coordinatorModeModule) {
     if (coordinatorModeModule.isCoordinatorMode()) {

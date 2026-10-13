@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
+import type { UUID } from 'node:crypto'
 
 import uniqBy from 'lodash-es/uniqBy.js'
 
@@ -308,7 +308,7 @@ export function annotateBoundaryWithPreservedSegment(
     compactMetadata: {
       ...boundary.compactMetadata,
       preservedSegment: {
-        headUuid: keep[0]!.uuid,
+        headUuid: keep[0].uuid,
         anchorUuid,
         tailUuid: keep.at(-1)!.uuid,
       },
@@ -531,7 +531,7 @@ export async function compactConversation(
     // already-loaded deferred tool schemas to the API.
     const preCompactDiscovered = extractDiscoveredToolNames(messages)
     if (preCompactDiscovered.size > 0) {
-      boundaryMarker.compactMetadata.preCompactDiscoveredTools = [...preCompactDiscovered].sort()
+      boundaryMarker.compactMetadata.preCompactDiscoveredTools = [...preCompactDiscovered].toSorted()
     }
 
     const transcriptPath = getTranscriptPath()
@@ -904,7 +904,7 @@ export async function partialCompactConversation(
     // simpler than tracking which half each tool lived in.
     const preCompactDiscovered = extractDiscoveredToolNames(allMessages)
     if (preCompactDiscovered.size > 0) {
-      boundaryMarker.compactMetadata.preCompactDiscoveredTools = [...preCompactDiscovered].sort()
+      boundaryMarker.compactMetadata.preCompactDiscoveredTools = [...preCompactDiscovered].toSorted()
     }
 
     const transcriptPath = getTranscriptPath()
@@ -1268,7 +1268,7 @@ export async function createPostCompactFileAttachments(
         !shouldExcludeFromPostCompactRestore(file.filename, toolUseContext.agentId) &&
         !preservedReadPaths.has(expandPath(file.filename)),
     )
-    .sort((a, b) => b.timestamp - a.timestamp)
+    .toSorted((a, b) => b.timestamp - a.timestamp)
     .slice(0, maxFiles)
 
   const results = await Promise.all(
@@ -1341,7 +1341,7 @@ export function createSkillAttachmentIfNeeded(agentId?: string): AttachmentMessa
   // instructions typically live) rather than dropping whole skills.
   let usedTokens = 0
   const skills = Array.from(invokedSkills.values())
-    .sort((a, b) => b.invokedAt - a.invokedAt)
+    .toSorted((a, b) => b.invokedAt - a.invokedAt)
     .map((skill) => ({
       name: skill.skillName,
       path: skill.skillPath,

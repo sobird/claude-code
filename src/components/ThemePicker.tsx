@@ -111,7 +111,7 @@ export function ThemePicker({
         <Select
           options={themeOptions}
           onFocus={(setting) => {
-            setPreviewTheme(setting as ThemeSetting)
+            setPreviewTheme(setting)
           }}
           onChange={(setting: string) => {
             savePreview()

@@ -1,5 +1,5 @@
-import { mkdir, readdir, readFile, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { getSessionId } from '../bootstrap/state.js'
 import { logForDebugging } from './debug.js'
@@ -87,7 +87,7 @@ export async function getSessionEnvironmentScript(): Promise<string | null> {
     const files = await readdir(sessionEnvDir)
     // We are sorting the hook env files by the order in which they are listed
     // in the settings.json file so that the resulting env is deterministic
-    const hookFiles = files.filter((f) => HOOK_ENV_REGEX.test(f)).sort(sortHookEnvFiles)
+    const hookFiles = files.filter((f) => HOOK_ENV_REGEX.test(f)).toSorted(sortHookEnvFiles)
 
     for (const file of hookFiles) {
       const filePath = join(sessionEnvDir, file)

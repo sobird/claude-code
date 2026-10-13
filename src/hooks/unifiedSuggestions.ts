@@ -1,4 +1,4 @@
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import Fuse from 'fuse.js'
 import type { SuggestionItem } from 'src/components/PromptInput/PromptInputFooterSuggestions.js'

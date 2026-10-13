@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { stat } from 'fs/promises'
+import { stat } from 'node:fs/promises'
 
 import {
   OUTPUT_FILE_TAG,

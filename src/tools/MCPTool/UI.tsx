@@ -106,10 +106,10 @@ export function renderToolUseProgressMessage(
 
 export function renderToolResultMessage(
   output: string | MCPToolResult,
-  _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
+  _progressMessagesForMessage: ProgressMessage[],
   { verbose, input }: { verbose: boolean; input?: unknown },
 ): React.ReactNode {
-  const mcpOutput = output as MCPToolResult
+  const mcpOutput = output
 
   if (!verbose) {
     const slackSend = trySlackSendCompact(mcpOutput, input)

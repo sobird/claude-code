@@ -6,7 +6,7 @@ import { getDefaultCharacters, interpolateColor, parseRGB, toRGBColor } from './
 
 const DEFAULT_CHARACTERS = getDefaultCharacters()
 
-const SPINNER_FRAMES = [...DEFAULT_CHARACTERS, ...[...DEFAULT_CHARACTERS].reverse()]
+const SPINNER_FRAMES = [...DEFAULT_CHARACTERS, ...[...DEFAULT_CHARACTERS].toReversed()]
 
 const REDUCED_MOTION_DOT = '●'
 const REDUCED_MOTION_CYCLE_MS = 2000 // 2-second cycle: 1s visible, 1s dim

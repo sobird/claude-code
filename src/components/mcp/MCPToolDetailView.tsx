@@ -14,7 +14,7 @@ type Props = {
 }
 
 export function MCPToolDetailView({ tool, server, onBack }: Props): React.ReactNode {
-  const [toolDescription, setToolDescription] = React.useState<string>('')
+  const [toolDescription, setToolDescription] = React.useState('')
 
   const toolName = getMcpDisplayName(tool.name, server.name)
   const fullDisplayName = tool.userFacingName ? tool.userFacingName({}) : toolName

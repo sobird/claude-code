@@ -58,12 +58,12 @@ export async function checkManagedSettingsSecurity(
               onAccept={() => {
                 logEvent('tengu_managed_settings_security_dialog_accepted', {})
                 unmount()
-                void resolve('approved')
+                resolve('approved')
               }}
               onReject={() => {
                 logEvent('tengu_managed_settings_security_dialog_rejected', {})
                 unmount()
-                void resolve('rejected')
+                resolve('rejected')
               }}
             />
           </KeybindingSetup>

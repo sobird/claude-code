@@ -44,7 +44,7 @@ let cachedDeferredToolNames: string | null = null
 function getDeferredToolsCacheKey(deferredTools: Tools): string {
   return deferredTools
     .map((t) => t.name)
-    .sort()
+    .toSorted()
     .join(',')
 }
 
@@ -280,7 +280,7 @@ async function searchToolsWithKeywords(
 
   return scored
     .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score)
+    .toSorted((a, b) => b.score - a.score)
     .slice(0, maxResults)
     .map((item) => item.name)
 }
@@ -310,7 +310,7 @@ export const ToolSearchTool = buildTool({
     return outputSchema()
   },
   async call(input, { options: { tools }, getAppState }) {
-    const { query, max_results = 5 } = input
+    const { query, max_results } = input
 
     const deferredTools = tools.filter(isDeferredTool)
     maybeInvalidateCache(deferredTools)
@@ -341,7 +341,7 @@ export const ToolSearchTool = buildTool({
     // is a harmless no-op that lets the model proceed without retry churn.
     const selectMatch = query.match(/^select:(.+)$/i)
     if (selectMatch) {
-      const requested = selectMatch[1]!
+      const requested = selectMatch[1]
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)

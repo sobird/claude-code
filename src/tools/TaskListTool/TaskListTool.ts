@@ -81,7 +81,7 @@ export const TaskListTool = buildTool({
     }
   },
   mapToolResultToToolResultBlockParam(content, toolUseID) {
-    const { tasks } = content as Output
+    const { tasks } = content
     if (tasks.length === 0) {
       return {
         tool_use_id: toolUseID,

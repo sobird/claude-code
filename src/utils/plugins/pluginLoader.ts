@@ -32,8 +32,8 @@
  * - Error collection and reporting
  */
 
-import { copyFile, readdir, readFile, readlink, realpath, rename, rm, rmdir, stat, symlink } from 'fs/promises'
-import { basename, dirname, join, relative, resolve, sep } from 'path'
+import { copyFile, readdir, readFile, readlink, realpath, rename, rm, rmdir, stat, symlink } from 'node:fs/promises'
+import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 
 import memoize from 'lodash-es/memoize.js'
 
@@ -182,7 +182,7 @@ export async function probeSeedCacheAnyVersion(pluginId: string): Promise<string
     try {
       const versions = await readdir(pluginDir)
       if (versions.length !== 1) continue
-      const versionDir = join(pluginDir, versions[0]!)
+      const versionDir = join(pluginDir, versions[0])
       const entries = await readdir(versionDir)
       if (entries.length > 0) return versionDir
     } catch {
@@ -362,7 +362,9 @@ export async function copyPluginToVersionedCache(
       // from recursive copyDir (broken symlinks, raced deletes) should preserve
       // their original path in the error.
       if (isENOENT(e) && getErrnoPath(e) === sourceDir) {
-        throw new Error(`Plugin source directory not found: ${sourceDir} (from entry.source: ${entry.source})`)
+        throw new Error(`Plugin source directory not found: ${sourceDir} (from entry.source: ${entry.source})`, {
+          cause: e,
+        })
       }
       throw e
     }
@@ -687,6 +689,7 @@ export async function installFromGitSubdir(
         throw new Error(
           `Subdirectory '${subdirPath}' not found in repository ${gitUrl}${ref ? ` (ref: ${ref})` : ''}. ` +
             'Check that the path is correct and exists at the specified ref/sha.',
+          { cause: e },
         )
       }
       throw e
@@ -848,7 +851,9 @@ export async function cachePlugin(
         level: 'error',
       })
 
-      throw new Error(`Plugin has a corrupt manifest file at ${manifestPath}. JSON parse error: ${errorMsg}`)
+      throw new Error(`Plugin has a corrupt manifest file at ${manifestPath}. JSON parse error: ${errorMsg}`, {
+        cause: error,
+      })
     }
   } else if (await pathExists(legacyManifestPath)) {
     try {
@@ -880,7 +885,9 @@ export async function cachePlugin(
         level: 'error',
       })
 
-      throw new Error(`Plugin has a corrupt manifest file at ${legacyManifestPath}. JSON parse error: ${errorMsg}`)
+      throw new Error(`Plugin has a corrupt manifest file at ${legacyManifestPath}. JSON parse error: ${errorMsg}`, {
+        cause: error,
+      })
     }
   } else {
     manifest = options?.manifest || {
@@ -1011,6 +1018,7 @@ export async function loadPluginManifest(
 
     throw new Error(
       `Plugin ${pluginName} has a corrupt manifest file at ${manifestPath}.\n\nJSON parse error: ${errorMsg}`,
+      { cause: error },
     )
   }
 }
@@ -1576,7 +1584,7 @@ async function loadPluginSettings(
 
   // Fall back to manifest.settings
   if (manifest.settings) {
-    const filtered = parsePluginSettings(manifest.settings as Record<string, unknown>)
+    const filtered = parsePluginSettings(manifest.settings)
     if (filtered) {
       logForDebugging(`Loaded settings from manifest for plugin ${manifest.name}`)
       return filtered
@@ -1597,11 +1605,11 @@ function mergeHooksSettings(base: HooksSettings | undefined, additional: HooksSe
   const merged = { ...base }
 
   for (const [event, matchers] of Object.entries(additional)) {
-    if (!merged[event as keyof HooksSettings]) {
-      merged[event as keyof HooksSettings] = matchers
+    if (!merged[event]) {
+      merged[event] = matchers
     } else {
       // Merge matchers for this event
-      merged[event as keyof HooksSettings] = [...(merged[event as keyof HooksSettings] || []), ...matchers]
+      merged[event] = [...(merged[event] || []), ...matchers]
     }
   }
 
@@ -1625,7 +1633,7 @@ async function loadPluginsFromMarketplaces({ cacheOnly }: { cacheOnly: boolean }
   // Merge --add-dir plugins at lowest priority; standard settings win on conflict
   const enabledPlugins = {
     ...getAddDirEnabledPlugins(),
-    ...(settings.enabledPlugins || {}),
+    ...settings.enabledPlugins,
   }
   const plugins: LoadedPlugin[] = []
   const errors: PluginError[] = []
@@ -1753,7 +1761,7 @@ async function loadPluginsFromMarketplaces({ cacheOnly }: { cacheOnly: boolean }
         errors.push({
           type: 'plugin-not-found',
           source: pluginId,
-          pluginId: pluginName!,
+          pluginId: pluginName,
           marketplace: marketplaceName!,
         })
         return null
@@ -1789,7 +1797,7 @@ async function loadPluginsFromMarketplaces({ cacheOnly }: { cacheOnly: boolean }
     } else if (result.status === 'rejected') {
       const err = toError(result.reason)
       logError(err)
-      const pluginId = marketplacePluginEntries[i]![0]
+      const pluginId = marketplacePluginEntries[i][0]
       errors.push({
         type: 'generic-error',
         source: pluginId,
@@ -2343,7 +2351,7 @@ async function finishLoadingPluginFromPath(
       ) {
         // Object mapping format - merge metadata
         const commandsMetadata: Record<string, CommandMetadata> = {
-          ...(plugin.commandsMetadata || {}),
+          ...plugin.commandsMetadata,
         }
         const validPaths: string[] = []
 
@@ -2501,7 +2509,7 @@ async function finishLoadingPluginFromPath(
     // Supplement hooks from marketplace entry
     if (entry.hooks) {
       plugin.hooksConfig = {
-        ...(plugin.hooksConfig || {}),
+        ...plugin.hooksConfig,
         ...(entry.hooks as HooksSettings),
       }
     }

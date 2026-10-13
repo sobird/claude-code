@@ -1,8 +1,8 @@
-import type { ChildProcess, ExecFileException } from 'child_process'
-import { execFile, spawn } from 'child_process'
-import { homedir } from 'os'
-import * as path from 'path'
-import { fileURLToPath } from 'url'
+import type { ChildProcess, ExecFileException } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
+import { homedir } from 'node:os'
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { rgPath } from '@vscode/ripgrep'
 import memoize from 'lodash-es/memoize.js'

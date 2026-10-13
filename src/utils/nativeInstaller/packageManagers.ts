@@ -2,7 +2,7 @@
  * Package manager detection for Claude CLI
  */
 
-import { readFile } from 'fs/promises'
+import { readFile } from 'node:fs/promises'
 
 import memoize from 'lodash-es/memoize.js'
 

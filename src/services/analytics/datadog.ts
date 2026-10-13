@@ -1,4 +1,4 @@
-import { createHash } from 'crypto'
+import { createHash } from 'node:crypto'
 
 import axios from 'axios'
 import memoize from 'lodash-es/memoize.js'

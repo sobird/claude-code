@@ -145,7 +145,7 @@ export function QuestionView({
     ],
   )
 
-  const textOptions: OptionWithDescription<string>[] = question.options.map((opt: QuestionOption) => ({
+  const textOptions: OptionWithDescription[] = question.options.map((opt: QuestionOption) => ({
     type: 'text' as const,
     value: opt.label,
     label: opt.label,
@@ -169,7 +169,7 @@ export function QuestionView({
     [questionText, onUpdateQuestionState, question.multiSelect],
   )
 
-  const otherOption: OptionWithDescription<string> = {
+  const otherOption: OptionWithDescription = {
     type: 'input' as const,
     value: '__other__',
     label: 'Other',

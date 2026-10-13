@@ -11,8 +11,8 @@
  *   Windows — Windows Terminal (wt.exe), PowerShell, cmd.exe
  */
 
-import { spawn } from 'child_process'
-import { basename } from 'path'
+import { spawn } from 'node:child_process'
+import { basename } from 'node:path'
 
 import { getGlobalConfig } from '../config.js'
 import { logForDebugging } from '../debug.js'
@@ -463,11 +463,11 @@ function spawnDetached(
       logForDebugging(`Failed to spawn ${command}: ${err.message}`, {
         level: 'error',
       })
-      void resolve(false)
+      resolve(false)
     })
     child.once('spawn', () => {
       child.unref()
-      void resolve(true)
+      resolve(true)
     })
   })
 }

@@ -1,6 +1,6 @@
-import * as fs from 'fs/promises'
-import { homedir } from 'os'
-import { join } from 'path'
+import * as fs from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 import { logEvent } from '../services/analytics/index.js'
 import { CACHE_PATHS } from './cachePaths.js'
@@ -40,7 +40,7 @@ export function addCleanupResults(a: CleanupResult, b: CleanupResult): CleanupRe
 }
 
 export function convertFileNameToDate(filename: string): Date {
-  const isoStr = filename.split('.')[0]!.replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/, 'T$1:$2:$3.$4Z')
+  const isoStr = filename.split('.')[0].replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/, 'T$1:$2:$3.$4Z')
   return new Date(isoStr)
 }
 
@@ -461,7 +461,7 @@ export async function cleanupNpmCacheForAnthropicPackages(): Promise<void> {
     for (const [, entries] of byPackage) {
       entries.sort((a, b) => b.time - a.time) // newest first
       for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i]!
+        const entry = entries[i]
         if (entry.time < cutoff || i >= NPM_CACHE_RETENTION_COUNT) {
           keysToRemove.push(entry.key)
         }

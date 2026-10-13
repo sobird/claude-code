@@ -43,7 +43,7 @@ type Props = {
   onChangeAppState?: (args: { newState: AppState; oldState: AppState }) => void
 }
 
-const HasAppStateContext = React.createContext<boolean>(false)
+const HasAppStateContext = React.createContext(false)
 
 export function AppStateProvider({ children, initialState, onChangeAppState }: Props): React.ReactNode {
   // Don't allow nested AppStateProviders.
@@ -55,7 +55,7 @@ export function AppStateProvider({ children, initialState, onChangeAppState }: P
   // Store is created once and never changes -- stable context value means
   // the provider never triggers re-renders. Consumers subscribe to slices
   // via useSyncExternalStore in useAppState(selector).
-  const [store] = useState(() => createStore<AppState>(initialState ?? getDefaultAppState(), onChangeAppState))
+  const [store] = useState(() => createStore(initialState ?? getDefaultAppState(), onChangeAppState))
 
   // Check on mount if bypass mode should be disabled
   // This handles the race condition where remote settings load BEFORE this component mounts,

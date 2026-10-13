@@ -371,8 +371,8 @@ export type RemoteControlHandle = {
   sendControlResponse(res: unknown): void
   sendControlCancelRequest(requestId: string): void
   inboundPrompts(): AsyncGenerator<InboundPrompt>
-  controlRequests(): AsyncGenerator<unknown>
-  permissionResponses(): AsyncGenerator<unknown>
+  controlRequests(): AsyncGenerator
+  permissionResponses(): AsyncGenerator
   onStateChange(cb: (state: 'ready' | 'connected' | 'reconnecting' | 'failed', detail?: string) => void): void
   teardown(): Promise<void>
 }

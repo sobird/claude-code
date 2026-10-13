@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import { useCallback, useEffect, useRef } from 'react'
 
@@ -138,12 +138,12 @@ export function useManageMCPConnections(
   const setAppState = useSetAppState()
 
   // Track active reconnection attempts to allow cancellation
-  const reconnectTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const reconnectTimersRef = useRef(new Map())
 
   // Dedup the --channels blocked warning per skip kind so that a user who
   // sees "run /login" (auth skip), logs in, then hits the policy gate
   // gets a second toast.
-  const channelWarnedKindsRef = useRef<Set<'disabled' | 'auth' | 'policy' | 'marketplace' | 'allowlist'>>(new Set())
+  const channelWarnedKindsRef = useRef(new Set())
   // Channel permission callbacks — constructed once, stable ref. Stored in
   // AppState so interactiveHandler can subscribe. The pending Map lives inside
   // the closure (not module-level, not AppState — functions-in-state is brittle).
@@ -830,7 +830,7 @@ export function useManageMCPConnections(
         ...(process.env.USER_TYPE === 'ant' && stdioCommands.length > 0
           ? {
               stdio_commands: stdioCommands
-                .sort()
+                .toSorted()
                 .join(',') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
             }
           : {}),

@@ -39,7 +39,7 @@ export function OAuthFlowStep({ onSuccess, onCancel }: OAuthFlowStepProps): Reac
   const [cursorOffset, setCursorOffset] = useState(0)
   const [showPastePrompt, setShowPastePrompt] = useState(false)
   const [urlCopied, setUrlCopied] = useState(false)
-  const timersRef = useRef<Set<NodeJS.Timeout>>(new Set())
+  const timersRef = useRef(new Set())
   // Separate ref so startOAuth's timer clear doesn't cancel the urlCopied reset
   const urlCopiedTimerRef = useRef<NodeJS.Timeout | undefined>(undefined)
 

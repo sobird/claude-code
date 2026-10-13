@@ -206,7 +206,7 @@ export function useManagePlugins({
           process.env.USER_TYPE === 'ant' && enabled.length > 0
             ? (enabled
                 .map((p) => p.name)
-                .sort()
+                .toSorted()
                 .join(',') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
             : undefined,
       }

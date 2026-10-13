@@ -144,11 +144,9 @@ export function Config({
   const initialConfig = React.useRef(getGlobalConfig())
   const [settingsData, setSettingsData] = useState(getInitialSettings())
   const initialSettingsData = React.useRef(getInitialSettings())
-  const [currentOutputStyle, setCurrentOutputStyle] = useState<OutputStyle>(
-    settingsData?.outputStyle || DEFAULT_OUTPUT_STYLE_NAME,
-  )
+  const [currentOutputStyle, setCurrentOutputStyle] = useState(settingsData?.outputStyle || DEFAULT_OUTPUT_STYLE_NAME)
   const initialOutputStyle = React.useRef(currentOutputStyle)
-  const [currentLanguage, setCurrentLanguage] = useState<string | undefined>(settingsData?.language)
+  const [currentLanguage, setCurrentLanguage] = useState(settingsData?.language)
   const initialLanguage = React.useRef(currentLanguage)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [scrollOffset, setScrollOffset] = useState(0)
@@ -1475,7 +1473,7 @@ export function Config({
       isDirty.current = true
       const currentIndex = setting.options.indexOf(setting.value)
       const nextIndex = (currentIndex + 1) % setting.options.length
-      setting.onChange(setting.options[nextIndex]!)
+      setting.onChange(setting.options[nextIndex])
       return
     }
   }, [autoUpdaterDisabledReason, filteredSettingsItems, selectedIndex, settingsData?.autoUpdatesChannel, setTabsHidden])
@@ -1717,7 +1715,7 @@ export function Config({
                 outputStyle: style,
               })
 
-              void logEvent('tengu_output_style_changed', {
+              logEvent('tengu_output_style_changed', {
                 style: (style ??
                   DEFAULT_OUTPUT_STYLE_NAME) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 source: 'config_panel' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -1756,7 +1754,7 @@ export function Config({
                 language,
               })
 
-              void logEvent('tengu_language_changed', {
+              logEvent('tengu_language_changed', {
                 language: (language ?? 'default') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 source: 'config_panel' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               })

@@ -69,7 +69,7 @@ function useClawdAnimation(): {
   // re-render on any settings change.
   const [reducedMotion] = useState(() => getInitialSettings().prefersReducedMotion ?? false)
   const [frameIndex, setFrameIndex] = useState(-1)
-  const sequenceRef = useRef<readonly Frame[]>(JUMP_WAVE)
+  const sequenceRef = useRef(JUMP_WAVE)
 
   const onClick = () => {
     if (reducedMotion || frameIndex !== -1) return
@@ -88,6 +88,6 @@ function useClawdAnimation(): {
   }, [frameIndex])
 
   const seq = sequenceRef.current
-  const current = frameIndex >= 0 && frameIndex < seq.length ? seq[frameIndex]! : IDLE
+  const current = frameIndex >= 0 && frameIndex < seq.length ? seq[frameIndex] : IDLE
   return { pose: current.pose, bounceOffset: current.offset, onClick }
 }

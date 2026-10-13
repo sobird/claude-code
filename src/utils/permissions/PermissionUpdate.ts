@@ -1,4 +1,4 @@
-import { posix } from 'path'
+import { posix } from 'node:path'
 
 import type { ToolPermissionContext } from '../../Tool.js'
 // Types extracted to src/types/permissions.ts to break import cycles

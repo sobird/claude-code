@@ -1,4 +1,4 @@
-import { resolve } from 'path'
+import { resolve } from 'node:path'
 
 import type { StructuredPatchHunk } from 'diff'
 import React, { useMemo } from 'react'

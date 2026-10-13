@@ -162,11 +162,11 @@ export function BackgroundTasksDialog({ onDone, toolUseContext, initialDetailTas
     const allItems = getSelectableBackgroundTasks(typedTasks, foregroundedTaskId)
     if (allItems.length === 1) {
       skippedListOnMount.current = true
-      return { mode: 'detail', itemId: allItems[0]!.id }
+      return { mode: 'detail', itemId: allItems[0].id }
     }
     return { mode: 'list' }
   })
-  const [selectedIndex, setSelectedIndex] = useState<number>(0)
+  const [selectedIndex, setSelectedIndex] = useState(0)
 
   // Register as modal overlay so parent Chat keybindings (up/down for history)
   // are deactivated while this dialog is open
@@ -186,7 +186,7 @@ export function BackgroundTasksDialog({ onDone, toolUseContext, initialDetailTas
     // Filter to only show running/pending background tasks, matching the status bar count
     const backgroundTasks = Object.values(typedTasks ?? {}).filter(isBackgroundTask)
     const allItems = backgroundTasks.map(toListItem)
-    const sorted = allItems.sort((a, b) => {
+    const sorted = allItems.toSorted((a, b) => {
       const aStatus = a.status
       const bStatus = b.status
       if (aStatus === 'running' && bStatus !== 'running') return -1

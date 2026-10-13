@@ -1,4 +1,4 @@
-import { Stream } from 'stream'
+import { Stream } from 'node:stream'
 
 import type { ReactNode } from 'react'
 import { logForDebugging } from 'src/utils/debug.js'

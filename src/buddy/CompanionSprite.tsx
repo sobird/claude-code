@@ -202,7 +202,7 @@ export function CompanionSprite(): React.ReactNode {
     // Excited: cycle all fidget frames fast
     spriteFrame = tick % frameCount
   } else {
-    const step = IDLE_SEQUENCE[tick % IDLE_SEQUENCE.length]!
+    const step = IDLE_SEQUENCE[tick % IDLE_SEQUENCE.length]
     if (step === -1) {
       spriteFrame = 0
       blink = true

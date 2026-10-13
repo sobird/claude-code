@@ -120,7 +120,7 @@ export function renderToolUseErrorMessage(
 
 export function renderToolResultMessage(
   { mode = 'files_with_matches', filenames, numFiles, content, numLines, numMatches }: Output,
-  _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
+  _progressMessagesForMessage: ProgressMessage[],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
   if (mode === 'content') {

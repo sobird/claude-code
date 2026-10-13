@@ -171,7 +171,7 @@ export function HooksConfigMenu({ toolNames, onExit }: Props): React.ReactNode {
     let total = 0
     for (const [event, matchers] of Object.entries(hooksByEventAndMatcher)) {
       const eventCount = Object.values(matchers).reduce((sum, hooks) => sum + hooks.length, 0)
-      byEvent[event as HookEvent] = eventCount
+      byEvent[event] = eventCount
       total += eventCount
     }
     return { hooksByEvent: byEvent, totalHooksCount: total }

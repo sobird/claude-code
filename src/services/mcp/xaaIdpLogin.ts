@@ -6,9 +6,9 @@
  * MCP server auths. The id_token is cached in the keychain and reused until expiry.
  */
 
-import { randomBytes } from 'crypto'
-import { createServer, type Server } from 'http'
-import { parse } from 'url'
+import { randomBytes } from 'node:crypto'
+import { createServer, type Server } from 'node:http'
+import { parse } from 'node:url'
 
 import { exchangeAuthorization, startAuthorization } from '@modelcontextprotocol/sdk/client/auth.js'
 import {
@@ -234,7 +234,7 @@ function jwtExp(jwt: string): number | undefined {
   const parts = jwt.split('.')
   if (parts.length !== 3) return undefined
   try {
-    const payload = jsonParse(Buffer.from(parts[1]!, 'base64url').toString('utf-8')) as { exp?: number }
+    const payload = jsonParse(Buffer.from(parts[1], 'base64url').toString('utf-8')) as { exp?: number }
     return typeof payload.exp === 'number' ? payload.exp : undefined
   } catch {
     return undefined

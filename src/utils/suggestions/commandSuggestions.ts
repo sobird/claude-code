@@ -300,7 +300,7 @@ export function generateCommandSuggestions(input: string, commands: Command[]): 
         score: getSkillUsageScore(getCommandName(cmd)),
       }))
       .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score)
+      .toSorted((a, b) => b.score - a.score)
 
     // Take top 5 recently used skills
     for (const item of commandsWithScores.slice(0, 5)) {
@@ -389,7 +389,7 @@ export function generateCommandSuggestions(input: string, commands: Command[]): 
     return { r, name, aliases, usage }
   })
 
-  const sortedResults = withMeta.sort((a, b) => {
+  const sortedResults = withMeta.toSorted((a, b) => {
     const aName = a.name
     const bName = b.name
     const aAliases = a.aliases

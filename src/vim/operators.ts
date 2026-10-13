@@ -132,7 +132,7 @@ export function executeLineOp(op: Operator, count: number, ctx: OperatorContext)
     }
   }
 
-  ctx.recordChange({ type: 'operator', op, motion: op[0]!, count })
+  ctx.recordChange({ type: 'operator', op, motion: op[0], count })
 }
 
 /**
@@ -219,7 +219,7 @@ export function executeJoin(count: number, ctx: OperatorContext): void {
   if (currentLine >= lines.length - 1) return
 
   const linesToJoin = Math.min(count, lines.length - currentLine - 1)
-  let joinedLine = lines[currentLine]!
+  let joinedLine = lines[currentLine]
   const cursorPos = joinedLine.length
 
   for (let i = 1; i <= linesToJoin; i++) {
@@ -307,7 +307,7 @@ export function executeIndent(dir: '>' | '<', count: number, ctx: OperatorContex
       // Remove as much leading whitespace as possible up to indent length
       let removed = 0
       let idx = 0
-      while (idx < line.length && removed < indent.length && /\s/.test(line[idx]!)) {
+      while (idx < line.length && removed < indent.length && /\s/.test(line[idx])) {
         removed++
         idx++
       }

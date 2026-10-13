@@ -1,7 +1,7 @@
 import { feature } from 'bun:bundle'
-import { randomBytes } from 'crypto'
-import { unwatchFile, watchFile } from 'fs'
-import { basename, dirname, join, resolve } from 'path'
+import { randomBytes } from 'node:crypto'
+import { unwatchFile, watchFile } from 'node:fs'
+import { basename, dirname, join, resolve } from 'node:path'
 
 import memoize from 'lodash-es/memoize.js'
 import pickBy from 'lodash-es/pickBy.js'
@@ -1194,8 +1194,8 @@ function saveConfigWithLock<A extends object>(
       const existingBackups = fs
         .readdirStringSync(backupDir)
         .filter((f) => f.startsWith(`${fileBase}.backup.`))
-        .sort()
-        .reverse() // Most recent first (timestamps sort lexicographically)
+        .toSorted()
+        .toReversed() // Most recent first (timestamps sort lexicographically)
 
       const mostRecentBackup = existingBackups[0]
       const mostRecentTimestamp = mostRecentBackup ? Number(mostRecentBackup.split('.backup.').pop()) : 0
@@ -1214,8 +1214,8 @@ function saveConfigWithLock<A extends object>(
         ? fs
             .readdirStringSync(backupDir)
             .filter((f) => f.startsWith(`${fileBase}.backup.`))
-            .sort()
-            .reverse()
+            .toSorted()
+            .toReversed()
         : existingBackups
 
       for (const oldBackup of backupsForCleanup.slice(MAX_BACKUPS)) {
@@ -1298,7 +1298,7 @@ function findMostRecentBackup(file: string): string | null {
     const backups = fs
       .readdirStringSync(backupDir)
       .filter((f) => f.startsWith(`${fileBase}.backup.`))
-      .sort()
+      .toSorted()
 
     const mostRecent = backups.at(-1) // Timestamps sort lexicographically
     if (mostRecent) {
@@ -1315,7 +1315,7 @@ function findMostRecentBackup(file: string): string | null {
     const backups = fs
       .readdirStringSync(fileDir)
       .filter((f) => f.startsWith(`${fileBase}.backup.`))
-      .sort()
+      .toSorted()
 
     const mostRecent = backups.at(-1) // Timestamps sort lexicographically
     if (mostRecent) {

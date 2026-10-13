@@ -5,7 +5,7 @@ import { createStore } from '../../state/store.js'
  * We suppress immediately after successful compaction since we don't have accurate
  * token counts until the next API response.
  */
-export const compactWarningStore = createStore<boolean>(false)
+export const compactWarningStore = createStore(false)
 
 /** Suppress the compact warning. Call after successful compaction. */
 export function suppressCompactWarning(): void {

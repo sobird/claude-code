@@ -474,7 +474,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       const positional = args.filter((a) => a !== '-n')
       // Must have exactly one positional arg that looks like a remote name
       if (positional.length !== 1) return true
-      return !/^[a-zA-Z0-9_-]+$/.test(positional[0]!)
+      return !/^[a-zA-Z0-9_-]+$/.test(positional[0])
     },
   },
   'git remote': {
@@ -1812,9 +1812,9 @@ export function validateFlags(
           if (
             i + 1 >= tokens.length ||
             (tokens[i + 1] &&
-              tokens[i + 1]!.startsWith('-') &&
-              tokens[i + 1]!.length > 1 &&
-              FLAG_PATTERN.test(tokens[i + 1]!))
+              tokens[i + 1].startsWith('-') &&
+              tokens[i + 1].length > 1 &&
+              FLAG_PATTERN.test(tokens[i + 1]))
           ) {
             return false // Missing required argument
           }

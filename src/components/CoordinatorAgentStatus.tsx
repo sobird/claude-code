@@ -31,7 +31,7 @@ import { isTerminalStatus } from './tasks/taskStatusUtils.js'
 export function getVisibleAgentTasks(tasks: AppState['tasks']): LocalAgentTaskState[] {
   return Object.values(tasks)
     .filter((t): t is LocalAgentTaskState => isPanelAgentTask(t) && t.evictAfter !== 0)
-    .sort((a, b) => a.startTime - b.startTime)
+    .toSorted((a, b) => a.startTime - b.startTime)
 }
 
 export function CoordinatorTaskPanel(): React.ReactNode {

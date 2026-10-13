@@ -14,7 +14,7 @@ export function renderToolUseMessage(input: Partial<{ server?: string }>): React
 
 export function renderToolResultMessage(
   output: Output,
-  _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
+  _progressMessagesForMessage: ProgressMessage[],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
   if (!output || output.length === 0) {

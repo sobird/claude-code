@@ -1,6 +1,6 @@
 /* eslint-disable custom-rules/no-top-level-side-effects */
 
-import { appendFileSync } from 'fs'
+import { appendFileSync } from 'node:fs'
 
 import createReconciler from 'react-reconciler'
 import { getYogaCounters } from 'src/native-ts/yoga-layout/index.js'

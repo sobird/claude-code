@@ -18,8 +18,8 @@
  *                   └── marketplace.json
  */
 
-import { writeFile } from 'fs/promises'
-import { basename, dirname, isAbsolute, join, resolve, sep } from 'path'
+import { writeFile } from 'node:fs/promises'
+import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
 
 import axios from 'axios'
 import isEqual from 'lodash-es/isEqual.js'
@@ -144,7 +144,7 @@ export function getDeclaredMarketplaces(): Record<string, DeclaredMarketplace> {
   // Explicitly-disabled entries (value: false) don't count.
   const enabledPlugins = {
     ...getAddDirEnabledPlugins(),
-    ...(getInitialSettings().enabledPlugins ?? {}),
+    ...getInitialSettings().enabledPlugins,
   }
   for (const [pluginId, value] of Object.entries(enabledPlugins)) {
     if (value && parsePluginIdentifier(pluginId).marketplace === OFFICIAL_MARKETPLACE_NAME) {
@@ -162,7 +162,7 @@ export function getDeclaredMarketplaces(): Record<string, DeclaredMarketplace> {
   return {
     ...implicit,
     ...getAddDirExtraMarketplaces(),
-    ...(getInitialSettings().extraKnownMarketplaces ?? {}),
+    ...getInitialSettings().extraKnownMarketplaces,
   }
 }
 
@@ -267,7 +267,7 @@ export async function loadKnownMarketplacesConfig(): Promise<KnownMarketplacesCo
     logForDebugging(errorMsg, {
       level: 'error',
     })
-    throw new Error(errorMsg)
+    throw new Error(errorMsg, { cause: error })
   }
 }
 
@@ -1059,6 +1059,7 @@ async function cacheMarketplaceFromGit(
       const rmErrorMsg = errorMessage(rmError)
       throw new Error(
         `Failed to clean up existing marketplace directory. Please manually delete the directory at ${cachePath} and try again.\n\nTechnical details: ${rmErrorMsg}`,
+        { cause: rmError },
       )
     }
     // ENOENT — cachePath didn't exist, this is a fresh install, nothing to clean up
@@ -1199,20 +1200,23 @@ async function cacheMarketplaceFromUrl(
       if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
         throw new Error(
           `Could not connect to ${redactedUrl}. Please check your internet connection and verify the URL is correct.\n\nTechnical details: ${error.message}`,
+          { cause: error },
         )
       }
       if (error.code === 'ETIMEDOUT') {
         throw new Error(
           `Request timed out while downloading marketplace from ${redactedUrl}. The server may be slow or unreachable.\n\nTechnical details: ${error.message}`,
+          { cause: error },
         )
       }
       if (error.response) {
         throw new Error(
           `HTTP ${error.response.status} error while downloading marketplace from ${redactedUrl}. The marketplace file may not exist at this URL.\n\nTechnical details: ${error.message}`,
+          { cause: error },
         )
       }
     }
-    throw new Error(`Failed to download marketplace from ${redactedUrl}: ${errorMessage(error)}`)
+    throw new Error(`Failed to download marketplace from ${redactedUrl}: ${errorMessage(error)}`, { cause: error })
   }
 
   safeCallProgress(onProgress, 'Validating marketplace data')
@@ -1523,9 +1527,9 @@ async function loadAndCacheMarketplace(
       marketplace = await parseFileWithSchema(marketplacePath, PluginMarketplaceSchema())
     } catch (e) {
       if (isENOENT(e)) {
-        throw new Error(`Marketplace file not found at ${marketplacePath}`)
+        throw new Error(`Marketplace file not found at ${marketplacePath}`, { cause: e })
       }
-      throw new Error(`Failed to parse marketplace file at ${marketplacePath}: ${errorMessage(e)}`)
+      throw new Error(`Failed to parse marketplace file at ${marketplacePath}: ${errorMessage(e)}`, { cause: e })
     }
 
     // Now rename the cache path to use the marketplace's actual name
@@ -1557,6 +1561,7 @@ async function loadAndCacheMarketplace(
         const errorMsg = errorMessage(error)
         throw new Error(
           `Failed to finalize marketplace cache. Please manually delete the directory at ${finalCachePath} if it exists and try again.\n\nTechnical details: ${errorMsg}`,
+          { cause: error },
         )
       }
     }
@@ -1945,11 +1950,14 @@ export const getMarketplace = memoize(async (name: string): Promise<PluginMarket
   try {
     ;({ marketplace } = await loadAndCacheMarketplace(entry.source))
   } catch (error) {
-    throw new Error(`Failed to load marketplace "${name}" from source (${entry.source.source}): ${errorMessage(error)}`)
+    throw new Error(
+      `Failed to load marketplace "${name}" from source (${entry.source.source}): ${errorMessage(error)}`,
+      { cause: error },
+    )
   }
 
   // Update lastUpdated only when we actually fetch
-  config[name]!.lastUpdated = new Date().toISOString()
+  config[name].lastUpdated = new Date().toISOString()
   await saveKnownMarketplacesConfig(config)
 
   return marketplace
@@ -2085,7 +2093,7 @@ export async function refreshAllMarketplaces(): Promise<void> {
     if (name === OFFICIAL_MARKETPLACE_NAME) {
       const sha = await fetchOfficialMarketplaceFromGcs(entry.installLocation, getMarketplacesCacheDir())
       if (sha !== null) {
-        config[name]!.lastUpdated = new Date().toISOString()
+        config[name].lastUpdated = new Date().toISOString()
         continue
       }
       if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_plugin_official_mkt_git_fallback', true)) {
@@ -2096,8 +2104,8 @@ export async function refreshAllMarketplaces(): Promise<void> {
     }
     try {
       const { cachePath } = await loadAndCacheMarketplace(entry.source)
-      config[name]!.lastUpdated = new Date().toISOString()
-      config[name]!.installLocation = cachePath
+      config[name].lastUpdated = new Date().toISOString()
+      config[name].installLocation = cachePath
     } catch (error) {
       logForDebugging(`Failed to refresh marketplace ${name}: ${errorMessage(error)}`, {
         level: 'error',
@@ -2283,7 +2291,7 @@ export async function refreshMarketplace(
     }
 
     // Update lastUpdated timestamp
-    config[name]!.lastUpdated = new Date().toISOString()
+    config[name].lastUpdated = new Date().toISOString()
     await saveKnownMarketplacesConfig(config)
 
     logForDebugging(`Successfully refreshed marketplace: ${name}`)
@@ -2292,7 +2300,7 @@ export async function refreshMarketplace(
     logForDebugging(`Failed to refresh marketplace ${name}: ${errorMessage}`, {
       level: 'error',
     })
-    throw new Error(`Failed to refresh marketplace '${name}': ${errorMessage}`)
+    throw new Error(`Failed to refresh marketplace '${name}': ${errorMessage}`, { cause: error })
   }
 }
 

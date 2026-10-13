@@ -1,4 +1,4 @@
-import { PassThrough } from 'stream'
+import { PassThrough } from 'node:stream'
 
 import * as React from 'react'
 import { useLayoutEffect } from 'react'

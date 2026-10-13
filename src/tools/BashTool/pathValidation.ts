@@ -1,5 +1,5 @@
-import { homedir } from 'os'
-import { isAbsolute, resolve } from 'path'
+import { homedir } from 'node:os'
+import { isAbsolute, resolve } from 'node:path'
 
 import type { z } from 'zod/v4'
 
@@ -1106,7 +1106,7 @@ const TIMEOUT_FLAG_VALUE_RE = /^[A-Za-z0-9_.+-]+$/
 function skipTimeoutFlags(a: readonly string[]): number {
   let i = 1
   while (i < a.length) {
-    const arg = a[i]!
+    const arg = a[i]
     const next = a[i + 1]
     if (arg === '--foreground' || arg === '--preserve-status' || arg === '--verbose') i++
     else if (/^--(?:kill-after|signal)=[A-Za-z0-9_.+-]+$/.test(arg)) i++
@@ -1133,7 +1133,7 @@ function skipTimeoutFlags(a: readonly string[]): number {
 function skipStdbufFlags(a: readonly string[]): number {
   let i = 1
   while (i < a.length) {
-    const arg = a[i]!
+    const arg = a[i]
     if (/^-[ioe]$/.test(arg) && a[i + 1]) i += 2
     else if (/^-[ioe]./.test(arg)) i++
     else if (/^--(input|output|error)=/.test(arg)) i++
@@ -1152,7 +1152,7 @@ function skipStdbufFlags(a: readonly string[]): number {
 function skipEnvFlags(a: readonly string[]): number {
   let i = 1
   while (i < a.length) {
-    const arg = a[i]!
+    const arg = a[i]
     if (arg.includes('=') && !arg.startsWith('-')) i++
     else if (arg === '-i' || arg === '-0' || arg === '-v') i++
     else if (arg === '-u' && a[i + 1]) i += 2
@@ -1179,7 +1179,7 @@ export function stripWrappersFromArgv(argv: string[]): string[] {
       // `inf` — strtod formats GNU timeout accepts) → return a unchanged.
       // Safe because checkSemantics (ast.ts) fails CLOSED on the same input
       // and runs first in bashToolHasPermission, so we never reach here.
-      if (i < 0 || !a[i] || !/^\d+(?:\.\d+)?[smhd]?$/.test(a[i]!)) return a
+      if (i < 0 || !a[i] || !/^\d+(?:\.\d+)?[smhd]?$/.test(a[i])) return a
       a = a.slice(i + 1)
     } else if (a[0] === 'nice') {
       // SECURITY (PR #21503 round 3): mirror checkSemantics — handle bare

@@ -126,7 +126,7 @@ export function useVoiceIntegration({
   // so interim transcripts can be inserted at the cursor position without
   // clobbering surrounding user text.
   const voicePrefixRef = useRef<string | null>(null)
-  const voiceSuffixRef = useRef<string>('')
+  const voiceSuffixRef = useRef('')
   // Tracks the last input value this hook wrote (via anchor, interim effect,
   // or handleVoiceTranscript). If inputValueRef.current diverges, the user
   // submitted or edited — both write paths bail to avoid clobbering. This is

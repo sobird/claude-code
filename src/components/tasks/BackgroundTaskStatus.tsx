@@ -42,7 +42,7 @@ export function BackgroundTaskStatus({
 
   const runningTasks = useMemo(
     () =>
-      (Object.values(tasks ?? {}) as TaskState[]).filter(
+      Object.values(tasks ?? {}).filter(
         (t) => isBackgroundTask(t) && !(process.env.USER_TYPE === 'ant' && isPanelAgentTask(t)),
       ),
     [tasks],

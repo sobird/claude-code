@@ -9,8 +9,8 @@
  * This reuses the LocalAgentTask state structure since the behavior is similar.
  */
 
-import type { UUID } from 'crypto'
-import { randomBytes } from 'crypto'
+import type { UUID } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 
 import {
   OUTPUT_FILE_TAG,
@@ -64,7 +64,7 @@ function generateMainSessionTaskId(): string {
   const bytes = randomBytes(8)
   let id = 's'
   for (let i = 0; i < 8; i++) {
-    id += TASK_ID_ALPHABET[bytes[i]! % TASK_ID_ALPHABET.length]
+    id += TASK_ID_ALPHABET[bytes[i] % TASK_ID_ALPHABET.length]
   }
   return id
 }
@@ -346,7 +346,7 @@ export function startBackgroundSession({
           // chat:killAgents path already marked notified + emitted; stopTask path did not.
           let alreadyNotified = false
           updateTaskState(taskId, setAppState, (task) => {
-            alreadyNotified = task.notified === true
+            alreadyNotified = task.notified
             return alreadyNotified ? task : { ...task, notified: true }
           })
           if (!alreadyNotified) {

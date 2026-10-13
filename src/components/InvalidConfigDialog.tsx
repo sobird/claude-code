@@ -88,7 +88,7 @@ export async function showInvalidConfigDialog({ error }: InvalidConfigHandlerPro
             errorDescription={error.message}
             onExit={() => {
               unmount()
-              void resolve()
+              resolve()
               process.exit(1)
             }}
             onReset={() => {
@@ -97,7 +97,7 @@ export async function showInvalidConfigDialog({ error }: InvalidConfigHandlerPro
                 encoding: 'utf8',
               })
               unmount()
-              void resolve()
+              resolve()
               process.exit(0)
             }}
           />

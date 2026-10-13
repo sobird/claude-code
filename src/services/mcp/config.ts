@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import { chmod, open, rename, stat, unlink } from 'fs/promises'
-import { dirname, join, parse } from 'path'
+import { chmod, open, rename, stat, unlink } from 'node:fs/promises'
+import { dirname, join, parse } from 'node:path'
 
 import mapValues from 'lodash-es/mapValues.js'
 import memoize from 'lodash-es/memoize.js'
@@ -135,7 +135,7 @@ function getServerCommandArray(config: McpServerConfig): string[] | null {
   if (config.type !== undefined && config.type !== 'stdio') {
     return null
   }
-  const stdioConfig = config as McpStdioServerConfig
+  const stdioConfig = config
   return [stdioConfig.command, ...(stdioConfig.args ?? [])]
 }
 
@@ -537,7 +537,7 @@ function expandEnvVars(config: McpServerConfig): {
   switch (config.type) {
     case undefined:
     case 'stdio': {
-      const stdioConfig = config as McpStdioServerConfig
+      const stdioConfig = config
       expanded = {
         ...stdioConfig,
         command: expandString(stdioConfig.command),
@@ -549,7 +549,7 @@ function expandEnvVars(config: McpServerConfig): {
     case 'sse':
     case 'http':
     case 'ws': {
-      const remoteConfig = config as McpSSEServerConfig | McpHTTPServerConfig | McpWebSocketServerConfig
+      const remoteConfig = config
       expanded = {
         ...remoteConfig,
         url: expandString(remoteConfig.url),
@@ -672,7 +672,7 @@ export async function addMcpConfig(name: string, config: unknown, scope: ConfigS
       try {
         await writeMcpjsonFile(mcpConfig)
       } catch (error) {
-        throw new Error(`Failed to write to .mcp.json: ${error}`)
+        throw new Error(`Failed to write to .mcp.json: ${error}`, { cause: error })
       }
       break
     }
@@ -731,7 +731,7 @@ export async function removeMcpConfig(name: string, scope: ConfigScope): Promise
       try {
         await writeMcpjsonFile(mcpConfig)
       } catch (error) {
-        throw new Error(`Failed to remove from .mcp.json: ${error}`)
+        throw new Error(`Failed to remove from .mcp.json: ${error}`, { cause: error })
       }
       break
     }
@@ -831,7 +831,7 @@ export function getMcpConfigsByScope(scope: 'project' | 'user' | 'local' | 'ente
     local: 'localSettings',
   }
 
-  if (scope in sourceMap && !isSettingSourceEnabled(sourceMap[scope]!)) {
+  if (scope in sourceMap && !isSettingSourceEnabled(sourceMap[scope])) {
     return { servers: {}, errors: [] }
   }
 
@@ -850,7 +850,7 @@ export function getMcpConfigsByScope(scope: 'project' | 'user' | 'local' | 'ente
       }
 
       // Process from root downward to CWD (so closer files have higher priority)
-      for (const dir of dirs.reverse()) {
+      for (const dir of dirs.toReversed()) {
         const mcpJsonPath = join(dir, '.mcp.json')
 
         const { config, errors } = parseMcpConfigFromFilePath({
@@ -1132,7 +1132,7 @@ export async function getClaudeCodeMcpConfigs(
     mcpErrors.push({
       type: 'mcp-server-suppressed-duplicate',
       source: name,
-      plugin: parts[1]!,
+      plugin: parts[1],
       serverName: parts.slice(2).join(':'),
       duplicateOf,
     })

@@ -27,12 +27,7 @@ export class ConnectorTextBlock {
  * Check if a value is a connector text block
  */
 export function isConnectorTextBlock(value: any): value is ConnectorTextBlock {
-  return (
-    value &&
-    typeof value === 'object' &&
-    '_isConnectorTextBlock' in value &&
-    (value as any)._isConnectorTextBlock === true
-  )
+  return value && typeof value === 'object' && '_isConnectorTextBlock' in value && value._isConnectorTextBlock === true
 }
 
 /**

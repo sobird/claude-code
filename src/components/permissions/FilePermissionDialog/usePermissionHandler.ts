@@ -61,9 +61,7 @@ function handleAcceptOnce(params: PermissionHandlerParams, options?: PermissionH
 
   // Log accept submission with feedback context
   logEvent('tengu_accept_submitted', {
-    toolName: sanitizeToolNameForAnalytics(
-      toolUseConfirm.tool.name,
-    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    toolName: sanitizeToolNameForAnalytics(toolUseConfirm.tool.name),
     isMcp: toolUseConfirm.tool.isMcp ?? false,
     has_instructions: !!options?.feedback,
     instructions_length: options?.feedback?.length ?? 0,
@@ -127,9 +125,7 @@ function handleReject(params: PermissionHandlerParams, options?: PermissionHandl
 
   // Log reject submission with feedback context
   logEvent('tengu_reject_submitted', {
-    toolName: sanitizeToolNameForAnalytics(
-      toolUseConfirm.tool.name,
-    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    toolName: sanitizeToolNameForAnalytics(toolUseConfirm.tool.name),
     isMcp: toolUseConfirm.tool.isMcp ?? false,
     has_instructions: !!options?.feedback,
     instructions_length: options?.feedback?.length ?? 0,

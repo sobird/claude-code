@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import { open } from 'fs/promises'
-import { basename, dirname, join, sep } from 'path'
+import { open } from 'node:fs/promises'
+import { basename, dirname, join, sep } from 'node:path'
 
 import type { ModelUsage } from 'src/entrypoints/agentSdkTypes.js'
 
@@ -223,7 +223,7 @@ async function processSessionFiles(sessionFiles: string[], options: ProcessOptio
       const mainMessages = isSubagentFile ? messages : messages.filter((m) => !m.isSidechain)
       if (mainMessages.length === 0) continue
 
-      const firstMessage = mainMessages[0]!
+      const firstMessage = mainMessages[0]
       const lastMessage = mainMessages.at(-1)!
 
       const firstTimestamp = new Date(firstMessage.timestamp)
@@ -314,10 +314,10 @@ async function processSessionFiles(sessionFiles: string[], options: ProcessOptio
               }
             }
 
-            modelUsageAgg[model]!.inputTokens += usage.input_tokens || 0
-            modelUsageAgg[model]!.outputTokens += usage.output_tokens || 0
-            modelUsageAgg[model]!.cacheReadInputTokens += usage.cache_read_input_tokens || 0
-            modelUsageAgg[model]!.cacheCreationInputTokens += usage.cache_creation_input_tokens || 0
+            modelUsageAgg[model].inputTokens += usage.input_tokens || 0
+            modelUsageAgg[model].outputTokens += usage.output_tokens || 0
+            modelUsageAgg[model].cacheReadInputTokens += usage.cache_read_input_tokens || 0
+            modelUsageAgg[model].cacheCreationInputTokens += usage.cache_creation_input_tokens || 0
 
             // Track daily tokens per model
             const totalTokens = (usage.input_tokens || 0) + (usage.output_tokens || 0)
@@ -333,10 +333,10 @@ async function processSessionFiles(sessionFiles: string[], options: ProcessOptio
   }
 
   return {
-    dailyActivity: Array.from(dailyActivityMap.values()).sort((a, b) => a.date.localeCompare(b.date)),
+    dailyActivity: Array.from(dailyActivityMap.values()).toSorted((a, b) => a.date.localeCompare(b.date)),
     dailyModelTokens: Array.from(dailyModelTokensMap.entries())
       .map(([date, tokensByModel]) => ({ date, tokensByModel }))
-      .sort((a, b) => a.date.localeCompare(b.date)),
+      .toSorted((a, b) => a.date.localeCompare(b.date)),
     modelUsage: modelUsageAgg,
     sessionStats: sessions,
     hourCounts: Object.fromEntries(hourCounts),
@@ -455,14 +455,14 @@ function cacheToStats(cache: PersistedStatsCache, todayStats: ProcessedStats | n
     for (const [model, usage] of Object.entries(todayStats.modelUsage)) {
       if (modelUsage[model]) {
         modelUsage[model] = {
-          inputTokens: modelUsage[model]!.inputTokens + usage.inputTokens,
-          outputTokens: modelUsage[model]!.outputTokens + usage.outputTokens,
-          cacheReadInputTokens: modelUsage[model]!.cacheReadInputTokens + usage.cacheReadInputTokens,
-          cacheCreationInputTokens: modelUsage[model]!.cacheCreationInputTokens + usage.cacheCreationInputTokens,
-          webSearchRequests: modelUsage[model]!.webSearchRequests + usage.webSearchRequests,
-          costUSD: modelUsage[model]!.costUSD + usage.costUSD,
-          contextWindow: Math.max(modelUsage[model]!.contextWindow, usage.contextWindow),
-          maxOutputTokens: Math.max(modelUsage[model]!.maxOutputTokens, usage.maxOutputTokens),
+          inputTokens: modelUsage[model].inputTokens + usage.inputTokens,
+          outputTokens: modelUsage[model].outputTokens + usage.outputTokens,
+          cacheReadInputTokens: modelUsage[model].cacheReadInputTokens + usage.cacheReadInputTokens,
+          cacheCreationInputTokens: modelUsage[model].cacheCreationInputTokens + usage.cacheCreationInputTokens,
+          webSearchRequests: modelUsage[model].webSearchRequests + usage.webSearchRequests,
+          costUSD: modelUsage[model].costUSD + usage.costUSD,
+          contextWindow: Math.max(modelUsage[model].contextWindow, usage.contextWindow),
+          maxOutputTokens: Math.max(modelUsage[model].maxOutputTokens, usage.maxOutputTokens),
         }
       } else {
         modelUsage[model] = { ...usage }
@@ -483,12 +483,12 @@ function cacheToStats(cache: PersistedStatsCache, todayStats: ProcessedStats | n
   }
 
   // Calculate derived stats
-  const dailyActivityArray = Array.from(dailyActivityMap.values()).sort((a, b) => a.date.localeCompare(b.date))
+  const dailyActivityArray = Array.from(dailyActivityMap.values()).toSorted((a, b) => a.date.localeCompare(b.date))
   const streaks = calculateStreaks(dailyActivityArray)
 
   const dailyModelTokens = Array.from(dailyModelTokensMap.entries())
     .map(([date, tokensByModel]) => ({ date, tokensByModel }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .toSorted((a, b) => a.date.localeCompare(b.date))
 
   // Compute session aggregates: combine cache aggregates with today's stats
   const totalSessions = cache.totalSessions + (todayStats?.sessionStats.length || 0)
@@ -560,7 +560,7 @@ function cacheToStats(cache: PersistedStatsCache, todayStats: ProcessedStats | n
 
   if (feature('SHOT_STATS')) {
     const shotDistribution: { [shotCount: number]: number } = {
-      ...(cache.shotDistribution || {}),
+      ...cache.shotDistribution,
     }
     if (todayStats?.shotDistribution) {
       for (const [count, sessions] of Object.entries(todayStats.shotDistribution)) {
@@ -680,8 +680,8 @@ export async function aggregateClaudeCodeStatsForRange(range: StatsDateRange): P
  * Used for filtered date ranges that bypass the cache.
  */
 function processedStatsToClaudeCodeStats(stats: ProcessedStats): ClaudeCodeStats {
-  const dailyActivitySorted = stats.dailyActivity.slice().sort((a, b) => a.date.localeCompare(b.date))
-  const dailyModelTokensSorted = stats.dailyModelTokens.slice().sort((a, b) => a.date.localeCompare(b.date))
+  const dailyActivitySorted = stats.dailyActivity.slice().toSorted((a, b) => a.date.localeCompare(b.date))
+  const dailyModelTokensSorted = stats.dailyModelTokens.slice().toSorted((a, b) => a.date.localeCompare(b.date))
 
   // Calculate streaks from daily activity
   const streaks = calculateStreaks(dailyActivitySorted)
@@ -803,13 +803,13 @@ function calculateStreaks(dailyActivity: DailyActivity[]): StreakInfo {
   let longestStreakEnd: string | null = null
 
   if (dailyActivity.length > 0) {
-    const sortedDates = Array.from(activeDates).sort()
+    const sortedDates = Array.from(activeDates).toSorted()
     let tempStreak = 1
-    let tempStart = sortedDates[0]!
+    let tempStart = sortedDates[0]
 
     for (let i = 1; i < sortedDates.length; i++) {
-      const prevDate = new Date(sortedDates[i - 1]!)
-      const currDate = new Date(sortedDates[i]!)
+      const prevDate = new Date(sortedDates[i - 1])
+      const currDate = new Date(sortedDates[i])
 
       const dayDiff = Math.round((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24))
 
@@ -868,7 +868,7 @@ function extractShotCountFromMessages(messages: TranscriptMessage[]): number | n
       }
       const match = SHOT_COUNT_REGEX.exec(block.input.command)
       if (match) {
-        return parseInt(match[1]!, 10)
+        return parseInt(match[1], 10)
       }
     }
   }

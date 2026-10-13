@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { Base64ImageSource, ContentBlockParam, ImageBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import type { QuerySource } from 'src/constants/querySource.js'

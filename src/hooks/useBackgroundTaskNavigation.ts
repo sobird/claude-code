@@ -64,7 +64,7 @@ export function useBackgroundTaskNavigation(options?: { onOpenBackgroundTasks?: 
   )
 
   // Track previous teammate count to detect when teammates are removed
-  const prevTeammateCountRef = useRef<number>(teammateCount)
+  const prevTeammateCountRef = useRef(teammateCount)
 
   // Clamp selection index if teammates are removed or reset when count becomes 0
   useEffect(() => {

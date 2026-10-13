@@ -61,8 +61,8 @@ function findWordObject(
   // Find which grapheme index the offset falls in
   let graphemeIdx = graphemes.length - 1
   for (let i = 0; i < graphemes.length; i++) {
-    const g = graphemes[i]!
-    const nextStart = i + 1 < graphemes.length ? graphemes[i + 1]!.index : text.length
+    const g = graphemes[i]
+    const nextStart = i + 1 < graphemes.length ? graphemes[i + 1].index : text.length
     if (offset >= g.index && offset < nextStart) {
       graphemeIdx = i
       break
@@ -70,7 +70,7 @@ function findWordObject(
   }
 
   const graphemeAt = (idx: number): string => graphemes[idx]?.segment ?? ''
-  const offsetAt = (idx: number): number => (idx < graphemes.length ? graphemes[idx]!.index : text.length)
+  const offsetAt = (idx: number): number => (idx < graphemes.length ? graphemes[idx].index : text.length)
   const isWs = (idx: number): boolean => isVimWhitespace(graphemeAt(idx))
   const isWord = (idx: number): boolean => isWordChar(graphemeAt(idx))
   const isPunct = (idx: number): boolean => isVimPunctuation(graphemeAt(idx))
@@ -116,8 +116,8 @@ function findQuoteObject(text: string, offset: number, quote: string, isInner: b
 
   // Pair quotes correctly: 0-1, 2-3, 4-5, etc.
   for (let i = 0; i < positions.length - 1; i += 2) {
-    const qs = positions[i]!
-    const qe = positions[i + 1]!
+    const qs = positions[i]
+    const qe = positions[i + 1]
     if (qs <= posInLine && posInLine <= qe) {
       return isInner
         ? { start: lineStart + qs + 1, end: lineStart + qe }

@@ -1,5 +1,5 @@
-import { lstat, realpath } from 'fs/promises'
-import { dirname, join, resolve, sep } from 'path'
+import { lstat, realpath } from 'node:fs/promises'
+import { dirname, join, resolve, sep } from 'node:path'
 
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import { getErrnoCode } from '../utils/errors.js'
@@ -114,7 +114,7 @@ async function realpathDeepestExisting(absolutePath: string): Promise<string> {
     try {
       const realCurrent = await realpath(current)
       // Rejoin the non-existing tail in reverse order (deepest popped first)
-      return tail.length === 0 ? realCurrent : join(realCurrent, ...tail.reverse())
+      return tail.length === 0 ? realCurrent : join(realCurrent, ...tail.toReversed())
     } catch (e: unknown) {
       const code = getErrnoCode(e)
       if (code === 'ENOENT') {

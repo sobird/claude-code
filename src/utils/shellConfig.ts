@@ -3,9 +3,9 @@
  * Used for managing claude aliases and PATH entries
  */
 
-import { open, readFile, stat } from 'fs/promises'
-import { homedir as osHomedir } from 'os'
-import { join } from 'path'
+import { open, readFile, stat } from 'node:fs/promises'
+import { homedir as osHomedir } from 'node:os'
+import { join } from 'node:path'
 
 import { isFsInaccessible } from './errors.js'
 import { getLocalClaudePath } from './localInstaller.js'

@@ -31,7 +31,7 @@ export function renderToolUseProgressMessage(): React.ReactNode {
 
 export function renderToolResultMessage(
   { bytes, code, codeText, result }: Output,
-  _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
+  _progressMessagesForMessage: ProgressMessage[],
   { verbose }: { verbose: boolean },
 ): React.ReactNode {
   const formattedSize = formatFileSize(bytes)

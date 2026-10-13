@@ -24,7 +24,7 @@ export async function handleMcpjsonServerApprovals(root: Root): Promise<void> {
   }
 
   await new Promise<void>((resolve) => {
-    const done = (): void => void resolve()
+    const done = (): void => resolve()
     if (pendingServers.length === 1 && pendingServers[0] !== undefined) {
       const serverName = pendingServers[0]
       root.render(

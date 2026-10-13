@@ -1,6 +1,6 @@
-import { createHash } from 'crypto'
-import { mkdir, readdir, readFile, stat, unlink, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { createHash } from 'node:crypto'
+import { mkdir, readdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { logForDebugging } from './debug.js'
 import { getClaudeConfigHomeDir } from './envUtils.js'

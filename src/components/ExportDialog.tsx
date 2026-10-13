@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join } from 'node:path'
 
 import React, { useCallback, useState } from 'react'
 
@@ -26,8 +26,8 @@ type ExportOption = 'clipboard' | 'file'
 
 export function ExportDialog({ content, defaultFilename, onDone }: ExportDialogProps): React.ReactNode {
   const [, setSelectedOption] = useState<ExportOption | null>(null)
-  const [filename, setFilename] = useState<string>(defaultFilename)
-  const [cursorOffset, setCursorOffset] = useState<number>(defaultFilename.length)
+  const [filename, setFilename] = useState(defaultFilename)
+  const [cursorOffset, setCursorOffset] = useState(defaultFilename.length)
   const [showFilenameInput, setShowFilenameInput] = useState(false)
   const { columns } = useTerminalSize()
 

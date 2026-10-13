@@ -6,8 +6,8 @@
  * Follows the same patterns as BashTool/pathValidation.ts.
  */
 
-import { homedir } from 'os'
-import { isAbsolute, resolve } from 'path'
+import { homedir } from 'node:os'
+import { isAbsolute, resolve } from 'node:path'
 
 import type { ToolPermissionContext } from '../../Tool.js'
 import type { PermissionRule } from '../../types/permissions.js'

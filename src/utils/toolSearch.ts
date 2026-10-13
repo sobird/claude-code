@@ -644,14 +644,14 @@ export function getDeferredToolsDelta(
     callSite: (scanContext?.callSite ?? 'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     querySource: (scanContext?.querySource ?? 'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     attachmentTypesSeen: [...attachmentTypesSeen]
-      .sort()
+      .toSorted()
       .join(',') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 
   return {
-    addedNames: added.map((t) => t.name).sort(),
-    addedLines: added.map(formatDeferredToolLine).sort(),
-    removedNames: removed.sort(),
+    addedNames: added.map((t) => t.name).toSorted(),
+    addedLines: added.map(formatDeferredToolLine).toSorted(),
+    removedNames: removed.toSorted(),
   }
 }
 

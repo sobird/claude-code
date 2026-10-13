@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { SDKPartialAssistantMessage, StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
 

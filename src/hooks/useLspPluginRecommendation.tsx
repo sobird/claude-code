@@ -10,7 +10,7 @@
  * Only shows one recommendation per session.
  */
 
-import { extname, join } from 'path'
+import { extname, join } from 'node:path'
 
 import * as React from 'react'
 
@@ -45,7 +45,7 @@ type UseLspPluginRecommendationResult = {
 export function useLspPluginRecommendation(): UseLspPluginRecommendationResult {
   const trackedFiles = useAppState((s) => s.fileHistory.trackedFiles)
   const { addNotification } = useNotifications()
-  const checkedFilesRef = React.useRef<Set<string>>(new Set())
+  const checkedFilesRef = React.useRef(new Set())
   const { recommendation, clearRecommendation, tryResolve } =
     usePluginRecommendationBase<NonNullable<LspRecommendationState>>()
 

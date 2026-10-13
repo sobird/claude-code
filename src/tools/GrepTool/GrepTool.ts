@@ -484,10 +484,10 @@ export const GrepTool = buildTool({
     const sortedMatches = results
       // Sort by modification time
       .map((_, i) => {
-        const r = stats[i]!
+        const r = stats[i]
         return [_, r.status === 'fulfilled' ? (r.value.mtimeMs ?? 0) : 0] as const
       })
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         if (process.env.NODE_ENV === 'test') {
           // In tests, we always want to sort by filename, so that results are deterministic
           return a[0].localeCompare(b[0])

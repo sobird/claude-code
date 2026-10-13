@@ -5,9 +5,9 @@
  * system to reduce code duplication and improve maintainability.
  */
 
-import { randomBytes } from 'crypto'
-import { rename, rm } from 'fs/promises'
-import { dirname, join, resolve, sep } from 'path'
+import { randomBytes } from 'node:crypto'
+import { rename, rm } from 'node:fs/promises'
+import { dirname, join, resolve, sep } from 'node:path'
 
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -109,7 +109,7 @@ export async function cacheAndRegisterPlugin(
     typeof entry.source === 'string' && localSourcePath ? (localSourcePath as PluginSource) : entry.source
 
   const cacheResult = await cachePlugin(source, {
-    manifest: entry as PluginMarketplaceEntry,
+    manifest: entry,
   })
 
   // For local plugins, use the original source path for Git SHA calculation

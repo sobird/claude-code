@@ -1,6 +1,6 @@
-import { readFile, realpath } from 'fs/promises'
-import { homedir } from 'os'
-import { delimiter, join, posix, win32 } from 'path'
+import { readFile, realpath } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { delimiter, join, posix, win32 } from 'node:path'
 
 import { execa } from 'execa'
 
@@ -384,7 +384,7 @@ async function detectConfigurationIssues(type: InstallationType): Promise<Array<
         // Unix-style PATH instructions
         const shellType = getShellType()
         const configPaths = getShellConfigPaths()
-        const configFile = configPaths[shellType as keyof typeof configPaths]
+        const configFile = configPaths[shellType]
         const displayPath = configFile ? configFile.replace(homedir(), '~') : 'your shell config file'
 
         warnings.push({

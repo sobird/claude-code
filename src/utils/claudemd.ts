@@ -26,7 +26,7 @@
  */
 
 import { feature } from 'bun:bundle'
-import { basename, dirname, extname, isAbsolute, join, parse, relative, sep } from 'path'
+import { basename, dirname, extname, isAbsolute, join, parse, relative, sep } from 'node:path'
 
 import ignore from 'ignore'
 import memoize from 'lodash-es/memoize.js'
@@ -815,7 +815,7 @@ export const getMemoryFiles = memoize(async (forceIncludeExternal: boolean = fal
     pathInWorkingPath(gitRoot, canonicalRoot)
 
   // Process from root downward to CWD
-  for (const dir of dirs.reverse()) {
+  for (const dir of dirs.toReversed()) {
     // In a nested worktree, skip checked-in files from the main repo's
     // working tree (dirs inside canonicalRoot but outside the worktree).
     const skipProject = isNestedWorktree && pathInWorkingPath(dir, canonicalRoot) && !pathInWorkingPath(dir, gitRoot)

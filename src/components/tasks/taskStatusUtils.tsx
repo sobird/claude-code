@@ -97,7 +97,7 @@ export function describeTeammateActivity(t: DeepImmutable<InProcessTeammateTaskS
 export function shouldHideTasksFooter(tasks: { [taskId: string]: TaskState }, showSpinnerTree: boolean): boolean {
   if (!showSpinnerTree) return false
   let hasVisibleTask = false
-  for (const t of Object.values(tasks) as TaskState[]) {
+  for (const t of Object.values(tasks)) {
     if (!isBackgroundTask(t) || (process.env.USER_TYPE === 'ant' && isPanelAgentTask(t))) {
       continue
     }

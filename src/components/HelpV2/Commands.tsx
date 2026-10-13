@@ -31,7 +31,7 @@ export function Commands({ commands, maxHeight, columns, title, onCancel, emptyM
         seen.add(cmd.name)
         return true
       })
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .toSorted((a, b) => a.name.localeCompare(b.name))
       .map((cmd) => ({
         label: `/${cmd.name}`,
         value: cmd.name,

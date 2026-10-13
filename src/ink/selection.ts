@@ -238,7 +238,7 @@ export function selectWordAt(s: SelectionState, screen: Screen, col: number, row
 // Printable ASCII minus terminal URL delimiters. Restricting to single-
 // codeunit ASCII keeps cell-count === string-index, so the column-span
 // check below is exact (no wide-char/grapheme drift).
-const URL_BOUNDARY = new Set([...'<>"\'` '])
+const URL_BOUNDARY = new Set('<>"\'` ')
 function isUrlChar(c: string): boolean {
   if (c.length !== 1) return false
   const code = c.charCodeAt(0)
@@ -639,7 +639,7 @@ export function isCellSelected(s: SelectionState, col: number, row: number): boo
 function extractRowText(screen: Screen, row: number, colStart: number, colEnd: number): string {
   const noSelect = screen.noSelect
   const rowOff = row * screen.width
-  const contentEnd = row + 1 < screen.height ? screen.softWrap[row + 1]! : 0
+  const contentEnd = row + 1 < screen.height ? screen.softWrap[row + 1] : 0
   const lastCol = contentEnd > 0 ? Math.min(colEnd, contentEnd - 1) : colEnd
   let line = ''
   for (let col = colStart; col <= lastCol; col++) {
@@ -689,17 +689,17 @@ export function getSelectedText(s: SelectionState, screen: Screen): string {
   const lines: string[] = []
 
   for (let i = 0; i < s.scrolledOffAbove.length; i++) {
-    joinRows(lines, s.scrolledOffAbove[i]!, s.scrolledOffAboveSW[i])
+    joinRows(lines, s.scrolledOffAbove[i], s.scrolledOffAboveSW[i])
   }
 
   for (let row = start.row; row <= end.row; row++) {
     const rowStart = row === start.row ? start.col : 0
     const rowEnd = row === end.row ? end.col : screen.width - 1
-    joinRows(lines, extractRowText(screen, row, rowStart, rowEnd), sw[row]! > 0)
+    joinRows(lines, extractRowText(screen, row, rowStart, rowEnd), sw[row] > 0)
   }
 
   for (let i = 0; i < s.scrolledOffBelow.length; i++) {
-    joinRows(lines, s.scrolledOffBelow[i]!, s.scrolledOffBelowSW[i])
+    joinRows(lines, s.scrolledOffBelow[i], s.scrolledOffBelowSW[i])
   }
 
   return lines.join('\n')
@@ -745,7 +745,7 @@ export function captureScrolledRows(
     const colStart = row === start.row ? start.col : 0
     const colEnd = row === end.row ? end.col : width - 1
     captured.push(extractRowText(screen, row, colStart, colEnd))
-    capturedSW.push(sw[row]! > 0)
+    capturedSW.push(sw[row] > 0)
   }
 
   if (side === 'above') {

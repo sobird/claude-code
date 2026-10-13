@@ -171,7 +171,7 @@ export function LogSelector({
   const currentCwd = React.useMemo(() => getOriginalCwd(), [])
   const [renameValue, setRenameValue] = React.useState('')
   const [renameCursorOffset, setRenameCursorOffset] = React.useState(0)
-  const [expandedGroupSessionIds, setExpandedGroupSessionIds] = React.useState<Set<string>>(new Set())
+  const [expandedGroupSessionIds, setExpandedGroupSessionIds] = React.useState(new Set())
   const [focusedNode, setFocusedNode] = React.useState<LogTreeNode | null>(null)
   // Track focused index for scroll position display in title
   const [focusedIndex, setFocusedIndex] = React.useState(1)
@@ -442,7 +442,7 @@ export function LogSelector({
     const sessionGroups = groupLogsBySessionId(displayedLogs)
 
     return Array.from(sessionGroups.entries()).map(([sessionId, groupLogs]): LogTreeNode => {
-      const latestLog = groupLogs[0]!
+      const latestLog = groupLogs[0]
       const indexInFiltered = displayedLogs.indexOf(latestLog)
       const snippet = snippets.get(latestLog)
       const snippetStr = snippet ? formatSnippet(snippet, highlightColor) : null
@@ -647,9 +647,9 @@ export function LogSelector({
     // When search just completed, focus the first item in the list
     if (prevStatus === 'searching' && agenticSearchState.status === 'results') {
       if (isResumeWithRenameEnabled && treeNodes.length > 0) {
-        setFocusedNode(treeNodes[0]!)
+        setFocusedNode(treeNodes[0])
       } else if (!isResumeWithRenameEnabled && displayedLogs.length > 0) {
-        const firstLog = displayedLogs[0]!
+        const firstLog = displayedLogs[0]
         setFocusedNode({
           id: '0',
           value: { log: firstLog, indexInFiltered: 0 },
@@ -1003,7 +1003,7 @@ export function LogSelector({
               value={renameValue}
               onChange={setRenameValue}
               onSubmit={handleRenameSubmit}
-              placeholder={getLogDisplayTitle(focusedLog!, 'Enter new session name')}
+              placeholder={getLogDisplayTitle(focusedLog, 'Enter new session name')}
               columns={columns}
               cursorOffset={renameCursorOffset}
               onChangeCursorOffset={setRenameCursorOffset}
@@ -1247,5 +1247,5 @@ function getUniqueTags(logs: LogOption[]): string[] {
       tags.add(log.tag)
     }
   }
-  return Array.from(tags).sort((a, b) => a.localeCompare(b))
+  return Array.from(tags).toSorted((a, b) => a.localeCompare(b))
 }

@@ -1,5 +1,5 @@
-import { mkdir, readFile, stat, unlink, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import { z } from 'zod/v4'
 

@@ -10,7 +10,7 @@
  * - Support for both JS and native builds
  */
 
-import { constants as fsConstants, type Stats } from 'fs'
+import { constants as fsConstants, type Stats } from 'node:fs'
 import {
   access,
   chmod,
@@ -27,9 +27,9 @@ import {
   symlink,
   unlink,
   writeFile,
-} from 'fs/promises'
-import { homedir } from 'os'
-import { basename, delimiter, dirname, join, resolve } from 'path'
+} from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { basename, delimiter, dirname, join, resolve } from 'node:path'
 
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -649,7 +649,7 @@ async function updateSymlink(symlinkPath: string, targetPath: string): Promise<b
           await copyFile(targetPath, symlinkPath)
         } catch (e) {
           if (isENOENT(e)) {
-            throw new Error(`Source file does not exist: ${targetPath}`)
+            throw new Error(`Source file does not exist: ${targetPath}`, { cause: e })
           }
           throw e
         }
@@ -845,7 +845,7 @@ export async function checkInstall(force: boolean = false): Promise<SetupMessage
       // Unix-style PATH instructions
       const shellType = getShellType()
       const configPaths = getShellConfigPaths()
-      const configFile = configPaths[shellType as keyof typeof configPaths]
+      const configFile = configPaths[shellType]
       const displayPath = configFile ? configFile.replace(homedir(), '~') : 'your shell config file'
 
       messages.push({
@@ -1261,7 +1261,7 @@ export async function cleanupOldVersions(): Promise<void> {
     // Eligible versions: not protected, sorted newest first (reuse cached mtime)
     const eligibleVersions = versionFiles
       .filter((v) => !protectedVersions.has(v.resolvedPath))
-      .sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+      .toSorted((a, b) => b.mtime.getTime() - a.mtime.getTime())
 
     const versionsToDelete = eligibleVersions.slice(VERSION_RETENTION_COUNT)
 

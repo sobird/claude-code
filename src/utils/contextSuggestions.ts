@@ -160,7 +160,7 @@ function checkMemoryBloat(data: ContextData, suggestions: ContextSuggestion[]): 
 
   if (memoryPercent >= MEMORY_HIGH_PERCENT && totalMemoryTokens >= MEMORY_HIGH_TOKENS) {
     const largestFiles = [...data.memoryFiles]
-      .sort((a, b) => b.tokens - a.tokens)
+      .toSorted((a, b) => b.tokens - a.tokens)
       .slice(0, 3)
       .map((f) => {
         const name = getDisplayPath(f.path)

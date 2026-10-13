@@ -17,7 +17,7 @@ type Props = {
 
 export function AssistantThinkingMessage({
   param: { thinking },
-  addMargin = false,
+  addMargin,
   isTranscriptMode,
   verbose,
   hideInTranscript = false,

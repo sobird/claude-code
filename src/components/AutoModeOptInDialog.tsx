@@ -73,7 +73,7 @@ export function AutoModeOptInDialog({ onAccept, onDecline, declineExits }: Props
             value: 'decline' as const,
           },
         ]}
-        onChange={(value) => onChange(value as 'accept' | 'accept-default' | 'decline')}
+        onChange={(value) => onChange(value)}
         onCancel={onDecline}
       />
     </Dialog>

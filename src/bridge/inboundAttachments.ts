@@ -10,9 +10,9 @@
  * skips that attachment. The message still reaches Claude, just without @path.
  */
 
-import { randomUUID } from 'crypto'
-import { mkdir, writeFile } from 'fs/promises'
-import { basename, join } from 'path'
+import { randomUUID } from 'node:crypto'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { basename, join } from 'node:path'
 
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import axios from 'axios'
@@ -145,7 +145,7 @@ export function prependPathRefs(
   if (typeof content === 'string') return prefix + content
   const i = content.findLastIndex((b) => b.type === 'text')
   if (i !== -1) {
-    const b = content[i]!
+    const b = content[i]
     if (b.type === 'text') {
       return [...content.slice(0, i), { ...b, text: prefix + b.text }, ...content.slice(i + 1)]
     }

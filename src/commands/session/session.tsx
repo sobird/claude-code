@@ -15,7 +15,7 @@ type Props = {
 
 function SessionInfo({ onDone }: Props): React.ReactNode {
   const remoteSessionUrl = useAppState((s) => s.remoteSessionUrl)
-  const [qrCode, setQrCode] = useState<string>('')
+  const [qrCode, setQrCode] = useState('')
 
   // Generate QR code when URL is available
   useEffect(() => {

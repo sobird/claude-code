@@ -6,7 +6,7 @@ function validateUrl(url: string): void {
   try {
     parsedUrl = new URL(url)
   } catch (_error) {
-    throw new Error(`Invalid URL format: ${url}`)
+    throw new Error(`Invalid URL format: ${url}`, { cause: _error })
   }
 
   // Validate URL protocol for security

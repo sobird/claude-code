@@ -249,7 +249,7 @@ function extractSectionName(content: string): string {
   // Try to find first markdown heading
   const headingMatch = content.match(/^#+\s+(.+)$/m)
   if (headingMatch) {
-    return headingMatch[1]!.trim()
+    return headingMatch[1].trim()
   }
   // Fall back to a truncated preview of the first non-empty line
   const firstLine = content.split('\n').find((l) => l.trim().length > 0) ?? ''
@@ -388,9 +388,9 @@ async function countBuiltInToolTokens(
       systemToolDetails = toolsForBreakdown
         .map((t, i) => ({
           name: t.name,
-          tokens: Math.round((estimates[i]! / estimateTotal) * distributable),
+          tokens: Math.round((estimates[i] / estimateTotal) * distributable),
         }))
-        .sort((a, b) => b.tokens - a.tokens)
+        .toSorted((a, b) => b.tokens - a.tokens)
     }
   }
 
@@ -633,7 +633,7 @@ export async function countMcpToolTokens(
     mcpToolDetails.push({
       name: tool.name,
       serverName: tool.name.split('__')[1] || 'unknown',
-      tokens: mcpToolTokensByTool[i]!,
+      tokens: mcpToolTokensByTool[i],
       isLoaded: loadedMcpToolNames.has(tool.name) || !isDeferredTool(tool),
     })
   }
@@ -705,10 +705,7 @@ type MessageBreakdown = {
   attachmentsByType: Map<string, number>
 }
 
-function processAssistantMessage(
-  msg: AssistantMessage | NormalizedAssistantMessage,
-  breakdown: MessageBreakdown,
-): void {
+function processAssistantMessage(msg: AssistantMessage, breakdown: MessageBreakdown): void {
   // Process each content block individually
   for (const block of msg.message.content) {
     const blockStr = jsonStringify(block)
@@ -725,11 +722,7 @@ function processAssistantMessage(
   }
 }
 
-function processUserMessage(
-  msg: UserMessage | NormalizedUserMessage,
-  breakdown: MessageBreakdown,
-  toolUseIdToName: Map<string, string>,
-): void {
+function processUserMessage(msg: UserMessage, breakdown: MessageBreakdown, toolUseIdToName: Map<string, string>): void {
   // Handle both string and array content
   if (typeof msg.message.content === 'string') {
     // Simple string content
@@ -1180,11 +1173,11 @@ export async function analyzeContextUsage(
       callTokens,
       resultTokens,
     }))
-    .sort((a, b) => b.callTokens + b.resultTokens - (a.callTokens + a.resultTokens))
+    .toSorted((a, b) => b.callTokens + b.resultTokens - (a.callTokens + a.resultTokens))
 
   const attachmentsByTypeArray = Array.from(messageBreakdown.attachmentsByType.entries())
     .map(([name, tokens]) => ({ name, tokens }))
-    .sort((a, b) => b.tokens - a.tokens)
+    .toSorted((a, b) => b.tokens - a.tokens)
 
   const formattedMessageBreakdown = {
     toolCallTokens: messageBreakdown.toolCallTokens,

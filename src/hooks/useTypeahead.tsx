@@ -332,7 +332,7 @@ export function extractCompletionToken(
   // Fast path for @ tokens: use lastIndexOf to avoid expensive $ anchor scan
   if (includeAtSymbol) {
     const atIdx = textBeforeCursor.lastIndexOf('@')
-    if (atIdx >= 0 && (atIdx === 0 || /\s/.test(textBeforeCursor[atIdx - 1]!))) {
+    if (atIdx >= 0 && (atIdx === 0 || /\s/.test(textBeforeCursor[atIdx - 1]))) {
       const fromAt = textBeforeCursor.substring(atIdx)
       const atHeadMatch = fromAt.match(AT_TOKEN_HEAD_RE)
       if (atHeadMatch && atHeadMatch[0].length === fromAt.length) {
@@ -692,7 +692,7 @@ export function useTypeahead({
       if (mode === 'prompt') {
         const hashMatch = value.substring(0, effectiveCursorOffset).match(HASH_CHANNEL_RE)
         if (hashMatch && hasSlackMcpServer(store.getState().mcp.clients)) {
-          debouncedFetchSlackChannels(hashMatch[2]!)
+          debouncedFetchSlackChannels(hashMatch[2])
           return
         } else if (suggestionType === 'slack-channel') {
           debouncedFetchSlackChannels.cancel()

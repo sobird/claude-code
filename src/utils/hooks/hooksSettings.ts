@@ -1,4 +1,4 @@
-import { resolve } from 'path'
+import { resolve } from 'node:path'
 
 import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
 
@@ -116,10 +116,10 @@ export function getAllHooks(appState: AppState): IndividualHookConfig[] {
       }
 
       for (const [event, matchers] of Object.entries(sourceSettings.hooks)) {
-        for (const matcher of matchers as HookMatcher[]) {
+        for (const matcher of matchers) {
           for (const hookCommand of matcher.hooks) {
             hooks.push({
-              event: event as HookEvent,
+              event: event,
               config: hookCommand,
               matcher: matcher.matcher,
               source,
@@ -227,7 +227,7 @@ export function sortMatchersByPriority(
     {} as Record<EditableSettingSource, number>,
   )
 
-  return [...matchers].sort((a, b) => {
+  return [...matchers].toSorted((a, b) => {
     const aHooks = hooksByEventAndMatcher[selectedEvent]?.[a] || []
     const bHooks = hooksByEventAndMatcher[selectedEvent]?.[b] || []
 

@@ -29,10 +29,10 @@
  *               └── 2.1.3.zip
  */
 
-import { randomBytes } from 'crypto'
-import { chmod, lstat, readdir, readFile, rename, rm, stat, writeFile } from 'fs/promises'
-import { tmpdir } from 'os'
-import { basename, dirname, join } from 'path'
+import { randomBytes } from 'node:crypto'
+import { chmod, lstat, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { basename, dirname, join } from 'node:path'
 
 import { logForDebugging } from '../debug.js'
 import { parseZipModes, unzipFile } from '../dxt/zip.js'

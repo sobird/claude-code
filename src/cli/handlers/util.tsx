@@ -4,7 +4,7 @@
  */
 /* eslint-disable custom-rules/no-process-exit -- CLI subcommand handlers intentionally exit */
 
-import { cwd } from 'process'
+import { cwd } from 'node:process'
 
 import React from 'react'
 
@@ -42,7 +42,7 @@ export async function setupTokenHandler(root: Root): Promise<void> {
             )}
             <ConsoleOAuthFlow
               onDone={() => {
-                void resolve()
+                resolve()
               }}
               mode="setup-token"
               startingMessage="This will guide you through long-lived (1-year) auth token setup for your Claude account. Claude subscription required."
@@ -78,7 +78,7 @@ export async function doctorHandler(root: Root): Promise<void> {
           <MCPConnectionManager dynamicMcpConfig={undefined} isStrictMcpConfig={false}>
             <DoctorWithPlugins
               onDone={() => {
-                void resolve()
+                resolve()
               }}
             />
           </MCPConnectionManager>
@@ -102,7 +102,7 @@ export async function installHandler(target: string | undefined, options: { forc
 
     void install.call(
       (result) => {
-        void resolve()
+        resolve()
         process.exit(result.includes('failed') ? 1 : 0)
       },
       {},

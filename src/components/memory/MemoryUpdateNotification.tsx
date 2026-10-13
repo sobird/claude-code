@@ -1,5 +1,5 @@
-import { homedir } from 'os'
-import { relative } from 'path'
+import { homedir } from 'node:os'
+import { relative } from 'node:path'
 
 import React from 'react'
 

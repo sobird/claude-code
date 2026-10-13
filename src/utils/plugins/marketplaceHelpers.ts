@@ -124,7 +124,7 @@ export function formatMarketplaceLoadingErrors(
   if (successCount > 0) {
     const message =
       failures.length === 1
-        ? `Warning: Failed to load marketplace '${failures[0]!.name}': ${failures[0]!.error}`
+        ? `Warning: Failed to load marketplace '${failures[0].name}': ${failures[0].error}`
         : `Warning: Failed to load ${failures.length} marketplaces: ${formatFailureNames(failures)}`
     return { type: 'warning', message }
   }

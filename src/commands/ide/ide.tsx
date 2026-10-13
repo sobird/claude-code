@@ -1,4 +1,4 @@
-import * as path from 'path'
+import * as path from 'node:path'
 
 import chalk from 'chalk'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
@@ -363,7 +363,7 @@ export async function call(
         />
       )
     } else if (runningIDEs.length === 1) {
-      return <InstallOnMount ide={runningIDEs[0]!} onInstall={onInstall} />
+      return <InstallOnMount ide={runningIDEs[0]} onInstall={onInstall} />
     }
   }
 
@@ -439,7 +439,7 @@ function IDECommandFlow({
         onDone('Error connecting to IDE.')
         return
       }
-      const newConfig = { ...(dynamicMcpConfig || {}) }
+      const newConfig = { ...dynamicMcpConfig }
       if (currentIDE) {
         delete newConfig.ide
       }

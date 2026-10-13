@@ -117,7 +117,7 @@ function extractPipePositions(rootNode: Node): number[] {
   // the second pipeline as a sibling of the first, so the outer `|` is
   // visited before the inner one — positions arrive out of order.
   // getPipeSegments iterates them to slice left-to-right, so sort here.
-  return pipePositions.sort((a, b) => a - b)
+  return pipePositions.toSorted((a, b) => a - b)
 }
 
 function extractRedirectionNodes(rootNode: Node): RedirectionNode[] {
@@ -197,7 +197,7 @@ class TreeSitterParsedCommand implements IParsedCommand {
   withoutOutputRedirections(): string {
     if (this.redirectionNodes.length === 0) return this.originalCommand
 
-    const sorted = [...this.redirectionNodes].sort((a, b) => b.startIndex - a.startIndex)
+    const sorted = [...this.redirectionNodes].toSorted((a, b) => b.startIndex - a.startIndex)
 
     let result = this.commandBytes
     for (const redir of sorted) {

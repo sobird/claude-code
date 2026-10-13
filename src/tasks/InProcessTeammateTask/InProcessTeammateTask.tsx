@@ -127,5 +127,5 @@ export function getAllInProcessTeammateTasks(tasks: Record<string, TaskStateBase
 export function getRunningTeammatesSorted(tasks: Record<string, TaskStateBase>): InProcessTeammateTaskState[] {
   return getAllInProcessTeammateTasks(tasks)
     .filter((t) => t.status === 'running')
-    .sort((a, b) => a.identity.agentName.localeCompare(b.identity.agentName))
+    .toSorted((a, b) => a.identity.agentName.localeCompare(b.identity.agentName))
 }

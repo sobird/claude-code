@@ -81,7 +81,7 @@ export function wrapApiForFaultInjection(api: BridgeApiClient): BridgeApiClient 
   function consume(method: BridgeFault['method']): BridgeFault | null {
     const idx = faultQueue.findIndex((f) => f.method === method)
     if (idx === -1) return null
-    const fault = faultQueue[idx]!
+    const fault = faultQueue[idx]
     fault.count--
     if (fault.count <= 0) faultQueue.splice(idx, 1)
     return fault

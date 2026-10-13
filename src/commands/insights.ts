@@ -1,8 +1,8 @@
-import { execFileSync } from 'child_process'
-import { constants as fsConstants } from 'fs'
-import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'fs/promises'
-import { tmpdir } from 'os'
-import { extname, join } from 'path'
+import { execFileSync } from 'node:child_process'
+import { constants as fsConstants } from 'node:fs'
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { extname, join } from 'node:path'
 
 import { diffLines } from 'diff'
 
@@ -511,7 +511,7 @@ function extractToolStats(log: LogOption): {
       if (Array.isArray(content)) {
         for (const block of content) {
           if (block.type === 'tool_use' && 'name' in block) {
-            const toolName = block.name as string
+            const toolName = block.name
             toolCounts[toolName] = (toolCounts[toolName] || 0) + 1
 
             // Check for special tool usage
@@ -650,11 +650,7 @@ function extractToolStats(log: LogOption): {
         }
       } else if (Array.isArray(content)) {
         for (const block of content) {
-          if (
-            block.type === 'text' &&
-            'text' in block &&
-            (block.text as string).includes('[Request interrupted by user')
-          ) {
+          if (block.type === 'text' && 'text' in block && block.text.includes('[Request interrupted by user')) {
             userInterruptions++
             break
           }
@@ -802,7 +798,7 @@ function formatTranscriptForFacets(log: LogOption): string {
       } else if (Array.isArray(content)) {
         for (const block of content) {
           if (block.type === 'text' && 'text' in block) {
-            lines.push(`[User]: ${(block.text as string).slice(0, 500)}`)
+            lines.push(`[User]: ${block.text.slice(0, 500)}`)
           }
         }
       }
@@ -811,7 +807,7 @@ function formatTranscriptForFacets(log: LogOption): string {
       if (Array.isArray(content)) {
         for (const block of content) {
           if (block.type === 'text' && 'text' in block) {
-            lines.push(`[Assistant]: ${(block.text as string).slice(0, 300)}`)
+            lines.push(`[Assistant]: ${block.text.slice(0, 300)}`)
           } else if (block.type === 'tool_use' && 'name' in block) {
             lines.push(`[Tool: ${block.name}]`)
           }
@@ -1040,11 +1036,11 @@ export function detectMultiClauding(
   const sessionLastIndex = new Map<string, number>()
 
   for (let i = 0; i < allSessionMessages.length; i++) {
-    const msg = allSessionMessages[i]!
+    const msg = allSessionMessages[i]
 
     // Shrink window from the left
-    while (windowStart < i && msg.ts - allSessionMessages[windowStart]!.ts > OVERLAP_WINDOW_MS) {
-      const expiring = allSessionMessages[windowStart]!
+    while (windowStart < i && msg.ts - allSessionMessages[windowStart].ts > OVERLAP_WINDOW_MS) {
+      const expiring = allSessionMessages[windowStart]
       if (sessionLastIndex.get(expiring.sessionId) === windowStart) {
         sessionLastIndex.delete(expiring.sessionId)
       }
@@ -1055,11 +1051,11 @@ export function detectMultiClauding(
     const prevIndex = sessionLastIndex.get(msg.sessionId)
     if (prevIndex !== undefined) {
       for (let j = prevIndex + 1; j < i; j++) {
-        const between = allSessionMessages[j]!
+        const between = allSessionMessages[j]
         if (between.sessionId !== msg.sessionId) {
-          const pair = [msg.sessionId, between.sessionId].sort().join(':')
+          const pair = [msg.sessionId, between.sessionId].toSorted().join(':')
           multiClaudeSessionPairs.add(pair)
-          messagesDuringMulticlaude.add(`${allSessionMessages[prevIndex]!.ts}:${msg.sessionId}`)
+          messagesDuringMulticlaude.add(`${allSessionMessages[prevIndex].ts}:${msg.sessionId}`)
           messagesDuringMulticlaude.add(`${between.ts}:${between.sessionId}`)
           messagesDuringMulticlaude.add(`${msg.ts}:${msg.sessionId}`)
           break
@@ -1231,7 +1227,7 @@ function aggregateData(sessions: SessionMeta[], facets: Map<string, SessionFacet
   // Calculate response time stats
   result.user_response_times = allResponseTimes
   if (allResponseTimes.length > 0) {
-    const sorted = [...allResponseTimes].sort((a, b) => a - b)
+    const sorted = [...allResponseTimes].toSorted((a, b) => a - b)
     result.median_response_time = sorted[Math.floor(sorted.length / 2)] || 0
     result.avg_response_time = allResponseTimes.reduce((a, b) => a + b, 0) / allResponseTimes.length
   }
@@ -1568,10 +1564,10 @@ async function generateParallelInsights(
       hours: Math.round(data.total_duration_hours),
       commits: data.git_commits,
       top_tools: Object.entries(data.tool_counts)
-        .sort((a, b) => b[1] - a[1])
+        .toSorted((a, b) => b[1] - a[1])
         .slice(0, 8),
       top_goals: Object.entries(data.goal_categories)
-        .sort((a, b) => b[1] - a[1])
+        .toSorted((a, b) => b[1] - a[1])
         .slice(0, 8),
       outcomes: data.outcomes,
       satisfaction: data.satisfaction,
@@ -1749,7 +1745,7 @@ function generateBarChart(data: Record<string, number>, color: string, maxItems 
   } else {
     // Sort by count descending
     entries = Object.entries(data)
-      .sort((a, b) => b[1] - a[1])
+      .toSorted((a, b) => b[1] - a[1])
       .slice(0, maxItems)
   }
 
@@ -2662,7 +2658,7 @@ async function scanAllSessions(): Promise<LiteSessionInfo[]> {
   const allSessions: LiteSessionInfo[] = []
 
   for (let i = 0; i < projectDirs.length; i++) {
-    const sessionFiles = await getSessionFilesWithMtime(projectDirs[i]!)
+    const sessionFiles = await getSessionFilesWithMtime(projectDirs[i])
     for (const [sessionId, fileInfo] of sessionFiles) {
       allSessions.push({
         sessionId,

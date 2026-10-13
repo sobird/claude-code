@@ -1,4 +1,4 @@
-import type { UUID } from 'crypto'
+import type { UUID } from 'node:crypto'
 
 import type { FileHistorySnapshot } from 'src/utils/fileHistory.js'
 import type { ContentReplacementRecord } from 'src/utils/toolResultStorage.js'
@@ -319,7 +319,7 @@ export type Entry =
   | ContextCollapseSnapshotEntry
 
 export function sortLogs(logs: LogOption[]): LogOption[] {
-  return logs.sort((a, b) => {
+  return logs.toSorted((a, b) => {
     // Sort by modified date (newest first)
     const modifiedDiff = b.modified.getTime() - a.modified.getTime()
     if (modifiedDiff !== 0) {

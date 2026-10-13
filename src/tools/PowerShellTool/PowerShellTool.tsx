@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'fs/promises'
+import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'node:fs/promises'
 
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
@@ -180,10 +180,10 @@ const ASSISTANT_BLOCKING_BUDGET_MS = 15_000
 // Commands that should not be auto-backgrounded (canonical lowercase).
 // 'sleep' is a PS built-in alias for Start-Sleep but not in COMMON_ALIASES,
 // so list both forms.
-const DISALLOWED_AUTO_BACKGROUND_COMMANDS = [
+const DISALLOWED_AUTO_BACKGROUND_COMMANDS = new Set([
   'start-sleep', // Start-Sleep should run in foreground unless explicitly backgrounded
   'sleep',
-]
+])
 
 /**
  * Checks if a command is allowed to be automatically backgrounded
@@ -194,7 +194,7 @@ function isAutobackgroundingAllowed(command: string): boolean {
   const firstWord = command.trim().split(/\s+/)[0]
   if (!firstWord) return true
   const canonical = resolveToCanonical(firstWord)
-  return !DISALLOWED_AUTO_BACKGROUND_COMMANDS.includes(canonical)
+  return !DISALLOWED_AUTO_BACKGROUND_COMMANDS.has(canonical)
 }
 
 /**
@@ -218,7 +218,7 @@ export function detectBlockedSleepPattern(command: string): string | null {
   // (case-insensitive; -Seconds can be abbreviated to -s per PS convention)
   const m = /^(?:start-sleep|sleep)(?:\s+-s(?:econds)?)?\s+(\d+)\s*$/i.exec(first)
   if (!m) return null
-  const secs = parseInt(m[1]!, 10)
+  const secs = parseInt(m[1], 10)
   if (secs < 2) return null // sub-2s sleeps are fine (rate limiting, pacing)
 
   const rest = command

@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources'
 import * as React from 'react'
@@ -71,7 +71,7 @@ export async function processBashCommand(
       setToolJSX({
         jsx: (
           <>
-            <BashModeProgress input={inputString!} progress={progress.data} verbose={context.options.verbose} />
+            <BashModeProgress input={inputString} progress={progress.data} verbose={context.options.verbose} />
             {jsx}
           </>
         ),

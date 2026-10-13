@@ -178,7 +178,7 @@ function getTeammateCommand(): string {
   if (process.env[TEAMMATE_COMMAND_ENV_VAR]) {
     return process.env[TEAMMATE_COMMAND_ENV_VAR]
   }
-  return isInBundledMode() ? process.execPath : process.argv[1]!
+  return isInBundledMode() ? process.execPath : process.argv[1]
 }
 
 /**
@@ -422,7 +422,7 @@ async function handleSpawnSplitPane(input: SpawnInput, context: ToolUseContext):
       teamFilePath: prev.teamContext?.teamFilePath ?? '',
       leadAgentId: prev.teamContext?.leadAgentId ?? '',
       teammates: {
-        ...(prev.teamContext?.teammates || {}),
+        ...prev.teamContext?.teammates,
         [teammateId]: {
           name: sanitizedName,
           agentType: agent_type,
@@ -624,7 +624,7 @@ async function handleSpawnSeparateWindow(input: SpawnInput, context: ToolUseCont
       teamFilePath: prev.teamContext?.teamFilePath ?? '',
       leadAgentId: prev.teamContext?.leadAgentId ?? '',
       teammates: {
-        ...(prev.teamContext?.teammates || {}),
+        ...prev.teamContext?.teammates,
         [teammateId]: {
           name: sanitizedName,
           agentType: agent_type,

@@ -83,7 +83,7 @@ function groupBySource<T extends { source: SettingSource | 'plugin' | 'built-in'
   for (const [key, group] of groups.entries()) {
     groups.set(
       key,
-      group.sort((a, b) => b.tokens - a.tokens),
+      group.toSorted((a, b) => b.tokens - a.tokens),
     )
   }
   // Return groups in consistent order

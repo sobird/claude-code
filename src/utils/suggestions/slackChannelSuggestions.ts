@@ -84,9 +84,9 @@ function parseChannels(text: string): string[] {
 
   for (const line of text.split('\n')) {
     const m = line.match(/^Name:\s*#?([a-z0-9][a-z0-9_-]{0,79})\s*$/)
-    if (m && !seen.has(m[1]!)) {
-      seen.add(m[1]!)
-      channels.push(m[1]!)
+    if (m && !seen.has(m[1])) {
+      seen.add(m[1])
+      channels.push(m[1])
     }
   }
 
@@ -106,9 +106,9 @@ export function findSlackChannelPositions(text: string): Array<{ start: number; 
   const re = /(^|\s)#([a-z0-9][a-z0-9_-]{0,79})(?=\s|$)/g
   let m: RegExpExecArray | null
   while ((m = re.exec(text)) !== null) {
-    if (!knownChannels.has(m[2]!)) continue
-    const start = m.index + m[1]!.length
-    positions.push({ start, end: start + 1 + m[2]!.length })
+    if (!knownChannels.has(m[2])) continue
+    const start = m.index + m[1].length
+    positions.push({ start, end: start + 1 + m[2].length })
   }
   return positions
 }
@@ -174,7 +174,7 @@ export async function getSlackChannelSuggestions(
 
   return channels
     .filter((c) => c.startsWith(lower))
-    .sort()
+    .toSorted()
     .slice(0, 10)
     .map((c) => ({
       id: `slack-channel-${c}`,

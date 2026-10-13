@@ -1,4 +1,4 @@
-import { randomUUID, type UUID } from 'crypto'
+import { randomUUID, type UUID } from 'node:crypto'
 
 import { validateUuid } from './uuid.js'
 
@@ -23,7 +23,7 @@ export function parseSessionIdentifier(resumeIdentifier: string): ParsedSessionU
   // paths (e.g., C:\path\file.jsonl) are parsed as valid URLs with C: as protocol
   if (resumeIdentifier.toLowerCase().endsWith('.jsonl')) {
     return {
-      sessionId: randomUUID() as UUID,
+      sessionId: randomUUID(),
       ingressUrl: null,
       isUrl: false,
       jsonlFile: resumeIdentifier,
@@ -49,7 +49,7 @@ export function parseSessionIdentifier(resumeIdentifier: string): ParsedSessionU
     // Use the entire URL as the ingress URL
     // Always generate a random session ID
     return {
-      sessionId: randomUUID() as UUID,
+      sessionId: randomUUID(),
       ingressUrl: url.href,
       isUrl: true,
       jsonlFile: null,

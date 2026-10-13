@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
-import { randomUUID } from 'crypto'
+import type { UUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 
 import uniqBy from 'lodash-es/uniqBy.js'
 import { logForDebugging } from 'src/utils/debug.js'
@@ -140,7 +140,7 @@ async function initializeAgentMcpServers(
         })
         continue
       }
-      const [serverName, serverConfig] = entries[0]!
+      const [serverName, serverConfig] = entries[0]
       name = serverName
       config = {
         ...serverConfig,
@@ -197,7 +197,7 @@ async function initializeAgentMcpServers(
   }
 }
 
-type QueryMessage = StreamEvent | RequestStartEvent | Message | ToolUseSummaryMessage | TombstoneMessage
+type QueryMessage = StreamEvent | RequestStartEvent | Message
 
 /**
  * Type guard to check if a message from query() is a recordable Message type.

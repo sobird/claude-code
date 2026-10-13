@@ -55,7 +55,7 @@ const DATE_RANGE_ORDER: StatsDateRange[] = ['all', '7d', '30d']
 
 function getNextDateRange(current: StatsDateRange): StatsDateRange {
   const currentIndex = DATE_RANGE_ORDER.indexOf(current)
-  return DATE_RANGE_ORDER[(currentIndex + 1) % DATE_RANGE_ORDER.length]!
+  return DATE_RANGE_ORDER[(currentIndex + 1) % DATE_RANGE_ORDER.length]
 }
 
 /**
@@ -273,7 +273,7 @@ function OverviewTab({
   const { columns: terminalWidth } = useTerminalSize()
 
   // Calculate favorite model and total tokens
-  const modelEntries = Object.entries(stats.modelUsage).sort(
+  const modelEntries = Object.entries(stats.modelUsage).toSorted(
     ([, a], [, b]) => b.inputTokens + b.outputTokens - (a.inputTokens + a.outputTokens),
   )
   const favoriteModel = modelEntries[0]
@@ -425,28 +425,28 @@ function OverviewTab({
           <Box flexDirection="row" gap={4}>
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
-                {shotStatsData.buckets[0]!.label}: <Text color="claude">{shotStatsData.buckets[0]!.count}</Text>
-                <Text color="subtle"> ({shotStatsData.buckets[0]!.pct}%)</Text>
+                {shotStatsData.buckets[0].label}: <Text color="claude">{shotStatsData.buckets[0].count}</Text>
+                <Text color="subtle"> ({shotStatsData.buckets[0].pct}%)</Text>
               </Text>
             </Box>
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
-                {shotStatsData.buckets[1]!.label}: <Text color="claude">{shotStatsData.buckets[1]!.count}</Text>
-                <Text color="subtle"> ({shotStatsData.buckets[1]!.pct}%)</Text>
+                {shotStatsData.buckets[1].label}: <Text color="claude">{shotStatsData.buckets[1].count}</Text>
+                <Text color="subtle"> ({shotStatsData.buckets[1].pct}%)</Text>
               </Text>
             </Box>
           </Box>
           <Box flexDirection="row" gap={4}>
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
-                {shotStatsData.buckets[2]!.label}: <Text color="claude">{shotStatsData.buckets[2]!.count}</Text>
-                <Text color="subtle"> ({shotStatsData.buckets[2]!.pct}%)</Text>
+                {shotStatsData.buckets[2].label}: <Text color="claude">{shotStatsData.buckets[2].count}</Text>
+                <Text color="subtle"> ({shotStatsData.buckets[2].pct}%)</Text>
               </Text>
             </Box>
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
-                {shotStatsData.buckets[3]!.label}: <Text color="claude">{shotStatsData.buckets[3]!.count}</Text>
-                <Text color="subtle"> ({shotStatsData.buckets[3]!.pct}%)</Text>
+                {shotStatsData.buckets[3].label}: <Text color="claude">{shotStatsData.buckets[3].count}</Text>
+                <Text color="subtle"> ({shotStatsData.buckets[3].pct}%)</Text>
               </Text>
             </Box>
           </Box>
@@ -543,7 +543,7 @@ function generateFunFactoid(stats: ClaudeCodeStats, totalTokens: number): string
     return ''
   }
   const randomIndex = Math.floor(Math.random() * factoids.length)
-  return factoids[randomIndex]!
+  return factoids[randomIndex]
 }
 
 function ModelsTab({
@@ -560,7 +560,7 @@ function ModelsTab({
   const { columns: terminalWidth } = useTerminalSize()
   const VISIBLE_MODELS = 4 // Show 4 models at a time (2 per column)
 
-  const modelEntries = Object.entries(stats.modelUsage).sort(
+  const modelEntries = Object.entries(stats.modelUsage).toSorted(
     ([, a], [, b]) => b.inputTokens + b.outputTokens - (a.inputTokens + a.outputTokens),
   )
 
@@ -738,7 +738,7 @@ function generateTokenChart(
   const topModels = models.slice(0, 3)
 
   for (let i = 0; i < topModels.length; i++) {
-    const model = topModels[i]!
+    const model = topModels[i]
     const data = recentData.map((day) => day.tokensByModel[model] || 0)
 
     // Only include if there's actual data
@@ -792,7 +792,7 @@ function generateXAxisLabels(data: DailyModelTokens[], _chartWidth: number, yAxi
 
   for (let i = 0; i < numLabels; i++) {
     const idx = Math.min(i * step, data.length - 1)
-    const date = new Date(data[idx]!.date)
+    const date = new Date(data[idx].date)
     const label = date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -840,13 +840,13 @@ function renderStatsToAnsi(stats: ClaudeCodeStats, activeTab: 'Overview' | 'Mode
   }
 
   // Trim trailing empty lines
-  while (lines.length > 0 && stripAnsi(lines[lines.length - 1]!).trim() === '') {
+  while (lines.length > 0 && stripAnsi(lines[lines.length - 1]).trim() === '') {
     lines.pop()
   }
 
   // Add "/stats" right-aligned on the last line
   if (lines.length > 0) {
-    const lastLine = lines[lines.length - 1]!
+    const lastLine = lines[lines.length - 1]
     const lastLineLen = getStringWidth(lastLine)
     // Use known content widths based on layout:
     // Overview: two-column stats = COL2_START(40) + COL2_LABEL_WIDTH(18) + max_value(~12) = 70
@@ -894,7 +894,7 @@ function renderOverviewToAnsi(stats: ClaudeCodeStats): string[] {
   }
 
   // Calculate values
-  const modelEntries = Object.entries(stats.modelUsage).sort(
+  const modelEntries = Object.entries(stats.modelUsage).toSorted(
     ([, a], [, b]) => b.inputTokens + b.outputTokens - (a.inputTokens + a.outputTokens),
   )
   const favoriteModel = modelEntries[0]
@@ -974,7 +974,7 @@ function renderOverviewToAnsi(stats: ClaudeCodeStats): string[] {
 function renderModelsToAnsi(stats: ClaudeCodeStats): string[] {
   const lines: string[] = []
 
-  const modelEntries = Object.entries(stats.modelUsage).sort(
+  const modelEntries = Object.entries(stats.modelUsage).toSorted(
     ([, a], [, b]) => b.inputTokens + b.outputTokens - (a.inputTokens + a.outputTokens),
   )
 

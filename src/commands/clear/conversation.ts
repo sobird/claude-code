@@ -3,7 +3,7 @@
  * This module has heavier dependencies and should be lazy-loaded when possible.
  */
 import { feature } from 'bun:bundle'
-import { randomUUID, type UUID } from 'crypto'
+import { randomUUID, type UUID } from 'node:crypto'
 
 import { getLastMainRequestId, getOriginalCwd, getSessionId, regenerateSessionId } from '../../bootstrap/state.js'
 import {
@@ -77,8 +77,7 @@ export async function clearConversation({
   // LocalMainSessionTask.ts startBackgroundSession.
   const preservedAgentIds = new Set<string>()
   const preservedLocalAgents: LocalAgentTaskState[] = []
-  const shouldKillTask = (task: AppState['tasks'][string]): boolean =>
-    'isBackgrounded' in task && task.isBackgrounded === false
+  const shouldKillTask = (task: AppState['tasks'][string]): boolean => 'isBackgrounded' in task && !task.isBackgrounded
   if (getAppState) {
     for (const task of Object.values(getAppState().tasks)) {
       if (shouldKillTask(task)) continue

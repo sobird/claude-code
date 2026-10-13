@@ -70,7 +70,7 @@ export function PowerShellPermissionRequest(props: PermissionRequestProps): Reac
   // corpus shows 14 multiline rules, zero match twice). For compound commands,
   // computes a prefix per subcommand, excluding subcommands that are already
   // auto-allowed (read-only).
-  const [editablePrefix, setEditablePrefix] = useState<string | undefined>(command.includes('\n') ? undefined : command)
+  const [editablePrefix, setEditablePrefix] = useState(command.includes('\n') ? undefined : command)
   const hasUserEditedPrefix = useRef(false)
   useEffect(() => {
     let cancelled = false
@@ -137,9 +137,7 @@ export function PowerShellPermissionRequest(props: PermissionRequestProps): Reac
       explainer_visible: explainerState.visible,
     })
 
-    const toolNameForAnalytics = sanitizeToolNameForAnalytics(
-      toolUseConfirm.tool.name,
-    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    const toolNameForAnalytics = sanitizeToolNameForAnalytics(toolUseConfirm.tool.name)
 
     if (value === 'yes-prefix-edited') {
       const trimmedPrefix = (editablePrefix ?? '').trim()

@@ -29,7 +29,7 @@ type Props = {
 export function VoiceProvider({ children }: Props): React.ReactNode {
   // Store is created once — stable context value means the provider never
   // triggers re-renders. Consumers subscribe to slices via useVoiceState.
-  const [store] = useState(() => createStore<VoiceState>(DEFAULT_STATE))
+  const [store] = useState(() => createStore(DEFAULT_STATE))
   return <VoiceContext.Provider value={store}>{children}</VoiceContext.Provider>
 }
 

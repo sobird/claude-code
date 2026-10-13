@@ -29,10 +29,10 @@ type PermissionDecisionArgs =
   | { decision: 'accept'; source: PermissionApprovalSource | 'config' }
   | { decision: 'reject'; source: PermissionRejectionSource | 'config' }
 
-const CODE_EDITING_TOOLS = ['Edit', 'Write', 'NotebookEdit']
+const CODE_EDITING_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit'])
 
 function isCodeEditingTool(toolName: string): boolean {
-  return CODE_EDITING_TOOLS.includes(toolName)
+  return CODE_EDITING_TOOLS.has(toolName)
 }
 
 // Builds OTel counter attributes for code editing tools, enriching with

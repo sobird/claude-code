@@ -1,6 +1,6 @@
-import { mkdir, writeFile } from 'fs/promises'
-import { tmpdir } from 'os'
-import { join } from 'path'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { marked, type Tokens } from 'marked'
 import React, { useRef } from 'react'
@@ -154,7 +154,7 @@ function CopyPicker({ fullText, codeBlocks, messageAge, onDone }: PickerProps): 
     if (selected === 'full' || selected === 'always') {
       return { text: fullText, filename: RESPONSE_FILENAME }
     }
-    const block = codeBlocks[selected]!
+    const block = codeBlocks[selected]
     return {
       text: block.code,
       filename: `copy${fileExtension(block.lang)}`,
@@ -262,7 +262,7 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
     age = n - 1
   }
 
-  const text = texts[age]!
+  const text = texts[age]
   const codeBlocks = extractCodeBlocks(text)
   const config = getGlobalConfig()
 

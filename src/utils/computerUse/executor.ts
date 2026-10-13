@@ -88,7 +88,7 @@ type Input = ReturnType<typeof requireComputerUseInput>
  */
 function isBareEscape(parts: readonly string[]): boolean {
   if (parts.length !== 1) return false
-  const lower = parts[0]!.toLowerCase()
+  const lower = parts[0].toLowerCase()
   return lower === 'escape' || lower === 'esc'
 }
 

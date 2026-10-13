@@ -56,7 +56,7 @@ export function isSessionContainerCompatible(messages: Message[]): boolean {
       if (block.type !== 'tool_use' || !('name' in block)) {
         continue
       }
-      const toolName = block.name as string
+      const toolName = block.name
       if (toolName.startsWith('mcp__')) {
         return false
       }
@@ -74,7 +74,7 @@ export function isSessionContainerCompatible(messages: Message[]): boolean {
 
 export function hasFrictionSignal(messages: Message[]): boolean {
   for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]!
+    const msg = messages[i]
     if (msg.type !== 'user') {
       continue
     }

@@ -120,17 +120,17 @@ export function execFileNoThrowWithCwd(
         if (result.failed) {
           if (finalPreserveOutput) {
             const errorCode = result.exitCode ?? 1
-            void resolve({
+            resolve({
               stdout: result.stdout || '',
               stderr: result.stderr || '',
               code: errorCode,
               error: getErrorMessage(result as unknown as ExecaResultWithError, errorCode),
             })
           } else {
-            void resolve({ stdout: '', stderr: '', code: result.exitCode ?? 1 })
+            resolve({ stdout: '', stderr: '', code: result.exitCode ?? 1 })
           }
         } else {
-          void resolve({
+          resolve({
             stdout: result.stdout,
             stderr: result.stderr,
             code: 0,
@@ -139,7 +139,7 @@ export function execFileNoThrowWithCwd(
       })
       .catch((error: ExecaError) => {
         logError(error)
-        void resolve({ stdout: '', stderr: '', code: 1 })
+        resolve({ stdout: '', stderr: '', code: 1 })
       })
   })
 }

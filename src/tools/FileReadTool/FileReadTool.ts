@@ -1,6 +1,6 @@
-import { readdir, readFile as readFileAsync } from 'fs/promises'
-import * as path from 'path'
-import { posix, win32 } from 'path'
+import { readdir, readFile as readFileAsync } from 'node:fs/promises'
+import * as path from 'node:path'
+import { posix, win32 } from 'node:path'
 
 import type { Base64ImageSource } from '@anthropic-ai/sdk/resources/index.mjs'
 import { z } from 'zod/v4'
@@ -423,7 +423,7 @@ export const FileReadTool = buildTool({
 
     return { result: true }
   },
-  async call({ file_path, offset = 1, limit = undefined, pages }, context, _canUseTool?, parentMessage?) {
+  async call({ file_path, offset = 1, limit, pages }, context, _canUseTool?, parentMessage?) {
     const { readFileState, fileReadingLimits } = context
 
     const defaults = getDefaultFileReadingLimits()

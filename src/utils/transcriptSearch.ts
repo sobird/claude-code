@@ -148,7 +148,7 @@ export function toolUseSearchText(input: unknown): string {
   for (const k of ['args', 'files']) {
     const v = o[k]
     if (Array.isArray(v) && v.every((x) => typeof x === 'string')) {
-      parts.push((v as string[]).join(' '))
+      parts.push(v.join(' '))
     }
   }
   return parts.join('\n')
@@ -182,7 +182,7 @@ export function toolResultSearchText(r: unknown): string {
   for (const k of ['filenames', 'lines', 'results']) {
     const v = o[k]
     if (Array.isArray(v) && v.every((x) => typeof x === 'string')) {
-      parts.push((v as string[]).join('\n'))
+      parts.push(v.join('\n'))
     }
   }
   return parts.join('\n')

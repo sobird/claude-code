@@ -32,7 +32,7 @@ export function ConfirmStepWrapper({ tools, existingAgents, onComplete }: Props)
 
       try {
         await saveAgentToFile(
-          wizardData.location!,
+          wizardData.location,
           wizardData.finalAgent.agentType,
           wizardData.finalAgent.whenToUse,
           wizardData.finalAgent.tools,

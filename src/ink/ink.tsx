@@ -1,5 +1,5 @@
-import { closeSync, constants as fsConstants, openSync, readSync, writeSync } from 'fs'
-import { format } from 'util'
+import { closeSync, constants as fsConstants, openSync, readSync, writeSync } from 'node:fs'
+import { format } from 'node:util'
 
 import autoBind from 'auto-bind'
 import noop from 'lodash-es/noop.js'
@@ -1820,7 +1820,7 @@ export function drainStdin(stdin: NodeJS.ReadStream = process.stdin): void {
     isRaw?: boolean
     setRawMode?: (raw: boolean) => void
   }
-  const wasRaw = tty.isRaw === true
+  const wasRaw = tty.isRaw
   // Drain the kernel TTY buffer via a fresh O_NONBLOCK fd. Bounded at 64
   // reads (64KB) — a real mouse burst is a few hundred bytes; the cap
   // guards against a terminal that ignores O_NONBLOCK.

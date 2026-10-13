@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
+import type { UUID } from 'node:crypto'
 
 import { findToolByName, type Tools } from '../Tool.js'
 import { extractBashCommentLabel } from '../tools/BashTool/commentLabel.js'
@@ -592,7 +592,7 @@ function createEmptyGroup(): GroupAccumulator {
 }
 
 function createCollapsedGroup(group: GroupAccumulator): CollapsedReadSearchGroup {
-  const firstMsg = group.messages[0]!
+  const firstMsg = group.messages[0]
   // When file-path-based reads exist, use unique file count (Set.size) only.
   // Adding bash operation count on top would double-count — e.g. Read(README.md)
   // followed by Bash(wc -l README.md) should still show as 1 file, not 2.
@@ -952,7 +952,7 @@ export function summarizeRecentActivities(
   let searchCount = 0
   let readCount = 0
   for (let i = activities.length - 1; i >= 0; i--) {
-    const activity = activities[i]!
+    const activity = activities[i]
     if (activity.isSearch) {
       searchCount++
     } else if (activity.isRead) {
@@ -969,7 +969,7 @@ export function summarizeRecentActivities(
   // SendMessage don't implement getActivityDescription, so search backward)
   for (let i = activities.length - 1; i >= 0; i--) {
     if (activities[i]?.activityDescription) {
-      return activities[i]!.activityDescription
+      return activities[i].activityDescription
     }
   }
   return undefined

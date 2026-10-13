@@ -17,7 +17,7 @@
  *   getSyntaxTheme always returns the default for the given Claude theme.
  */
 
-import { basename, extname } from 'path'
+import { basename, extname } from 'node:path'
 
 import { diffArrays } from 'diff'
 import type * as hljsNamespace from 'highlight.js'

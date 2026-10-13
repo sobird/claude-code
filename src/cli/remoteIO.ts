@@ -1,5 +1,5 @@
-import { PassThrough } from 'stream'
-import { URL } from 'url'
+import { PassThrough } from 'node:stream'
+import { URL } from 'node:url'
 
 import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
 

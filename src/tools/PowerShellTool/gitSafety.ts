@@ -7,7 +7,7 @@
  *    malicious hooks.
  */
 
-import { basename, posix, resolve, sep } from 'path'
+import { basename, posix, resolve, sep } from 'node:path'
 
 import { getCwd } from '../../utils/cwd.js'
 import { PS_TOKENIZER_DASH_CHARS } from '../../utils/powershell/parser.js'
@@ -50,7 +50,7 @@ function normalizeGitPathArg(arg: string): string {
   let s = arg
   // Normalize parameter prefixes: dash chars (–, —, ―) and forward-slash
   // (PS 5.1). /Path:hooks/pre-commit → extract colon-bound value. (bug #28)
-  if (s.length > 0 && (PS_TOKENIZER_DASH_CHARS.has(s[0]!) || s[0] === '/')) {
+  if (s.length > 0 && (PS_TOKENIZER_DASH_CHARS.has(s[0]) || s[0] === '/')) {
     const c = s.indexOf(':', 1)
     if (c > 0) s = s.slice(c + 1)
   }

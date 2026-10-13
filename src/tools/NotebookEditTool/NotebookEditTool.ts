@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { extname, isAbsolute, resolve } from 'path'
+import { extname, isAbsolute, resolve } from 'node:path'
 
 import { fileHistoryEnabled, fileHistoryTrackEdit } from 'src/utils/fileHistory.js'
 import { z } from 'zod/v4'
@@ -214,7 +214,7 @@ export const NotebookEditTool = buildTool({
       }
       throw e
     }
-    const notebook = safeParseJSON(content) as NotebookContent | null
+    const notebook = safeParseJSON(content)
     if (!notebook) {
       return {
         result: false,

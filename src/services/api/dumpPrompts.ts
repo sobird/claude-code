@@ -1,6 +1,6 @@
-import { createHash } from 'crypto'
-import { promises as fs } from 'fs'
-import { dirname, join } from 'path'
+import { createHash } from 'node:crypto'
+import { promises as fs } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 import type { ClientOptions } from '@anthropic-ai/sdk'
 import { getSessionId } from 'src/bootstrap/state.js'

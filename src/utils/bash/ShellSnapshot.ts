@@ -1,7 +1,7 @@
-import { execFile } from 'child_process'
-import { mkdir, stat } from 'fs/promises'
-import * as os from 'os'
-import { join } from 'path'
+import { execFile } from 'node:child_process'
+import { mkdir, stat } from 'node:fs/promises'
+import * as os from 'node:os'
+import { join } from 'node:path'
 
 import { execa } from 'execa'
 import { logEvent } from 'src/services/analytics/index.js'

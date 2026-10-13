@@ -177,8 +177,8 @@ function ShellOutputContent({ outputPromise, columns }: ShellOutputContentProps)
   // Build lines, skip empty trailing/leading segments
   const rendered: string[] = []
   for (let i = 0; i < starts.length; i++) {
-    const start = starts[i]!
-    const end = i < starts.length - 1 ? starts[i + 1]! - 1 : content.length
+    const start = starts[i]
+    const end = i < starts.length - 1 ? starts[i + 1] - 1 : content.length
     const line = content.slice(start, end)
     if (line) rendered.push(line)
   }

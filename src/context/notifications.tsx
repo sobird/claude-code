@@ -190,7 +190,7 @@ export function useNotifications(): {
           // Fold into queued notification if keys match
           const queueIdx = prev.notifications.queue.findIndex((_) => _.key === notif.key)
           if (queueIdx !== -1) {
-            const folded = notif.fold(prev.notifications.queue[queueIdx]!, notif)
+            const folded = notif.fold(prev.notifications.queue[queueIdx], notif)
             const newQueue = [...prev.notifications.queue]
             newQueue[queueIdx] = folded
             return {

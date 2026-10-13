@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
+import type { UUID } from 'node:crypto'
 
 import chalk from 'chalk'
 import type { RefObject } from 'react'
@@ -208,7 +208,7 @@ export function dropTextInBriefTurns<
   const textIndexToTurn: number[] = []
   let turn = 0
   for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i]!
+    const msg = messages[i]
     const block = msg.message?.content[0]
     if (msg.type === 'user' && block?.type !== 'tool_result' && !msg.isMeta) {
       turn++

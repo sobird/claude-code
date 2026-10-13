@@ -38,12 +38,12 @@ async function checkClaudeMdFiles(): Promise<ContextWarning | null> {
   }
 
   const details = largeFiles
-    .sort((a, b) => b.content.length - a.content.length)
+    .toSorted((a, b) => b.content.length - a.content.length)
     .map((file) => `${file.path}: ${file.content.length.toLocaleString()} chars`)
 
   const message =
     largeFiles.length === 1
-      ? `Large CLAUDE.md file detected (${largeFiles[0]!.content.length.toLocaleString()} chars > ${MAX_MEMORY_CHARACTER_COUNT.toLocaleString()})`
+      ? `Large CLAUDE.md file detected (${largeFiles[0].content.length.toLocaleString()} chars > ${MAX_MEMORY_CHARACTER_COUNT.toLocaleString()})`
       : `${largeFiles.length} large CLAUDE.md files detected (each > ${MAX_MEMORY_CHARACTER_COUNT.toLocaleString()} chars)`
 
   return {
@@ -80,7 +80,7 @@ async function checkAgentDescriptions(agentInfo: AgentDefinitionsResult | null):
         tokens: roughTokenCountEstimation(description),
       }
     })
-    .sort((a, b) => b.tokens - a.tokens)
+    .toSorted((a, b) => b.tokens - a.tokens)
 
   const details = agentTokens.slice(0, 5).map((agent) => `${agent.name}: ~${agent.tokens.toLocaleString()} tokens`)
 
@@ -144,7 +144,7 @@ async function checkMcpTools(
     }
 
     // Sort servers by token count
-    const sortedServers = Array.from(toolsByServer.entries()).sort((a, b) => b[1].tokens - a[1].tokens)
+    const sortedServers = Array.from(toolsByServer.entries()).toSorted((a, b) => b[1].tokens - a[1].tokens)
 
     const details = sortedServers
       .slice(0, 5)

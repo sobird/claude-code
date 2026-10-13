@@ -1,6 +1,6 @@
-import { createHash, randomUUID, type UUID } from 'crypto'
-import { stat } from 'fs/promises'
-import { isAbsolute, join, relative, sep } from 'path'
+import { createHash, randomUUID, type UUID } from 'node:crypto'
+import { stat } from 'node:fs/promises'
+import { isAbsolute, join, relative, sep } from 'node:path'
 
 import { getOriginalCwd, getSessionId } from '../bootstrap/state.js'
 import type { AttributionSnapshotMessage, FileAttributionState } from '../types/logs.js'
@@ -589,7 +589,7 @@ export async function calculateCommitAttribution(
       const baseline = mergedBaselines.get(file)
 
       // Get the surface for this file
-      const fileSurface = states[0]!.surface
+      const fileSurface = states[0].surface
 
       let claudeChars = 0
       let humanChars = 0
@@ -732,8 +732,8 @@ export async function getGitDiffSize(filePath: string): Promise<number> {
         const deleteMatch = line.match(/(\d+) deletions?/)
 
         // Use line-based changes and approximate chars per line (~40 chars average)
-        const insertions = insertMatch ? parseInt(insertMatch[1]!, 10) : 0
-        const deletions = deleteMatch ? parseInt(deleteMatch[1]!, 10) : 0
+        const insertions = insertMatch ? parseInt(insertMatch[1], 10) : 0
+        const deletions = deleteMatch ? parseInt(deleteMatch[1], 10) : 0
         totalChanges += (insertions + deletions) * 40
       }
     }

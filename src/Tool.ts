@@ -1,4 +1,4 @@
-import type { UUID } from 'crypto'
+import type { UUID } from 'node:crypto'
 
 import type { ToolResultBlockParam, ToolUseBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { ElicitRequestURLParams, ElicitResult } from '@modelcontextprotocol/sdk/types.js'
@@ -277,12 +277,8 @@ export type ToolProgress<P extends ToolProgressData> = {
   data: P
 }
 
-export function filterToolProgressMessages(
-  progressMessagesForMessage: ProgressMessage[],
-): ProgressMessage<ToolProgressData>[] {
-  return progressMessagesForMessage.filter(
-    (msg): msg is ProgressMessage<ToolProgressData> => msg.data?.type !== 'hook_progress',
-  )
+export function filterToolProgressMessages(progressMessagesForMessage: ProgressMessage[]): ProgressMessage[] {
+  return progressMessagesForMessage.filter((msg): msg is ProgressMessage => msg.data?.type !== 'hook_progress')
 }
 
 export type ToolResult<T> = {

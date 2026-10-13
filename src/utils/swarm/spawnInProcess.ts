@@ -219,7 +219,7 @@ export function killInProcessTeammate(taskId: string, setAppState: SetAppStateFn
       return prev
     }
 
-    const teammateTask = task as InProcessTeammateTaskState
+    const teammateTask = task
 
     if (teammateTask.status !== 'running') {
       return prev
@@ -265,7 +265,7 @@ export function killInProcessTeammate(taskId: string, setAppState: SetAppStateFn
           endTime: Date.now(),
           onIdleCallbacks: [], // Clear callbacks to prevent stale references
           messages: teammateTask.messages?.length
-            ? [teammateTask.messages[teammateTask.messages.length - 1]!]
+            ? [teammateTask.messages[teammateTask.messages.length - 1]]
             : undefined,
           pendingUserMessages: [],
           inProgressToolUseIDs: undefined,

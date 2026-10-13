@@ -166,7 +166,7 @@ export async function refreshOAuthToken(
       throw new Error(`Token refresh failed: ${response.statusText}`)
     }
 
-    const data = response.data as OAuthTokenExchangeResponse
+    const data = response.data
     const { access_token: accessToken, refresh_token: newRefreshToken = refreshToken, expires_in: expiresIn } = data
 
     const expiresAt = Date.now() + expiresIn * 1000
@@ -261,7 +261,7 @@ export async function fetchAndStoreUserRoles(accessToken: string): Promise<void>
   if (response.status !== 200) {
     throw new Error(`Failed to fetch user roles: ${response.statusText}`)
   }
-  const data = response.data as UserRolesResponse
+  const data = response.data
   const config = getGlobalConfig()
 
   if (!config.oauthAccount) {

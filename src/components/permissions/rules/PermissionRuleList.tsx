@@ -331,7 +331,7 @@ export function PermissionRuleList({ onExit, initialTab, onRetryDenials }: Props
       }
 
       // Get all rule keys and sort them alphabetically based on rule's formatted value
-      const sortedRuleKeys = Array.from(rulesByKey.keys()).sort((a, b) => {
+      const sortedRuleKeys = Array.from(rulesByKey.keys()).toSorted((a, b) => {
         const ruleA = rulesByKey.get(a)
         const ruleB = rulesByKey.get(b)
         if (ruleA && ruleB) {

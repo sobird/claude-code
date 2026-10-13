@@ -1,4 +1,4 @@
-import { isAbsolute, join } from 'path'
+import { isAbsolute, join } from 'node:path'
 
 import chokidar, { type FSWatcher } from 'chokidar'
 
@@ -96,7 +96,7 @@ function handleFileEvent(path: string, event: 'change' | 'add' | 'unlink'): void
 
 export function updateWatchPaths(paths: string[]): void {
   if (!initialized) return
-  const sorted = paths.slice().sort()
+  const sorted = paths.slice().toSorted()
   if (sorted.length === dynamicWatchPathsSorted.length && sorted.every((p, i) => p === dynamicWatchPathsSorted[i])) {
     return
   }
@@ -139,7 +139,7 @@ export async function onCwdChangedForHooks(oldCwd: string, newCwd: string): Prom
     }
   })
   dynamicWatchPaths = hookResult.watchPaths
-  dynamicWatchPathsSorted = hookResult.watchPaths.slice().sort()
+  dynamicWatchPathsSorted = hookResult.watchPaths.slice().toSorted()
   for (const msg of hookResult.systemMessages) {
     notifyCallback?.(msg, false)
   }

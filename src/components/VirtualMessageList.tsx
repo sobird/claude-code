@@ -269,7 +269,7 @@ export function VirtualMessageList({
   // churn at 27k messages). Append-only delta push when the prefix matches;
   // fall back to full rebuild on compaction, /clear, or itemKey change.
   const keysRef = useRef<string[]>([])
-  const prevMessagesRef = useRef<typeof messages>(messages)
+  const prevMessagesRef = useRef(messages)
   const prevItemKeyRef = useRef(itemKey)
   if (
     prevItemKeyRef.current !== itemKey ||
@@ -279,7 +279,7 @@ export function VirtualMessageList({
     keysRef.current = messages.map((m) => itemKey(m))
   } else {
     for (let i = keysRef.current.length; i < messages.length; i++) {
-      keysRef.current.push(itemKey(messages[i]!))
+      keysRef.current.push(itemKey(messages[i]))
     }
   }
   prevMessagesRef.current = messages
@@ -304,7 +304,7 @@ export function VirtualMessageList({
     (i: number) => {
       const h = getItemHeight(i)
       if (h === 0) return false
-      return isNavigableMessage(messages[i]!)
+      return isNavigableMessage(messages[i])
     },
     [getItemHeight, messages],
   )
@@ -320,13 +320,13 @@ export function VirtualMessageList({
     const scan = (from: number, dir: 1 | -1, pred: (i: number) => boolean = isVisible) => {
       for (let i = from; i >= 0 && i < messages.length; i += dir) {
         if (pred(i)) {
-          select(messages[i]!)
+          select(messages[i])
           return true
         }
       }
       return false
     }
-    const isUser = (i: number) => isVisible(i) && messages[i]!.type === 'user'
+    const isUser = (i: number) => isVisible(i) && messages[i].type === 'user'
     return {
       // Entry via shift+↑ = same semantic as in-cursor shift+↑ (prevUser).
       enterCursor: () => scan(messages.length - 1, -1, isUser),
@@ -449,7 +449,7 @@ export function VirtualMessageList({
       return
     }
     const idx = Math.max(0, Math.min(ord, positions.length - 1))
-    const p = positions[idx]!
+    const p = positions[idx]
     const top = jumpState.current.getItemTop(msgIdx)
     // lo = item's position within scroll content (wrapper-relative).
     // viewportTop = where the scroll content starts on SCREEN (after
@@ -619,12 +619,12 @@ export function VirtualMessageList({
     }
     st.ptr = ptr
     st.screenOrd = 0 // resolved after scan (wantLast → length-1)
-    jump(matches[ptr]!, delta < 0)
+    jump(matches[ptr], delta < 0)
     // screenOrd will resolve after scan. Best-effort: prefixSum[ptr] + 0
     // for n (first pos), prefixSum[ptr+1] for N (last pos = count-1).
     // The scan-effect's highlight will be the real value; this is a
     // pre-scan placeholder so the badge updates immediately.
-    const placeholder = delta < 0 ? (prefixSum[ptr + 1] ?? total) : prefixSum[ptr]! + 1
+    const placeholder = delta < 0 ? (prefixSum[ptr + 1] ?? total) : prefixSum[ptr] + 1
     onSearchMatchesChange?.(total, placeholder)
   }
   stepRef.current = step
@@ -655,7 +655,7 @@ export function VirtualMessageList({
         if (lq) {
           const msgs = jumpState.current.messages
           for (let i = 0; i < msgs.length; i++) {
-            const text = extractSearchText(msgs[i]!)
+            const text = extractSearchText(msgs[i])
             let pos = text.indexOf(lq)
             let cnt = 0
             while (pos >= 0) {
@@ -674,12 +674,12 @@ export function VirtualMessageList({
         const s = scrollRef.current
         const { offsets, start, getItemTop } = jumpState.current
         const firstTop = getItemTop(start)
-        const origin = firstTop >= 0 ? firstTop - offsets[start]! : 0
+        const origin = firstTop >= 0 ? firstTop - offsets[start] : 0
         if (matches.length > 0 && s) {
           const curTop = searchAnchor.current >= 0 ? searchAnchor.current : s.getScrollTop()
           let best = Infinity
           for (let k = 0; k < matches.length; k++) {
-            const d = Math.abs(origin + offsets[matches[k]!]! - curTop)
+            const d = Math.abs(origin + offsets[matches[k]] - curTop)
             if (d <= best) {
               best = d
               ptr = k
@@ -696,7 +696,7 @@ export function VirtualMessageList({
           // message. At sticky-bottom (common / entry), nearest is the
           // last msg; its last occurrence is closest to where the user
           // was — minimal view movement. n advances forward from there.
-          jump(matches[ptr]!, true)
+          jump(matches[ptr], true)
         } else if (searchAnchor.current >= 0 && s) {
           // /foob → 0 matches → snap back to anchor. less/vim incsearch.
           s.scrollTo(searchAnchor.current)
@@ -731,7 +731,7 @@ export function VirtualMessageList({
           const t0 = performance.now()
           const end = Math.min(i + CHUNK, msgs.length)
           for (let j = i; j < end; j++) {
-            extractSearchText(msgs[j]!)
+            extractSearchText(msgs[j])
           }
           workMs += performance.now() - t0
         }
@@ -783,7 +783,7 @@ export function VirtualMessageList({
       <Box ref={spacerRef} height={topSpacer} flexShrink={0} />
       {messages.slice(start, end).map((msg, i) => {
         const idx = start + i
-        const k = keys[idx]!
+        const k = keys[idx]
         const clickable = !!onItemClick && (isItemClickable?.(msg) ?? true)
         const hovered = clickable && hoveredKey === k
         const expanded = isItemExpanded?.(msg)
@@ -899,7 +899,7 @@ function StickyTracker({
   let text: string | null = null
   if (firstVisible > 0 && !isSticky) {
     for (let i = firstVisible - 1; i >= 0; i--) {
-      const t = stickyPromptText(messages[i]!)
+      const t = stickyPromptText(messages[i])
       if (t === null) continue
       // The prompt's wrapping Box top is above target (that's why it's in
       // the [0, firstVisible) range), but its ❯ is at top+1 (marginTop=1).
@@ -915,8 +915,8 @@ function StickyTracker({
     }
   }
 
-  const baseOffset = firstVisibleTop >= 0 ? firstVisibleTop - offsets[firstVisible]! : 0
-  const estimate = idx >= 0 ? Math.max(0, baseOffset + offsets[idx]!) : -1
+  const baseOffset = firstVisibleTop >= 0 ? firstVisibleTop - offsets[firstVisible] : 0
+  const estimate = idx >= 0 ? Math.max(0, baseOffset + offsets[idx]) : -1
 
   // For click-jumps to items not yet mounted (user scrolled far past,
   // prompt is in the topSpacer). Click handler scrolls to the estimate

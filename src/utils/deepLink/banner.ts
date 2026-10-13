@@ -12,9 +12,9 @@
  * notice which directory — and therefore which CLAUDE.md — was loaded.
  */
 
-import { stat } from 'fs/promises'
-import { homedir } from 'os'
-import { join, sep } from 'path'
+import { stat } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { join, sep } from 'node:path'
 
 import { formatNumber, formatRelativeTimeAgo } from '../format.js'
 import { getGitDir } from '../git.js'

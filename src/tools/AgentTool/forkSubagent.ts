@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { BetaToolUseBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 

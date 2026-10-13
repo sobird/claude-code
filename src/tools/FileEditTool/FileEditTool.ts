@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, sep } from 'path'
+import { dirname, isAbsolute, sep } from 'node:path'
 
 import { logEvent } from 'src/services/analytics/index.js'
 

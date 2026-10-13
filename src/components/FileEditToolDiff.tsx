@@ -64,7 +64,7 @@ function DiffFrame({ children, placeholder }: { children?: React.ReactNode; plac
 
 async function loadDiffData(file_path: string, edits: FileEdit[]): Promise<DiffData> {
   const valid = edits.filter((e) => e.old_string != null && e.new_string != null)
-  const single = valid.length === 1 ? valid[0]! : undefined
+  const single = valid.length === 1 ? valid[0] : undefined
 
   // SedEditPermissionRequest passes the entire file as old_string. Scanning for
   // a needle ≥ CHUNK_SIZE allocates O(needle) for the overlap buffer — skip the

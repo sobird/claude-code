@@ -1,4 +1,4 @@
-import type { Writable } from 'stream'
+import type { Writable } from 'node:stream'
 
 import { coerce } from 'semver'
 
@@ -151,12 +151,12 @@ export function isXtermJs(): boolean {
 // in xterm.js-based terminals like VS Code). tmux is allowlisted because it
 // accepts modifyOtherKeys and doesn't forward the kitty sequence to the outer
 // terminal.
-const EXTENDED_KEYS_TERMINALS = ['iTerm.app', 'kitty', 'WezTerm', 'ghostty', 'tmux', 'windows-terminal']
+const EXTENDED_KEYS_TERMINALS = new Set(['iTerm.app', 'kitty', 'WezTerm', 'ghostty', 'tmux', 'windows-terminal'])
 
 /** True if this terminal correctly handles extended key reporting
  *  (Kitty keyboard protocol + xterm modifyOtherKeys). */
 export function supportsExtendedKeys(): boolean {
-  return EXTENDED_KEYS_TERMINALS.includes(env.terminal ?? '')
+  return EXTENDED_KEYS_TERMINALS.has(env.terminal ?? '')
 }
 
 /** True if the terminal scrolls the viewport when it receives cursor-up

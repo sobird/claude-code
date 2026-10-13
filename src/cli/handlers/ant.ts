@@ -1,7 +1,6 @@
 // Auto-generated stub — replace with real implementation
 import type { Command } from '@commander-js/extra-typings'
 
-export {}
 export const logHandler: (logId: string | number | undefined) => Promise<void> = (async () => {}) as (
   logId: string | number | undefined,
 ) => Promise<void>

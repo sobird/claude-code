@@ -46,8 +46,8 @@ export const Ansi = React.memo(function Ansi({ children, dimColor }: Props): Rea
     return null
   }
 
-  if (spans.length === 1 && !hasAnyProps(spans[0]!.props)) {
-    return dimColor ? <Text dim>{spans[0]!.text}</Text> : <Text>{spans[0]!.text}</Text>
+  if (spans.length === 1 && !hasAnyProps(spans[0].props)) {
+    return dimColor ? <Text dim>{spans[0].text}</Text> : <Text>{spans[0].text}</Text>
   }
 
   const content = spans.map((span, i) => {

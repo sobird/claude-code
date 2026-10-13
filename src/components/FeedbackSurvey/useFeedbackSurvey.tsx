@@ -67,12 +67,12 @@ export function useFeedbackSurvey(
     timeLastShown: number | null
     submitCountAtLastAppearance: number | null
   }>(() => ({ timeLastShown: null, submitCountAtLastAppearance: null }))
-  const config = useDynamicConfig<FeedbackSurveyConfig>('tengu_feedback_survey_config', DEFAULT_FEEDBACK_SURVEY_CONFIG)
-  const badTranscriptAskConfig = useDynamicConfig<TranscriptAskConfig>(
+  const config = useDynamicConfig('tengu_feedback_survey_config', DEFAULT_FEEDBACK_SURVEY_CONFIG)
+  const badTranscriptAskConfig = useDynamicConfig(
     'tengu_bad_survey_transcript_ask_config',
     DEFAULT_TRANSCRIPT_ASK_CONFIG,
   )
-  const goodTranscriptAskConfig = useDynamicConfig<TranscriptAskConfig>(
+  const goodTranscriptAskConfig = useDynamicConfig(
     'tengu_good_survey_transcript_ask_config',
     DEFAULT_TRANSCRIPT_ASK_CONFIG,
   )

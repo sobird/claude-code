@@ -743,7 +743,7 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
       const flagsWithArgs = new Set(['-d', '--date', '-r', '--reference', '--iso-8601', '--rfc-3339'])
       let i = 0
       while (i < args.length) {
-        const token = args[i]!
+        const token = args[i]
         // Skip flags and their arguments
         if (token.startsWith('--') && token.includes('=')) {
           // Long flag with =value, already consumed
@@ -987,7 +987,7 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
       let i = 0
       let afterDoubleDash = false
       while (i < args.length) {
-        const token = args[i]!
+        const token = args[i]
         if (token === '--') {
           afterDoubleDash = true
           i++

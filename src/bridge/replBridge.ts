@@ -1,5 +1,5 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import { HybridTransport } from '../cli/transports/HybridTransport.js'
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'

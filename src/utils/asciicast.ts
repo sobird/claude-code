@@ -1,5 +1,5 @@
-import { appendFile, rename } from 'fs/promises'
-import { basename, dirname, join } from 'path'
+import { appendFile, rename } from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
 
 import { getOriginalCwd, getSessionId } from '../bootstrap/state.js'
 import { createBufferedWriter } from './bufferedWriter.js'
@@ -60,7 +60,7 @@ export function getSessionRecordingPaths(): string[] {
     const names = (
       typeof entries[0] === 'string' ? entries : (entries as { name: string }[]).map((e) => e.name)
     ) as string[]
-    const files = names.filter((f) => f.startsWith(sessionId) && f.endsWith('.cast')).sort()
+    const files = names.filter((f) => f.startsWith(sessionId) && f.endsWith('.cast')).toSorted()
     return files.map((f) => join(projectDir, f))
   } catch {
     return []
@@ -177,7 +177,7 @@ export function installAsciicastRecorder(): void {
   })
 
   // Wrap process.stdout.write to capture output
-  const originalWrite = process.stdout.write.bind(process.stdout) as typeof process.stdout.write
+  const originalWrite = process.stdout.write.bind(process.stdout)
   process.stdout.write = function (
     chunk: string | Uint8Array,
     encodingOrCb?: BufferEncoding | ((err?: Error) => void),

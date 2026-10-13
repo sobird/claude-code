@@ -10,7 +10,7 @@
  * log.ts has NO heavy dependencies - events are queued until this sink is attached.
  */
 
-import { dirname, join } from 'path'
+import { dirname, join } from 'node:path'
 
 import axios from 'axios'
 

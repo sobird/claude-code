@@ -1,8 +1,8 @@
-import { execFileSync, spawn } from 'child_process'
-import { constants as fsConstants, readFileSync, unlinkSync } from 'fs'
-import { type FileHandle, mkdir, open, realpath } from 'fs/promises'
-import { isAbsolute, resolve } from 'path'
-import { join as posixJoin } from 'path/posix'
+import { execFileSync, spawn } from 'node:child_process'
+import { constants as fsConstants, readFileSync, unlinkSync } from 'node:fs'
+import { type FileHandle, mkdir, open, realpath } from 'node:fs/promises'
+import { isAbsolute, resolve } from 'node:path'
+import { join as posixJoin } from 'node:path/posix'
 
 import memoize from 'lodash-es/memoize.js'
 import { logEvent } from 'src/services/analytics/index.js'
@@ -21,7 +21,7 @@ import { which } from './which.js'
 
 export type { ExecResult } from './ShellCommand.js'
 
-import { accessSync } from 'fs'
+import { accessSync } from 'node:fs'
 
 import { onCwdChangedForHooks } from './hooks/fileChangedWatcher.js'
 import { getClaudeTempDirName } from './permissions/filesystem.js'
@@ -408,7 +408,7 @@ export function setCwd(path: string, relativeTo?: string): void {
     physicalPath = getFsImplementation().realpathSync(resolved)
   } catch (e) {
     if (isENOENT(e)) {
-      throw new Error(`Path "${resolved}" does not exist`)
+      throw new Error(`Path "${resolved}" does not exist`, { cause: e })
     }
     throw e
   }

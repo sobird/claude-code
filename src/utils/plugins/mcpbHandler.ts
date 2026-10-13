@@ -1,6 +1,6 @@
-import { createHash } from 'crypto'
-import { chmod, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { createHash } from 'node:crypto'
+import { chmod, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import type { McpbManifest, McpbUserConfigurationOption } from '@anthropic-ai/mcpb'
 import axios from 'axios'
@@ -240,7 +240,7 @@ export function saveMcpServerUserConfig(
       if (needSecureScrub) {
         logForDebugging(
           `saveMcpServerUserConfig: scrubbed ${
-            Object.keys(existingInSecureStorage!).length - Object.keys(secureScrubbed!).length
+            Object.keys(existingInSecureStorage).length - Object.keys(secureScrubbed).length
           } stale non-sensitive key(s) from secureStorage for ${k}`,
         )
       }
@@ -279,7 +279,7 @@ export function saveMcpServerUserConfig(
         string,
         undefined
       >
-      settings.pluginConfigs[pluginId].mcpServers![serverName] = {
+      settings.pluginConfigs[pluginId].mcpServers[serverName] = {
         ...nonSensitive,
         ...scrubbed,
       } as UserConfigValues
@@ -300,7 +300,9 @@ export function saveMcpServerUserConfig(
   } catch (error) {
     const errorObj = toError(error)
     logError(errorObj)
-    throw new Error(`Failed to save user configuration for ${pluginId}/${serverName}: ${errorObj.message}`)
+    throw new Error(`Failed to save user configuration for ${pluginId}/${serverName}: ${errorObj.message}`, {
+      cause: error,
+    })
   }
 }
 
@@ -857,7 +859,7 @@ export async function loadMcpbFile(
 
   return {
     manifest,
-    mcpConfig: mcpConfig as McpServerConfig,
+    mcpConfig: mcpConfig,
     extractedPath: extractPath,
     contentHash,
   }

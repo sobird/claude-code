@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join } from 'node:path'
 
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'
@@ -84,7 +84,7 @@ function substituteVariables(template: string, variables: Record<string, string>
   // (replacer fn treats $ literally), and (2) double-substitution when user
   // content happens to contain {{varName}} matching a later variable.
   return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
-    Object.prototype.hasOwnProperty.call(variables, key) ? variables[key]! : match,
+    Object.prototype.hasOwnProperty.call(variables, key) ? variables[key] : match,
   )
 }
 

@@ -1,4 +1,4 @@
-import { EventEmitter as NodeEventEmitter } from 'events'
+import { EventEmitter as NodeEventEmitter } from 'node:events'
 
 import { Event } from './event.js'
 

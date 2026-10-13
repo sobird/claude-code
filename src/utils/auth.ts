@@ -1,6 +1,6 @@
-import { exec } from 'child_process'
-import { mkdir, stat } from 'fs/promises'
-import { join } from 'path'
+import { exec } from 'node:child_process'
+import { mkdir, stat } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import chalk from 'chalk'
 import { execa } from 'execa'
@@ -590,7 +590,7 @@ export function refreshAwsAuth(awsAuthRefresh: string): Promise<boolean> {
       if (code === 0) {
         logForDebugging('AWS auth refresh completed successfully')
         authStatusManager.endAuthentication(true)
-        void resolve(true)
+        resolve(true)
       } else {
         const timedOut = signal === 'SIGTERM'
         const message = timedOut
@@ -601,7 +601,7 @@ export function refreshAwsAuth(awsAuthRefresh: string): Promise<boolean> {
         // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.error(message)
         authStatusManager.endAuthentication(false)
-        void resolve(false)
+        resolve(false)
       }
     })
   })
@@ -845,7 +845,7 @@ export function refreshGcpAuth(gcpAuthRefresh: string): Promise<boolean> {
       if (code === 0) {
         logForDebugging('GCP auth refresh completed successfully')
         authStatusManager.endAuthentication(true)
-        void resolve(true)
+        resolve(true)
       } else {
         const timedOut = signal === 'SIGTERM'
         const message = timedOut
@@ -856,7 +856,7 @@ export function refreshGcpAuth(gcpAuthRefresh: string): Promise<boolean> {
         // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.error(message)
         authStatusManager.endAuthentication(false)
-        void resolve(false)
+        resolve(false)
       }
     })
   })

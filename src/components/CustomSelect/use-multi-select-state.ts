@@ -1,4 +1,4 @@
-import { isDeepStrictEqual } from 'util'
+import { isDeepStrictEqual } from 'node:util'
 
 import { useCallback, useState } from 'react'
 
@@ -165,7 +165,7 @@ export function useMultiSelectState<T>({
   initialFocusLast,
   hideIndexes = false,
 }: UseMultiSelectStateProps<T>): MultiSelectState<T> {
-  const [selectedValues, setSelectedValues] = useState<T[]>(defaultValue)
+  const [selectedValues, setSelectedValues] = useState(defaultValue)
   const [isSubmitFocused, setIsSubmitFocused] = useState(false)
 
   // Reset selectedValues when options change (e.g. async-loaded data changes
@@ -354,7 +354,7 @@ export function useMultiSelectState<T>({
       if (!hideIndexes && /^[0-9]+$/.test(normalizedInput)) {
         const index = parseInt(normalizedInput) - 1
         if (index >= 0 && index < options.length) {
-          const value = options[index]!.value
+          const value = options[index].value
           const newValues = selectedValues.includes(value)
             ? selectedValues.filter((v) => v !== value)
             : [...selectedValues, value]

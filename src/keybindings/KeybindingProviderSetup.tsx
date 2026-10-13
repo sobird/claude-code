@@ -135,7 +135,7 @@ export function KeybindingSetup({ children }: Props): React.ReactNode {
   // Active context tracking for keybinding priority resolution
   // Using a ref instead of state for synchronous updates - input handlers need
   // to see the current value immediately, not after a React render cycle.
-  const activeContextsRef = useRef<Set<KeybindingContextName>>(new Set())
+  const activeContextsRef = useRef(new Set())
 
   const registerActiveContext = useCallback((context: KeybindingContextName) => {
     activeContextsRef.current.add(context)

@@ -274,7 +274,7 @@ export async function getWithPermittedRedirects(
     if (axios.isAxiosError(error) && error.response && [301, 302, 307, 308].includes(error.response.status)) {
       const redirectLocation = error.response.headers.location
       if (!redirectLocation) {
-        throw new Error('Redirect missing Location header')
+        throw new Error('Redirect missing Location header', { cause: error })
       }
 
       // Resolve relative URLs against the original URL
@@ -488,7 +488,7 @@ export async function applyPromptToMarkdown(
   const { content } = assistantMessage.message
   if (content.length > 0) {
     const contentBlock = content[0]
-    if ('text' in contentBlock!) {
+    if ('text' in contentBlock) {
       return contentBlock.text
     }
   }

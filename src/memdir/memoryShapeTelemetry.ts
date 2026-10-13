@@ -2,7 +2,6 @@ import type { MemoryScope } from '../utils/memoryFileDetection.js'
 // Auto-generated stub — replace with real implementation
 import type { MemoryHeader } from './memoryScan.js'
 
-export {}
 export const logMemoryRecallShape: (memories: MemoryHeader[], selected: MemoryHeader[]) => void = () => {}
 export const logMemoryWriteShape: (
   toolName: string,

@@ -161,13 +161,13 @@ function AskUserQuestionPermissionRequestBody({
     void storeImage(newContent)
     setPastedContentsByQuestion((prev) => ({
       ...prev,
-      [questionText]: { ...(prev[questionText] ?? {}), [pasteId]: newContent },
+      [questionText]: { ...prev[questionText], [pasteId]: newContent },
     }))
   }
 
   const onRemoveImage = useCallback((questionText: string, id: number) => {
     setPastedContentsByQuestion((prev) => {
-      const questionContents = { ...(prev[questionText] ?? {}) }
+      const questionContents = { ...prev[questionText] }
       delete questionContents[id]
       return { ...prev, [questionText]: questionContents }
     })

@@ -1,7 +1,7 @@
-import { createHash } from 'crypto'
-import { readFileSync, realpathSync, statSync } from 'fs'
-import { open, readFile, realpath, stat } from 'fs/promises'
-import { basename, dirname, join, resolve, sep } from 'path'
+import { createHash } from 'node:crypto'
+import { readFileSync, realpathSync, statSync } from 'node:fs'
+import { open, readFile, realpath, stat } from 'node:fs/promises'
+import { basename, dirname, join, resolve, sep } from 'node:path'
 
 import memoize from 'lodash-es/memoize.js'
 
@@ -296,7 +296,7 @@ export function normalizeGitRemoteUrl(url: string): string | null {
       const proxyPath = path.slice(4) // Remove "git/" prefix
       const segments = proxyPath.split('/')
       // 3+ segments where first contains a dot → host/owner/repo (GHE format)
-      if (segments.length >= 3 && segments[0]!.includes('.')) {
+      if (segments.length >= 3 && segments[0].includes('.')) {
         return proxyPath.toLowerCase()
       }
       // 2 segments → owner/repo (legacy format, assume github.com)

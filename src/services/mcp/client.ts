@@ -199,8 +199,8 @@ const isComputerUseMCPServer = feature('CHICAGO_MCP')
       .isComputerUseMCPServer
   : undefined
 
-import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -499,9 +499,9 @@ function isLocalMcpServer(config: ScopedMcpServerConfig): boolean {
 }
 
 // For the IDE MCP servers, we only include specific tools
-const ALLOWED_IDE_TOOLS = ['mcp__ide__executeCode', 'mcp__ide__getDiagnostics']
+const ALLOWED_IDE_TOOLS = new Set(['mcp__ide__executeCode', 'mcp__ide__getDiagnostics'])
 function isIncludedMcpTool(tool: Tool): boolean {
-  return !tool.name.startsWith('mcp__ide__') || ALLOWED_IDE_TOOLS.includes(tool.name)
+  return !tool.name.startsWith('mcp__ide__') || ALLOWED_IDE_TOOLS.has(tool.name)
 }
 
 /**
@@ -647,7 +647,7 @@ export const connectToServer = memoize(
           wsClient = await createNodeWsClient(serverRef.url, {
             headers: wsHeaders,
             agent: getWebSocketProxyAgent(serverRef.url),
-            ...(tlsOptions || {}),
+            ...tlsOptions,
           })
         }
         transport = new WebSocketTransport(wsClient)
@@ -693,7 +693,7 @@ export const connectToServer = memoize(
           wsClient = await createNodeWsClient(serverRef.url, {
             headers: wsHeaders,
             agent: getWebSocketProxyAgent(serverRef.url),
-            ...(tlsOptions || {}),
+            ...tlsOptions,
           })
         }
         transport = new WebSocketTransport(wsClient)
@@ -2133,7 +2133,7 @@ export function prefetchAllMcpResources(mcpConfigs: Record<string, ScopedMcpServ
     pendingCount = Object.keys(mcpConfigs).length
 
     if (pendingCount === 0) {
-      void resolve({
+      resolve({
         clients: [],
         tools: [],
         commands: [],
@@ -2163,7 +2163,7 @@ export function prefetchAllMcpResources(mcpConfigs: Record<string, ScopedMcpServ
           commands_metadata_length: commandsMetadataLength,
         })
 
-        void resolve({
+        resolve({
           clients,
           tools,
           commands,
@@ -2172,7 +2172,7 @@ export function prefetchAllMcpResources(mcpConfigs: Record<string, ScopedMcpServ
     }, mcpConfigs).catch((error) => {
       logMCPError('prefetchAllMcpResources', `Failed to get MCP resources: ${errorMessage(error)}`)
       // Still resolve with empty results
-      void resolve({
+      resolve({
         clients: [],
         tools: [],
         commands: [],
@@ -2613,7 +2613,7 @@ export async function callMCPToolWithUrlElicitationRetry({
           }
           userResult = await new Promise<ElicitResult>((resolve) => {
             const onAbort = () => {
-              void resolve({ action: 'cancel' })
+              resolve({ action: 'cancel' })
             }
             if (signal.aborted) {
               onAbort()
@@ -2639,14 +2639,14 @@ export async function callMCPToolWithUrlElicitationRetry({
                       }
                       // Decline or cancel: resolve the retry Promise
                       signal.removeEventListener('abort', onAbort)
-                      void resolve(result)
+                      resolve(result)
                     },
                     onWaitingDismiss: (action) => {
                       signal.removeEventListener('abort', onAbort)
                       if (action === 'retry') {
-                        void resolve({ action: 'accept' })
+                        resolve({ action: 'accept' })
                       } else {
-                        void resolve({ action: 'cancel' })
+                        resolve({ action: 'cancel' })
                       }
                     },
                   },

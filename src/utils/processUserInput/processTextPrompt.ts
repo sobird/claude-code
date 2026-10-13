@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources'
 import { setPromptId } from 'src/bootstrap/state.js'

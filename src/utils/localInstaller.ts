@@ -2,8 +2,8 @@
  * Utilities for handling local installation
  */
 
-import { access, chmod, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { access, chmod, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { type ReleaseChannel, saveGlobalConfig } from './config.js'
 import { getClaudeConfigHomeDir } from './envUtils.js'

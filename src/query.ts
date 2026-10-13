@@ -197,9 +197,7 @@ type State = {
   transition: Continue | undefined
 }
 
-export async function* query(
-  params: QueryParams,
-): AsyncGenerator<StreamEvent | RequestStartEvent | Message | TombstoneMessage | ToolUseSummaryMessage, Terminal> {
+export async function* query(params: QueryParams): AsyncGenerator<StreamEvent | RequestStartEvent | Message> {
   const consumedCommandUuids: string[] = []
   const terminal = yield* queryLoop(params, consumedCommandUuids)
   // Only reached if queryLoop returned normally. Skipped on throw (error
@@ -215,7 +213,7 @@ export async function* query(
 async function* queryLoop(
   params: QueryParams,
   consumedCommandUuids: string[],
-): AsyncGenerator<StreamEvent | RequestStartEvent | Message | TombstoneMessage | ToolUseSummaryMessage, Terminal> {
+): AsyncGenerator<StreamEvent | RequestStartEvent | Message> {
   // Immutable params — never reassigned during the query loop.
   const { systemPrompt, userContext, systemContext, canUseTool, fallbackModel, querySource, maxTurns, skipCacheWrite } =
     params

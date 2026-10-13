@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import axios from 'axios'
 import chalk from 'chalk'
@@ -590,7 +590,7 @@ async function handleTeleportPrerequisites(root: Root, errorsToIgnore?: Set<Tele
                     ',',
                   ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 })
-                void resolve()
+                resolve()
               }}
             />
           </KeybindingSetup>
@@ -702,7 +702,7 @@ export async function teleportFromSessionsAPI(
 
     logError(err)
 
-    throw new Error(`Failed to fetch session from Sessions API: ${err.message}`)
+    throw new Error(`Failed to fetch session from Sessions API: ${err.message}`, { cause: error })
   }
 }
 
@@ -912,7 +912,7 @@ export async function teleportToRemote(options: {
       }
       const envVars = {
         CLAUDE_CODE_OAUTH_TOKEN: accessToken,
-        ...(options.environmentVariables ?? {}),
+        ...options.environmentVariables,
       }
 
       // Bundle mode: upload local working tree (uncommitted changes via

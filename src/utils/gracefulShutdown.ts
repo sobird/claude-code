@@ -1,4 +1,4 @@
-import { writeSync } from 'fs'
+import { writeSync } from 'node:fs'
 
 import chalk from 'chalk'
 import memoize from 'lodash-es/memoize.js'

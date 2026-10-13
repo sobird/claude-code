@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { dirname, join, resolve } from 'path'
+import { dirname, join, resolve } from 'node:path'
 
 import mergeWith from 'lodash-es/mergeWith.js'
 import { z } from 'zod/v4'
@@ -87,7 +87,7 @@ export function loadManagedFileSettings(): {
       .readdirSync(dropInDir)
       .filter((d) => (d.isFile() || d.isSymbolicLink()) && d.name.endsWith('.json') && !d.name.startsWith('.'))
       .map((d) => d.name)
-      .sort()
+      .toSorted()
     for (const name of entries) {
       const { settings, errors: fileErrors } = parseSettingsFile(join(dropInDir, name))
       errors.push(...fileErrors)
@@ -310,7 +310,7 @@ function getSettingsForSourceUncached(source: SettingSource): SettingsJson | nul
     if (inlineSettings) {
       const parsed = SettingsSchema().safeParse(inlineSettings)
       if (parsed.success) {
-        return mergeWith(fileSettings || {}, parsed.data, settingsMergeCustomizer) as SettingsJson
+        return mergeWith(fileSettings || {}, parsed.data, settingsMergeCustomizer)
       }
     }
   }
@@ -485,7 +485,7 @@ export function settingsMergeCustomizer(objValue: unknown, srcValue: unknown): u
 export function getManagedSettingsKeysForLogging(settings: SettingsJson): string[] {
   // Use .strip() to get only valid schema keys
   const validSettings = SettingsSchema().strip().parse(settings) as Record<string, unknown>
-  const keysToExpand = ['permissions', 'sandbox', 'hooks']
+  const keysToExpand = new Set(['permissions', 'sandbox', 'hooks'])
   const allKeys: string[] = []
 
   // Define valid nested keys for each nested setting we expand
@@ -531,7 +531,7 @@ export function getManagedSettingsKeysForLogging(settings: SettingsJson): string
   }
 
   for (const key of Object.keys(validSettings)) {
-    if (keysToExpand.includes(key) && validSettings[key] && typeof validSettings[key] === 'object') {
+    if (keysToExpand.has(key) && validSettings[key] && typeof validSettings[key] === 'object') {
       // Expand nested keys for these special settings (one level deep only)
       const nestedObj = validSettings[key] as Record<string, unknown>
       const validKeys = validNestedKeys[key]
@@ -550,7 +550,7 @@ export function getManagedSettingsKeysForLogging(settings: SettingsJson): string
     }
   }
 
-  return allKeys.sort()
+  return allKeys.toSorted()
 }
 
 // Flag to prevent infinite recursion when loading settings

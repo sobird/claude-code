@@ -10,8 +10,8 @@
  * - Configure OTEL_TRACES_EXPORTER (console, otlp, etc.)
  */
 
-import { AsyncLocalStorage } from 'async_hooks'
 import { feature } from 'bun:bundle'
+import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { context as otelContext, type Span, trace } from '@opentelemetry/api'
 

@@ -85,10 +85,10 @@ export function getCoordinatorUserContext(
   }
 
   const workerTools = isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
-    ? [BASH_TOOL_NAME, FILE_READ_TOOL_NAME, FILE_EDIT_TOOL_NAME].sort().join(', ')
+    ? [BASH_TOOL_NAME, FILE_READ_TOOL_NAME, FILE_EDIT_TOOL_NAME].toSorted().join(', ')
     : Array.from(ASYNC_AGENT_ALLOWED_TOOLS)
         .filter((name) => !INTERNAL_WORKER_TOOLS.has(name))
-        .sort()
+        .toSorted()
         .join(', ')
 
   let content = `Workers spawned via the ${AGENT_TOOL_NAME} tool have access to these tools: ${workerTools}`

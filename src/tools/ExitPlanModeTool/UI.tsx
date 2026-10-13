@@ -19,7 +19,7 @@ export function renderToolUseMessage(): React.ReactNode {
 
 export function renderToolResultMessage(
   output: Output,
-  _progressMessagesForMessage: ProgressMessage<ToolProgressData>[],
+  _progressMessagesForMessage: ProgressMessage[],
   { theme: _theme }: { theme: ThemeName },
 ): React.ReactNode {
   const { plan, filePath } = output

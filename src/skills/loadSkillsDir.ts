@@ -1,5 +1,5 @@
-import { realpath } from 'fs/promises'
-import { basename, dirname, isAbsolute, join, sep as pathSep, relative } from 'path'
+import { realpath } from 'node:fs/promises'
+import { basename, dirname, isAbsolute, join, sep as pathSep, relative } from 'node:path'
 
 import ignore from 'ignore'
 import memoize from 'lodash-es/memoize.js'
@@ -180,7 +180,7 @@ export function parseSkillFrontmatterFields(
     frontmatter.model === 'inherit'
       ? undefined
       : frontmatter.model
-        ? parseUserSpecifiedModel(frontmatter.model as string)
+        ? parseUserSpecifiedModel(frontmatter.model)
         : undefined
 
   const effortRaw = frontmatter['effort']
@@ -431,7 +431,7 @@ function transformSkillFiles(files: MarkdownFile[]): MarkdownFile[] {
   for (const [dir, dirFiles] of filesByDir) {
     const skillFiles = dirFiles.filter((f) => isSkillFile(f.filePath))
     if (skillFiles.length > 0) {
-      const skillFile = skillFiles[0]!
+      const skillFile = skillFiles[0]
       if (skillFiles.length > 1) {
         logForDebugging(`Multiple skill files found in ${dir}, using ${basename(skillFile.filePath)}`)
       }
@@ -782,7 +782,7 @@ export async function discoverSkillDirsForPaths(filePaths: string[], cwd: string
   }
 
   // Sort by path depth (deepest first) so skills closer to the file take precedence
-  return newDirs.sort((a, b) => b.split(pathSep).length - a.split(pathSep).length)
+  return newDirs.toSorted((a, b) => b.split(pathSep).length - a.split(pathSep).length)
 }
 
 /**

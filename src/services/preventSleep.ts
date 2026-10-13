@@ -12,7 +12,7 @@
  *
  * Only runs on macOS - no-op on other platforms.
  */
-import { type ChildProcess, spawn } from 'child_process'
+import { type ChildProcess, spawn } from 'node:child_process'
 
 import { registerCleanup } from '../utils/cleanupRegistry.js'
 import { logForDebugging } from '../utils/debug.js'

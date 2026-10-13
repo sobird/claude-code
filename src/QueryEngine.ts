@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import last from 'lodash-es/last.js'
@@ -186,7 +186,7 @@ export class QueryEngine {
       setAppState,
       replayUserMessages = false,
       includePartialMessages = false,
-      agents = [],
+      agents,
       setSDKStatus,
       orphanedPermission,
     } = this.config
@@ -224,7 +224,7 @@ export class QueryEngine {
 
     const initialThinkingConfig: ThinkingConfig = thinkingConfig
       ? thinkingConfig
-      : shouldEnableThinkingByDefault() !== false
+      : shouldEnableThinkingByDefault()
         ? { type: 'adaptive' }
         : { type: 'disabled' }
 

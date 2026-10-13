@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'fs/promises'
+import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'node:fs/promises'
 
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import * as React from 'react'
@@ -290,9 +290,9 @@ function isSilentBashCommand(command: string): boolean {
 }
 
 // Commands that should not be auto-backgrounded
-const DISALLOWED_AUTO_BACKGROUND_COMMANDS = [
+const DISALLOWED_AUTO_BACKGROUND_COMMANDS = new Set([
   'sleep', // Sleep should run in foreground unless explicitly backgrounded by user
-]
+])
 
 // Check if background tasks are disabled at module load time
 const isBackgroundTasksDisabled =
@@ -450,7 +450,7 @@ function isAutobackgroundingAllowed(command: string): boolean {
   const baseCommand = parts[0]?.trim()
   if (!baseCommand) return true
 
-  return !DISALLOWED_AUTO_BACKGROUND_COMMANDS.includes(baseCommand)
+  return !DISALLOWED_AUTO_BACKGROUND_COMMANDS.has(baseCommand)
 }
 
 /**
@@ -467,7 +467,7 @@ export function detectBlockedSleepPattern(command: string): string | null {
   // Float durations (sleep 0.5) are allowed — those are legit pacing, not polls.
   const m = /^sleep\s+(\d+)\s*$/.exec(first)
   if (!m) return null
-  const secs = parseInt(m[1]!, 10)
+  const secs = parseInt(m[1], 10)
   if (secs < 2) return null // sub-2s sleeps are fine (rate limiting, pacing)
 
   // `sleep N` alone → "what are you waiting for?"
@@ -958,8 +958,7 @@ export const BashTool = buildTool({
       backgroundTaskId: result.backgroundTaskId,
       backgroundedByUser: result.backgroundedByUser,
       assistantAutoBackgrounded: result.assistantAutoBackgrounded,
-      dangerouslyDisableSandbox:
-        'dangerouslyDisableSandbox' in input ? (input.dangerouslyDisableSandbox as boolean | undefined) : undefined,
+      dangerouslyDisableSandbox: 'dangerouslyDisableSandbox' in input ? input.dangerouslyDisableSandbox : undefined,
       persistedOutputPath,
       persistedOutputSize,
     }

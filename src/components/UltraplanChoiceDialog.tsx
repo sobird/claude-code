@@ -1,6 +1,6 @@
-import type { UUID } from 'crypto'
-import { stat, writeFile } from 'fs/promises'
-import { join } from 'path'
+import type { UUID } from 'node:crypto'
+import { stat, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import figures from 'figures'
 import React, { useCallback } from 'react'

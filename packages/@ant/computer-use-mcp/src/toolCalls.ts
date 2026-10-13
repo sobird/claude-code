@@ -856,7 +856,7 @@ async function handleRequestAccess(
   if (!Array.isArray(rawApps) || !rawApps.every((a) => typeof a === 'string')) {
     return errorResult('"apps" must be an array of strings.', 'bad_args')
   }
-  const apps = rawApps as string[]
+  const apps = rawApps
 
   const requestedFlags: Partial<CuGrantFlags> = {}
   if (typeof args.clipboardRead === 'boolean') {
@@ -1343,7 +1343,7 @@ async function handleRequestTeachAccess(
   if (!Array.isArray(rawApps) || !rawApps.every((a) => typeof a === 'string')) {
     return errorResult('"apps" must be an array of strings.', 'bad_args')
   }
-  const apps = rawApps as string[]
+  const apps = rawApps
 
   const { needDialog, skipDialogGrants, willHide, tieredApps, userDenied, policyDenied } = await buildAccessRequest(
     adapter,
@@ -1840,7 +1840,7 @@ function uniqueDisplayLabels(displays: readonly DisplayGeometry[]): Map<number, 
   // NSScreen.screens iteration order — same label always maps to same
   // physical display across buildMonitorNote → switch_display round-trip,
   // even if display configuration reorders between the two calls.
-  const sorted = [...displays].sort((a, b) => a.displayId - b.displayId)
+  const sorted = [...displays].toSorted((a, b) => a.displayId - b.displayId)
   const counts = new Map<string, number>()
   const out = new Map<number, string>()
   for (const d of sorted) {
@@ -1922,7 +1922,7 @@ async function handleScreenshot(
     // set has changed since the display was last resolved. Prevents the
     // resolver yanking the display on every screenshot.
     const allowedBundleIds = overrides.allowedApps.map((a) => a.bundleId)
-    const currentAppSetKey = allowedBundleIds.slice().sort().join(',')
+    const currentAppSetKey = allowedBundleIds.slice().toSorted().join(',')
     const appSetChanged = currentAppSetKey !== overrides.displayResolvedForApps
     const autoResolve = !overrides.displayPinnedByModel && appSetChanged
 

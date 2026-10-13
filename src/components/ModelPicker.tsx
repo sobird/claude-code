@@ -297,9 +297,9 @@ function cycleEffortLevel(current: EffortLevel, direction: 'left' | 'right', inc
   const idx = levels.indexOf(current)
   const currentIndex = idx !== -1 ? idx : levels.indexOf('high')
   if (direction === 'right') {
-    return levels[(currentIndex + 1) % levels.length]!
+    return levels[(currentIndex + 1) % levels.length]
   } else {
-    return levels[(currentIndex - 1 + levels.length) % levels.length]!
+    return levels[(currentIndex - 1 + levels.length) % levels.length]
   }
 }
 

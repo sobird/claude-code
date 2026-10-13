@@ -23,9 +23,9 @@
  */
 
 import { feature } from 'bun:bundle'
-import { mkdirSync, writeFileSync } from 'fs'
-import { mkdir, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import { getSessionId } from '../../bootstrap/state.js'
 import { registerCleanup } from '../cleanupRegistry.js'
@@ -542,10 +542,10 @@ export function endLLMRequestPerfettoSpan(
     if (attemptStartTimes && attemptStartTimes.length > 1) {
       // attemptStartTimes[0] is the reference point (first attempt).
       // Convert wall-clock deltas into Perfetto-relative microseconds.
-      const baseWallMs = attemptStartTimes[0]!
+      const baseWallMs = attemptStartTimes[0]
       for (let i = 0; i < attemptStartTimes.length - 1; i++) {
-        const attemptStartUs = pending.startTime + (attemptStartTimes[i]! - baseWallMs) * 1000
-        const attemptEndUs = pending.startTime + (attemptStartTimes[i + 1]! - baseWallMs) * 1000
+        const attemptStartUs = pending.startTime + (attemptStartTimes[i] - baseWallMs) * 1000
+        const attemptEndUs = pending.startTime + (attemptStartTimes[i + 1] - baseWallMs) * 1000
 
         events.push({
           name: `Attempt ${i + 1} (retry)`,

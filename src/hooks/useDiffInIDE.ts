@@ -1,5 +1,5 @@
-import { randomUUID } from 'crypto'
-import { basename } from 'path'
+import { randomUUID } from 'node:crypto'
+import { basename } from 'node:path'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
@@ -290,7 +290,7 @@ async function showDiffInIDE(
   }
 }
 
-async function closeTabInIDE(tabName: string, ideClient?: MCPServerConnection | undefined): Promise<void> {
+async function closeTabInIDE(tabName: string, ideClient?: MCPServerConnection): Promise<void> {
   try {
     if (!ideClient || ideClient.type !== 'connected') {
       throw new Error('IDE client not available')

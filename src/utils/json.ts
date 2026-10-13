@@ -1,4 +1,4 @@
-import { open, readFile, stat } from 'fs/promises'
+import { open, readFile, stat } from 'node:fs/promises'
 
 import { applyEdits, modify, parse as parseJsonc } from 'jsonc-parser/lib/esm/main.js'
 

@@ -2,8 +2,8 @@
  * Utility for persisting large tool results to disk instead of truncating them.
  */
 
-import { mkdir, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
@@ -613,7 +613,7 @@ function partitionByPriorDecision(
  * will eventually clear them.
  */
 function selectFreshToReplace(fresh: ToolResultCandidate[], frozenSize: number, limit: number): ToolResultCandidate[] {
-  const sorted = [...fresh].sort((a, b) => b.size - a.size)
+  const sorted = [...fresh].toSorted((a, b) => b.size - a.size)
   const selected: ToolResultCandidate[] = []
   let remaining = frozenSize + fresh.reduce((sum, c) => sum + c.size, 0)
   for (const c of sorted) {

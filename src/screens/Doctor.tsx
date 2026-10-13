@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join } from 'node:path'
 
 import figures from 'figures'
 import React, { Suspense, use, useCallback, useEffect, useMemo, useState } from 'react'

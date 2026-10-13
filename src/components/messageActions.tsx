@@ -148,7 +148,7 @@ export const MESSAGE_ACTIONS = [
   action({
     key: 'p',
     // `!` safe: applies() guarantees toolName ∈ PRIMARY_INPUT.
-    label: (s) => `copy ${PRIMARY_INPUT[s.toolName!]!.label}`,
+    label: (s) => `copy ${PRIMARY_INPUT[s.toolName!].label}`,
     types: ['grouped_tool_use', 'assistant'],
     applies: (s) => s.toolName != null && s.toolName in PRIMARY_INPUT,
     run: (m, c) => {

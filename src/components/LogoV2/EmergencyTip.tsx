@@ -55,5 +55,5 @@ const DEFAULT_TIP: TipOfFeed = { tip: '', color: 'dim' }
  * Returns cached value immediately, updates in background
  */
 function getTipOfFeed(): TipOfFeed {
-  return getDynamicConfig_CACHED_MAY_BE_STALE<TipOfFeed>(CONFIG_NAME, DEFAULT_TIP)
+  return getDynamicConfig_CACHED_MAY_BE_STALE(CONFIG_NAME, DEFAULT_TIP)
 }

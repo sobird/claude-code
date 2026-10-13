@@ -1,6 +1,6 @@
-import type { IncomingMessage, ServerResponse } from 'http'
-import { createServer, type Server } from 'http'
-import type { AddressInfo } from 'net'
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import { createServer, type Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
 
 import { logEvent } from 'src/services/analytics/index.js'
 

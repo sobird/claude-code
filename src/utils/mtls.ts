@@ -1,6 +1,6 @@
-import type * as https from 'https'
-import { Agent as HttpsAgent } from 'https'
-import type * as tls from 'tls'
+import type * as https from 'node:https'
+import { Agent as HttpsAgent } from 'node:https'
+import type * as tls from 'node:tls'
 
 import memoize from 'lodash-es/memoize.js'
 import type * as undici from 'undici'

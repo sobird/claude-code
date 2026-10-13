@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { dirname } from 'path'
+import { dirname } from 'node:path'
 
 import React from 'react'
 import { useTerminalSize } from 'src/hooks/useTerminalSize.js'

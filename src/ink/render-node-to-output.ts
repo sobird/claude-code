@@ -177,7 +177,7 @@ function wrapWithOsc8Link(text: string, url: string): string {
 function buildCharToSegmentMap(segments: StyledSegment[]): number[] {
   const map: number[] = []
   for (let i = 0; i < segments.length; i++) {
-    const len = segments[i]!.text.length
+    const len = segments[i].text.length
     for (let j = 0; j < len; j++) {
       map.push(i)
     }
@@ -205,19 +205,19 @@ function applyStylesToWrappedText(
 
   let charIndex = 0
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-    const line = lines[lineIdx]!
+    const line = lines[lineIdx]
 
     // In trim mode, skip leading whitespace that was trimmed from this line.
     // Only skip if the original has whitespace but the output line doesn't start
     // with whitespace (meaning it was trimmed). If both have whitespace, the
     // whitespace was preserved and we shouldn't skip.
     if (trimEnabled && line.length > 0) {
-      const lineStartsWithWhitespace = /\s/.test(line[0]!)
-      const originalHasWhitespace = charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex]!)
+      const lineStartsWithWhitespace = /\s/.test(line[0])
+      const originalHasWhitespace = charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex])
 
       // Only skip if original has whitespace but line doesn't
       if (originalHasWhitespace && !lineStartsWithWhitespace) {
-        while (charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex]!)) {
+        while (charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex])) {
           charIndex++
         }
       }
@@ -280,11 +280,11 @@ function applyStylesToWrappedText(
     // - "AB   \tD" wrapped to "AB\n\tD" - skip spaces until we hit the tab
     // In non-trim mode, whitespace is preserved so no skipping is needed.
     if (trimEnabled && lineIdx < lines.length - 1) {
-      const nextLine = lines[lineIdx + 1]!
+      const nextLine = lines[lineIdx + 1]
       const nextLineFirstChar = nextLine.length > 0 ? nextLine[0] : null
 
       // Skip whitespace until we hit a char that matches the next line's first char
-      while (charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex]!)) {
+      while (charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex])) {
         // Stop if we found the character that starts the next line
         if (nextLineFirstChar !== null && originalPlain[charIndex] === nextLineFirstChar) {
           break
@@ -324,7 +324,7 @@ function wrapWithSoftWrap(
   for (const orig of origLines) {
     const pieces = wrapText(orig, maxWidth, textWrap).split('\n')
     for (let i = 0; i < pieces.length; i++) {
-      outLines.push(pieces[i]!)
+      outLines.push(pieces[i])
       softWrap.push(i > 0)
     }
   }
@@ -540,7 +540,7 @@ function renderNodeToOutput(
         let softWrap: boolean[] | undefined
         if (needsWrapping && segments.length === 1) {
           // Single segment: wrap plain text first, then apply styles to each line
-          const segment = segments[0]!
+          const segment = segments[0]
           const w = wrapWithSoftWrap(plainText, maxWidth, textWrap)
           softWrap = w.softWrap
           text = w.wrapped
@@ -1248,7 +1248,7 @@ function blitEscapingAbsoluteDescendants(
   const pb = py + ph
   for (const child of node.childNodes) {
     if (child.nodeName === '#text') continue
-    const elem = child as DOMElement
+    const elem = child
     if (elem.style.position === 'absolute') {
       const cached = nodeCache.get(elem)
       if (cached) {
@@ -1348,7 +1348,7 @@ function dropSubtreeCache(node: DOMElement): void {
   nodeCache.delete(node)
   for (const child of node.childNodes) {
     if (child.nodeName !== '#text') {
-      dropSubtreeCache(child as DOMElement)
+      dropSubtreeCache(child)
     }
   }
 }

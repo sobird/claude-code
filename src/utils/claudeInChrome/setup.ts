@@ -1,7 +1,7 @@
-import { chmod, mkdir, readFile, writeFile } from 'fs/promises'
-import { homedir } from 'os'
-import { join } from 'path'
-import { fileURLToPath } from 'url'
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { BROWSER_TOOLS } from '@ant/claude-for-chrome-mcp'
 
@@ -211,7 +211,7 @@ export async function installChromeNativeHostManifest(manifestBinaryPath: string
 
   // Windows requires registry entries pointing to the manifest for each browser
   if (getPlatform() === 'windows') {
-    const manifestPath = join(manifestDirs[0]!, NATIVE_HOST_MANIFEST_NAME)
+    const manifestPath = join(manifestDirs[0], NATIVE_HOST_MANIFEST_NAME)
     registerWindowsNativeHosts(manifestPath)
   }
 

@@ -56,7 +56,7 @@ export default function TextInput(props: Props): React.ReactNode {
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
       useVoiceState((s) => s.voiceAudioLevels)
     : []
-  const smoothedRef = useRef<number[]>(new Array(CURSOR_WAVEFORM_WIDTH).fill(0))
+  const smoothedRef = useRef(new Array(CURSOR_WAVEFORM_WIDTH).fill(0))
 
   const needsAnimation = isVoiceRecording && !reducedMotion
   const [animRef, animTime] = feature('VOICE_MODE')
@@ -87,7 +87,7 @@ export default function TextInput(props: Props): React.ReactNode {
     const isSilent = raw < SILENCE_THRESHOLD
     const hue = ((animTime / 1000) * 90) % 360
     const { r, g, b } = isSilent ? { r: 128, g: 128, b: 128 } : hueToRgb(hue)
-    invert = () => chalk.rgb(r, g, b)(BARS[barIndex]!)
+    invert = () => chalk.rgb(r, g, b)(BARS[barIndex])
   } else {
     invert = chalk.inverse
   }

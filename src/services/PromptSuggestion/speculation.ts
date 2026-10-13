@@ -1,7 +1,7 @@
-import { randomUUID } from 'crypto'
-import { rm } from 'fs'
-import { appendFile, copyFile, mkdir } from 'fs/promises'
-import { dirname, isAbsolute, join, relative } from 'path'
+import { randomUUID } from 'node:crypto'
+import { rm } from 'node:fs'
+import { appendFile, copyFile, mkdir } from 'node:fs/promises'
+import { dirname, isAbsolute, join, relative } from 'node:path'
 
 import { getCwdState } from '../../bootstrap/state.js'
 import type { CompletionBoundary } from '../../state/AppStateStore.js'
@@ -246,7 +246,7 @@ function updateActiveSpeculationState(
 ): void {
   setAppState((prev) => {
     if (prev.speculation.status !== 'active') return prev
-    const current = prev.speculation as ActiveSpeculationState
+    const current = prev.speculation
     const updates = updater(current)
     // Check if any values actually changed to avoid unnecessary re-renders
     const hasChanges = Object.entries(updates).some(

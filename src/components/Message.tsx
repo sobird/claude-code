@@ -171,7 +171,7 @@ function MessageImpl({
               param={param}
               style={style}
               verbose={verbose}
-              imageIndex={imageIndices[index]!}
+              imageIndex={imageIndices[index]}
               isUserContinuation={isUserContinuation}
               lookups={lookups}
               isTranscriptMode={isTranscriptMode}

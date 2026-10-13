@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import memoize from 'lodash-es/memoize.js'
 import type { SettingSource } from 'src/utils/settings/constants.js'

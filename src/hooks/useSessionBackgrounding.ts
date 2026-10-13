@@ -35,7 +35,7 @@ export function useSessionBackgrounding({
   const foregroundedTaskId = useAppState((s) => s.foregroundedTaskId)
   const foregroundedTask = useAppState((s) => (s.foregroundedTaskId ? s.tasks[s.foregroundedTaskId] : undefined))
   const setAppState = useSetAppState()
-  const lastSyncedMessagesLengthRef = useRef<number>(0)
+  const lastSyncedMessagesLengthRef = useRef(0)
 
   const handleBackgroundSession = useCallback(() => {
     if (foregroundedTaskId) {

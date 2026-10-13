@@ -4,7 +4,7 @@
 // engine correctly recognises coding terminology, project names, and branch
 // names that would otherwise be misheard.
 
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import { getProjectRoot } from '../bootstrap/state.js'
 import { getBranch } from '../utils/git.js'

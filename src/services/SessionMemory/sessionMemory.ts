@@ -4,7 +4,7 @@
  * without interrupting the main conversation flow.
  */
 
-import { writeFile } from 'fs/promises'
+import { writeFile } from 'node:fs/promises'
 
 import memoize from 'lodash-es/memoize.js'
 
@@ -184,7 +184,7 @@ async function setupSessionMemoryFile(
   const result = await FileReadTool.call({ file_path: memoryPath }, toolUseContext)
   let currentMemory = ''
 
-  const output = result.data as FileReadToolOutput
+  const output = result.data
   if (output.type === 'text') {
     currentMemory = output.file.content
   }

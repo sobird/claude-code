@@ -1,4 +1,4 @@
-import { basename, dirname, join, sep } from 'path'
+import { basename, dirname, join, sep } from 'node:path'
 
 import { LRUCache } from 'lru-cache'
 import type { SuggestionItem } from 'src/components/PromptInput/PromptInputFooterSuggestions.js'
@@ -177,7 +177,7 @@ export async function scanDirectoryForPaths(dirPath: string, includeHidden = fal
         path: join(dirPath, entry.name),
         type: entry.isDirectory() ? ('directory' as const) : ('file' as const),
       }))
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         // Sort directories first, then alphabetically
         if (a.type === 'directory' && b.type !== 'directory') return -1
         if (a.type !== 'directory' && b.type === 'directory') return 1

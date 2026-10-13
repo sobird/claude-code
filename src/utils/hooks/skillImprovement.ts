@@ -174,8 +174,8 @@ export function initSkillImprovement(): void {
 export async function applySkillImprovement(skillName: string, updates: SkillUpdate[]): Promise<void> {
   if (!skillName) return
 
-  const { join } = await import('path')
-  const fs = await import('fs/promises')
+  const { join } = await import('node:path')
+  const fs = await import('node:fs/promises')
 
   // Skills live at .claude/skills/<name>/SKILL.md relative to CWD
   const filePath = join(getCwd(), '.claude', 'skills', skillName, 'SKILL.md')

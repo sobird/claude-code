@@ -1,4 +1,4 @@
-import { basename, sep } from 'path'
+import { basename, sep } from 'node:path'
 
 import React, { type ReactNode } from 'react'
 
@@ -115,7 +115,7 @@ export function generateShellSuggestionsLabel(
   if (hasReadPaths && !hasDirectories && !hasCommands) {
     // Only Read rules - use "reading from" language
     if (readPaths.length === 1) {
-      const firstPath = readPaths[0]!
+      const firstPath = readPaths[0]
       const dirName = basename(firstPath) || firstPath
       return (
         <Text>
@@ -132,7 +132,7 @@ export function generateShellSuggestionsLabel(
   if (hasDirectories && !hasReadPaths && !hasCommands) {
     // Only directory permissions - use "access to" language
     if (directories.length === 1) {
-      const firstDir = directories[0]!
+      const firstDir = directories[0]
       const dirName = basename(firstDir) || firstDir
       return (
         <Text>

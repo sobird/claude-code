@@ -1,4 +1,4 @@
-import { relative } from 'path'
+import { relative } from 'node:path'
 
 import * as React from 'react'
 import { Suspense, use, useMemo } from 'react'
@@ -42,7 +42,7 @@ export function NotebookEditToolDiff(props: Props): React.ReactNode {
     () =>
       getFsImplementation()
         .readFile(props.notebook_path, { encoding: 'utf-8' })
-        .then((content) => safeParseJSON(content) as NotebookContent | null)
+        .then((content) => safeParseJSON(content))
         .catch(() => null),
     [props.notebook_path],
   )

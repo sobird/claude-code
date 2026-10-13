@@ -1,4 +1,4 @@
-import * as fs from 'fs'
+import * as fs from 'node:fs'
 import {
   mkdir as mkdirPromise,
   open,
@@ -9,9 +9,9 @@ import {
   rm as rmPromise,
   stat as statPromise,
   unlink as unlinkPromise,
-} from 'fs/promises'
-import { homedir } from 'os'
-import * as nodePath from 'path'
+} from 'node:fs/promises'
+import { homedir } from 'node:os'
+import * as nodePath from 'node:path'
 
 import { getErrnoCode } from './errors.js'
 import { slowLogging } from './slowOperations.js'
@@ -696,7 +696,7 @@ export async function* readLinesReverse(path: string): AsyncGenerator<string, vo
       const lines = combined.toString('utf8', firstNewline + 1).split('\n')
 
       for (let i = lines.length - 1; i >= 0; i--) {
-        const line = lines[i]!
+        const line = lines[i]
         if (line) {
           yield line
         }

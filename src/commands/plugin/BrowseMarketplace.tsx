@@ -85,8 +85,8 @@ export function BrowseMarketplace({
 
   // Selection state
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [selectedForInstall, setSelectedForInstall] = useState<Set<string>>(new Set())
-  const [installingPlugins, setInstallingPlugins] = useState<Set<string>>(new Set())
+  const [selectedForInstall, setSelectedForInstall] = useState(new Set())
+  const [installingPlugins, setInstallingPlugins] = useState(new Set())
 
   // Pagination for plugin list (continuous scrolling)
   const pagination = usePagination<InstallablePlugin>({

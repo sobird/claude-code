@@ -1,4 +1,4 @@
-import { relative } from 'path'
+import { relative } from 'node:path'
 
 import type {
   CallHierarchyIncomingCall,
@@ -146,7 +146,7 @@ export function formatGoToDefinitionResult(
       return 'No definition found. This may occur if the cursor is not on a symbol, or if the definition is in an external library not indexed by the LSP server.'
     }
     if (validLocations.length === 1) {
-      return `Defined in ${formatLocation(validLocations[0]!, cwd)}`
+      return `Defined in ${formatLocation(validLocations[0], cwd)}`
     }
     const locationList = validLocations.map((loc) => `  ${formatLocation(loc, cwd)}`).join('\n')
     return `Found ${validLocations.length} definitions:\n${locationList}`
@@ -181,7 +181,7 @@ export function formatFindReferencesResult(result: Location[] | null, cwd?: stri
   }
 
   if (validLocations.length === 1) {
-    return `Found 1 reference:\n  ${formatLocation(validLocations[0]!, cwd)}`
+    return `Found 1 reference:\n  ${formatLocation(validLocations[0], cwd)}`
   }
 
   // Group references by file
@@ -422,7 +422,7 @@ export function formatPrepareCallHierarchyResult(result: CallHierarchyItem[] | n
   }
 
   if (result.length === 1) {
-    return `Call hierarchy item: ${formatCallHierarchyItem(result[0]!, cwd)}`
+    return `Call hierarchy item: ${formatCallHierarchyItem(result[0], cwd)}`
   }
 
   const lines = [`Found ${result.length} call hierarchy items:`]

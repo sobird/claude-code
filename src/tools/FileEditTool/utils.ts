@@ -144,7 +144,7 @@ function applyCurlyDoubleQuotes(str: string): string {
     if (chars[i] === '"') {
       result.push(isOpeningContext(chars, i) ? LEFT_DOUBLE_CURLY_QUOTE : RIGHT_DOUBLE_CURLY_QUOTE)
     } else {
-      result.push(chars[i]!)
+      result.push(chars[i])
     }
   }
   return result.join('')
@@ -168,7 +168,7 @@ function applyCurlySingleQuotes(str: string): string {
         result.push(isOpeningContext(chars, i) ? LEFT_SINGLE_CURLY_QUOTE : RIGHT_SINGLE_CURLY_QUOTE)
       }
     } else {
-      result.push(chars[i]!)
+      result.push(chars[i])
     }
   }
   return result.join('')

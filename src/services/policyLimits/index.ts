@@ -12,10 +12,10 @@
  * - API returns empty restrictions for users without policy limits
  */
 
-import { createHash } from 'crypto'
-import { readFileSync as fsReadFileSync } from 'fs'
-import { unlink, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { createHash } from 'node:crypto'
+import { readFileSync as fsReadFileSync } from 'node:fs'
+import { unlink, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import axios from 'axios'
 
@@ -125,7 +125,7 @@ function sortKeysDeep(obj: unknown): unknown {
   }
   if (obj !== null && typeof obj === 'object') {
     const sorted: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(obj).sort(([a], [b]) => a.localeCompare(b))) {
+    for (const [key, value] of Object.entries(obj).toSorted(([a], [b]) => a.localeCompare(b))) {
       sorted[key] = sortKeysDeep(value)
     }
     return sorted

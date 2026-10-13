@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { dirname } from 'path'
+import { dirname } from 'node:path'
 
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import uniqBy from 'lodash-es/uniqBy.js'
@@ -850,7 +850,7 @@ async function executeRemoteSkill(
       urlScheme,
       error: msg,
     })
-    throw new Error(`Failed to load remote skill ${slug}: ${msg}`)
+    throw new Error(`Failed to load remote skill ${slug}: ${msg}`, { cause: e })
   }
 
   const { cacheHit, latencyMs, skillPath, content, fileCount, totalBytes, fetchMethod } = loadResult

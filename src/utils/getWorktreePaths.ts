@@ -1,4 +1,4 @@
-import { sep } from 'path'
+import { sep } from 'node:path'
 
 import { logEvent } from '../services/analytics/index.js'
 import { execFileNoThrowWithCwd } from './execFileNoThrow.js'
@@ -57,7 +57,7 @@ export async function getWorktreePaths(cwd: string): Promise<string[]> {
 
   // Sort worktrees: current worktree first, then alphabetically
   const currentWorktree = worktreePaths.find((path) => cwd === path || cwd.startsWith(path + sep))
-  const otherWorktrees = worktreePaths.filter((path) => path !== currentWorktree).sort((a, b) => a.localeCompare(b))
+  const otherWorktrees = worktreePaths.filter((path) => path !== currentWorktree).toSorted((a, b) => a.localeCompare(b))
 
   return currentWorktree ? [currentWorktree, ...otherWorktrees] : otherWorktrees
 }

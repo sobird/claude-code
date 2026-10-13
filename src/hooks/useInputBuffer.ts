@@ -24,7 +24,7 @@ export type UseInputBufferResult = {
 export function useInputBuffer({ maxBufferSize, debounceMs }: UseInputBufferProps): UseInputBufferResult {
   const [buffer, setBuffer] = useState<BufferEntry[]>([])
   const [currentIndex, setCurrentIndex] = useState(-1)
-  const lastPushTime = useRef<number>(0)
+  const lastPushTime = useRef(0)
   const pendingPush = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const pushToBuffer = useCallback(

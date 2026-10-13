@@ -49,8 +49,8 @@ function makeShutdownNotif(count: number): Notification {
 export function useTeammateLifecycleNotification(): void {
   const tasks = useAppState((s) => s.tasks)
   const { addNotification } = useNotifications()
-  const seenRunningRef = useRef<Set<string>>(new Set())
-  const seenCompletedRef = useRef<Set<string>>(new Set())
+  const seenRunningRef = useRef(new Set())
+  const seenCompletedRef = useRef(new Set())
 
   useEffect(() => {
     if (getIsRemoteMode()) return

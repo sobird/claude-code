@@ -1,5 +1,5 @@
-import { createHash } from 'crypto'
-import { join } from 'path'
+import { createHash } from 'node:crypto'
+import { join } from 'node:path'
 
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
 import type { Command } from '../../commands.js'
@@ -136,7 +136,7 @@ export function hashMcpConfig(config: ScopedMcpServerConfig): string {
     if (v && typeof v === 'object' && !Array.isArray(v)) {
       const obj = v as Record<string, unknown>
       const sorted: Record<string, unknown> = {}
-      for (const k of Object.keys(obj).sort()) sorted[k] = obj[k]
+      for (const k of Object.keys(obj).toSorted()) sorted[k] = obj[k]
       return sorted
     }
     return v
@@ -288,7 +288,7 @@ export function ensureTransport(type?: string): 'stdio' | 'sse' | 'http' {
     throw new Error(`Invalid transport type: ${type}. Must be one of: stdio, sse, http`)
   }
 
-  return type as 'stdio' | 'sse' | 'http'
+  return type
 }
 
 export function parseHeaders(headerArray: string[]): Record<string, string> {
@@ -429,7 +429,7 @@ export function extractAgentMcpServers(agents: AgentDefinition[]): AgentMcpServe
       const entries = Object.entries(spec)
       if (entries.length !== 1) continue
 
-      const [serverName, serverConfig] = entries[0]!
+      const [serverName, serverConfig] = entries[0]
       const existing = serverMap.get(serverName)
 
       if (existing) {
@@ -492,7 +492,7 @@ export function extractAgentMcpServers(agents: AgentDefinition[]): AgentMcpServe
     // These are internal types not meant for agent MCP server display
   }
 
-  return result.sort((a, b) => a.name.localeCompare(b.name))
+  return result.toSorted((a, b) => a.name.localeCompare(b.name))
 }
 
 /**

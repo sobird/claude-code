@@ -17,7 +17,7 @@ import {
 } from '../../utils/effort.js'
 import { updateSettingsForSource } from '../../utils/settings/settings.js'
 
-const COMMON_HELP_ARGS = ['help', '-h', '--help']
+const COMMON_HELP_ARGS = new Set(['help', '-h', '--help'])
 
 type EffortCommandResult = {
   message: string
@@ -154,7 +154,7 @@ function ApplyEffortAndClose({
 export async function call(onDone: LocalJSXCommandOnDone, _context: unknown, args?: string): Promise<React.ReactNode> {
   args = args?.trim() || ''
 
-  if (COMMON_HELP_ARGS.includes(args)) {
+  if (COMMON_HELP_ARGS.has(args)) {
     onDone(
       'Usage: /effort [low|medium|high|max|auto]\n\nEffort levels:\n- low: Quick, straightforward implementation\n- medium: Balanced approach with standard testing\n- high: Comprehensive implementation with extensive testing\n- max: Maximum capability with deepest reasoning (Opus 4.6 only)\n- auto: Use the default effort level for your model',
     )

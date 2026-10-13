@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { getOauthConfig } from 'src/constants/oauth.js'

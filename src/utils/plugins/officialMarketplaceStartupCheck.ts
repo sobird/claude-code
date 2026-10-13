@@ -8,7 +8,7 @@
  * - Previous installation attempts
  */
 
-import { join } from 'path'
+import { join } from 'node:path'
 
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { logEvent } from '../../services/analytics/index.js'

@@ -227,14 +227,14 @@ export function adjustIndexToPreserveAPIInvariants(messages: Message[], startInd
   // Collect tool_result IDs from ALL messages in the kept range
   const allToolResultIds: string[] = []
   for (let i = startIndex; i < messages.length; i++) {
-    allToolResultIds.push(...getToolResultIds(messages[i]!))
+    allToolResultIds.push(...getToolResultIds(messages[i]))
   }
 
   if (allToolResultIds.length > 0) {
     // Collect tool_use IDs already in the kept range
     const toolUseIdsInKeptRange = new Set<string>()
     for (let i = adjustedIndex; i < messages.length; i++) {
-      const msg = messages[i]!
+      const msg = messages[i]
       if (msg.type === 'assistant' && Array.isArray(msg.message.content)) {
         for (const block of msg.message.content) {
           if (block.type === 'tool_use') {
@@ -249,7 +249,7 @@ export function adjustIndexToPreserveAPIInvariants(messages: Message[], startInd
 
     // Find the assistant message(s) with matching tool_use blocks
     for (let i = adjustedIndex - 1; i >= 0 && neededToolUseIds.size > 0; i--) {
-      const message = messages[i]!
+      const message = messages[i]
       if (hasToolUseWithIds(message, neededToolUseIds)) {
         adjustedIndex = i
         // Remove found tool_use_ids from the set
@@ -268,7 +268,7 @@ export function adjustIndexToPreserveAPIInvariants(messages: Message[], startInd
   // Collect all message.ids from assistant messages in the kept range
   const messageIdsInKeptRange = new Set<string>()
   for (let i = adjustedIndex; i < messages.length; i++) {
-    const msg = messages[i]!
+    const msg = messages[i]
     if (msg.type === 'assistant' && msg.message.id) {
       messageIdsInKeptRange.add(msg.message.id)
     }
@@ -277,7 +277,7 @@ export function adjustIndexToPreserveAPIInvariants(messages: Message[], startInd
   // Look backwards for assistant messages with the same message.id that are not in the kept range
   // These may contain thinking blocks that need to be merged by normalizeMessagesForAPI
   for (let i = adjustedIndex - 1; i >= 0; i--) {
-    const message = messages[i]!
+    const message = messages[i]
     if (message.type === 'assistant' && message.message.id && messageIdsInKeptRange.has(message.message.id)) {
       // This message has the same message.id as one in the kept range
       // Include it so thinking blocks can be properly merged
@@ -312,7 +312,7 @@ export function calculateMessagesToKeepIndex(messages: Message[], lastSummarized
   let totalTokens = 0
   let textBlockMessageCount = 0
   for (let i = startIndex; i < messages.length; i++) {
-    const msg = messages[i]!
+    const msg = messages[i]
     totalTokens += estimateMessageTokens([msg])
     if (hasTextBlocks(msg)) {
       textBlockMessageCount++
@@ -338,7 +338,7 @@ export function calculateMessagesToKeepIndex(messages: Message[], lastSummarized
   const idx = messages.findLastIndex((m) => isCompactBoundaryMessage(m))
   const floor = idx === -1 ? 0 : idx + 1
   for (let i = startIndex - 1; i >= floor; i--) {
-    const msg = messages[i]!
+    const msg = messages[i]
     const msgTokens = estimateMessageTokens([msg])
     totalTokens += msgTokens
     if (hasTextBlocks(msg)) {
@@ -410,7 +410,7 @@ function createCompactionResultFromSessionMemory(
   )
   const preCompactDiscovered = extractDiscoveredToolNames(messages)
   if (preCompactDiscovered.size > 0) {
-    boundaryMarker.compactMetadata.preCompactDiscoveredTools = [...preCompactDiscovered].sort()
+    boundaryMarker.compactMetadata.preCompactDiscoveredTools = [...preCompactDiscovered].toSorted()
   }
 
   // Truncate oversized sections to prevent session memory from consuming
@@ -438,7 +438,7 @@ function createCompactionResultFromSessionMemory(
   return {
     boundaryMarker: annotateBoundaryWithPreservedSegment(
       boundaryMarker,
-      summaryMessages[summaryMessages.length - 1]!.uuid,
+      summaryMessages[summaryMessages.length - 1].uuid,
       messagesToKeep,
     ),
     summaryMessages,

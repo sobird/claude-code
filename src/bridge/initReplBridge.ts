@@ -14,7 +14,7 @@
  */
 
 import { feature } from 'bun:bundle'
-import { hostname } from 'os'
+import { hostname } from 'node:os'
 
 import { getOriginalCwd, getSessionId } from '../bootstrap/state.js'
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
@@ -246,7 +246,7 @@ export async function initReplBridge(options?: InitBridgeOptions): Promise<ReplB
       // and synthetic interrupts ([Request interrupted by user]) — none are
       // human-authored. Same filter as extractTitleText + isSyntheticMessage.
       for (let i = initialMessages.length - 1; i >= 0; i--) {
-        const msg = initialMessages[i]!
+        const msg = initialMessages[i]
         if (
           msg.type !== 'user' ||
           msg.isMeta ||

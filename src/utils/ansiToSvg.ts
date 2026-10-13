@@ -65,7 +65,7 @@ export function parseAnsi(text: string): ParsedLine[] {
       if (line[i] === '\x1b' && line[i + 1] === '[') {
         // Find the end of the escape sequence
         let j = i + 2
-        while (j < line.length && !/[A-Za-z]/.test(line[j]!)) {
+        while (j < line.length && !/[A-Za-z]/.test(line[j])) {
           j++
         }
 
@@ -78,7 +78,7 @@ export function parseAnsi(text: string): ParsedLine[] {
 
           let k = 0
           while (k < codes.length) {
-            const code = codes[k]!
+            const code = codes[k]
             if (code === 0) {
               // Reset
               currentColor = DEFAULT_FG
@@ -95,7 +95,7 @@ export function parseAnsi(text: string): ParsedLine[] {
               // Extended color - check next code
               if (codes[k + 1] === 5 && codes[k + 2] !== undefined) {
                 // 256-color mode: 38;5;n
-                const colorIndex = codes[k + 2]!
+                const colorIndex = codes[k + 2]
                 currentColor = get256Color(colorIndex)
                 k += 2
               } else if (
@@ -106,9 +106,9 @@ export function parseAnsi(text: string): ParsedLine[] {
               ) {
                 // 24-bit true color: 38;2;r;g;b
                 currentColor = {
-                  r: codes[k + 2]!,
-                  g: codes[k + 3]!,
-                  b: codes[k + 4]!,
+                  r: codes[k + 2],
+                  g: codes[k + 3],
+                  b: codes[k + 4],
                 }
                 k += 4
               }
@@ -218,7 +218,7 @@ export function ansiToSvg(ansiText: string, options: AnsiToSvgOptions = {}): str
   const lines = parseAnsi(ansiText)
 
   // Trim trailing empty lines
-  while (lines.length > 0 && lines[lines.length - 1]!.every((span) => span.text.trim() === '')) {
+  while (lines.length > 0 && lines[lines.length - 1].every((span) => span.text.trim() === '')) {
     lines.pop()
   }
 
@@ -238,7 +238,7 @@ export function ansiToSvg(ansiText: string, options: AnsiToSvgOptions = {}): str
   svg += `  </style>\n`
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-    const spans = lines[lineIndex]!
+    const spans = lines[lineIndex]
     const y = paddingY + (lineIndex + 1) * lineHeight - (lineHeight - fontSize) / 2
 
     // Build a single <text> element with <tspan> children for each colored segment

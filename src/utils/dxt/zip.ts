@@ -1,4 +1,4 @@
-import { isAbsolute, normalize } from 'path'
+import { isAbsolute, normalize } from 'node:path'
 
 import { logForDebugging } from '../debug.js'
 import { isENOENT } from '../errors.js'
@@ -123,7 +123,7 @@ export async function unzipFile(zipData: Buffer): Promise<Record<string, Uint8Ar
     filter: (file) => {
       const validationResult = validateZipFile(file, state)
       if (!validationResult.isValid) {
-        throw new Error(validationResult.error!)
+        throw new Error(validationResult.error)
       }
       return true
     },
@@ -215,6 +215,6 @@ export async function readAndUnzipFile(filePath: string): Promise<Record<string,
       throw error
     }
     const errorMessage = error instanceof Error ? error.message : String(error)
-    throw new Error(`Failed to read or unzip file: ${errorMessage}`)
+    throw new Error(`Failed to read or unzip file: ${errorMessage}`, { cause: error })
   }
 }

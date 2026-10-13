@@ -157,10 +157,10 @@ export function TaskListV2({ tasks, isStandalone = false }: Props): React.ReactN
     }
     recentCompleted.sort(byIdAsc)
     olderCompleted.sort(byIdAsc)
-    const inProgress = tasks.filter((t) => t.status === 'in_progress').sort(byIdAsc)
+    const inProgress = tasks.filter((t) => t.status === 'in_progress').toSorted(byIdAsc)
     const pending = tasks
       .filter((t) => t.status === 'pending')
-      .sort((a, b) => {
+      .toSorted((a, b) => {
         const aBlocked = a.blockedBy.some((id) => unresolvedTaskIds.has(id))
         const bBlocked = b.blockedBy.some((id) => unresolvedTaskIds.has(id))
         if (aBlocked !== bBlocked) {
@@ -174,7 +174,7 @@ export function TaskListV2({ tasks, isStandalone = false }: Props): React.ReactN
     hiddenTasks = prioritized.slice(maxDisplay)
   } else {
     // No truncation needed — sort by ID for stable ordering
-    visibleTasks = [...tasks].sort(byIdAsc)
+    visibleTasks = [...tasks].toSorted(byIdAsc)
     hiddenTasks = []
   }
 
@@ -304,7 +304,7 @@ function TaskItem({ task, ownerColor, openBlockers, activity, ownerActive, colum
             {' '}
             {figures.pointerSmall} blocked by{' '}
             {[...openBlockers]
-              .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+              .toSorted((a, b) => parseInt(a, 10) - parseInt(b, 10))
               .map((id) => `#${id}`)
               .join(', ')}
           </Text>

@@ -1,4 +1,4 @@
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import React from 'react'
 import type { z } from 'zod/v4'

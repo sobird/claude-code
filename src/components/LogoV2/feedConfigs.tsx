@@ -1,4 +1,4 @@
-import { homedir } from 'os'
+import { homedir } from 'node:os'
 
 import figures from 'figures'
 import * as React from 'react'
@@ -62,7 +62,7 @@ export function createWhatsNewFeed(releaseNotes: string[]): FeedConfig {
 export function createProjectOnboardingFeed(steps: Step[]): FeedConfig {
   const enabledSteps = steps
     .filter(({ isEnabled }) => isEnabled)
-    .sort((a, b) => Number(a.isComplete) - Number(b.isComplete))
+    .toSorted((a, b) => Number(a.isComplete) - Number(b.isComplete))
 
   const lines: FeedLine[] = enabledSteps.map(({ text, isComplete }) => {
     const checkmark = isComplete ? `${figures.tick} ` : ''

@@ -87,7 +87,7 @@ function stripToolSearchFieldsFromMessages(
 
       // Strip tool_reference blocks from tool_result content (user messages)
       if (block.type === 'tool_result') {
-        const toolResult = block as Anthropic.Beta.Messages.BetaToolResultBlockParam
+        const toolResult = block
         if (Array.isArray(toolResult.content)) {
           const filteredContent = (toolResult.content as unknown[]).filter(
             (c) => !isToolReferenceBlock(c),
@@ -267,7 +267,7 @@ export async function countTokensViaHaikuFallback(
   const normalizedMessages = stripToolSearchFieldsFromMessages(messages)
 
   const messagesToSend: MessageParam[] =
-    normalizedMessages.length > 0 ? (normalizedMessages as MessageParam[]) : [{ role: 'user', content: 'count' }]
+    normalizedMessages.length > 0 ? normalizedMessages : [{ role: 'user', content: 'count' }]
 
   const betas = getModelBetas(model)
   // Filter betas for Vertex - some betas (like web-search) cause 400 errors

@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import type { WriteFileOptions } from 'fs'
-import { closeSync, writeFileSync as fsWriteFileSync, fsyncSync, openSync } from 'fs'
+import type { WriteFileOptions } from 'node:fs'
+import { closeSync, writeFileSync as fsWriteFileSync, fsyncSync, openSync } from 'node:fs'
 
 // biome-ignore lint: This file IS the cloneDeep wrapper - it must import the original
 import lodashCloneDeep from 'lodash-es/cloneDeep.js'

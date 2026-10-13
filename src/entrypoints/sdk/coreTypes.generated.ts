@@ -5,7 +5,7 @@
  * Here we provide typed stubs for all the types referenced throughout the codebase.
  */
 
-import type { UUID } from 'crypto'
+import type { UUID } from 'node:crypto'
 
 import type { BetaUsage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 

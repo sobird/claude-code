@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { randomUUID, type UUID } from 'crypto'
+import { randomUUID, type UUID } from 'node:crypto'
 
 import type { BetaUsage as Usage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type {
@@ -656,14 +656,14 @@ export function isNotEmptyMessage(message: Message): boolean {
     return true
   }
 
-  if (message.message.content[0]!.type !== 'text') {
+  if (message.message.content[0].type !== 'text') {
     return true
   }
 
   return (
-    message.message.content[0]!.text.trim().length > 0 &&
-    message.message.content[0]!.text !== NO_CONTENT_MESSAGE &&
-    message.message.content[0]!.text !== INTERRUPT_MESSAGE_FOR_TOOL_USE
+    message.message.content[0].text.trim().length > 0 &&
+    message.message.content[0].text !== NO_CONTENT_MESSAGE &&
+    message.message.content[0].text !== INTERRUPT_MESSAGE_FOR_TOOL_USE
   )
 }
 
@@ -1337,7 +1337,7 @@ export function reorderAttachmentsForAPI(messages: Message[]): Message[] {
 
   // Scan from the bottom up
   for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i]!
+    const message = messages[i]
 
     if (message.type === 'attachment') {
       // Collect attachment to bubble up
@@ -1355,7 +1355,7 @@ export function reorderAttachmentsForAPI(messages: Message[]): Message[] {
         // pendingAttachments is already reversed; after the final result.reverse()
         // they will appear in original order right after `message`.
         for (let j = 0; j < pendingAttachments.length; j++) {
-          result.push(pendingAttachments[j]!)
+          result.push(pendingAttachments[j])
         }
         result.push(message)
         pendingAttachments.length = 0
@@ -1368,7 +1368,7 @@ export function reorderAttachmentsForAPI(messages: Message[]): Message[] {
 
   // Any remaining attachments bubble all the way to the top.
   for (let j = 0; j < pendingAttachments.length; j++) {
-    result.push(pendingAttachments[j]!)
+    result.push(pendingAttachments[j])
   }
 
   result.reverse()
@@ -1486,7 +1486,7 @@ function appendMessageTagToUserMessage(message: UserMessage): UserMessage {
   // Find the last text block
   let lastTextIdx = -1
   for (let i = content.length - 1; i >= 0; i--) {
-    if (content[i]!.type === 'text') {
+    if (content[i].type === 'text') {
       lastTextIdx = i
       break
     }
@@ -1756,7 +1756,7 @@ function relocateToolReferenceSiblings(
   const result = [...messages]
 
   for (let i = 0; i < result.length; i++) {
-    const msg = result[i]!
+    const msg = result[i]
     if (msg.type !== 'user') continue
     const content = msg.message.content
     if (!Array.isArray(content)) continue
@@ -1770,7 +1770,7 @@ function relocateToolReferenceSiblings(
     // recreate the problem one position later.
     let targetIdx = -1
     for (let j = i + 1; j < result.length; j++) {
-      const cand = result[j]!
+      const cand = result[j]
       if (cand.type !== 'user') continue
       const cc = cand.message.content
       if (!Array.isArray(cc)) continue
@@ -1827,7 +1827,7 @@ export function normalizeMessagesForAPI(messages: Message[], tools: Tools = []):
   // userMessageUUID → set of block types to strip from that message.
   const stripTargets = new Map<string, Set<string>>()
   for (let i = 0; i < reorderedMessages.length; i++) {
-    const msg = reorderedMessages[i]!
+    const msg = reorderedMessages[i]
     if (!isSyntheticApiErrorMessage(msg)) {
       continue
     }
@@ -1845,7 +1845,7 @@ export function normalizeMessagesForAPI(messages: Message[], tools: Tools = []):
     }
     // Walk backward to find the nearest preceding isMeta user message
     for (let j = i - 1; j >= 0; j--) {
-      const candidate = reorderedMessages[j]!
+      const candidate = reorderedMessages[j]
       if (candidate.type === 'user' && candidate.isMeta) {
         const existing = stripTargets.get(candidate.uuid)
         if (existing) {
@@ -2031,7 +2031,7 @@ export function normalizeMessagesForAPI(messages: Message[], tools: Tools = []):
           // since concurrent agents (teammates) can interleave streaming content
           // blocks from multiple API responses with different message IDs.
           for (let i = result.length - 1; i >= 0; i--) {
-            const msg = result[i]!
+            const msg = result[i]
 
             if (msg.type !== 'assistant' && !isToolResultMessage(msg)) {
               break
@@ -2127,7 +2127,7 @@ export function normalizeMessagesForAPI(messages: Message[], tools: Tools = []):
       require('../services/compact/snipCompact.js') as typeof import('../services/compact/snipCompact.js')
     if (isSnipRuntimeEnabled()) {
       for (let i = 0; i < sanitized.length; i++) {
-        if (sanitized[i]!.type === 'user') {
+        if (sanitized[i].type === 'user') {
           sanitized[i] = appendMessageTagToUserMessage(sanitized[i] as UserMessage)
         }
       }
@@ -2580,7 +2580,7 @@ export function getAssistantMessageText(message: Message): string | null {
   return null
 }
 
-export function getUserMessageText(message: Message | NormalizedMessage): string | null {
+export function getUserMessageText(message: Message): string | null {
   if (message.type !== 'user') {
     return null
   }
@@ -2641,7 +2641,7 @@ export type StreamingThinking = {
  * Handles messages from a stream, updating response length for deltas and appending completed messages
  */
 export function handleMessageFromStream(
-  message: Message | TombstoneMessage | StreamEvent | RequestStartEvent | ToolUseSummaryMessage,
+  message: Message | StreamEvent | RequestStartEvent,
   onMessage: (message: Message) => void,
   onUpdateLength: (newContent: string) => void,
   onSetStreamMode: (mode: SpinnerMode) => void,
@@ -3210,7 +3210,7 @@ Read the team config to discover your teammates' names. Check the task list peri
         }),
       ])
     case 'file': {
-      const fileContent = attachment.content as FileReadToolOutput
+      const fileContent = attachment.content
       switch (fileContent.type) {
         case 'image': {
           return wrapMessagesInSystemReminder([
@@ -3449,7 +3449,7 @@ Read the team config to discover your teammates' names. Check the task list peri
       ])
     }
     case 'output_style': {
-      const outputStyle = OUTPUT_STYLE_CONFIG[attachment.style as keyof typeof OUTPUT_STYLE_CONFIG]
+      const outputStyle = OUTPUT_STYLE_CONFIG[attachment.style]
       if (!outputStyle) {
         return []
       }
@@ -4189,9 +4189,7 @@ export function createSystemAPIErrorMessage(
 /**
  * Checks if a message is a compact boundary marker
  */
-export function isCompactBoundaryMessage(
-  message: Message | NormalizedMessage,
-): message is SystemCompactBoundaryMessage {
+export function isCompactBoundaryMessage(message: Message): message is SystemCompactBoundaryMessage {
   return message?.type === 'system' && message.subtype === 'compact_boundary'
 }
 
@@ -4199,7 +4197,7 @@ export function isCompactBoundaryMessage(
  * Finds the index of the last compact boundary marker in the messages array
  * @returns The index of the last compact boundary, or -1 if none found
  */
-export function findLastCompactBoundaryIndex<T extends Message | NormalizedMessage>(messages: T[]): number {
+export function findLastCompactBoundaryIndex<T extends Message>(messages: T[]): number {
   // Scan backwards to find the most recent compact boundary
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i]
@@ -4222,7 +4220,7 @@ export function findLastCompactBoundaryIndex<T extends Message | NormalizedMessa
  *
  * Note: The boundary itself is a system message and will be filtered by normalizeMessagesForAPI.
  */
-export function getMessagesAfterCompactBoundary<T extends Message | NormalizedMessage>(
+export function getMessagesAfterCompactBoundary<T extends Message>(
   messages: T[],
   options?: { includeSnipped?: boolean },
 ): T[] {
@@ -4682,7 +4680,7 @@ export function ensureToolResultPairing(
   const allSeenToolUseIds = new Set<string>()
 
   for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i]!
+    const msg = messages[i]
 
     if (msg.type !== 'assistant') {
       // A user message with tool_result blocks but NO preceding assistant
@@ -4809,7 +4807,7 @@ export function ensureToolResultPairing(
       if (Array.isArray(content)) {
         for (const block of content) {
           if (typeof block === 'object' && 'type' in block && block.type === 'tool_result') {
-            const trId = (block as ToolResultBlockParam).tool_use_id
+            const trId = block.tool_use_id
             if (existingToolResultIds.has(trId)) {
               hasDuplicateToolResults = true
             }
@@ -4852,7 +4850,7 @@ export function ensureToolResultPairing(
         const seenTrIds = new Set<string>()
         content = content.filter((block) => {
           if (typeof block === 'object' && 'type' in block && block.type === 'tool_result') {
-            const trId = (block as ToolResultBlockParam).tool_use_id
+            const trId = block.tool_use_id
             if (orphanedSet.has(trId)) return false
             if (seenTrIds.has(trId)) return false
             seenTrIds.add(trId)
@@ -4878,7 +4876,7 @@ export function ensureToolResultPairing(
         // (pairing runs after normalize). Re-smoosh just this one message.
         result.push(
           checkStatsigFeatureGate_CACHED_MAY_BE_STALE('tengu_chair_sermon')
-            ? smooshSystemReminderSiblings([patchedNext])[0]!
+            ? smooshSystemReminderSiblings([patchedNext])[0]
             : patchedNext,
         )
       } else {
@@ -4927,7 +4925,7 @@ export function ensureToolResultPairing(
       if (m.type === 'user' && Array.isArray(m.message.content)) {
         const toolResults = m.message.content
           .filter((b) => typeof b === 'object' && 'type' in b && b.type === 'tool_result')
-          .map((b) => (b as ToolResultBlockParam).tool_use_id)
+          .map((b) => b.tool_use_id)
         if (toolResults.length > 0) {
           return `[${idx}] user(tool_results=[${toolResults.join(',')}])`
         }

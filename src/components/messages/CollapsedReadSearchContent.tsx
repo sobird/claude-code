@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import React, { useRef } from 'react'
 
@@ -293,7 +293,7 @@ export function CollapsedReadSearchContent({
     if (!isFirst) nonMemParts.push(<Text key={`comma-${key}`}>, </Text>)
     nonMemParts.push(
       <Text key={key}>
-        {isFirst ? verb[0]!.toUpperCase() + verb.slice(1) : verb} {body}
+        {isFirst ? verb[0].toUpperCase() + verb.slice(1) : verb} {body}
       </Text>,
     )
   }

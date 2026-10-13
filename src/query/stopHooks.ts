@@ -69,10 +69,7 @@ export async function* handleStopHooks(
   toolUseContext: ToolUseContext,
   querySource: QuerySource,
   stopHookActive?: boolean,
-): AsyncGenerator<
-  StreamEvent | RequestStartEvent | Message | TombstoneMessage | ToolUseSummaryMessage,
-  StopHookResult
-> {
+): AsyncGenerator<StreamEvent | RequestStartEvent | Message, StopHookResult> {
   const hookStartTime = Date.now()
 
   const stopHookContext: REPLHookContext = {

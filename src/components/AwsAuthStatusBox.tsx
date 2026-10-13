@@ -6,7 +6,7 @@ import { type AwsAuthStatus, AwsAuthStatusManager } from '../utils/awsAuthStatus
 const URL_RE = /https?:\/\/\S+/
 
 export function AwsAuthStatusBox(): React.ReactNode {
-  const [status, setStatus] = useState<AwsAuthStatus>(AwsAuthStatusManager.getInstance().getStatus())
+  const [status, setStatus] = useState(AwsAuthStatusManager.getInstance().getStatus())
 
   useEffect(() => {
     // Subscribe to status updates

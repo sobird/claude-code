@@ -4,8 +4,8 @@
  * the API-client chain (which closed a cycle through memdir.ts — #25372).
  */
 
-import { readdir } from 'fs/promises'
-import { basename, join } from 'path'
+import { readdir } from 'node:fs/promises'
+import { basename, join } from 'node:path'
 
 import { parseFrontmatter } from '../utils/frontmatterParser.js'
 import { readFileInRange } from '../utils/readFileInRange.js'
@@ -56,7 +56,7 @@ export async function scanMemoryFiles(memoryDir: string, signal: AbortSignal): P
     return headerResults
       .filter((r): r is PromiseFulfilledResult<MemoryHeader> => r.status === 'fulfilled')
       .map((r) => r.value)
-      .sort((a, b) => b.mtimeMs - a.mtimeMs)
+      .toSorted((a, b) => b.mtimeMs - a.mtimeMs)
       .slice(0, MAX_MEMORY_FILES)
   } catch {
     return []

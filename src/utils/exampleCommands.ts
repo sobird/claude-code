@@ -43,7 +43,7 @@ export function countAndSortItems(items: string[], topN: number = 20): string {
     counts.set(item, (counts.get(item) || 0) + 1)
   }
   return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1])
+    .toSorted((a, b) => b[1] - a[1])
     .slice(0, topN)
     .map(([item, count]) => `${count.toString().padStart(6)} ${item}`)
     .join('\n')
@@ -114,7 +114,7 @@ async function getFrequentlyModifiedFiles(): Promise<string[]> {
     }
 
     const sorted = Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
+      .toSorted((a, b) => b[1] - a[1])
       .map(([p]) => p)
 
     return pickDiverseCoreFiles(sorted, 5)

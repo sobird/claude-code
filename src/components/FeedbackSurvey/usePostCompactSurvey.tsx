@@ -45,7 +45,7 @@ export function usePostCompactSurvey(
   handleSelect: (selected: FeedbackSurveyResponse) => void
 } {
   const [gateEnabled, setGateEnabled] = useState<boolean | null>(null)
-  const seenCompactBoundaries = useRef<Set<string>>(new Set())
+  const seenCompactBoundaries = useRef(new Set())
   // Track the compact boundary we're waiting on (to show survey after next message)
   const pendingCompactBoundaryUuid = useRef<string | null>(null)
 

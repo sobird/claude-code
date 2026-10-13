@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
-import { mkdir, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import type Anthropic from '@anthropic-ai/sdk'
 import type { BetaToolUnion } from '@anthropic-ai/sdk/resources/beta/messages.js'
@@ -514,7 +514,7 @@ function stripThinking(text: string): string {
 function parseXmlBlock(text: string): boolean | null {
   const matches = [...stripThinking(text).matchAll(/<block>(yes|no)\b(<\/block>)?/gi)]
   if (matches.length === 0) return null
-  return matches[0]![1]!.toLowerCase() === 'yes'
+  return matches[0][1].toLowerCase() === 'yes'
 }
 
 /**
@@ -524,7 +524,7 @@ function parseXmlBlock(text: string): boolean | null {
 function parseXmlReason(text: string): string | null {
   const matches = [...stripThinking(text).matchAll(/<reason>([\s\S]*?)<\/reason>/g)]
   if (matches.length === 0) return null
-  return matches[0]![1]!.trim()
+  return matches[0][1].trim()
 }
 
 /**
@@ -532,7 +532,7 @@ function parseXmlReason(text: string): string | null {
  */
 function parseXmlThinking(text: string): string | null {
   const match = /<thinking>([\s\S]*?)<\/thinking>/.exec(text)
-  return match ? match[1]!.trim() : null
+  return match ? match[1].trim() : null
 }
 
 /**

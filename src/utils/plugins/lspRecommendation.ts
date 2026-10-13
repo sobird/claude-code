@@ -10,7 +10,7 @@
  * are not detectable until after installation.
  */
 
-import { extname } from 'path'
+import { extname } from 'node:path'
 
 import { isBinaryInstalled } from '../binaryCheck.js'
 import { getGlobalConfig, saveGlobalConfig } from '../config.js'

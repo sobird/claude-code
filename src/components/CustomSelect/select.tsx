@@ -237,7 +237,7 @@ export function Select<T>({
   })
 
   // Track the last initialValue we synced, so we can detect user edits
-  const lastInitialValues = useRef<Map<T, string>>(new Map())
+  const lastInitialValues = useRef(new Map())
 
   // Sync initialValue changes to inputValues state, but only if user hasn't edited
   useEffect(() => {

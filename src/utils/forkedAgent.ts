@@ -8,8 +8,8 @@
  * 4. Isolate mutable state to prevent interference with the main agent loop
  */
 
-import type { UUID } from 'crypto'
-import { randomUUID } from 'crypto'
+import type { UUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { PromptCommand } from '../commands.js'
 import type { QuerySource } from '../constants/querySource.js'
@@ -486,7 +486,7 @@ export async function runForkedAgent({
       logForDebugging(`Forked agent [${forkLabel}] failed to record initial transcript: ${err}`),
     )
     // Track the last recorded message UUID for parent chain continuity
-    lastRecordedUuid = initialMessages.length > 0 ? initialMessages[initialMessages.length - 1]!.uuid : null
+    lastRecordedUuid = initialMessages.length > 0 ? initialMessages[initialMessages.length - 1].uuid : null
   }
 
   // Run the query loop with isolated context (cache-safe params preserved)

@@ -1,4 +1,4 @@
-import { relative } from 'path'
+import { relative } from 'node:path'
 
 import * as React from 'react'
 import { getCwd } from 'src/utils/cwd.js'

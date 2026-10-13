@@ -26,7 +26,7 @@ export function TeleportError({
   errorsToIgnore = EMPTY_ERRORS_TO_IGNORE,
 }: TeleportErrorProps): React.ReactNode {
   const [currentError, setCurrentError] = useState<TeleportLocalErrorType | null>(null)
-  const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
 
   // Check for errors on mount and when error resolution occurs
   const checkErrors = useCallback(async () => {

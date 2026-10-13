@@ -1,4 +1,4 @@
-import { hostname } from 'os'
+import { hostname } from 'node:os'
 
 import axios from 'axios'
 import memoize from 'lodash-es/memoize.js'

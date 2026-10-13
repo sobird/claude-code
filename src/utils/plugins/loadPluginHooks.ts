@@ -56,7 +56,7 @@ function convertPluginHooksToMatchers(plugin: LoadedPlugin): Record<HookEvent, P
 
   // Process each hook event - pass through all hook types with plugin context
   for (const [event, matchers] of Object.entries(plugin.hooksConfig)) {
-    const hookEvent = event as HookEvent
+    const hookEvent = event
     if (!pluginMatchers[hookEvent]) {
       continue
     }
@@ -122,7 +122,7 @@ export const loadPluginHooks = memoize(async (): Promise<void> => {
     const pluginMatchers = convertPluginHooksToMatchers(plugin)
 
     // Merge plugin hooks into the main collection
-    for (const event of Object.keys(pluginMatchers) as HookEvent[]) {
+    for (const event of Object.keys(pluginMatchers)) {
       allPluginHooks[event].push(...pluginMatchers[event])
     }
   }
@@ -186,7 +186,7 @@ export async function pruneRemovedPluginHooks(): Promise<void> {
   const survivors: Partial<Record<HookEvent, PluginHookMatcher[]>> = {}
   for (const [event, matchers] of Object.entries(current)) {
     const kept = matchers.filter((m): m is PluginHookMatcher => 'pluginRoot' in m && enabledRoots.has(m.pluginRoot))
-    if (kept.length > 0) survivors[event as HookEvent] = kept
+    if (kept.length > 0) survivors[event] = kept
   }
 
   clearRegisteredPluginHooks()
@@ -224,7 +224,7 @@ export function getPluginAffectingSettingsSnapshot(): string {
   // Array fields (strictKnownMarketplaces, blockedMarketplaces) have
   // schema-stable order.
   const sortKeys = <T extends Record<string, unknown>>(o: T | undefined) =>
-    o ? Object.fromEntries(Object.entries(o).sort()) : {}
+    o ? Object.fromEntries(Object.entries(o).toSorted()) : {}
   return jsonStringify({
     enabledPlugins: sortKeys(merged.enabledPlugins),
     extraKnownMarketplaces: sortKeys(merged.extraKnownMarketplaces),

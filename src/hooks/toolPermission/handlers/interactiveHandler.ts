@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { logForDebugging } from 'src/utils/debug.js'

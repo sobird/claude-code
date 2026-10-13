@@ -73,7 +73,7 @@ export function formatCommandsWithinBudget(commands: Command[], contextWindowTok
   const bundledIndices = new Set<number>()
   const restCommands: Command[] = []
   for (let i = 0; i < commands.length; i++) {
-    const cmd = commands[i]!
+    const cmd = commands[i]
     if (cmd.type === 'prompt' && cmd.source === 'bundled') {
       bundledIndices.add(i)
     } else {
@@ -111,7 +111,7 @@ export function formatCommandsWithinBudget(commands: Command[], contextWindowTok
         bundled_chars: bundledChars,
       })
     }
-    return commands.map((cmd, i) => (bundledIndices.has(i) ? fullEntries[i]!.full : `- ${cmd.name}`)).join('\n')
+    return commands.map((cmd, i) => (bundledIndices.has(i) ? fullEntries[i].full : `- ${cmd.name}`)).join('\n')
   }
 
   // Truncate non-bundled descriptions to fit within budget
@@ -132,7 +132,7 @@ export function formatCommandsWithinBudget(commands: Command[], contextWindowTok
   return commands
     .map((cmd, i) => {
       // Bundled skills always get full descriptions
-      if (bundledIndices.has(i)) return fullEntries[i]!.full
+      if (bundledIndices.has(i)) return fullEntries[i].full
       const description = getCommandDescription(cmd)
       return `- ${cmd.name}: ${truncate(description, maxDescLen)}`
     })

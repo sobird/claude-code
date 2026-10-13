@@ -44,8 +44,8 @@ export function WebFetchPermissionRequest({
 
   // Generate permission options specific to domains
   const showAlwaysAllowOptions = shouldShowAlwaysAllowOptions()
-  const options = useMemo((): OptionWithDescription<string>[] => {
-    const result: OptionWithDescription<string>[] = [
+  const options = useMemo((): OptionWithDescription[] => {
+    const result: OptionWithDescription[] = [
       {
         label: 'Yes',
         value: 'yes',

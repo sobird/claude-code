@@ -1,5 +1,5 @@
-import { appendFile, mkdir, symlink, unlink } from 'fs/promises'
-import { dirname, join } from 'path'
+import { appendFile, mkdir, symlink, unlink } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import memoize from 'lodash-es/memoize.js'
 import { getSessionId } from 'src/bootstrap/state.js'
@@ -85,12 +85,12 @@ export const isDebugToStdErr = memoize((): boolean => {
 
 export const getDebugFilePath = memoize((): string | null => {
   for (let i = 0; i < process.argv.length; i++) {
-    const arg = process.argv[i]!
+    const arg = process.argv[i]
     if (arg.startsWith('--debug-file=')) {
       return arg.substring('--debug-file='.length)
     }
     if (arg === '--debug-file' && i + 1 < process.argv.length) {
-      return process.argv[i + 1]!
+      return process.argv[i + 1]
     }
   }
   return null

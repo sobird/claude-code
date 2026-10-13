@@ -1,7 +1,7 @@
-import { constants as fsConstants } from 'fs'
-import { access, writeFile } from 'fs/promises'
-import { homedir } from 'os'
-import { join } from 'path'
+import { constants as fsConstants } from 'node:fs'
+import { access, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 import axios from 'axios'
 import { getDynamicConfig_BLOCKS_ON_INIT } from 'src/services/analytics/growthbook.js'
@@ -66,9 +66,7 @@ export async function assertMinVersion(): Promise<void> {
   }
 
   try {
-    const versionConfig = await getDynamicConfig_BLOCKS_ON_INIT<{
-      minVersion: string
-    }>('tengu_version_config', { minVersion: '0.0.0' })
+    const versionConfig = await getDynamicConfig_BLOCKS_ON_INIT('tengu_version_config', { minVersion: '0.0.0' })
 
     if (versionConfig.minVersion && lt(MACRO.VERSION, versionConfig.minVersion)) {
       // biome-ignore lint/suspicious/noConsole:: intentional console output
@@ -416,7 +414,7 @@ export async function getVersionHistory(limit: number): Promise<string[]> {
   try {
     const versions = jsonParse(result.stdout.trim()) as string[]
     // Take last N versions, then reverse to get newest first
-    return versions.slice(-limit).reverse()
+    return versions.slice(-limit).toReversed()
   } catch (error) {
     logForDebugging(`Failed to parse version history: ${error}`)
     return []

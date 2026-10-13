@@ -1,4 +1,4 @@
-import { spawnSync } from 'child_process'
+import { spawnSync } from 'node:child_process'
 
 import { getIsInteractive } from '../bootstrap/state.js'
 import { logForDebugging } from './debug.js'

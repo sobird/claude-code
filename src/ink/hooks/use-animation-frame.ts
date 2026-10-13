@@ -44,7 +44,7 @@ export function useAnimationFrame(
 
     const onChange = (): void => {
       const now = clock.now()
-      if (now - lastUpdate >= intervalMs!) {
+      if (now - lastUpdate >= intervalMs) {
         lastUpdate = now
         setTime(now)
       }

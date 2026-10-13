@@ -298,7 +298,7 @@ export function getRecentReleaseNotesSync(maxItems: number): string[] {
   // Get notes from recent versions
   const allNotes: string[] = []
   const versions = Object.keys(parsed)
-    .sort((a, b) => (gt(a, b) ? -1 : 1))
+    .toSorted((a, b) => (gt(a, b) ? -1 : 1))
     .slice(0, 3) // Look at top 3 recent versions
 
   for (const version of versions) {

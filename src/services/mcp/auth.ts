@@ -1,8 +1,8 @@
-import { createHash, randomBytes, randomUUID } from 'crypto'
-import { mkdir } from 'fs/promises'
-import { createServer, type Server } from 'http'
-import { join } from 'path'
-import { parse } from 'url'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { mkdir } from 'node:fs/promises'
+import { createServer, type Server } from 'node:http'
+import { join } from 'node:path'
+import { parse } from 'node:url'
 
 import {
   discoverAuthorizationServerMetadata,

@@ -1,4 +1,4 @@
-import type { UUID } from 'crypto'
+import type { UUID } from 'node:crypto'
 
 import { logEvent } from 'src/services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/metadata.js'
@@ -432,7 +432,7 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
     // await by this function's synchronous return path. See state.ts.
     await runWithWorkload(turnWorkload, async () => {
       for (let i = 0; i < commands.length; i++) {
-        const cmd = commands[i]!
+        const cmd = commands[i]
         const isFirst = i === 0
         const result = await processUserInput({
           input: cmd.value,

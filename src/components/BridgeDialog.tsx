@@ -1,4 +1,4 @@
-import { basename } from 'path'
+import { basename } from 'node:path'
 
 import { toString as qrToString } from 'qrcode'
 import * as React from 'react'

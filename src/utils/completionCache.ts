@@ -1,7 +1,7 @@
-import { mkdir, readFile, writeFile } from 'fs/promises'
-import { homedir } from 'os'
-import { dirname, join } from 'path'
-import { pathToFileURL } from 'url'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import chalk from 'chalk'
 

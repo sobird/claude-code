@@ -1,4 +1,4 @@
-import { randomUUID, type UUID } from 'crypto'
+import { randomUUID, type UUID } from 'node:crypto'
 
 import type { ContentBlockParam, TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import figures from 'figures'
@@ -36,7 +36,7 @@ function isTextBlock(block: ContentBlockParam): block is TextBlockParam {
   return block.type === 'text'
 }
 
-import * as path from 'path'
+import * as path from 'node:path'
 
 import { useTerminalSize } from 'src/hooks/useTerminalSize.js'
 import type { FileEditOutput } from 'src/tools/FileEditTool/types.js'
@@ -113,7 +113,7 @@ export function MessageSelector({
 
   const hasMessagesToSelect = messageOptions.length > 1
 
-  const [messageToRestore, setMessageToRestore] = useState<UserMessage | undefined>(preselectedMessage)
+  const [messageToRestore, setMessageToRestore] = useState(preselectedMessage)
   const [diffStatsForRestore, setDiffStatsForRestore] = useState<DiffStats | undefined>(undefined)
 
   useEffect(() => {

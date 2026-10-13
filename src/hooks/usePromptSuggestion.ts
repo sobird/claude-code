@@ -29,9 +29,9 @@ export function usePromptSuggestion({ inputValue, isAssistantResponding }: Props
   const isValidSuggestion = suggestionText && shownAt > 0
 
   // Track engagement depth for telemetry
-  const firstKeystrokeAt = useRef<number>(0)
-  const wasFocusedWhenShown = useRef<boolean>(true)
-  const prevShownAt = useRef<number>(0)
+  const firstKeystrokeAt = useRef(0)
+  const wasFocusedWhenShown = useRef(true)
+  const prevShownAt = useRef(0)
 
   // Capture focus state when a new suggestion appears (shownAt changes)
   if (shownAt > 0 && shownAt !== prevShownAt.current) {

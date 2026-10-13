@@ -1,4 +1,4 @@
-import { URL } from 'url'
+import { URL } from 'node:url'
 
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { HybridTransport } from './HybridTransport.js'

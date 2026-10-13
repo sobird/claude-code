@@ -248,11 +248,11 @@ export function getFormatHint(schema: PrimitiveSchemaDefinition): string | undef
     const formatNum = (n: number) => (Number.isInteger(n) && !isInteger ? `${n}.0` : String(n))
 
     if (schema.minimum !== undefined && schema.maximum !== undefined) {
-      return `(${schema.type} between ${formatNum(schema.minimum!)} and ${formatNum(schema.maximum!)})`
+      return `(${schema.type} between ${formatNum(schema.minimum)} and ${formatNum(schema.maximum)})`
     } else if (schema.minimum !== undefined) {
-      return `(${schema.type} >= ${formatNum(schema.minimum!)})`
+      return `(${schema.type} >= ${formatNum(schema.minimum)})`
     } else if (schema.maximum !== undefined) {
-      return `(${schema.type} <= ${formatNum(schema.maximum!)})`
+      return `(${schema.type} <= ${formatNum(schema.maximum)})`
     } else {
       const example = schema.type === 'integer' ? '42' : '3.14'
       return `(${schema.type}, e.g. ${example})`

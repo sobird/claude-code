@@ -14,8 +14,8 @@
  * cost when keychainPrefetch.ts pulls this file in.
  */
 
-import { createHash } from 'crypto'
-import { userInfo } from 'os'
+import { createHash } from 'node:crypto'
+import { userInfo } from 'node:os'
 
 import { getOauthConfig } from 'src/constants/oauth.js'
 

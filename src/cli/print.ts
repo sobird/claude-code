@@ -1,10 +1,10 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
-import { randomUUID } from 'crypto'
-import { readFile, stat } from 'fs/promises'
-import { dirname } from 'path'
-import { cwd } from 'process'
+import type { UUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
+import { readFile, stat } from 'node:fs/promises'
+import { dirname } from 'node:path'
+import { cwd } from 'node:process'
 
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
@@ -344,7 +344,7 @@ function toBlocks(v: PromptValue): ContentBlockParam[] {
  * to blocks and concatenated.
  */
 export function joinPromptValues(values: PromptValue[]): PromptValue {
-  if (values.length === 1) return values[0]!
+  if (values.length === 1) return values[0]
   if (values.every((v) => typeof v === 'string')) {
     return values.join('\n')
   }
@@ -1140,7 +1140,7 @@ function runHeadlessStreaming(
           }
 
           // Delegate to SDK consumer via control protocol
-          const url = 'url' in request.params ? (request.params.url as string) : undefined
+          const url = 'url' in request.params ? request.params.url : undefined
           const requestedSchema =
             'requestedSchema' in request.params
               ? (request.params.requestedSchema as Record<string, unknown> | undefined)
@@ -1775,9 +1775,9 @@ function runHeadlessStreaming(
                 usage:
                   totalTokensMatch && toolUsesMatch
                     ? {
-                        total_tokens: parseInt(totalTokensMatch[1]!, 10),
-                        tool_uses: parseInt(toolUsesMatch[1]!, 10),
-                        duration_ms: durationMsMatch ? parseInt(durationMsMatch[1]!, 10) : 0,
+                        total_tokens: parseInt(totalTokensMatch[1], 10),
+                        tool_uses: parseInt(toolUsesMatch[1], 10),
+                        duration_ms: durationMsMatch ? parseInt(durationMsMatch[1], 10) : 0,
                       }
                     : undefined,
                 session_id: getSessionId(),
@@ -3676,7 +3676,7 @@ export function createCanUseToolWithPermissionPrompt(permissionPromptTool: Permi
     }
 
     // TypeScript narrowing: after the abort check, raceResult must be ToolResult
-    const result = raceResult as Awaited<typeof toolCallPromise>
+    const result = raceResult
 
     const permissionToolResultBlockParam = permissionPromptTool.mapToolResultToToolResultBlockParam(result.data, '1')
     if (
@@ -3840,7 +3840,7 @@ async function handleInitializeRequest(
   if (request.hooks) {
     const hooks: Partial<Record<HookEvent, HookCallbackMatcher[]>> = {}
     for (const [event, matchers] of Object.entries(request.hooks)) {
-      hooks[event as HookEvent] = matchers.map((matcher) => {
+      hooks[event] = matchers.map((matcher) => {
         const callbacks = matcher.hookCallbackIds.map((callbackId) => {
           return structuredIO.createHookCallback(callbackId, matcher.timeout)
         })

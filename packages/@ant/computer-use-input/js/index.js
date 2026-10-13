@@ -1,4 +1,4 @@
-const path = require('path')
+const path = require('node:path')
 
 // Discriminated union: { isSupported: false } on non-darwin,
 // { isSupported: true, ...nativeFns } on darwin. Cross-platform consumers

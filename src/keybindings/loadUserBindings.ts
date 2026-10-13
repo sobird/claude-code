@@ -9,9 +9,9 @@
  * use the default bindings.
  */
 
-import { readFileSync } from 'fs'
-import { readFile, stat } from 'fs/promises'
-import { dirname, join } from 'path'
+import { readFileSync } from 'node:fs'
+import { readFile, stat } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import chokidar, { type FSWatcher } from 'chokidar'
 

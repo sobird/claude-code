@@ -1,5 +1,5 @@
-import { type SpawnOptions, type SpawnSyncOptions, spawn, spawnSync } from 'child_process'
-import { basename } from 'path'
+import { type SpawnOptions, type SpawnSyncOptions, spawn, spawnSync } from 'node:child_process'
+import { basename } from 'node:path'
 
 import memoize from 'lodash-es/memoize.js'
 

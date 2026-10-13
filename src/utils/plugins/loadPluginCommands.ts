@@ -1,4 +1,4 @@
-import { basename, dirname, join } from 'path'
+import { basename, dirname, join } from 'node:path'
 
 import memoize from 'lodash-es/memoize.js'
 
@@ -127,7 +127,7 @@ function transformPluginSkillFiles(files: PluginMarkdownFile[]): PluginMarkdownF
     const skillFiles = dirFiles.filter((f) => isSkillFile(f.filePath))
     if (skillFiles.length > 0) {
       // Use the first skill file if multiple exist
-      const skillFile = skillFiles[0]!
+      const skillFile = skillFiles[0]
       if (skillFiles.length > 1) {
         logForDebugging(`Multiple skill files found in ${dir}, using ${basename(skillFile.filePath)}`)
       }
@@ -229,7 +229,7 @@ function createPluginCommand(
       frontmatter.model === 'inherit'
         ? undefined
         : frontmatter.model
-          ? parseUserSpecifiedModel(frontmatter.model as string)
+          ? parseUserSpecifiedModel(frontmatter.model)
           : undefined
 
     const effortRaw = frontmatter['effort']

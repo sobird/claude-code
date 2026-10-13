@@ -33,10 +33,10 @@ type UseVimInputProps = Omit<UseTextInputProps, 'inputFilter'> & {
 }
 
 export function useVimInput(props: UseVimInputProps): VimInputState {
-  const vimStateRef = React.useRef<VimState>(createInitialVimState())
+  const vimStateRef = React.useRef(createInitialVimState())
   const [mode, setMode] = useState<VimMode>('INSERT')
 
-  const persistentRef = React.useRef<PersistentState>(createInitialPersistentState())
+  const persistentRef = React.useRef(createInitialPersistentState())
 
   // inputFilter is applied once at the top of handleVimInput (not here) so
   // vim-handled paths that return without calling textInput.onInput still

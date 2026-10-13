@@ -15,7 +15,7 @@ export function renderPlaceholder({
   value,
   showCursor,
   focus,
-  terminalFocus = true,
+  terminalFocus,
   invert = chalk.inverse,
   hidePlaceholderText = false,
 }: PlaceholderRendererProps): {
@@ -34,7 +34,7 @@ export function renderPlaceholder({
       // Show inverse cursor only when both input and terminal are focused
       if (showCursor && focus && terminalFocus) {
         renderedPlaceholder =
-          placeholder.length > 0 ? invert(placeholder[0]!) + chalk.dim(placeholder.slice(1)) : invert(' ')
+          placeholder.length > 0 ? invert(placeholder[0]) + chalk.dim(placeholder.slice(1)) : invert(' ')
       }
     }
   }

@@ -15,9 +15,9 @@ function percentile(sorted: number[], p: number): number {
   const lower = Math.floor(index)
   const upper = Math.ceil(index)
   if (lower === upper) {
-    return sorted[lower]!
+    return sorted[lower]
   }
-  return sorted[lower]! + (sorted[upper]! - sorted[lower]!) * (index - lower)
+  return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower)
 }
 
 const RESERVOIR_SIZE = 1024
@@ -85,7 +85,7 @@ export function createStatsStore(): StatsStore {
         result[`${name}_min`] = h.min
         result[`${name}_max`] = h.max
         result[`${name}_avg`] = h.sum / h.count
-        const sorted = [...h.reservoir].sort((a, b) => a - b)
+        const sorted = [...h.reservoir].toSorted((a, b) => a - b)
         result[`${name}_p50`] = percentile(sorted, 50)
         result[`${name}_p95`] = percentile(sorted, 95)
         result[`${name}_p99`] = percentile(sorted, 99)

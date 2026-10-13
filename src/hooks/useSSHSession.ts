@@ -9,7 +9,7 @@
  * handed in; useDirectConnect creates its WebSocket inside the effect.
  */
 
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 

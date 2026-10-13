@@ -1,6 +1,6 @@
-import { readFileSync } from 'fs'
-import { mkdir, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { readFileSync } from 'node:fs'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import isEqual from 'lodash-es/isEqual.js'
 import memoize from 'lodash-es/memoize.js'
@@ -54,7 +54,7 @@ function isModelCapabilitiesEligible(): boolean {
 
 // Longest-id-first so substring match prefers most specific; secondary key for stable isEqual
 function sortForMatching(models: ModelCapability[]): ModelCapability[] {
-  return [...models].sort((a, b) => b.id.length - a.id.length || a.id.localeCompare(b.id))
+  return [...models].toSorted((a, b) => b.id.length - a.id.length || a.id.localeCompare(b.id))
 }
 
 // Keyed on cache path so tests that set CLAUDE_CONFIG_DIR get a fresh read

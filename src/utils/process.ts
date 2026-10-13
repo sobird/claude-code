@@ -51,7 +51,7 @@ export function peekForStdinData(stream: NodeJS.EventEmitter, ms: number): Promi
       clearTimeout(peek)
       stream.off('end', onEnd)
       stream.off('data', onFirstData)
-      void resolve(timedOut)
+      resolve(timedOut)
     }
     const onEnd = () => done(false)
     const onFirstData = () => clearTimeout(peek)

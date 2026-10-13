@@ -690,16 +690,16 @@ const applyBorderStyles = (node: LayoutNode, style: Styles, resolvedStyle?: Styl
     // Skip undefined values — they mean the prop was removed or never set,
     // not that a border should be enabled.
     if ('borderTop' in style && style.borderTop !== undefined) {
-      node.setBorder(LayoutEdge.Top, style.borderTop === false ? 0 : 1)
+      node.setBorder(LayoutEdge.Top, !style.borderTop ? 0 : 1)
     }
     if ('borderBottom' in style && style.borderBottom !== undefined) {
-      node.setBorder(LayoutEdge.Bottom, style.borderBottom === false ? 0 : 1)
+      node.setBorder(LayoutEdge.Bottom, !style.borderBottom ? 0 : 1)
     }
     if ('borderLeft' in style && style.borderLeft !== undefined) {
-      node.setBorder(LayoutEdge.Left, style.borderLeft === false ? 0 : 1)
+      node.setBorder(LayoutEdge.Left, !style.borderLeft ? 0 : 1)
     }
     if ('borderRight' in style && style.borderRight !== undefined) {
-      node.setBorder(LayoutEdge.Right, style.borderRight === false ? 0 : 1)
+      node.setBorder(LayoutEdge.Right, !style.borderRight ? 0 : 1)
     }
   }
 }

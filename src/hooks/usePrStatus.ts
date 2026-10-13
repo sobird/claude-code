@@ -34,7 +34,7 @@ const INITIAL_STATE: PrStatusState = {
  * called unconditionally to satisfy the rules of hooks).
  */
 export function usePrStatus(isLoading: boolean, enabled = true): PrStatusState {
-  const [prStatus, setPrStatus] = useState<PrStatusState>(INITIAL_STATE)
+  const [prStatus, setPrStatus] = useState(INITIAL_STATE)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const disabledRef = useRef(false)
   const lastFetchRef = useRef(0)

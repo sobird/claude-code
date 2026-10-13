@@ -15,7 +15,7 @@
  * Uses the same suspend-Ink pattern as the external editor (promptEditor.ts).
  */
 
-import { spawn, spawnSync } from 'child_process'
+import { spawn, spawnSync } from 'node:child_process'
 
 import { getSessionId } from '../bootstrap/state.js'
 import instances from '../ink/instances.js'

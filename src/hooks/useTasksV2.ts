@@ -1,4 +1,4 @@
-import { type FSWatcher, watch } from 'fs'
+import { type FSWatcher, watch } from 'node:fs'
 
 import { useEffect, useSyncExternalStore } from 'react'
 

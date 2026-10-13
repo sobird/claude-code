@@ -1,4 +1,4 @@
-import { homedir } from 'os'
+import { homedir } from 'node:os'
 
 import React from 'react'
 import { logEvent } from 'src/services/analytics/index.js'

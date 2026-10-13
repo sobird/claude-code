@@ -144,7 +144,7 @@ export function Passes({ onDone }: Props): React.ReactNode {
   const availableCount = count(passStatuses, (p) => p.isAvailable)
 
   // Sort passes: available first, then redeemed
-  const sortedPasses = [...passStatuses].sort((a, b) => +b.isAvailable - +a.isAvailable)
+  const sortedPasses = [...passStatuses].toSorted((a, b) => +b.isAvailable - +a.isAvailable)
 
   // ASCII art for tickets
   const renderTicket = (pass: PassStatus) => {

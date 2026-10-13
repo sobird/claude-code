@@ -1,4 +1,4 @@
-import { relative } from 'path'
+import { relative } from 'node:path'
 
 import type { StructuredPatchHunk } from 'diff'
 import * as React from 'react'

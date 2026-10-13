@@ -148,8 +148,8 @@ export function getSimpleCommandPrefix(command: string): string | null {
   // prevents generating prefix rules like Bash(npm run:*) that can never match
   // at allow-rule check time, because stripSafeWrappers only strips safe vars.
   let i = 0
-  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
-    const varName = tokens[i]!.split('=')[0]!
+  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i])) {
+    const varName = tokens[i].split('=')[0]
     const isAntOnlySafe = process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
     if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
       return null
@@ -159,7 +159,7 @@ export function getSimpleCommandPrefix(command: string): string | null {
 
   const remaining = tokens.slice(i)
   if (remaining.length < 2) return null
-  const subcmd = remaining[1]!
+  const subcmd = remaining[1]
   // Second token must look like a subcommand (e.g., "commit", "run", "compose"),
   // not a flag (-rf), filename (file.txt), path (/tmp), URL, or number (755).
   if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(subcmd)) return null
@@ -223,8 +223,8 @@ export function getFirstWordPrefix(command: string): string | null {
   const tokens = command.trim().split(/\s+/).filter(Boolean)
 
   let i = 0
-  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
-    const varName = tokens[i]!.split('=')[0]!
+  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i])) {
+    const varName = tokens[i].split('=')[0]
     const isAntOnlySafe = process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
     if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
       return null
@@ -255,7 +255,7 @@ function suggestionForExactCommand(command: string): PermissionUpdate[] {
   // the middle, which fails permission validation and corrupts the settings
   // file. Use the first line as a prefix rule instead.
   if (command.includes('\n')) {
-    const firstLine = command.split('\n')[0]!.trim()
+    const firstLine = command.split('\n')[0].trim()
     if (firstLine) {
       return sharedSuggestionForPrefix(BashTool.name, firstLine)
     }
@@ -301,8 +301,8 @@ function extractPrefixBeforeHeredoc(command: string): string | null {
   // prefix rules that can never match (same rationale as getSimpleCommandPrefix).
   const tokens = before.split(/\s+/).filter(Boolean)
   let i = 0
-  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
-    const varName = tokens[i]!.split('=')[0]!
+  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i])) {
+    const varName = tokens[i].split('=')[0]
     const isAntOnlySafe = process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
     if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
       return null
@@ -558,7 +558,7 @@ export function stripSafeWrappers(command: string): string {
 
     const envVarMatch = stripped.match(ENV_VAR_PATTERN)
     if (envVarMatch) {
-      const varName = envVarMatch[1]!
+      const varName = envVarMatch[1]
       const isAntOnlySafe = process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
       if (SAFE_ENV_VARS.has(varName) || isAntOnlySafe) {
         stripped = stripped.replace(ENV_VAR_PATTERN, '')
@@ -604,7 +604,7 @@ const TIMEOUT_FLAG_VALUE_RE = /^[A-Za-z0-9_.+-]+$/
 function skipTimeoutFlags(a: readonly string[]): number {
   let i = 1
   while (i < a.length) {
-    const arg = a[i]!
+    const arg = a[i]
     const next = a[i + 1]
     if (arg === '--foreground' || arg === '--preserve-status' || arg === '--verbose') i++
     else if (/^--(?:kill-after|signal)=[A-Za-z0-9_.+-]+$/.test(arg)) i++
@@ -641,7 +641,7 @@ export function stripWrappersFromArgv(argv: string[]): string[] {
       a = a.slice(a[1] === '--' ? 2 : 1)
     } else if (a[0] === 'timeout') {
       const i = skipTimeoutFlags(a)
-      if (i < 0 || !a[i] || !/^\d+(?:\.\d+)?[smhd]?$/.test(a[i]!)) return a
+      if (i < 0 || !a[i] || !/^\d+(?:\.\d+)?[smhd]?$/.test(a[i])) return a
       a = a.slice(i + 1)
     } else if (a[0] === 'nice' && a[1] === '-n' && a[2] && /^-?\d+$/.test(a[2])) {
       a = a.slice(a[3] === '--' ? 4 : 3)
@@ -716,7 +716,7 @@ export function stripAllLeadingEnvVars(command: string, blocklist?: RegExp): str
 
     const m = stripped.match(ENV_VAR_PATTERN)
     if (!m) continue
-    if (blocklist?.test(m[1]!)) break
+    if (blocklist?.test(m[1])) break
     stripped = stripped.slice(m[0].length)
   }
 
@@ -1279,7 +1279,7 @@ function filterCdCwdSubcommands(
   const subcommands: string[] = []
   const astCommandsByIdx: (SimpleCommand | undefined)[] = []
   for (let i = 0; i < rawSubcommands.length; i++) {
-    const cmd = rawSubcommands[i]!
+    const cmd = rawSubcommands[i]
     if (cmd === `cd ${cwd}` || cmd === `cd ${cwdMingw}`) continue
     subcommands.push(cmd)
     astCommandsByIdx.push(astCommands?.[i])
@@ -2012,7 +2012,7 @@ export async function bashToolHasPermission(
       message: `Permission to use ${BashTool.name} with command ${input.command} has been denied.`,
       decisionReason: {
         type: 'subcommandResults',
-        reasons: new Map(subcommandPermissionDecisions.map((result, i) => [subcommands[i]!, result])),
+        reasons: new Map(subcommandPermissionDecisions.map((result, i) => [subcommands[i], result])),
       },
     }
   }
@@ -2108,7 +2108,7 @@ export async function bashToolHasPermission(
       updatedInput: input,
       decisionReason: {
         type: 'subcommandResults',
-        reasons: new Map(subcommandPermissionDecisions.map((result, i) => [subcommands[i]!, result])),
+        reasons: new Map(subcommandPermissionDecisions.map((result, i) => [subcommands[i], result])),
       },
     }
   }
@@ -2132,7 +2132,7 @@ export async function bashToolHasPermission(
   appState = context.getAppState() // re-compute the latest in case the user hit shift+tab
   if (subcommands.length === 1) {
     const result = await checkCommandAndSuggestRules(
-      { command: subcommands[0]! },
+      { command: subcommands[0] },
       appState.toolPermissionContext,
       commandSubcommandPrefix,
       compoundCommandHasCd,

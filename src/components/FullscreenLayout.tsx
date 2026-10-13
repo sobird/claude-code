@@ -1,4 +1,4 @@
-import { fileURLToPath } from 'url'
+import { fileURLToPath } from 'node:url'
 
 import figures from 'figures'
 import React, {
@@ -217,7 +217,7 @@ export function countUnseenAssistantTurns(messages: readonly Message[], dividerI
   let count = 0
   let prevWasAssistant = false
   for (let i = dividerIndex; i < messages.length; i++) {
-    const m = messages[i]!
+    const m = messages[i]
     if (m.type === 'progress') continue
     // Tool-use-only assistant entries aren't "new messages" to the user —
     // skip them the same way we skip progress. prevWasAssistant is NOT
@@ -263,7 +263,7 @@ export function computeUnseenDivider(
   let anchorIdx = dividerIndex
   while (
     anchorIdx < messages.length &&
-    (messages[anchorIdx]?.type === 'progress' || isNullRenderingAttachment(messages[anchorIdx]!))
+    (messages[anchorIdx]?.type === 'progress' || isNullRenderingAttachment(messages[anchorIdx]))
   ) {
     anchorIdx++
   }

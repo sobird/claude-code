@@ -11,7 +11,7 @@
 // binary audio frames.  The server responds with TranscriptText and
 // TranscriptEndpoint JSON messages.
 
-import type { ClientRequest, IncomingMessage } from 'http'
+import type { ClientRequest, IncomingMessage } from 'node:http'
 
 import WebSocket from 'ws'
 

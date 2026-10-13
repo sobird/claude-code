@@ -1,4 +1,4 @@
-import { basename, relative } from 'path'
+import { basename, relative } from 'node:path'
 
 import React, { useMemo } from 'react'
 import type { z } from 'zod/v4'

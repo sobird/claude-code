@@ -1,8 +1,8 @@
-import { type ChildProcess, spawn } from 'child_process'
-import { createWriteStream, type WriteStream } from 'fs'
-import { tmpdir } from 'os'
-import { dirname, join } from 'path'
-import { createInterface } from 'readline'
+import { type ChildProcess, spawn } from 'node:child_process'
+import { createWriteStream, type WriteStream } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { createInterface } from 'node:readline'
 
 import { jsonParse, jsonStringify } from '../utils/slowOperations.js'
 import { debugTruncate } from './debugUtils.js'

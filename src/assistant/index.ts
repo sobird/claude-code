@@ -1,5 +1,5 @@
 // Auto-generated stub — replace with real implementation
-export {}
+
 export const isAssistantMode: () => boolean = () => false
 export const initializeAssistantTeam: () => Promise<void> = async () => {}
 export const markAssistantForced: () => void = () => {}

@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
 import type { GoogleAuth } from 'google-auth-library'

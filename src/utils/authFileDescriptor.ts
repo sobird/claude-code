@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 
 import { getApiKeyFromFd, getOauthTokenFromFd, setApiKeyFromFd, setOauthTokenFromFd } from '../bootstrap/state.js'
 import { logForDebugging } from './debug.js'

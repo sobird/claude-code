@@ -237,7 +237,7 @@ function useCanUseTool(
                         source: { type: 'classifier' },
                       })
                       resolve(
-                        ctx.buildAllow(result.updatedInput ?? (input as Record<string, unknown>), {
+                        ctx.buildAllow(result.updatedInput ?? input, {
                           decisionReason: {
                             type: 'classifier' as const,
                             classifier: 'bash_allow' as const,

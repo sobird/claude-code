@@ -162,7 +162,7 @@ function getEnvOverrides(): Record<string, unknown> | null {
         try {
           envOverrides = JSON.parse(raw) as Record<string, unknown>
           logForDebugging(
-            `GrowthBook: Using env var overrides for ${Object.keys(envOverrides!).length} features: ${Object.keys(envOverrides!).join(', ')}`,
+            `GrowthBook: Using env var overrides for ${Object.keys(envOverrides).length} features: ${Object.keys(envOverrides).join(', ')}`,
           )
         } catch {
           logError(new Error(`GrowthBook: Failed to parse CLAUDE_INTERNAL_FC_OVERRIDES: ${raw}`))

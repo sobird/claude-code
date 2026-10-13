@@ -1,4 +1,4 @@
-import { basename, extname, posix, sep } from 'path'
+import { basename, extname, posix, sep } from 'node:path'
 
 /**
  * File patterns that should be excluded from attribution.

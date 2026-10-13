@@ -21,7 +21,7 @@ import { ensureKeychainPrefetchCompleted, startKeychainPrefetch } from './utils/
 startKeychainPrefetch()
 
 import { feature } from 'bun:bundle'
-import { readFileSync } from 'fs'
+import { readFileSync } from 'node:fs'
 
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings'
 import chalk from 'chalk'
@@ -127,7 +127,7 @@ const assistantModule = feature('KAIROS')
   : null
 const kairosGate = feature('KAIROS') ? (require('./assistant/gate.js') as typeof import('./assistant/gate.js')) : null
 
-import { relative, resolve } from 'path'
+import { relative, resolve } from 'node:path'
 
 import { registerMcpAddCommand } from 'src/commands/mcp/addCommand.js'
 import { registerMcpXaaIdpCommand } from 'src/commands/mcp/xaaIdpCommand.js'
@@ -4688,7 +4688,7 @@ async function run(): Promise<CommanderCommand> {
           idleTimeout: string
           maxSessions: string
         }) => {
-          const { randomBytes } = await import('crypto')
+          const { randomBytes } = await import('node:crypto')
           const { startServer } = await import('./server/server.js')
           const { SessionManager } = await import('./server/sessionManager.js')
           const { DangerousBackend } = await import('./server/backends/dangerousBackend.js')

@@ -1,4 +1,4 @@
-import { basename, relative } from 'path'
+import { basename, relative } from 'node:path'
 
 import React, { Suspense, use, useMemo } from 'react'
 import { FileEditToolDiff } from 'src/components/FileEditToolDiff.js'

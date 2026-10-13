@@ -1,4 +1,4 @@
-import { readdir } from 'fs/promises'
+import { readdir } from 'node:fs/promises'
 
 import { getCwd } from '../../utils/cwd.js'
 import { registerBundledSkill } from '../bundledSkills.js'
@@ -64,7 +64,7 @@ function processContent(md: string, content: SkillContent): string {
 
 function buildInlineReference(filePaths: string[], content: SkillContent): string {
   const sections: string[] = []
-  for (const filePath of filePaths.sort()) {
+  for (const filePath of filePaths.toSorted()) {
     const md = content.SKILL_FILES[filePath]
     if (!md) continue
     sections.push(`<doc path="${filePath}">\n${processContent(md, content).trim()}\n</doc>`)

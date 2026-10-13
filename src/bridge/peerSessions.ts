@@ -1,5 +1,5 @@
 // Auto-generated stub — replace with real implementation
-export {}
+
 export const postInterClaudeMessage: (
   target: string,
   message: string,

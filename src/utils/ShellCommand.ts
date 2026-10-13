@@ -1,6 +1,6 @@
-import type { ChildProcess } from 'child_process'
-import { stat } from 'fs/promises'
-import type { Readable } from 'stream'
+import type { ChildProcess } from 'node:child_process'
+import { stat } from 'node:fs/promises'
+import type { Readable } from 'node:stream'
 
 import treeKill from 'tree-kill'
 
@@ -252,7 +252,7 @@ class ShellCommandImpl implements ShellCommand {
     this.#childProcess.once('exit', this.#exitHandler.bind(this))
     this.#childProcess.once('error', this.#errorHandler.bind(this))
 
-    this.#timeoutId = setTimeout(ShellCommandImpl.#handleTimeout, this.#timeout, this) as NodeJS.Timeout
+    this.#timeoutId = setTimeout(ShellCommandImpl.#handleTimeout, this.#timeout, this)
 
     const exitPromise = new Promise<number>((resolve) => {
       this.#exitCodeResolver = resolve

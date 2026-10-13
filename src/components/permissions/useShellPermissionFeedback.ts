@@ -53,9 +53,7 @@ export function useShellPermissionFeedback({
     // Notify that user is interacting with the dialog
     toolUseConfirm.onUserInteraction()
     const analyticsProps = {
-      toolName: sanitizeToolNameForAnalytics(
-        toolUseConfirm.tool.name,
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      toolName: sanitizeToolNameForAnalytics(toolUseConfirm.tool.name),
       isMcp: toolUseConfirm.tool.isMcp ?? false,
     }
 

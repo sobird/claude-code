@@ -1,5 +1,5 @@
-import { realpathSync } from 'fs'
-import { cwd } from 'process'
+import { realpathSync } from 'node:fs'
+import { cwd } from 'node:process'
 
 import type { BetaMessageStreamParams } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { Attributes, Meter, MetricOptions } from '@opentelemetry/api'
@@ -1370,11 +1370,11 @@ export function registerHookCallbacks(hooks: Partial<Record<HookEvent, Registere
 
   // `registerHookCallbacks` may be called multiple times, so we need to merge (not overwrite)
   for (const [event, matchers] of Object.entries(hooks)) {
-    const eventKey = event as HookEvent
+    const eventKey = event
     if (!STATE.registeredHooks[eventKey]) {
       STATE.registeredHooks[eventKey] = []
     }
-    STATE.registeredHooks[eventKey]!.push(...matchers)
+    STATE.registeredHooks[eventKey].push(...matchers)
   }
 }
 
@@ -1396,7 +1396,7 @@ export function clearRegisteredPluginHooks(): void {
     // Keep only callback hooks (those without pluginRoot)
     const callbackHooks = matchers.filter((m) => !('pluginRoot' in m))
     if (callbackHooks.length > 0) {
-      filtered[event as HookEvent] = callbackHooks
+      filtered[event] = callbackHooks
     }
   }
 

@@ -141,7 +141,7 @@ export async function discoverProtectedResource(
   try {
     prm = await discoverOAuthProtectedResourceMetadata(serverUrl, undefined, opts?.fetchFn ?? defaultFetch)
   } catch (e) {
-    throw new Error(`XAA: PRM discovery failed: ${e instanceof Error ? e.message : String(e)}`)
+    throw new Error(`XAA: PRM discovery failed: ${e instanceof Error ? e.message : String(e)}`, { cause: e })
   }
   if (!prm.resource || !prm.authorization_servers?.[0]) {
     throw new Error('XAA: PRM discovery failed: PRM missing resource or authorization_servers')

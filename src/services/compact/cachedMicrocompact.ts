@@ -1,5 +1,4 @@
 // Auto-generated stub — replace with real implementation
-export {}
 
 export type CachedMCState = {
   registeredTools: Set<string>

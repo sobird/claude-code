@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join } from 'node:path'
 
 import { expandEnvVarsInString } from '../../services/mcp/envExpansion.js'
 import { type McpServerConfig, McpServerConfigSchema, type ScopedMcpServerConfig } from '../../services/mcp/types.js'
@@ -458,7 +458,7 @@ export function resolvePluginMcpEnvironment(
       const resolvedEnv: Record<string, string> = {
         CLAUDE_PLUGIN_ROOT: plugin.path,
         CLAUDE_PLUGIN_DATA: getPluginDataDir(plugin.source),
-        ...(stdioConfig.env || {}),
+        ...stdioConfig.env,
       }
       for (const [key, value] of Object.entries(resolvedEnv)) {
         if (key !== 'CLAUDE_PLUGIN_ROOT' && key !== 'CLAUDE_PLUGIN_DATA') {

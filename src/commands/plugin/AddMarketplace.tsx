@@ -47,7 +47,7 @@ export function AddMarketplace({
 }: Props): React.ReactNode {
   const hasAttemptedAutoAdd = useRef(false)
   const [isLoading, setLoading] = useState(false)
-  const [progressMessage, setProgressMessage] = useState<string>('')
+  const [progressMessage, setProgressMessage] = useState('')
 
   const handleAdd = async () => {
     const input = inputValue.trim()

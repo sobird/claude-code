@@ -10,7 +10,7 @@
  * as params.
  */
 
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
 import type { SDKControlRequest, SDKControlResponse } from '../entrypoints/sdk/controlTypes.js'
@@ -118,8 +118,8 @@ export function handleIngressMessage(
   recentPostedUUIDs: BoundedUUIDSet,
   recentInboundUUIDs: BoundedUUIDSet,
   onInboundMessage: ((msg: SDKMessage) => void | Promise<void>) | undefined,
-  onPermissionResponse?: ((response: SDKControlResponse) => void) | undefined,
-  onControlRequest?: ((request: SDKControlRequest) => void) | undefined,
+  onPermissionResponse?: (response: SDKControlResponse) => void,
+  onControlRequest?: (request: SDKControlRequest) => void,
 ): void {
   try {
     const parsed: unknown = normalizeControlMessageKeys(jsonParse(data))

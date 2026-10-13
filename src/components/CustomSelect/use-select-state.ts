@@ -134,7 +134,7 @@ export function useSelectState<T>({
   onFocus,
   focusValue,
 }: UseSelectStateProps<T>): SelectState<T> {
-  const [value, setValue] = useState<T | undefined>(defaultValue)
+  const [value, setValue] = useState(defaultValue)
 
   const navigation = useSelectNavigation<T>({
     visibleOptionCount,

@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { readFileSync } from 'node:fs'
 
 import codeExcerpt, { type CodeExcerpt } from 'code-excerpt'
 import React from 'react'
@@ -31,7 +31,7 @@ type Props = {
 
 export default function ErrorOverview({ error }: Props) {
   const stack = error.stack ? error.stack.split('\n').slice(1) : undefined
-  const origin = stack ? getStackUtils().parseLine(stack[0]!) : undefined
+  const origin = stack ? getStackUtils().parseLine(stack[0]) : undefined
   const filePath = cleanupPath(origin?.file)
   let excerpt: CodeExcerpt[] | undefined
   let lineWidth = 0

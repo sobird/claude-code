@@ -1,4 +1,4 @@
-import { type FileHandle, open } from 'fs/promises'
+import { type FileHandle, open } from 'node:fs/promises'
 
 import { isENOENT } from './errors.js'
 

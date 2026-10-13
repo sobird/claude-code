@@ -505,15 +505,15 @@ export function resolveSkillModelOverride(skillModel: string, currentModel: stri
   return skillModel
 }
 
-const LEGACY_OPUS_FIRSTPARTY = [
+const LEGACY_OPUS_FIRSTPARTY = new Set([
   'claude-opus-4-20250514',
   'claude-opus-4-1-20250805',
   'claude-opus-4-0',
   'claude-opus-4-1',
-]
+])
 
 function isLegacyOpusFirstParty(model: string): boolean {
-  return LEGACY_OPUS_FIRSTPARTY.includes(model)
+  return LEGACY_OPUS_FIRSTPARTY.has(model)
 }
 
 /**

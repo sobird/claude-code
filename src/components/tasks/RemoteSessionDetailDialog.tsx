@@ -395,7 +395,7 @@ export function RemoteSessionDetailDialog({ session, toolUseContext, onDone, onB
   // Ultraplan/review sessions never read this — skip the normalize work for them.
   const lastMessages = useMemo(() => {
     if (session.isUltraplan || session.isRemoteReview) return []
-    return normalizeMessages(toInternalMessages(session.log as SDKMessage[]))
+    return normalizeMessages(toInternalMessages(session.log))
       .filter((_) => _.type !== 'progress')
       .slice(-3)
   }, [session])
