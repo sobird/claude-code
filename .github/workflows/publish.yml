@@ -3,22 +3,26 @@ name: Publish
 on:
   workflow_call:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           registry-url: https://registry.npmjs.org/
-      
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -26,7 +30,7 @@ jobs:
 
       - name: Cache dependencies
         id: cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             node_modules
@@ -37,5 +41,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: bun install
 
+      - name: Build CLI
+        run: bun run build
       - name: Publish to NPM
-        run: npm publish
+        run: npm publish ./dist

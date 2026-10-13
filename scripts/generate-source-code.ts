@@ -13,60 +13,58 @@
  * sobird<i@sobird.me> at 2026/04/01 4:45:05 created.
  */
 
-import type { RawSourceMap } from 'source-map';
+import fs from 'node:fs'
+import path from 'node:path'
+import type { RawSourceMap } from 'source-map'
+import { SourceMapConsumer } from 'source-map'
 
-import fs from 'node:fs';
-import path from 'node:path';
+const __dirname = import.meta.dir
 
-import { SourceMapConsumer } from 'source-map';
-
-const __dirname = import.meta.dir;
-
-const rawSourceMap: RawSourceMap = JSON.parse(fs.readFileSync('cli.js.map', 'utf8'));
+const rawSourceMap: RawSourceMap = JSON.parse(fs.readFileSync('cli.js.map', 'utf8'))
 // .tsx
-const sourceMappingURL = '//# sourceMappingURL=data:application/json;charset=utf-8;base64,';
+const sourceMappingURL = '//# sourceMappingURL=data:application/json;charset=utf-8;base64,'
 
-let tsxFileCount = 0;
-let srcFileCount = 0;
-let srcFileLines = 0;
+let tsxFileCount = 0
+let srcFileCount = 0
+let srcFileLines = 0
 
 await SourceMapConsumer.with(rawSourceMap, null, (consumer) => {
   consumer.sources.forEach((file) => {
-    const isNodeModulesFile = file.startsWith('../node_modules');
-    const filename = path.resolve(__dirname, file);
+    const isNodeModulesFile = file.startsWith('../node_modules')
+    const filename = path.resolve(__dirname, file)
 
-    fs.mkdirSync(path.dirname(filename), { recursive: true });
+    fs.mkdirSync(path.dirname(filename), { recursive: true })
 
-    let content = consumer.sourceContentFor(file) ?? '';
-    const sourceMappingURLIndex = content.indexOf(sourceMappingURL);
+    let content = consumer.sourceContentFor(file) ?? ''
+    const sourceMappingURLIndex = content.indexOf(sourceMappingURL)
 
     // 如果文件中存在 sourceMappingURL注释, 则重新解析，并使用解析后的内容覆盖原内容
     if (sourceMappingURLIndex > -1) {
-      const sourceMapBase64 = (content.slice(sourceMappingURLIndex + sourceMappingURL.length));
-      const sourceMapString = Buffer.from(sourceMapBase64, 'base64').toString('utf8');
-      const sourceMap: RawSourceMap = JSON.parse(sourceMapString);
+      const sourceMapBase64 = content.slice(sourceMappingURLIndex + sourceMappingURL.length)
+      const sourceMapString = Buffer.from(sourceMapBase64, 'base64').toString('utf8')
+      const sourceMap: RawSourceMap = JSON.parse(sourceMapString)
 
-      content = sourceMap.sourcesContent?.[0] ?? '';
+      content = sourceMap.sourcesContent?.[0] ?? ''
 
-      tsxFileCount += 1;
+      tsxFileCount += 1
 
-      content = content.replaceAll('"external" ===', 'process.env.USER_TYPE ===');
-      content = content.replaceAll('"external" !==', 'process.env.USER_TYPE !==');
-      content = content.replaceAll('"production" ===', 'process.env.NODE_ENV ===');
+      content = content.replaceAll('"external" ===', 'process.env.USER_TYPE ===')
+      content = content.replaceAll('"external" !==', 'process.env.USER_TYPE !==')
+      content = content.replaceAll('"production" ===', 'process.env.NODE_ENV ===')
     }
 
     // 统计源码文件数和代码行数
     if (!isNodeModulesFile) {
-      const lineCount = content.split('\n').length;
+      const lineCount = content.split('\n').length
 
-      srcFileLines += lineCount;
-      srcFileCount += 1;
+      srcFileLines += lineCount
+      srcFileCount += 1
     }
 
-    fs.writeFileSync(filename, content, 'utf-8');
-  });
+    fs.writeFileSync(filename, content, 'utf-8')
+  })
 
-  console.log('srcFileCount', srcFileCount);
-  console.log('srcFileLines', srcFileLines);
-  console.log('tsxFileCount', tsxFileCount);
-});
+  console.log('srcFileCount', srcFileCount)
+  console.log('srcFileLines', srcFileLines)
+  console.log('tsxFileCount', tsxFileCount)
+})

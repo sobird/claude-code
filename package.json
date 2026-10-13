@@ -28,7 +28,7 @@
     "vendor/url-handler"
   ],
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/cli.js",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -39,6 +39,8 @@
     "debug": "bun scripts/debug.ts",
     "debug:dist": "node --inspect-brk dist/cli.js",
     "dev": "bun scripts/dev.ts",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "postinstall": "echo \"postinstall\"",
@@ -176,9 +178,11 @@
     "typescript": "^6.0.2"
   },
   "lint-staged": {
-    "*": "oxlint --fix"
+    "**/*": "oxfmt --no-error-on-unmatched-pattern",
+    "**/*.{js,jsx,ts,tsx,mjs,cjs}": "oxlint --fix"
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "trustedDependencies": []
 }
