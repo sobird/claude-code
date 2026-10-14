@@ -38,6 +38,9 @@ import { PassThrough, Readable } from 'node:stream'
 
 import React, { type ReactNode } from 'react'
 import { render, ThemeProvider, type Instance } from 'src/ink.js'
+// BSU/ESU = Begin/End Synchronized Update — the DEC-2026 markers Ink wraps
+// around each frame. Absent on plain pipes, hence lastFrame()'s raw fallback.
+import { BSU, ESU } from 'src/ink/termio/dec.js'
 
 export type Harness = {
   /** Content of the most recent frame (raw ANSI). Feed to stripAnsi() to assert. */
@@ -62,24 +65,19 @@ export type Harness = {
   instance: Instance
 }
 
-// DEC synchronized-update markers, wrapped around each frame when the terminal
-// supports synchronized output. Absent on plain pipes, hence the fallback below.
-const SYNC_START = '\x1B[?2026h'
-const SYNC_END = '\x1B[?2026l'
-
 // Every live instance, so cleanup() can tear them all down (afterEach(cleanup)).
-const liveInstances = new Set<Instance>()
+const instances = new Set<Instance>()
 
 /** Unmount every instance still tracked. Safe to call repeatedly. */
 export function cleanup(): void {
-  for (const instance of liveInstances) {
+  for (const instance of instances) {
     try {
       instance.unmount()
     } catch {
       // Already unmounted — nothing to do.
     }
   }
-  liveInstances.clear()
+  instances.clear()
 }
 
 /**
@@ -153,12 +151,12 @@ class FrameReader {
     stream.on('data', (chunk: Buffer | string) => {
       this.rest += chunk.toString()
       for (;;) {
-        const start = this.rest.indexOf(SYNC_START)
+        const start = this.rest.indexOf(BSU)
         if (start === -1) break
-        const end = this.rest.indexOf(SYNC_END, start + SYNC_START.length)
+        const end = this.rest.indexOf(ESU, start + BSU.length)
         if (end === -1) break
-        this.frames.push(this.rest.slice(start + SYNC_START.length, end))
-        this.rest = this.rest.slice(end + SYNC_END.length)
+        this.frames.push(this.rest.slice(start + BSU.length, end))
+        this.rest = this.rest.slice(end + ESU.length)
       }
     })
   }
@@ -197,7 +195,7 @@ export async function renderForTest(node: ReactNode, { columns = 100 }: { column
     stdin: stdin as unknown as NodeJS.ReadStream,
     patchConsole: false,
   })
-  liveInstances.add(instance)
+  instances.add(instance)
 
   return {
     frames: reader.frames,
@@ -218,7 +216,7 @@ export async function renderForTest(node: ReactNode, { columns = 100 }: { column
       await new Promise((resolve) => setTimeout(resolve, 0))
     },
     unmount: () => {
-      liveInstances.delete(instance)
+      instances.delete(instance)
       instance.unmount()
     },
     instance,
