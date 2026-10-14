@@ -39,6 +39,8 @@
     "debug": "bun scripts/debug.ts",
     "debug:dist": "node --inspect-brk dist/cli.js",
     "dev": "bun scripts/dev.ts",
+    "dev:log": "bun scripts/dev.ts --debug",
+    "dev:record": "USER_TYPE=ant CLAUDE_CODE_TERMINAL_RECORDING=1 bun scripts/dev.ts",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",

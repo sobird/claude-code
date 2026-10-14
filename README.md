@@ -73,6 +73,54 @@ npm link
 node dist/cli.js
 ```
 
+### 源码级断点
+
+上面的 attach 对应到现成脚本，分别断在源码和构建产物：
+
+```bash
+bun run debug          # bun --inspect-brk，断在 src/**.ts(x)
+bun run debug:dist     # node --inspect-brk dist/cli.js，配合 cli.js.map
+```
+
+运行后在 Chrome 的 `chrome://inspect` 或 VS Code 里 attach。
+
+### 调试日志
+
+以调试模式启动（等价于 `bun run dev` 加 `--debug`）：
+
+```bash
+bun run dev:log
+```
+
+日志写入 `~/.claude/debug/<sessionId>.txt`，并维护一个 `latest` 软链便于 tail：
+
+```bash
+tail -f ~/.claude/debug/latest
+```
+
+常见开关：
+
+- `--debug=<filter>`：按模块包含/排除，例如 `--debug=ink,render`、`--debug=!1p,!file`
+- `--debug-to-stderr`（`-d2e`）：日志同时打到 stderr
+- `--debug-file <path>`：写到指定文件
+- `CLAUDE_CODE_DEBUG_LOG_LEVEL=verbose`：连带输出更啰嗦的诊断（默认 `debug`）
+
+会话中途也可以运行 `/debug` 开启日志并回读。
+
+### 终端录制（asciicast）
+
+把整段 TUI 录成 asciicast v2，可用 `asciinema` 回放。录制器仅在 `USER_TYPE=ant` 且 `CLAUDE_CODE_TERMINAL_RECORDING=1` 时启用，脚本已替你设好这两个变量：
+
+```bash
+bun run dev:record
+```
+
+录制文件落在 `~/.claude/projects/<sanitized-cwd>/<sessionId>-<timestamp>.cast`：
+
+```bash
+asciinema play ~/.claude/projects/<...>/<sessionId>-*.cast
+```
+
 ### React DevTools（查看 Ink 的 UI 组件树）
 
 CLI 的界面由自定义的 Ink renderer 渲染，默认在 React DevTools 里是看不到的。用独立的 React DevTools 应用即可查看其组件树、props/hooks，并随交互实时刷新。
