@@ -53,3 +53,25 @@ describe('renderForTest', () => {
     expect(stripAnsi(app.lastFrame())).toContain('hello alan')
   })
 })
+
+describe('frame events (onFrame)', () => {
+  test('records timing and a phase breakdown per rendered frame', async () => {
+    const app = await renderForTest(<Counter />)
+    expect(app.frameEvents.length).toBeGreaterThan(0)
+
+    const [first] = app.frameEvents
+    expect(first.durationMs).toBeGreaterThanOrEqual(0)
+    // phases is always populated when onFrame is wired (ink.tsx:851).
+    expect(first.phases?.write).toBeGreaterThanOrEqual(0)
+    expect(first.phases?.patches).toBeGreaterThanOrEqual(0)
+    expect(Array.isArray(first.flickers)).toBe(true)
+  })
+
+  test('emits another event for each post-input frame', async () => {
+    const app = await renderForTest(<Counter />)
+    const before = app.frameEvents.length
+    app.write(' ')
+    await app.tick()
+    expect(app.frameEvents.length).toBeGreaterThan(before)
+  })
+})

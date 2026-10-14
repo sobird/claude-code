@@ -38,6 +38,7 @@ import { PassThrough, Readable } from 'node:stream'
 
 import React, { type ReactNode } from 'react'
 import { render, ThemeProvider, type Instance } from 'src/ink.js'
+import type { FrameEvent } from 'src/ink/frame.js'
 // BSU/ESU = Begin/End Synchronized Update — the DEC-2026 markers Ink wraps
 // around each frame. Absent on plain pipes, hence lastFrame()'s raw fallback.
 import { BSU, ESU } from 'src/ink/termio/dec.js'
@@ -47,6 +48,8 @@ export type Harness = {
   lastFrame: () => string
   /** Every complete frame captured so far, oldest first. */
   frames: string[]
+  /** Per-frame timing/phases/flickers, straight from RenderOptions.onFrame. */
+  frameEvents: FrameEvent[]
   /** Bytes written to stdout that are NOT part of a complete frame — the
    *  terminal control/query sequences around the frames. Raw ANSI. */
   raw: () => string
@@ -181,6 +184,7 @@ export async function renderForTest(node: ReactNode, { columns = 100 }: { column
   const stdin = new FakeStdin()
 
   const reader = new FrameReader(stdout)
+  const frameEvents: FrameEvent[] = []
 
   let stderrOutput = ''
   let lastStderr = ''
@@ -193,12 +197,14 @@ export async function renderForTest(node: ReactNode, { columns = 100 }: { column
     stdout: stdout as unknown as NodeJS.WriteStream,
     stderr: stderr as unknown as NodeJS.WriteStream,
     stdin: stdin as unknown as NodeJS.ReadStream,
+    onFrame: (event) => frameEvents.push(event),
     patchConsole: false,
   })
   instances.add(instance)
 
   return {
     frames: reader.frames,
+    frameEvents,
     lastFrame: () => reader.lastFrame(),
     raw: () => reader.raw(),
     lastStderrFrame: () => lastStderr,
