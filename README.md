@@ -73,6 +73,30 @@ npm link
 node dist/cli.js
 ```
 
+### React DevTools（查看 Ink 的 UI 组件树）
+
+CLI 的界面由自定义的 Ink renderer 渲染，默认在 React DevTools 里是看不到的。用独立的 React DevTools 应用即可查看其组件树、props/hooks，并随交互实时刷新。
+
+前置条件：
+
+- 全局安装独立前端应用（自带 Electron，会打开一个窗口并监听 `8097` 端口）：
+  ```bash
+  npm i -g react-devtools
+  ```
+- 后端依赖 `react-devtools-core` 已在仓库的 `devDependencies` 中，无需额外安装。
+
+使用步骤：
+
+1. 终端 A 启动前端：`react-devtools`
+2. 终端 B 以开发模式启动 CLI：`bun run dev`（Bun 默认 `NODE_ENV=development`，会自动加载 `src/ink/devtools.ts`）
+3. 在 DevTools 窗口顶部把 renderer 切到 `ink`，即可看到组件树并实时刷新。
+
+说明：
+
+- 仅在开发模式生效：`src/ink/reconciler.ts` 在 `NODE_ENV === 'development'` 下动态引入 `src/ink/devtools.ts`，生产构建不会加载。
+- `react-devtools-core` 的后端是按浏览器环境写的，该模块会把 `self`/`window` 别名到 `globalThis`（对整个进程生效），再依次调用 `initialize()`、`connectToDevTools()`。
+- 若 `react-devtools` 报 `Electron failed to install correctly`，说明 Electron 二进制没下载成功；设置镜像 `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/` 后重装，或删除 `node_modules/electron` 再重装。
+
 ## 免责声明
 
 本仓库仅供个人学习、研究、交流和参考使用，请勿将其用于任何商业活动
