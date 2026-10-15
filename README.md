@@ -60,6 +60,18 @@ npm link
 
 ## 🐛 调试
 
+### 实时预览（改代码自动重画）
+
+想「改一个组件立刻看到效果」，用这个 harness：它把目标界面渲染进终端，`bun --watch` 监视到文件改动就重启进程重画。
+
+```bash
+bun run dev:ui
+```
+
+编辑 `scripts/ui-harness.tsx` 里 `Demo()` 返回的组件即可切换预览对象，保存后自动重载，`Ctrl+C` 退出。真实界面一般需要 app 的 provider，harness 已按 `tests/testing/ink.tsx` 包好 `AppStateProvider` + `KeybindingSetup`（`render` 另加 `ThemeProvider`）。
+
+说明：全屏 TUI 没法真正热替换（Ink 的 reconciler 持有终端状态，中途换树会错位），所以这里的「实时」是**整进程重启**；harness 在退出信号里先 `unmount()`，让 Ink 复原 raw mode / 光标，避免重启之间把终端弄乱。
+
 ### 开发模式调试
 
 打开`vscode`运行和调试面板，选择`⚡️ Attach to claude code`，点击`开始调试（F5）`。

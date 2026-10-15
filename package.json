@@ -41,6 +41,7 @@
     "dev": "bun scripts/dev.ts",
     "dev:log": "bun scripts/dev.ts --debug",
     "dev:record": "USER_TYPE=ant CLAUDE_CODE_TERMINAL_RECORDING=1 bun scripts/dev.ts",
+    "dev:ui": "bun --watch scripts/ui-harness.tsx",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
