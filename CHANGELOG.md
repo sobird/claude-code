@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.0](https://github.com/sobird/claude-code/compare/v1.0.0...v1.1.0) (2026-10-15)
+
+
+### Features
+
+* add a live UI preview harness for Ink components ([7bfa1df](https://github.com/sobird/claude-code/commit/7bfa1dfda7257b5283689a215ffeb9d9ec10cf4f))
+* add custom AI platform configuration support ([52f1d99](https://github.com/sobird/claude-code/commit/52f1d991b4f6209a2ec5bddd0fdd38a9d3176471))
+* clean up preflight checks ([084b7b1](https://github.com/sobird/claude-code/commit/084b7b161ba6df9208a04ec5af2ec30de6cb5a24))
+* connect the Ink reconciler to React DevTools in development ([bb412e5](https://github.com/sobird/claude-code/commit/bb412e5d999256bb19178e30da978843383fed75))
+* generate distribution package.json during build ([2d34a06](https://github.com/sobird/claude-code/commit/2d34a06fef749b3829dff5d6b83a950982932dec))
+
+
+### Bug Fixes
+
+* keep the Ink reconciler module synchronous ([6aefe8f](https://github.com/sobird/claude-code/commit/6aefe8fa6ad4876d55c8cd31ec8dd0e306e36e2e))
+
 ## 1.0.0 (2026-04-19)
 
 
