@@ -59,7 +59,7 @@ export type Message = {
   [key: string]: unknown
 }
 
-export type AssistantMessage = Message & { type: 'assistant' }
+export type AssistantMessage = Message & { type: 'assistant'; requestId?: string }
 export type AttachmentMessage<T = unknown> = Message & {
   type: 'attachment'
   attachment: { type: string; [key: string]: unknown }

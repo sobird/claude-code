@@ -3,10 +3,10 @@ import { randomUUID } from 'node:crypto'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources'
 import * as React from 'react'
 import { BashModeProgress } from 'src/components/BashModeProgress.js'
-import type { SetToolJSXFn } from 'src/Tool.js'
+import type { SetToolJSXFn, ToolProgress } from 'src/Tool.js'
 import { BashTool } from 'src/tools/BashTool/BashTool.js'
 import type { AttachmentMessage, SystemMessage, UserMessage } from 'src/types/message.js'
-import type { ShellProgress } from 'src/types/tools.js'
+import type { BashProgress, PowerShellProgress } from 'src/types/tools.js'
 
 import { logEvent } from '../../services/analytics/index.js'
 import { errorMessage, ShellError } from '../errors.js'
@@ -66,8 +66,8 @@ export async function processBashCommand(
       },
     }
 
-    // Progress UI — shared across both shell backends (both emit ShellProgress)
-    const onProgress = (progress: { data: ShellProgress }) => {
+    // Progress UI — shared across both shell backends (both emit BashProgress)
+    const onProgress = (progress: ToolProgress<BashProgress | PowerShellProgress>) => {
       setToolJSX({
         jsx: (
           <>

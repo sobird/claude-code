@@ -18,14 +18,15 @@ export type CliHighlight = {
 // faulted in.
 let cliHighlightPromise: Promise<CliHighlight | null> | undefined
 
-let loadedGetLanguage: typeof import('highlight.js').getLanguage | undefined
+let loadedGetLanguage: typeof import('highlight.js').default.getLanguage | undefined
 
 async function loadCliHighlight(): Promise<CliHighlight | null> {
   try {
     const cliHighlight = await import('cli-highlight')
     // cache hit — cli-highlight already loaded highlight.js
     const highlightJs = await import('highlight.js')
-    loadedGetLanguage = highlightJs.getLanguage
+    // highlight.js has no ESM named exports; getLanguage lives on the default export
+    loadedGetLanguage = highlightJs.default.getLanguage
     return {
       highlight: cliHighlight.highlight,
       supportsLanguage: cliHighlight.supportsLanguage,

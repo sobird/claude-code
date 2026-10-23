@@ -2,7 +2,12 @@ import { feature } from 'bun:bundle'
 
 import * as React from 'react'
 import { buildTool, type ToolDef, toolMatchesName } from 'src/Tool.js'
-import type { Message as MessageType, NormalizedUserMessage } from 'src/types/message.js'
+import type {
+  AssistantMessage,
+  Message as MessageType,
+  NormalizedUserMessage,
+  ProgressMessage,
+} from 'src/types/message.js'
 import { getQuerySourceForAgent } from 'src/utils/promptCategory.js'
 import { z } from 'zod/v4'
 
@@ -276,10 +281,10 @@ export type RemoteLaunchedOutput = {
 
 type InternalOutput = Output | TeammateSpawnedOutput | RemoteLaunchedOutput
 
-import type { AgentToolProgress, ShellProgress } from '../../types/tools.js'
+import type { AgentToolProgress, BashProgress, PowerShellProgress } from '../../types/tools.js'
 // AgentTool forwards both its own progress events and shell progress
 // events from the sub-agent so the SDK receives tool_progress updates during bash/powershell runs.
-export type Progress = AgentToolProgress | ShellProgress
+export type Progress = AgentToolProgress | BashProgress | PowerShellProgress
 
 export const AgentTool = buildTool({
   async prompt({ agents, tools, getToolPermissionContext, allowedAgentTypes }) {
@@ -1264,15 +1269,16 @@ export const AgentTool = buildTool({
 
               // Forward bash_progress events from sub-agent to parent so the SDK
               // receives tool_progress events just as it does for the main agent.
-              if (
-                message.type === 'progress' &&
-                (message.data.type === 'bash_progress' || message.data.type === 'powershell_progress') &&
-                onProgress
-              ) {
-                onProgress({
-                  toolUseID: message.toolUseID,
-                  data: message.data,
-                })
+              if (message.type === 'progress' && onProgress) {
+                const progress = message as ProgressMessage<BashProgress | PowerShellProgress> & {
+                  toolUseID?: string
+                }
+                if (progress.data.type === 'bash_progress' || progress.data.type === 'powershell_progress') {
+                  onProgress({
+                    toolUseID: progress.toolUseID ?? '',
+                    data: progress.data,
+                  })
+                }
               }
 
               if (message.type !== 'assistant' && message.type !== 'user') {
@@ -1283,7 +1289,7 @@ export const AgentTool = buildTool({
               // Subagent streaming events are filtered out in runAgent.ts, so we
               // need to count tokens from completed messages here
               if (message.type === 'assistant') {
-                const contentLength = getAssistantMessageContentLength(message)
+                const contentLength = getAssistantMessageContentLength(message as AssistantMessage)
                 if (contentLength > 0) {
                   toolUseContext.setResponseLength((len) => len + contentLength)
                 }
@@ -1291,6 +1297,9 @@ export const AgentTool = buildTool({
 
               const normalizedNew = normalizeMessages([message])
               for (const m of normalizedNew) {
+                if (!Array.isArray(m.message.content)) {
+                  continue
+                }
                 for (const content of m.message.content) {
                   if (content.type !== 'tool_use' && content.type !== 'tool_result') {
                     continue
