@@ -167,9 +167,9 @@
     {
       "id": "behavior:autocompact-thrash",
       "kind": "behavior",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "autocompact thrash 检测与窗口配置"
+      "status": "ported",
+      "evidence": ["bundle:9497077", "bundle:9498230", "bundle:9428173", "bundle:9428365"],
+      "notes": "rapid-refill breaker：3 回合窗口内连续 3 次快速回填后停止 autocompact 并报错（R28；运行时 thrash 无法经 probe 驱动，静态偏移为权威证据）"
     },
     {
       "id": "behavior:cleanup-period-days",

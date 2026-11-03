@@ -1,0 +1,6 @@
+{
+  "args": ["--version"],
+  "breakpoints": [],
+  "capture": [],
+  "notes": "A runtime autocompact-thrash cannot be driven through the probe: it requires three real back-to-back context refills to the threshold. The evidence for the rapid-refill breaker is static, from the 2.1.89 bundle at offsets 9497077, 9498230, 9428173, and 9428365."
+}

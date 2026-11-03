@@ -52,6 +52,10 @@ export type AutoCompactTrackingState = {
   // Used as a circuit breaker to stop retrying when the context is
   // irrecoverably over the limit (e.g., prompt_too_long).
   consecutiveFailures?: number
+  // Consecutive times the context refilled to the limit within
+  // RAPID_REFILL_TURN_WINDOW turns of the previous compact. Reset when a
+  // compact is not followed by a rapid refill.
+  consecutiveRapidRefills?: number
 }
 
 export const AUTOCOMPACT_BUFFER_TOKENS = 13_000
@@ -63,6 +67,29 @@ export const MANUAL_COMPACT_BUFFER_TOKENS = 3_000
 // BQ 2026-03-10: 1,279 sessions had 50+ consecutive failures (up to 3,272)
 // in a single session, wasting ~250K API calls/day globally.
 const MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3
+
+// Rapid-refill breaker: if the context refills to the autocompact threshold
+// within this many turns of the previous compact, count it as a rapid refill.
+// After MAX_CONSECUTIVE_RAPID_REFILLS in a row, stop autocompacting and tell
+// the user the context is thrashing instead of compacting forever.
+export const RAPID_REFILL_TURN_WINDOW = 3
+export const MAX_CONSECUTIVE_RAPID_REFILLS = 3
+
+export function computeConsecutiveRapidRefills(
+  tracking: AutoCompactTrackingState | undefined,
+  turnWindow = RAPID_REFILL_TURN_WINDOW,
+): number {
+  return tracking?.compacted === true && tracking.turnCounter < turnWindow
+    ? (tracking?.consecutiveRapidRefills ?? 0) + 1
+    : 0
+}
+
+export function isRapidRefillBreakerTripped(
+  consecutiveRapidRefills: number,
+  maxConsecutive = MAX_CONSECUTIVE_RAPID_REFILLS,
+): boolean {
+  return consecutiveRapidRefills >= maxConsecutive
+}
 
 export function getAutoCompactThreshold(model: string): number {
   const effectiveContextWindow = getEffectiveContextWindowSize(model)
@@ -226,6 +253,8 @@ export async function autoCompactIfNeeded(
   wasCompacted: boolean
   compactionResult?: CompactionResult
   consecutiveFailures?: number
+  consecutiveRapidRefills?: number
+  rapidRefillBreakerTripped?: boolean
 }> {
   if (isEnvTruthy(process.env.DISABLE_COMPACT)) {
     return { wasCompacted: false }
@@ -246,6 +275,18 @@ export async function autoCompactIfNeeded(
 
   if (!shouldCompact) {
     return { wasCompacted: false }
+  }
+
+  // Rapid-refill breaker: if the context keeps refilling to the limit within
+  // a few turns of the previous compact, compaction alone can't keep up.
+  // Stop compacting and let the caller surface a thrash error instead.
+  const consecutiveRapidRefills = computeConsecutiveRapidRefills(tracking)
+  if (isRapidRefillBreakerTripped(consecutiveRapidRefills)) {
+    logForDebugging(
+      `autocompact: rapid-refill breaker tripped — ${consecutiveRapidRefills} consecutive refills within <${RAPID_REFILL_TURN_WINDOW} turns each (last was ${tracking?.turnCounter} turns)`,
+      { level: 'warn' },
+    )
+    return { wasCompacted: false, rapidRefillBreakerTripped: true }
   }
 
   const recompactionInfo: RecompactionInfo = {
@@ -278,6 +319,7 @@ export async function autoCompactIfNeeded(
     return {
       wasCompacted: true,
       compactionResult: sessionMemoryResult,
+      consecutiveRapidRefills,
     }
   }
 
@@ -302,6 +344,7 @@ export async function autoCompactIfNeeded(
       compactionResult,
       // Reset failure count on success
       consecutiveFailures: 0,
+      consecutiveRapidRefills,
     }
   } catch (error) {
     if (!hasExactErrorMessage(error, ERROR_MESSAGE_USER_ABORT)) {

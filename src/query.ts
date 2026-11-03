@@ -380,21 +380,37 @@ async function* queryLoop(
     const fullSystemPrompt = asSystemPrompt(appendSystemContext(systemPrompt, systemContext))
 
     queryCheckpoint('query_autocompact_start')
-    const { compactionResult, consecutiveFailures } = await deps.autocompact(
-      messagesForQuery,
-      toolUseContext,
-      {
-        systemPrompt,
-        userContext,
-        systemContext,
+    const { compactionResult, consecutiveFailures, consecutiveRapidRefills, rapidRefillBreakerTripped } =
+      await deps.autocompact(
+        messagesForQuery,
         toolUseContext,
-        forkContextMessages: messagesForQuery,
-      },
-      querySource,
-      tracking,
-      snipTokensFreed,
-    )
+        {
+          systemPrompt,
+          userContext,
+          systemContext,
+          toolUseContext,
+          forkContextMessages: messagesForQuery,
+        },
+        querySource,
+        tracking,
+        snipTokensFreed,
+      )
     queryCheckpoint('query_autocompact_end')
+
+    if (rapidRefillBreakerTripped) {
+      logEvent('tengu_auto_compact_rapid_refill_breaker', {
+        consecutiveRapidRefills: tracking?.consecutiveRapidRefills ?? 0,
+        turnsSincePreviousCompact: tracking?.turnCounter ?? -1,
+        queryChainId: queryChainIdForAnalytics,
+        queryDepth: queryTracking.depth,
+      })
+      yield createAssistantAPIErrorMessage({
+        content:
+          'Autocompact is thrashing: the context refilled to the limit within 3 turns of the previous compact, 3 times in a row. A file being read or a tool output is likely too large for the context window. Try reading in smaller chunks, or use /clear to start fresh.',
+        error: 'invalid_request',
+      })
+      return { reason: 'rapid_refill_breaker' }
+    }
 
     if (compactionResult) {
       const { preCompactTokenCount, postCompactTokenCount, truePostCompactTokenCount, compactionUsage } =
@@ -442,6 +458,7 @@ async function* queryLoop(
         turnId: deps.uuid(),
         turnCounter: 0,
         consecutiveFailures: 0,
+        consecutiveRapidRefills,
       }
 
       const postCompactMessages = buildPostCompactMessages(compactionResult)
