@@ -6,7 +6,7 @@ import ts from 'typescript'
 import { fingerprintFunction } from './fingerprint'
 import type { AlignNode, AlignResult } from './types'
 
-export type AlignOptions = {
+type AlignOptions = {
   referencePath: string
   mapPath?: string
   targetPath: string
@@ -14,7 +14,6 @@ export type AlignOptions = {
 }
 
 type FnNode = {
-  node: ts.Node
   fingerprint: string
   kind: string
   name?: string
@@ -48,7 +47,8 @@ function functionName(node: ts.Node): string | undefined {
 }
 
 // ScriptKind.JS forces JavaScript parsing, which is the source-file-level
-// equivalent of the compiler `allowJs` flag.
+// equivalent of the compiler `allowJs` flag. Parent nodes stay unset so the
+// full parse trees can be collected for GC once functions have been extracted.
 function collectFunctions(sourceFile: ts.SourceFile): FnNode[] {
   const out: FnNode[] = []
   const visit = (node: ts.Node): void => {
@@ -56,7 +56,6 @@ function collectFunctions(sourceFile: ts.SourceFile): FnNode[] {
       const start = node.getStart(sourceFile)
       const { line, character } = sourceFile.getLineAndCharacterOfPosition(start)
       out.push({
-        node,
         fingerprint: fingerprintFunction(node),
         kind: ts.SyntaxKind[node.kind],
         name: functionName(node),
@@ -78,7 +77,7 @@ async function parseFunctions(filePath: string): Promise<FnNode[]> {
     filePath,
     source,
     { languageVersion: ts.ScriptTarget.Latest },
-    true,
+    false,
     ts.ScriptKind.JS,
   )
   return collectFunctions(sourceFile)
@@ -182,6 +181,8 @@ async function attributeWithoutMap(pairs: Pair[], priorAlignPath?: string): Prom
   const inherited = priorAlignPath ? await loadPriorSources(priorAlignPath) : new Map<string, AlignNode['source']>()
   return pairs.map((pair) => {
     const node = toAlignNode(pair)
+    // Target-only nodes are `new` by definition: they have no reference
+    // counterpart to inherit attribution from, so they stay unattributed.
     if (!pair.reference) {
       node.classification = 'new'
       node.confidence = 'low'
@@ -191,7 +192,7 @@ async function attributeWithoutMap(pairs: Pair[], priorAlignPath?: string): Prom
     const source = inherited.get(pair.target.fingerprint)
     if (source) {
       node.source = source
-      node.classification = 'matched'
+      node.classification = pair.kind
       node.confidence = 'medium'
     } else {
       node.classification = 'unattributed'
