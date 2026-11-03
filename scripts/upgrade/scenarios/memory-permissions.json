@@ -1,0 +1,6 @@
+{
+  "args": ["--version"],
+  "breakpoints": [],
+  "capture": [],
+  "notes": "The probe cannot exercise agent/skill memory permissions: permission bypasses only fire inside a live tool-use permission decision (Read/Write on an agent memory path), and owner-only chmod happens when bundled skill files are extracted at runtime. A --version run reaches neither, so evidence is static from package/cli.js (bundle offsets 11384382, 11385809, 10900767, 11372409) and the existing source, not from probe output."
+}

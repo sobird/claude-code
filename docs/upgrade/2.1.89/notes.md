@@ -63,6 +63,18 @@
 - 与 R35 示例的偏差：`classifyCommandName('node')` 按源码契约返回 `'unknown'`（裸名歧义），并非 `'application'`；测试固定为 `'unknown'`，`'application'` 用路径形式（如 `./node`）覆盖。
 - `scripts/upgrade/scenarios/fast-powershell-sandbox.json` 为 `--version` 探针场景；上述行为需要真实 API/pwsh/sandbox 状态，probe 无法复现，证据为 `package/cli.js` 静态偏移。
 
+## Task 25 — agent/skill memory permissions (R36)
+
+- 结论：2.1.89 的 agent/skill memory 文件权限在 2.1.88 源码树中已经存在，2.1.88→2.1.89 没有增量。本 Task 仅做验证与回归测试，未改动任何 `src/` 文件（R36 否定了 brief 中虚构的 `memoryFileMode()` / `src/utils/permissions/memoryMode.ts`）。
+- bundle 偏移 → 既有源码位置（bundle offset 为解码后字符偏移）：
+  - `11384382`（`Agent memory files are allowed for writing`）→ Write 权限绕过：`src/utils/permissions/filesystem.ts:1389`–`1398`，条件为 `isAgentMemoryPath(normalizedPath)`。
+  - `11385809`（`Agent memory files are allowed for reading`）→ Read 权限绕过：`src/utils/permissions/filesystem.ts:1531`–`1540`，同样条件为 `isAgentMemoryPath(normalizedPath)`。
+  - `11372409`（bundle `D18`，agent-memory 路径解析与判定）→ `src/tools/AgentTool/agentMemory.ts` 的 `getAgentMemoryDir`、`getAgentMemoryEntrypoint`、`getMemoryScopeDisplay`、`isAgentMemoryPath`、`loadAgentMemoryPrompt`；`isAgentMemoryPath` 先 `normalize()` 再前缀匹配，阻止 `..` 穿越。
+  - `10900767`（bundled skill 解包：`mkdir(...,{recursive:!0,mode:448})` 与文件 `mode:384`）→ `src/skills/bundledSkills.ts:156`（`mode: 0o700`）与 `safeWriteFile`（`0o600`）。bundle 的 `fEY` 还会拒绝 `..` 逃逸的 skill 文件路径。
+- 无增量的补充：`ensureMemoryDirExists`（bundle `Pd8` @11366051，`src/memdir/memdir.ts:129`）在两个版本中都不设置 mode，故不改动。
+- 测试：`tests/memory-permissions.test.ts` 固定 `getAgentMemoryDir` 三种 scope（项目/用户/本地）与 `:`→`-` 消毒、`isAgentMemoryPath` 对三个 scope 的 `MEMORY.md` 放行、对 `/etc/passwd` 及 `..` 穿越路径拒绝、`getAgentMemoryEntrypoint` 与 `getMemoryScopeDisplay` 文案。skill 0o700/0o600 与权限绕过位于未导出的内部实现，按 R36 以静态 bundle 证据记录，不直接导入。
+- `scripts/upgrade/scenarios/memory-permissions.json` 为 `--version` 探针场景；权限绕过只在真实工具调用的权限判定中触发，chmod 只在运行时解包 skill 时发生，probe 均无法复现，证据为 `package/cli.js` 静态偏移。
+
 ## 未解点
 
 ### defer 暂停/恢复

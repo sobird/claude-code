@@ -216,9 +216,15 @@
     {
       "id": "bundle-only:memory-permissions",
       "kind": "bundle-only",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "仅 bundle 可见：agent/skill memory 权限"
+      "status": "already-present",
+      "evidence": [
+        "bundle:11384382",
+        "bundle:11385809",
+        "bundle:10900767",
+        "bundle:11372409",
+        "scenario:memory-permissions.json"
+      ],
+      "notes": "agent/skill memory 权限在源码中已存在，无需移植：Read/Write 对 agent memory 路径的自动放行（filesystem.ts，isAgentMemoryPath）与 bundled skill 解包的目录 0o700/文件 0o600 均已在位（R36）"
     }
   ]
 }
