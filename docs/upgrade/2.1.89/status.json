@@ -174,9 +174,9 @@
     {
       "id": "behavior:cleanup-period-days",
       "kind": "behavior",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "cleanupPeriodDays 0 改为校验失败，描述指向 --no-session-persistence"
+      "status": "ported",
+      "evidence": ["bundle:1057171", "bundle:1075053"],
+      "notes": "cleanupPeriodDays 拒绝 0（改为 positive 校验），描述与校验提示指向 --no-session-persistence；flag 提示文案已移植"
     },
     {
       "id": "behavior:bash-stale-edit",
