@@ -22,4 +22,11 @@
 - 外部构建已编译 `KAIROS_BRIEF` 特性，命令模块会被打包；但运行时可见性仍由 GrowthBook `tengu_kairos_brief_config.enable_slash_command`（默认 `false`）控制，`isEnabled` 直接返回该值。
 - R19：slash 命令不出现在 CLI `--help`，故验收改为「`features` 含 `KAIROS_BRIEF`」+「external `dist/cli.js` 含 `Toggle brief-only mode`」。
 
+### /buddy
+
+- 依据 `package/cli.js` 静态抽取：注册 `type:"local-jsx",name:"buddy",description:"Hatch a coding companion · pet, off",immediate:!0` @11229990；`call()` 行为同段 11229990–11230620；可见性门 `H_7`（firstParty、非 essential-traffic、2026-04 起；ant 构建跳过日期门）同段。
+- soul 生成 `sBK`/`FRY` @11212865 / 11229627：`sideQuery` + `getSmallFastModel()` + `querySource:"buddy_companion"`、JSON schema 输出、inspiration 词 LCG、fallback soul、hatch 落盘 `{ soul, hatchedAt }` 均移植到 `src/buddy/soul.ts`；UI 面板/孵化动画对应 `aQ8`/`YgK`。
+- R20：上游 `pet` 会向私有鉴权端点发起 reaction 请求并显示气泡；本仓库不移植 reaction plumbing，`/buddy pet` 仅写 `companionPetAt`（爱心仍由 `CompanionSprite` 渲染），孵化后也不生成 reaction。命令面板因此没有 “last said” 区块。
+- R21：slash 命令不出现在 CLI `--help`，故验收改为「`features` 含 `BUDDY`」+「external `dist/cli.js` 含 `Hatch a coding companion`」；`scripts/upgrade/scenarios/cmd-buddy.json` 为 `--version` 探针场景，probe 产出空 trace，静态偏移为验收证据。
+
 ## 未解点

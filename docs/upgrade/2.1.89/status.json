@@ -25,9 +25,15 @@
     {
       "id": "cmd:buddy",
       "kind": "command",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增/更新 /buddy 命令及 buddy 模块"
+      "status": "ported",
+      "evidence": [
+        "bundle:name:\"buddy\"",
+        "bundle:11229990",
+        "bundle:Hatch a coding companion · pet, off",
+        "bundle:buddy_companion",
+        "bundle:H_7"
+      ],
+      "notes": "新增/更新 /buddy 命令及 buddy 模块；soul 生成已移植，reaction 端点因私有鉴权近似为不显示气泡（R20）"
     },
     {
       "id": "cmd:web-setup",

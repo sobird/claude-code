@@ -27,7 +27,7 @@ export const features = [
   // 'BG_SESSIONS',
   // 'BREAK_CACHE_COMMAND',
   'BRIDGE_MODE',
-  // 'BUDDY',
+  'BUDDY',
   'BUILDING_CLAUDE_APPS',
   'BUILTIN_EXPLORE_PLAN_AGENTS',
   // 'BYOC_ENVIRONMENT_RUNNER',
