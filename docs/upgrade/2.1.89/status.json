@@ -160,9 +160,9 @@
     {
       "id": "behavior:mcp-nonblocking",
       "kind": "behavior",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "MCP_CONNECTION_NONBLOCKING 与 -p 连接等待逻辑"
+      "status": "ported",
+      "evidence": ["bundle:12985577", "bundle:12985681"],
+      "notes": "MCP_CONNECTION_NONBLOCKING 与 -p 连接等待逻辑（R29）：共享 waitForMcpConnect 同时门控 regular 与 claude.ai 两批连接，默认 5s 上限，env 为真时完全异步；probe 无法观测等待时序，静态偏移为权威证据"
     },
     {
       "id": "behavior:autocompact-thrash",
