@@ -73,6 +73,7 @@ export type FooterItem = 'tasks' | 'tmux' | 'bagel' | 'teams' | 'bridge' | 'comp
 
 export type AppState = DeepImmutable<{
   settings: SettingsJson
+  autoCompactWindow?: number
   verbose: boolean
   mainLoopModel: ModelSetting
   mainLoopModelForSession: ModelSetting
@@ -443,8 +444,10 @@ export function getDefaultAppState(): AppState {
   const initialMode: PermissionMode =
     teammateUtils.isTeammate() && teammateUtils.isPlanModeRequired() ? 'plan' : 'default'
 
+  const settings = getInitialSettings()
   return {
-    settings: getInitialSettings(),
+    settings,
+    autoCompactWindow: settings.autoCompactWindow,
     tasks: {},
     agentNameRegistry: new Map(),
     verbose: false,

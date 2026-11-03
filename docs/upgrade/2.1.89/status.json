@@ -4,8 +4,12 @@
     {
       "id": "cmd:autocompact",
       "kind": "command",
-      "status": "unresolved",
-      "evidence": [],
+      "status": "ported",
+      "evidence": [
+        "bundle:name:\"autocompact\"",
+        "bundle:CLAUDE_CODE_AUTO_COMPACT_WINDOW",
+        "scenario:cmd-autocompact.json"
+      ],
       "notes": "新增命令：autocompact 窗口配置 UI"
     },
     {

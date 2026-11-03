@@ -259,6 +259,14 @@ export const SettingsSchema = lazySchema(() =>
         .describe(
           'Number of days to retain chat transcripts (default: 30). Setting to 0 disables session persistence entirely: no transcripts are written and existing transcripts are deleted at startup.',
         ),
+      autoCompactWindow: z
+        .number()
+        .int()
+        .min(100_000)
+        .max(1_000_000)
+        .optional()
+        .catch(undefined)
+        .describe('Auto-compact window size'),
       env: EnvironmentVariablesSchema().optional().describe('Environment variables to set for Claude Code sessions'),
       // Attribution for commits and PRs
       attribution: z
