@@ -50,7 +50,7 @@ export function setEligibility(v: boolean): boolean {
 }
 
 export function getSettingsPath(): string {
-  return join(getClaudeConfigHomeDir(), SETTINGS_FILENAME)
+  return process.env.CLAUDE_CODE_REMOTE_SETTINGS_PATH ?? join(getClaudeConfigHomeDir(), SETTINGS_FILENAME)
 }
 
 // sync IO — settings pipeline is sync. fileRead and jsonRead are leaves;

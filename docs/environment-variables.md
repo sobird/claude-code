@@ -85,9 +85,6 @@ CLAUDE_CODE_EAGER_FLUSH=1
 # 协作者模式
 CLAUDE_CODE_IS_COWORK=1
 
-# 禁用命令注入检查
-CLAUDE_CODE_DISABLE_COMMAND_INJECTION_CHECK=1
-
 # 启用简单模式（简化界面和功能）
 CLAUDE_CODE_SIMPLE=1
 
@@ -348,6 +345,31 @@ CLAUDE_CODE_POST_FOR_SESSION_INGRESS_V2=1
 
 # Claude Code SDK 版本
 CLAUDE_AGENT_SDK_VERSION=...
+```
+
+## 2.1.89 新增变量
+
+```bash
+# 覆盖 Agent 工具中"不要随意派生子代理"的成本引导段落；设为真值强制开启、设为零值强制关闭，否则仅 Pro 订阅且 GrowthBook tengu_willow_prism 开启时生效
+CLAUDE_CODE_AGENT_COST_STEER=1
+
+# 强制启用 brief-only 模式（开发/测试绕过权益校验）
+CLAUDE_CODE_BRIEF=1
+
+# 禁用内置 Claude API skill 的注册
+CLAUDE_CODE_DISABLE_CLAUDE_API_SKILL=1
+
+# 指定一个 JSON 文件作为远程托管设置，跳过 API 拉取
+CLAUDE_CODE_REMOTE_SETTINGS_PATH=/path/to/remote-settings.json
+
+# resume-return 提示的最小会话闲置分钟数，默认 70（GrowthBook tengu_gleaming_fair 控制）
+CLAUDE_CODE_RESUME_THRESHOLD_MINUTES=70
+
+# resume-return 提示的最小估算 token 数，默认 100000（同上）
+CLAUDE_CODE_RESUME_TOKEN_THRESHOLD=100000
+
+# 为真时 print 模式启动不等待 MCP 连接（完全异步）；否则最多等待 5 秒
+MCP_CONNECTION_NONBLOCKING=1
 ```
 
 ## 注意事项

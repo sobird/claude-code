@@ -37,6 +37,10 @@ export function resetSyncCache(): void {
  * getSettings() to avoid circular dependencies during settings loading.
  */
 export function isRemoteManagedSettingsEligible(): boolean {
+  // 2.1.89: an explicit override file makes the user eligible regardless of
+  // auth/provider — the file is the source of truth instead of the API.
+  if (process.env.CLAUDE_CODE_REMOTE_SETTINGS_PATH) return (cached = setEligibility(true))
+
   if (cached !== undefined) return cached
 
   // 3p provider users should not hit the settings endpoint

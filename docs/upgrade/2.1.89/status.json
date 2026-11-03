@@ -56,86 +56,86 @@
     {
       "id": "env:CLAUDE_CODE_AGENT_COST_STEER",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增环境变量，待定位语义"
+      "status": "ported",
+      "evidence": ["bundle:9219929", "bundle:9226630"],
+      "notes": "新增环境变量；shouldSteerAgentCost() 门控 Agent 工具成本引导段落"
     },
     {
       "id": "env:CLAUDE_CODE_BRIEF",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增环境变量，/brief 模式开关"
+      "status": "already-present",
+      "evidence": ["bundle:8158390"],
+      "notes": "新增环境变量，/brief 模式开关；本仓库 main.tsx/BriefTool 已有读取点"
     },
     {
       "id": "env:CLAUDE_CODE_DISABLE_CLAUDE_API_SKILL",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增环境变量，禁用 Claude API skill"
+      "status": "ported",
+      "evidence": ["bundle:12793490"],
+      "notes": "新增环境变量，禁用 Claude API skill；skills/bundled/index.ts 注册守卫读取"
     },
     {
       "id": "env:CLAUDE_CODE_REMOTE_SETTINGS_PATH",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增环境变量，远程设置路径覆盖"
+      "status": "ported",
+      "evidence": ["bundle:7023139"],
+      "notes": "新增环境变量，远程设置路径覆盖；getSettingsPath/eligibility/fetchAndLoad 均读取"
     },
     {
       "id": "env:CLAUDE_CODE_RESUME_THRESHOLD_MINUTES",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增环境变量，resume 分钟阈值"
+      "status": "approximated",
+      "evidence": ["bundle:12342363"],
+      "notes": "resume-return 提示阈值（默认 70）。该提示由 GrowthBook tengu_gleaming_fair + resumeReturnDismissed 门控，本仓库无此功能，仅文档化"
     },
     {
       "id": "env:CLAUDE_CODE_RESUME_TOKEN_THRESHOLD",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增环境变量，resume token 阈值"
+      "status": "approximated",
+      "evidence": ["bundle:12342427"],
+      "notes": "resume-return 提示阈值（默认 100000）。该提示由 GrowthBook tengu_gleaming_fair + resumeReturnDismissed 门控，本仓库无此功能，仅文档化"
     },
     {
       "id": "env:MCP_CONNECTION_NONBLOCKING",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增环境变量，非阻塞 MCP 连接（无 CLAUDE_CODE_ 前缀）"
+      "status": "ported",
+      "evidence": ["bundle:12985577"],
+      "notes": "新增环境变量，非阻塞 MCP 连接（无 CLAUDE_CODE_ 前缀）；配合 behavior:mcp-nonblocking"
     },
     {
       "id": "env:CLAUDE_CODE_20250219_BETA_HEADER",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "2.1.89 移除，待确认 retained-internal 或删除"
+      "status": "retained-internal",
+      "evidence": ["bundle:absent:CLAUDE_CODE_20250219_BETA_HEADER"],
+      "notes": "2.1.89 bundle 无读取点，本仓库保留：src/constants/betas.ts"
     },
     {
       "id": "env:CLAUDE_CODE_DISABLE_COMMAND_INJECTION_CHECK",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "2.1.89 移除，待确认 retained-internal 或删除"
+      "status": "retained-internal",
+      "evidence": ["bundle:absent:CLAUDE_CODE_DISABLE_COMMAND_INJECTION_CHECK"],
+      "notes": "2.1.89 bundle 无读取点，本仓库保留：src/tools/BashTool/bashPermissions.ts（已从文档移除）"
     },
     {
       "id": "env:CLAUDE_CODE_DISABLE_MOUSE_CLICKS",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "2.1.89 移除，并入已存在的 CLAUDE_CODE_DISABLE_MOUSE"
+      "status": "retained-internal",
+      "evidence": ["bundle:absent:CLAUDE_CODE_DISABLE_MOUSE_CLICKS"],
+      "notes": "2.1.89 bundle 无读取点，本仓库保留：src/utils/fullscreen.ts:149"
     },
     {
       "id": "env:CLAUDE_CODE_OVERRIDE_DATE",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "2.1.89 移除，待确认 retained-internal 或删除"
+      "status": "retained-internal",
+      "evidence": ["bundle:absent:CLAUDE_CODE_OVERRIDE_DATE"],
+      "notes": "2.1.89 bundle 无读取点，本仓库保留：src/constants/common.ts"
     },
     {
       "id": "env:CLAUDE_CODE_VERIFY_PLAN",
       "kind": "env",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "2.1.89 移除，待确认 retained-internal 或删除"
+      "status": "retained-internal",
+      "evidence": ["bundle:absent:CLAUDE_CODE_VERIFY_PLAN"],
+      "notes": "2.1.89 bundle 无读取点，本仓库保留：src/utils/messages.ts / src/utils/attachments.ts / src/tools.ts"
     },
     {
       "id": "behavior:defer",

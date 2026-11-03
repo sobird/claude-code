@@ -389,6 +389,16 @@ async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null>
     return null
   }
 
+  // 2.1.89 override-file path: when CLAUDE_CODE_REMOTE_SETTINGS_PATH points at
+  // a JSON file, load it from cache/disk and skip the API fetch entirely.
+  const overridePath = process.env.CLAUDE_CODE_REMOTE_SETTINGS_PATH
+  if (overridePath) {
+    logForDebugging(
+      `Remote settings: Using override file ${overridePath} (CLAUDE_CODE_REMOTE_SETTINGS_PATH), skipping API fetch`,
+    )
+    return getRemoteManagedSettingsSyncFromCache()
+  }
+
   // Load cached settings from file
   const cachedSettings = getRemoteManagedSettingsSyncFromCache()
 
