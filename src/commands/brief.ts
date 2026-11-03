@@ -1,5 +1,3 @@
-import { feature } from 'bun:bundle'
-
 import { z } from 'zod/v4'
 
 import { getKairosActive, setUserMsgOptIn } from '../bootstrap/state.js'
@@ -43,12 +41,7 @@ const brief = {
   type: 'local-jsx',
   name: 'brief',
   description: 'Toggle brief-only mode',
-  isEnabled: () => {
-    if (feature('KAIROS') || feature('KAIROS_BRIEF')) {
-      return getBriefConfig().enable_slash_command
-    }
-    return false
-  },
+  isEnabled: () => getBriefConfig().enable_slash_command,
   immediate: true,
   load: () =>
     Promise.resolve({

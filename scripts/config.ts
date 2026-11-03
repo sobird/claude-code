@@ -58,7 +58,7 @@ export const features = [
   // 'IS_LIBC_GLIBC',
   // 'IS_LIBC_MUSL',
   // 'KAIROS',
-  // 'KAIROS_BRIEF',
+  'KAIROS_BRIEF',
   // 'KAIROS_CHANNELS',
   // 'KAIROS_DREAM',
   // 'KAIROS_GITHUB_WEBHOOKS',

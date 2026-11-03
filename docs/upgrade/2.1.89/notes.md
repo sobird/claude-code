@@ -16,4 +16,10 @@
 - AppState 近似：压缩服务读取初始设置快照（`getInitialSettings()`）而非 `AppState.autoCompactWindow`，避免 services 依赖 UI store；`/autocompact` 写入 `userSettings` 后需设置重载/下个会话生效。Task 19 必须保留该近似。
 - 格式/UI 近似：数值格式化沿用仓库 `formatTokens`；交互 UI 为只读 `Dialog`（无上下键滑块，未发送 `tengu_autocompact_dialog_opened`）；`GlobalConfig.autoCompactWindow` 已移除（保留 settings schema 与 AppState 字段）。
 
+### /brief
+
+- 依据 `package/cli.js` 静态抽取：注册 `type:"local-jsx",name:"brief",description:"Toggle brief-only mode"` @11179551。
+- 外部构建已编译 `KAIROS_BRIEF` 特性，命令模块会被打包；但运行时可见性仍由 GrowthBook `tengu_kairos_brief_config.enable_slash_command`（默认 `false`）控制，`isEnabled` 直接返回该值。
+- R19：slash 命令不出现在 CLI `--help`，故验收改为「`features` 含 `KAIROS_BRIEF`」+「external `dist/cli.js` 含 `Toggle brief-only mode`」。
+
 ## 未解点

@@ -18,9 +18,9 @@
     {
       "id": "cmd:brief",
       "kind": "command",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增/更新 /brief 命令及特性开关"
+      "status": "ported",
+      "evidence": ["bundle:name:\"brief\"", "bundle:11179551", "bundle:Toggle brief-only mode"],
+      "notes": "新增/更新 /brief 命令及特性开关；runtime 可见性仍由 GB tengu_kairos_brief_config.enable_slash_command 控制"
     },
     {
       "id": "cmd:buddy",
