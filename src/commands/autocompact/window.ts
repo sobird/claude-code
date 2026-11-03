@@ -1,44 +1,12 @@
-import { getSdkBetas } from '../../bootstrap/state.js'
 import { isAutoCompactEnabled } from '../../services/compact/autoCompact.js'
+import { resolveAutocompactWindow } from '../../services/compact/autocompactWindow.js'
 import type { ToolUseContext } from '../../Tool.js'
-import { getContextWindowForModel } from '../../utils/context.js'
 import { formatTokens } from '../../utils/format.js'
 import { getInitialSettings, updateSettingsForSource } from '../../utils/settings/settings.js'
-import { AUTOCOMPACT_MAX_WINDOW, AUTOCOMPACT_MIN_WINDOW, parseAutocompactArgs } from './index.js'
+import { parseAutocompactArgs } from './index.js'
 
-export type AutocompactWindowSource = 'env' | 'settings' | 'model'
-
-export type AutocompactWindow = {
-  configured: number
-  window: number
-  source: AutocompactWindowSource
-}
-
-/**
- * Mirrors upstream `VU` for the env override: `parseInt` only (no k/m
- * shorthand), non-positive or non-numeric values are ignored, values above the
- * maximum are capped, and values below the minimum are raised to it.
- */
-export function parseAutocompactEnvWindow(raw = process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW): number | undefined {
-  if (!raw) return undefined
-  const value = parseInt(raw, 10)
-  if (isNaN(value) || value <= 0) return undefined
-  return Math.max(AUTOCOMPACT_MIN_WINDOW, Math.min(value, AUTOCOMPACT_MAX_WINDOW))
-}
-
-/** Mirrors upstream `j56`: env wins over settings, which wins over the model default. */
-export function resolveAutocompactWindow(model: string, settingsWindow: number | undefined): AutocompactWindow {
-  const modelWindow = getContextWindowForModel(model, getSdkBetas())
-
-  const envWindow = parseAutocompactEnvWindow()
-  if (envWindow !== undefined) {
-    return { window: Math.min(modelWindow, envWindow), configured: envWindow, source: 'env' }
-  }
-  if (settingsWindow !== undefined) {
-    return { window: Math.min(modelWindow, settingsWindow), configured: settingsWindow, source: 'settings' }
-  }
-  return { window: modelWindow, configured: modelWindow, source: 'model' }
-}
+export type { AutocompactWindow, AutocompactWindowSource } from '../../services/compact/autocompactWindow.js'
+export { parseAutocompactEnvWindow } from '../../services/compact/autocompactWindow.js'
 
 /** Mirrors upstream `s2Y`: the multi-line status shown by `/autocompact` with no args. */
 export function showAutocompactWindow(model: string, settingsWindow: number | undefined): string {

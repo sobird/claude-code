@@ -12,5 +12,8 @@
 - 分析事件 `tengu_autocompact_command` 未发送：仓库 `LogEventMetadata` 只允许 boolean/number/undefined，而该事件含字符串 `action`，按“非平凡则省略”处理。
 - R16：测试按 2.1.89 语义使用 `'50000' → invalid`（范围下限 100k），并导出 `parseAutocompactArgs`；`'2m'` 同样越界为 invalid。
 - R17：`scripts/upgrade/scenarios/cmd-autocompact.json` 为 `--version` 探针场景，probe 产出空 trace（`/tmp/autocompact.json`）；以上静态偏移为验收证据。
+- R18：窗口配置真正参与压缩判定。`getEffectiveContextWindowSize()` 改为 `resolveAutocompactWindow(model, getInitialSettings().autoCompactWindow).window` 后再扣除摘要预留，因此 `/autocompact 300k` 会改变 autocompact 阈值；纯解析器与 `AUTOCOMPACT_MIN/MAX_WINDOW` 迁至 `src/services/compact/autocompactWindow.ts`（不依赖 `autoCompact.ts` 或命令模块）。
+- AppState 近似：压缩服务读取初始设置快照（`getInitialSettings()`）而非 `AppState.autoCompactWindow`，避免 services 依赖 UI store；`/autocompact` 写入 `userSettings` 后需设置重载/下个会话生效。Task 19 必须保留该近似。
+- 格式/UI 近似：数值格式化沿用仓库 `formatTokens`；交互 UI 为只读 `Dialog`（无上下键滑块，未发送 `tengu_autocompact_dialog_opened`）；`GlobalConfig.autoCompactWindow` 已移除（保留 settings schema 与 AppState 字段）。
 
 ## 未解点

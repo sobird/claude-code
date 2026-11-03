@@ -1,10 +1,8 @@
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
+import { AUTOCOMPACT_MAX_WINDOW, AUTOCOMPACT_MIN_WINDOW } from '../../services/compact/autocompactWindow.js'
 import type { Command } from '../../types/command.js'
 
-/** Lower bound accepted by `/autocompact` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. */
-export const AUTOCOMPACT_MIN_WINDOW = 100_000
-/** Upper bound accepted by `/autocompact` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. */
-export const AUTOCOMPACT_MAX_WINDOW = 1_000_000
+export { AUTOCOMPACT_MAX_WINDOW, AUTOCOMPACT_MIN_WINDOW }
 
 export type ParsedAutocompactArgs =
   | { action: 'show' }

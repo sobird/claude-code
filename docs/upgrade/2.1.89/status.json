@@ -7,10 +7,13 @@
       "status": "ported",
       "evidence": [
         "bundle:name:\"autocompact\"",
+        "bundle:9937634",
+        "bundle:9495310",
+        "bundle:9931819",
         "bundle:CLAUDE_CODE_AUTO_COMPACT_WINDOW",
         "scenario:cmd-autocompact.json"
       ],
-      "notes": "新增命令：autocompact 窗口配置 UI"
+      "notes": "新增命令：autocompact 窗口配置 UI；窗口运行时生效（R18）"
     },
     {
       "id": "cmd:brief",

@@ -2,22 +2,22 @@ import { feature } from 'bun:bundle'
 
 import { markPostCompaction } from 'src/bootstrap/state.js'
 
-import { getSdkBetas } from '../../bootstrap/state.js'
 import type { QuerySource } from '../../constants/querySource.js'
 import type { ToolUseContext } from '../../Tool.js'
 import type { Message } from '../../types/message.js'
 import { getGlobalConfig } from '../../utils/config.js'
-import { getContextWindowForModel } from '../../utils/context.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { hasExactErrorMessage } from '../../utils/errors.js'
 import type { CacheSafeParams } from '../../utils/forkedAgent.js'
 import { logError } from '../../utils/log.js'
+import { getInitialSettings } from '../../utils/settings/settings.js'
 import { tokenCountWithEstimation } from '../../utils/tokens.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 import { getMaxOutputTokensForModel } from '../api/claude.js'
 import { notifyCompaction } from '../api/promptCacheBreakDetection.js'
 import { setLastSummarizedMessageId } from '../SessionMemory/sessionMemoryUtils.js'
+import { resolveAutocompactWindow } from './autocompactWindow.js'
 import {
   type CompactionResult,
   compactConversation,
@@ -34,16 +34,12 @@ const MAX_OUTPUT_TOKENS_FOR_SUMMARY = 20_000
 // Returns the context window size minus the max output tokens for the model
 export function getEffectiveContextWindowSize(model: string): number {
   const reservedTokensForSummary = Math.min(getMaxOutputTokensForModel(model), MAX_OUTPUT_TOKENS_FOR_SUMMARY)
-  let contextWindow = getContextWindowForModel(model, getSdkBetas())
-
-  const autoCompactWindow = process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW
-  if (autoCompactWindow) {
-    const parsed = parseInt(autoCompactWindow, 10)
-    if (!isNaN(parsed) && parsed > 0) {
-      contextWindow = Math.min(contextWindow, parsed)
-    }
-  }
-
+  // Resolve env > user settings > model default. This reads the initial
+  // settings snapshot rather than AppState to keep the compaction service
+  // independent of the UI store; `/autocompact` persists to userSettings, so
+  // the next session (and any settings reload) picks it up. Task 19 must
+  // preserve this approximation.
+  const contextWindow = resolveAutocompactWindow(model, getInitialSettings().autoCompactWindow).window
   return contextWindow - reservedTokensForSummary
 }
 
