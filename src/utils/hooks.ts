@@ -1771,6 +1771,32 @@ export function getTaskCompletedHookMessage(blockingError: HookBlockingError): s
 export function getUserPromptSubmitHookBlockingMessage(blockingError: HookBlockingError): string {
   return `UserPromptSubmit operation blocked by hook:\n${blockingError.blockingError}`
 }
+
+/**
+ * Aggregate a hook-provided permission decision into the running aggregate with
+ * the same precedence upstream uses: deny > defer > ask > allow. passthrough
+ * never changes the aggregate, and allow only applies when nothing is set yet.
+ */
+export function resolvePermissionBehavior(
+  current: PermissionResult['behavior'] | 'defer' | undefined,
+  next: PermissionResult['behavior'] | 'defer',
+): PermissionResult['behavior'] | 'defer' | undefined {
+  switch (next) {
+    case 'deny':
+      return 'deny'
+    case 'defer':
+      return current !== 'deny' ? 'defer' : current
+    case 'ask':
+      return current !== 'deny' && current !== 'defer' ? 'ask' : current
+    case 'allow':
+      return current === undefined ? 'allow' : current
+    case 'passthrough':
+      return current
+    default:
+      return current
+  }
+}
+
 /**
  * Common logic for executing hooks
  * @param hookInput The structured hook input that will be validated and converted to JSON
@@ -2521,7 +2547,7 @@ async function* executeHooks({
     cancelled: 0,
   }
 
-  let permissionBehavior: PermissionResult['behavior'] | undefined
+  let permissionBehavior: PermissionResult['behavior'] | 'defer' | undefined
 
   // Run all hooks in parallel and wait for all to complete
   for await (const result of all(hookPromises)) {
@@ -2596,36 +2622,12 @@ async function* executeHooks({
       }
     }
 
-    // Check for permission behavior with precedence: deny > ask > allow
+    // Check for permission behavior with precedence: deny > defer > ask > allow
     if (result.permissionBehavior) {
       logForDebugging(
         `Hook ${hookEvent} (${getHookDisplayText(result.hook)}) returned permissionDecision: ${result.permissionBehavior}${result.hookPermissionDecisionReason ? ` (reason: ${result.hookPermissionDecisionReason})` : ''}`,
       )
-      // Apply precedence rules
-      switch (result.permissionBehavior) {
-        case 'deny':
-          // deny always takes precedence
-          permissionBehavior = 'deny'
-          break
-        case 'ask':
-          // ask takes precedence over allow but not deny
-          if (permissionBehavior !== 'deny') {
-            permissionBehavior = 'ask'
-          }
-          break
-        case 'allow':
-          // allow only if no other behavior set
-          if (!permissionBehavior) {
-            permissionBehavior = 'allow'
-          }
-          break
-        case 'passthrough':
-          // passthrough doesn't set permission behavior
-          break
-        case 'defer':
-          // defer is handled by pause/resume logic, not aggregation
-          break
-      }
+      permissionBehavior = resolvePermissionBehavior(permissionBehavior, result.permissionBehavior)
     }
 
     // Yield permission behavior and updatedInput if provided (from allow or ask behavior)

@@ -155,7 +155,7 @@
         "bundle:11413421",
         "bundle:allow, deny, ask, defer"
       ],
-      "notes": "暂停/恢复已移植：toolHooks 产出 defer 事件，toolExecution 写 hook_deferred_tool attachment 并提前返回，query 以 tool_deferred 结束回合，QueryEngine 在 resume 时重新发出工具并产出 deferred SDK result，print 做 marker 尾扫描并注入合成续跑提示。端到端真实 API 冒烟未运行（R25：probe 无法驱动双进程暂停/恢复，静态偏移为权威证据）。"
+      "notes": "暂停/恢复已移植：toolHooks 产出 defer 事件，toolExecution 写 hook_deferred_tool attachment 并提前返回，query 以 tool_deferred 结束回合，QueryEngine 在 resume 时重新发出工具并产出 deferred SDK result，print 做 marker 尾扫描并注入合成续跑提示。R38 补齐：hook 聚合按 deny > defer > ask > allow 优先级合并（resolvePermissionBehavior），exit-code-2 blockingError 置 hasDeny 以抑制同轮 defer；两者均由 tests/permission-defer.test.ts 与 tests/tool-hooks-defer-suppression.test.ts 覆盖。端到端真实 API 冒烟未运行（R25：probe 无法驱动双进程暂停/恢复，静态偏移为权威证据）。"
     },
     {
       "id": "behavior:mcp-nonblocking",

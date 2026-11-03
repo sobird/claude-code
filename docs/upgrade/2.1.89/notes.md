@@ -94,6 +94,14 @@
   - `node dist/cli.js --version`：`2.1.89 (Claude Code)`。
   - `node dist/cli.js --help`：不含 `ultraplan`。slash 命令不出现在 CLI `--help`（R19/R21/R23），故 `autocompact`/`brief`/`buddy`/`web-setup` 未见于 help 属既有架构事实而非回归；等价验收在构建产物中确认：`name:"autocompact"`/`"brief"`/`"buddy"`/`"web-setup"` 均已注册，`feature('ULTRAPLAN')` 门控使 ultraplan 不进入 COMMANDS（仅有 `ULTRAPLAN_TELEPORT_*` 等死数据字符串，R23a）。
 
+## 最终审查修复 (R38)
+
+- 缺陷 1（Critical）：`src/utils/hooks.ts` 的 hook 结果聚合把 `case 'defer'` 当作注释空操作，且只在 `permissionBehavior !== undefined` 时 yield，导致 hook 返回 `permissionDecision: "defer"` 时整轮不产出行为，暂停/恢复永不触发。修复：新增导出纯函数 `resolvePermissionBehavior(current, next)`，按上游 `case"defer": if(I!=="deny") I="defer"` 的优先级实现 `deny > defer > ask > allow`（passthrough 无操作，allow 仅在未设置时生效），聚合循环改为调用该函数；yield 的 `hookPermissionDecisionReason`/`hookSource`/`updatedInput` 逻辑保持不变。
+- 缺陷 2（Important）：`src/services/tools/toolHooks.ts` 中 hook 以 exit-code 2 产生的 `blockingError` 走 `hookPermissionResult` deny 分支，但未设置 `hasDeny`，导致同轮 `defer` 未被抑制。修复：在该分支 yield deny 前设置 `hasDeny = true`，使 `deferredHookName && !hasDeny` 正确抑制 defer。
+- 加固（Minor）：`src/services/mcp/connectionPolicy.ts` 的 `waitForMcpConnect` 将 timeout 清理移入 `finally`（拒绝的 promise 不再遗留 ref'd 5s 定时器）；nonblocking 模式对未观察的 promise 附加 `.catch` 以 debug 日志吸收拒绝，避免 unhandled rejection；blocking 路径拒绝仍向上传播。
+- 文档：`docs/environment-variables.md` 的 `CLAUDE_CODE_REMOTE_SETTINGS_PATH` 条目补充说明该文件为可信本地输入，覆盖远程托管策略并跳过安全确认提示。
+- 测试：`tests/permission-defer.test.ts` 新增 `resolvePermissionBehavior` 优先级用例（defer vs ask / allow / deny、ask vs allow、passthrough 无操作）；`tests/tool-hooks-defer-suppression.test.ts` 通过 `mock.module` 桩接 `executePreToolHooks`，验证 (a) blockingError 后 defer 仅产出 deny 且无 `defer` 事件、(b) 单独 defer 产出 `defer` 事件（临时回退修复时该用例失败，确认可捕获缺陷）。
+
 ## 未解点
 
 ### defer 暂停/恢复

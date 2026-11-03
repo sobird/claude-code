@@ -359,6 +359,7 @@ CLAUDE_CODE_AGENT_COST_STEER=1
 CLAUDE_CODE_DISABLE_CLAUDE_API_SKILL=1
 
 # 指定一个 JSON 文件作为远程托管设置，跳过 API 拉取
+# 注意：该文件被视为可信的本地输入，会覆盖远程托管的策略，并跳过安全确认提示
 CLAUDE_CODE_REMOTE_SETTINGS_PATH=/path/to/remote-settings.json
 
 # resume-return 提示的最小会话闲置分钟数，默认 70（GrowthBook tengu_gleaming_fair 控制）

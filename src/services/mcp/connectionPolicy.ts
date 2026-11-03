@@ -27,19 +27,28 @@ export async function waitForMcpConnect(
   const timeoutMs = opts.timeoutMs ?? MCP_CONNECT_TIMEOUT_MS
 
   if (isMcpConnectionNonblocking(env)) {
+    // Nobody awaits the promise in this mode, so observe rejections here to
+    // avoid an unhandled rejection while still letting the connection continue.
+    promise.catch((error: unknown) => {
+      logForDebugging(`[MCP] ${label} failed while running fully async (MCP_CONNECTION_NONBLOCKING): ${String(error)}`)
+    })
     logForDebugging(`[MCP] ${label} running fully async (MCP_CONNECTION_NONBLOCKING)`)
     return
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined
-  const timedOut = await Promise.race([
-    promise.then(() => false),
-    new Promise<boolean>((resolve) => {
-      timer = setTimeout(resolve, timeoutMs, true)
-    }),
-  ])
-  if (timer !== undefined) clearTimeout(timer)
-  if (timedOut) {
-    logForDebugging(`[MCP] ${label} not ready after ${timeoutMs}ms — proceeding; background connection continues`)
+  try {
+    const timedOut = await Promise.race([
+      promise.then(() => false),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(resolve, timeoutMs, true)
+      }),
+    ])
+    if (timedOut) {
+      logForDebugging(`[MCP] ${label} not ready after ${timeoutMs}ms — proceeding; background connection continues`)
+    }
+  } finally {
+    // A rejected connection promise would otherwise leave a ref'd timer alive.
+    if (timer !== undefined) clearTimeout(timer)
   }
 }

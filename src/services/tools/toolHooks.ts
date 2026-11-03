@@ -426,6 +426,8 @@ export async function* runPreToolUseHooks(
           yield { type: 'message', message: { message: result.message } }
         }
         if (result.blockingError) {
+          // An exit-code-2 blocking denial must suppress a sibling defer.
+          hasDeny = true
           const denialMessage = getPreToolHookBlockingMessage(`PreToolUse:${tool.name}`, result.blockingError)
           yield {
             type: 'hookPermissionResult',
