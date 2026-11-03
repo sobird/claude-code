@@ -181,9 +181,9 @@
     {
       "id": "behavior:bash-stale-edit",
       "kind": "behavior",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "Bash 改文件后 stale-edit 提示与 Edit-after-Bash"
+      "status": "ported",
+      "evidence": ["bundle:3728413", "bundle:8723975", "bundle:8733253"],
+      "notes": "2.1.89 仅修改 Edit/Write 共享的 stale-content 错误常量；mtime 晚于 lastRead.timestamp 且非完整未变读取时抛出新文案，提示 linter/formatter via Bash 后重新 Read。无新增 BashTool 提示（R30）。probe 无法触发 stale-edit，静态偏移为权威证据。"
     },
     {
       "id": "bundle-only:channels",
