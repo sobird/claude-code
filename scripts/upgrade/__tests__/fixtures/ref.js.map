@@ -1,0 +1,11 @@
+{
+  "version": 3,
+  "file": "ref.js",
+  "sources": ["../src/a.ts", "../node_modules/x/index.js"],
+  "sourcesContent": [
+    "export const alpha = (a) => a + \"alpha\"\n",
+    "module.exports = (b) => b + \"depstr\"\n"
+  ],
+  "names": [],
+  "mappings": "AAAA;;;ACAA"
+}
