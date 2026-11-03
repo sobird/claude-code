@@ -110,13 +110,14 @@ export async function verifyUpgrade(opts: VerifyOptions): Promise<VerifyReport> 
     if (!isFlag && !isStr) continue
     // ignored-dependency flag/string entries are advisory only, never fail.
     if (entry.status === 'ignored-dependency') continue
+    // R13: classify ledgered flags/strings purely by bundle membership.
+    // src presence may be cross-checked but must never change the classification.
     const value = entry.id.slice(isFlag ? 5 : 4)
     const targetHas = (isFlag ? targetFlags : targetStrings).has(value)
     const referenceHas = (isFlag ? referenceFlags : referenceStrings).has(value)
-    const srcHas = hasToken(srcText, value)
-    if (targetHas && !srcHas) {
+    if (targetHas && !referenceHas) {
       if (!GROUP1_OK.has(entry.status)) missingInSrc.push(entry.id)
-    } else if (!targetHas && referenceHas && srcHas) {
+    } else if (!targetHas && referenceHas) {
       if (!GROUP2_OK.has(entry.status)) unexpectedInSrc.push(entry.id)
     }
   }

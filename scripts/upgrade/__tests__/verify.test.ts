@@ -114,6 +114,62 @@ test('ledgered ported flag missing from target fails', async () => {
   expect(r.unexpectedInSrc).toContain('flag:--oldflag')
 })
 
+test('ledgered flag present in both bundles passes as already-present', async () => {
+  const paths = await setup(
+    [
+      entry('cmd:new', 'ported'),
+      entry('cmd:old', 'retained-internal'),
+      entry('env:CLAUDE_CODE_OLD', 'retained-internal'),
+      entry('flag:--bothflag', 'already-present'),
+    ],
+    {
+      target: `${DEFAULT_TARGET}x.option("--bothflag");`,
+      reference: `${DEFAULT_REFERENCE}x.option("--bothflag");`,
+    },
+  )
+  const r = await verifyUpgrade(paths)
+  expect(r.ok).toBe(true)
+  expect(r.missingInSrc).toEqual([])
+  expect(r.unexpectedInSrc).toEqual([])
+})
+
+test('target-only ledgered flag led already-present fails despite src presence', async () => {
+  const paths = await setup(
+    [
+      entry('cmd:new', 'ported'),
+      entry('cmd:old', 'retained-internal'),
+      entry('env:CLAUDE_CODE_OLD', 'retained-internal'),
+      entry('flag:--newflag', 'already-present'),
+    ],
+    { src: `${DEFAULT_SRC}\nexport const flag = '--newflag'` },
+  )
+  const r = await verifyUpgrade(paths)
+  expect(r.ok).toBe(false)
+  expect(r.missingInSrc).toContain('flag:--newflag')
+})
+
+test('removal ledgered flag led ported fails despite src absence', async () => {
+  const paths = await setup([
+    entry('cmd:new', 'ported'),
+    entry('cmd:old', 'retained-internal'),
+    entry('env:CLAUDE_CODE_OLD', 'retained-internal'),
+    entry('flag:--oldflag', 'ported'),
+  ])
+  const r = await verifyUpgrade(paths)
+  expect(r.ok).toBe(false)
+  expect(r.unexpectedInSrc).toContain('flag:--oldflag')
+})
+
+test('double-quoted command name in src is recognized', async () => {
+  const paths = await setup([entry('cmd:new', 'already-present'), entry('cmd:old', 'retained-internal')], {
+    target: 'var a={type:"local",name:"new"};',
+    reference: 'var a={type:"local",name:"old"};',
+    src: ['export const cmd = { name: "new" }', 'export const cmd2 = { name: "old" }'].join('\n'),
+  })
+  const r = await verifyUpgrade(paths)
+  expect(r.ok).toBe(true)
+})
+
 test('MCP_CONNECTION_NONBLOCKING is not required when absent from both bundles', async () => {
   const paths = await setup([entry('cmd:new', 'ported'), entry('env:CLAUDE_CODE_OLD', 'retained-internal')], {
     src: ["export const cmd = { name: 'new' }", "export const env = 'CLAUDE_CODE_OLD'"].join('\n'),
