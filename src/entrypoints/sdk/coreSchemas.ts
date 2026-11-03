@@ -1300,6 +1300,14 @@ export const SDKResultSuccessSchema = lazySchema(() =>
     modelUsage: z.record(z.string(), ModelUsageSchema()),
     permission_denials: z.array(SDKPermissionDenialSchema()),
     structured_output: z.unknown().optional(),
+    deferred_tool_use: z
+      .object({
+        type: z.literal('tool_use').optional(),
+        id: z.string(),
+        name: z.string(),
+        input: z.unknown(),
+      })
+      .optional(),
     fast_mode_state: FastModeStateSchema().optional(),
     uuid: UUIDPlaceholder(),
     session_id: z.string(),

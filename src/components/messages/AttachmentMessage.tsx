@@ -377,6 +377,12 @@ export function AttachmentMessage({ attachment, addMargin, verbose, isTranscript
         </Line>
       )
     }
+    case 'hook_deferred_tool':
+      return (
+        <Line color="warning">
+          {attachment.hookName} deferred {attachment.toolName} · resume with -p --resume to continue
+        </Line>
+      )
     case 'task_status':
       return <TaskStatusMessage attachment={attachment} />
     case 'teammate_shutdown_batch':

@@ -398,12 +398,17 @@ export async function* runPreToolUseHooks(
       type: 'additionalContext'
       message: MessageUpdateLazy<AttachmentMessage>
     }
+  // pause a headless session on a deferred tool permission (print-mode only)
+  | { type: 'defer'; hookName: string }
   // stop execution
   | { type: 'stop' }
 > {
   const hookStartTime = Date.now()
   try {
     const appState = toolUseContext.getAppState()
+
+    let deferredHookName: string | undefined
+    let hasDeny = false
 
     for await (const result of executePreToolHooks(
       tool.name,
@@ -455,7 +460,13 @@ export async function* runPreToolUseHooks(
             reason: result.hookPermissionDecisionReason,
           }
           if (result.permissionBehavior === 'defer') {
+            // Deferral is resolved after the hook loop: a later deny wins, and
+            // the caller needs to know which hook deferred the call.
+            deferredHookName = result.hookSource || `PreToolUse:${tool.name}`
             continue
+          }
+          if (result.permissionBehavior === 'deny') {
+            hasDeny = true
           }
           if (result.permissionBehavior === 'allow') {
             yield {
@@ -578,6 +589,10 @@ export async function* runPreToolUseHooks(
         }
         yield { type: 'stop' }
       }
+    }
+    // Surface deferral only after every hook ran: a later deny suppresses it.
+    if (deferredHookName && !hasDeny) {
+      yield { type: 'defer', hookName: deferredHookName }
     }
   } catch (error) {
     logError(error)

@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle'
 import { randomUUID } from 'node:crypto'
 
+import type { ToolUseBlock } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import last from 'lodash-es/last.js'
 import { getSessionId, isSessionPersistenceDisabled } from 'src/bootstrap/state.js'
@@ -27,16 +28,20 @@ import { hasAutoMemPathOverride } from './memdir/paths.js'
 import { query } from './query.js'
 import { categorizeRetryableAPIError } from './services/api/errors.js'
 import type { MCPServerConnection } from './services/mcp/types.js'
+import type { DeferredToolUse } from './services/tools/permissionDefer.js'
+import { runTools } from './services/tools/toolOrchestration.js'
 import type { AppState } from './state/AppState.js'
-import { type Tools, type ToolUseContext, toolMatchesName } from './Tool.js'
+import { findToolByName, type Tools, type ToolUseContext, toolMatchesName } from './Tool.js'
 import type { AgentDefinition } from './tools/AgentTool/loadAgentsDir.js'
 import { SYNTHETIC_OUTPUT_TOOL_NAME } from './tools/SyntheticOutputTool/SyntheticOutputTool.js'
-import type { Message } from './types/message.js'
+import type { AssistantMessage, Message } from './types/message.js'
 import type { OrphanedPermission } from './types/textInputTypes.js'
 import { createAbortController } from './utils/abortController.js'
+import type { HookDeferredToolAttachment } from './utils/attachments.js'
 import type { AttributionState } from './utils/commitAttribution.js'
 import { getGlobalConfig } from './utils/config.js'
 import { getCwd } from './utils/cwd.js'
+import { logForDebugging } from './utils/debug.js'
 import { isBareMode, isEnvTruthy } from './utils/envUtils.js'
 import { getFastModeState } from './utils/fastMode.js'
 import { type FileHistoryState, fileHistoryEnabled, fileHistoryMakeSnapshot } from './utils/fileHistory.js'
@@ -114,6 +119,8 @@ export type QueryEngineConfig = {
   setSDKStatus?: (status: SDKStatus) => void
   abortController?: AbortController
   orphanedPermission?: OrphanedPermission
+  /** Deferred tool marker loaded from the resumed transcript; re-emitted on first submit. */
+  deferredToolUse?: DeferredToolUse
   /**
    * Snip-boundary handler: receives each yielded system message plus the
    * current mutableMessages store. Returns undefined if the message is not a
@@ -137,6 +144,65 @@ export type QueryEngineConfig = {
  * turn within the same conversation. State (messages, file cache, usage, etc.)
  * persists across turns.
  */
+/**
+ * Re-emit a deferred tool use through normal tool execution so PreToolUse runs
+ * again. This mirrors `--resume` of an orphaned permission, except the tool_use
+ * already lives in the resumed transcript (so the assistant message is not
+ * pushed again). Yields raw Message objects; the caller attaches SDK fields.
+ */
+async function* resumeDeferredTool(
+  deferredToolUse: DeferredToolUse,
+  canUseTool: CanUseToolFn,
+  mutableMessages: Message[],
+  processUserInputContext: ProcessUserInputContext,
+): AsyncGenerator<Message, void, unknown> {
+  const persistSession = !isSessionPersistenceDisabled()
+
+  const currentMode = processUserInputContext.getAppState().toolPermissionContext.mode
+  if (currentMode !== deferredToolUse.permissionMode) {
+    logForDebugging(
+      `Deferred tool resume: permissionMode mismatch (deferred under '${deferredToolUse.permissionMode}', resuming under '${currentMode}'). --resume does not restore permissionMode — pass --permission-mode ${deferredToolUse.permissionMode} to match.`,
+      { level: 'warn' },
+    )
+  }
+
+  let assistantMessage: AssistantMessage | undefined
+  let toolUseBlock: ToolUseBlock | undefined
+  for (let i = mutableMessages.length - 1; i >= 0; i--) {
+    const message = mutableMessages[i]
+    if (message?.type === 'assistant' && Array.isArray(message.message.content)) {
+      const block = message.message.content.find(
+        (content): content is ToolUseBlock => content.type === 'tool_use' && content.id === deferredToolUse.id,
+      )
+      if (block) {
+        // The runtime guard above proves this is an assistant message.
+        assistantMessage = message as AssistantMessage
+        toolUseBlock = block
+        break
+      }
+    }
+  }
+
+  if (!assistantMessage || !toolUseBlock) {
+    logForDebugging(`Deferred tool resume: tool_use ${deferredToolUse.id} not found in transcript`, { level: 'warn' })
+    return
+  }
+
+  logForDebugging(
+    `Deferred tool resume: re-emitting ${deferredToolUse.name} (${deferredToolUse.id}) through PreToolUse`,
+  )
+
+  for await (const update of runTools([toolUseBlock], [assistantMessage], canUseTool, processUserInputContext)) {
+    if (update.message) {
+      mutableMessages.push(update.message)
+      if (persistSession) {
+        await recordTranscript(mutableMessages)
+      }
+      yield update.message
+    }
+  }
+}
+
 export class QueryEngine {
   private config: QueryEngineConfig
   private mutableMessages: Message[]
@@ -144,6 +210,7 @@ export class QueryEngine {
   private permissionDenials: SDKPermissionDenial[]
   private totalUsage: NonNullableUsage
   private hasHandledOrphanedPermission = false
+  private hasHandledDeferredToolResume = false
   private readFileState: FileStateCache
   // Turn-scoped skill discovery tracking (feeds was_discovered on
   // tengu_skill_tool_invocation). Must persist across the two
@@ -189,6 +256,7 @@ export class QueryEngine {
       agents,
       setSDKStatus,
       orphanedPermission,
+      deferredToolUse,
     } = this.config
 
     this.discoveredSkillNames.clear()
@@ -339,6 +407,95 @@ export class QueryEngine {
         processUserInputContext,
       )) {
         yield message
+      }
+    }
+
+    // Handle deferred tool resume (only once per engine lifetime). A prior -p
+    // run paused on a PreToolUse `defer`; re-emit the same tool use through
+    // PreToolUse so the hook/permission flow can approve it now. The synthetic
+    // "Continue from where you left off." prompt drives the rest of the turn.
+    if (deferredToolUse && !this.hasHandledDeferredToolResume) {
+      this.hasHandledDeferredToolResume = true
+
+      if (!findToolByName(tools, deferredToolUse.name)) {
+        logForDebugging(
+          `Deferred tool resume: tool '${deferredToolUse.name}' is no longer available (MCP server disconnected or tool removed)`,
+          { level: 'warn' },
+        )
+        yield {
+          type: 'result',
+          subtype: 'success',
+          is_error: true,
+          duration_ms: Date.now() - startTime,
+          duration_api_ms: getTotalAPIDuration(),
+          num_turns: this.mutableMessages.length,
+          result: '',
+          stop_reason: 'tool_deferred_unavailable',
+          session_id: getSessionId(),
+          total_cost_usd: getTotalCost(),
+          usage: this.totalUsage,
+          modelUsage: getModelUsage(),
+          permission_denials: this.permissionDenials,
+          deferred_tool_use: {
+            id: deferredToolUse.id,
+            name: deferredToolUse.name,
+            input: deferredToolUse.input,
+          },
+          fast_mode_state: getFastModeState(initialMainLoopModel, initialAppState.fastMode),
+          uuid: randomUUID(),
+        }
+        return
+      }
+
+      let deferredAgain: HookDeferredToolAttachment | undefined
+      for await (const message of resumeDeferredTool(
+        deferredToolUse,
+        wrappedCanUseTool,
+        this.mutableMessages,
+        processUserInputContext,
+      )) {
+        const attachment =
+          message.type === 'attachment'
+            ? (message as { attachment?: HookDeferredToolAttachment }).attachment
+            : undefined
+        if (attachment?.type === 'hook_deferred_tool') {
+          deferredAgain = attachment
+        }
+        yield {
+          ...message,
+          session_id: getSessionId(),
+          parent_tool_use_id: null,
+        } as SDKMessage
+      }
+
+      // The hook deferred the tool again — stay paused and emit another marker.
+      if (deferredAgain) {
+        if (persistSession) {
+          await recordTranscript(this.mutableMessages)
+        }
+        yield {
+          type: 'result',
+          subtype: 'success',
+          is_error: false,
+          duration_ms: Date.now() - startTime,
+          duration_api_ms: getTotalAPIDuration(),
+          num_turns: this.mutableMessages.length,
+          result: '',
+          stop_reason: 'tool_deferred',
+          session_id: getSessionId(),
+          total_cost_usd: getTotalCost(),
+          usage: this.totalUsage,
+          modelUsage: getModelUsage(),
+          permission_denials: this.permissionDenials,
+          deferred_tool_use: {
+            id: deferredAgain.toolUseID,
+            name: deferredAgain.toolName,
+            input: deferredAgain.toolInput,
+          },
+          fast_mode_state: getFastModeState(initialMainLoopModel, initialAppState.fastMode),
+          uuid: randomUUID(),
+        }
+        return
       }
     }
 
@@ -580,6 +737,8 @@ export class QueryEngine {
     let hasAcknowledgedInitialMessages = false
     // Track structured output from StructuredOutput tool calls
     let structuredOutputFromTool: unknown
+    // Track a deferred tool marker yielded by the query loop
+    let deferredToolUseFromQuery: DeferredToolUse | undefined
     // Track the last stop_reason from assistant messages
     let lastStopReason: string | null = null
     // Reference-based watermark so error_during_execution's errors[] is
@@ -742,6 +901,16 @@ export class QueryEngine {
           // Extract structured output from StructuredOutput tool calls
           if (message.attachment.type === 'structured_output') {
             structuredOutputFromTool = message.attachment.data
+          }
+          // A PreToolUse hook deferred the tool call — remember it so the final
+          // result carries the marker for a later -p --resume.
+          else if (message.attachment.type === 'hook_deferred_tool') {
+            deferredToolUseFromQuery = {
+              id: message.attachment.toolUseID,
+              name: message.attachment.toolName,
+              input: message.attachment.toolInput,
+              permissionMode: message.attachment.permissionMode,
+            }
           }
           // Handle max turns reached signal from query.ts
           else if (message.attachment.type === 'max_turns_reached') {
@@ -939,6 +1108,30 @@ export class QueryEngine {
       }
     }
 
+    // A PreToolUse hook deferred the tool call: pause the turn and report the
+    // marker so a later -p --resume can re-emit the tool use.
+    if (deferredToolUseFromQuery) {
+      yield {
+        type: 'result',
+        subtype: 'success',
+        is_error: false,
+        duration_ms: Date.now() - startTime,
+        duration_api_ms: getTotalAPIDuration(),
+        num_turns: turnCount,
+        result: '',
+        stop_reason: 'tool_deferred',
+        session_id: getSessionId(),
+        total_cost_usd: getTotalCost(),
+        usage: this.totalUsage,
+        modelUsage: getModelUsage(),
+        permission_denials: this.permissionDenials,
+        deferred_tool_use: deferredToolUseFromQuery,
+        fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
+        uuid: randomUUID(),
+      }
+      return
+    }
+
     if (!isResultSuccessful(result, lastStopReason)) {
       yield {
         type: 'result',
@@ -1063,6 +1256,7 @@ export async function* ask({
   agents = [],
   setSDKStatus,
   orphanedPermission,
+  deferredToolUse,
 }: {
   commands: Command[]
   prompt: string | Array<ContentBlockParam>
@@ -1094,6 +1288,7 @@ export async function* ask({
   agents?: AgentDefinition[]
   setSDKStatus?: (status: SDKStatus) => void
   orphanedPermission?: OrphanedPermission
+  deferredToolUse?: DeferredToolUse
 }): AsyncGenerator<SDKMessage, void, unknown> {
   const engine = new QueryEngine({
     cwd,
@@ -1122,6 +1317,7 @@ export async function* ask({
     setSDKStatus,
     abortController,
     orphanedPermission,
+    deferredToolUse,
     ...(feature('HISTORY_SNIP')
       ? {
           snipReplay: (yielded: Message, store: Message[]) => {

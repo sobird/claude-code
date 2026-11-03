@@ -37,3 +37,13 @@
 - R22：slash 命令不出现在 CLI `--help`，故验收改为「`features` 含 `CCR_REMOTE_SETUP`」+「external `dist/cli.js` 含 `Setup Claude Code on the web`」；`scripts/upgrade/scenarios/cmd-web-setup.json` 为 `--version` 探针场景，probe 产出空 trace，静态偏移为验收证据。
 
 ## 未解点
+
+### defer 暂停/恢复
+
+- 暂停条件（`shouldDeferPermission`）：仅 print/headless 会话（`isNonInteractiveSession`）且当前 assistant message 只有 1 个 `tool_use` 时生效。交互模式忽略并告警 `Hook <name> returned permissionDecision=defer in interactive mode; ignoring (defer is print-mode only)`；同批多个工具调用也忽略并告警 `... but N tool calls are in this batch; ignoring (defer is solo-only — siblings would be orphaned on resume)`。hook 生成器在整轮 hook 结束后才 yield `defer`，期间若有 hook 返回 deny 则抑制该事件（`bundle:9415778`）。
+- attachment 结构（`HookDeferredToolAttachment`）：`{ type: 'hook_deferred_tool', toolUseID, toolName, toolInput, hookName, hookEvent, permissionMode }`。`toolExecution.ts` 在 `case 'defer'` 中写入该 attachment 并立即 `return resultingMessages`，不执行工具。
+- 渲染字符串：`<hookName> deferred <toolName> · resume with -p --resume to continue`（`AttachmentMessage.tsx`）。
+- transcript marker 扫描（`readDeferredToolUse`）：只读文件尾部 1 MB（`tailFile`），从后往前找最后一条 `type:"attachment"` 且 `attachment.type === "hook_deferred_tool"` 的记录；若该记录之后出现引用同一 `tool_use_id` 的行（说明工具已运行），视为陈旧 marker 返回 `undefined`。畸形 JSON 行跳过，读取/解析失败也按“无 marker”处理。
+- resume 重放：`QueryEngine` 从会话消息中定位原 `tool_use` 块，经 `runTools` 重新走 PreToolUse；若 hook 再次 defer，则再写 marker 并产出 `stop_reason:'tool_deferred'` 的成功 result；若原工具已不存在（MCP 断开/工具移除），产出 `stop_reason:'tool_deferred_unavailable'`、`is_error:true`、`result:''` 的 result。两处 result 都带 `deferred_tool_use:{id,name,input}`。
+- `query.ts` 在工具结果循环中检测到 `hook_deferred_tool` attachment 后，于 `aborted_tools` 检查之后返回 `{reason:'tool_deferred'}`。`print.ts` 在存在 marker 时无条件 enqueue 合成提示 `Continue from where you left off.`（`isMeta`），并允许无输入提示的 `--resume`。
+- R25：probe 无法驱动两进程的“暂停→resume”流程，故以 bundle 静态偏移为权威证据（`9415778`、`9422415`、`9495528`、`12897935`、`12903928`、`12917388`、`12935025`、`11414290`）；端到端真实 API 冒烟未运行。

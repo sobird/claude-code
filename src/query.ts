@@ -1183,6 +1183,7 @@ async function* queryLoop(
     }
 
     let shouldPreventContinuation = false
+    let toolDeferred = false
     let updatedToolUseContext = toolUseContext
 
     queryCheckpoint('query_tool_execution_start')
@@ -1211,6 +1212,10 @@ async function* queryLoop(
 
         if (update.message.type === 'attachment' && update.message.attachment.type === 'hook_stopped_continuation') {
           shouldPreventContinuation = true
+        }
+
+        if (update.message.type === 'attachment' && update.message.attachment?.type === 'hook_deferred_tool') {
+          toolDeferred = true
         }
 
         toolResults.push(
@@ -1318,6 +1323,12 @@ async function* queryLoop(
         })
       }
       return { reason: 'aborted_tools' }
+    }
+
+    // A PreToolUse hook deferred the (solo) tool call in print mode. Stop the
+    // turn; print.ts persists the marker and a later --resume re-emits it.
+    if (toolDeferred) {
+      return { reason: 'tool_deferred' }
     }
 
     // If a hook indicated to prevent continuation, stop here

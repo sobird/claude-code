@@ -114,6 +114,7 @@ import {
 } from 'src/services/PromptSuggestion/promptSuggestion.js'
 import { waitForRemoteManagedSettingsToLoad } from 'src/services/remoteManagedSettings/index.js'
 import { downloadUserSettings, redownloadUserSettings } from 'src/services/settingsSync/index.js'
+import { type DeferredToolUse, readDeferredToolUse } from 'src/services/tools/permissionDefer.js'
 import type { AppState } from 'src/state/AppStateStore.js'
 import { externalMetadataToAppState } from 'src/state/onChangeAppState.js'
 import type { ToolPermissionContext } from 'src/Tool.js'
@@ -582,6 +583,7 @@ export async function runHeadless(
   const {
     messages: initialMessages,
     turnInterruptionState,
+    deferredToolUse,
     agentSetting: resumedAgentSetting,
   } = await loadInitialMessages(setAppState, {
     continue: options.continue,
@@ -665,9 +667,11 @@ export async function runHeadless(
     typeof options.resume === 'string' && (Boolean(validateUuid(options.resume)) || options.resume.endsWith('.jsonl'))
   const isUsingSdkUrl = Boolean(options.sdkUrl)
 
-  if (!inputPrompt && !hasValidResumeSessionId && !isUsingSdkUrl) {
+  if (!inputPrompt && !isUsingSdkUrl && !deferredToolUse && !hookInitialUserMessage) {
     process.stderr.write(
-      `Error: Input must be provided either through stdin or as a prompt argument when using --print\n`,
+      hasValidResumeSessionId || options.continue
+        ? `Error: No deferred tool marker found in the resumed session. Either the session was not deferred, the marker is stale (tool already ran), or it exceeds the tail-scan window. Provide a prompt to continue the conversation.\n`
+        : `Error: Input must be provided either through stdin or as a prompt argument when using --print\n`,
     )
     gracefulShutdownSync(1)
     return
@@ -754,6 +758,7 @@ export async function runHeadless(
     agents,
     options,
     turnInterruptionState,
+    deferredToolUse,
   )) {
     if (transformToStreamlined) {
       // Streamlined mode: transform messages and stream immediately
@@ -878,6 +883,7 @@ function runHeadlessStreaming(
     workload?: string | undefined
   },
   turnInterruptionState?: TurnInterruptionState,
+  deferredToolUse?: DeferredToolUse,
 ): AsyncIterable<StdoutMessage> {
   let running = false
   let runPhase: 'draining_commands' | 'waiting_for_agents' | 'finally_flush' | 'finally_post_flush' | undefined
@@ -1042,6 +1048,21 @@ function runHeadlessStreaming(
       mode: 'prompt',
       value: turnInterruptionState.message.message.content,
       uuid: randomUUID(),
+    })
+  }
+
+  // Auto-resume a tool that a PreToolUse hook deferred in a previous -p run.
+  // The query engine re-emits the tool through PreToolUse on the first ask();
+  // this synthetic prompt then carries the conversation forward once the tool
+  // result lands.
+  let pendingDeferredToolUse = deferredToolUse
+  if (deferredToolUse) {
+    logForDebugging(`[print.ts] Auto-resuming deferred tool: ${deferredToolUse.name} (${deferredToolUse.id})`)
+    enqueue({
+      mode: 'prompt',
+      value: 'Continue from where you left off.',
+      uuid: randomUUID(),
+      isMeta: true,
     })
   }
 
@@ -1881,6 +1902,7 @@ function runHeadlessStreaming(
                 ),
               agents: currentAgents,
               orphanedPermission: cmd.orphanedPermission,
+              deferredToolUse: pendingDeferredToolUse,
               setSDKStatus: (status) => {
                 output.enqueue({
                   type: 'system',
@@ -1924,6 +1946,10 @@ function runHeadlessStreaming(
               }
             }
           }) // end runWithWorkload
+
+          // The deferred marker only applies to the first ask(); subsequent
+          // turns are ordinary conversation.
+          pendingDeferredToolUse = undefined
 
           for (const uuid of batchUuids) {
             notifyCommandLifecycle(uuid, 'completed')
@@ -4234,6 +4260,7 @@ export function removeInterruptedMessage(messages: Message[], interruptedUserMes
 type LoadInitialMessagesResult = {
   messages: Message[]
   turnInterruptionState?: TurnInterruptionState
+  deferredToolUse?: DeferredToolUse
   agentSetting?: string
 }
 
@@ -4303,6 +4330,7 @@ async function loadInitialMessages(
         return {
           messages: result.messages,
           turnInterruptionState: result.turnInterruptionState,
+          deferredToolUse: result.fullPath ? await readDeferredToolUse(result.fullPath) : undefined,
           agentSetting: result.agentSetting,
         }
       }
@@ -4463,6 +4491,7 @@ async function loadInitialMessages(
       return {
         messages: result.messages,
         turnInterruptionState: result.turnInterruptionState,
+        deferredToolUse: result.fullPath ? await readDeferredToolUse(result.fullPath) : undefined,
         agentSetting: result.agentSetting,
       }
     } catch (error) {
