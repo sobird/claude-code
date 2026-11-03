@@ -49,9 +49,9 @@
     {
       "id": "cmd:ultraplan",
       "kind": "command",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "预期在 2.1.89 外部命令面移除"
+      "status": "retained-internal",
+      "evidence": ["bundle:no-name:\"ultraplan\"", "bundle:10604171", "bundle:10605411"],
+      "notes": "按 D5 保留源码，external 关闭 ULTRAPLAN 特性注册（R23）"
     },
     {
       "id": "env:CLAUDE_CODE_AGENT_COST_STEER",

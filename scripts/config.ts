@@ -97,7 +97,6 @@ export const features = [
   // 'TREE_SITTER_BASH',
   // 'TREE_SITTER_BASH_SHADOW',
   // 'UDS_INBOX',
-  'ULTRAPLAN',
   'ULTRATHINK',
   // 'UNATTENDED_RETRY',
   // 'UPLOAD_USER_SETTINGS',
