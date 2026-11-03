@@ -25,6 +25,13 @@ const GROUP2_OK = new Set<Status>(['already-present', 'retained-internal'])
 
 const uniqSorted = (values: Iterable<string>): string[] => [...new Set(values)].toSorted()
 
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+// Match `value` only when it is not embedded in a longer identifier-like token,
+// so e.g. CLAUDE_CODE_FOO does not match CLAUDE_CODE_FOOBAR.
+const hasToken = (text: string, value: string): boolean =>
+  new RegExp(`(?<![A-Za-z0-9_])${escapeRegExp(value)}(?![A-Za-z0-9_])`).test(text)
+
 async function readSources(dir: string): Promise<string> {
   const parts: string[] = []
   async function walk(current: string): Promise<void> {
@@ -56,8 +63,7 @@ export async function verifyUpgrade(opts: VerifyOptions): Promise<VerifyReport> 
   const ledger = JSON.parse(ledgerText) as StatusLedger
   const byId = new Map(ledger.entries.map((entry) => [entry.id, entry]))
 
-  const srcCommands = new Set([...srcText.matchAll(/name:\s*'([^']+)'/g)].map((match) => match[1]))
-  const srcFlags = new Set([...srcText.matchAll(/['"](--[a-z0-9-]+)['"]/g)].map((match) => match[1]))
+  const srcCommands = new Set([...srcText.matchAll(/name:\s*['"]([^'"]+)['"]/g)].map((match) => match[1]))
 
   const missingInSrc: string[] = []
   const unexpectedInSrc: string[] = []
@@ -84,10 +90,15 @@ export async function verifyUpgrade(opts: VerifyOptions): Promise<VerifyReport> 
 
   const targetEnv = new Set(target.envVars)
   const referenceEnv = new Set(reference.envVars)
-  for (const name of targetEnv) if (!srcText.includes(name)) group1(`env:${name}`)
+  for (const name of targetEnv) if (!hasToken(srcText, name)) group1(`env:${name}`)
   for (const name of referenceEnv) {
-    if (!targetEnv.has(name) && srcText.includes(name)) group2(`env:${name}`)
+    if (!targetEnv.has(name) && hasToken(srcText, name)) group2(`env:${name}`)
   }
+
+  const targetFlags = new Set(target.cliFlags)
+  const referenceFlags = new Set(reference.cliFlags)
+  const targetStrings = new Set(target.strings)
+  const referenceStrings = new Set(reference.strings)
 
   for (const entry of ledger.entries) {
     if (entry.status === 'unresolved') {
@@ -97,12 +108,16 @@ export async function verifyUpgrade(opts: VerifyOptions): Promise<VerifyReport> 
     const isFlag = entry.id.startsWith('flag:')
     const isStr = entry.id.startsWith('str:')
     if (!isFlag && !isStr) continue
+    // ignored-dependency flag/string entries are advisory only, never fail.
+    if (entry.status === 'ignored-dependency') continue
     const value = entry.id.slice(isFlag ? 5 : 4)
-    const inSrc = isFlag ? srcFlags.has(value) : srcText.includes(value)
-    if (entry.status === 'ignored-dependency') {
-      if (inSrc) unresolved.push(entry.id)
-    } else if (!inSrc) {
-      unresolved.push(entry.id)
+    const targetHas = (isFlag ? targetFlags : targetStrings).has(value)
+    const referenceHas = (isFlag ? referenceFlags : referenceStrings).has(value)
+    const srcHas = hasToken(srcText, value)
+    if (targetHas && !srcHas) {
+      if (!GROUP1_OK.has(entry.status)) missingInSrc.push(entry.id)
+    } else if (!targetHas && referenceHas && srcHas) {
+      if (!GROUP2_OK.has(entry.status)) unexpectedInSrc.push(entry.id)
     }
   }
 

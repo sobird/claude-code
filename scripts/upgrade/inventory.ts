@@ -24,7 +24,8 @@ export async function scanBundle(filePath: string): Promise<Inventory> {
     commands.set(`${type}:${name}`, { type, name })
   }
 
-  const envVars = uniqSorted([...source.matchAll(ENV_RE)].map((match) => match[0]).concat(EXTRA_ENV))
+  const extras = EXTRA_ENV.filter((name) => source.includes(name))
+  const envVars = uniqSorted([...source.matchAll(ENV_RE)].map((match) => match[0]).concat(extras))
   const cliFlags = uniqSorted([...source.matchAll(FLAG_RE)].map((match) => match[1]))
 
   return {

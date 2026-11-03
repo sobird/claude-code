@@ -26,20 +26,23 @@ function writeLedger(dir: string, entries: StatusEntry[]): string {
   return path
 }
 
-async function setup(entries: StatusEntry[]) {
+const DEFAULT_TARGET = 'var a={type:"local",name:"new"};x.option("--newflag");'
+const DEFAULT_REFERENCE = 'var a={type:"local",name:"old"};process.env.CLAUDE_CODE_OLD;x.option("--oldflag");'
+const DEFAULT_SRC = [
+  "export const cmd = { name: 'new' }",
+  "export const cmd2 = { name: 'old' }",
+  "export const env = 'CLAUDE_CODE_OLD MCP_CONNECTION_NONBLOCKING'",
+].join('\n')
+
+type SetupOptions = { target?: string; reference?: string; src?: string }
+
+async function setup(entries: StatusEntry[], opts: SetupOptions = {}) {
   const dir = tempDir()
   const targetPath = join(dir, 'target.js')
   const referencePath = join(dir, 'reference.js')
-  writeFileSync(targetPath, 'var a={type:"local",name:"new"};x.option("--newflag");')
-  writeFileSync(referencePath, 'var a={type:"local",name:"old"};process.env.CLAUDE_CODE_OLD;x.option("--oldflag");')
-  writeFileSync(
-    join(dir, 'src.ts'),
-    [
-      "export const cmd = { name: 'new' }",
-      "export const cmd2 = { name: 'old' }",
-      "export const env = 'CLAUDE_CODE_OLD MCP_CONNECTION_NONBLOCKING'",
-    ].join('\n'),
-  )
+  writeFileSync(targetPath, opts.target ?? DEFAULT_TARGET)
+  writeFileSync(referencePath, opts.reference ?? DEFAULT_REFERENCE)
+  writeFileSync(join(dir, 'src.ts'), opts.src ?? DEFAULT_SRC)
   const statusPath = writeLedger(dir, entries)
   return { dir, targetPath, referencePath, srcDir: dir, statusPath }
 }
@@ -81,16 +84,55 @@ test('fails on unresolved', async () => {
   expect(r.unresolved).toContain('flag:--mystery')
 })
 
-test('flag advisory without ledger entry does not fail and is omitted', async () => {
-  const paths = await setup([
-    entry('cmd:new', 'ported'),
-    entry('cmd:old', 'retained-internal'),
-    entry('env:CLAUDE_CODE_OLD', 'retained-internal'),
-  ])
+test('unledgered flag difference stays advisory and does not fail', async () => {
+  const paths = await setup(
+    [
+      entry('cmd:new', 'ported'),
+      entry('cmd:old', 'retained-internal'),
+      entry('env:CLAUDE_CODE_OLD', 'retained-internal'),
+    ],
+    { src: `${DEFAULT_SRC}\nexport const flag = '--oldflag'` },
+  )
   const r = await verifyUpgrade(paths)
   expect(r.ok).toBe(true)
   expect(r.missingInSrc).not.toContain('flag:--newflag')
   expect(r.unexpectedInSrc).not.toContain('flag:--oldflag')
+})
+
+test('ledgered ported flag missing from target fails', async () => {
+  const paths = await setup(
+    [
+      entry('cmd:new', 'ported'),
+      entry('cmd:old', 'retained-internal'),
+      entry('env:CLAUDE_CODE_OLD', 'retained-internal'),
+      entry('flag:--oldflag', 'ported'),
+    ],
+    { src: `${DEFAULT_SRC}\nexport const flag = '--oldflag'` },
+  )
+  const r = await verifyUpgrade(paths)
+  expect(r.ok).toBe(false)
+  expect(r.unexpectedInSrc).toContain('flag:--oldflag')
+})
+
+test('MCP_CONNECTION_NONBLOCKING is not required when absent from both bundles', async () => {
+  const paths = await setup([entry('cmd:new', 'ported'), entry('env:CLAUDE_CODE_OLD', 'retained-internal')], {
+    src: ["export const cmd = { name: 'new' }", "export const env = 'CLAUDE_CODE_OLD'"].join('\n'),
+  })
+  const r = await verifyUpgrade(paths)
+  expect(r.ok).toBe(true)
+  expect(r.missingInSrc).not.toContain('env:MCP_CONNECTION_NONBLOCKING')
+  expect(r.unregistered).not.toContain('env:MCP_CONNECTION_NONBLOCKING')
+})
+
+test('env substring does not satisfy a shorter env name', async () => {
+  const paths = await setup([entry('cmd:new', 'ported')], {
+    target: 'process.env.CLAUDE_CODE_FOO;var a={type:"local",name:"new"}',
+    reference: 'var a={type:"local",name:"old"}',
+    src: ["export const cmd = { name: 'new' }", "export const env = 'CLAUDE_CODE_FOOBAR'"].join('\n'),
+  })
+  const r = await verifyUpgrade(paths)
+  expect(r.ok).toBe(false)
+  expect(r.unregistered).toContain('env:CLAUDE_CODE_FOO')
 })
 
 test('counts every status from the ledger', async () => {
