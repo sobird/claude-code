@@ -7,3 +7,6 @@ function second(y) {
 function extra(z) {
   return z * 2
 }
+function gamma(w) {
+  return w + 'alpha2'
+}

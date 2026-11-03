@@ -5,6 +5,7 @@ import { join } from 'node:path'
 
 import { alignBundles } from '../align'
 import { extractCandidates } from '../extract'
+import type { AlignResult } from '../types'
 
 const base = 'scripts/upgrade/__tests__/fixtures'
 const tempDirs: string[] = []
@@ -30,9 +31,16 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true })
 })
 
-test('writes a prettified candidate for a keyword hit', async () => {
+test('writes a prettified candidate for a new node keyword hit', async () => {
   const alignPath = await fixtureAlign()
   const outDir = tempDir()
+  const align = JSON.parse(readFileSync(alignPath, 'utf8')) as AlignResult
+
+  // Align order is first, second, extra, gamma. `first` is matched and shares
+  // the `alpha` literal with the reference; `gamma` is new and contains
+  // `alpha2`.
+  expect(align.nodes[0].classification).toBe('matched')
+  expect(align.nodes[3].classification).toBe('new')
 
   const written = await extractCandidates({
     alignPath,
@@ -41,16 +49,25 @@ test('writes a prettified candidate for a keyword hit', async () => {
     keywords: ['alpha'],
   })
 
-  expect(written).toEqual([join(outDir, 'candidates', '0-functiondeclaration.ts')])
-  expect(readdirSync(join(outDir, 'candidates'))).toEqual(['0-functiondeclaration.ts'])
+  expect(written).toEqual([join(outDir, 'candidates', '3-functiondeclaration.ts')])
+  expect(readdirSync(join(outDir, 'candidates'))).toEqual(['3-functiondeclaration.ts'])
   const text = readFileSync(written[0], 'utf8')
-  expect(text).toContain('alpha')
-  expect(text).toContain('function first')
+  expect(text).toContain('gamma')
+  expect(text).toContain('alpha2')
+  // A matched node that also matches the keyword (`first`, via `alpha`) must
+  // not be extracted: candidates are limited to changed/new nodes.
+  expect(written.some((path) => path.includes('0-functiondeclaration'))).toBe(false)
+  expect(text).not.toContain('function first')
 })
 
 test('skips dependency nodes even when the keyword matches', async () => {
   const alignPath = await fixtureAlign()
   const outDir = tempDir()
+  const align = JSON.parse(readFileSync(alignPath, 'utf8')) as AlignResult
+
+  // `second` pairs as changed but is reclassified `ignored-dependency` by map
+  // attribution.
+  expect(align.nodes[1].classification).toBe('ignored-dependency')
 
   const written = await extractCandidates({
     alignPath,

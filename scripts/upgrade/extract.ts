@@ -43,9 +43,11 @@ export async function extractCandidates(opts: ExtractOptions): Promise<string[]>
 
   for (let index = 0; index < align.nodes.length; index++) {
     const node = align.nodes[index]
-    // Dependencies are noise: never extract them, even when a keyword happens
-    // to appear in their bundled body.
-    if (node.classification === 'ignored-dependency') continue
+    // Only changed/new nodes are candidates. This also excludes dependency
+    // nodes (`ignored-dependency`, which map attribution can assign to an
+    // otherwise-changed pair), matched nodes, and unattributed nodes, even when
+    // a keyword happens to appear in their bundled body.
+    if (node.classification !== 'changed' && node.classification !== 'new') continue
 
     const snippet = target.slice(node.target.start, node.target.end)
     const haystack = snippet.toLowerCase()
