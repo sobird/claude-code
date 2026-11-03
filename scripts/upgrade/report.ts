@@ -10,12 +10,23 @@ const SECTIONS: Array<{ key: keyof VerifyReport; title: string }> = [
   { key: 'unresolved', title: 'Unresolved' },
 ]
 
-function renderMarkdown(report: VerifyReport): string {
+function pad(value: string, width: number): string {
+  return value.padEnd(width, ' ')
+}
+
+// Render a markdown table padded to a stable column width. oxfmt aligns tables
+// this way, so generated output passes `oxfmt --check` without a separate pass.
+function renderTable(header: string[], rows: string[][]): string[] {
+  const widths = header.map((cell, column) => Math.max(cell.length, ...rows.map((row) => row[column].length)))
+  const renderRow = (cells: string[]): string =>
+    `| ${cells.map((cell, column) => pad(cell, widths[column])).join(' | ')} |`
+  return [renderRow(header), `| ${widths.map((width) => '-'.repeat(width)).join(' | ')} |`, ...rows.map(renderRow)]
+}
+
+export function renderMarkdown(report: VerifyReport): string {
   const lines: string[] = ['# Upgrade verification report', '', `OK: ${report.ok}`, '']
-  lines.push('| Status | Count |', '| --- | --- |')
-  for (const [status, count] of Object.entries(report.counts)) {
-    lines.push(`| ${status} | ${count} |`)
-  }
+  const countRows = Object.entries(report.counts).map(([status, count]) => [status, String(count)])
+  lines.push(...renderTable(['Status', 'Count'], countRows))
   for (const section of SECTIONS) {
     const ids = report[section.key] as string[]
     if (ids.length === 0) continue

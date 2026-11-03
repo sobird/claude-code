@@ -307,14 +307,14 @@
       "id": "env:CLAUDE_CODE_HOST_HTTP_PROXY_PORT",
       "kind": "env",
       "status": "approximated",
-      "evidence": ["bundle:4351166", "bundle:5395760"],
+      "evidence": ["bundle:5395760"],
       "notes": "2.1.88/2.1.89 bundle 中由打包依赖 @anthropic-ai/sandbox-runtime 的 Linux 沙箱启动代码（[Sandbox Linux] --setenv）注入子进程；本仓库该能力由同名依赖提供，src/ 不直接读取，故近似为依赖实现（R35 依赖噪声）"
     },
     {
       "id": "env:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT",
       "kind": "env",
       "status": "approximated",
-      "evidence": ["bundle:4351244", "bundle:5395838"],
+      "evidence": ["bundle:5395838"],
       "notes": "同 HOST_HTTP_PROXY_PORT：由打包依赖 @anthropic-ai/sandbox-runtime 注入沙箱子进程，本仓库由同名依赖提供，src/ 不直接读取（R35 依赖噪声）"
     },
     {

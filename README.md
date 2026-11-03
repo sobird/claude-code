@@ -76,7 +76,7 @@ bun scripts/upgrade/cli.ts extract --align <align-dir/align.json> --target <2.1.
 bun scripts/upgrade/cli.ts probe --target <2.1.89/cli.js> --scenario <scenario.json> --out <trace.json>
 
 # 5. 对拍源码与目标 bundle，校验台账并输出报告
-bun scripts/upgrade/cli.ts verify --target <2.1.89/cli.js> --src src --status docs/upgrade/2.1.89/status.json --out <report-dir>
+bun scripts/upgrade/cli.ts verify --target <2.1.89/cli.js> --reference ./cli.js --src src --status docs/upgrade/2.1.89/status.json --out <report-dir>
 ```
 
 五个步骤里，`inventory` 与 `align` 建立差异基线，`extract` 与 `probe` 收集待移植的静态字符串和运行时证据，`verify` 最终核对所有台账条目是否处于终态并生成 `report.md` / `report.json`。

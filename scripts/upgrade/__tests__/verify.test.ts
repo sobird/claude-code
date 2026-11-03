@@ -218,7 +218,7 @@ test('writeReport writes report.json and report.md', async () => {
   expect(json.unregistered).toContain('cmd:old')
   const md = readFileSync(join(outDir, 'report.md'), 'utf8')
   expect(md).toContain('# Upgrade verification report')
-  expect(md).toContain('| Status | Count |')
+  expect(md).toContain('| Status             | Count |')
   expect(md).toContain('Unregistered')
   expect(md).toContain('cmd:old')
 })

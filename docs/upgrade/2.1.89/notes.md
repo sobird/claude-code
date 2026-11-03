@@ -79,11 +79,12 @@
 
 - 台账收尾：`status.json` 补齐 §8.4 的 11 个 `already-present` 条目（`CLAUDE_CODE_NO_FLICKER`、`PermissionDenied`/`TaskCreated` hook、`showThinkingSummaries`、`claude-cli://` 深链、`StructuredOutput`、折叠摘要 “Listed N directories”、`Ctrl+B`、many-image 2000px、`/usage`、hook 输出 10k），证据均指向 2.1.88 `cli.js`（逐条加载 bundle 核对偏移附近的文本）。全部条目均为终态，无 `unresolved`。
 - hook 输出 10k 的准确位置：`cli.js` 的 `o65` 截断函数 @13798340（提示 `… [output truncated - exceeded N characters]`），常量 `QP4=1e4` @13801119。
+- 偏移基准：既有条目的 `bundle:` 偏移索引 `package/cli.js`（2.1.89），§8.4/§8.5 新增条目索引根 `cli.js`（2.1.88）；`verify` 不解析这些偏移，仅供人工核对。
 - verify 首次运行暴露 3 个未登记 env（`CLAUDE_CODE_HOST_HTTP_PROXY_PORT`、`CLAUDE_CODE_HOST_SOCKS_PROXY_PORT`、`CLAUDE_CODE_SM_COMPACT`）。三者均非 2.1.89 新增：前两者由打包依赖 `@anthropic-ai/sandbox-runtime` 的 `[Sandbox Linux] --setenv` 注入子进程（R35 依赖噪声）；后者是扫描器 `ENV_RE` 从 `ENABLE_/DISABLE_CLAUDE_CODE_SM_COMPACT` 截取的子串名，真实读取点已在 `src/services/compact/sessionMemoryCompact.ts:370/373`。按 R37「修台账而非改源码」补登为 `approximated`，`src/` 未改动。
 - 第二层对拍：`bun scripts/upgrade/cli.ts verify --target package/cli.js --src src --status docs/upgrade/2.1.89/status.json --out docs/upgrade/2.1.89/` → 退出码 0，`report.md`/`report.json` 由 verify 生成（ok=true）；counts：already-present 16、ported 13、approximated 5、ignored-dependency 1、retained-internal 6、unresolved 0；无 missingInSrc / unexpectedInSrc / unregistered。
 - `status.md` 无生成器，按 R37 由 `status.json` 重新生成表格（id/kind/status/evidence 四列，逐条按文件顺序，evidence 以 `, ` 连接，空值 `—`）。
 - README 在「构建项目」后新增「如何用流水线升级版本」，说明 `inventory → align → extract → probe → verify` 顺序及每个子命令的一行用法。
-- 注意：`report.md` 由 `scripts/upgrade/report.ts` 生成，其 markdown 表格未做列对齐，`oxfmt --check` 会判为格式不符；为通过 `bun run fmt:check` 且不把生成器改动纳入本次提交范围，对生成的 `report.md` 执行了 `oxfmt`（仅补齐表格空白，数据不变）。重跑 verify 会再次输出未对齐版本。
+- `report.md` 由 `scripts/upgrade/report.ts` 生成；生成器现已按列宽补齐 markdown 表格（与 `oxfmt` 对齐规则一致），重跑 verify 的输出无需再手工格式化即可通过 `bun run fmt:check`。
 - 三层验证（R37：typecheck/lint 以既有基线为准，只确认改动文件未引入新错误）：
   - `bun run typecheck`：1547 个错误，与 CLAUDE.md「Known state」的既有基线一致；Task 26 未改动任何 `.ts/.tsx`，`git diff --name-only cb8ed88` 仅含文档；升级触及文件中报错均为既有泛型 `Message`/SDK 类型错误（如 `messages.ts`、`hooks.ts`、`query.ts`），非本次移植特性引入。
   - `bun run fmt:check`：通过（2265 文件）。
