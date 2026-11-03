@@ -1,0 +1,6 @@
+{
+  "args": ["--version"],
+  "breakpoints": [],
+  "capture": [],
+  "notes": "The probe cannot exercise channels: the feature is GrowthBook-gated (tengu_harbor) and requires an MCP server plus claude.ai OAuth, none of which a --version run reaches. Evidence is therefore static from package/cli.js (bundle offsets) and the existing source, not from probe output."
+}

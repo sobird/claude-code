@@ -188,9 +188,9 @@
     {
       "id": "bundle-only:channels",
       "kind": "bundle-only",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "仅 bundle 可见：channels，取证后定 ported 或 approximated"
+      "status": "already-present",
+      "evidence": ["bundle:12974406,10197914,1056793,10488459,12998609,10196674,10199598"],
+      "notes": "2.1.89 的 channels 面在源码中已完整实现（--channels 选项与内联解析、gate 顺序、allowlist、permission relay、设置项 channelsEnabled/defaultView），无需移植（R34）"
     },
     {
       "id": "bundle-only:fast-mode-errors",

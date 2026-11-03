@@ -36,6 +36,21 @@
 - 保留运行时门：可见性仍由 GrowthBook `tengu_cobalt_lantern` + `isPolicyAllowed('allow_remote_sessions')` 控制，未放宽。
 - R22：slash 命令不出现在 CLI `--help`，故验收改为「`features` 含 `CCR_REMOTE_SETUP`」+「external `dist/cli.js` 含 `Setup Claude Code on the web`」；`scripts/upgrade/scenarios/cmd-web-setup.json` 为 `--version` 探针场景，probe 产出空 trace，静态偏移为验收证据。
 
+## Task 23 — channels (R34)
+
+- 结论：`--channels` / `channelsEnabled` / `defaultView` 在 2.1.88 源码树中已完整实现，2.1.89 无需移植，本 Task 仅做验证与回归测试。
+- bundle 偏移 → 既有源码位置：
+  - `12974406` → CLI 选项 `--channels <servers...>` / `--dangerously-load-development-channels <servers...>`：`src/main.tsx:4494`、`src/main.tsx:4500`（文案与 bundle 一致）。
+  - `10197914` → 内联解析与 `tengu_mcp_channel_flags` 遥测：`src/main.tsx:2121`–`2146`。
+  - `1056793` → `findChannelEntry`（bundle `_J6`）与 gate 顺序（capability → disabled → auth → policy → session → marketplace → allowlist，reason 文案一致）：`src/services/mcp/channelNotification.ts`。
+  - `10488459` → allowlist（`tengu_harbor_ledger` / `tengu_harbor`）：`src/services/mcp/channelAllowlist.ts:39`、`:50`。
+  - `12998609` → permission relay（bundle `uyK`/`IyK`/`myK`/`pyK`/`ByK`/`gyK`/`LXY`）：`src/services/mcp/channelPermissions.ts`。
+  - `10196674` → 通知/对话框：`src/components/LogoV2/ChannelsNotice.tsx`、`src/components/DevChannelsDialog.tsx`。
+  - `10199598` → 设置项 `channelsEnabled`（托管策略、默认关闭）与 `defaultView: z.enum(['chat','transcript'])`：`src/utils/settings/types.ts:721`、`:749`，消费点 `src/main.tsx:2675`、`src/components/Settings/Config.tsx:765`。
+- 测试：`tests/channels-2.1.89.test.ts` 固定 `findChannelEntry`、`shortRequestId`、`truncateForPreview`、`filterPermissionRelayClients` 与 `channelsEnabled` schema。
+- `defaultView` 位于 `feature('KAIROS') || feature('KAIROS_BRIEF')` 展开内，`bun test` 运行时两开关均关闭，故该键为 schema 未知字段（外层 `.passthrough()` 会静默接受，无法断言枚举）；测试据 R34 仅覆盖 `channelsEnabled`，`defaultView` 以上述静态位置为准。
+- `scripts/upgrade/scenarios/channels.json` 为 `--version` 探针场景，probe 无法驱动 channels（GrowthBook + MCP 服务器 + claude.ai OAuth），证据为 `package/cli.js` 静态偏移。
+
 ## 未解点
 
 ### defer 暂停/恢复
