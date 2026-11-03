@@ -38,9 +38,13 @@
     {
       "id": "cmd:web-setup",
       "kind": "command",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "新增/更新 /web-setup 命令（remote-setup）"
+      "status": "ported",
+      "evidence": [
+        "bundle:name:\"web-setup\"",
+        "bundle:11209069",
+        "bundle:Setup Claude Code on the web (requires connecting your GitHub account)"
+      ],
+      "notes": "新增/更新 /web-setup 命令；2.1.89 注册与 remote-setup 流程与本仓库源码一致，仅需开启 CCR_REMOTE_SETUP（R22）"
     },
     {
       "id": "cmd:ultraplan",

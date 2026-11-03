@@ -29,4 +29,11 @@
 - R20：上游 `pet` 会向私有鉴权端点发起 reaction 请求并显示气泡；本仓库不移植 reaction plumbing，`/buddy pet` 仅写 `companionPetAt`（爱心仍由 `CompanionSprite` 渲染），孵化后也不生成 reaction。命令面板因此没有 “last said” 区块。
 - R21：slash 命令不出现在 CLI `--help`，故验收改为「`features` 含 `BUDDY`」+「external `dist/cli.js` 含 `Hatch a coding companion`」；`scripts/upgrade/scenarios/cmd-buddy.json` 为 `--version` 探针场景，probe 产出空 trace，静态偏移为验收证据。
 
+### /web-setup
+
+- 依据 `package/cli.js` 静态抽取：注册 `type:"local-jsx",name:"web-setup",description:"Setup Claude Code on the web (requires connecting your GitHub account)",availability:["claude-ai"]` @11209069。
+- 2.1.89 的注册（`src/commands/remote-setup/index.ts`）与 `remote-setup.tsx` 流程已与本仓库源码逐项一致（含用户可见文案、`availability: ['claude-ai']` 及 `isEnabled`/`isHidden` 门），本 Task 不修改两者。
+- 保留运行时门：可见性仍由 GrowthBook `tengu_cobalt_lantern` + `isPolicyAllowed('allow_remote_sessions')` 控制，未放宽。
+- R22：slash 命令不出现在 CLI `--help`，故验收改为「`features` 含 `CCR_REMOTE_SETUP`」+「external `dist/cli.js` 含 `Setup Claude Code on the web`」；`scripts/upgrade/scenarios/cmd-web-setup.json` 为 `--version` 探针场景，probe 产出空 trace，静态偏移为验收证据。
+
 ## 未解点
