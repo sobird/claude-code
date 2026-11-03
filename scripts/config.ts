@@ -1,10 +1,11 @@
-import { bugs, name, version } from '../package.json'
+import { bugs, name } from '../package.json'
+import { UPSTREAM_VERSION } from './upstream-version'
 
 export type BuildTarget = 'ant' | 'external'
 export type BuildEnv = 'development' | 'production' | 'test'
 
 export const defines = {
-  'MACRO.VERSION': JSON.stringify(version),
+  'MACRO.VERSION': JSON.stringify(UPSTREAM_VERSION),
   'MACRO.BUILD_TIME': JSON.stringify(new Date().toISOString()),
   'MACRO.FEEDBACK_CHANNEL': JSON.stringify(bugs.url),
   'MACRO.ISSUES_EXPLAINER': JSON.stringify(`report the issue at ${bugs.url}`),
@@ -120,7 +121,7 @@ export const featureArgs = features.flatMap((feature) => ['--feature', feature])
 export const banner = `#!/usr/bin/env node
 // (c) Anthropic PBC. All rights reserved. Use is subject to the Legal Agreements outlined here: https://code.claude.com/docs/en/legal-and-compliance.
 
-// Version: ${version}
+// Version: ${UPSTREAM_VERSION}
 
 // Want to see the unminified source? We're hiring!
 // https://job-boards.greenhouse.io/anthropic/jobs/4816199008`
