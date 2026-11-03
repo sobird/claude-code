@@ -1,0 +1,6 @@
+{
+  "args": ["--version"],
+  "breakpoints": [],
+  "capture": [],
+  "notes": "Probe cannot reproduce these behaviors: fast mode error UX needs live API/GrowthBook state, PowerShell security rules need a real pwsh install, and sandbox MITM/proxy needs sandbox runtime state. Evidence is static from package/cli.js offsets (fast mode @10729316, PowerShell @8556815, MITM @4376088); the MITM implementation belongs to the vendored @anthropic-ai/sandbox-runtime dependency."
+}

@@ -51,6 +51,18 @@
 - `defaultView` 位于 `feature('KAIROS') || feature('KAIROS_BRIEF')` 展开内，`bun test` 运行时两开关均关闭，故该键为 schema 未知字段（外层 `.passthrough()` 会静默接受，无法断言枚举）；测试据 R34 仅覆盖 `channelsEnabled`，`defaultView` 以上述静态位置为准。
 - `scripts/upgrade/scenarios/channels.json` 为 `--version` 探针场景，probe 无法驱动 channels（GrowthBook + MCP 服务器 + claude.ai OAuth），证据为 `package/cli.js` 静态偏移。
 
+## Task 24 — fast mode / PowerShell / sandbox (R35)
+
+- 结论：三个 "bundle-only" 领域在 2.1.88 源码树中均已实现；2.1.88→2.1.89 的增量主要是压缩器重命名，2.1.89 新增字符串在本仓库 `src/` 中均可找到。本 Task 仅做验证与回归测试，未改动任何 `src/` 文件。
+- bundle 偏移 → 既有源码位置：
+  - `10729316`（`Fast mode overloaded and is temporarily unavailable`）→ fast mode 错误 UX：`src/utils/fastMode.ts`（`getFastModeUnavailableReason`、`isFastModeEnabled`、cooldown 状态机）、`src/hooks/notifs/useFastModeNotification.tsx`、`src/commands/fast/fast.tsx`、`src/components/ModelPicker.tsx`。
+  - `8556815`（`PowerShell parser: command too long`）→ PowerShell 安全规则：`src/tools/PowerShellTool/powershellSecurity.ts`（`powershellCommandIsSafe`）、`src/tools/PowerShellTool/powershellPermissions.ts`、`src/utils/powershell/{parser,dangerousCmdlets,staticPrefix}.ts`。
+  - `4376088`（`Optional MITM proxy configuration`）→ sandbox MITM/proxy：字符串属于打包依赖 `@anthropic-ai/sandbox-runtime`，忽略该依赖内部实现。CLI 自有的配置面已存在：`src/entrypoints/sandboxTypes.ts`（`httpProxyPort`、`socksProxyPort`、`enableWeakerNestedSandbox`、`enableWeakerNetworkIsolation`），以及 `/sandbox` UI 组件与 egress-proxy denial。
+- 忽略依赖理由：MITM 代理服务器、Unix-socket relay、域名路由、seccomp/bwrap 及 `[Sandbox Linux]` 内部实现均由打包的 `@anthropic-ai/sandbox-runtime` 提供，按用户指令（忽略 bundle 依赖）不移植；本仓库只负责配置 schema 与 CLI 表面。
+- 测试：`tests/bundle-only-behaviors.test.ts` 固定：fast mode 禁用/cooldown API；PowerShell 的 `classifyCommandName`/`stripModulePrefix`/`MAX_COMMAND_LENGTH` 与 `powershellCommandIsSafe`（拒绝 `Invoke-Expression`、接受 `Get-ChildItem`、解析失败返回 ask）；sandbox schema 的 `httpProxyPort`/`socksProxyPort` 与 weaker isolation 标志。
+- 与 R35 示例的偏差：`classifyCommandName('node')` 按源码契约返回 `'unknown'`（裸名歧义），并非 `'application'`；测试固定为 `'unknown'`，`'application'` 用路径形式（如 `./node`）覆盖。
+- `scripts/upgrade/scenarios/fast-powershell-sandbox.json` 为 `--version` 探针场景；上述行为需要真实 API/pwsh/sandbox 状态，probe 无法复现，证据为 `package/cli.js` 静态偏移。
+
 ## 未解点
 
 ### defer 暂停/恢复

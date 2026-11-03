@@ -195,23 +195,23 @@
     {
       "id": "bundle-only:fast-mode-errors",
       "kind": "bundle-only",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "仅 bundle 可见：fast mode 错误 UX"
+      "status": "already-present",
+      "evidence": ["bundle:10729316"],
+      "notes": "2.1.89 的 fast mode 错误 UX 已在源码中实现：src/utils/fastMode.ts（getFastModeUnavailableReason/isFastModeEnabled/cooldown）、src/hooks/notifs/useFastModeNotification.tsx、src/commands/fast/fast.tsx、src/components/ModelPicker.tsx；仅需回归测试（R35）"
     },
     {
       "id": "bundle-only:powershell-rules",
       "kind": "bundle-only",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "仅 bundle 可见：PowerShell 安全规则"
+      "status": "already-present",
+      "evidence": ["bundle:8556815"],
+      "notes": "2.1.89 的 PowerShell 安全规则已在源码中实现：src/tools/PowerShellTool/powershellSecurity.ts（powershellCommandIsSafe）、src/tools/PowerShellTool/powershellPermissions.ts、src/utils/powershell/{parser,dangerousCmdlets,staticPrefix}.ts；仅需回归测试（R35）"
     },
     {
       "id": "bundle-only:sandbox-mitm",
       "kind": "bundle-only",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "仅 bundle 可见：sandbox proxy/MITM 配置"
+      "status": "ignored-dependency",
+      "evidence": ["bundle:4376088"],
+      "notes": "Optional MITM proxy 配置属于打包依赖 @anthropic-ai/sandbox-runtime，按用户指令忽略；CLI 自有面已存在：src/entrypoints/sandboxTypes.ts（httpProxyPort/socksProxyPort/enableWeakerNestedSandbox/enableWeakerNetworkIsolation）及 /sandbox UI 与 egress-proxy denial（R35）"
     },
     {
       "id": "bundle-only:memory-permissions",
