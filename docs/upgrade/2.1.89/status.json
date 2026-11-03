@@ -225,6 +225,104 @@
         "scenario:memory-permissions.json"
       ],
       "notes": "agent/skill memory 权限在源码中已存在，无需移植：Read/Write 对 agent memory 路径的自动放行（filesystem.ts，isAgentMemoryPath）与 bundled skill 解包的目录 0o700/文件 0o600 均已在位（R36）"
+    },
+    {
+      "id": "env:CLAUDE_CODE_NO_FLICKER",
+      "kind": "env",
+      "status": "already-present",
+      "evidence": ["bundle:4726786"],
+      "notes": "全屏（无闪烁）渲染开关在 2.1.88 已存在：bundle 中 process.env.CLAUDE_CODE_NO_FLICKER 判定与 tmux -CC 检测；本仓库 src/utils/fullscreen.ts 已有读取点"
+    },
+    {
+      "id": "behavior:hook-permission-denied",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:1256015"],
+      "notes": "PermissionDenied hook 事件在 2.1.88 的 hook 事件列表中已存在，无需移植"
+    },
+    {
+      "id": "behavior:hook-task-created",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:1256057"],
+      "notes": "TaskCreated hook 事件在 2.1.88 的 hook 事件列表中已存在，无需移植"
+    },
+    {
+      "id": "behavior:show-thinking-summaries",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:1312705"],
+      "notes": "showThinkingSummaries 设置项在 2.1.88 已存在（settings schema 的 boolean 描述），无需移植"
+    },
+    {
+      "id": "behavior:deep-link-claude-cli",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:1310899"],
+      "notes": "claude-cli:// 协议深链注册及其 disableDeepLinkRegistration 开关在 2.1.88 已存在，无需移植"
+    },
+    {
+      "id": "behavior:structured-output",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:8500348"],
+      "notes": "StructuredOutput schema 校验与错误文案在 2.1.88 已存在，无需移植"
+    },
+    {
+      "id": "behavior:collapsed-listed-directories",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:11086619"],
+      "notes": "折叠摘要 “Listed N directories” 文案与计数逻辑在 2.1.88 已存在，无需移植"
+    },
+    {
+      "id": "behavior:ctrl-b-task-background",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:8572425"],
+      "notes": "Ctrl+B 任务转后台键位（Task 上下文 ctrl+b → task:background）在 2.1.88 已存在，无需移植"
+    },
+    {
+      "id": "behavior:many-image-2000px",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:11572918"],
+      "notes": "many-image 2000px 尺寸上限提示在 2.1.88 已存在，无需移植"
+    },
+    {
+      "id": "behavior:usage-command",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:name:\"usage\"", "bundle:12443262"],
+      "notes": "/usage 命令（local-jsx，Show plan usage limits，默认 Usage 页签）在 2.1.88 已注册，无需移植"
+    },
+    {
+      "id": "behavior:hook-output-10k",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:13798340", "bundle:13801119"],
+      "notes": "hook 输出超过 10000 字符时截断（o65/QP4=1e4，提示 “… [output truncated - exceeded N characters]”）在 2.1.88 已存在，无需移植"
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_HTTP_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:4351166", "bundle:5395760"],
+      "notes": "2.1.88/2.1.89 bundle 中由打包依赖 @anthropic-ai/sandbox-runtime 的 Linux 沙箱启动代码（[Sandbox Linux] --setenv）注入子进程；本仓库该能力由同名依赖提供，src/ 不直接读取，故近似为依赖实现（R35 依赖噪声）"
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:4351244", "bundle:5395838"],
+      "notes": "同 HOST_HTTP_PROXY_PORT：由打包依赖 @anthropic-ai/sandbox-runtime 注入沙箱子进程，本仓库由同名依赖提供，src/ 不直接读取（R35 依赖噪声）"
+    },
+    {
+      "id": "env:CLAUDE_CODE_SM_COMPACT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:11312248", "bundle:11312307"],
+      "notes": "扫描器 ENV_RE 从 ENABLE_/DISABLE_CLAUDE_CODE_SM_COMPACT 截取到的子串名；真实读取点为 src/services/compact/sessionMemoryCompact.ts:370/373（带前缀的两个变量，2.1.88 已存在），以近似记录消化扫描噪声"
     }
   ]
 }

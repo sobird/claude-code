@@ -58,6 +58,29 @@ node dist/cli.js
 npm link
 ```
 
+### 如何用流水线升级版本
+
+升级到新的上游版本时，按 `inventory → align → extract → probe → verify` 的顺序运行 `scripts/upgrade/cli.ts` 的五个子命令，前一步的产物作为后一步的输入：
+
+```bash
+# 1. 盘点 bundle：命令、环境变量、CLI 参数与字符串
+bun scripts/upgrade/cli.ts inventory --bundle <upstream/cli.js> --out <inventory.json>
+
+# 2. 对比参考版与目标版的函数节点，生成对齐结果
+bun scripts/upgrade/cli.ts align --reference <2.1.88/cli.js> --target <2.1.89/cli.js> --out <align-dir>
+
+# 3. 从变更节点中抽取待移植的字符串候选
+bun scripts/upgrade/cli.ts extract --align <align-dir/align.json> --target <2.1.89/cli.js> --out <candidates-dir>
+
+# 4. 用场景脚本探测运行时行为
+bun scripts/upgrade/cli.ts probe --target <2.1.89/cli.js> --scenario <scenario.json> --out <trace.json>
+
+# 5. 对拍源码与目标 bundle，校验台账并输出报告
+bun scripts/upgrade/cli.ts verify --target <2.1.89/cli.js> --src src --status docs/upgrade/2.1.89/status.json --out <report-dir>
+```
+
+五个步骤里，`inventory` 与 `align` 建立差异基线，`extract` 与 `probe` 收集待移植的静态字符串和运行时证据，`verify` 最终核对所有台账条目是否处于终态并生成 `report.md` / `report.json`。
+
 ## 🐛 调试
 
 ### 实时预览（改代码自动重画）

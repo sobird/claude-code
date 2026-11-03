@@ -75,6 +75,24 @@
 - 测试：`tests/memory-permissions.test.ts` 固定 `getAgentMemoryDir` 三种 scope（项目/用户/本地）与 `:`→`-` 消毒、`isAgentMemoryPath` 对三个 scope 的 `MEMORY.md` 放行、对 `/etc/passwd` 及 `..` 穿越路径拒绝、`getAgentMemoryEntrypoint` 与 `getMemoryScopeDisplay` 文案。skill 0o700/0o600 与权限绕过位于未导出的内部实现，按 R36 以静态 bundle 证据记录，不直接导入。
 - `scripts/upgrade/scenarios/memory-permissions.json` 为 `--version` 探针场景；权限绕过只在真实工具调用的权限判定中触发，chmod 只在运行时解包 skill 时发生，probe 均无法复现，证据为 `package/cli.js` 静态偏移。
 
+## Task 26 — 收尾与三层验证 (R37)
+
+- 台账收尾：`status.json` 补齐 §8.4 的 11 个 `already-present` 条目（`CLAUDE_CODE_NO_FLICKER`、`PermissionDenied`/`TaskCreated` hook、`showThinkingSummaries`、`claude-cli://` 深链、`StructuredOutput`、折叠摘要 “Listed N directories”、`Ctrl+B`、many-image 2000px、`/usage`、hook 输出 10k），证据均指向 2.1.88 `cli.js`（逐条加载 bundle 核对偏移附近的文本）。全部条目均为终态，无 `unresolved`。
+- hook 输出 10k 的准确位置：`cli.js` 的 `o65` 截断函数 @13798340（提示 `… [output truncated - exceeded N characters]`），常量 `QP4=1e4` @13801119。
+- verify 首次运行暴露 3 个未登记 env（`CLAUDE_CODE_HOST_HTTP_PROXY_PORT`、`CLAUDE_CODE_HOST_SOCKS_PROXY_PORT`、`CLAUDE_CODE_SM_COMPACT`）。三者均非 2.1.89 新增：前两者由打包依赖 `@anthropic-ai/sandbox-runtime` 的 `[Sandbox Linux] --setenv` 注入子进程（R35 依赖噪声）；后者是扫描器 `ENV_RE` 从 `ENABLE_/DISABLE_CLAUDE_CODE_SM_COMPACT` 截取的子串名，真实读取点已在 `src/services/compact/sessionMemoryCompact.ts:370/373`。按 R37「修台账而非改源码」补登为 `approximated`，`src/` 未改动。
+- 第二层对拍：`bun scripts/upgrade/cli.ts verify --target package/cli.js --src src --status docs/upgrade/2.1.89/status.json --out docs/upgrade/2.1.89/` → 退出码 0，`report.md`/`report.json` 由 verify 生成（ok=true）；counts：already-present 16、ported 13、approximated 5、ignored-dependency 1、retained-internal 6、unresolved 0；无 missingInSrc / unexpectedInSrc / unregistered。
+- `status.md` 无生成器，按 R37 由 `status.json` 重新生成表格（id/kind/status/evidence 四列，逐条按文件顺序，evidence 以 `, ` 连接，空值 `—`）。
+- README 在「构建项目」后新增「如何用流水线升级版本」，说明 `inventory → align → extract → probe → verify` 顺序及每个子命令的一行用法。
+- 注意：`report.md` 由 `scripts/upgrade/report.ts` 生成，其 markdown 表格未做列对齐，`oxfmt --check` 会判为格式不符；为通过 `bun run fmt:check` 且不把生成器改动纳入本次提交范围，对生成的 `report.md` 执行了 `oxfmt`（仅补齐表格空白，数据不变）。重跑 verify 会再次输出未对齐版本。
+- 三层验证（R37：typecheck/lint 以既有基线为准，只确认改动文件未引入新错误）：
+  - `bun run typecheck`：1547 个错误，与 CLAUDE.md「Known state」的既有基线一致；Task 26 未改动任何 `.ts/.tsx`，`git diff --name-only cb8ed88` 仅含文档；升级触及文件中报错均为既有泛型 `Message`/SDK 类型错误（如 `messages.ts`、`hooks.ts`、`query.ts`），非本次移植特性引入。
+  - `bun run fmt:check`：通过（2265 文件）。
+  - `bun run lint`：1531 warnings + 4 errors；4 个 error 全部位于本分支未改动文件（`src/utils/bash/commands.ts:1160`、`src/utils/bash/bashPipeCommand.ts:183`、`src/tools/AgentTool/UI.tsx:45`、`src/tools/BashTool/readOnlyValidation.ts:1237`），属既有 `no-unnecessary-type-assertion` 积压。
+  - `bun test`：133 pass / 0 fail（28 个测试文件，383 个 expect）。
+  - `bun run build`：成功，产出 `dist/cli.js`（27,236,579 bytes）。
+  - `node dist/cli.js --version`：`2.1.89 (Claude Code)`。
+  - `node dist/cli.js --help`：不含 `ultraplan`。slash 命令不出现在 CLI `--help`（R19/R21/R23），故 `autocompact`/`brief`/`buddy`/`web-setup` 未见于 help 属既有架构事实而非回归；等价验收在构建产物中确认：`name:"autocompact"`/`"brief"`/`"buddy"`/`"web-setup"` 均已注册，`feature('ULTRAPLAN')` 门控使 ultraplan 不进入 COMMANDS（仅有 `ULTRAPLAN_TELEPORT_*` 等死数据字符串，R23a）。
+
 ## 未解点
 
 ### defer 暂停/恢复
