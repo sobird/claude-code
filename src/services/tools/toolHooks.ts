@@ -454,6 +454,9 @@ export async function* runPreToolUseHooks(
             hookSource: result.hookSource,
             reason: result.hookPermissionDecisionReason,
           }
+          if (result.permissionBehavior === 'defer') {
+            continue
+          }
           if (result.permissionBehavior === 'allow') {
             yield {
               type: 'hookPermissionResult',

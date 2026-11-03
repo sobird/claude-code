@@ -2,7 +2,6 @@ import { type HookEvent, HOOK_EVENTS, type HookInput, type PermissionUpdate } fr
 import type { HookJSONOutput, AsyncHookJSONOutput, SyncHookJSONOutput } from 'src/entrypoints/agentSdkTypes.js'
 import type { Message } from 'src/types/message.js'
 import type { PermissionResult } from 'src/utils/permissions/PermissionResult.js'
-import { permissionBehaviorSchema } from 'src/utils/permissions/PermissionRule.js'
 import { permissionUpdateSchema } from 'src/utils/permissions/PermissionUpdateSchema.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { z } from 'zod/v4'
@@ -38,6 +37,9 @@ export type PromptResponse = {
   selected: string
 }
 
+// Hook-only permission behavior: PreToolUse hooks may also defer the decision.
+export const hookPermissionBehaviorSchema = lazySchema(() => z.enum(['allow', 'deny', 'ask', 'defer']))
+
 // Sync hook response schema
 export const syncHookResponseSchema = lazySchema(() =>
   z.object({
@@ -51,7 +53,7 @@ export const syncHookResponseSchema = lazySchema(() =>
       .union([
         z.object({
           hookEventName: z.literal('PreToolUse'),
-          permissionDecision: permissionBehaviorSchema().optional(),
+          permissionDecision: hookPermissionBehaviorSchema().optional(),
           permissionDecisionReason: z.string().optional(),
           updatedInput: z.record(z.string(), z.unknown()).optional(),
           additionalContext: z.string().optional(),

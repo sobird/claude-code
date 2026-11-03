@@ -221,6 +221,8 @@ export const PermissionUpdateDestinationSchema = lazySchema(() =>
 
 export const PermissionBehaviorSchema = lazySchema(() => z.enum(['allow', 'deny', 'ask']))
 
+export const HookPermissionBehaviorSchema = lazySchema(() => z.enum(['allow', 'deny', 'ask', 'defer']))
+
 export const PermissionRuleValueSchema = lazySchema(() =>
   z.object({
     toolName: z.string(),
@@ -764,7 +766,7 @@ export const AsyncHookJSONOutputSchema = lazySchema(() =>
 export const PreToolUseHookSpecificOutputSchema = lazySchema(() =>
   z.object({
     hookEventName: z.literal('PreToolUse'),
-    permissionDecision: PermissionBehaviorSchema().optional(),
+    permissionDecision: HookPermissionBehaviorSchema().optional(),
     permissionDecisionReason: z.string().optional(),
     updatedInput: z.record(z.string(), z.unknown()).optional(),
     additionalContext: z.string().optional(),

@@ -140,9 +140,9 @@
     {
       "id": "behavior:defer",
       "kind": "behavior",
-      "status": "unresolved",
-      "evidence": [],
-      "notes": "PreToolUse permissionDecision 新增 defer，headless 暂停/恢复"
+      "status": "ported",
+      "evidence": ["bundle:11415200", "bundle:11394700", "bundle:11413421", "bundle:allow, deny, ask, defer"],
+      "notes": "Task 16 仅完成 schema/解析；暂停/恢复逻辑由 Task 17 负责"
     },
     {
       "id": "behavior:mcp-nonblocking",
