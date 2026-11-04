@@ -16,9 +16,18 @@ import { sendNotification } from '../services/notifier.js'
 import { OAuthService } from '../services/oauth/index.js'
 import { getOauthAccountInfo, validateForceLoginOrg } from '../utils/auth.js'
 import { logError } from '../utils/log.js'
+import { maskSecretForDisplay } from '../utils/secretMask.js'
 import { getSettings_DEPRECATED, updateSettingsForSource } from '../utils/settings/settings.js'
 import { Select } from './CustomSelect/select.js'
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js'
+import {
+  buildPlatformEnv,
+  PLATFORM_DEFINITIONS,
+  type PlatformFormValues,
+  type PlatformKind,
+  readPlatformFromEnv,
+  validatePlatformValues,
+} from './platformConfig.js'
 import { Spinner } from './Spinner.js'
 import TextInput from './TextInput.js'
 
@@ -29,38 +38,19 @@ type Props = {
   forceLoginMethod?: 'claudeai' | 'console'
 }
 
-interface BaseStatus {
-  state: string
-  baseUrl: string
-  apiKey: string
-  haikuModel: string
-  sonnetModel: string
-  opusModel: string
-  activeField: 'base_url' | 'api_key' | 'haiku_model' | 'sonnet_model' | 'opus_model'
-}
-
 /**
- * Custom Platform Status
- *
- * Anthropic Compatible configure API endpoint and model names
+ * Platform setup: configure a custom endpoint and the model used per tier.
+ * Anthropic-compatible endpoints are used as-is; OpenAI and Gemini endpoints
+ * are translated by src/services/api/providerAdapters.
  */
-interface CustomPlatformStatus extends BaseStatus {
-  state: 'custom_platform'
-}
-
-interface OpenAIPlatformStatus extends BaseStatus {
-  state: 'openai_platform'
-}
-
-interface GeminiPlatformStatus extends BaseStatus {
-  state: 'gemini_platform'
+interface PlatformConfigStatus extends PlatformFormValues {
+  state: 'platform_config'
+  platform: PlatformKind
 }
 
 type OAuthStatus =
   | { state: 'idle' } // Initial state, waiting to select login method
-  | CustomPlatformStatus // Custom platform: configure API endpoint and model names
-  | OpenAIPlatformStatus // OpenAI Chat Completions API platform
-  | GeminiPlatformStatus // Gemini Generate Content API platform
+  | PlatformConfigStatus // Configure a custom API endpoint and model names
   | { state: 'platform_setup' } // Show platform setup info (Bedrock/Vertex/Foundry)
   | { state: 'ready_to_start' } // Flow started, waiting for browser to open
   | { state: 'waiting_for_login'; url: string } // Browser opened, waiting for user to login
@@ -176,18 +166,6 @@ export function ConsoleOAuthFlow({
     {
       context: 'Confirmation',
       isActive: oauthStatus.state === 'error' && !!oauthStatus.toRetry,
-    },
-  )
-
-  // Use Settings context so 'n' key doesn't cancel (allows typing 'n' in filename input)
-  useKeybinding(
-    'confirm:no',
-    () => {
-      setOAuthStatus({ state: 'idle' })
-    },
-    {
-      context: 'Settings',
-      isActive: oauthStatus.state === 'custom_platform',
     },
   )
 
@@ -517,38 +495,21 @@ function OAuthStatusMessage({
                 },
               ]}
               onChange={(value) => {
-                if (value === 'custom_platform') {
-                  logEvent('tengu_custom_platform_selected', {})
+                if (value === 'custom_platform' || value === 'openai_platform' || value === 'gemini_platform') {
+                  const platform: PlatformKind =
+                    value === 'custom_platform' ? 'anthropic' : value === 'openai_platform' ? 'openai' : 'gemini'
+                  logEvent(
+                    platform === 'anthropic'
+                      ? 'tengu_custom_platform_selected'
+                      : platform === 'openai'
+                        ? 'tengu_openai_platform_selected'
+                        : 'tengu_gemini_platform_selected',
+                    {},
+                  )
                   setOAuthStatus({
-                    state: 'custom_platform',
-                    baseUrl: process.env.ANTHROPIC_BASE_URL ?? '',
-                    apiKey: process.env.ANTHROPIC_AUTH_TOKEN ?? '',
-                    haikuModel: process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL ?? '',
-                    sonnetModel: process.env.ANTHROPIC_DEFAULT_SONNET_MODEL ?? '',
-                    opusModel: process.env.ANTHROPIC_DEFAULT_OPUS_MODEL ?? '',
-                    activeField: 'base_url',
-                  })
-                } else if (value === 'openai_platform') {
-                  logEvent('tengu_openai_platform_selected', {})
-                  setOAuthStatus({
-                    state: 'openai_platform',
-                    baseUrl: process.env.OPENAI_BASE_URL ?? '',
-                    apiKey: process.env.OPENAI_API_KEY ?? '',
-                    haikuModel: process.env.OPENAI_DEFAULT_HAIKU_MODEL ?? '',
-                    sonnetModel: process.env.OPENAI_DEFAULT_SONNET_MODEL ?? '',
-                    opusModel: process.env.OPENAI_DEFAULT_OPUS_MODEL ?? '',
-                    activeField: 'base_url',
-                  })
-                } else if (value === 'gemini_platform') {
-                  logEvent('tengu_gemini_platform_selected', {})
-                  setOAuthStatus({
-                    state: 'gemini_platform',
-                    baseUrl: process.env.GEMINI_BASE_URL ?? '',
-                    apiKey: process.env.GEMINI_API_KEY ?? '',
-                    haikuModel: process.env.GEMINI_DEFAULT_HAIKU_MODEL ?? '',
-                    sonnetModel: process.env.GEMINI_DEFAULT_SONNET_MODEL ?? '',
-                    opusModel: process.env.GEMINI_DEFAULT_OPUS_MODEL ?? '',
-                    activeField: 'base_url',
+                    state: 'platform_config',
+                    platform,
+                    ...readPlatformFromEnv(platform),
                   })
                 } else if (value === 'platform') {
                   logEvent('tengu_oauth_platform_selected', {})
@@ -569,212 +530,21 @@ function OAuthStatusMessage({
         </Box>
       )
 
-    case 'custom_platform':
-      type Field = 'base_url' | 'api_key' | 'haiku_model' | 'sonnet_model' | 'opus_model'
-      const FIELDS: Field[] = ['base_url', 'api_key', 'haiku_model', 'sonnet_model', 'opus_model']
-      const { activeField, baseUrl, apiKey, haikuModel, sonnetModel, opusModel } = oauthStatus
-      const displayValues: Record<Field, string> = {
-        base_url: baseUrl,
-        api_key: apiKey,
-        haiku_model: haikuModel,
-        sonnet_model: sonnetModel,
-        opus_model: opusModel,
-      }
-
-      const [inputValue, setInputValue] = useState(() => displayValues[activeField])
-      const [inputCursorOffset, setInputCursorOffset] = useState(() => displayValues[activeField].length)
-
-      const buildState = useCallback(
-        (field: Field, value: string, newActive?: Field) => {
-          const s = {
-            state: 'custom_platform' as const,
-            activeField: newActive ?? activeField,
-            baseUrl,
-            apiKey,
-            haikuModel,
-            sonnetModel,
-            opusModel,
-          }
-          switch (field) {
-            case 'base_url':
-              return { ...s, baseUrl: value }
-            case 'api_key':
-              return { ...s, apiKey: value }
-            case 'haiku_model':
-              return { ...s, haikuModel: value }
-            case 'sonnet_model':
-              return { ...s, sonnetModel: value }
-            case 'opus_model':
-              return { ...s, opusModel: value }
-            default:
-              return { ...s }
-          }
-        },
-        [activeField, baseUrl, apiKey, haikuModel, sonnetModel, opusModel],
-      )
-
-      const switchTo = useCallback(
-        (target: Field) => {
-          setOAuthStatus(buildState(activeField, inputValue, target))
-          setInputValue(displayValues[target] ?? '')
-          setInputCursorOffset((displayValues[target] ?? '').length)
-        },
-        [activeField, inputValue, displayValues, buildState, setOAuthStatus],
-      )
-
-      const doSave = useCallback(() => {
-        const finalVals = { ...displayValues, [activeField]: inputValue }
-        const env: Record<string, string> = {}
-
-        // Validate base_url if provided
-        if (finalVals.base_url) {
-          try {
-            // oxlint-disable-next-line no-new
-            new URL(finalVals.base_url)
-          } catch {
-            setOAuthStatus({
-              state: 'error',
-              message: 'Invalid base URL: please enter a full URL including protocol (e.g., https://api.example.com)',
-              toRetry: {
-                state: 'custom_platform',
-                baseUrl: '',
-                apiKey: '',
-                haikuModel: '',
-                sonnetModel: '',
-                opusModel: '',
-                activeField: 'base_url',
-              },
-            })
-            return
-          }
-          env.ANTHROPIC_BASE_URL = finalVals.base_url
-        }
-
-        if (finalVals.api_key) env.ANTHROPIC_AUTH_TOKEN = finalVals.api_key
-        if (finalVals.haiku_model) env.ANTHROPIC_DEFAULT_HAIKU_MODEL = finalVals.haiku_model
-        if (finalVals.sonnet_model) env.ANTHROPIC_DEFAULT_SONNET_MODEL = finalVals.sonnet_model
-        if (finalVals.opus_model) env.ANTHROPIC_DEFAULT_OPUS_MODEL = finalVals.opus_model
-
-        const { error } = updateSettingsForSource('userSettings', {
-          modelType: 'anthropic',
-          env,
-        })
-
-        if (error) {
-          setOAuthStatus({
-            state: 'error',
-            message: 'Failed to save settings. Please try again.',
-            toRetry: {
-              state: 'custom_platform',
-              baseUrl: finalVals.base_url ?? '',
-              apiKey: finalVals.api_key ?? '',
-              haikuModel: finalVals.haiku_model ?? '',
-              sonnetModel: finalVals.sonnet_model ?? '',
-              opusModel: finalVals.opus_model ?? '',
-              activeField: 'base_url',
-            },
-          })
-        } else {
-          for (const [k, v] of Object.entries(env)) process.env[k] = v
-          setOAuthStatus({ state: 'success' })
-          onDone()
-        }
-      }, [activeField, inputValue, displayValues, setOAuthStatus, onDone])
-
-      const handleEnter = useCallback(() => {
-        const idx = FIELDS.indexOf(activeField)
-        if (idx === FIELDS.length - 1) {
-          setOAuthStatus(buildState(activeField, inputValue))
-          doSave()
-        } else {
-          const next = FIELDS[idx + 1]
-          setOAuthStatus(buildState(activeField, inputValue, next))
-          setInputValue(displayValues[next] ?? '')
-          setInputCursorOffset((displayValues[next] ?? '').length)
-        }
-      }, [activeField, inputValue, buildState, doSave, displayValues, setOAuthStatus])
-
-      useKeybinding(
-        'tabs:next',
-        () => {
-          const idx = FIELDS.indexOf(activeField)
-          if (idx < FIELDS.length - 1) {
-            setOAuthStatus(buildState(activeField, inputValue, FIELDS[idx + 1]))
-            setInputValue(displayValues[FIELDS[idx + 1]] ?? '')
-            setInputCursorOffset((displayValues[FIELDS[idx + 1]] ?? '').length)
-          }
-        },
-        { context: 'Tabs' },
-      )
-      useKeybinding(
-        'tabs:previous',
-        () => {
-          const idx = FIELDS.indexOf(activeField)
-          if (idx > 0) {
-            setOAuthStatus(buildState(activeField, inputValue, FIELDS[idx - 1]))
-            setInputValue(displayValues[FIELDS[idx - 1]] ?? '')
-            setInputCursorOffset((displayValues[FIELDS[idx - 1]] ?? '').length)
-          }
-        },
-        { context: 'Tabs' },
-      )
-
-      const columns = useTerminalSize().columns - 20
-
-      const renderRow = (field: Field, label: string, opts?: { mask?: boolean; placeholder?: string }) => {
-        const active = activeField === field
-        const val = displayValues[field]
-        return (
-          <Box gap={1}>
-            <Box width={10} backgroundColor={active ? 'suggestion' : undefined} justifyContent="flex-end">
-              <Text color={active ? 'inverseText' : undefined}>{` ${label} `}</Text>
-            </Box>
-            <TextInput
-              value={active ? inputValue : val}
-              onChange={setInputValue}
-              onSubmit={handleEnter}
-              cursorOffset={inputCursorOffset}
-              onChangeCursorOffset={setInputCursorOffset}
-              columns={columns}
-              mask={opts?.mask ? '*' : undefined}
-              focus={active}
-              dimColor={active}
-              showCursor={active}
-            />
-            {/* {active ? (
-              <TextInput
-                value={inputValue}
-                onChange={setInputValue}
-                onSubmit={handleEnter}
-                cursorOffset={inputCursorOffset}
-                onChangeCursorOffset={setInputCursorOffset}
-                columns={columns}
-                mask={opts?.mask ? '*' : undefined}
-                focus={true}
-              />
-            ) : val ? (
-              <Text color="success">
-                {opts?.mask ? val.slice(0, 8) + '\u00b7'.repeat(Math.max(0, val.length - 8)) : val}
-              </Text>
-            ) : null} */}
-          </Box>
-        )
-      }
-
+    case 'platform_config':
       return (
-        <Box flexDirection="column" gap={1}>
-          <Text bold>Anthropic Compatible Setup</Text>
-          <Box flexDirection="column">
-            {renderRow('base_url', 'Base URL')}
-            {renderRow('api_key', 'API Key', { mask: true })}
-            {renderRow('haiku_model', 'Haiku')}
-            {renderRow('sonnet_model', 'Sonnet')}
-            {renderRow('opus_model', 'Opus')}
-          </Box>
-          <Text dimColor>
-            {figures.arrowUp + figures.arrowDown}/Tab to switch · Enter on last field to save · Esc to go back
-          </Text>
-        </Box>
+        <PlatformConfigForm
+          key={oauthStatus.platform}
+          platform={oauthStatus.platform}
+          initial={{
+            baseUrl: oauthStatus.baseUrl,
+            apiKey: oauthStatus.apiKey,
+            haikuModel: oauthStatus.haikuModel,
+            sonnetModel: oauthStatus.sonnetModel,
+            opusModel: oauthStatus.opusModel,
+          }}
+          onDone={onDone}
+          onCancel={() => setOAuthStatus({ state: 'idle' })}
+        />
       )
 
     case 'platform_setup':
@@ -909,4 +679,138 @@ function OAuthStatusMessage({
     default:
       return null
   }
+}
+
+type PlatformField = 'base_url' | 'api_key' | 'haiku_model' | 'sonnet_model' | 'opus_model'
+
+const PLATFORM_FIELDS: PlatformField[] = ['base_url', 'api_key', 'haiku_model', 'sonnet_model', 'opus_model']
+
+const FIELD_VALUE_KEY: Record<PlatformField, keyof PlatformFormValues> = {
+  base_url: 'baseUrl',
+  api_key: 'apiKey',
+  haiku_model: 'haikuModel',
+  sonnet_model: 'sonnetModel',
+  opus_model: 'opusModel',
+}
+
+function PlatformConfigForm({
+  platform,
+  initial,
+  onDone,
+  onCancel,
+}: {
+  platform: PlatformKind
+  initial: PlatformFormValues
+  onDone: () => void
+  onCancel: () => void
+}): React.ReactNode {
+  const definition = PLATFORM_DEFINITIONS[platform]
+  const [values, setValues] = useState(initial)
+  const [activeField, setActiveField] = useState<PlatformField>('base_url')
+  const [cursorOffset, setCursorOffset] = useState(initial.baseUrl.length)
+  const [error, setError] = useState<string | null>(null)
+  const columns = useTerminalSize().columns - 20
+
+  const switchTo = useCallback(
+    (field: PlatformField) => {
+      setActiveField(field)
+      setCursorOffset(values[FIELD_VALUE_KEY[field]].length)
+    },
+    [values],
+  )
+
+  const save = useCallback(() => {
+    const validationError = validatePlatformValues(platform, values)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    const env = buildPlatformEnv(platform, values)
+    const { error: saveError } = updateSettingsForSource('userSettings', { env })
+    if (saveError) {
+      setError('Failed to save settings. Please try again.')
+      return
+    }
+    for (const [key, value] of Object.entries(env)) process.env[key] = value
+    onDone()
+  }, [platform, values, onDone])
+
+  const handleEnter = useCallback(() => {
+    const index = PLATFORM_FIELDS.indexOf(activeField)
+    if (index === PLATFORM_FIELDS.length - 1) {
+      save()
+      return
+    }
+    switchTo(PLATFORM_FIELDS[index + 1])
+  }, [activeField, save, switchTo])
+
+  useKeybinding(
+    'tabs:next',
+    () => {
+      const index = PLATFORM_FIELDS.indexOf(activeField)
+      if (index < PLATFORM_FIELDS.length - 1) switchTo(PLATFORM_FIELDS[index + 1])
+    },
+    { context: 'Tabs' },
+  )
+
+  useKeybinding(
+    'tabs:previous',
+    () => {
+      const index = PLATFORM_FIELDS.indexOf(activeField)
+      if (index > 0) switchTo(PLATFORM_FIELDS[index - 1])
+    },
+    { context: 'Tabs' },
+  )
+
+  // Settings context so plain 'n' can be typed; Esc goes back to login options.
+  useKeybinding('confirm:no', onCancel, { context: 'Settings' })
+
+  const renderRow = (field: PlatformField, label: string, opts?: { mask?: boolean; placeholder?: string }) => {
+    const active = activeField === field
+    const value = values[FIELD_VALUE_KEY[field]]
+    return (
+      <Box gap={1} key={field}>
+        <Box width={10} backgroundColor={active ? 'suggestion' : undefined} justifyContent="flex-end">
+          <Text color={active ? 'inverseText' : undefined}>{` ${label} `}</Text>
+        </Box>
+        {active ? (
+          <TextInput
+            value={value}
+            onChange={(next) => {
+              setValues((current) => ({ ...current, [FIELD_VALUE_KEY[field]]: next }))
+              setError(null)
+            }}
+            onSubmit={handleEnter}
+            cursorOffset={cursorOffset}
+            onChangeCursorOffset={setCursorOffset}
+            columns={columns}
+            mask={opts?.mask ? '*' : undefined}
+            focus={true}
+            showCursor={true}
+          />
+        ) : value ? (
+          <Text color="success">{opts?.mask ? maskSecretForDisplay(value) : value}</Text>
+        ) : (
+          <Text dimColor>{opts?.placeholder ?? ''}</Text>
+        )}
+      </Box>
+    )
+  }
+
+  return (
+    <Box flexDirection="column" gap={1}>
+      <Text bold>{definition.title}</Text>
+      <Box flexDirection="column">
+        {renderRow('base_url', 'Base URL', { placeholder: definition.baseUrlPlaceholder })}
+        {renderRow('api_key', 'API Key', { mask: true })}
+        {renderRow('haiku_model', 'Haiku')}
+        {renderRow('sonnet_model', 'Sonnet')}
+        {renderRow('opus_model', 'Opus')}
+      </Box>
+      {error ? <Text color="error">{error}</Text> : null}
+      <Text dimColor>
+        {figures.arrowUp + figures.arrowDown}/Tab to switch · Enter on last field to save · Esc to go back
+      </Text>
+    </Box>
+  )
 }

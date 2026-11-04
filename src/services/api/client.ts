@@ -20,6 +20,8 @@ import { getIsNonInteractiveSession, getSessionId } from '../../bootstrap/state.
 import { getOauthConfig } from '../../constants/oauth.js'
 import { isDebugToStdErr, logForDebugging } from '../../utils/debug.js'
 import { getAWSRegion, getVertexRegionForModel, isEnvTruthy } from '../../utils/envUtils.js'
+import { getProviderConfig } from './providerAdapters/config.js'
+import { createProviderFetch } from './providerAdapters/index.js'
 
 /**
  * Environment variables for different client types:
@@ -138,6 +140,19 @@ export async function getAnthropicClient({
       fetch: resolvedFetch,
     }),
   }
+  // OpenAI-compatible / Gemini providers: the SDK keeps speaking the Anthropic
+  // Messages API, and a custom fetch translates each request and stream.
+  const providerConfig = getProviderConfig()
+  if (providerConfig) {
+    return new Anthropic({
+      apiKey: providerConfig.apiKey || 'provider-translation',
+      baseURL: 'https://claude-code-provider.invalid',
+      ...ARGS,
+      fetch: createProviderFetch(providerConfig, resolvedFetch ?? globalThis.fetch),
+      ...(isDebugToStdErr() && { logger: createStderrLogger() }),
+    })
+  }
+
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK)) {
     const { AnthropicBedrock } = await import('@anthropic-ai/bedrock-sdk')
     // Use region override for small fast model if specified

@@ -3,6 +3,22 @@ import { isEnvTruthy } from '../envUtils.js'
 
 export type APIProvider = 'firstParty' | 'bedrock' | 'vertex' | 'foundry'
 
+export type CustomProviderKind = 'anthropic' | 'openai' | 'gemini'
+
+/**
+ * Provider selected through the platform setup screen (or set directly via
+ * CLAUDE_CODE_API_PROVIDER). `openai` and `gemini` requests are translated by
+ * src/services/api/providerAdapters; `anthropic` means a plain
+ * Anthropic-compatible endpoint configured through ANTHROPIC_BASE_URL.
+ */
+export function getCustomProviderKind(): CustomProviderKind {
+  const raw = (process.env.CLAUDE_CODE_API_PROVIDER ?? '').trim().toLowerCase()
+  if (raw === 'openai' || raw === 'gemini') {
+    return raw
+  }
+  return 'anthropic'
+}
+
 export function getAPIProvider(): APIProvider {
   return isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK)
     ? 'bedrock'
@@ -23,6 +39,11 @@ export function getAPIProviderForStatsig(): AnalyticsMetadata_I_VERIFIED_THIS_IS
  * (or api-staging.anthropic.com for ant users).
  */
 export function isFirstPartyAnthropicBaseUrl(): boolean {
+  // Requests for openai/gemini providers are translated in-process and never
+  // reach api.anthropic.com, so none of the Anthropic-only features apply.
+  if (getCustomProviderKind() !== 'anthropic') {
+    return false
+  }
   const baseUrl = process.env.ANTHROPIC_BASE_URL
   if (!baseUrl) {
     return true
