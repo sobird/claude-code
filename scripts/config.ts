@@ -109,7 +109,7 @@ export const features = [
 export function define(buildTraget: BuildTarget = 'external', _buildEnv: BuildEnv = 'production') {
   return {
     ...defines,
-    // 'process.env.NODE_ENV': JSON.stringify(_buildEnv),
+    'process.env.NODE_ENV': JSON.stringify(_buildEnv),
     'process.env.USER_TYPE': JSON.stringify(buildTraget),
   }
 }
