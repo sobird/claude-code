@@ -11,7 +11,8 @@ import { useCallback, useRef, useState } from 'react'
 import { cn } from '../../lib/utils'
 
 interface ChatInputProps {
-  onSubmit: (text: string) => void
+  /** May reject; on rejection the draft is kept so the user can retry. */
+  onSubmit: (text: string) => Promise<void> | void
   onInterrupt?: () => void
   isLoading?: boolean
   disabled?: boolean
@@ -28,17 +29,27 @@ export function ChatInput({
   className,
 }: ChatInputProps) {
   const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     const trimmed = text.trim()
-    if (!trimmed || disabled) return
-    onSubmit(trimmed)
-    setText('')
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
+    if (!trimmed || disabled || sending) return
+    setSending(true)
+    try {
+      await onSubmit(trimmed)
+      // Only clear once the send resolved; a failure keeps the text so the
+      // user can retry (the parent surfaces the error).
+      setText('')
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto'
+      }
+    } catch {
+      // Keep the draft; the parent already shows the error.
+    } finally {
+      setSending(false)
     }
-  }, [text, disabled, onSubmit])
+  }, [text, disabled, sending, onSubmit])
 
   const handleInput = useCallback((target: HTMLTextAreaElement) => {
     setText(target.value)
@@ -46,7 +57,7 @@ export function ChatInput({
     target.style.height = `${Math.min(target.scrollHeight, 200)}px`
   }, [])
 
-  const canSend = text.trim().length > 0 && !disabled
+  const canSend = text.trim().length > 0 && !disabled && !sending
 
   return (
     <div className={cn('mx-auto w-full max-w-3xl', className)}>
@@ -60,7 +71,7 @@ export function ChatInput({
               if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                 event.preventDefault()
                 if (isLoading) onInterrupt?.()
-                else handleSubmit()
+                else void handleSubmit()
               }
             }}
             placeholder={placeholder}
@@ -70,7 +81,7 @@ export function ChatInput({
           />
           <button
             type="button"
-            onClick={isLoading ? onInterrupt : handleSubmit}
+            onClick={isLoading ? onInterrupt : () => void handleSubmit()}
             disabled={!isLoading && !canSend}
             aria-label={isLoading ? '中断' : '发送'}
             className={cn(

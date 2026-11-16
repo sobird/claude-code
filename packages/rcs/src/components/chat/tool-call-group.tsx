@@ -9,7 +9,7 @@ import { Check, ChevronRight, Loader2, X } from 'lucide-react'
 import { useState } from 'react'
 
 import type { ToolCallData, ToolCallEntry, ToolCallStatus } from '../../lib/session-reducer'
-import { cn } from '../../lib/utils'
+import { cn, uniqueKeys } from '../../lib/utils'
 import { Button } from '../ui/button'
 
 interface ToolCallGroupProps {
@@ -48,13 +48,8 @@ export function ToolCallGroup({ entries, onPermissionRespond }: ToolCallGroupPro
         </button>
         {expanded ? (
           <div className="divide-y divide-border border-t border-border">
-            {entries.map((entry) => (
-              <SingleToolCard
-                key={entry.toolCall.id}
-                tool={entry.toolCall}
-                compact
-                onPermissionRespond={onPermissionRespond}
-              />
+            {uniqueKeys(entries, (entry) => entry.toolCall.id).map(({ item, key }) => (
+              <SingleToolCard key={key} tool={item.toolCall} compact onPermissionRespond={onPermissionRespond} />
             ))}
           </div>
         ) : null}

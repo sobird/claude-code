@@ -5,15 +5,16 @@
  *
  * Loads durable history once with the token-aware client, folds it together
  * with the live SSE frames (deduped by `seqNum`) through the pure reducer, and
- * renders the thread, permission cards, and composer. Messages sent from this
- * surface are injected as optimistic inbound events so they interleave with
- * live assistant output at the right sequence position.
+ * renders the thread, permission cards, and composer. A sent message is folded
+ * in from its `POST /events` response (deduped by seqNum/uuid against the live
+ * echo and history) so it shows immediately and survives a reload.
  */
 
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { isSessionClosedStatus } from '../../contracts'
 import { useAccessToken } from '../../hooks/useAccessToken'
 import { useSessionStream } from '../../hooks/useSessionStream'
 import { ApiError, createApiClient } from '../../lib/api-client'
@@ -24,7 +25,7 @@ import {
   type ThreadEntry,
   type ToolCallEntry,
 } from '../../lib/session-reducer'
-import { cn } from '../../lib/utils'
+import { cn, uniqueKeys } from '../../lib/utils'
 import { StatusBadge } from '../shell/status-badge'
 import { Button } from '../ui/button'
 import { ChatInput } from './chat-input'
@@ -57,7 +58,7 @@ interface HistoryResponse {
 
 interface EventActionResponse {
   status: string
-  event?: { id?: string; seqNum?: number }
+  event?: SessionEventInput
 }
 
 type GroupedItem =
@@ -68,10 +69,6 @@ function toMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message
   if (error instanceof Error) return error.message
   return 'Something went wrong'
-}
-
-function isOutboundUser(event: SessionEventInput): boolean {
-  return event.type === 'user' && event.direction === 'outbound'
 }
 
 function groupToolCalls(entries: ThreadEntry[]): GroupedItem[] {
@@ -110,7 +107,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [optimistic, setOptimistic] = useState<SessionEventInput[]>([])
+  // Events folded in from a send response so the message shows immediately even
+  // if the live stream hiccups; the SSE echo dedupes by seqNum/uuid.
+  const [extraEvents, setExtraEvents] = useState<SessionEventInput[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const hasToken = token !== null
@@ -139,16 +138,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     void load()
   }, [hasToken, load])
 
-  // Fold history first, then live frames and optimistic sends, all ordered by
-  // durable sequence so an assistant reply never lands before its prompt.
+  // Fold history first, then live frames and locally-sent events, all ordered
+  // by durable sequence so an assistant reply never lands before its prompt.
   const chat = useMemo(() => {
     const merged: SessionEventInput[] = []
-    for (const event of history ?? []) if (!isOutboundUser(event)) merged.push(event)
-    for (const event of stream.events) if (!isOutboundUser(event)) merged.push(event)
-    for (const event of optimistic) merged.push(event)
+    for (const event of history ?? []) merged.push(event)
+    for (const event of stream.events) merged.push(event)
+    for (const event of extraEvents) merged.push(event)
     merged.sort((a, b) => (a.seqNum ?? 0) - (b.seqNum ?? 0))
     return applyHistory(initialChatState, merged)
-  }, [history, stream.events, optimistic])
+  }, [history, stream.events, extraEvents])
 
   const entries = chat.entries
   const entryCount = entries.length
@@ -161,26 +160,25 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const handleSend = useCallback(
     async (text: string) => {
       setActionError(null)
+      // Generate the uuid once so the send body, the response event, and a
+      // history reload all agree on the same entry id (reducer dedupes by it).
+      const uuid = crypto.randomUUID()
       try {
         const result = await api.post<EventActionResponse>(`/web/sessions/${encodeURIComponent(sessionId)}/events`, {
           type: 'user',
-          uuid: crypto.randomUUID(),
+          uuid,
           content: text,
           message: { content: text },
         })
         const event = result?.event
-        setOptimistic((prev) => [
+        setExtraEvents((prev) => [
           ...prev,
-          {
-            id: event?.id ?? `local-${Date.now()}`,
-            seqNum: event?.seqNum,
-            type: 'user',
-            direction: 'inbound',
-            payload: { content: text },
-          },
+          event ?? { id: uuid, type: 'user', direction: 'outbound', payload: { content: text, uuid } },
         ])
       } catch (error) {
         setActionError(toMessage(error))
+        // Rethrow so the composer keeps the draft for a retry.
+        throw error
       }
     },
     [api, sessionId],
@@ -211,7 +209,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     }
   }, [api, sessionId])
 
-  const closed = chat.closed
+  // Honor both the live status event and the fetched session status, so an
+  // archived session never shows an enabled composer when its status event is
+  // outside the loaded history window.
+  const closed = chat.closed || isSessionClosedStatus(session?.status)
   const busy = chat.status === 'running'
   const displayStatus = chat.status ?? session?.status ?? 'active'
   const reconnectError = stream.status === 'error' ? (stream.error ?? 'Live updates disconnected') : null
@@ -312,18 +313,17 @@ function MessageThread({
   onPermissionRespond: (requestId: string, approved: boolean) => void
 }) {
   const grouped = groupToolCalls(entries)
+  const keyed = uniqueKeys(grouped, (item) =>
+    item.kind === 'tools' ? `tools-${item.entries[0]?.toolCall.id ?? 'empty'}` : `entry-${item.entry.id}`,
+  )
 
   return (
     <div className="flex flex-col gap-3">
-      {grouped.map((item) =>
+      {keyed.map(({ item, key }) =>
         item.kind === 'tools' ? (
-          <ToolCallGroup
-            key={`tools-${item.entries[0]?.toolCall.id ?? 'empty'}`}
-            entries={item.entries}
-            onPermissionRespond={onPermissionRespond}
-          />
+          <ToolCallGroup key={key} entries={item.entries} onPermissionRespond={onPermissionRespond} />
         ) : (
-          <div key={item.entry.id} className={spacingFor(item.entry)}>
+          <div key={key} className={spacingFor(item.entry)}>
             <EntryRenderer entry={item.entry} />
           </div>
         ),

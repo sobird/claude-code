@@ -279,9 +279,21 @@ function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
   return { ...state, entries: [...state.entries, entry] }
 }
 
+function mostRecentRunningIndex(entries: ThreadEntry[]): number {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]
+    if (entry && entry.type === 'tool_call' && entry.toolCall.status === 'running') return i
+  }
+  return -1
+}
+
 function handleToolResult(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
-  const index = findToolCallIndex(state.entries, asText(payload.tool_call_id))
+  const toolCallId = asText(payload.tool_call_id)
+  // An explicitly named call that does not match stays a no-op. A missing/empty
+  // id is positional, so fall back to the most recent running call.
+  let index = toolCallId ? findToolCallIndex(state.entries, toolCallId) : -1
+  if (!toolCallId) index = mostRecentRunningIndex(state.entries)
   if (index < 0) return state
 
   const entry = state.entries[index]
@@ -314,32 +326,46 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
     ? state.pendingPermissions
     : [...state.pendingPermissions, { requestId, toolName, toolInput, description }]
 
-  // Mark the most recent running tool call as waiting for confirmation; if
-  // there is none, surface the request as a standalone tool-call card.
-  let marked = false
+  // Already bound to this exact request (replayed frame): don't create a second card.
+  const alreadyBound = state.entries.some(
+    (entry) => entry.type === 'tool_call' && entry.toolCall.permissionRequest?.requestId === requestId,
+  )
+  if (alreadyBound) return { ...state, pendingPermissions }
+
+  // Prefer the most recent running call for the same tool; fall back to the
+  // most recent running call of any kind. Calls already awaiting confirmation
+  // are never rebound to a different request.
+  let target = -1
   for (let i = state.entries.length - 1; i >= 0; i--) {
     const entry = state.entries[i]
-    if (entry && entry.type === 'tool_call' && entry.toolCall.status === 'running') {
-      const updated: ToolCallEntry = {
-        type: 'tool_call',
-        toolCall: {
-          ...entry.toolCall,
-          status: 'waiting_for_confirmation',
-          permissionRequest: { requestId, options: [] },
-        },
-      }
-      return {
-        ...state,
-        entries: replaceEntry(state.entries, i, updated),
-        pendingPermissions,
-      }
-    }
-    if (entry && entry.type === 'tool_call' && entry.toolCall.status === 'waiting_for_confirmation') {
-      marked = true
+    if (
+      entry &&
+      entry.type === 'tool_call' &&
+      entry.toolCall.status === 'running' &&
+      entry.toolCall.title === toolName
+    ) {
+      target = i
+      break
     }
   }
+  if (target < 0) target = mostRecentRunningIndex(state.entries)
 
-  if (marked) return { ...state, pendingPermissions }
+  if (target >= 0) {
+    const entry = state.entries[target] as ToolCallEntry
+    const updated: ToolCallEntry = {
+      type: 'tool_call',
+      toolCall: {
+        ...entry.toolCall,
+        status: 'waiting_for_confirmation',
+        permissionRequest: { requestId, options: [] },
+      },
+    }
+    return {
+      ...state,
+      entries: replaceEntry(state.entries, target, updated),
+      pendingPermissions,
+    }
+  }
 
   const standalone: ToolCallEntry = {
     type: 'tool_call',
@@ -372,11 +398,20 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
     if (entry.type !== 'tool_call') return entry
     if (entry.toolCall.permissionRequest?.requestId !== requestId) return entry
     changed = true
+    // A standalone card has no tool call behind it, so it will never receive a
+    // `tool_result`; settle it here (approved → complete, denied → rejected).
+    const status: ToolCallStatus = entry.toolCall.isStandalonePermission
+      ? approved
+        ? 'complete'
+        : 'rejected'
+      : approved
+        ? 'running'
+        : 'rejected'
     return {
       type: 'tool_call' as const,
       toolCall: {
         ...entry.toolCall,
-        status: approved ? ('running' as const) : ('rejected' as const),
+        status,
         permissionRequest: undefined,
         isStandalonePermission: undefined,
       },
@@ -426,17 +461,20 @@ function handlePlan(state: ChatState, event: SessionEventInput): ChatState {
 function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
   switch (event.type) {
     case 'user': {
-      // Outbound is the echo of a message this UI already rendered.
-      if (event.direction === 'outbound') return state
+      // Both directions render: the gateway persists outbound sends as `user`
+      // events but does not echo them back inbound, so treating only inbound as
+      // displayable would lose every sent message on reload.
       const text = extractEventText(event.payload)
       if (!text) return state
+      const payload = asRecord(event.payload) ?? {}
       const seqNum = numericSeqNum(event)
+      const id = asText(payload.uuid) || (seqNum !== null ? String(seqNum) : event.id || `user-${state.entries.length}`)
+      // Dedupe by uuid: an optimistic send and its history/echo counterpart
+      // share the uuid even when their seqNums differ.
+      if (state.entries.some((entry) => entry.type === 'user_message' && entry.id === id)) return state
       return {
         ...state,
-        entries: [
-          ...state.entries,
-          { type: 'user_message', id: event.id || `user-${seqNum ?? state.entries.length}`, content: text },
-        ],
+        entries: [...state.entries, { type: 'user_message', id, content: text }],
       }
     }
     case 'assistant':
