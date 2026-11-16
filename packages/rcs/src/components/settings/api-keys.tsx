@@ -1,9 +1,9 @@
 'use client'
 
 import { Copy, KeyRound, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { ApiError } from '../../lib/api-client'
+import { ApiError, createApiClient } from '../../lib/api-client'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
@@ -45,7 +45,10 @@ function formatLastUsed(iso: string | null): string {
 
 /** Manage personal API keys: list, create (key shown once), and revoke. */
 export function ApiKeys() {
-  const { api, token, tokenError } = useSettingsApi()
+  const { token, tokenError, refresh } = useSettingsApi()
+  // Key the client on `token`: a provider-held ref would lag one effect flush
+  // behind this component's effects, sending the first request unauthenticated.
+  const api = useMemo(() => createApiClient({ getToken: () => token, refreshToken: refresh }), [token, refresh])
   const [keys, setKeys] = useState<ApiKeyView[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

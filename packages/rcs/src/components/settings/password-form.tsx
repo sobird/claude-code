@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 
-import { ApiError } from '../../lib/api-client'
+import { ApiError, createApiClient } from '../../lib/api-client'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Input } from '../ui/input'
@@ -18,7 +18,10 @@ function toMessage(error: unknown): string {
 
 /** Change the signed-in user's password with inline validation and feedback. */
 export function PasswordForm() {
-  const { api } = useSettingsApi()
+  const { token, refresh } = useSettingsApi()
+  // Key the client on `token`: a provider-held ref would lag one effect flush
+  // behind this component's effects, sending the first request unauthenticated.
+  const api = useMemo(() => createApiClient({ getToken: () => token, refreshToken: refresh }), [token, refresh])
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')

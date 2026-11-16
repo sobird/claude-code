@@ -1,9 +1,9 @@
 'use client'
 
 import { Plus, RotateCcw } from 'lucide-react'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { ApiError } from '../../lib/api-client'
+import { ApiError, createApiClient } from '../../lib/api-client'
 import { useSettingsApi } from '../settings/use-settings-api'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
@@ -371,7 +371,10 @@ function ResetPasswordDialog({
 
 /** Admin user management: list, create, change role, enable/disable, reset password. */
 export function UserTable({ currentUserId }: { currentUserId: string }) {
-  const { api, token, tokenError } = useSettingsApi()
+  const { token, tokenError, refresh } = useSettingsApi()
+  // Key the client on `token`: a provider-held ref would lag one effect flush
+  // behind this component's effects, sending the first request unauthenticated.
+  const api = useMemo(() => createApiClient({ getToken: () => token, refreshToken: refresh }), [token, refresh])
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
