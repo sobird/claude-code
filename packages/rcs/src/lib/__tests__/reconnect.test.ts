@@ -56,6 +56,7 @@ function baseDeps(overrides: Partial<RunStreamDeps>): RunStreamDeps {
 describe('runStreamWithRefresh', () => {
   test('401 during a stream triggers one refresh then resume from last id', async () => {
     const calls: FetchCall[] = []
+    const controller = new AbortController()
     let refreshCount = 0
     const authError = Object.assign(new Error('unauthorized'), { status: 401 })
 
@@ -68,12 +69,18 @@ describe('runStreamWithRefresh', () => {
             streamThenError(sseFrame('7', '{"type":"message","payload":{"n":7},"seqNum":7}'), authError),
           )
         }
-        return new Response(streamOf())
+        // The resumed stream produces one more event so the gate can abort it.
+        return new Response(streamOf(sseFrame('8', '{"type":"message","payload":{"n":8},"seqNum":8}')))
       },
       refreshToken: async () => {
         refreshCount += 1
         return 'token-2'
       },
+      // A clean EOF reconnects too, so end the test by aborting on the resumed stream.
+      onEvent: () => {
+        if (calls.length === 2) controller.abort()
+      },
+      signal: controller.signal,
     })
 
     const result = await runStreamWithRefresh(deps)
@@ -140,6 +147,86 @@ describe('runStreamWithRefresh', () => {
     expect((thrown as Error).message).toContain('unauthorized')
     expect(refreshCount).toBe(1)
     expect(fetchCalls).toBe(2)
+  })
+
+  test('a clean EOF reconnects with backoff and resumes from the last id', async () => {
+    const sleeps: number[] = []
+    const statuses: StreamStatus[] = []
+    const headers: Record<string, string>[] = []
+    const controller = new AbortController()
+    let fetchCalls = 0
+
+    const deps = baseDeps({
+      fetch: async (_url, init) => {
+        fetchCalls += 1
+        headers.push(headersOf(init))
+        // Both responses end cleanly, as if a proxy closed the stream.
+        return new Response(streamOf(sseFrame(String(fetchCalls + 6), `{"seqNum":${fetchCalls + 6}}`)))
+      },
+      sleep: async (ms) => {
+        sleeps.push(ms)
+      },
+      signal: controller.signal,
+      onEvent: () => {
+        if (fetchCalls === 2) controller.abort()
+      },
+      onStatus: (status) => statuses.push(status),
+    })
+
+    const result = await runStreamWithRefresh(deps)
+
+    expect(sleeps).toEqual([1000])
+    expect(result).toMatchObject({ reconnects: 1, resumedFrom: '7' })
+    expect(headers[1]?.['Last-Event-ID']).toBe('7')
+    expect(statuses).toContain('reconnecting')
+  })
+
+  test('5xx and 429 responses reconnect with backoff', async () => {
+    const sleeps: number[] = []
+    const statuses: StreamStatus[] = []
+    const controller = new AbortController()
+    let fetchCalls = 0
+
+    const deps = baseDeps({
+      fetch: async () => {
+        fetchCalls += 1
+        if (fetchCalls === 1) return new Response(null, { status: 503 })
+        if (fetchCalls === 2) return new Response(null, { status: 429 })
+        controller.abort()
+        return new Response(streamOf())
+      },
+      sleep: async (ms) => {
+        sleeps.push(ms)
+      },
+      signal: controller.signal,
+      onStatus: (status) => statuses.push(status),
+    })
+
+    const result = await runStreamWithRefresh(deps)
+
+    expect(sleeps).toEqual([1000, 2000])
+    expect(result.reconnects).toBe(2)
+    expect(statuses.filter((status) => status === 'reconnecting')).toHaveLength(2)
+  })
+
+  test('4xx responses other than 429 fail terminally', async () => {
+    let fetchCalls = 0
+    const deps = baseDeps({
+      fetch: async () => {
+        fetchCalls += 1
+        return new Response(null, { status: 400 })
+      },
+    })
+
+    let thrown: unknown
+    try {
+      await runStreamWithRefresh(deps)
+    } catch (err) {
+      thrown = err
+    }
+    expect(thrown instanceof Error).toBe(true)
+    expect((thrown as Error).message).toContain('HTTP 400')
+    expect(fetchCalls).toBe(1)
   })
 
   test('stops on abort without further fetches', async () => {

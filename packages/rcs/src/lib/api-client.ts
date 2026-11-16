@@ -35,9 +35,13 @@ export class ApiError extends Error {
  * Base URL for gateway API calls. Uses `NEXT_PUBLIC_RCS_API_URL` when set (dev
  * points straight at the gateway) and otherwise returns `''` so fetches stay
  * same-origin (production serves both from one origin).
+ *
+ * `process.env.NEXT_PUBLIC_RCS_API_URL` must stay a literal member expression so
+ * Next's compiler inlines it into client bundles; tests set `process.env` before
+ * calling this function instead of passing an env object.
  */
-export function getApiBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
-  const configured = env.NEXT_PUBLIC_RCS_API_URL
+export function getApiBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_RCS_API_URL
   if (typeof configured !== 'string' || configured.length === 0) return ''
   return configured.replace(/\/+$/, '')
 }

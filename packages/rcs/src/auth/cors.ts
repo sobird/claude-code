@@ -15,7 +15,7 @@ export interface WebCorsOptions {
 }
 
 const ALLOWED_METHODS = ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
-const ALLOWED_HEADERS = ['Authorization', 'Content-Type']
+const ALLOWED_HEADERS = ['Authorization', 'Content-Type', 'Last-Event-ID']
 
 export function webCorsOptions(origins: string[]): WebCorsOptions {
   const allowlist = new Set(origins.map((origin) => origin.trim()).filter(Boolean))

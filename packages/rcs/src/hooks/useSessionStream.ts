@@ -4,8 +4,10 @@
  * Live session event stream for the session detail UI.
  *
  * Thin React wrapper: the refresh/resume/backoff logic lives in
- * `runStreamWithRefresh` so it can be tested without React. Events are deduped
- * by `seqNum` (falling back to the frame id) because a reconnect replays.
+ * `runStreamWithRefresh` so it can be tested without React. Events match the
+ * gateway history shape (`GET /web/sessions/:id/events`) so callers can render
+ * either source with one type, and are deduped by `seqNum` because a reconnect
+ * replays.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -15,11 +17,14 @@ import { defaultSleep, runStreamWithRefresh, type StreamStatus } from '../lib/re
 import { useAccessToken } from './useAccessToken'
 
 export interface SessionStreamEvent {
-  id: string | number
+  /** Monotonic per-session sequence number; also the dedupe key. */
+  seqNum: number
   type: string
   payload: unknown
-  direction: string
-  seqNum: number
+  direction: 'inbound' | 'outbound'
+  sessionId: string
+  /** `Date.now()` at the moment the live frame was parsed. */
+  receivedAt: number
 }
 
 export interface UseSessionStreamResult {
@@ -35,7 +40,7 @@ interface RawFrameData {
   seqNum?: unknown
 }
 
-function toStreamEvent(id: string | undefined, data: string): SessionStreamEvent | null {
+function toStreamEvent(sessionId: string, data: string): SessionStreamEvent | null {
   let parsed: RawFrameData
   try {
     parsed = JSON.parse(data) as RawFrameData
@@ -44,11 +49,12 @@ function toStreamEvent(id: string | undefined, data: string): SessionStreamEvent
   }
   if (typeof parsed.type !== 'string' || typeof parsed.seqNum !== 'number') return null
   return {
-    id: parsed.seqNum,
+    seqNum: parsed.seqNum,
     type: parsed.type,
     payload: parsed.payload,
-    direction: typeof parsed.direction === 'string' ? parsed.direction : '',
-    seqNum: parsed.seqNum,
+    direction: parsed.direction === 'outbound' ? 'outbound' : 'inbound',
+    sessionId,
+    receivedAt: Date.now(),
   }
 }
 
@@ -75,7 +81,9 @@ export function useSessionStream(sessionId: string | null): UseSessionStreamResu
     if (!sessionId || !started) return undefined
 
     const controller = new AbortController()
-    const seen = new Set<string>()
+    const seen = new Set<number>()
+    let cancelled = false
+    const isStale = () => cancelled || controller.signal.aborted
     setEvents([])
     setError(null)
     setStatus('connecting')
@@ -93,22 +101,28 @@ export function useSessionStream(sessionId: string | null): UseSessionStreamResu
         return next
       },
       onEvent: (frame) => {
-        const event = toStreamEvent(frame.id, frame.data)
+        if (isStale()) return
+        const event = toStreamEvent(sessionId, frame.data)
         if (!event) return
-        const key = String(event.seqNum)
-        if (seen.has(key)) return
-        seen.add(key)
+        if (seen.has(event.seqNum)) return
+        seen.add(event.seqNum)
         setEvents((prev) => [...prev, event])
       },
-      onStatus: setStatus,
+      onStatus: (next) => {
+        if (isStale()) return
+        setStatus(next)
+      },
       signal: controller.signal,
     }).catch((err: unknown) => {
-      if (controller.signal.aborted) return
+      if (isStale()) return
       setError(err instanceof Error ? err.message : String(err))
       setStatus('error')
     })
 
-    return () => controller.abort()
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
   }, [sessionId, started])
 
   return { events, status, error }

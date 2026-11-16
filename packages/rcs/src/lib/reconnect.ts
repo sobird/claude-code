@@ -7,8 +7,9 @@
  * - tracks the last seen event id and resumes with `Last-Event-ID`
  * - on `401` calls `refreshToken()` exactly once (a second consecutive 401
  *   surfaces an error instead of looping), then resumes immediately
- * - other failures back off exponentially (1s → 2s → 4s … capped at 30s)
- * - stops when the stream ends normally or the `AbortSignal` fires
+ * - transient failures (network errors, `429`, `5xx`) and a clean EOF back off
+ *   exponentially (1s → 2s → 4s … capped at 30s) and resume from the last id
+ * - terminal conditions: abort, a second consecutive `401`, other `4xx`
  */
 
 import { consumeSse, type SseEvent } from './sse-client'
@@ -44,6 +45,11 @@ function isAbort(err: unknown, signal?: AbortSignal): boolean {
 
 function isAuthError(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { status?: unknown }).status === 401
+}
+
+/** `429` and `5xx` are transient; other non-2xx statuses are terminal. */
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500
 }
 
 /** Default sleep, exposed so browsers can import it without wiring timers. */
@@ -118,7 +124,12 @@ export async function runStreamWithRefresh(deps: RunStreamDeps): Promise<RunStre
 
     if (!response.ok) {
       await response.body?.cancel().catch(() => {})
-      return fail('error', new Error(`stream failed with HTTP ${response.status}`))
+      if (!isRetryableStatus(response.status)) {
+        return fail('error', new Error(`stream failed with HTTP ${response.status}`))
+      }
+      const next = await backoffAndReconnect()
+      if (next.type === 'done') return next.result
+      continue
     }
 
     refreshedSinceOpen = false
@@ -146,7 +157,11 @@ export async function runStreamWithRefresh(deps: RunStreamDeps): Promise<RunStre
       continue
     }
 
-    return finish('closed')
+    // The stream ended cleanly (server/proxy closed it) without an abort:
+    // treat it like a transient drop and resume from the last event id.
+    if (signal?.aborted) return finish('closed')
+    const next = await backoffAndReconnect()
+    if (next.type === 'done') return next.result
   }
 
   /** Refresh once and resume from the last event id. */

@@ -13,6 +13,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const ACCESS_TOKEN_PATH = '/code/api/access-token'
 const REFRESH_MARGIN_MS = 60_000
+const DEFAULT_EXPIRES_IN_SECONDS = 300
+// setTimeout fires immediately for delays above a signed 32-bit int.
+const MAX_TIMEOUT_MS = 2_147_483_647
 
 interface AccessTokenResponse {
   token: string
@@ -30,6 +33,9 @@ export function useAccessToken(): UseAccessTokenResult {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
   const refreshRef = useRef<() => Promise<string | null>>(async () => null)
+  // Shared by the timer and on-demand `refresh()` so they never fire two
+  // concurrent minting requests (the endpoint is rate limited).
+  const inFlightRef = useRef<Promise<string | null> | null>(null)
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -41,7 +47,8 @@ export function useAccessToken(): UseAccessTokenResult {
   const scheduleRefresh = useCallback(
     (expiresAt: number) => {
       clearTimer()
-      const delay = Math.max(0, expiresAt - Date.now() - REFRESH_MARGIN_MS)
+      const remaining = expiresAt - Date.now() - REFRESH_MARGIN_MS
+      const delay = Number.isFinite(remaining) ? Math.min(Math.max(0, remaining), MAX_TIMEOUT_MS) : 0
       timerRef.current = setTimeout(() => {
         void refreshRef.current()
       }, delay)
@@ -49,7 +56,7 @@ export function useAccessToken(): UseAccessTokenResult {
     [clearTimer],
   )
 
-  const load = useCallback(async (): Promise<string | null> => {
+  const fetchToken = useCallback(async (): Promise<string | null> => {
     try {
       const response = await fetch(ACCESS_TOKEN_PATH, { method: 'POST' })
       if (!response.ok) {
@@ -59,16 +66,33 @@ export function useAccessToken(): UseAccessTokenResult {
         }
         return null
       }
-      const body = (await response.json()) as AccessTokenResponse
-      if (!mountedRef.current) return body.token
-      const expiresAt = Date.now() + body.expiresIn * 1000
-      setToken(body.token)
-      scheduleRefresh(expiresAt)
-      return body.token
+      const body = (await response.json()) as Partial<AccessTokenResponse>
+      const nextToken = typeof body.token === 'string' && body.token.length > 0 ? body.token : null
+      if (!nextToken) return null
+      const rawExpiresIn = body.expiresIn
+      const expiresIn =
+        typeof rawExpiresIn === 'number' && Number.isFinite(rawExpiresIn) && rawExpiresIn > 0
+          ? rawExpiresIn
+          : DEFAULT_EXPIRES_IN_SECONDS
+      if (!mountedRef.current) return nextToken
+      setToken(nextToken)
+      scheduleRefresh(Date.now() + expiresIn * 1000)
+      return nextToken
     } catch {
       return null
     }
   }, [clearTimer, scheduleRefresh])
+
+  const load = useCallback((): Promise<string | null> => {
+    const pending = inFlightRef.current
+    if (pending) return pending
+    const request = fetchToken()
+    inFlightRef.current = request
+    void request.finally(() => {
+      if (inFlightRef.current === request) inFlightRef.current = null
+    })
+    return request
+  }, [fetchToken])
 
   useEffect(() => {
     refreshRef.current = load

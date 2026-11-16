@@ -62,6 +62,8 @@ export async function consumeSse(
   try {
     while (!signal?.aborted) {
       const { done, value } = await reader.read()
+      // A chunk can arrive after the caller aborted; drop it instead of emitting.
+      if (signal?.aborted) return
       if (done) break
       buffer += decoder.decode(value, { stream: true })
 
@@ -74,10 +76,17 @@ export async function consumeSse(
       }
     }
 
+    if (signal?.aborted) return
+
     // Flush any final frame that lacked a trailing blank line.
     buffer += decoder.decode()
     if (buffer.trim().length > 0) emit(buffer)
   } finally {
-    reader.releaseLock()
+    if (signal?.aborted) {
+      // Cancel (not just unlock) so the underlying fetch body is torn down.
+      await reader.cancel().catch(() => {})
+    } else {
+      reader.releaseLock()
+    }
   }
 }
