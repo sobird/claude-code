@@ -1,0 +1,134 @@
+'use client'
+
+/**
+ * Dashboard data provider.
+ *
+ * Owns the gateway polling loop shared by the dashboard, the navbar connection
+ * badge, and the mobile session drawer. Data is fetched with the Task 15
+ * token-aware client every 10 seconds; errors surface as an `ApiError` message
+ * while stale data stays on screen.
+ */
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+
+import { useAccessToken } from '../../hooks/useAccessToken'
+import { ApiError, createApiClient } from '../../lib/api-client'
+import type { ConnectionState } from '../ui/connection-status'
+import type { CreatedSession, EnvironmentSummary, SessionSummary } from './types'
+
+const POLL_INTERVAL_MS = 10_000
+
+export interface CreateSessionInput {
+  title?: string
+  environment_id?: string
+  permission_mode?: string
+}
+
+interface DashboardDataValue {
+  sessions: SessionSummary[]
+  environments: EnvironmentSummary[]
+  /** True until the first load settles (success or failure). */
+  loading: boolean
+  error: string | null
+  connection: ConnectionState
+  refresh: () => void
+  createSession: (input: CreateSessionInput) => Promise<CreatedSession>
+}
+
+const DashboardDataContext = createContext<DashboardDataValue | undefined>(undefined)
+
+function toMessage(error: unknown): string {
+  if (error instanceof ApiError) return error.message
+  if (error instanceof Error) return error.message
+  return 'Failed to load dashboard data'
+}
+
+export function DashboardDataProvider({ children }: { children: ReactNode }) {
+  const { token, refresh: refreshToken } = useAccessToken()
+  const tokenRef = useRef(token)
+  const inFlightRef = useRef(false)
+
+  const [sessions, setSessions] = useState<SessionSummary[]>([])
+  const [environments, setEnvironments] = useState<EnvironmentSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [connection, setConnection] = useState<ConnectionState>('connecting')
+
+  useEffect(() => {
+    tokenRef.current = token
+  }, [token])
+
+  const api = useMemo(
+    () =>
+      createApiClient({
+        getToken: () => tokenRef.current,
+        refreshToken: refreshToken,
+      }),
+    [refreshToken],
+  )
+
+  const load = useCallback(async () => {
+    if (tokenRef.current === null || inFlightRef.current) return
+    inFlightRef.current = true
+    try {
+      const [nextSessions, nextEnvironments] = await Promise.all([
+        api.get<SessionSummary[]>('/web/sessions/all'),
+        api.get<EnvironmentSummary[]>('/web/environments'),
+      ])
+      setSessions(Array.isArray(nextSessions) ? nextSessions : [])
+      setEnvironments(Array.isArray(nextEnvironments) ? nextEnvironments : [])
+      setError(null)
+      setConnection('connected')
+    } catch (loadError) {
+      setError(toMessage(loadError))
+      setConnection('error')
+    } finally {
+      inFlightRef.current = false
+      setLoading(false)
+    }
+  }, [api])
+
+  const refresh = useCallback(() => {
+    void load()
+  }, [load])
+
+  const createSession = useCallback(
+    async (input: CreateSessionInput): Promise<CreatedSession> => {
+      const created = await api.post<CreatedSession>('/web/sessions', input)
+      void load()
+      return created
+    },
+    [api, load],
+  )
+
+  useEffect(() => {
+    if (token === null) return undefined
+    setConnection('connecting')
+    void load()
+    const timer = setInterval(() => {
+      void load()
+    }, POLL_INTERVAL_MS)
+    return () => clearInterval(timer)
+  }, [token, load])
+
+  const value = useMemo<DashboardDataValue>(
+    () => ({
+      sessions,
+      environments,
+      loading,
+      error,
+      connection,
+      refresh,
+      createSession,
+    }),
+    [sessions, environments, loading, error, connection, refresh, createSession],
+  )
+
+  return <DashboardDataContext.Provider value={value}>{children}</DashboardDataContext.Provider>
+}
+
+export function useDashboardData(): DashboardDataValue {
+  const context = useContext(DashboardDataContext)
+  if (!context) throw new Error('useDashboardData must be used within a DashboardDataProvider')
+  return context
+}
