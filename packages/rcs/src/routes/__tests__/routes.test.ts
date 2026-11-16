@@ -1038,6 +1038,24 @@ describe('Web Session Routes', () => {
     expect(sessions[0].owner_user_id).toBe(s.member.id)
   })
 
+  test('GET /web/sessions/all shares unowned sessions with members', async () => {
+    const own = await createWebSession(s.memberToken)
+    const foreign = await createWebSession(s.otherToken)
+    const unowned = await s.repos.sessions.create({ status: 'idle' })
+
+    const sessions = (await resJson(
+      await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }),
+    )) as Array<{ id: string; owner_user_id: string | null }>
+    expect(new Set(sessions.map((sess) => sess.id))).toEqual(new Set([own, toWebSessionId(unowned.id)]))
+    expect(sessions.some((sess) => sess.id === foreign)).toBe(false)
+    expect(sessions.find((sess) => sess.id === toWebSessionId(unowned.id))?.owner_user_id).toBeNull()
+
+    const adminSessions = (await resJson(
+      await app.request('/web/sessions/all', { headers: bearer(s.adminToken) }),
+    )) as Array<{ id: string }>
+    expect(new Set(adminSessions.map((sess) => sess.id))).toEqual(new Set([own, foreign, toWebSessionId(unowned.id)]))
+  })
+
   test('GET /web/sessions hides archived and inactive sessions', async () => {
     const archived = await s.repos.sessions.create({ ownerUserId: s.member.id, status: 'archived' })
     const inactive = await s.repos.sessions.create({ ownerUserId: s.member.id, status: 'inactive' })
@@ -1339,14 +1357,57 @@ describe('Web Environment Routes', () => {
     expect(envs[0].owner_user_id).toBe(s.member.id)
   })
 
-  test('GET /web/environments admin sees all', async () => {
-    await app.request('/v1/environments/bridge', {
+  test('GET /web/environments shares unowned active environments with members', async () => {
+    const memberEnvRes = await app.request('/v1/environments/bridge', {
       method: 'POST',
       headers: bearer(s.memberToken),
       body: JSON.stringify({ machine_name: 'member-mac' }),
     })
-    const envs = await resJson(await app.request('/web/environments', { headers: bearer(s.adminToken) }))
-    expect(envs).toHaveLength(1)
+    const memberEnvId = (await resJson(memberEnvRes)).environment_id
+    const otherEnvRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.otherToken),
+      body: JSON.stringify({ machine_name: 'other-mac' }),
+    })
+    const otherEnvId = (await resJson(otherEnvRes)).environment_id
+    const unowned = await s.repos.environments.create({
+      ownerUserId: null,
+      machineName: 'legacy-box',
+      status: 'active',
+    })
+
+    const envs = (await resJson(await app.request('/web/environments', { headers: bearer(s.memberToken) }))) as Array<{
+      id: string
+      owner_user_id: string | null
+    }>
+    expect(new Set(envs.map((env) => env.id))).toEqual(new Set([memberEnvId, unowned.id]))
+    expect(envs.some((env) => env.id === otherEnvId)).toBe(false)
+    expect(envs.find((env) => env.id === unowned.id)?.owner_user_id).toBeNull()
+  })
+
+  test('GET /web/environments admin sees all', async () => {
+    const memberEnvRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ machine_name: 'member-mac' }),
+    })
+    const memberEnvId = (await resJson(memberEnvRes)).environment_id
+    const otherEnvRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.otherToken),
+      body: JSON.stringify({ machine_name: 'other-mac' }),
+    })
+    const otherEnvId = (await resJson(otherEnvRes)).environment_id
+    const unowned = await s.repos.environments.create({
+      ownerUserId: null,
+      machineName: 'legacy-box',
+      status: 'active',
+    })
+
+    const envs = (await resJson(await app.request('/web/environments', { headers: bearer(s.adminToken) }))) as Array<{
+      id: string
+    }>
+    expect(new Set(envs.map((env) => env.id))).toEqual(new Set([memberEnvId, otherEnvId, unowned.id]))
   })
 
   test('GET /web/environments requires auth', async () => {

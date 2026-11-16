@@ -32,7 +32,17 @@ const MAX_HISTORY_LIMIT = 1000
 async function listVisibleRecords(c: AppContext): Promise<SessionRecord[]> {
   const repos = c.get('repos')
   const user = c.get('user')
-  const records = user.role === 'admin' ? await listAllSessions(repos) : await repos.sessions.listByOwner(user.id)
+  let records: SessionRecord[]
+  if (user.role === 'admin') {
+    records = await listAllSessions(repos)
+  } else {
+    // Members see their own sessions plus legacy unowned ones (the shared
+    // "Unclaimed" pool); dedupe by id in case a claim raced the reads.
+    const byId = new Map<string, SessionRecord>()
+    for (const record of await repos.sessions.listByOwner(user.id)) byId.set(record.id, record)
+    for (const record of await repos.sessions.listUnowned()) byId.set(record.id, record)
+    records = [...byId.values()]
+  }
   return records.filter((record) => !isSessionClosedStatus(record.status))
 }
 

@@ -76,7 +76,7 @@ export function Dashboard({ user }: { user: DashboardUser }) {
         </h2>
         {loading && environments.length === 0 ? (
           <SectionSkeletons rows={2} />
-        ) : (
+        ) : error && visibleEnvironments.length === 0 ? null : (
           <EnvironmentList environments={visibleEnvironments} />
         )}
       </section>
@@ -92,10 +92,10 @@ export function Dashboard({ user }: { user: DashboardUser }) {
         </div>
         {loading && sessions.length === 0 ? (
           <SectionSkeletons rows={3} />
-        ) : sessions.length === 0 ? (
+        ) : error && visibleSessions.length === 0 ? null : visibleSessions.length === 0 ? (
           <CliHint />
-        ) : (
-          <SessionList sessions={claimedSessions} emptyMessage="No sessions assigned to you yet." />
+        ) : claimedSessions.length === 0 ? null : (
+          <SessionList sessions={claimedSessions} />
         )}
       </section>
 

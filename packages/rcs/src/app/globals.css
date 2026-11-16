@@ -79,6 +79,13 @@
   --radius: 0.625rem;
 }
 
+/* Legacy `index.css` aliases kept for ported components. Declared outside
+   @theme so Tailwind's unused-variable pruning does not drop them. */
+:root {
+  --default-border-color: var(--color-border);
+  --default-ring-color: var(--color-ring);
+}
+
 /* ============================================================
    Dark mode — warm stone dark palette
    ============================================================ */

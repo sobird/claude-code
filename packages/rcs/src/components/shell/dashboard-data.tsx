@@ -44,7 +44,7 @@ function toMessage(error: unknown): string {
 }
 
 export function DashboardDataProvider({ children }: { children: ReactNode }) {
-  const { token, refresh: refreshToken } = useAccessToken()
+  const { token, refresh: refreshToken, error: tokenError } = useAccessToken()
   const tokenRef = useRef(token)
   const inFlightRef = useRef(false)
 
@@ -89,8 +89,13 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   }, [api])
 
   const refresh = useCallback(() => {
+    // Without a token the polling load is a no-op, so retry minting instead.
+    if (tokenRef.current === null) {
+      void refreshToken()
+      return
+    }
     void load()
-  }, [load])
+  }, [load, refreshToken])
 
   const createSession = useCallback(
     async (input: CreateSessionInput): Promise<CreatedSession> => {
@@ -102,14 +107,23 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    if (token === null) return undefined
+    if (token === null) {
+      // The token hook reports failures once its first attempt settles; only
+      // then surface an error, so the initial in-flight mint keeps the skeleton.
+      if (tokenError !== null) {
+        setError('Unable to obtain an access token — check the gateway.')
+        setConnection('error')
+        setLoading(false)
+      }
+      return undefined
+    }
     setConnection('connecting')
     void load()
     const timer = setInterval(() => {
       void load()
     }, POLL_INTERVAL_MS)
     return () => clearInterval(timer)
-  }, [token, load])
+  }, [token, tokenError, load])
 
   const value = useMemo<DashboardDataValue>(
     () => ({

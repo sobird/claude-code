@@ -1,3 +1,7 @@
+// Next rewrites are basePath-prefixed (`/code/web/*`) but the client fetches
+// same-origin `/web/*`, so dev needs the explicit gateway URL.
+process.env.NEXT_PUBLIC_RCS_API_URL ??= 'http://localhost:4000'
+
 const specs: { label: string; cmd: string[] }[] = [
   { label: 'web', cmd: ['bunx', 'next', 'dev', '--port', '3000'] },
   { label: 'gateway', cmd: ['bun', '--watch', 'server/index.ts'] },

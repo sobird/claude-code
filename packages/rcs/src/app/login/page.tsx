@@ -36,7 +36,9 @@ async function authenticate(formData: FormData): Promise<void> {
     await signIn('credentials', { username, password, redirectTo: next })
   } catch (error) {
     if (error instanceof AuthError) {
-      redirect(`${APP_BASE_PATH}/login?error=invalid&next=${encodeURIComponent(next)}`)
+      // Next prepends the app basePath to server-action redirects, so pass the
+      // path *without* `/code` (adding it here yields `/code/code/login`).
+      redirect(`/login?error=invalid&next=${encodeURIComponent(next)}`)
     }
     throw error
   }
