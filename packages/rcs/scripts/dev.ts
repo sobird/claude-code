@@ -38,5 +38,9 @@ function shutdown(code: number): never {
 process.on('SIGINT', () => shutdown(0))
 process.on('SIGTERM', () => shutdown(0))
 
-const exits = await Promise.all(children.map((child) => child.exited))
-shutdown(exits.some((code) => code !== 0) ? 1 : 0)
+async function main() {
+  const exits = await Promise.all(children.map((child) => child.exited))
+  shutdown(exits.some((code) => code !== 0) ? 1 : 0)
+}
+
+void main()
