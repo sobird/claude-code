@@ -85,14 +85,6 @@ function getServerSnapshot(): AccessTokenSnapshot {
 
 const store = createAccessTokenStore({ mint: mintAccessToken })
 
-/** Kick off the initial mint exactly once for the lifetime of the tab. */
-let started = false
-function startOnce(): void {
-  if (started) return
-  started = true
-  void store.ensureLoaded()
-}
-
 function refresh(): Promise<string | null> {
   return store.refresh()
 }
@@ -101,7 +93,8 @@ export function useAccessToken(): UseAccessTokenResult {
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, getServerSnapshot)
 
   useEffect(() => {
-    startOnce()
+    // Ensure a token exists; the shared store dedupes concurrent mints and reuses a fresh token.
+    void store.ensureLoaded()
   }, [])
 
   return { token: snapshot.token, refresh, error: snapshot.error }
