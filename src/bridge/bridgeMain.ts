@@ -110,12 +110,21 @@ function pollSleepDetectionThresholdMs(backoff: BackoffConfig): number {
  * process.execPath is the node runtime — the child spawn must pass the script
  * path as the first arg, otherwise node interprets --sdk-url as a node option
  * and exits with "bad option: --sdk-url". See anthropics/claude-code#28334.
+ *
+ * Non-bundled runs execute the CLI source directly, so MACRO.* defines and
+ * `--feature` gates exist only as runtime flags in process.execArgv. bunfig.toml
+ * is not a fallback: it is resolved relative to the cwd, and session children
+ * run with cwd set to the session directory. Bun leaks app args into execArgv
+ * only in single-file executables — the bundled branch returned above — so
+ * script-mode execArgv holds nothing but runtime flags. Inspect flags are
+ * dropped: forwarding --inspect-brk would leave the child paused before it
+ * ever connects.
  */
 function spawnScriptArgs(): string[] {
   if (isInBundledMode() || !process.argv[1]) {
     return []
   }
-  return [process.argv[1]]
+  return [...process.execArgv.filter((arg) => !/^--inspect(-brk)?(=|$)/.test(arg)), process.argv[1]]
 }
 
 /** Attempt to spawn a session; returns error string if spawn throws. */
