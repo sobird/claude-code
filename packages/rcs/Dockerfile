@@ -15,7 +15,11 @@ WORKDIR /repo
 # Workspace-wide install (root lockfile). `.dockerignore` strips node_modules,
 # .git, docs, prior build output, etc.
 COPY . .
-RUN bun install --frozen-lockfile
+# `--ignore-scripts`: `modifiers-napi` declares `gypfile: true` (macOS-only FFI)
+# and Bun would run node-gyp on every install, which needs Python+toolchain the
+# builder image does not carry. No workspace package has a real install script
+# and native dependencies ship prebuilt platform binaries, so this is safe.
+RUN bun install --frozen-lockfile --ignore-scripts
 
 WORKDIR /repo/packages/rcs
 
