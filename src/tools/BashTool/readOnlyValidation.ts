@@ -1234,7 +1234,7 @@ export function isCommandSafeViaFlagParsing(command: string): boolean {
   }
 
   // Now we know all tokens are strings
-  const tokens = parsed as string[]
+  const tokens = parsed
 
   if (tokens.length === 0) {
     return false

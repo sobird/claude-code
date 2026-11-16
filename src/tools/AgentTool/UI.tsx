@@ -42,7 +42,7 @@ function hasProgressMessage(data: Progress): data is AgentToolProgress {
   if (!('message' in data)) {
     return false
   }
-  const msg = (data as AgentToolProgress).message
+  const msg = data.message
   return msg != null && typeof msg === 'object' && 'type' in msg
 }
 

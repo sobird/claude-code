@@ -1157,7 +1157,7 @@ function reconstructCommand(kept: ParseEntry[], originalCmd: string): string {
 
     // Handle glob patterns
     if (op === 'glob' && 'pattern' in part) {
-      result = addToken(result, part.pattern as string)
+      result = addToken(result, part.pattern)
       continue
     }
 

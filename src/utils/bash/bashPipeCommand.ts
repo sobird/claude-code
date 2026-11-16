@@ -180,7 +180,7 @@ function buildCommandParts(parsed: ParseEntry[], start: number, end: number): st
       // Special handling for glob operators
       if (entry.op === 'glob' && 'pattern' in entry) {
         // Don't quote glob patterns - they need to remain as-is for shell expansion
-        parts.push(entry.pattern as string)
+        parts.push(entry.pattern)
       } else {
         parts.push(entry.op)
         // Reset after command separators - the next command can have its own env vars
