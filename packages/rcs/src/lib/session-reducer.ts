@@ -1,0 +1,479 @@
+/**
+ * Pure chat reducer for the session detail view.
+ *
+ * Folds durable history (`GET /web/sessions/:id/history`) and live SSE frames
+ * (`useSessionStream`) into one `ThreadEntry[]` model. It is React-free so the
+ * fold semantics can be unit tested, and it dedupes by durable `seqNum` because
+ * the stream replays the newest window on every (re)connect.
+ *
+ * Unlike the legacy Vite adapter it also resolves `control_response` /
+ * `permission_response`, so approvals race-free regardless of whether the echo
+ * arrives over history or live.
+ */
+
+import { isSessionClosedStatus } from '../contracts'
+
+// =============================================================================
+// Chat model
+// =============================================================================
+
+export type ToolCallStatus = 'running' | 'complete' | 'error' | 'waiting_for_confirmation' | 'rejected' | 'canceled'
+
+export type AssistantChunk = { type: 'message'; text: string } | { type: 'thought'; text: string }
+
+export interface PermissionOption {
+  optionId: string
+  name: string
+  kind: string
+}
+
+export interface ToolCallData {
+  id: string
+  title: string
+  status: ToolCallStatus
+  rawInput?: Record<string, unknown>
+  rawOutput?: Record<string, unknown>
+  /** Present while `status === 'waiting_for_confirmation'`. */
+  permissionRequest?: {
+    requestId: string
+    options: PermissionOption[]
+  }
+  /** Permission request that had no matching in-flight tool call. */
+  isStandalonePermission?: boolean
+}
+
+export interface UserMessageEntry {
+  type: 'user_message'
+  id: string
+  content: string
+}
+
+export interface AssistantMessageEntry {
+  type: 'assistant_message'
+  id: string
+  chunks: AssistantChunk[]
+}
+
+export interface ToolCallEntry {
+  type: 'tool_call'
+  toolCall: ToolCallData
+}
+
+export type PlanEntryPriority = 'high' | 'medium' | 'low'
+export type PlanEntryStatus = 'pending' | 'in_progress' | 'completed'
+
+export interface PlanEntry {
+  content: string
+  priority: PlanEntryPriority
+  status: PlanEntryStatus
+}
+
+export interface PlanDisplayEntry {
+  type: 'plan'
+  id: string
+  entries: PlanEntry[]
+}
+
+export type ThreadEntry = UserMessageEntry | AssistantMessageEntry | ToolCallEntry | PlanDisplayEntry
+
+export interface PendingPermission {
+  requestId: string
+  toolName: string
+  toolInput: Record<string, unknown>
+  description?: string
+}
+
+export interface ChatState {
+  entries: ThreadEntry[]
+  pendingPermissions: PendingPermission[]
+  status: string | null
+  closed: boolean
+  lastSeqNum: number
+  seenSeqNums: Set<number>
+  /** Events without a numeric `seqNum` dedupe by uuid instead. */
+  seenEventIds: Set<string>
+  error: string | null
+}
+
+/**
+ * Shape shared by durable history rows and live SSE frames. Both carry a
+ * `seqNum`; only history carries the event uuid in `id`.
+ */
+export interface SessionEventInput {
+  id?: string
+  seqNum?: number
+  type: string
+  payload?: unknown
+  direction?: 'inbound' | 'outbound'
+  sessionId?: string
+  createdAt?: number
+  receivedAt?: number
+}
+
+export const initialChatState: ChatState = {
+  entries: [],
+  pendingPermissions: [],
+  status: null,
+  closed: false,
+  lastSeqNum: 0,
+  seenSeqNums: new Set<number>(),
+  seenEventIds: new Set<string>(),
+  error: null,
+}
+
+// =============================================================================
+// Payload helpers
+// =============================================================================
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
+}
+
+function asText(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+/** Pull a display string out of a `content` / `message.content` payload. */
+export function extractEventText(payload: unknown): string {
+  const record = asRecord(payload)
+  if (!record) return typeof payload === 'string' ? payload : ''
+
+  const content = record.content
+  if (typeof content === 'string') return content
+
+  const message = asRecord(record.message)
+  if (message) {
+    if (typeof message.content === 'string') return message.content
+    if (Array.isArray(message.content)) {
+      return message.content
+        .map((block) => asRecord(block))
+        .filter((block): block is Record<string, unknown> => !!block && block.type === 'text')
+        .map((block) => asText(block.text))
+        .join('')
+    }
+  }
+
+  return ''
+}
+
+function requestIdOf(payload: Record<string, unknown>): string {
+  const flat = asText(payload.request_id)
+  if (flat) return flat
+  const response = asRecord(payload.response)
+  return response ? asText(response.request_id) : ''
+}
+
+function numericSeqNum(event: SessionEventInput): number | null {
+  return typeof event.seqNum === 'number' && Number.isFinite(event.seqNum) ? event.seqNum : null
+}
+
+// =============================================================================
+// Reducer
+// =============================================================================
+
+function isDuplicate(state: ChatState, event: SessionEventInput): boolean {
+  const seqNum = numericSeqNum(event)
+  if (seqNum !== null) return state.seenSeqNums.has(seqNum)
+  if (event.id) return state.seenEventIds.has(event.id)
+  return false
+}
+
+function markSeen(state: ChatState, event: SessionEventInput): ChatState {
+  const seqNum = numericSeqNum(event)
+  const seenSeqNums = new Set(state.seenSeqNums)
+  const seenEventIds = new Set(state.seenEventIds)
+  if (seqNum !== null) seenSeqNums.add(seqNum)
+  if (event.id) seenEventIds.add(event.id)
+  return {
+    ...state,
+    seenSeqNums,
+    seenEventIds,
+    lastSeqNum: seqNum !== null ? Math.max(state.lastSeqNum, seqNum) : state.lastSeqNum,
+  }
+}
+
+function findToolCallIndex(entries: ThreadEntry[], toolCallId: string): number {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]
+    if (entry && entry.type === 'tool_call' && entry.toolCall.id === toolCallId) return i
+  }
+  return -1
+}
+
+function replaceEntry(entries: ThreadEntry[], index: number, entry: ThreadEntry): ThreadEntry[] {
+  const next = entries.slice()
+  next[index] = entry
+  return next
+}
+
+function appendAssistantText(entries: ThreadEntry[], text: string, eventId: string): ThreadEntry[] {
+  const last = entries[entries.length - 1]
+  if (last && last.type === 'assistant_message') {
+    const chunks = last.chunks.slice()
+    const lastChunk = chunks[chunks.length - 1]
+    if (lastChunk && lastChunk.type === 'message') {
+      chunks[chunks.length - 1] = { type: 'message', text: lastChunk.text + text }
+    } else {
+      chunks.push({ type: 'message', text })
+    }
+    return replaceEntry(entries, entries.length - 1, { ...last, chunks })
+  }
+
+  return [...entries, { type: 'assistant_message', id: eventId, chunks: [{ type: 'message', text }] }]
+}
+
+function collectToolUseBlocks(payload: Record<string, unknown>): Record<string, unknown>[] {
+  const message = asRecord(payload.message)
+  if (!message || !Array.isArray(message.content)) return []
+  return message.content
+    .map((block) => asRecord(block))
+    .filter((block): block is Record<string, unknown> => !!block && block.type === 'tool_use')
+}
+
+function toolCallFromBlock(block: Record<string, unknown>, fallbackId: string): ToolCallEntry {
+  const input = asRecord(block.input)
+  return {
+    type: 'tool_call',
+    toolCall: {
+      id: asText(block.id) || fallbackId,
+      title: asText(block.name) || 'tool',
+      status: 'running',
+      rawInput: input ?? {},
+    },
+  }
+}
+
+function handleAssistant(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const seqNum = numericSeqNum(event)
+  const nextId = event.id || `assistant-${seqNum ?? state.entries.length}`
+
+  let entries = state.entries
+  const text = typeof payload.content === 'string' ? payload.content : extractEventText(payload)
+  if (text) entries = appendAssistantText(entries, text, nextId)
+
+  const blocks = collectToolUseBlocks(payload)
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
+    if (!block) continue
+    entries = [...entries, toolCallFromBlock(block, `call-${seqNum ?? entries.length}-${i}`)]
+  }
+
+  return entries === state.entries ? state : { ...state, entries }
+}
+
+function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const seqNum = numericSeqNum(event)
+  const id = asText(payload.tool_call_id) || `call-${seqNum ?? state.entries.length}`
+  const input = asRecord(payload.tool_input)
+  const entry: ToolCallEntry = {
+    type: 'tool_call',
+    toolCall: {
+      id,
+      title: asText(payload.tool_name) || 'tool',
+      status: 'running',
+      rawInput: input ?? {},
+    },
+  }
+  return { ...state, entries: [...state.entries, entry] }
+}
+
+function handleToolResult(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const index = findToolCallIndex(state.entries, asText(payload.tool_call_id))
+  if (index < 0) return state
+
+  const entry = state.entries[index]
+  if (!entry || entry.type !== 'tool_call') return state
+
+  const output = payload.content ?? payload.output ?? ''
+  const next: ToolCallEntry = {
+    type: 'tool_call',
+    toolCall: {
+      ...entry.toolCall,
+      status: payload.is_error === true ? 'error' : 'complete',
+      rawOutput: { output },
+    },
+  }
+  return { ...state, entries: replaceEntry(state.entries, index, next) }
+}
+
+function handlePermissionRequest(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const request = asRecord(payload.request) ?? payload
+  const requestId = asText(payload.request_id)
+  if (!requestId) return state
+
+  const toolName = asText(request.tool_name) || 'unknown'
+  const toolInput = asRecord(request.input) ?? asRecord(request.tool_input) ?? {}
+  const description = asText(request.description)
+
+  const pendingExists = state.pendingPermissions.some((permission) => permission.requestId === requestId)
+  const pendingPermissions = pendingExists
+    ? state.pendingPermissions
+    : [...state.pendingPermissions, { requestId, toolName, toolInput, description }]
+
+  // Mark the most recent running tool call as waiting for confirmation; if
+  // there is none, surface the request as a standalone tool-call card.
+  let marked = false
+  for (let i = state.entries.length - 1; i >= 0; i--) {
+    const entry = state.entries[i]
+    if (entry && entry.type === 'tool_call' && entry.toolCall.status === 'running') {
+      const updated: ToolCallEntry = {
+        type: 'tool_call',
+        toolCall: {
+          ...entry.toolCall,
+          status: 'waiting_for_confirmation',
+          permissionRequest: { requestId, options: [] },
+        },
+      }
+      return {
+        ...state,
+        entries: replaceEntry(state.entries, i, updated),
+        pendingPermissions,
+      }
+    }
+    if (entry && entry.type === 'tool_call' && entry.toolCall.status === 'waiting_for_confirmation') {
+      marked = true
+    }
+  }
+
+  if (marked) return { ...state, pendingPermissions }
+
+  const standalone: ToolCallEntry = {
+    type: 'tool_call',
+    toolCall: {
+      id: `permission-${requestId}`,
+      title: toolName,
+      status: 'waiting_for_confirmation',
+      rawInput: toolInput,
+      permissionRequest: { requestId, options: [] },
+      isStandalonePermission: true,
+    },
+  }
+  return {
+    ...state,
+    entries: [...state.entries, standalone],
+    pendingPermissions,
+  }
+}
+
+function handlePermissionResponse(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const requestId = requestIdOf(payload)
+  if (!requestId) return state
+
+  const approved = payload.approved === true
+  const pendingPermissions = state.pendingPermissions.filter((permission) => permission.requestId !== requestId)
+
+  let changed = pendingPermissions.length !== state.pendingPermissions.length
+  const entries = state.entries.map((entry) => {
+    if (entry.type !== 'tool_call') return entry
+    if (entry.toolCall.permissionRequest?.requestId !== requestId) return entry
+    changed = true
+    return {
+      type: 'tool_call' as const,
+      toolCall: {
+        ...entry.toolCall,
+        status: approved ? ('running' as const) : ('rejected' as const),
+        permissionRequest: undefined,
+        isStandalonePermission: undefined,
+      },
+    }
+  })
+
+  return changed ? { ...state, entries, pendingPermissions } : { ...state, pendingPermissions }
+}
+
+function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const status = asText(payload.status)
+  if (!status) return state
+  return { ...state, status, closed: isSessionClosedStatus(status) }
+}
+
+function handleError(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const message = asText(payload.message) || asText(payload.content) || 'Unknown error'
+  return { ...state, error: message }
+}
+
+function handlePlan(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const raw = Array.isArray(payload.entries) ? payload.entries : []
+  const entries: PlanEntry[] = raw
+    .map((item) => asRecord(item))
+    .filter((item): item is Record<string, unknown> => !!item)
+    .map((item) => ({
+      content: asText(item.content),
+      priority: (item.priority === 'high' || item.priority === 'low' ? item.priority : 'medium') as PlanEntryPriority,
+      status: (item.status === 'completed' || item.status === 'in_progress'
+        ? item.status
+        : 'pending') as PlanEntryStatus,
+    }))
+  if (entries.length === 0) return state
+
+  const seqNum = numericSeqNum(event)
+  const planEntry: PlanDisplayEntry = {
+    type: 'plan',
+    id: event.id || `plan-${seqNum ?? state.entries.length}`,
+    entries,
+  }
+  return { ...state, entries: [...state.entries, planEntry] }
+}
+
+function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
+  switch (event.type) {
+    case 'user': {
+      // Outbound is the echo of a message this UI already rendered.
+      if (event.direction === 'outbound') return state
+      const text = extractEventText(event.payload)
+      if (!text) return state
+      const seqNum = numericSeqNum(event)
+      return {
+        ...state,
+        entries: [
+          ...state.entries,
+          { type: 'user_message', id: event.id || `user-${seqNum ?? state.entries.length}`, content: text },
+        ],
+      }
+    }
+    case 'assistant':
+      return handleAssistant(state, event)
+    case 'tool_use':
+      return handleToolUse(state, event)
+    case 'tool_result':
+      return handleToolResult(state, event)
+    case 'control_request':
+    case 'permission_request':
+      return handlePermissionRequest(state, event)
+    case 'control_response':
+    case 'permission_response':
+      return handlePermissionResponse(state, event)
+    case 'session_status':
+      return handleSessionStatus(state, event)
+    case 'error':
+      return handleError(state, event)
+    case 'plan':
+      return handlePlan(state, event)
+    default:
+      // partial_assistant, result, result_success, system, task_state,
+      // automation_state, status, … are intentionally ignored.
+      return state
+  }
+}
+
+/** Fold one history row or live frame into the chat state. */
+export function reduceSessionEvent(state: ChatState, event: SessionEventInput): ChatState {
+  if (isDuplicate(state, event)) return state
+  const seeded = markSeen(state, event)
+  return applyEvent(seeded, event)
+}
+
+/** Fold a page of durable history (oldest→newest) through the reducer. */
+export function applyHistory(state: ChatState, events: readonly SessionEventInput[]): ChatState {
+  let next = state
+  for (const event of events) next = reduceSessionEvent(next, event)
+  return next
+}
