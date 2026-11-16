@@ -88,6 +88,92 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect((await repos.users.getById(user.id))?.disabledAt).toBeNull()
     })
 
+    test('updateGuarded applies profile and disabled state in one call', async () => {
+      const repos = makeRepos()
+      const user = await repos.users.create({ username: 'guarded-profile', passwordHash: 'x', role: 'member' })
+      const disabledAt = new Date('2026-03-04T05:06:07.000Z')
+
+      const result = await repos.users.updateGuarded(user.id, {
+        displayName: 'Renamed',
+        disabledAt,
+      })
+      expect(result).toEqual({ updated: true })
+
+      const updated = await repos.users.getById(user.id)
+      expect(updated?.displayName).toBe('Renamed')
+      expect(updated?.disabledAt?.getTime()).toBe(disabledAt.getTime())
+
+      expect(await repos.users.updateGuarded(user.id, { disabledAt: null })).toEqual({ updated: true })
+      expect((await repos.users.getById(user.id))?.disabledAt).toBeNull()
+    })
+
+    test('updateGuarded reports not_found for unknown ids', async () => {
+      const repos = makeRepos()
+      expect(await repos.users.updateGuarded(crypto.randomUUID(), { displayName: 'nobody' })).toEqual({
+        updated: false,
+        reason: 'not_found',
+      })
+    })
+
+    test('updateGuarded demotes an admin while another enabled admin remains', async () => {
+      const repos = makeRepos()
+      const first = await repos.users.create({ username: 'guarded-admin-a', passwordHash: 'x', role: 'admin' })
+      await repos.users.create({ username: 'guarded-admin-b', passwordHash: 'x', role: 'admin' })
+
+      expect(await repos.users.updateGuarded(first.id, { role: 'member' })).toEqual({ updated: true })
+      expect((await repos.users.getById(first.id))?.role).toBe('member')
+    })
+
+    test('concurrent demotions cannot remove every admin', async () => {
+      const repos = makeRepos()
+      for (const user of await repos.users.list()) {
+        if (user.role === 'admin' && user.disabledAt === null) {
+          await repos.users.setDisabled(user.id, new Date())
+        }
+      }
+      const first = await repos.users.create({ username: 'guarded-race-a', passwordHash: 'x', role: 'admin' })
+      const second = await repos.users.create({ username: 'guarded-race-b', passwordHash: 'x', role: 'admin' })
+
+      const results = await Promise.all([
+        repos.users.updateGuarded(first.id, { role: 'member' }),
+        repos.users.updateGuarded(second.id, { role: 'member' }),
+      ])
+
+      expect(results.filter((result) => result.updated)).toHaveLength(1)
+      const enabledAdmins = (await repos.users.list()).filter(
+        (user) => user.role === 'admin' && user.disabledAt === null,
+      )
+      expect(enabledAdmins).toHaveLength(1)
+    })
+
+    test('updateGuarded refuses to demote or disable the last enabled admin', async () => {
+      const repos = makeRepos()
+      // The PGlite suite shares one database, so retire every other enabled admin
+      // first and make this user the only one.
+      for (const user of await repos.users.list()) {
+        if (user.role === 'admin' && user.disabledAt === null) {
+          await repos.users.setDisabled(user.id, new Date())
+        }
+      }
+      const soleAdmin = await repos.users.create({ username: 'guarded-sole-admin', passwordHash: 'x', role: 'admin' })
+
+      expect(await repos.users.updateGuarded(soleAdmin.id, { role: 'member' })).toEqual({
+        updated: false,
+        reason: 'last_admin',
+      })
+      expect(await repos.users.updateGuarded(soleAdmin.id, { disabledAt: new Date() })).toEqual({
+        updated: false,
+        reason: 'last_admin',
+      })
+
+      // Unrelated profile edits still go through.
+      expect(await repos.users.updateGuarded(soleAdmin.id, { displayName: 'Still Admin' })).toEqual({ updated: true })
+      const reloaded = await repos.users.getById(soleAdmin.id)
+      expect(reloaded?.role).toBe('admin')
+      expect(reloaded?.disabledAt).toBeNull()
+      expect(reloaded?.displayName).toBe('Still Admin')
+    })
+
     test('setPasswordHash replaces the stored hash', async () => {
       const repos = makeRepos()
       const user = await repos.users.create({ username: 'frank', passwordHash: 'old', role: 'member' })

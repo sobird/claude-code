@@ -176,6 +176,32 @@ describe('createSSEStream', () => {
     })
   })
 
+  test('a backlog larger than the replay limit drains across successive reconnects', async () => {
+    await withReplayLimit('2', async () => {
+      const events = []
+      for (let index = 0; index < 5; index++) {
+        events.push(
+          await repos.events.append({
+            sessionId: 's10',
+            type: 'user',
+            payload: { content: `b${index}` },
+            direction: 'outbound',
+          }),
+        )
+      }
+
+      // The client had seen b0; reconnect #1 replays the oldest window after its cursor.
+      const firstFrames = await readDataFrames(await app.request(`/stream/s10?from=${events[0].id}`), 2)
+      // Reconnecting from b2's id (the last seqNum delivered) catches up on the rest.
+      const secondFrames = await readDataFrames(await app.request(`/stream/s10?from=${events[2].id}`), 2)
+
+      const contents = [...firstFrames, ...secondFrames].map(
+        (frame) => (JSON.parse(frame) as { payload: { content: string } }).payload.content,
+      )
+      expect(contents).toEqual(['b1', 'b2', 'b3', 'b4'])
+    })
+  })
+
   test('subscribes to live events after replay', async () => {
     const res = await app.request('/stream/s6')
     const reader = res.body?.getReader()

@@ -2,7 +2,8 @@
  * Admin user management.
  *
  * Password hashes are never serialized. The last enabled admin cannot be demoted or
- * disabled (409), so the instance always retains an administrator.
+ * disabled (409); the guard runs under a row lock, so concurrent PATCHes cannot race
+ * the instance out of administrators.
  */
 
 import { Hono } from 'hono'
@@ -11,7 +12,7 @@ import type { AppEnv } from '../../auth/context.js'
 import { requireAdmin } from '../../auth/middleware.js'
 import { hashPassword } from '../../auth/password.js'
 import type { Role, UserRecord } from '../../contracts.js'
-import type { UserPatch } from '../../db/repositories/types.js'
+import type { GuardedUserPatch } from '../../db/repositories/types.js'
 import { legacyUserAuth, readJson } from '../common.js'
 
 const app = new Hono<AppEnv>()
@@ -32,12 +33,6 @@ function toUserView(record: UserRecord) {
 
 function parseRole(value: unknown): Role | undefined {
   return value === 'admin' || value === 'member' ? value : undefined
-}
-
-/** Count enabled admins other than `excludeId`. */
-async function otherEnabledAdmins(repos: AppEnv['Variables']['repos'], excludeId: string): Promise<number> {
-  const users = await repos.users.list()
-  return users.filter((user) => user.role === 'admin' && user.disabledAt === null && user.id !== excludeId).length
 }
 
 /** GET /web/admin/users — List users without password hashes. */
@@ -84,20 +79,22 @@ app.patch('/admin/users/:id', async (c) => {
   const displayName = typeof body.displayName === 'string' ? body.displayName : undefined
   const password = typeof body.password === 'string' && body.password ? body.password : undefined
 
-  const targetIsEnabledAdmin = target.role === 'admin' && target.disabledAt === null
-  const losesAdmin = role !== undefined && role !== 'admin'
-  const disables = disabled === true
-  if (targetIsEnabledAdmin && (losesAdmin || disables)) {
-    if ((await otherEnabledAdmins(repos, target.id)) === 0) {
-      return c.json({ error: 'cannot demote or disable the last enabled admin' }, 409)
-    }
-  }
-
-  const patch: UserPatch = {}
+  const patch: GuardedUserPatch = {}
   if (role !== undefined) patch.role = role
   if (displayName !== undefined) patch.displayName = displayName
-  if (Object.keys(patch).length > 0) await repos.users.update(target.id, patch)
-  if (disabled !== undefined) await repos.users.setDisabled(target.id, disabled ? new Date() : null)
+  if (disabled !== undefined) patch.disabledAt = disabled ? new Date() : null
+
+  // The guard runs under a row lock inside the repository, so two concurrent
+  // PATCHes cannot both demote the last two admins.
+  if (Object.keys(patch).length > 0) {
+    const result = await repos.users.updateGuarded(target.id, patch)
+    if (!result.updated) {
+      if (result.reason === 'last_admin') {
+        return c.json({ error: 'cannot demote or disable the last enabled admin' }, 409)
+      }
+      return c.json({ error: 'user not found' }, 404)
+    }
+  }
   if (password !== undefined) await repos.users.setPasswordHash(target.id, await hashPassword(password))
 
   const updated = await repos.users.getById(target.id)

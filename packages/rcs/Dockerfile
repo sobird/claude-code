@@ -59,8 +59,9 @@ COPY --from=builder /repo/packages/rcs/.next/static/ ./packages/rcs/.next/static
 COPY --from=builder /repo/packages/rcs/public/ ./packages/rcs/public/
 
 # Bundled gateway + migrations (`bun /app/dist/gateway.js` auto-migrates on boot).
+# The builder already copied `src/db/migrations` into `dist/migrations`, so the
+# whole `dist/` tree carries the SQL.
 COPY --from=builder /repo/packages/rcs/dist/ ./dist/
-COPY --from=builder /repo/packages/rcs/src/db/migrations/ ./dist/migrations/
 
 EXPOSE 3000
 

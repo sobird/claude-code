@@ -40,6 +40,14 @@ export interface UserPatch {
   displayName?: string | null
 }
 
+/** Atomic last-admin guard input; `disabledAt: undefined` leaves the flag unchanged. */
+export interface GuardedUserPatch extends UserPatch {
+  /** A `Date` disables the user, `null` re-enables them. */
+  disabledAt?: Date | null
+}
+
+export type GuardedUserUpdateResult = { updated: true } | { updated: false; reason: 'not_found' | 'last_admin' }
+
 export interface UserRepository {
   create(input: CreateUserInput): Promise<UserRecord>
   getById(id: string): Promise<UserRecord | null>
@@ -48,6 +56,12 @@ export interface UserRepository {
   list(): Promise<UserRecord[]>
   /** Update mutable profile columns. */
   update(id: string, patch: UserPatch): Promise<void>
+  /**
+   * Apply `patch` while refusing to demote or disable the last enabled admin.
+   * Implementations serialize concurrent calls (Postgres locks the enabled admin
+   * rows) so two requests cannot both observe another admin.
+   */
+  updateGuarded(id: string, patch: GuardedUserPatch): Promise<GuardedUserUpdateResult>
   /** Disable the user (`disabledAt` set) or re-enable them (`null`). */
   setDisabled(id: string, disabledAt: Date | null): Promise<void>
   setPasswordHash(id: string, hash: string): Promise<void>

@@ -101,6 +101,12 @@ claude remote-control
   `Authorization: Bearer …` on every bridge call.
 - `CLAUDE_BRIDGE_SESSION_INGRESS_URL` — optional; defaults to the base URL.
   Set it explicitly only if session ingress is served from a different host.
+- `CLAUDE_BRIDGE_USE_CCR_V2` — **do not set it against this gateway.** The
+  gateway always reports `use_code_sessions: false`; the v2 code-sessions path
+  this override forces authenticates with a worker JWT against
+  `POST /v1/code/sessions/:id/worker/register`, which only accepts a user
+  credential, so the session fails. The default (legacy) path is the supported
+  one.
 
 The base URL must be HTTPS unless it is localhost/127.0.0.1. The CLI registers an
 environment, long-polls for work, and opens a WebSocket for the selected session.
