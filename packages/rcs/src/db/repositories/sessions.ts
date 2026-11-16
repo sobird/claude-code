@@ -9,10 +9,10 @@
 import { and, asc, eq, isNull, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 
-import type { SessionRecord } from '../../contracts.js'
-import type { Database } from '../client.js'
-import { sessions } from '../schema.js'
-import type { CreateSessionInput, SessionListOptions, SessionPatch, SessionRepository } from './types.js'
+import type { SessionRecord } from '../../contracts'
+import type { Database } from '../client'
+import { sessions } from '../schema'
+import type { CreateSessionInput, SessionListOptions, SessionPatch, SessionRepository } from './types'
 
 export function createSessionRepository(db: Database): SessionRepository {
   return {

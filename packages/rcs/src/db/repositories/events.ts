@@ -9,10 +9,10 @@
 
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 
-import type { SessionEventRecord } from '../../contracts.js'
-import type { Database } from '../client.js'
-import { sessionEvents } from '../schema.js'
-import type { EventRepository } from './types.js'
+import type { SessionEventRecord } from '../../contracts'
+import type { Database } from '../client'
+import { sessionEvents } from '../schema'
+import type { EventRepository } from './types'
 
 export function createEventRepository(db: Database): EventRepository {
   return {

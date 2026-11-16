@@ -8,7 +8,7 @@
 
 import { bigserial, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
-import type { Role } from '../contracts.js'
+import type { Role } from '../contracts'
 
 export type EventDirection = 'inbound' | 'outbound'
 

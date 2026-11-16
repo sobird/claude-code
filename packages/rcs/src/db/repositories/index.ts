@@ -7,15 +7,15 @@
  * kept for earlier consumers that only need the user-facing subset.
  */
 
-import type { Database } from '../client.js'
-import { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys.js'
-import { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments.js'
-import { createEventRepository, createMemoryEventRepository } from './events.js'
-import { createMemorySessionWorkerRepository, createSessionWorkerRepository } from './session-workers.js'
-import { createMemorySessionRepository, createSessionRepository } from './sessions.js'
-import type { Repositories } from './types.js'
-import { createMemoryUserRepository, createUserRepository } from './users.js'
-import { createMemoryWorkItemRepository, createWorkItemRepository } from './work-items.js'
+import type { Database } from '../client'
+import { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys'
+import { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments'
+import { createEventRepository, createMemoryEventRepository } from './events'
+import { createMemorySessionWorkerRepository, createSessionWorkerRepository } from './session-workers'
+import { createMemorySessionRepository, createSessionRepository } from './sessions'
+import type { Repositories } from './types'
+import { createMemoryUserRepository, createUserRepository } from './users'
+import { createMemoryWorkItemRepository, createWorkItemRepository } from './work-items'
 
 export function createRepositories(db: Database): Repositories {
   return {
@@ -47,11 +47,11 @@ export const createUserRepositories = createRepositories
 /** Kept for earlier consumers; identical to `createMemoryRepositories`. */
 export const createMemoryUserRepositories = createMemoryRepositories
 
-export { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys.js'
-export { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments.js'
-export { createEventRepository, createMemoryEventRepository } from './events.js'
-export { createMemorySessionRepository, createSessionRepository } from './sessions.js'
-export { createMemorySessionWorkerRepository, createSessionWorkerRepository } from './session-workers.js'
+export { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys'
+export { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments'
+export { createEventRepository, createMemoryEventRepository } from './events'
+export { createMemorySessionRepository, createSessionRepository } from './sessions'
+export { createMemorySessionWorkerRepository, createSessionWorkerRepository } from './session-workers'
 export type {
   ApiKeyRepository,
   AppendEventInput,
@@ -73,6 +73,6 @@ export type {
   SessionWorkerRepository,
   UserRepository,
   WorkItemRepository,
-} from './types.js'
-export { createMemoryUserRepository, createUserRepository } from './users.js'
-export { createMemoryWorkItemRepository, createWorkItemRepository } from './work-items.js'
+} from './types'
+export { createMemoryUserRepository, createUserRepository } from './users'
+export { createMemoryWorkItemRepository, createWorkItemRepository } from './work-items'

@@ -8,10 +8,10 @@
 
 import { asc, count, eq } from 'drizzle-orm'
 
-import type { UserRecord } from '../../contracts.js'
-import type { Database } from '../client.js'
-import { users } from '../schema.js'
-import type { CreateUserInput, UserPatch, UserRepository } from './types.js'
+import type { UserRecord } from '../../contracts'
+import type { Database } from '../client'
+import { users } from '../schema'
+import type { CreateUserInput, UserPatch, UserRepository } from './types'
 
 export function createUserRepository(db: Database): UserRepository {
   return {

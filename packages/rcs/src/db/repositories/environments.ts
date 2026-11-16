@@ -8,10 +8,10 @@
 
 import { and, asc, eq } from 'drizzle-orm'
 
-import type { EnvironmentRecord } from '../../contracts.js'
-import type { Database } from '../client.js'
-import { environments } from '../schema.js'
-import type { CreateEnvironmentInput, EnvironmentPatch, EnvironmentRepository } from './types.js'
+import type { EnvironmentRecord } from '../../contracts'
+import type { Database } from '../client'
+import { environments } from '../schema'
+import type { CreateEnvironmentInput, EnvironmentPatch, EnvironmentRepository } from './types'
 
 export function createEnvironmentRepository(db: Database): EnvironmentRepository {
   return {

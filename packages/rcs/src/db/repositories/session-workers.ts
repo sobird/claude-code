@@ -8,10 +8,10 @@
 
 import { eq } from 'drizzle-orm'
 
-import type { SessionWorkerRecord } from '../../contracts.js'
-import type { Database } from '../client.js'
-import { sessionWorkers } from '../schema.js'
-import type { SessionWorkerPatch, SessionWorkerRepository } from './types.js'
+import type { SessionWorkerRecord } from '../../contracts'
+import type { Database } from '../client'
+import { sessionWorkers } from '../schema'
+import type { SessionWorkerPatch, SessionWorkerRepository } from './types'
 
 function mergeExternalMetadata(
   existing: Record<string, unknown> | null,

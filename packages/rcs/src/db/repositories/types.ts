@@ -16,7 +16,7 @@ import type {
   SessionWorkerRecord,
   UserRecord,
   WorkItemRecord,
-} from '../../contracts.js'
+} from '../../contracts'
 
 export interface CreateUserInput {
   username: string

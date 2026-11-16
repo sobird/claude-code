@@ -6,6 +6,7 @@
  * dependency and production imports of this module must not require it.
  */
 
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import type { PgliteDatabase } from 'drizzle-orm/pglite'
@@ -13,7 +14,7 @@ import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js'
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 
-import { schema } from './schema.js'
+import { schema } from './schema'
 
 export type Database = PgliteDatabase<typeof schema> | PostgresJsDatabase<typeof schema>
 
@@ -57,7 +58,10 @@ async function applyMigrations(db: Database): Promise<void> {
   if (!driver) {
     throw new Error('Unknown database driver; create the database with createPostgresDatabase or createPgliteDatabase')
   }
-  const migrationsFolder = fileURLToPath(new URL('./migrations', import.meta.url))
+  // Resolved via path APIs (not `new URL(..., import.meta.url)`) so bundlers do
+  // not try to inline the migrations directory; this module is also imported by
+  // the Next server, which never runs migrations.
+  const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), 'migrations')
   if (driver === 'pglite') {
     const { migrate } = await import('drizzle-orm/pglite/migrator')
     await migrate(db as PgliteDatabase<typeof schema>, { migrationsFolder })

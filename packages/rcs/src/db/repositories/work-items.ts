@@ -9,10 +9,10 @@
 
 import { and, asc, eq } from 'drizzle-orm'
 
-import type { WorkItemRecord } from '../../contracts.js'
-import type { Database } from '../client.js'
-import { workItems } from '../schema.js'
-import type { EnqueueWorkItemInput, WorkItemRepository } from './types.js'
+import type { WorkItemRecord } from '../../contracts'
+import type { Database } from '../client'
+import { workItems } from '../schema'
+import type { EnqueueWorkItemInput, WorkItemRepository } from './types'
 
 export function createWorkItemRepository(db: Database): WorkItemRepository {
   return {

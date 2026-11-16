@@ -8,10 +8,10 @@
 
 import { asc, eq } from 'drizzle-orm'
 
-import type { ApiKeyRecord } from '../../contracts.js'
-import type { Database } from '../client.js'
-import { apiKeys } from '../schema.js'
-import type { ApiKeyRepository, CreateApiKeyInput } from './types.js'
+import type { ApiKeyRecord } from '../../contracts'
+import type { Database } from '../client'
+import { apiKeys } from '../schema'
+import type { ApiKeyRepository, CreateApiKeyInput } from './types'
 
 export function createApiKeyRepository(db: Database): ApiKeyRepository {
   return {
