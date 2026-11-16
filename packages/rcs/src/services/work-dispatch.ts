@@ -70,7 +70,7 @@ async function canonicalSessionId(repos: Repositories, sessionId: string): Promi
   if (await repos.sessions.getById(sessionId)) return sessionId
   const compatibleId = toCompatibleCodeSessionId(sessionId)
   if (compatibleId && (await repos.sessions.getById(compatibleId))) return compatibleId
-  return sessionId
+  throw new Error(`Session ${sessionId} not found`)
 }
 
 export async function createWorkItem(repos: Repositories, environmentId: string, sessionId: string): Promise<string> {
@@ -104,7 +104,10 @@ export async function pollWork(
   timeoutSeconds?: number,
 ): Promise<WorkResponse | null> {
   const config = loadConfig()
-  const timeout = timeoutSeconds ?? config.pollTimeout
+  // Query-param-derived values can arrive as NaN/Infinity/negative; fall back to the
+  // configured timeout so a bad value cannot tight-spin or wait forever.
+  const requested = timeoutSeconds ?? config.pollTimeout
+  const timeout = Number.isFinite(requested) && requested >= 0 ? requested : config.pollTimeout
   const deadline = Date.now() + timeout * 1000
 
   for (;;) {

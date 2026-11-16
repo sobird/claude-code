@@ -128,7 +128,7 @@ export async function registerEnvironment(
       const session = await repos.sessions.create({
         environmentId: record.id,
         ownerUserId: record.ownerUserId,
-        title: input.machineName ?? 'ACP Agent',
+        title: input.machineName || 'ACP Agent',
         source: 'acp',
       })
       sessionId = session.id

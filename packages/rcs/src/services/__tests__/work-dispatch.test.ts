@@ -65,6 +65,11 @@ describe('Work Dispatch', () => {
       await expectRejects(createWorkItem(repos, inactiveEnv.id, sessionId), /not active/)
     })
 
+    test('throws a clear session not found error for an unknown session id', async () => {
+      await expectRejects(createWorkItem(repos, envId, 'session_missing'), /session .*not found/i)
+      await expectRejects(createWorkItem(repos, envId, 'cse_missing'), /session .*not found/i)
+    })
+
     test('stores the canonical session id when given a web session id', async () => {
       const webSessionId = toWebSessionId(sessionId)
       const workId = await createWorkItem(repos, envId, webSessionId)
@@ -93,6 +98,21 @@ describe('Work Dispatch', () => {
     test('returns null when no work available (timeout)', async () => {
       const result = await pollWork(repos, envId, 0.1)
       expect(result).toBeNull()
+    })
+
+    test('invalid timeout values fall back to the configured pollTimeout instead of spinning', async () => {
+      const previous = process.env.RCS_POLL_TIMEOUT
+      process.env.RCS_POLL_TIMEOUT = '0'
+      try {
+        for (const invalid of [Number.NaN, Number.POSITIVE_INFINITY, -1]) {
+          const startedAt = Date.now()
+          expect(await pollWork(repos, envId, invalid)).toBeNull()
+          expect(Date.now() - startedAt).toBeLessThan(1000)
+        }
+      } finally {
+        if (previous === undefined) delete process.env.RCS_POLL_TIMEOUT
+        else process.env.RCS_POLL_TIMEOUT = previous
+      }
     })
 
     test('returns pending work and marks as dispatched', async () => {

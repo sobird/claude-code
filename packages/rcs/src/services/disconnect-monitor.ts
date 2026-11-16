@@ -49,7 +49,11 @@ export async function runDisconnectMonitorSweep(
 export function startDisconnectMonitor({ repos, config }: StartDisconnectMonitorOptions): void {
   if (sweepTimer) return
   sweepTimer = setInterval(() => {
-    void runDisconnectMonitorSweep(repos, config)
+    // Swallow failures so a transient DB error never becomes an unhandled rejection
+    // that tears down the long-lived gateway; the next tick retries naturally.
+    void runDisconnectMonitorSweep(repos, config).catch((error: unknown) => {
+      console.error('[disconnect-monitor] sweep failed:', error)
+    })
   }, SWEEP_INTERVAL_MS)
   const handle = sweepTimer as { unref?: () => void }
   handle.unref?.()
