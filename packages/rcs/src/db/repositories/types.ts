@@ -1,12 +1,22 @@
 /**
- * Repository interfaces for users, API keys, environments, and sessions.
+ * Repository interfaces for users, API keys, environments, sessions, work items,
+ * session workers, and durable session events.
  *
  * Repositories are the only place that touches the database; consumers (services,
  * routes) depend on these interfaces so tests can swap in the in-memory
  * implementations.
  */
 
-import type { ApiKeyRecord, EnvironmentRecord, Role, SessionRecord, UserRecord } from '../../contracts.js'
+import type {
+  ApiKeyRecord,
+  EnvironmentRecord,
+  Role,
+  SessionEventRecord,
+  SessionRecord,
+  SessionWorkerRecord,
+  UserRecord,
+  WorkItemRecord,
+} from '../../contracts.js'
 
 export interface CreateUserInput {
   username: string
@@ -118,10 +128,67 @@ export interface SessionRepository {
   archive(id: string, at: Date): Promise<void>
 }
 
-/** Partial composition; Task 7 extends this with the remaining repositories. */
+/** Every repository module, composed by `createRepositories` / `createMemoryRepositories`. */
 export interface Repositories {
   users: UserRepository
   apiKeys: ApiKeyRepository
   environments: EnvironmentRepository
   sessions: SessionRepository
+  workItems: WorkItemRepository
+  sessionWorkers: SessionWorkerRepository
+  events: EventRepository
+}
+
+export interface EnqueueWorkItemInput {
+  environmentId: string
+  sessionId: string
+  /** Serialized work secret payload (`work_items.secret` is `text`). */
+  secret: string
+}
+
+export interface WorkItemRepository {
+  /** Creates a `pending` work item with a generated `work_…` id. */
+  enqueue(input: EnqueueWorkItemInput): Promise<WorkItemRecord>
+  /**
+   * Atomically claims the oldest pending item for the environment and marks it
+   * `dispatched`; returns `null` when there is nothing to claim.
+   */
+  claimNext(environmentId: string): Promise<WorkItemRecord | null>
+  getById(id: string): Promise<WorkItemRecord | null>
+  /** Transition the item's state (`pending`/`dispatched`/`acked`/`completed`). */
+  setState(id: string, state: string): Promise<void>
+  /** Heartbeat / lease extension: bumps `updatedAt` without changing state. */
+  bump(id: string): Promise<void>
+}
+
+export interface SessionWorkerPatch {
+  workerStatus?: string | null
+  /** Object patches merge into the stored value; `null` clears it. */
+  externalMetadata?: Record<string, unknown> | null
+  requiresActionDetails?: Record<string, unknown> | null
+  lastHeartbeatAt?: Date | null
+}
+
+export interface SessionWorkerRepository {
+  get(sessionId: string): Promise<SessionWorkerRecord | null>
+  /** Insert when missing, otherwise merge the patch and bump `updatedAt`. */
+  upsert(sessionId: string, patch: SessionWorkerPatch): Promise<SessionWorkerRecord>
+}
+
+export interface AppendEventInput {
+  sessionId: string
+  type: string
+  payload: unknown
+  direction: SessionEventRecord['direction']
+}
+
+export interface EventRepository {
+  /** Persists an event and returns the inserted row (including its `bigserial` id). */
+  append(input: AppendEventInput): Promise<SessionEventRecord>
+  /** Events with `id > afterId`, ascending (SSE `Last-Event-ID` replay). */
+  listSince(sessionId: string, afterId: number, limit: number): Promise<SessionEventRecord[]>
+  /** Events with `id < beforeId`, newest-first window returned in display order. */
+  listBefore(sessionId: string, beforeId: number, limit: number): Promise<SessionEventRecord[]>
+  /** Highest event id for the session, or `null` when it has no events. */
+  latestId(sessionId: string): Promise<number | null>
 }
