@@ -42,5 +42,11 @@ export const config = {
   // Next strips `basePath` before matching middleware, so patterns are relative
   // to `/code`. Exclude Auth.js endpoints, Next internals, and static assets;
   // API routes enforce auth themselves.
-  matcher: ['/', '/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  //
+  // PWA assets must stay publicly reachable: browsers fetch the web app manifest
+  // with credentials mode `omit`, so an auth redirect would turn it into HTML and
+  // the app could never be installed. The service worker route and its chunks,
+  // icons, and the offline page are likewise loaded outside an authenticated page
+  // context, so they are excluded from the guard as well.
+  matcher: ['/', '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/|serwist/|~offline).*)'],
 }

@@ -18,8 +18,10 @@ export function ServiceWorkerRegistration(): null {
     if (process.env.NODE_ENV !== 'production') return
     if (!('serviceWorker' in navigator)) return
 
-    navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: SERVICE_WORKER_SCOPE }).catch(() => {
-      // Browsers without support or insecure origins reject registration.
+    navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: SERVICE_WORKER_SCOPE }).catch((error: unknown) => {
+      // Browsers without support or insecure origins reject registration. Log
+      // instead of surfacing an unhandled rejection; do not retry.
+      console.warn('Service worker registration failed', error)
     })
   }, [])
 

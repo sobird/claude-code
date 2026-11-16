@@ -12,5 +12,7 @@ import { createSerwistRoute } from '@serwist/turbopack'
 export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } = createSerwistRoute({
   swSrc: 'src/app/sw.ts',
   useNativeEsbuild: false,
-  additionalPrecacheEntries: ['/code/~offline'],
+  // Object entries (rather than bare strings) carry an explicit `revision` so
+  // the adapter does not emit its `string-entry-warning`.
+  additionalPrecacheEntries: [{ url: '/code/~offline', revision: null }],
 })
