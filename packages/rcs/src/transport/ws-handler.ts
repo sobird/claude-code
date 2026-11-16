@@ -16,7 +16,7 @@ import type { GatewayConfig } from '../config.js'
 import type { Repositories } from '../db/repositories/types.js'
 import { toClientPayload } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'
-import { getEventBus, publishSessionEvent, subscribeReplayThenLive, toSessionEvent } from './event-bus.js'
+import { getEventBus, loadEventReplayWindow, publishSessionEvent, subscribeReplayThenLive } from './event-bus.js'
 
 // Per-connection cleanup, keyed by sessionId (only one WS per session).
 interface CleanupEntry {
@@ -62,8 +62,8 @@ function sendEvent(ws: WSContext, event: SessionEvent): void {
 
 /**
  * Called from `onOpen`: subscribe before reading durable history so no event can slip
- * across the replay→live boundary, then replay from the beginning (bounded by
- * `config.eventReplayLimit`) and forward live outbound events.
+ * across the replay→live boundary, then replay the newest `config.eventReplayLimit`
+ * events (there is no cursor on this path) and forward live outbound events.
  */
 export async function handleWebSocketOpen(
   repos: Repositories,
@@ -114,7 +114,7 @@ export async function handleWebSocketOpen(
     bus: getEventBus(sessionId),
     fromSeqNum: 0,
     replay: true,
-    loadSince: async () => (await repos.events.listSince(sessionId, 0, config.eventReplayLimit)).map(toSessionEvent),
+    loadSince: () => loadEventReplayWindow(repos, sessionId, 0, config.eventReplayLimit),
     filterLiveEvent: (event) => event.direction === 'outbound',
     onReplayEvent: (event) => sendEvent(ws, event),
     onLiveEvent: (event) => sendEvent(ws, event),

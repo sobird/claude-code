@@ -37,6 +37,21 @@ async function seedRepos(): Promise<Repositories> {
   return repos
 }
 
+/** Connect, complete the upgrade, and resolve the WS close code (rejects on timeout). */
+async function closeCodeFor(url: string, protocols: string[]): Promise<number> {
+  return await new Promise<number>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('timed out waiting for close')), 2000)
+    const ws = new WebSocket(url, protocols)
+    ws.addEventListener('close', (event) => {
+      clearTimeout(timeout)
+      resolve(event.code)
+    })
+    ws.addEventListener('error', () => {
+      // A failed upgrade also fires here; close/timeout decides the result.
+    })
+  })
+}
+
 async function waitFor(predicate: () => Promise<boolean>, timeoutMs = 2000): Promise<void> {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
@@ -197,6 +212,41 @@ describe('GET /v2/session_ingress/ws/:id', () => {
 
       expect(payload.type).toBe('user')
       expect(payload.message.content).toBe('compat ws replay')
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  test('closes with 4001 after upgrading when the session does not exist', async () => {
+    const server = Bun.serve({
+      port: 0,
+      fetch: app.fetch,
+      websocket: { ...sessionIngressWebsocket, idleTimeout: 30 },
+    })
+
+    try {
+      const code = await closeCodeFor(`ws://127.0.0.1:${server.port}/v2/session_ingress/ws/cse_missing`, [
+        encodeWebSocketAuthProtocol('test-api-key'),
+      ])
+      expect(code).toBe(4001)
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  test('closes with 4003 after upgrading when credentials are invalid', async () => {
+    const session = await repos.sessions.create({})
+    const server = Bun.serve({
+      port: 0,
+      fetch: app.fetch,
+      websocket: { ...sessionIngressWebsocket, idleTimeout: 30 },
+    })
+
+    try {
+      const code = await closeCodeFor(`ws://127.0.0.1:${server.port}/v2/session_ingress/ws/${session.id}`, [
+        encodeWebSocketAuthProtocol('wrong-key'),
+      ])
+      expect(code).toBe(4003)
     } finally {
       await server.stop(true)
     }

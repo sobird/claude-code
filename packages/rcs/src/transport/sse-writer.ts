@@ -10,11 +10,10 @@
 import type { Context } from 'hono'
 
 import { loadConfig } from '../config.js'
-import type { SessionEventRecord } from '../contracts.js'
 import type { Repositories } from '../db/repositories/types.js'
 import { toSessionEventFrame, toWorkerClientFrame } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'
-import { getEventBus, subscribeReplayThenLive, toSessionEvent } from './event-bus.js'
+import { getEventBus, loadEventReplayWindow, subscribeReplayThenLive } from './event-bus.js'
 
 const KEEPALIVE_MS = 15000
 
@@ -31,8 +30,9 @@ function unrefTimer(timer: ReturnType<typeof setInterval>): void {
 
 interface EventStreamOptions {
   sessionId: string
+  /** `Last-Event-ID` / `from_sequence_num`; 0 replays the newest window. */
   fromSeqNum: number
-  /** Replay even when the cursor is 0 (not used by the SSE routes). */
+  /** Replay even when the cursor is 0; the SSE routes default to true. */
   replay?: boolean
   frame: (event: SessionEvent) => string
   /** Direction filter applied to both the durable replay and live events. */
@@ -40,12 +40,12 @@ interface EventStreamOptions {
 }
 
 async function loadReplay(repos: Repositories, options: EventStreamOptions): Promise<SessionEvent[]> {
-  const records: SessionEventRecord[] = await repos.events.listSince(
+  const events = await loadEventReplayWindow(
+    repos,
     options.sessionId,
     options.fromSeqNum,
     loadConfig().eventReplayLimit,
   )
-  const events = records.map(toSessionEvent)
   return options.include ? events.filter(options.include) : events
 }
 
@@ -79,7 +79,7 @@ function createEventStream(c: Context, repos: Repositories, options: EventStream
       const subscription = subscribeReplayThenLive({
         bus: getEventBus(options.sessionId),
         fromSeqNum: options.fromSeqNum,
-        replay: options.replay,
+        replay: options.replay ?? true,
         loadSince: () => loadReplay(repos, options),
         filterLiveEvent: options.include,
         onReplayEvent: (event) => send(options.frame(event)),

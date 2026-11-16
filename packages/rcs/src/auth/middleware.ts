@@ -181,56 +181,92 @@ export function createEnvironmentAuth(options: AuthOptions = {}): MiddlewareHand
 /** Environment guard with no legacy keys configured. */
 export const environmentAuth = createEnvironmentAuth()
 
+/** Why a session-ingress credential was rejected. */
+export type SessionIngressAuthFailureReason = 'unauthorized' | 'forbidden' | 'not_found'
+
+/**
+ * Discriminated result of resolving a session-ingress credential. `user` is set only when
+ * an API key (or legacy key) authenticated the caller; worker and environment tokens carry
+ * no user.
+ */
+export type SessionIngressAuthResult =
+  | { ok: true; workerSessionId: string; user: AuthUser | null }
+  | { ok: false; reason: SessionIngressAuthFailureReason; message: string }
+
+/**
+ * Resolves a session-ingress credential (`:id` is a `cse_*` or web `session_*` session id).
+ *
+ * Shared by the HTTP middleware (which maps failures to 401/403/404 JSON) and the
+ * WebSocket route (which completes the upgrade and closes with 4003/4001 so the CLI
+ * transport sees a real close code instead of a failed upgrade). Accepts a worker token
+ * bound to the session, an environment token whose user owns the session's environment, or
+ * an API key whose user owns the session / is an admin / the session is unowned.
+ */
+export async function resolveSessionIngressAuth(
+  repos: Repositories,
+  routeId: string | undefined,
+  token: string | null,
+  legacyKeys: string[] = [],
+): Promise<SessionIngressAuthResult> {
+  if (!routeId) return { ok: false, reason: 'unauthorized', message: 'missing session id' }
+
+  const canonicalId = toCompatibleCodeSessionId(routeId) ?? routeId
+  const session = await repos.sessions.getById(canonicalId)
+  if (!session) return { ok: false, reason: 'not_found', message: 'session not found' }
+
+  if (!token) return { ok: false, reason: 'unauthorized', message: 'missing credentials' }
+
+  const user = await resolveApiKeyUser(repos, token, legacyKeys)
+  if (user) {
+    if (user.role !== 'admin' && session.ownerUserId !== null && session.ownerUserId !== user.id) {
+      return { ok: false, reason: 'forbidden', message: 'not the session owner' }
+    }
+    return { ok: true, workerSessionId: canonicalId, user }
+  }
+
+  const workerToken = await verifyWorkerToken(token)
+  if (workerToken) {
+    if (workerToken.sessionId !== routeId && workerToken.sessionId !== canonicalId) {
+      return { ok: false, reason: 'forbidden', message: 'worker token does not match session' }
+    }
+    return { ok: true, workerSessionId: canonicalId, user: null }
+  }
+
+  const environmentToken = await verifyEnvironmentToken(token)
+  if (environmentToken) {
+    const environment = session.environmentId ? await repos.environments.getById(session.environmentId) : null
+    if (!environment || environment.ownerUserId !== environmentToken.userId) {
+      return { ok: false, reason: 'forbidden', message: 'environment token does not own the session environment' }
+    }
+    return { ok: true, workerSessionId: canonicalId, user: null }
+  }
+
+  return { ok: false, reason: 'unauthorized', message: 'invalid credentials' }
+}
+
 /**
  * Guards session-ingress routes (`:id` is a `cse_*` or web `session_*` session id).
- * Accepts a worker token bound to the session, an environment token whose user owns the
- * session's environment, or an API key whose user owns the session / is an admin / the
- * session is unowned. Sets `c.workerSessionId` to the canonical `cse_*` id.
+ * Sets `c.workerSessionId` to the canonical `cse_*` id (and `c.user` for API keys).
  */
 export function createSessionIngressAuth(options: AuthOptions = {}): MiddlewareHandler<AppEnv> {
   const legacyKeys = options.legacyKeys ?? []
   return async (c, next) => {
-    const repos = c.get('repos')
-    const routeId = c.req.param('id')
-    if (!routeId) return unauthorized(c, 'missing session id')
+    const result = await resolveSessionIngressAuth(
+      c.get('repos'),
+      c.req.param('id'),
+      extractWebSocketAuthToken(c),
+      legacyKeys,
+    )
 
-    const canonicalId = toCompatibleCodeSessionId(routeId) ?? routeId
-    const session = await repos.sessions.getById(canonicalId)
-    if (!session) return c.json({ error: 'session not found' }, 404)
-
-    const token = extractWebSocketAuthToken(c)
-    if (!token) return unauthorized(c, 'missing credentials')
-
-    const user = await resolveApiKeyUser(repos, token, legacyKeys)
-    if (user) {
-      if (user.role !== 'admin' && session.ownerUserId !== null && session.ownerUserId !== user.id) {
-        return forbidden(c, 'not the session owner')
-      }
-      c.set('user', user)
-      c.set('workerSessionId', canonicalId)
-      return next()
+    if (!result.ok) {
+      if (result.reason === 'not_found') return c.json({ error: result.message }, 404)
+      if (result.reason === 'forbidden') return forbidden(c, result.message)
+      return unauthorized(c, result.message)
     }
 
-    const workerToken = await verifyWorkerToken(token)
-    if (workerToken) {
-      if (workerToken.sessionId !== routeId && workerToken.sessionId !== canonicalId) {
-        return forbidden(c, 'worker token does not match session')
-      }
-      c.set('workerSessionId', canonicalId)
-      return next()
-    }
-
-    const environmentToken = await verifyEnvironmentToken(token)
-    if (environmentToken) {
-      const environment = session.environmentId ? await repos.environments.getById(session.environmentId) : null
-      if (!environment || environment.ownerUserId !== environmentToken.userId) {
-        return forbidden(c, 'environment token does not own the session environment')
-      }
-      c.set('workerSessionId', canonicalId)
-      return next()
-    }
-
-    return unauthorized(c, 'invalid credentials')
+    if (result.user) c.set('user', result.user)
+    c.set('workerSessionId', result.workerSessionId)
+    return next()
   }
 }
 

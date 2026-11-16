@@ -259,8 +259,8 @@ describe('handleWebSocketOpen', () => {
     expect(sentJson(ws, 0).isSynthetic).toBe(true)
   })
 
-  test('honors eventReplayLimit', async () => {
-    for (let index = 0; index < 3; index++) {
+  test('replays the newest eventReplayLimit events when there is no cursor', async () => {
+    for (let index = 0; index < 4; index++) {
       await repos.events.append({
         sessionId: 'limit',
         type: 'user',
@@ -273,8 +273,13 @@ describe('handleWebSocketOpen', () => {
     await handleWebSocketOpen(repos, makeConfig({ eventReplayLimit: 2 }), ws as never, 'limit')
 
     expect(ws.sent).toHaveLength(2)
-    expect((sentJson(ws, 0).message as Record<string, unknown>).content).toBe('m0')
-    expect((sentJson(ws, 1).message as Record<string, unknown>).content).toBe('m1')
+    expect((sentJson(ws, 0).message as Record<string, unknown>).content).toBe('m2')
+    expect((sentJson(ws, 1).message as Record<string, unknown>).content).toBe('m3')
+    const contents = ws.sent.map((line) => {
+      const message = JSON.parse(line) as { message?: { content?: string } }
+      return message.message?.content
+    })
+    expect(contents).not.toContain('m0')
   })
 
   test('replay then buffered-live delivery loses and duplicates nothing (R22)', async () => {
@@ -292,8 +297,8 @@ describe('handleWebSocketOpen', () => {
       ...repos,
       events: {
         ...repos.events,
-        async listSince(sessionId, afterId, limit) {
-          const snapshot = await repos.events.listSince(sessionId, afterId, limit)
+        async listBefore(sessionId, beforeId, limit) {
+          const snapshot = await repos.events.listBefore(sessionId, beforeId, limit)
           if (!racing) {
             racing = true
             const lastRow = snapshot.at(-1)

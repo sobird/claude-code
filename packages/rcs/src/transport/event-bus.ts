@@ -186,6 +186,30 @@ export function toSessionEvent(record: SessionEventRecord): SessionEvent {
   }
 }
 
+/**
+ * Load one durable replay window in ascending `seqNum` order.
+ *
+ * A real cursor replays the *oldest* events after it (bounded by `limit`). Without a
+ * cursor there is nothing to resume from, so replay the *newest* `limit` events: the
+ * pre-rewrite in-memory bus retained the tail (evicting oldest), and replaying from 0
+ * would silently drop the most recent pre-connect history of a long session. Events
+ * appended after `latestId` resolves are delivered live by the caller's subscription.
+ */
+export async function loadEventReplayWindow(
+  repos: Repositories,
+  sessionId: string,
+  cursor: number,
+  limit: number,
+): Promise<SessionEvent[]> {
+  if (cursor > 0) {
+    return (await repos.events.listSince(sessionId, cursor, limit)).map(toSessionEvent)
+  }
+
+  const latest = await repos.events.latestId(sessionId)
+  if (latest === null) return []
+  return (await repos.events.listBefore(sessionId, latest + 1, limit)).map(toSessionEvent)
+}
+
 export interface ReplayThenLiveOptions {
   bus: EventBus
   /** Cursor: replay events with `seqNum > fromSeqNum`. */
@@ -199,7 +223,7 @@ export interface ReplayThenLiveOptions {
   onReplayEvent: (event: SessionEvent) => void
   /** Emit live events, including any buffered during the replay query. */
   onLiveEvent: (event: SessionEvent) => void
-  /** Replay even when `fromSeqNum` is 0 (the WebSocket path replays from the beginning). */
+  /** Force replay even when `fromSeqNum` is 0; the WebSocket and SSE paths both set it. */
   replay?: boolean
   /** Live-only filter; replayed events are filtered by `loadSince`. */
   filterLiveEvent?: (event: SessionEvent) => boolean
@@ -285,7 +309,10 @@ export function subscribeReplayThenLive(options: ReplayThenLiveOptions): ReplayT
 
     replaying = false
     for (const event of buffered) {
-      if (stopped || options.isClosed?.()) break
+      if (stopped || options.isClosed?.()) {
+        unsubscribe()
+        return
+      }
       // Dedupe the replay/live boundary: anything already covered by the replay is dropped.
       if (event.seqNum <= lastReplayedSeqNum) continue
       try {

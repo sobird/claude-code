@@ -49,6 +49,18 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Pr
   })
 }
 
+/** Run `fn` with `RCS_EVENT_REPLAY_LIMIT` overridden, restoring the previous value after. */
+async function withReplayLimit<T>(limit: string, fn: () => Promise<T>): Promise<T> {
+  const previous = process.env.RCS_EVENT_REPLAY_LIMIT
+  process.env.RCS_EVENT_REPLAY_LIMIT = limit
+  try {
+    return await fn()
+  } finally {
+    if (previous === undefined) delete process.env.RCS_EVENT_REPLAY_LIMIT
+    else process.env.RCS_EVENT_REPLAY_LIMIT = previous
+  }
+}
+
 /** Read until `count` `data:` frames have arrived (or the timeout elapses). */
 async function readDataFrames(res: Response, count: number, timeoutMs = 1500): Promise<string[]> {
   const reader = res.body?.getReader()
@@ -121,13 +133,47 @@ describe('createSSEStream', () => {
     expect(text).toContain('assistant')
   })
 
-  test('does not replay when fromSeqNum is 0', async () => {
-    await repos.events.append({ sessionId: 's5', type: 'user', payload: {}, direction: 'outbound' })
+  test('replays the newest window when fromSeqNum is 0', async () => {
+    await withReplayLimit('2', async () => {
+      for (let index = 0; index < 4; index++) {
+        await repos.events.append({
+          sessionId: 's5',
+          type: 'user',
+          payload: { content: `m${index}` },
+          direction: 'outbound',
+        })
+      }
 
-    const res = await app.request('/stream/s5')
-    const text = await readPartialStream(res)
-    expect(text).toContain(': keepalive')
-    expect(text).not.toContain('event: message')
+      const res = await app.request('/stream/s5')
+      const frames = await readDataFrames(res, 2)
+      const contents = frames.map((frame) => (JSON.parse(frame) as { payload: { content: string } }).payload.content)
+      expect(contents).toEqual(['m2', 'm3'])
+      expect(contents).not.toContain('m0')
+    })
+  })
+
+  test('bounds an explicit far-behind cursor to the oldest events after it', async () => {
+    await withReplayLimit('2', async () => {
+      const first = await repos.events.append({
+        sessionId: 's8',
+        type: 'user',
+        payload: { content: 'm0' },
+        direction: 'outbound',
+      })
+      for (let index = 1; index < 4; index++) {
+        await repos.events.append({
+          sessionId: 's8',
+          type: 'user',
+          payload: { content: `m${index}` },
+          direction: 'outbound',
+        })
+      }
+
+      const res = await app.request(`/stream/s8?from=${first.id}`)
+      const frames = await readDataFrames(res, 2)
+      const contents = frames.map((frame) => (JSON.parse(frame) as { payload: { content: string } }).payload.content)
+      expect(contents).toEqual(['m1', 'm2'])
+    })
   })
 
   test('subscribes to live events after replay', async () => {
@@ -220,6 +266,26 @@ describe('createWorkerEventStream', () => {
     const data = JSON.parse(frame) as { event_type: string; sequence_num: number }
     expect(data.event_type).toBe('user')
     expect(data.sequence_num).toBe(inbound.id + 1)
+  })
+
+  test('replays the newest outbound window when fromSeqNum is 0', async () => {
+    await withReplayLimit('2', async () => {
+      const ids: number[] = []
+      for (let index = 0; index < 4; index++) {
+        const record = await repos.events.append({
+          sessionId: 'w2',
+          type: 'user',
+          payload: { content: `m${index}` },
+          direction: 'outbound',
+        })
+        ids.push(record.id)
+      }
+
+      const res = await app.request('/worker/w2')
+      const frames = await readDataFrames(res, 2)
+      const seqNums = frames.map((frame) => (JSON.parse(frame) as { sequence_num: number }).sequence_num)
+      expect(seqNums).toEqual([ids[2], ids[3]])
+    })
   })
 
   test('replays then flushes buffered outbound events exactly once (R22)', async () => {

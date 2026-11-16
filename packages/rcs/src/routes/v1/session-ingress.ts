@@ -11,6 +11,8 @@ import { Hono } from 'hono'
 import type { WSContext } from 'hono/ws'
 
 import type { AppEnv } from '../../auth/context.js'
+import { extractWebSocketAuthToken } from '../../auth/context.js'
+import { resolveSessionIngressAuth } from '../../auth/middleware.js'
 import { loadConfig } from '../../config.js'
 import type { Repositories } from '../../db/repositories/types.js'
 import {
@@ -21,7 +23,7 @@ import {
 } from '../../transport/ws-handler.js'
 import { handleSizedWsPayload, decodeWsPayload } from '../../transport/ws-payload.js'
 import { upgradeWebSocket, websocket } from '../../transport/ws-shared.js'
-import { legacySessionIngressAuth } from '../common.js'
+import { legacySessionIngressAuth, readLegacyKeys } from '../common.js'
 
 const app = new Hono<AppEnv>()
 
@@ -43,15 +45,41 @@ app.post('/session/:id/events', legacySessionIngressAuth, async (c) => {
   return c.json({ status: 'ok' }, 200)
 })
 
+/** Close code the CLI treats as a permanent "session not found" rejection. */
+const WS_CLOSE_SESSION_NOT_FOUND = 4001
+/** Close code the CLI treats as a permanent "unauthorized" rejection. */
+const WS_CLOSE_UNAUTHORIZED = 4003
+
 /** GET /ws/:id — WebSocket transport with durable replay. */
 app.get(
   '/ws/:id',
-  legacySessionIngressAuth,
   upgradeWebSocket(async (c) => {
     const repos = c.get('repos')
-    const sessionId = c.get('workerSessionId')
     const config = loadConfig()
+    const auth = await resolveSessionIngressAuth(
+      repos,
+      c.req.param('id'),
+      extractWebSocketAuthToken(c),
+      readLegacyKeys(),
+    )
 
+    // Complete the upgrade first; credential rejections ride on real WS close codes so the
+    // CLI's WebSocketTransport sees 4001/4003 (permanent, no backoff) instead of a failed
+    // HTTP upgrade that it cannot distinguish from a transient network error.
+    if (!auth.ok) {
+      const code = auth.reason === 'not_found' ? WS_CLOSE_SESSION_NOT_FOUND : WS_CLOSE_UNAUTHORIZED
+      const reason = auth.reason === 'not_found' ? 'session not found' : 'unauthorized'
+      return {
+        onOpen(_event, ws) {
+          ws.close(code, reason)
+        },
+        onMessage() {},
+        onClose() {},
+        onError() {},
+      }
+    }
+
+    const sessionId = auth.workerSessionId
     return {
       async onOpen(_event, ws) {
         await handleWebSocketOpen(repos, config, ws, sessionId)
