@@ -62,7 +62,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
   log(`\n[RCS] Received ${signal}, shutting down...`)
   stopDisconnectMonitor()
   closeAllConnections()
-  closeAllAcpConnections(repos)
+  await closeAllAcpConnections(repos)
   closeAllRelayConnections()
   await closeDatabase(db)
   process.exit(0)

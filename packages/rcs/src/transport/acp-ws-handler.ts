@@ -330,11 +330,18 @@ export function sendToAgentWs(agentId: string, msg: object): boolean {
   return true
 }
 
-/** Gracefully close all ACP WebSocket connections. */
-export function closeAllAcpConnections(repos: Repositories): void {
+/**
+ * Gracefully close all ACP WebSocket connections.
+ *
+ * Sockets and keepalive intervals are torn down synchronously; the offline
+ * writes are awaited so they complete before the caller releases the database
+ * pool (otherwise they race the pool close and silently fail).
+ */
+export async function closeAllAcpConnections(repos: Repositories): Promise<void> {
   if (connections.size === 0) return
 
   console.log(`[ACP-WS] Gracefully closing ${connections.size} ACP connection(s)...`)
+  const offlineWrites: Promise<void>[] = []
   for (const entry of connections.values()) {
     try {
       if (entry.unsub) entry.unsub()
@@ -343,12 +350,13 @@ export function closeAllAcpConnections(repos: Repositories): void {
         entry.ws.close(1001, 'server_shutdown')
       }
       if (entry.agentId) {
-        markAgentOffline(repos, entry.agentId).catch(() => {})
+        offlineWrites.push(markAgentOffline(repos, entry.agentId).catch(() => {}))
       }
     } catch {
       // ignore errors during shutdown
     }
   }
   connections.clear()
+  await Promise.all(offlineWrites)
   console.log('[ACP-WS] All connections closed')
 }
