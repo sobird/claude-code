@@ -1,21 +1,23 @@
 'use client'
 
 /**
- * Fetches and refreshes the gateway access token.
+ * Reads the app-wide gateway access token.
  *
- * The minting endpoint is rate limited (5/min per ip+username), so it is called
- * once on mount and again only shortly before expiry (~60s early) or on demand
- * via `refresh()`. A `401` clears the token; redirecting is left to the page or
- * middleware.
+ * The token is a single shared value per browser tab: every `useAccessToken()`
+ * caller subscribes to one module-level store, so mounting several consumers
+ * (dashboard provider, session view, SSE stream) mints exactly one token. The
+ * minting endpoint is rate limited (5/min per ip+username), so the initial mint
+ * runs once and the shared store refreshes shortly before expiry (~60s early),
+ * deduping concurrent requests. A `401` clears the token; redirecting is left to
+ * the page or middleware.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
+
+import { createAccessTokenStore, type AccessTokenSnapshot, type TokenMintResult } from '../lib/token-store'
 
 const ACCESS_TOKEN_PATH = '/code/api/access-token'
-const REFRESH_MARGIN_MS = 60_000
 const DEFAULT_EXPIRES_IN_SECONDS = 300
-// setTimeout fires immediately for delays above a signed 32-bit int.
-const MAX_TIMEOUT_MS = 2_147_483_647
 
 interface AccessTokenResponse {
   token: string
@@ -49,100 +51,58 @@ async function readErrorMessage(response: Response): Promise<string> {
   return response.statusText || `Access token request failed (HTTP ${response.status})`
 }
 
-export function useAccessToken(): UseAccessTokenResult {
-  const [token, setToken] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const mountedRef = useRef(true)
-  const refreshRef = useRef<() => Promise<string | null>>(async () => null)
-  // Shared by the timer and on-demand `refresh()` so they never fire two
-  // concurrent minting requests (the endpoint is rate limited).
-  const inFlightRef = useRef<Promise<string | null> | null>(null)
-
-  const clearTimer = useCallback(() => {
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
+/** Mint a token from the gateway, mapping every outcome to a `TokenMintResult`. */
+async function mintAccessToken(): Promise<TokenMintResult> {
+  try {
+    const response = await fetch(ACCESS_TOKEN_PATH, { method: 'POST' })
+    if (!response.ok) {
+      return { ok: false, status: response.status, message: await readErrorMessage(response) }
     }
+    const body = (await response.json()) as Partial<AccessTokenResponse>
+    if (typeof body.token !== 'string' || body.token.length === 0) {
+      return { ok: false, status: response.status, message: 'Access token response was empty' }
+    }
+    const rawExpiresIn = body.expiresIn
+    const expiresIn =
+      typeof rawExpiresIn === 'number' && Number.isFinite(rawExpiresIn) && rawExpiresIn > 0
+        ? rawExpiresIn
+        : DEFAULT_EXPIRES_IN_SECONDS
+    return { ok: true, token: body.token, expiresIn }
+  } catch (cause) {
+    return {
+      ok: false,
+      status: 0,
+      message: cause instanceof Error && cause.message ? cause.message : 'Unable to reach the gateway',
+    }
+  }
+}
+
+const SERVER_SNAPSHOT: AccessTokenSnapshot = { token: null, error: null }
+
+function getServerSnapshot(): AccessTokenSnapshot {
+  return SERVER_SNAPSHOT
+}
+
+const store = createAccessTokenStore({ mint: mintAccessToken })
+
+/** Kick off the initial mint exactly once for the lifetime of the tab. */
+let started = false
+function startOnce(): void {
+  if (started) return
+  started = true
+  void store.ensureLoaded()
+}
+
+function refresh(): Promise<string | null> {
+  return store.refresh()
+}
+
+export function useAccessToken(): UseAccessTokenResult {
+  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, getServerSnapshot)
+
+  useEffect(() => {
+    startOnce()
   }, [])
 
-  const scheduleRefresh = useCallback(
-    (expiresAt: number) => {
-      clearTimer()
-      const remaining = expiresAt - Date.now() - REFRESH_MARGIN_MS
-      const delay = Number.isFinite(remaining) ? Math.min(Math.max(0, remaining), MAX_TIMEOUT_MS) : 0
-      timerRef.current = setTimeout(() => {
-        void refreshRef.current()
-      }, delay)
-    },
-    [clearTimer],
-  )
-
-  const fetchToken = useCallback(async (): Promise<string | null> => {
-    try {
-      const response = await fetch(ACCESS_TOKEN_PATH, { method: 'POST' })
-      if (!response.ok) {
-        if (response.status === 401) {
-          clearTimer()
-          if (mountedRef.current) {
-            setToken(null)
-            setError('Not signed in')
-          }
-          return null
-        }
-        const message = await readErrorMessage(response)
-        if (mountedRef.current) setError(message)
-        return null
-      }
-      const body = (await response.json()) as Partial<AccessTokenResponse>
-      const nextToken = typeof body.token === 'string' && body.token.length > 0 ? body.token : null
-      if (!nextToken) {
-        if (mountedRef.current) setError('Access token response was empty')
-        return null
-      }
-      const rawExpiresIn = body.expiresIn
-      const expiresIn =
-        typeof rawExpiresIn === 'number' && Number.isFinite(rawExpiresIn) && rawExpiresIn > 0
-          ? rawExpiresIn
-          : DEFAULT_EXPIRES_IN_SECONDS
-      if (!mountedRef.current) return nextToken
-      setToken(nextToken)
-      setError(null)
-      scheduleRefresh(Date.now() + expiresIn * 1000)
-      return nextToken
-    } catch (cause) {
-      if (mountedRef.current) {
-        setError(cause instanceof Error && cause.message ? cause.message : 'Unable to reach the gateway')
-      }
-      return null
-    }
-  }, [clearTimer, scheduleRefresh])
-
-  const load = useCallback((): Promise<string | null> => {
-    const pending = inFlightRef.current
-    if (pending) return pending
-    const request = fetchToken()
-    inFlightRef.current = request
-    void request.finally(() => {
-      if (inFlightRef.current === request) inFlightRef.current = null
-    })
-    return request
-  }, [fetchToken])
-
-  useEffect(() => {
-    refreshRef.current = load
-  }, [load])
-
-  useEffect(() => {
-    mountedRef.current = true
-    void load()
-    return () => {
-      mountedRef.current = false
-      clearTimer()
-    }
-  }, [clearTimer, load])
-
-  const refresh = useCallback(async (): Promise<string | null> => load(), [load])
-
-  return { token, refresh, error }
+  return { token: snapshot.token, refresh, error: snapshot.error }
 }
