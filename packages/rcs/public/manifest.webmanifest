@@ -1,0 +1,32 @@
+{
+  "name": "Remote Control Server",
+  "short_name": "Remote Control",
+  "description": "Remote control for Claude Code sessions",
+  "id": "/code/",
+  "start_url": "/code/",
+  "scope": "/code/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#efeee9",
+  "theme_color": "#c96442",
+  "icons": [
+    {
+      "src": "/code/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/code/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/code/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

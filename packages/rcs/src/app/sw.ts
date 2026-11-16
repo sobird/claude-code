@@ -1,0 +1,44 @@
+import { defaultCache } from '@serwist/next/worker'
+import { NetworkOnly, Serwist } from 'serwist'
+import type { PrecacheEntry, RuntimeCaching } from 'serwist'
+
+// The project's tsconfig uses the DOM lib, whose service-worker globals are
+// limited; declare only the slice this entry reads. `__SW_MANIFEST` is
+// injected by Serwist's InjectManifest at build time.
+declare const self: {
+  __SW_MANIFEST: (PrecacheEntry | string)[]
+}
+
+const BASE_PATH = '/code'
+const OFFLINE_URL = `${BASE_PATH}/~offline`
+
+/**
+ * Gateway endpoints stream or mutate state; they must never be served from the
+ * cache. This also covers dev, where these paths proxy to the gateway.
+ */
+const NETWORK_ONLY_PATHS = ['/web', '/v1', '/v2', '/acp', '/api']
+
+const networkOnly: RuntimeCaching[] = NETWORK_ONLY_PATHS.map((path) => ({
+  matcher: ({ sameOrigin, url }) => sameOrigin && url.pathname.startsWith(`${BASE_PATH}${path}`),
+  handler: new NetworkOnly(),
+}))
+
+const serwist = new Serwist({
+  precacheEntries: self.__SW_MANIFEST,
+  skipWaiting: true,
+  clientsClaim: true,
+  navigationPreload: true,
+  // Network-only rules must come first: defaultCache falls through to a
+  // NetworkFirst catch-all that would otherwise cache gateway responses.
+  runtimeCaching: [...networkOnly, ...defaultCache],
+  fallbacks: {
+    entries: [
+      {
+        url: OFFLINE_URL,
+        matcher: ({ request }) => request.destination === 'document',
+      },
+    ],
+  },
+})
+
+serwist.addEventListeners()

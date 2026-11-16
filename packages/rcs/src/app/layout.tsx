@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 
 import { ThemeProvider } from '../lib/theme'
@@ -6,9 +6,29 @@ import { ThemeProvider } from '../lib/theme'
 // oxlint-disable-next-line import/no-unassigned-import -- global stylesheet side effect
 import './globals.css'
 
+const BASE_PATH = '/code'
+
 export const metadata: Metadata = {
   title: 'Remote Control Server',
   description: 'Remote control for Claude Code sessions',
+  applicationName: 'Remote Control',
+  manifest: `${BASE_PATH}/manifest.webmanifest`,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Remote Control',
+  },
+  icons: {
+    icon: `${BASE_PATH}/icons/icon-192.png`,
+    apple: `${BASE_PATH}/icons/icon-192.png`,
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#efeee9' },
+    { media: '(prefers-color-scheme: dark)', color: '#2c2a27' },
+  ],
 }
 
 /**
