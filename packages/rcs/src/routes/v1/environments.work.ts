@@ -1,8 +1,9 @@
 /**
  * V1 work-dispatch routes.
  *
- * Polling, acknowledging, and stopping require the environment credential. Heartbeats
- * additionally accept the worker token carried in the work secret (`session_ingress_token`).
+ * Polling and stopping require the environment credential. Acknowledging and heartbeating
+ * additionally accept the worker token carried in the work secret (`session_ingress_token`),
+ * which is what the CLI presents for both calls.
  */
 
 import { Hono } from 'hono'
@@ -45,7 +46,7 @@ app.get('/:id/work/poll', legacyEnvironmentAuth, async (c) => {
 })
 
 /** POST /v1/environments/:id/work/:workId/ack — Acknowledge dispatched work. */
-app.post('/:id/work/:workId/ack', legacyEnvironmentAuth, async (c) => {
+app.post('/:id/work/:workId/ack', workerOrEnvironmentAuth, async (c) => {
   const item = await loadWorkForEnvironment(c)
   if (!item) return notFound(c, 'Work item not found')
   await ackWork(c.get('repos'), item.id)

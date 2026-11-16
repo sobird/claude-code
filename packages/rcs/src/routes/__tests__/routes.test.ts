@@ -275,6 +275,70 @@ describe('V1 Session Routes', () => {
     expect((await resJson(sessRes)).id).toMatch(/^session_/)
   })
 
+  test('POST /v1/sessions onto another member environment is forbidden', async () => {
+    const envRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.otherToken),
+      body: JSON.stringify({ machine_name: 'other-box' }),
+    })
+    const { environment_id } = await resJson(envRes)
+
+    const sessRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ environment_id }),
+    })
+    expect(sessRes.status).toBe(403)
+    const body = await resJson(sessRes)
+    expect(body.error.type).toBe('forbidden')
+    expect(await s.repos.sessions.listByOwner(s.member.id)).toHaveLength(0)
+    expect(await s.repos.sessions.listByEnvironment(environment_id)).toHaveLength(0)
+  })
+
+  test('POST /v1/sessions onto the caller own environment queues work', async () => {
+    const envRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ machine_name: 'member-box' }),
+    })
+    const { environment_id, environment_secret } = await resJson(envRes)
+
+    const sessRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ environment_id }),
+    })
+    expect(sessRes.status).toBe(200)
+    const sessionId = (await resJson(sessRes)).id
+
+    const workRes = await app.request(`/v1/environments/${environment_id}/work/poll`, {
+      headers: bearer(environment_secret),
+    })
+    expect(workRes.status).toBe(200)
+    expect(toWebSessionId((await resJson(workRes)).data.id)).toBe(sessionId)
+  })
+
+  test('POST /v1/sessions admins may dispatch onto another member environment', async () => {
+    const envRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.otherToken),
+      body: JSON.stringify({ machine_name: 'other-admin-target' }),
+    })
+    const { environment_id, environment_secret } = await resJson(envRes)
+
+    const sessRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({ environment_id }),
+    })
+    expect(sessRes.status).toBe(200)
+
+    const workRes = await app.request(`/v1/environments/${environment_id}/work/poll`, {
+      headers: bearer(environment_secret),
+    })
+    expect(workRes.status).toBe(200)
+  })
+
   test('POST /v1/sessions with events publishes initial events', async () => {
     const sessRes = await app.request('/v1/sessions', {
       method: 'POST',
@@ -461,6 +525,52 @@ describe('V1 Work Routes', () => {
     })
     expect(hbRes.status).toBe(200)
     expect((await resJson(hbRes)).lease_extended).toBe(true)
+  })
+
+  function decodeWorkSecret(secret: string): { session_ingress_token: string } {
+    return JSON.parse(Buffer.from(secret, 'base64url').toString('utf8'))
+  }
+
+  test('POST work ack accepts the work secret worker token', async () => {
+    await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({ environment_id: envId }),
+    })
+    const work = await resJson(await app.request(`/v1/environments/${envId}/work/poll`, { headers: bearer(envSecret) }))
+    const token = decodeWorkSecret(work.secret).session_ingress_token
+
+    const ackRes = await app.request(`/v1/environments/${envId}/work/${work.id}/ack`, {
+      method: 'POST',
+      headers: bearer(token),
+    })
+    expect(ackRes.status).toBe(200)
+    expect((await s.repos.workItems.getById(work.id))?.state).toBe('acked')
+  })
+
+  test('POST work ack rejects a worker token minted for another session', async () => {
+    for (const title of ['first', 'second']) {
+      await app.request('/v1/sessions', {
+        method: 'POST',
+        headers: bearer(s.adminToken),
+        body: JSON.stringify({ environment_id: envId, title }),
+      })
+    }
+    const firstWork = await resJson(
+      await app.request(`/v1/environments/${envId}/work/poll`, { headers: bearer(envSecret) }),
+    )
+    const secondWork = await resJson(
+      await app.request(`/v1/environments/${envId}/work/poll`, { headers: bearer(envSecret) }),
+    )
+    expect(firstWork.id).not.toBe(secondWork.id)
+    const foreignToken = decodeWorkSecret(firstWork.secret).session_ingress_token
+
+    const ackRes = await app.request(`/v1/environments/${envId}/work/${secondWork.id}/ack`, {
+      method: 'POST',
+      headers: bearer(foreignToken),
+    })
+    expect(ackRes.status).toBe(404)
+    expect((await s.repos.workItems.getById(secondWork.id))?.state).toBe('dispatched')
   })
 })
 
@@ -836,6 +946,68 @@ describe('Web Session Routes', () => {
     expect(body.owner_user_id).toBe(s.member.id)
   })
 
+  test('POST /web/sessions onto another member environment is forbidden', async () => {
+    const envRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.otherToken),
+      body: JSON.stringify({ machine_name: 'web-other-box' }),
+    })
+    const { environment_id } = await resJson(envRes)
+
+    const res = await app.request('/web/sessions', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ environment_id }),
+    })
+    expect(res.status).toBe(403)
+    expect((await resJson(res)).error.type).toBe('forbidden')
+    expect(await s.repos.sessions.listByOwner(s.member.id)).toHaveLength(0)
+    expect(await s.repos.sessions.listByEnvironment(environment_id)).toHaveLength(0)
+  })
+
+  test('POST /web/sessions onto the caller own environment queues work', async () => {
+    const envRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ machine_name: 'web-member-box' }),
+    })
+    const { environment_id, environment_secret } = await resJson(envRes)
+
+    const res = await app.request('/web/sessions', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ environment_id }),
+    })
+    expect(res.status).toBe(200)
+    const sessionId = (await resJson(res)).id
+
+    const workRes = await app.request(`/v1/environments/${environment_id}/work/poll`, {
+      headers: bearer(environment_secret),
+    })
+    expect(workRes.status).toBe(200)
+    expect(toWebSessionId((await resJson(workRes)).data.id)).toBe(sessionId)
+  })
+
+  test('POST /web/sessions admins may dispatch onto another member environment', async () => {
+    const envRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.otherToken),
+      body: JSON.stringify({ machine_name: 'web-admin-target' }),
+    })
+    const { environment_id, environment_secret } = await resJson(envRes)
+
+    const res = await app.request('/web/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({ environment_id }),
+    })
+    expect(res.status).toBe(200)
+    const workRes = await app.request(`/v1/environments/${environment_id}/work/poll`, {
+      headers: bearer(environment_secret),
+    })
+    expect(workRes.status).toBe(200)
+  })
+
   test('GET /web/sessions returns only the caller sessions', async () => {
     const id = await createWebSession(s.memberToken)
     await createWebSession(s.otherToken)
@@ -1039,14 +1211,14 @@ describe('Web Session Routes', () => {
     expect((await resJson(res)).error.type).toBe('session_closed')
   })
 
-  test('POST /web/sessions with invalid environment still creates', async () => {
+  test('POST /web/sessions with an unknown environment is rejected', async () => {
     const res = await app.request('/web/sessions', {
       method: 'POST',
       headers: bearer(s.memberToken),
       body: JSON.stringify({ environment_id: 'env_nonexistent' }),
     })
-    expect(res.status).toBe(200)
-    expect((await resJson(res)).id).toMatch(/^session_/)
+    expect(res.status).toBe(404)
+    expect((await resJson(res)).error.type).toBe('not_found')
   })
 })
 

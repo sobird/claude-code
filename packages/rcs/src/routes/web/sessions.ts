@@ -25,7 +25,7 @@ import {
 import { createWorkItem } from '../../services/work-dispatch.js'
 import type { SessionEvent } from '../../transport/event-bus.js'
 import { getEventBus } from '../../transport/event-bus.js'
-import { forbidden, legacyUserAuth, notFound, readJson, sessionClosed } from '../common.js'
+import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment, sessionClosed } from '../common.js'
 
 const app = new Hono<AppEnv>()
 const KEEPALIVE_MS = 15000
@@ -163,6 +163,13 @@ app.post('/sessions', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const body = await readJson(c)
   const environmentId = typeof body.environment_id === 'string' ? body.environment_id : null
+  if (environmentId) {
+    // Web is a new surface: reject unknown environments outright and block members from
+    // dispatching onto another user's environment.
+    const access = await resolveDispatchEnvironment(c, environmentId)
+    if (!access.environment) return notFound(c, 'Environment not found')
+    if (access.forbiddenForCaller) return forbidden(c, 'Environment belongs to another user')
+  }
 
   const session = await createSession(repos, {
     environmentId,

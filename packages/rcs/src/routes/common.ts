@@ -11,6 +11,7 @@ import type { MiddlewareHandler } from 'hono'
 import { extractWebSocketAuthToken, type AppContext, type AppEnv } from '../auth/context.js'
 import { createEnvironmentAuth, createSessionIngressAuth, createUserAuth } from '../auth/middleware.js'
 import { verifyWorkerToken } from '../auth/tokens.js'
+import type { EnvironmentRecord } from '../contracts.js'
 
 /** Reads legacy `RCS_API_KEYS` (comma separated) on every call. */
 export function readLegacyKeys(): string[] {
@@ -63,6 +64,30 @@ export function forbidden(c: AppContext, message = 'Not your session') {
 
 export function sessionClosed(c: AppContext, status: string) {
   return jsonError(c, 'session_closed', `Session is ${status}`, 409)
+}
+
+export interface DispatchEnvironmentAccess {
+  /** The environment row, or `null` when the id is unknown. */
+  environment: EnvironmentRecord | null
+  /** True when the caller neither owns the environment nor is an admin. */
+  forbiddenForCaller: boolean
+}
+
+/**
+ * Resolves the target environment for work dispatch and enforces ownership. Members may
+ * only dispatch onto their own environments; unowned legacy environments remain usable by
+ * any authenticated caller. Admins bypass the ownership check.
+ */
+export async function resolveDispatchEnvironment(
+  c: AppContext,
+  environmentId: string,
+): Promise<DispatchEnvironmentAccess> {
+  const environment = await c.get('repos').environments.getById(environmentId)
+  if (!environment) return { environment: null, forbiddenForCaller: false }
+  const user = c.get('user')
+  const forbiddenForCaller =
+    environment.ownerUserId !== null && environment.ownerUserId !== user.id && user.role !== 'admin'
+  return { environment, forbiddenForCaller }
 }
 
 /** Parses a JSON body without throwing on empty/invalid input. */

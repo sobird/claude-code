@@ -19,7 +19,7 @@ import {
 } from '../../services/session.js'
 import { createWorkItem } from '../../services/work-dispatch.js'
 import { getEventBus, publishSessionEvent } from '../../transport/event-bus.js'
-import { forbidden, legacyUserAuth, notFound, readJson } from '../common.js'
+import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '../common.js'
 
 const app = new Hono<AppEnv>()
 
@@ -43,6 +43,12 @@ app.post('/', legacyUserAuth, async (c) => {
   const body = await readJson(c)
 
   const environmentId = typeof body.environment_id === 'string' ? body.environment_id : null
+  if (environmentId) {
+    // Guard against cross-tenant dispatch before creating anything. An unknown environment
+    // keeps the legacy behavior: the session is still created and dispatch is skipped.
+    const access = await resolveDispatchEnvironment(c, environmentId)
+    if (access.forbiddenForCaller) return forbidden(c, 'Environment belongs to another user')
+  }
   const session = await createSession(repos, {
     environmentId,
     ownerUserId: user.id,
