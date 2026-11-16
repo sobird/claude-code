@@ -1,0 +1,76 @@
+/**
+ * Route-level helpers shared by the gateway HTTP modules.
+ *
+ * Middlewares are constructed per request so that legacy `RCS_API_KEYS` values are read
+ * from the environment at call time (tests configure them right before exercising the
+ * app, after module evaluation). No credential is ever read from a query string.
+ */
+
+import type { MiddlewareHandler } from 'hono'
+
+import { extractWebSocketAuthToken, type AppContext, type AppEnv } from '../auth/context.js'
+import { createEnvironmentAuth, createSessionIngressAuth, createUserAuth } from '../auth/middleware.js'
+import { verifyWorkerToken } from '../auth/tokens.js'
+
+/** Reads legacy `RCS_API_KEYS` (comma separated) on every call. */
+export function readLegacyKeys(): string[] {
+  return (process.env.RCS_API_KEYS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+}
+
+/** Access token or user API key (plus legacy keys); sets `c.user`. */
+export const legacyUserAuth: MiddlewareHandler<AppEnv> = (c, next) =>
+  createUserAuth({ legacyKeys: readLegacyKeys() })(c, next)
+
+/** Environment token or API key owning `:id`; sets `c.environment`. */
+export const legacyEnvironmentAuth: MiddlewareHandler<AppEnv> = (c, next) =>
+  createEnvironmentAuth({ legacyKeys: readLegacyKeys() })(c, next)
+
+/** Worker token, environment token, or owning API key for session `:id`. */
+export const legacySessionIngressAuth: MiddlewareHandler<AppEnv> = (c, next) =>
+  createSessionIngressAuth({ legacyKeys: readLegacyKeys() })(c, next)
+
+/**
+ * Worker heartbeats present the worker token embedded in the work secret, while legacy
+ * callers continue to use their API key. Try the worker token first, then fall back to
+ * the environment guard.
+ */
+export const workerOrEnvironmentAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
+  const token = extractWebSocketAuthToken(c)
+  if (token) {
+    const worker = await verifyWorkerToken(token)
+    if (worker) {
+      c.set('workerSessionId', worker.sessionId)
+      return next()
+    }
+  }
+  return legacyEnvironmentAuth(c, next)
+}
+
+export function jsonError(c: AppContext, type: string, message: string, status: 400 | 403 | 404 | 409) {
+  return c.json({ error: { type, message } }, status)
+}
+
+export function notFound(c: AppContext, message = 'Session not found') {
+  return jsonError(c, 'not_found', message, 404)
+}
+
+export function forbidden(c: AppContext, message = 'Not your session') {
+  return jsonError(c, 'forbidden', message, 403)
+}
+
+export function sessionClosed(c: AppContext, status: string) {
+  return jsonError(c, 'session_closed', `Session is ${status}`, 409)
+}
+
+/** Parses a JSON body without throwing on empty/invalid input. */
+export async function readJson(c: AppContext): Promise<Record<string, unknown>> {
+  try {
+    const value: unknown = await c.req.json()
+    return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}

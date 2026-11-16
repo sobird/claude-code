@@ -34,12 +34,20 @@ export interface CreateApiKeyInput {
   hash: string
 }
 
+/** Mutable profile columns; credentials use the dedicated setters. */
+export interface UserPatch {
+  role?: Role
+  displayName?: string | null
+}
+
 export interface UserRepository {
   create(input: CreateUserInput): Promise<UserRecord>
   getById(id: string): Promise<UserRecord | null>
   getByUsername(username: string): Promise<UserRecord | null>
   count(): Promise<number>
   list(): Promise<UserRecord[]>
+  /** Update mutable profile columns. */
+  update(id: string, patch: UserPatch): Promise<void>
   /** Disable the user (`disabledAt` set) or re-enable them (`null`). */
   setDisabled(id: string, disabledAt: Date | null): Promise<void>
   setPasswordHash(id: string, hash: string): Promise<void>

@@ -11,7 +11,7 @@ import { asc, count, eq } from 'drizzle-orm'
 import type { UserRecord } from '../../contracts.js'
 import type { Database } from '../client.js'
 import { users } from '../schema.js'
-import type { CreateUserInput, UserRepository } from './types.js'
+import type { CreateUserInput, UserPatch, UserRepository } from './types.js'
 
 export function createUserRepository(db: Database): UserRepository {
   return {
@@ -49,6 +49,13 @@ export function createUserRepository(db: Database): UserRepository {
 
     async list() {
       return db.select().from(users).orderBy(asc(users.createdAt), asc(users.username))
+    },
+
+    async update(id, patch) {
+      const values: Partial<typeof users.$inferInsert> = { updatedAt: new Date() }
+      if (patch.role !== undefined) values.role = patch.role
+      if (patch.displayName !== undefined) values.displayName = patch.displayName
+      await db.update(users).set(values).where(eq(users.id, id))
     },
 
     async setDisabled(id, disabledAt) {
@@ -116,6 +123,14 @@ export function createMemoryUserRepository(): UserRepository {
       return [...byId.values()]
         .map(cloneUser)
         .toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.username.localeCompare(b.username))
+    },
+
+    async update(id: string, patch: UserPatch) {
+      const record = byId.get(id)
+      if (!record) return
+      if (patch.role !== undefined) record.role = patch.role
+      if (patch.displayName !== undefined) record.displayName = patch.displayName
+      record.updatedAt = new Date()
     },
 
     async setDisabled(id, disabledAt) {
