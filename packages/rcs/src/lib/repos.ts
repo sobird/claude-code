@@ -26,8 +26,3 @@ export function getRepositories(): Repositories {
   cached = { db, repos: createRepositories(db) }
   return cached.repos
 }
-
-/** True once the pool has been created (diagnostics/tests). */
-export function hasRepositories(): boolean {
-  return cached !== null
-}

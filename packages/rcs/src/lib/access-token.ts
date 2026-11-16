@@ -12,6 +12,7 @@
 
 import { signAccessToken } from '../auth/tokens'
 import type { Role } from '../contracts'
+import type { Repositories } from '../db/repositories/types'
 
 /** Access tokens are valid for five minutes. */
 export const ACCESS_TOKEN_TTL_SECONDS = 300
@@ -51,4 +52,25 @@ export async function createAccessTokenForSession(session: SessionLike | null): 
   }
 
   return signAccessToken({ id, username: name, role }, ACCESS_TOKEN_TTL_SECONDS)
+}
+
+/**
+ * Mints an access token only when the session user currently exists and is not
+ * disabled. Returns `null` for both cases so callers can answer `401` without
+ * revealing whether the id exists.
+ *
+ * The username and role come from the freshly loaded user row, so role changes
+ * and account removal take effect without waiting for the session to expire.
+ */
+export async function mintAccessTokenForSession(
+  session: SessionLike | null,
+  repos: Repositories,
+): Promise<string | null> {
+  const id = session?.user?.id
+  if (typeof id !== 'string' || id.length === 0) return null
+
+  const user = await repos.users.getById(id)
+  if (!user || user.disabledAt !== null) return null
+
+  return signAccessToken({ id: user.id, username: user.username, role: user.role }, ACCESS_TOKEN_TTL_SECONDS)
 }

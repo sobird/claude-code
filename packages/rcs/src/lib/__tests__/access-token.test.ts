@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test'
 
 import { verifyAccessToken } from '../../auth/tokens.js'
-import { ACCESS_TOKEN_TTL_SECONDS, createAccessTokenForSession } from '../access-token.js'
+import { createMemoryRepositories } from '../../db/repositories/index.js'
+import { ACCESS_TOKEN_TTL_SECONDS, createAccessTokenForSession, mintAccessTokenForSession } from '../access-token.js'
 
 const previousSecret = process.env.RCS_AUTH_SECRET
 
@@ -45,4 +46,39 @@ test('rejects sessions without a known role', async () => {
     user: { id: 'u1', name: 'alice', role: 'owner' as never },
   }).catch((error: unknown) => error)
   expect(badRole).toBeInstanceOf(Error)
+})
+
+test('mints a token for an active user', async () => {
+  const repos = createMemoryRepositories()
+  const user = await repos.users.create({ username: 'carol', passwordHash: 'hash', role: 'member' })
+
+  const token = await mintAccessTokenForSession({ user: { id: user.id, name: user.username, role: user.role } }, repos)
+
+  expect(typeof token).toBe('string')
+  expect(await verifyAccessToken(token as string)).toEqual({ sub: user.id, username: 'carol', role: 'member' })
+})
+
+test('refuses to mint for a disabled user', async () => {
+  const repos = createMemoryRepositories()
+  const user = await repos.users.create({ username: 'dave', passwordHash: 'hash', role: 'member' })
+  await repos.users.setDisabled(user.id, new Date())
+
+  const token = await mintAccessTokenForSession({ user: { id: user.id, name: user.username, role: user.role } }, repos)
+
+  expect(token).toBeNull()
+})
+
+test('refuses to mint when the user no longer exists', async () => {
+  const repos = createMemoryRepositories()
+
+  const token = await mintAccessTokenForSession({ user: { id: 'missing', name: 'ghost', role: 'member' } }, repos)
+
+  expect(token).toBeNull()
+})
+
+test('refuses to mint for a session without a user id', async () => {
+  const repos = createMemoryRepositories()
+
+  expect(await mintAccessTokenForSession(null, repos)).toBeNull()
+  expect(await mintAccessTokenForSession({ user: { name: 'ghost', role: 'member' } }, repos)).toBeNull()
 })
