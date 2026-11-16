@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "build": "next build",
+    "build:gateway": "bun build --target bun --outfile dist/gateway.js server/index.ts",
+    "build:migrate": "bun build --target bun --outfile dist/migrate.js src/db/migrate.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dev": "bun scripts/dev.ts",
     "dev:gateway": "bun --watch server/index.ts",
     "dev:web": "next dev --port 3000",
     "gateway": "bun server/index.ts",
+    "smoke": "bun scripts/smoke.ts",
     "start": "next start",
     "test": "bun test",
     "typecheck": "tsc --noEmit"

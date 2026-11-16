@@ -1,0 +1,110 @@
+# RCS deployment stack: Postgres + Next UI + Bun gateway + Caddy.
+#
+# Copy .env.example to .env and set real secrets before exposing this outside a
+# trusted network. The defaults below are deliberately loud demo values.
+#
+# The build context is the repository root (`../..`): @sobird/rcs is a Bun
+# workspace member and needs the root lockfile/workspace manifests.
+
+name: rcs
+
+x-common-env: &common-env
+  DATABASE_URL: ${DATABASE_URL:-postgres://rcs:${POSTGRES_PASSWORD:-insecure-dev-postgres-password}@postgres:5432/rcs}
+  RCS_AUTH_SECRET: ${RCS_AUTH_SECRET:-insecure-dev-secret-change-me}
+  ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:-insecure-dev-admin-password}
+
+x-rcs-service: &rcs-service
+  image: rcs:local
+  build:
+    context: ../..
+    dockerfile: packages/rcs/Dockerfile
+    args:
+      NEXT_PUBLIC_RCS_API_URL: ${NEXT_PUBLIC_RCS_API_URL:-}
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rcs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-insecure-dev-postgres-password}
+      POSTGRES_DB: rcs
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U rcs -d rcs']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  gateway:
+    <<: *rcs-service
+    # Same image as `app`, different process. The gateway applies migrations on boot.
+    command: ['bun', '/app/dist/gateway.js']
+    environment:
+      <<: *common-env
+      RCS_PORT: '4000'
+      RCS_HOST: 0.0.0.0
+      RCS_BASE_URL: ${RCS_BASE_URL:-http://localhost}
+    expose:
+      - '4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:4000/health', '-o', '/dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  app:
+    <<: *rcs-service
+    # Default image CMD: `node /app/packages/rcs/server.js`.
+    environment:
+      <<: *common-env
+      PORT: '3000'
+      HOSTNAME: 0.0.0.0
+    expose:
+      - '3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # Migrations must exist before the Next process provisions the bootstrap admin.
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:3000/code/login', '-o', '/dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      # HTTP/3.
+      - '443:443/udp'
+    environment:
+      # Empty → plain HTTP on :80 (Caddyfile default). Set a domain for automatic HTTPS.
+      RCS_DOMAIN: ${RCS_DOMAIN:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:

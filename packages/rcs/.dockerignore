@@ -1,0 +1,33 @@
+# Ignore build/install artifacts and local state. The compose build context is the
+# repository root, so BuildKit applies `Dockerfile.dockerignore` (same rules, with
+# root-relative patterns) to that context. This file documents the package-local
+# context and is used by tools that honour it directly.
+
+node_modules
+**/node_modules
+
+.next
+.next/**/*
+
+dist
+dist/**/*
+
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+coverage
+coverage/**/*
+
+.git
+.gitignore
+.github
+.worktrees
+
+.superpowers
+.claude
+.vscode
+.idea
+.DS_Store

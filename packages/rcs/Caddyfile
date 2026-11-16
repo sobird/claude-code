@@ -1,0 +1,26 @@
+# Single origin for the Next UI and the Bun gateway.
+#
+# Default (RCS_DOMAIN unset/empty): plain HTTP on :80 for local/demo use.
+# RCS_DOMAIN=rcs.example.com: automatic HTTPS via Caddy's public ACME flow.
+#
+# Same-origin routing is what lets the browser use relative URLs:
+#   /code/*                                  → Next UI (port 3000)
+#   /v1/* /v2/* /acp/* /web/* /api/oauth/*   → Bun gateway (port 4000)
+# Caddy upgrades WebSocket connections (/acp/ws, /acp/relay) transparently.
+
+{$RCS_DOMAIN::80} {
+	encode zstd gzip
+
+	@gateway path /v1/* /v2/* /acp/* /web/* /api/oauth/*
+	handle @gateway {
+		# Disable response buffering so SSE (/web/sessions/:id/events,
+		# /acp/channel-groups/:id/events) streams immediately.
+		reverse_proxy gateway:4000 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		reverse_proxy app:3000
+	}
+}

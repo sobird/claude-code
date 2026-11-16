@@ -1,0 +1,35 @@
+# BuildKit applies `<Dockerfile>.dockerignore` when the build context is the
+# repository root (which docker-compose.yml uses for the Bun workspace install).
+# Patterns are root-relative.
+
+# Installed dependencies and build output — always rebuilt inside the image.
+**/node_modules
+**/.next
+**/dist
+**/*.tsbuildinfo
+**/coverage
+
+# VCS, worktrees, local tooling state.
+.git
+.gitignore
+.github
+.worktrees
+.superpowers
+.claude
+.vscode
+.idea
+.DS_Store
+
+# Docs and repo-level extras that no build step needs.
+docs
+docs.json
+CLAUDE.md
+AGENTS.md
+tests
+landing-page
+
+# Local env / secrets (example file is kept so the image can be inspected).
+.env
+**/.env
+**/.env.*
+!**/.env.example
