@@ -111,6 +111,32 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect(scoped).not.toContain(inactive.id)
     })
 
+    test('listByWorkerType returns all statuses, ordered, optionally scoped to an owner', async () => {
+      const owner = await repos.users.create({ username: 'wt-owner', passwordHash: 'x', role: 'member' })
+      const other = await repos.users.create({ username: 'wt-other', passwordHash: 'x', role: 'member' })
+      const first = await repos.environments.create({ ownerUserId: owner.id, workerType: 'acp', bridgeId: 'g1' })
+      const second = await repos.environments.create({ ownerUserId: owner.id, workerType: 'acp', bridgeId: 'g1' })
+      const foreign = await repos.environments.create({ ownerUserId: other.id, workerType: 'acp', bridgeId: 'g2' })
+      const claude = await repos.environments.create({ ownerUserId: owner.id, workerType: 'claude_code' })
+      await repos.environments.update(second.id, { status: 'offline' })
+
+      const all = await repos.environments.listByWorkerType('acp')
+      const allIds = all.map((env) => env.id)
+      expect(allIds).toContain(first.id)
+      expect(allIds).toContain(second.id)
+      expect(allIds).toContain(foreign.id)
+      expect(allIds).not.toContain(claude.id)
+      expect(all.find((env) => env.id === second.id)?.status).toBe('offline')
+      for (let i = 1; i < all.length; i += 1) {
+        expect(all[i]?.createdAt.getTime()).toBeGreaterThanOrEqual(all[i - 1]?.createdAt.getTime())
+      }
+
+      const scoped = await repos.environments.listByWorkerType('acp', { ownerUserId: owner.id })
+      expect(scoped.map((env) => env.id).toSorted()).toEqual([first.id, second.id].toSorted())
+
+      expect(await repos.environments.listByWorkerType('missing_type')).toEqual([])
+    })
+
     test('re-registration only reuses an environment owned by the caller', async () => {
       const owner = await repos.users.create({ username: 'owner', passwordHash: 'x', role: 'member' })
       const other = await repos.users.create({ username: 'other', passwordHash: 'x', role: 'member' })

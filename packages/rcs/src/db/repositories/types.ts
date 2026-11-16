@@ -92,6 +92,10 @@ export interface ListActiveEnvironmentsOptions {
   ownerUserId?: string
 }
 
+export interface ListByWorkerTypeOptions {
+  ownerUserId?: string
+}
+
 export interface EnvironmentRepository {
   create(input: CreateEnvironmentInput): Promise<EnvironmentRecord>
   getById(id: string): Promise<EnvironmentRecord | null>
@@ -100,6 +104,11 @@ export interface EnvironmentRepository {
   listActive(options?: ListActiveEnvironmentsOptions): Promise<EnvironmentRecord[]>
   /** Active environment owned by `ownerUserId`, or `null` (never another user's). */
   findReusable(input: FindReusableEnvironmentInput): Promise<EnvironmentRecord | null>
+  /**
+   * Every environment of a worker type regardless of status (online and offline ACP
+   * agents), ascending by `createdAt`; scoped to `ownerUserId` when supplied.
+   */
+  listByWorkerType(workerType: string, options?: ListByWorkerTypeOptions): Promise<EnvironmentRecord[]>
 }
 
 export interface CreateSessionInput {

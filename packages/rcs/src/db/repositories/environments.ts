@@ -77,6 +77,18 @@ export function createEnvironmentRepository(db: Database): EnvironmentRepository
         .limit(1)
       return row ?? null
     },
+
+    async listByWorkerType(workerType, options) {
+      const conditions = [eq(environments.workerType, workerType)]
+      if (options?.ownerUserId !== undefined) {
+        conditions.push(eq(environments.ownerUserId, options.ownerUserId))
+      }
+      return db
+        .select()
+        .from(environments)
+        .where(and(...conditions))
+        .orderBy(asc(environments.createdAt), asc(environments.id))
+    },
   }
 }
 
@@ -148,6 +160,17 @@ export function createMemoryEnvironmentRepository(): EnvironmentRepository {
       if (!record) return null
       if (record.ownerUserId !== input.ownerUserId || record.status !== 'active') return null
       return cloneEnvironment(record)
+    },
+
+    async listByWorkerType(workerType, options) {
+      return [...byId.values()]
+        .filter(
+          (record) =>
+            record.workerType === workerType &&
+            (options?.ownerUserId === undefined || record.ownerUserId === options.ownerUserId),
+        )
+        .map(cloneEnvironment)
+        .toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
     },
   }
 }

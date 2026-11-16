@@ -2,7 +2,17 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 
 import { createMemoryRepositories } from '../../db/repositories/index.js'
 import type { SessionEvent } from '../event-bus.js'
-import { EventBus, getAllEventBuses, getEventBus, publishSessionEvent, removeEventBus } from '../event-bus.js'
+import {
+  AcpEventBus,
+  EventBus,
+  getAllAcpEventBuses,
+  getAllEventBuses,
+  getAcpEventBus,
+  getEventBus,
+  publishSessionEvent,
+  removeAcpEventBus,
+  removeEventBus,
+} from '../event-bus.js'
 
 let nextSeq = 1
 
@@ -172,5 +182,39 @@ describe('publishSessionEvent', () => {
     const event = await publishSessionEvent(repos, null, 's1', 'user', { content: 'x' }, 'outbound')
     expect(event.seqNum).toBeGreaterThan(0)
     expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(1)
+  })
+})
+
+describe('AcpEventBus', () => {
+  beforeEach(() => {
+    for (const [key] of getAllAcpEventBuses()) removeAcpEventBus(key)
+  })
+
+  test('assigns monotonic seqNums and replays events after a cursor', () => {
+    const bus = getAcpEventBus('group-1')
+    const received: SessionEvent[] = []
+    bus.subscribe((event) => received.push(event))
+
+    const first = bus.publish({ id: 'a', sessionId: 'group-1', type: 'acp', payload: { n: 1 }, direction: 'outbound' })
+    const second = bus.publish({ id: 'b', sessionId: 'group-1', type: 'acp', payload: { n: 2 }, direction: 'inbound' })
+
+    expect(first.seqNum).toBe(1)
+    expect(second.seqNum).toBe(2)
+    expect(bus.getLastSeqNum()).toBe(2)
+    expect(received).toHaveLength(2)
+    expect(bus.getEventsSince(1).map((event) => event.id)).toEqual(['b'])
+    expect(bus.getEventsSince(2)).toEqual([])
+  })
+
+  test('caps retained history and evicts the oldest half', () => {
+    const bus = new AcpEventBus()
+    for (let index = 0; index < 5001; index += 1) {
+      bus.publish({ id: `e${index}`, sessionId: 'g', type: 'acp', payload: {}, direction: 'outbound' })
+    }
+
+    const retained = bus.getEventsSince(0)
+    expect(retained).toHaveLength(2500)
+    expect(retained[0]?.seqNum).toBe(2502)
+    expect(bus.getLastSeqNum()).toBe(5001)
   })
 })

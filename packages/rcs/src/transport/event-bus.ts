@@ -81,6 +81,91 @@ export function getAllEventBuses(): Map<string, EventBus> {
 }
 
 /**
+ * History-retaining event bus for ACP channel groups (R25).
+ *
+ * Unlike the session `EventBus` (fan-out only; durability lives in `session_events`), ACP
+ * channel-group traffic stays in memory: the pre-rewrite bus kept the tail so a
+ * reconnecting SSE consumer could replay recent events via `Last-Event-ID`. Port that
+ * behaviour verbatim: at most `MAX_ACP_EVENTS_PER_BUS` events, evicting the oldest half.
+ */
+const MAX_ACP_EVENTS_PER_BUS = 5000
+
+export class AcpEventBus {
+  private readonly subscribers = new Set<SessionEventSubscriber>()
+  private events: SessionEvent[] = []
+  private seqNum = 0
+  private closed = false
+
+  subscribe(callback: SessionEventSubscriber): () => void {
+    this.subscribers.add(callback)
+    return () => {
+      this.subscribers.delete(callback)
+    }
+  }
+
+  subscriberCount(): number {
+    return this.subscribers.size
+  }
+
+  publish(event: Omit<SessionEvent, 'seqNum' | 'createdAt'>): SessionEvent {
+    if (this.closed) throw new Error('AcpEventBus is closed')
+    const full: SessionEvent = { ...event, seqNum: ++this.seqNum, createdAt: Date.now() }
+    this.events.push(full)
+    if (this.events.length > MAX_ACP_EVENTS_PER_BUS) {
+      this.events = this.events.slice(-Math.floor(MAX_ACP_EVENTS_PER_BUS / 2))
+    }
+    for (const callback of this.subscribers) {
+      try {
+        callback(full)
+      } catch {
+        // A failing subscriber must not break the publisher; drop the error.
+      }
+    }
+    return full
+  }
+
+  getLastSeqNum(): number {
+    return this.seqNum
+  }
+
+  /** Retained events with `seqNum > seqNum`, oldest first. */
+  getEventsSince(seqNum: number): SessionEvent[] {
+    const index = this.events.findIndex((event) => event.seqNum > seqNum)
+    return index === -1 ? [] : this.events.slice(index)
+  }
+
+  close(): void {
+    this.closed = true
+    this.subscribers.clear()
+    this.events = []
+  }
+}
+
+const acpBuses = new Map<string, AcpEventBus>()
+
+export function getAcpEventBus(channelGroupId: string): AcpEventBus {
+  let bus = acpBuses.get(channelGroupId)
+  if (!bus) {
+    bus = new AcpEventBus()
+    acpBuses.set(channelGroupId, bus)
+  }
+  return bus
+}
+
+export function removeAcpEventBus(channelGroupId: string): void {
+  const bus = acpBuses.get(channelGroupId)
+  if (bus) {
+    bus.close()
+    acpBuses.delete(channelGroupId)
+  }
+}
+
+/** Test/shutdown helper: all live ACP channel-group buses. */
+export function getAllAcpEventBuses(): Map<string, AcpEventBus> {
+  return acpBuses
+}
+
+/**
  * Extract plain text from the various message payload shapes the bridge emits:
  * `{ content: "text" }`, `{ message: { content: "text" } }`, and
  * `{ message: { content: [{ type: 'text', text: '…' }] } }`.
