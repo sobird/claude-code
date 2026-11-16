@@ -6,6 +6,7 @@
  * extends this module with the WebSocket/SSE transport that consumes it.
  */
 
+import type { SessionEventRecord } from '../contracts.js'
 import type { Repositories } from '../db/repositories/types.js'
 
 export interface SessionEvent {
@@ -167,15 +168,135 @@ export async function publishSessionEvent(
 ): Promise<SessionEvent> {
   const normalized = normalizePayload(type, payload)
   const record = await repos.events.append({ sessionId, type, payload: normalized, direction })
-  const event: SessionEvent = {
+  const event = toSessionEvent(record)
+  eventBus?.publish(event)
+  return event
+}
+
+/** Map a persisted `session_events` row onto the in-process event shape. */
+export function toSessionEvent(record: SessionEventRecord): SessionEvent {
+  return {
     id: record.eventId,
-    sessionId,
-    type,
-    payload: normalized,
-    direction,
+    sessionId: record.sessionId,
+    type: record.type,
+    payload: record.payload,
+    direction: record.direction,
     seqNum: record.id,
     createdAt: record.createdAt.getTime(),
   }
-  eventBus?.publish(event)
-  return event
+}
+
+export interface ReplayThenLiveOptions {
+  bus: EventBus
+  /** Cursor: replay events with `seqNum > fromSeqNum`. */
+  fromSeqNum: number
+  /**
+   * Load the durable replay window. Called once, after the live subscription is active.
+   * Ignored unless `replay` is true.
+   */
+  loadSince: () => Promise<SessionEvent[]>
+  /** Emit replayed events, in ascending `seqNum` order. */
+  onReplayEvent: (event: SessionEvent) => void
+  /** Emit live events, including any buffered during the replay query. */
+  onLiveEvent: (event: SessionEvent) => void
+  /** Replay even when `fromSeqNum` is 0 (the WebSocket path replays from the beginning). */
+  replay?: boolean
+  /** Live-only filter; replayed events are filtered by `loadSince`. */
+  filterLiveEvent?: (event: SessionEvent) => boolean
+  /** True once the consumer is gone; emission stops and the subscription is dropped. */
+  isClosed?: () => boolean
+}
+
+export interface ReplayThenLiveSubscription {
+  /** Resolves once the replay has been emitted and buffered live events have been flushed. */
+  ready: Promise<void>
+  /** Detach the live subscription and drop any buffered events. */
+  unsubscribe: () => void
+}
+
+/**
+ * Subscribe to a session bus before reading durable history, then emit the replay followed
+ * by live events.
+ *
+ * This closes the persist-then-publish race (R22): an event appended between "read history"
+ * and "subscribe" would otherwise be lost, and an event appended before the history read
+ * but published during it would otherwise be duplicated. Live events received while the
+ * replay query is in flight are buffered; after the replay they are flushed only when their
+ * `seqNum` exceeds the last replayed `seqNum`, which dedupes the replay/live boundary
+ * without losing anything.
+ */
+export function subscribeReplayThenLive(options: ReplayThenLiveOptions): ReplayThenLiveSubscription {
+  const { bus } = options
+  const buffered: SessionEvent[] = []
+  let replaying = true
+  let stopped = false
+
+  const unsubscribe = () => {
+    if (stopped) return
+    stopped = true
+    buffered.length = 0
+    detach()
+  }
+
+  const detach = bus.subscribe((event) => {
+    if (stopped) return
+    if (options.filterLiveEvent && !options.filterLiveEvent(event)) return
+    if (replaying) {
+      buffered.push(event)
+      return
+    }
+    try {
+      options.onLiveEvent(event)
+    } catch {
+      unsubscribe()
+    }
+  })
+
+  const ready = (async () => {
+    let replayed: SessionEvent[] = []
+    const shouldReplay = options.replay ?? options.fromSeqNum > 0
+    if (shouldReplay) {
+      try {
+        replayed = await options.loadSince()
+      } catch {
+        replayed = []
+      }
+    }
+
+    if (stopped || options.isClosed?.()) {
+      unsubscribe()
+      return
+    }
+
+    let lastReplayedSeqNum = options.fromSeqNum
+    for (const event of replayed) {
+      if (stopped || options.isClosed?.()) {
+        unsubscribe()
+        return
+      }
+      try {
+        options.onReplayEvent(event)
+      } catch {
+        unsubscribe()
+        return
+      }
+      if (event.seqNum > lastReplayedSeqNum) lastReplayedSeqNum = event.seqNum
+    }
+
+    replaying = false
+    for (const event of buffered) {
+      if (stopped || options.isClosed?.()) break
+      // Dedupe the replay/live boundary: anything already covered by the replay is dropped.
+      if (event.seqNum <= lastReplayedSeqNum) continue
+      try {
+        options.onLiveEvent(event)
+      } catch {
+        unsubscribe()
+        return
+      }
+    }
+    buffered.length = 0
+  })()
+
+  return { ready, unsubscribe }
 }

@@ -10,7 +10,6 @@
 import { Hono } from 'hono'
 
 import type { AppContext, AppEnv } from '../../auth/context.js'
-import { loadConfig } from '../../config.js'
 import { isSessionClosedStatus, toWebSessionId } from '../../contracts.js'
 import type { SessionRecord } from '../../contracts.js'
 import { getAutomationStateSnapshot } from '../../services/automationState.js'
@@ -23,12 +22,10 @@ import {
   toWebSessionResponse,
 } from '../../services/session.js'
 import { createWorkItem } from '../../services/work-dispatch.js'
-import type { SessionEvent } from '../../transport/event-bus.js'
-import { getEventBus } from '../../transport/event-bus.js'
+import { createSSEStream } from '../../transport/sse-writer.js'
 import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment, sessionClosed } from '../common.js'
 
 const app = new Hono<AppEnv>()
-const KEEPALIVE_MS = 15000
 const DEFAULT_HISTORY_LIMIT = 100
 const MAX_HISTORY_LIMIT = 1000
 
@@ -67,95 +64,6 @@ function toHistoryEvent(event: {
     seqNum: event.id,
     createdAt: event.createdAt.getTime(),
   }
-}
-
-function sseFrame(event: SessionEvent): string {
-  const data = JSON.stringify({
-    type: event.type,
-    payload: event.payload,
-    direction: event.direction,
-    seqNum: event.seqNum,
-  })
-  return `id: ${event.seqNum}\nevent: message\ndata: ${data}\n\n`
-}
-
-function unrefTimer(timer: ReturnType<typeof setInterval>): void {
-  ;(timer as { unref?: () => void }).unref?.()
-}
-
-async function createWebStream(c: AppContext, sessionId: string, fromSeqNum: number): Promise<Response> {
-  const repos = c.get('repos')
-  const replayed =
-    fromSeqNum > 0 ? await repos.events.listSince(sessionId, fromSeqNum, loadConfig().eventReplayLimit) : []
-  const bus = getEventBus(sessionId)
-  const encoder = new TextEncoder()
-  let dispose = () => {}
-
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      let closed = false
-      let unsub = () => {}
-      let keepalive: ReturnType<typeof setInterval> | null = null
-
-      const cleanup = () => {
-        if (closed) return
-        closed = true
-        unsub()
-        if (keepalive) clearInterval(keepalive)
-      }
-      dispose = cleanup
-
-      const send = (chunk: string) => {
-        if (closed) return
-        try {
-          controller.enqueue(encoder.encode(chunk))
-        } catch {
-          cleanup()
-        }
-      }
-
-      for (const record of replayed) {
-        send(
-          sseFrame({
-            id: record.eventId,
-            sessionId: record.sessionId,
-            type: record.type,
-            payload: record.payload,
-            direction: record.direction,
-            seqNum: record.id,
-            createdAt: record.createdAt.getTime(),
-          }),
-        )
-      }
-
-      send(': keepalive\n\n')
-
-      unsub = bus.subscribe((event) => send(sseFrame(event)))
-      keepalive = setInterval(() => send(': keepalive\n\n'), KEEPALIVE_MS)
-      unrefTimer(keepalive)
-
-      c.req.raw.signal.addEventListener('abort', () => {
-        cleanup()
-        try {
-          controller.close()
-        } catch {
-          // already closed
-        }
-      })
-    },
-    cancel() {
-      dispose()
-    },
-  })
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    },
-  })
 }
 
 /** POST /web/sessions — Create a web session owned by the caller. */
@@ -261,7 +169,7 @@ app.get('/sessions/:id/events', legacyUserAuth, async (c) => {
   const lastEventId = c.req.header('Last-Event-ID')
   const parsed = lastEventId ? Number.parseInt(lastEventId, 10) : 0
   const fromSeqNum = Number.isFinite(parsed) && parsed > 0 ? parsed : 0
-  return createWebStream(c, owned, fromSeqNum)
+  return createSSEStream(c, repos, owned, fromSeqNum)
 })
 
 export default app
