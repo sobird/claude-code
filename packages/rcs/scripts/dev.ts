@@ -40,5 +40,3 @@ process.on('SIGTERM', () => shutdown(0))
 
 const exits = await Promise.all(children.map((child) => child.exited))
 shutdown(exits.some((code) => code !== 0) ? 1 : 0)
-
-
