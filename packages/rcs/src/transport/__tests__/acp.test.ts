@@ -313,6 +313,78 @@ describe('ACP agent WebSocket handlers', () => {
 
     handleAcpWsClose(s.repos, asWs(ws), 'ws-register')
   })
+
+  test('two identify frames in one payload bind exactly once', async () => {
+    const env = await s.repos.environments.create({
+      ownerUserId: s.member.id,
+      workerType: 'acp',
+      bridgeId: 'group-dup-identify',
+    })
+    const ws = createMockWs()
+
+    handleAcpWsOpen(s.repos, asWs(ws), 'ws-dup-identify', s.memberUser)
+    const frame = JSON.stringify({ type: 'identify', agent_id: env.id })
+    handleAcpWsMessage(s.repos, asWs(ws), 'ws-dup-identify', `${frame}\n${frame}\n`)
+    await waitFor(() => ws.sent.some((line) => line.includes('"identified"')))
+    await Bun.sleep(20) // let the second (in-flight-guarded) frame settle
+
+    const output = ws.sent.join('')
+    expect(ws.sent.filter((line) => line.includes('"identified"'))).toHaveLength(1)
+    expect(output).toContain('Already identified')
+    // Exactly one bus subscription: a second bind would leak the earlier subscriber.
+    expect(getAcpEventBus('group-dup-identify').subscriberCount()).toBe(1)
+
+    const active = await s.repos.environments.listActive({ ownerUserId: s.member.id })
+    expect(active.filter((record) => record.id === env.id)).toHaveLength(1)
+
+    handleAcpWsClose(s.repos, asWs(ws), 'ws-dup-identify')
+  })
+
+  test('a failed identify can be retried on the same connection', async () => {
+    const env = await s.repos.environments.create({
+      ownerUserId: s.member.id,
+      workerType: 'acp',
+      bridgeId: 'group-retry',
+    })
+    const ws = createMockWs()
+
+    handleAcpWsOpen(s.repos, asWs(ws), 'ws-retry', s.memberUser)
+    handleAcpWsMessage(
+      s.repos,
+      asWs(ws),
+      'ws-retry',
+      `${JSON.stringify({ type: 'identify', agent_id: 'env_missing' })}\n`,
+    )
+    await waitFor(() => ws.sent.some((line) => line.includes('Agent not found')))
+
+    ws.sent.length = 0
+    handleAcpWsMessage(s.repos, asWs(ws), 'ws-retry', `${JSON.stringify({ type: 'identify', agent_id: env.id })}\n`)
+    await waitFor(() => ws.sent.some((line) => line.includes('"identified"')))
+
+    expect(ws.sent.join('')).toContain(env.id)
+    expect(getAcpEventBus('group-retry').subscriberCount()).toBe(1)
+
+    handleAcpWsClose(s.repos, asWs(ws), 'ws-retry')
+  })
+
+  test('two register frames in one payload create a single environment', async () => {
+    const ws = createMockWs()
+
+    handleAcpWsOpen(s.repos, asWs(ws), 'ws-dup-register', s.memberUser)
+    const frame = JSON.stringify({ type: 'register', agent_name: 'dup', channel_group_id: 'group-dup-register' })
+    handleAcpWsMessage(s.repos, asWs(ws), 'ws-dup-register', `${frame}\n${frame}\n`)
+    await waitFor(() => ws.sent.some((line) => line.includes('"registered"')))
+    await Bun.sleep(20)
+
+    expect(ws.sent.filter((line) => line.includes('"registered"'))).toHaveLength(1)
+    expect(ws.sent.join('')).toContain('Already registered')
+    expect(getAcpEventBus('group-dup-register').subscriberCount()).toBe(1)
+
+    const agents = await s.repos.environments.listByWorkerType('acp', { ownerUserId: s.member.id })
+    expect(agents).toHaveLength(1)
+
+    handleAcpWsClose(s.repos, asWs(ws), 'ws-dup-register')
+  })
 })
 
 describe('ACP relay ownership', () => {

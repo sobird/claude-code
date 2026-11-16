@@ -24,6 +24,8 @@ import type { SessionEvent } from './event-bus.js'
 // Per-connection state
 interface AcpConnectionEntry {
   agentId: string | null // Set after register/identify
+  /** Synchronous in-flight guard: a register/identify is awaiting the DB. */
+  binding: boolean
   channelGroupId: string
   user: AuthUser
   unsub: (() => void) | null
@@ -94,6 +96,7 @@ export function handleAcpWsOpen(repos: Repositories, ws: WSContext, wsId: string
 
   connections.set(wsId, {
     agentId: null,
+    binding: false,
     channelGroupId: '',
     user,
     unsub: null,
@@ -111,40 +114,49 @@ async function handleRegister(
   entry: AcpConnectionEntry,
   msg: Record<string, unknown>,
 ): Promise<void> {
-  if (entry.agentId) {
+  // Synchronous guard: `agentId` is set only after an await, so check and claim the
+  // in-flight flag before touching the DB. Otherwise two frames in one payload both
+  // pass a bare `agentId` check and bind twice (leaking a bus subscription).
+  if (entry.agentId || entry.binding) {
     sendToWs(entry.ws, { type: 'error', message: 'Already registered' })
     return
   }
+  entry.binding = true
 
-  const agentName = (msg.agent_name as string) || 'unknown'
-  const capabilities = msg.capabilities as Record<string, unknown> | undefined
-  const channelGroupId = (msg.channel_group_id as string) || `group_${randomUUID().replace(/-/g, '').slice(0, 12)}`
-  const maxSessions = typeof msg.max_sessions === 'number' ? msg.max_sessions : 1
+  try {
+    const agentName = (msg.agent_name as string) || 'unknown'
+    const capabilities = msg.capabilities as Record<string, unknown> | undefined
+    const channelGroupId = (msg.channel_group_id as string) || `group_${randomUUID().replace(/-/g, '').slice(0, 12)}`
+    const maxSessions = typeof msg.max_sessions === 'number' ? msg.max_sessions : 1
 
-  const record = await repos.environments.create({
-    ownerUserId: entry.user.id,
-    machineName: agentName,
-    workerType: 'acp',
-    bridgeId: channelGroupId,
-    maxSessions,
-    capabilities: capabilities || null,
-    status: 'active',
-    lastPollAt: new Date(),
-  })
+    const record = await repos.environments.create({
+      ownerUserId: entry.user.id,
+      machineName: agentName,
+      workerType: 'acp',
+      bridgeId: channelGroupId,
+      maxSessions,
+      capabilities: capabilities || null,
+      status: 'active',
+      lastPollAt: new Date(),
+    })
 
-  entry.agentId = record.id
-  entry.channelGroupId = channelGroupId
-  entry.capabilities = capabilities || null
-  bindChannelGroup(entry)
+    entry.agentId = record.id
+    entry.channelGroupId = channelGroupId
+    entry.capabilities = capabilities || null
+    bindChannelGroup(entry)
 
-  console.log(
-    `[ACP-WS] Agent registered (legacy WS): agentId=${record.id} channelGroup=${channelGroupId} name=${agentName}`,
-  )
-  sendToWs(entry.ws, {
-    type: 'registered',
-    agent_id: record.id,
-    channel_group_id: channelGroupId,
-  })
+    console.log(
+      `[ACP-WS] Agent registered (legacy WS): agentId=${record.id} channelGroup=${channelGroupId} name=${agentName}`,
+    )
+    sendToWs(entry.ws, {
+      type: 'registered',
+      agent_id: record.id,
+      channel_group_id: channelGroupId,
+    })
+  } finally {
+    // Release the in-flight flag on failure so a transient DB error can be retried.
+    if (!entry.agentId) entry.binding = false
+  }
 }
 
 /** Handle identify message — binds WS to an existing agent registered via REST. */
@@ -153,38 +165,45 @@ async function handleIdentify(
   entry: AcpConnectionEntry,
   msg: Record<string, unknown>,
 ): Promise<void> {
-  if (entry.agentId) {
+  // See handleRegister: claim the in-flight flag synchronously before the first await.
+  if (entry.agentId || entry.binding) {
     sendToWs(entry.ws, { type: 'error', message: 'Already identified' })
     return
   }
+  entry.binding = true
 
-  const agentId = msg.agent_id as string
-  if (!agentId) {
-    sendToWs(entry.ws, { type: 'error', message: 'Missing agent_id' })
-    return
+  try {
+    const agentId = msg.agent_id as string
+    if (!agentId) {
+      sendToWs(entry.ws, { type: 'error', message: 'Missing agent_id' })
+      return
+    }
+
+    // Look up the environment record (created via REST registration) and enforce ownership.
+    const record = await repos.environments.getById(agentId)
+    if (!record || record.workerType !== 'acp' || !canAccessAgent(entry.user, record)) {
+      sendToWs(entry.ws, { type: 'error', message: 'Agent not found' })
+      return
+    }
+
+    await repos.environments.update(agentId, { status: 'active', lastPollAt: new Date() })
+
+    const channelGroupId = record.bridgeId || `group_${randomUUID().replace(/-/g, '').slice(0, 12)}`
+    entry.agentId = record.id
+    entry.channelGroupId = channelGroupId
+    entry.capabilities = record.capabilities || null
+    bindChannelGroup(entry)
+
+    console.log(`[ACP-WS] Agent identified (REST+WS): agentId=${record.id} channelGroup=${channelGroupId}`)
+    sendToWs(entry.ws, {
+      type: 'identified',
+      agent_id: record.id,
+      channel_group_id: channelGroupId,
+    })
+  } finally {
+    // Release the in-flight flag on failure so a transient DB error can be retried.
+    if (!entry.agentId) entry.binding = false
   }
-
-  // Look up the environment record (created via REST registration) and enforce ownership.
-  const record = await repos.environments.getById(agentId)
-  if (!record || record.workerType !== 'acp' || !canAccessAgent(entry.user, record)) {
-    sendToWs(entry.ws, { type: 'error', message: 'Agent not found' })
-    return
-  }
-
-  await repos.environments.update(agentId, { status: 'active', lastPollAt: new Date() })
-
-  const channelGroupId = record.bridgeId || `group_${randomUUID().replace(/-/g, '').slice(0, 12)}`
-  entry.agentId = record.id
-  entry.channelGroupId = channelGroupId
-  entry.capabilities = record.capabilities || null
-  bindChannelGroup(entry)
-
-  console.log(`[ACP-WS] Agent identified (REST+WS): agentId=${record.id} channelGroup=${channelGroupId}`)
-  sendToWs(entry.ws, {
-    type: 'identified',
-    agent_id: record.id,
-    channel_group_id: channelGroupId,
-  })
 }
 
 /** Called from onMessage — processes NDJSON lines. */
@@ -207,20 +226,20 @@ export function handleAcpWsMessage(repos: Repositories, ws: WSContext, wsId: str
     // Handle keepalive.
     if (msg.type === 'keep_alive') {
       if (entry.agentId) {
-        void repos.environments.update(entry.agentId, { lastPollAt: new Date() })
+        repos.environments.update(entry.agentId, { lastPollAt: new Date() }).catch(() => {})
       }
       continue
     }
 
     // Handle registration (legacy WS-only).
     if (msg.type === 'register') {
-      void handleRegister(repos, entry, msg)
+      handleRegister(repos, entry, msg).catch((err) => console.error('[ACP-WS] register failed:', err))
       continue
     }
 
     // Handle identify (REST registration + WS binding).
     if (msg.type === 'identify') {
-      void handleIdentify(repos, entry, msg)
+      handleIdentify(repos, entry, msg).catch((err) => console.error('[ACP-WS] identify failed:', err))
       continue
     }
 
@@ -233,7 +252,7 @@ export function handleAcpWsMessage(repos: Repositories, ws: WSContext, wsId: str
       continue
     }
 
-    void repos.environments.update(entry.agentId, { lastPollAt: new Date() })
+    repos.environments.update(entry.agentId, { lastPollAt: new Date() }).catch(() => {})
 
     // Pass-through: publish to channel group EventBus as inbound.
     const bus = getAcpEventBus(entry.channelGroupId)
@@ -269,7 +288,7 @@ export function handleAcpWsClose(
 
   // Mark agent as offline (don't delete record — allow reconnect).
   if (entry.agentId) {
-    void markAgentOffline(repos, entry.agentId)
+    markAgentOffline(repos, entry.agentId).catch(() => {})
 
     // Notify all relay connections that this agent is gone.
     if (entry.channelGroupId) {
@@ -324,7 +343,7 @@ export function closeAllAcpConnections(repos: Repositories): void {
         entry.ws.close(1001, 'server_shutdown')
       }
       if (entry.agentId) {
-        void markAgentOffline(repos, entry.agentId)
+        markAgentOffline(repos, entry.agentId).catch(() => {})
       }
     } catch {
       // ignore errors during shutdown
