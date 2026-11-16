@@ -38,10 +38,12 @@ docker compose up -d --build
 
 Open <http://localhost/code/login> and sign in with the bootstrap admin.
 
-To serve over HTTPS, set `RCS_DOMAIN=rcs.example.com` (and
-`RCS_BASE_URL=https://rcs.example.com` for CLI-facing work secrets) in `.env`.
-Caddy then obtains a certificate automatically. With `RCS_DOMAIN` empty, Caddy
-serves plain HTTP on port 80, which is the intended local/demo mode.
+By default Caddy serves plain HTTP on port 80, which is the intended
+local/demo mode. To serve over HTTPS, set `RCS_DOMAIN=rcs.example.com` (and
+`RCS_BASE_URL=https://rcs.example.com` for CLI-facing work secrets) in `.env`;
+Caddy then obtains a certificate automatically. This requires inbound TCP ports
+80 and 443 (and optionally UDP 443 for HTTP/3) to be reachable. `/health` is
+proxied by Caddy, so it is available at the public origin as well.
 
 The `postgres`, `app`, `gateway` and `caddy` services share one image built from
 `Dockerfile`. The `gateway` service overrides the default command with

@@ -88,12 +88,16 @@ services:
     restart: unless-stopped
     ports:
       - '80:80'
+      # 443 is only used when RCS_DOMAIN is a real hostname (automatic HTTPS).
+      # With the default :80 site address Caddy serves plain HTTP and never
+      # binds these.
       - '443:443'
-      # HTTP/3.
-      - '443:443/udp'
+      - '443:443/udp' # HTTP/3.
     environment:
-      # Empty → plain HTTP on :80 (Caddyfile default). Set a domain for automatic HTTPS.
-      RCS_DOMAIN: ${RCS_DOMAIN:-}
+      # Empty/unset → Compose passes ":80" (the `:-` form treats an empty .env
+      # value as unset), so Caddy serves plain HTTP on :80. Set a real hostname
+      # for automatic HTTPS.
+      RCS_DOMAIN: ${RCS_DOMAIN:-:80}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
