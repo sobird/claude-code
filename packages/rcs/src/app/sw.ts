@@ -1,10 +1,10 @@
-import { defaultCache } from '@serwist/next/worker'
+import { defaultCache } from '@serwist/turbopack/worker'
 import { NetworkOnly, Serwist } from 'serwist'
 import type { PrecacheEntry, RuntimeCaching } from 'serwist'
 
 // The project's tsconfig uses the DOM lib, whose service-worker globals are
 // limited; declare only the slice this entry reads. `__SW_MANIFEST` is
-// injected by Serwist's InjectManifest at build time.
+// injected by `@serwist/turbopack` when the worker is bundled at build time.
 declare const self: {
   __SW_MANIFEST: (PrecacheEntry | string)[]
 }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 
+import { ServiceWorkerRegistration } from '../components/shell/service-worker-registration'
 import { ThemeProvider } from '../lib/theme'
 
 // oxlint-disable-next-line import/no-unassigned-import -- global stylesheet side effect
@@ -44,7 +45,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ServiceWorkerRegistration />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

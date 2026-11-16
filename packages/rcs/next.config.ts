@@ -1,3 +1,4 @@
+import { withSerwist } from '@serwist/turbopack'
 import type { NextConfig } from 'next'
 
 const GATEWAY_URL = 'http://localhost:4000'
@@ -15,4 +16,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withSerwist(nextConfig)
