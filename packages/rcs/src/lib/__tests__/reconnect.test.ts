@@ -209,7 +209,26 @@ describe('runStreamWithRefresh', () => {
     expect(statuses.filter((status) => status === 'reconnecting')).toHaveLength(2)
   })
 
-  test('4xx responses other than 429 fail terminally', async () => {
+  test('a 409 closed-session response ends the stream as closed, not an error', async () => {
+    const statuses: StreamStatus[] = []
+    let fetchCalls = 0
+    const deps = baseDeps({
+      fetch: async () => {
+        fetchCalls += 1
+        return new Response(JSON.stringify({ error: { type: 'session_closed' } }), { status: 409 })
+      },
+      onStatus: (status) => statuses.push(status),
+    })
+
+    const result = await runStreamWithRefresh(deps)
+
+    expect(fetchCalls).toBe(1)
+    expect(result.reconnects).toBe(0)
+    expect(statuses[statuses.length - 1]).toBe('closed')
+    expect(statuses).not.toContain('error')
+  })
+
+  test('4xx responses other than 409 and 429 fail terminally', async () => {
     let fetchCalls = 0
     const deps = baseDeps({
       fetch: async () => {

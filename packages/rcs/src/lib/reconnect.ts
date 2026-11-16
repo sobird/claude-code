@@ -10,6 +10,8 @@
  * - transient failures (network errors, `429`, `5xx`) and a clean EOF back off
  *   exponentially (1s → 2s → 4s … capped at 30s) and resume from the last id
  * - terminal conditions: abort, a second consecutive `401`, other `4xx`
+ * - `409` (a closed/archived session) ends the stream as `closed` rather than an
+ *   error: the session simply accepts no more live events
  */
 
 import { consumeSse, type SseEvent } from './sse-client'
@@ -124,6 +126,9 @@ export async function runStreamWithRefresh(deps: RunStreamDeps): Promise<RunStre
 
     if (!response.ok) {
       await response.body?.cancel().catch(() => {})
+      // A closed session's stream answers 409 (`session_closed`): expected and
+      // terminal, not a connection failure the UI should report in red.
+      if (response.status === 409) return finish('closed')
       if (!isRetryableStatus(response.status)) {
         return fail('error', new Error(`stream failed with HTTP ${response.status}`))
       }

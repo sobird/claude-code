@@ -117,8 +117,8 @@ app.get('/channel-groups/:id', legacyUserAuth, async (c) => {
 app.get('/channel-groups/:id/events', legacyUserAuth, async (c) => {
   const groupId = c.req.param('id')
   const agents = await listVisibleAgents(c.get('repos'), c.get('user'))
-  const visible = agents.some((agent) => (agent.bridgeId || 'default') === groupId)
-  if (!visible) {
+  const members = agents.filter((agent) => (agent.bridgeId || 'default') === groupId)
+  if (members.length === 0) {
     return jsonError(c, 'not_found', 'Channel group not found', 404)
   }
 
@@ -126,7 +126,9 @@ app.get('/channel-groups/:id/events', legacyUserAuth, async (c) => {
   const fromSeq = c.req.query('from_sequence_num')
   const fromSeqNum = fromSeq ? Number.parseInt(fromSeq, 10) : lastEventId ? Number.parseInt(lastEventId, 10) : 0
 
-  return createAcpSSEStream(c, groupId, Number.isFinite(fromSeqNum) ? fromSeqNum : 0)
+  // Buses are owner-scoped; a member sees only their own, an admin sees every owner's.
+  const owners = [...new Set(members.map((agent) => agent.ownerUserId).filter((id): id is string => id !== null))]
+  return createAcpSSEStream(c, owners, groupId, Number.isFinite(fromSeqNum) ? fromSeqNum : 0)
 })
 
 /** WS /acp/ws — acp-link agent transport (API key only). */

@@ -16,7 +16,7 @@ import type { Repositories } from '../../db/repositories/types.js'
 import acpRoutes, { websocket as acpWebsocket } from '../../routes/acp/index.js'
 import { handleRelayOpen } from '../acp-relay-handler.js'
 import { handleAcpWsClose, handleAcpWsMessage, handleAcpWsOpen } from '../acp-ws-handler.js'
-import { getAllAcpEventBuses, getAcpEventBus, removeAcpEventBus } from '../event-bus.js'
+import { acpBusKey, getAllAcpEventBuses, getAcpEventBus, removeAcpEventBus } from '../event-bus.js'
 
 interface MockWs {
   readyState: number
@@ -238,7 +238,7 @@ describe('GET /acp/channel-groups/:id/events', () => {
       bridgeId: 'group-member',
       machineName: 'mine',
     })
-    const bus = getAcpEventBus('group-member')
+    const bus = getAcpEventBus(acpBusKey(s.member.id, 'group-member'))
     bus.publish({ id: 'e1', sessionId: 'group-member', type: 'first', payload: { n: 1 }, direction: 'outbound' })
     bus.publish({ id: 'e2', sessionId: 'group-member', type: 'second', payload: { n: 2 }, direction: 'outbound' })
 
@@ -254,6 +254,51 @@ describe('GET /acp/channel-groups/:id/events', () => {
     expect(text).toContain('"type":"second"')
     expect(text).toContain('"seqNum":2')
     expect(text).not.toContain('"type":"first"')
+    await reader?.cancel()
+  })
+
+  test('the same channel_group_id from two owners stays isolated', async () => {
+    await s.repos.environments.create({
+      ownerUserId: s.member.id,
+      workerType: 'acp',
+      bridgeId: 'shared-group',
+    })
+    await s.repos.environments.create({
+      ownerUserId: s.other.id,
+      workerType: 'acp',
+      bridgeId: 'shared-group',
+    })
+
+    const res = await app.request('/acp/channel-groups/shared-group/events', { headers: bearer(s.memberToken) })
+    expect(res.status).toBe(200)
+
+    // A member subscribes to their own owner-scoped bus only: traffic the other
+    // owner publishes under the same group id never reaches this stream. The
+    // foreign event is published first so any leak would be enqueued before it.
+    getAcpEventBus(acpBusKey(s.other.id, 'shared-group')).publish({
+      id: 'o1',
+      sessionId: 'shared-group',
+      type: 'other-only',
+      payload: {},
+      direction: 'outbound',
+    })
+    getAcpEventBus(acpBusKey(s.member.id, 'shared-group')).publish({
+      id: 'm1',
+      sessionId: 'shared-group',
+      type: 'member-only',
+      payload: {},
+      direction: 'outbound',
+    })
+
+    const reader = res.body?.getReader()
+    const decoder = new TextDecoder()
+    let text = ''
+    for (let i = 0; i < 10 && !text.includes('member-only'); i++) {
+      const chunk = await reader?.read()
+      text += decoder.decode(chunk?.value)
+    }
+    expect(text).toContain('member-only')
+    expect(text).not.toContain('other-only')
     await reader?.cancel()
   })
 })
@@ -332,7 +377,7 @@ describe('ACP agent WebSocket handlers', () => {
     expect(ws.sent.filter((line) => line.includes('"identified"'))).toHaveLength(1)
     expect(output).toContain('Already identified')
     // Exactly one bus subscription: a second bind would leak the earlier subscriber.
-    expect(getAcpEventBus('group-dup-identify').subscriberCount()).toBe(1)
+    expect(getAcpEventBus(acpBusKey(s.member.id, 'group-dup-identify')).subscriberCount()).toBe(1)
 
     const active = await s.repos.environments.listActive({ ownerUserId: s.member.id })
     expect(active.filter((record) => record.id === env.id)).toHaveLength(1)
@@ -362,7 +407,7 @@ describe('ACP agent WebSocket handlers', () => {
     await waitFor(() => ws.sent.some((line) => line.includes('"identified"')))
 
     expect(ws.sent.join('')).toContain(env.id)
-    expect(getAcpEventBus('group-retry').subscriberCount()).toBe(1)
+    expect(getAcpEventBus(acpBusKey(s.member.id, 'group-retry')).subscriberCount()).toBe(1)
 
     handleAcpWsClose(s.repos, asWs(ws), 'ws-retry')
   })
@@ -378,7 +423,7 @@ describe('ACP agent WebSocket handlers', () => {
 
     expect(ws.sent.filter((line) => line.includes('"registered"'))).toHaveLength(1)
     expect(ws.sent.join('')).toContain('Already registered')
-    expect(getAcpEventBus('group-dup-register').subscriberCount()).toBe(1)
+    expect(getAcpEventBus(acpBusKey(s.member.id, 'group-dup-register')).subscriberCount()).toBe(1)
 
     const agents = await s.repos.environments.listByWorkerType('acp', { ownerUserId: s.member.id })
     expect(agents).toHaveLength(1)

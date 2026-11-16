@@ -3,11 +3,15 @@
  *
  * ACP traffic is in-memory only (R25): the stream replays retained events after
  * `fromSeqNum` from the channel-group `AcpEventBus`, then fans out live events.
+ *
+ * Buses are owner-scoped, so the stream subscribes once per visible owner of the
+ * group. A member only ever passes their own id; an admin viewing a group that two
+ * owners reused sees the merged stream.
  */
 
 import type { Context } from 'hono'
 
-import { getAcpEventBus } from './event-bus.js'
+import { acpBusKey, getAcpEventBus } from './event-bus.js'
 
 const KEEPALIVE_MS = 15000
 
@@ -22,9 +26,14 @@ function unrefTimer(timer: ReturnType<typeof setInterval>): void {
   ;(timer as { unref?: () => void }).unref?.()
 }
 
-/** Create an SSE response stream for an ACP channel group. */
-export function createAcpSSEStream(c: Context, channelGroupId: string, fromSeqNum = 0): Response {
-  const bus = getAcpEventBus(channelGroupId)
+/** Create an SSE response stream for an ACP channel group visible to the listed owners. */
+export function createAcpSSEStream(
+  c: Context,
+  ownerUserIds: string[],
+  channelGroupId: string,
+  fromSeqNum = 0,
+): Response {
+  const buses = ownerUserIds.map((ownerId) => getAcpEventBus(acpBusKey(ownerId, channelGroupId)))
   const encoder = new TextEncoder()
 
   let dispose = () => {}
@@ -32,13 +41,13 @@ export function createAcpSSEStream(c: Context, channelGroupId: string, fromSeqNu
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       let closed = false
-      let unsub = () => {}
+      const unsubs: Array<() => void> = []
       let keepalive: ReturnType<typeof setInterval> | null = null
 
       const cleanup = () => {
         if (closed) return
         closed = true
-        unsub()
+        for (const unsub of unsubs) unsub()
         if (keepalive) clearInterval(keepalive)
       }
       dispose = cleanup
@@ -63,9 +72,12 @@ export function createAcpSSEStream(c: Context, channelGroupId: string, fromSeqNu
         return `id: ${event.seqNum}\nevent: message\ndata: ${data}\n\n`
       }
 
-      // Replay retained events when reconnecting.
+      // Replay retained events when reconnecting. Each owner bus numbers its events
+      // independently, so merge and order the replay by seqNum.
       if (fromSeqNum > 0) {
-        for (const event of bus.getEventsSince(fromSeqNum)) {
+        const replay = buses.flatMap((bus) => bus.getEventsSince(fromSeqNum))
+        replay.sort((a, b) => a.seqNum - b.seqNum)
+        for (const event of replay) {
           send(frame(event))
         }
       }
@@ -73,10 +85,14 @@ export function createAcpSSEStream(c: Context, channelGroupId: string, fromSeqNu
       // Initial keepalive.
       send(': keepalive\n\n')
 
-      // Subscribe to new events.
-      unsub = bus.subscribe((event) => {
-        send(frame(event))
-      })
+      // Subscribe to new events from every visible owner's bus.
+      for (const bus of buses) {
+        unsubs.push(
+          bus.subscribe((event) => {
+            send(frame(event))
+          }),
+        )
+      }
 
       keepalive = setInterval(() => send(': keepalive\n\n'), KEEPALIVE_MS)
       unrefTimer(keepalive)

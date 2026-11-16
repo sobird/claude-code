@@ -18,7 +18,7 @@ import type { AuthUser } from '../auth/context.js'
 import { loadConfig } from '../config.js'
 import type { EnvironmentRecord } from '../contracts.js'
 import type { Repositories } from '../db/repositories/types.js'
-import { getAcpEventBus } from './event-bus.js'
+import { acpBusKey, getAcpEventBus } from './event-bus.js'
 import type { SessionEvent } from './event-bus.js'
 
 // Per-connection state
@@ -27,6 +27,8 @@ interface AcpConnectionEntry {
   /** Synchronous in-flight guard: a register/identify is awaiting the DB. */
   binding: boolean
   channelGroupId: string
+  /** Owner of the bound environment — scopes the channel-group bus. Set on bind. */
+  ownerUserId: string | null
   user: AuthUser
   unsub: (() => void) | null
   keepalive: ReturnType<typeof setInterval> | null
@@ -56,9 +58,14 @@ function canAccessAgent(user: AuthUser, record: EnvironmentRecord): boolean {
   return user.role === 'admin' || record.ownerUserId === user.id
 }
 
+/** Bus key for a bound connection's channel group (owner-scoped). */
+function busKeyFor(entry: AcpConnectionEntry): string {
+  return acpBusKey(entry.ownerUserId ?? entry.user.id, entry.channelGroupId)
+}
+
 /** Subscribe the connection to outbound events of its channel group. */
 function bindChannelGroup(entry: AcpConnectionEntry): void {
-  const bus = getAcpEventBus(entry.channelGroupId)
+  const bus = getAcpEventBus(busKeyFor(entry))
   entry.unsub = bus.subscribe((event: SessionEvent) => {
     if (entry.ws.readyState !== 1) return
     if (event.direction !== 'outbound') return
@@ -98,6 +105,7 @@ export function handleAcpWsOpen(repos: Repositories, ws: WSContext, wsId: string
     agentId: null,
     binding: false,
     channelGroupId: '',
+    ownerUserId: null,
     user,
     unsub: null,
     keepalive,
@@ -142,6 +150,7 @@ async function handleRegister(
 
     entry.agentId = record.id
     entry.channelGroupId = channelGroupId
+    entry.ownerUserId = record.ownerUserId
     entry.capabilities = capabilities || null
     bindChannelGroup(entry)
 
@@ -191,6 +200,7 @@ async function handleIdentify(
     const channelGroupId = record.bridgeId || `group_${randomUUID().replace(/-/g, '').slice(0, 12)}`
     entry.agentId = record.id
     entry.channelGroupId = channelGroupId
+    entry.ownerUserId = record.ownerUserId
     entry.capabilities = record.capabilities || null
     bindChannelGroup(entry)
 
@@ -255,7 +265,7 @@ export function handleAcpWsMessage(repos: Repositories, ws: WSContext, wsId: str
     repos.environments.update(entry.agentId, { lastPollAt: new Date() }).catch(() => {})
 
     // Pass-through: publish to channel group EventBus as inbound.
-    const bus = getAcpEventBus(entry.channelGroupId)
+    const bus = getAcpEventBus(busKeyFor(entry))
     bus.publish({
       id: randomUUID(),
       sessionId: entry.channelGroupId,
@@ -292,7 +302,7 @@ export function handleAcpWsClose(
 
     // Notify all relay connections that this agent is gone.
     if (entry.channelGroupId) {
-      const bus = getAcpEventBus(entry.channelGroupId)
+      const bus = getAcpEventBus(busKeyFor(entry))
       bus.publish({
         id: randomUUID(),
         sessionId: entry.channelGroupId,

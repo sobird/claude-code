@@ -143,6 +143,15 @@ export class AcpEventBus {
 
 const acpBuses = new Map<string, AcpEventBus>()
 
+/**
+ * Namespaced key for an ACP channel-group bus. `channel_group_id` is client-supplied and
+ * only meaningful within one owner's environments, so the bus is keyed by owner too —
+ * otherwise two owners that pick the same id would share one event bus.
+ */
+export function acpBusKey(ownerUserId: string, channelGroupId: string): string {
+  return `${ownerUserId}:${channelGroupId}`
+}
+
 export function getAcpEventBus(channelGroupId: string): AcpEventBus {
   let bus = acpBuses.get(channelGroupId)
   if (!bus) {

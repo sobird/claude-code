@@ -13,7 +13,7 @@ import type { WSContext } from 'hono/ws'
 import type { AuthUser } from '../auth/context.js'
 import type { Repositories } from '../db/repositories/types.js'
 import { findAcpConnectionByAgentId, sendToAgentWs } from './acp-ws-handler.js'
-import { getAcpEventBus } from './event-bus.js'
+import { acpBusKey, getAcpEventBus } from './event-bus.js'
 import type { SessionEvent } from './event-bus.js'
 
 // Per-relay connection state
@@ -87,8 +87,9 @@ export async function handleRelayOpen(
   unrefTimer(keepalive)
 
   // Subscribe to the channel group bus — forward agent responses to the frontend.
+  // The bus is keyed by the agent's owner, not just the client-supplied group id.
   const channelGroupId = agentConn.channelGroupId
-  const bus = getAcpEventBus(channelGroupId)
+  const bus = getAcpEventBus(acpBusKey(record.ownerUserId ?? user.id, channelGroupId))
   const unsub = bus.subscribe((event: SessionEvent) => {
     if (ws.readyState !== 1) return
     if (event.direction !== 'inbound') return
