@@ -42,6 +42,26 @@ describe('reduceSessionEvent', () => {
     expect(message?.chunks).toEqual([{ type: 'message', text: 'Hello world' }])
   })
 
+  test('a replayed assistant message (same uuid, new seqNum) is not rendered twice', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', { uuid: 'msg-a', content: 'pong', message: { id: 'm1' } }),
+    )
+    state = reduceSessionEvent(state, event('user', { content: 'next turn' }))
+    // The bridge replays history into the CLI on reconnect; the CLI echoes it.
+    state = reduceSessionEvent(state, event('assistant', { uuid: 'msg-a', content: 'pong', message: { id: 'm1' } }))
+
+    expect(assistants(state)).toHaveLength(1)
+    expect(assistants(state)[0]?.chunks).toEqual([{ type: 'message', text: 'pong' }])
+  })
+
+  test('replay acknowledgments of a user message are ignored', () => {
+    let state = reduceSessionEvent(initialChatState, event('user', { content: 'hello', uuid: 'user-1' }))
+    state = reduceSessionEvent(state, event('user', { content: 'hello', uuid: 'user-1', isReplay: true }))
+
+    expect(state.entries.filter((entry) => entry.type === 'user_message')).toHaveLength(1)
+  })
+
   test('tool_use creates a running tool call', () => {
     const state = reduceSessionEvent(
       initialChatState,

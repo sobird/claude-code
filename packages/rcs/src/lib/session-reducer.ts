@@ -92,6 +92,13 @@ export interface ChatState {
   seenSeqNums: Set<number>
   /** Events without a numeric `seqNum` dedupe by uuid instead. */
   seenEventIds: Set<string>
+  /**
+   * Assistant message uuids already rendered. The bridge replays history into
+   * the CLI on every ingress reconnect and the CLI echoes assistant messages
+   * back, so the same message arrives again under a fresh durable seqNum.
+   * Dedupe by message uuid so the replay does not repeat text in the UI.
+   */
+  seenAssistantUuids: Set<string>
   error: string | null
 }
 
@@ -118,6 +125,7 @@ export const initialChatState: ChatState = {
   lastSeqNum: 0,
   seenSeqNums: new Set<number>(),
   seenEventIds: new Set<string>(),
+  seenAssistantUuids: new Set<string>(),
   error: null,
 }
 
@@ -248,6 +256,12 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
   const seqNum = numericSeqNum(event)
   const nextId = event.id || `assistant-${seqNum ?? state.entries.length}`
 
+  // A replayed assistant message carries the uuid it was first rendered under.
+  const messageUuid = asText(payload.uuid) || nextId
+  if (messageUuid && state.seenAssistantUuids.has(messageUuid)) return state
+  const seenAssistantUuids = new Set(state.seenAssistantUuids)
+  seenAssistantUuids.add(messageUuid)
+
   let entries = state.entries
   const text = typeof payload.content === 'string' ? payload.content : extractEventText(payload)
   if (text) entries = appendAssistantText(entries, text, nextId)
@@ -259,7 +273,7 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
     entries = [...entries, toolCallFromBlock(block, `call-${seqNum ?? entries.length}-${i}`)]
   }
 
-  return entries === state.entries ? state : { ...state, entries }
+  return { ...state, entries, seenAssistantUuids }
 }
 
 function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
@@ -464,9 +478,11 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       // Both directions render: the gateway persists outbound sends as `user`
       // events but does not echo them back inbound, so treating only inbound as
       // displayable would lose every sent message on reload.
+      const payload = asRecord(event.payload) ?? {}
+      // Replay acknowledgments echo a message the history already holds.
+      if (payload.isReplay === true) return state
       const text = extractEventText(event.payload)
       if (!text) return state
-      const payload = asRecord(event.payload) ?? {}
       const seqNum = numericSeqNum(event)
       const id = asText(payload.uuid) || (seqNum !== null ? String(seqNum) : event.id || `user-${state.entries.length}`)
       // Dedupe by uuid: an optimistic send and its history/echo counterpart
