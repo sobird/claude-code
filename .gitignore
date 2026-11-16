@@ -42,3 +42,6 @@ package
 *.njsproj
 *.sln
 *.sw?
+
+# Local git worktrees
+.worktrees/
