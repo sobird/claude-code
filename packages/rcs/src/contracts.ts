@@ -94,6 +94,23 @@ export interface AttachmentRecord {
   createdAt: Date
 }
 
+export interface PushSubscriptionRecord {
+  id: string
+  userId: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  userAgent: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface PushVapidKeys {
+  publicKey: string
+  privateKey: string
+  subject: string
+}
+
 export interface SessionEventRecord {
   /** Globally monotonic bigserial id, used as the SSE `Last-Event-ID` / seqNum. */
   id: number

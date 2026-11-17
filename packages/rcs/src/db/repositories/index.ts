@@ -12,6 +12,8 @@ import { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys
 import { createAttachmentRepository, createMemoryAttachmentRepository } from './attachments'
 import { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments'
 import { createEventRepository, createMemoryEventRepository } from './events'
+import { createMemoryPushSettingsRepository, createPushSettingsRepository } from './push-settings'
+import { createMemoryPushSubscriptionRepository, createPushSubscriptionRepository } from './push-subscriptions'
 import { createMemorySessionWorkerRepository, createSessionWorkerRepository } from './session-workers'
 import { createMemorySessionRepository, createSessionRepository } from './sessions'
 import type { Repositories } from './types'
@@ -28,6 +30,8 @@ export function createRepositories(db: Database): Repositories {
     sessionWorkers: createSessionWorkerRepository(db),
     events: createEventRepository(db),
     attachments: createAttachmentRepository(db),
+    pushSubscriptions: createPushSubscriptionRepository(db),
+    pushSettings: createPushSettingsRepository(db),
   }
 }
 
@@ -41,6 +45,8 @@ export function createMemoryRepositories(): Repositories {
     sessionWorkers: createMemorySessionWorkerRepository(),
     events: createMemoryEventRepository(),
     attachments: createMemoryAttachmentRepository(),
+    pushSubscriptions: createMemoryPushSubscriptionRepository(),
+    pushSettings: createMemoryPushSettingsRepository(),
   }
 }
 
@@ -54,6 +60,8 @@ export { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys
 export { createAttachmentRepository, createMemoryAttachmentRepository } from './attachments'
 export { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments'
 export { createEventRepository, createMemoryEventRepository } from './events'
+export { createMemoryPushSettingsRepository, createPushSettingsRepository } from './push-settings'
+export { createMemoryPushSubscriptionRepository, createPushSubscriptionRepository } from './push-subscriptions'
 export { createMemorySessionRepository, createSessionRepository } from './sessions'
 export { createMemorySessionWorkerRepository, createSessionWorkerRepository } from './session-workers'
 export type {
@@ -63,6 +71,7 @@ export type {
   CreateAttachmentInput,
   CreateApiKeyInput,
   CreateEnvironmentInput,
+  CreatePushSubscriptionInput,
   CreateSessionInput,
   CreateUserInput,
   EnqueueWorkItemInput,
@@ -71,6 +80,8 @@ export type {
   EventRepository,
   FindReusableEnvironmentInput,
   ListActiveEnvironmentsOptions,
+  PushSettingsRepository,
+  PushSubscriptionRepository,
   Repositories,
   SessionListOptions,
   SessionPatch,

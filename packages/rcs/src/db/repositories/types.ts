@@ -11,6 +11,8 @@ import type {
   ApiKeyRecord,
   AttachmentRecord,
   EnvironmentRecord,
+  PushSubscriptionRecord,
+  PushVapidKeys,
   Role,
   SessionEventRecord,
   SessionRecord,
@@ -161,6 +163,28 @@ export interface SessionRepository {
   archive(id: string, at: Date): Promise<void>
 }
 
+export interface CreatePushSubscriptionInput {
+  endpoint: string
+  p256dh: string
+  auth: string
+  userAgent?: string | null
+}
+
+export interface PushSubscriptionRepository {
+  /** Insert or update the row for this endpoint, reassigning it to `userId`. */
+  upsertForUser(userId: string, input: CreatePushSubscriptionInput): Promise<PushSubscriptionRecord>
+  /** Newest first. */
+  listByUser(userId: string): Promise<PushSubscriptionRecord[]>
+  deleteById(id: string): Promise<void>
+  deleteByEndpoint(userId: string, endpoint: string): Promise<void>
+}
+
+export interface PushSettingsRepository {
+  get(): Promise<PushVapidKeys | null>
+  /** Upsert the single row (`id = 'default'`). */
+  set(keys: PushVapidKeys): Promise<void>
+}
+
 /** Every repository module, composed by `createRepositories` / `createMemoryRepositories`. */
 export interface Repositories {
   users: UserRepository
@@ -171,6 +195,8 @@ export interface Repositories {
   sessionWorkers: SessionWorkerRepository
   events: EventRepository
   attachments: AttachmentRepository
+  pushSubscriptions: PushSubscriptionRepository
+  pushSettings: PushSettingsRepository
 }
 
 export interface CreateAttachmentInput {

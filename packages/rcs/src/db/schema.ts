@@ -198,6 +198,32 @@ export const attachments = pgTable(
   (table) => [uniqueIndex('attachments_owner_sha256_idx').on(table.ownerUserId, table.sha256)],
 )
 
+export const pushSettings = pgTable('push_settings', {
+  id: text('id').primaryKey(),
+  publicKey: text('public_key').notNull(),
+  privateKey: text('private_key').notNull(),
+  subject: text('subject').notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull().unique(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    userAgent: text('user_agent'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [index('push_subscriptions_user_idx').on(table.userId)],
+)
+
 export const schema = {
   users,
   apiKeys,
@@ -207,4 +233,6 @@ export const schema = {
   workItems,
   sessionEvents,
   attachments,
+  pushSettings,
+  pushSubscriptions,
 }
