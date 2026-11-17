@@ -946,6 +946,22 @@ describe('Web Session Routes', () => {
     expect(body.owner_user_id).toBe(s.member.id)
   })
 
+  test('POST /web/sessions localizes the default title from Accept-Language', async () => {
+    const en = await app.request('/web/sessions', {
+      method: 'POST',
+      headers: { ...bearer(s.memberToken), 'Accept-Language': 'en-US' },
+      body: '{}',
+    })
+    expect(((await resJson(en)) as { title: string }).title).toBe('New Session')
+
+    const zh = await app.request('/web/sessions', {
+      method: 'POST',
+      headers: { ...bearer(s.memberToken), 'Accept-Language': 'zh-TW' },
+      body: '{}',
+    })
+    expect(((await resJson(zh)) as { title: string }).title).toBe('新会话')
+  })
+
   test('POST /web/sessions onto another member environment is forbidden', async () => {
     const envRes = await app.request('/v1/environments/bridge', {
       method: 'POST',

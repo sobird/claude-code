@@ -12,6 +12,7 @@ import { Hono } from 'hono'
 import type { AppContext, AppEnv } from '../../auth/context.js'
 import { isSessionClosedStatus, toWebSessionId } from '../../contracts.js'
 import type { SessionRecord } from '../../contracts.js'
+import { defaultSessionTitle, requestLocale } from '../../i18n/default-titles.js'
 import { getAutomationStateSnapshot } from '../../services/automationState.js'
 import {
   createSession,
@@ -100,7 +101,10 @@ app.post('/sessions', legacyUserAuth, async (c) => {
   const session = await createSession(repos, {
     environmentId,
     ownerUserId: c.get('user').id,
-    title: typeof body.title === 'string' && body.title ? body.title : 'New Session',
+    title:
+      typeof body.title === 'string' && body.title
+        ? body.title
+        : defaultSessionTitle(requestLocale(c.req.header('accept-language'))),
     source: 'web',
     permissionMode: typeof body.permission_mode === 'string' ? body.permission_mode : 'default',
   })

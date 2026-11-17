@@ -12,6 +12,7 @@ import { generateApiKey } from '../../auth/api-key.js'
 import type { AppEnv } from '../../auth/context.js'
 import { hashPassword, verifyPassword } from '../../auth/password.js'
 import type { ApiKeyRecord } from '../../contracts.js'
+import { defaultApiKeyName, requestLocale } from '../../i18n/default-titles.js'
 import { legacyUserAuth, readJson } from '../common.js'
 
 const app = new Hono<AppEnv>()
@@ -55,7 +56,10 @@ app.get('/api-keys', legacyUserAuth, async (c) => {
 app.post('/api-keys', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const body = await readJson(c)
-  const name = typeof body.name === 'string' && body.name ? body.name : 'API key'
+  const name =
+    typeof body.name === 'string' && body.name
+      ? body.name
+      : defaultApiKeyName(requestLocale(c.req.header('accept-language')))
   const generated = generateApiKey()
   const record = await repos.apiKeys.create({
     userId: c.get('user').id,
