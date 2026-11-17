@@ -371,7 +371,8 @@
       "insecure": "Notifications require HTTPS. Open the app over a secure connection.",
       "iosInstall": "Add this app to your Home Screen to enable notifications.",
       "denied": "Notifications are blocked. Allow them in your browser settings, then reload.",
-      "error": "Could not update notifications. Try again."
+      "error": "Could not update notifications. Try again.",
+      "subscribeTimeout": "Subscribing timed out — the browser could not reach its push service."
     }
   },
   "admin": {

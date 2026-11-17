@@ -32,6 +32,29 @@ export function detectPushState(env: PushEnvironment): PushState {
   return 'available'
 }
 
+/**
+ * Reject with a caller-supplied error when `promise` settles slower than `ms`.
+ * `pushManager.subscribe()` can hang indefinitely when the browser's push
+ * service is unreachable, leaving the settings card stuck on "enabling"; a
+ * timeout turns that into a retryable error. The underlying promise is left
+ * running (there is no cancel), so a late resolution is ignored.
+ */
+export function withTimeout<T>(promise: Promise<T>, ms: number, message: () => Error): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(message()), ms)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error: unknown) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 /** Decode a URL-safe base64 VAPID key into the bytes `applicationServerKey` expects. */
 export function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)

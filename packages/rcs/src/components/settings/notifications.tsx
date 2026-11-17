@@ -10,6 +10,7 @@ import {
   detectPushState,
   subscriptionToRequest,
   urlBase64ToUint8Array,
+  withTimeout,
   type PushEnvironment,
   type PushState,
 } from '../../lib/push-subscription'
@@ -21,6 +22,10 @@ interface PushConfig {
   enabled: boolean
   publicKey: string | null
 }
+
+// Both `serviceWorker.ready` and `pushManager.subscribe()` can hang forever when
+// the browser cannot reach its push service; bound them so the button recovers.
+const SUBSCRIBE_TIMEOUT_MS = 10_000
 
 /** Read the browser capabilities the pure state machine needs. Client-only. */
 function readEnvironment(): PushEnvironment {
@@ -116,11 +121,16 @@ export function Notifications() {
         return
       }
 
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(config.publicKey),
-      })
+      const timeoutMessage = () => new Error(t('subscribeTimeout'))
+      const registration = await withTimeout(navigator.serviceWorker.ready, SUBSCRIBE_TIMEOUT_MS, timeoutMessage)
+      const subscription = await withTimeout(
+        registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(config.publicKey),
+        }),
+        SUBSCRIBE_TIMEOUT_MS,
+        timeoutMessage,
+      )
       const request = subscriptionToRequest(subscription.toJSON())
       if (!request) {
         setError(new Error(t('error')))

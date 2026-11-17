@@ -4,6 +4,7 @@ import {
   detectPushState,
   subscriptionToRequest,
   urlBase64ToUint8Array,
+  withTimeout,
   type PushEnvironment,
 } from '../push-subscription.js'
 
@@ -61,6 +62,21 @@ describe('urlBase64ToUint8Array', () => {
 
   test('pads and translates base64url alphabet', () => {
     expect(Array.from(urlBase64ToUint8Array('_-8'))).toEqual([255, 239])
+  })
+})
+
+describe('withTimeout', () => {
+  test('resolves with the value when the promise settles in time', async () => {
+    await expect(withTimeout(Promise.resolve('ok'), 50, () => new Error('late'))).resolves.toBe('ok')
+  })
+
+  test('rejects with the supplied error when the promise is too slow', async () => {
+    const slow = new Promise<string>(() => {})
+    await expect(withTimeout(slow, 1, () => new Error('timed out'))).rejects.toThrow('timed out')
+  })
+
+  test('passes through the original rejection', async () => {
+    await expect(withTimeout(Promise.reject(new Error('boom')), 50, () => new Error('late'))).rejects.toThrow('boom')
   })
 })
 
