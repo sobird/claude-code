@@ -3,6 +3,13 @@
     "appName": "远程控制",
     "appDescription": "用于 Claude Code 会话的远程控制",
     "account": "账户",
+    "dashboard": "仪表盘",
+    "openSessions": "打开会话",
+    "sessions": "会话",
+    "sessionsDescription": "打开一个会话，或从仪表盘开始新会话。",
+    "settings": "设置",
+    "admin": "管理",
+    "signOut": "退出登录",
     "retry": "重试",
     "cancel": "取消",
     "done": "完成",
@@ -31,6 +38,15 @@
     },
     "defaultSessionTitle": "新会话",
     "defaultApiKeyName": "API 密钥"
+  },
+  "auth": {
+    "pageTitle": "登录 · 远程控制服务器",
+    "brand": "远程控制服务器",
+    "title": "登录",
+    "subtitle": "使用你的 RCS 账户继续。",
+    "username": "用户名",
+    "password": "密码",
+    "invalidCredentials": "用户名或密码无效。"
   },
   "settings": {
     "language": {

@@ -1,3 +1,7 @@
+'use client'
+
+import { useTranslations } from 'next-intl'
+
 import { cn } from '../../lib/utils'
 
 const statusStyles: Record<string, string> = {
@@ -12,6 +16,8 @@ const statusStyles: Record<string, string> = {
 
 /** Small pill describing a session or environment status. */
 export function StatusBadge({ status }: { status: string }) {
+  const t = useTranslations('common')
+  const label = t.has(`status.${status}`) ? t(`status.${status}`) : status
   return (
     <span
       className={cn(
@@ -19,7 +25,7 @@ export function StatusBadge({ status }: { status: string }) {
         statusStyles[status] ?? 'bg-surface-3 text-text-secondary',
       )}
     >
-      {status}
+      {label}
     </span>
   )
 }

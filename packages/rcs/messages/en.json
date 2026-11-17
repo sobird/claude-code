@@ -3,6 +3,13 @@
     "appName": "Remote Control",
     "appDescription": "Remote control for Claude Code sessions",
     "account": "Account",
+    "dashboard": "Dashboard",
+    "openSessions": "Open sessions",
+    "sessions": "Sessions",
+    "sessionsDescription": "Open a session or start a new one from the dashboard.",
+    "settings": "Settings",
+    "admin": "Admin",
+    "signOut": "Sign out",
     "retry": "Retry",
     "cancel": "Cancel",
     "done": "Done",
@@ -31,6 +38,15 @@
     },
     "defaultSessionTitle": "New Session",
     "defaultApiKeyName": "API key"
+  },
+  "auth": {
+    "pageTitle": "Sign in · Remote Control Server",
+    "brand": "Remote Control Server",
+    "title": "Sign in",
+    "subtitle": "Use your RCS account to continue.",
+    "username": "Username",
+    "password": "Password",
+    "invalidCredentials": "Invalid username or password."
   },
   "settings": {
     "language": {

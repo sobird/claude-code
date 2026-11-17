@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { AuthError } from 'next-auth'
+import { getTranslations } from 'next-intl/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
@@ -10,8 +11,9 @@ import { signInUrlHasError } from '../../../lib/auth-redirect'
 import { APP_BASE_PATH } from '../../../lib/auth.config'
 import { getRepositories } from '../../../lib/repos'
 
-export const metadata: Metadata = {
-  title: 'Sign in · Remote Control Server',
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('auth')
+  return { title: t('pageTitle') }
 }
 
 /**
@@ -73,14 +75,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams
   const next = sanitizeNext(params.next)
   const failed = params.error === 'invalid' || params.error === 'CredentialsSignin'
+  const t = await getTranslations('auth')
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-stone-50 px-6 py-12 text-stone-900">
       <div className="w-full max-w-sm space-y-8 rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
         <header className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-orange-700">Remote Control Server</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-          <p className="text-sm text-stone-500">Use your RCS account to continue.</p>
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-orange-700">{t('brand')}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
+          <p className="text-sm text-stone-500">{t('subtitle')}</p>
         </header>
 
         {failed ? (
@@ -88,7 +91,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             role="alert"
             className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800"
           >
-            Invalid username or password.
+            {t('invalidCredentials')}
           </p>
         ) : null}
 
@@ -96,7 +99,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <input type="hidden" name="next" value={next} />
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-stone-700">Username</span>
+            <span className="text-sm font-medium text-stone-700">{t('username')}</span>
             <input
               name="username"
               type="text"
@@ -108,7 +111,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-stone-700">Password</span>
+            <span className="text-sm font-medium text-stone-700">{t('password')}</span>
             <input
               name="password"
               type="password"
@@ -122,7 +125,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             type="submit"
             className="w-full rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
           >
-            Sign in
+            {t('title')}
           </button>
         </form>
       </div>

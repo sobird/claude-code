@@ -1,6 +1,7 @@
 'use client'
 
 import { LayoutGrid, LogOut, Menu, Settings, Shield } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -39,9 +40,11 @@ function BrandMark() {
 export function Navbar({ user, signOutAction }: NavbarProps) {
   const { sessions, connection } = useDashboardData()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const t = useTranslations('common')
 
   const visibleSessions = selectVisibleSessions(toOwnedSessions(sessions), user)
   const initial = (user.name || '?').charAt(0).toUpperCase()
+  const roleLabel = t.has('role.' + user.role) ? t('role.' + user.role) : user.role
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface-1">
@@ -53,7 +56,7 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
             size="icon-sm"
             className="md:hidden"
             onClick={() => setDrawerOpen(true)}
-            aria-label="Open sessions"
+            aria-label={t('openSessions')}
           >
             <Menu className="h-4 w-4" />
           </Button>
@@ -63,7 +66,7 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
             className="flex items-center gap-2 font-display text-base font-semibold text-text-primary no-underline sm:text-lg"
           >
             <BrandMark />
-            <span className="truncate">Remote Control</span>
+            <span className="truncate">{t('appName')}</span>
           </Link>
         </div>
 
@@ -72,7 +75,7 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
             <StatusIndicator state={connection} />
           </div>
 
-          <Button asChild variant="ghost" size="icon-sm" className="hidden md:inline-flex" aria-label="Dashboard">
+          <Button asChild variant="ghost" size="icon-sm" className="hidden md:inline-flex" aria-label={t('dashboard')}>
             <Link href="/">
               <LayoutGrid className="h-4 w-4" />
             </Link>
@@ -86,26 +89,26 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/15 text-xs font-semibold text-brand">
                   {initial}
                 </span>
-                <span className="hidden max-w-28 truncate sm:inline">{user.name || 'Account'}</span>
+                <span className="hidden max-w-28 truncate sm:inline">{user.name || t('account')}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuLabel>
-                <div className="truncate text-sm font-medium text-text-primary">{user.name || 'Account'}</div>
-                <div className="text-xs font-normal capitalize text-text-muted">{user.role}</div>
+                <div className="truncate text-sm font-medium text-text-primary">{user.name || t('account')}</div>
+                <div className="text-xs font-normal capitalize text-text-muted">{roleLabel}</div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/settings" className="w-full no-underline">
                   <Settings className="h-4 w-4" />
-                  Settings
+                  {t('settings')}
                 </Link>
               </DropdownMenuItem>
               {user.role === 'admin' ? (
                 <DropdownMenuItem asChild>
                   <Link href="/admin" className="w-full no-underline">
                     <Shield className="h-4 w-4" />
-                    Admin
+                    {t('admin')}
                   </Link>
                 </DropdownMenuItem>
               ) : null}
@@ -114,7 +117,7 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
                 <DropdownMenuItem asChild>
                   <button type="submit" className="w-full">
                     <LogOut className="h-4 w-4" />
-                    Sign out
+                    {t('signOut')}
                   </button>
                 </DropdownMenuItem>
               </form>
@@ -126,10 +129,8 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DialogContent className="max-h-[80vh] overflow-hidden bg-surface-1 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold text-text-primary">Sessions</DialogTitle>
-            <DialogDescription className="text-sm text-text-muted">
-              Open a session or start a new one from the dashboard.
-            </DialogDescription>
+            <DialogTitle className="font-display text-lg font-semibold text-text-primary">{t('sessions')}</DialogTitle>
+            <DialogDescription className="text-sm text-text-muted">{t('sessionsDescription')}</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
             <SessionList sessions={visibleSessions} />
