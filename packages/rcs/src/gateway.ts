@@ -29,6 +29,7 @@ import webAttachments from './routes/web/attachments.js'
 import webAuth from './routes/web/auth.js'
 import webControl from './routes/web/control.js'
 import webEnvironments from './routes/web/environments.js'
+import webPush from './routes/web/push.js'
 import webSessions from './routes/web/sessions.js'
 
 export interface CreateGatewayOptions {
@@ -84,6 +85,7 @@ export function createGateway({ config, repos }: CreateGatewayOptions): Hono<App
   app.route('/web', webEnvironments)
   app.route('/web', webAccount)
   app.route('/web', webAdmin)
+  app.route('/web', webPush)
 
   app.route('/acp', acpRoutes)
 
