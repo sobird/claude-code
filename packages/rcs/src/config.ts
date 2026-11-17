@@ -23,6 +23,9 @@ export interface GatewayConfig {
   wsKeepaliveInterval: number
   eventReplayLimit: number
   webCorsOrigins: string[]
+  vapidPublicKey: string | null
+  vapidPrivateKey: string | null
+  vapidSubject: string
 }
 
 const DEFAULT_PORT = 4000
@@ -35,12 +38,18 @@ const DEFAULT_DISCONNECT_TIMEOUT = 300
 const DEFAULT_WS_IDLE_TIMEOUT = 30
 const DEFAULT_WS_KEEPALIVE_INTERVAL = 20
 const DEFAULT_EVENT_REPLAY_LIMIT = 5000
+const DEFAULT_VAPID_SUBJECT = 'mailto:noreply@localhost'
 
 function readInt(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
   const raw = env[name]?.trim()
   if (!raw) return fallback
   const value = Number.parseInt(raw, 10)
   return Number.isFinite(value) ? value : fallback
+}
+
+function readOptional(env: NodeJS.ProcessEnv, name: string): string | null {
+  const raw = env[name]?.trim()
+  return raw ? raw : null
 }
 
 function readList(env: NodeJS.ProcessEnv, name: string): string[] {
@@ -75,5 +84,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig 
     wsKeepaliveInterval: readInt(env, 'RCS_WS_KEEPALIVE_INTERVAL', DEFAULT_WS_KEEPALIVE_INTERVAL),
     eventReplayLimit: readInt(env, 'RCS_EVENT_REPLAY_LIMIT', DEFAULT_EVENT_REPLAY_LIMIT),
     webCorsOrigins: readList(env, 'RCS_WEB_CORS_ORIGINS'),
+    vapidPublicKey: readOptional(env, 'RCS_VAPID_PUBLIC_KEY'),
+    vapidPrivateKey: readOptional(env, 'RCS_VAPID_PRIVATE_KEY'),
+    vapidSubject: env.RCS_VAPID_SUBJECT?.trim() || DEFAULT_VAPID_SUBJECT,
   }
 }

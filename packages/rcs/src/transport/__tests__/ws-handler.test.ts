@@ -55,6 +55,9 @@ function makeConfig(overrides: Partial<GatewayConfig> = {}): GatewayConfig {
     wsKeepaliveInterval: 20,
     eventReplayLimit: 5000,
     webCorsOrigins: [],
+    vapidPublicKey: null,
+    vapidPrivateKey: null,
+    vapidSubject: 'mailto:noreply@localhost',
     ...overrides,
   }
 }
