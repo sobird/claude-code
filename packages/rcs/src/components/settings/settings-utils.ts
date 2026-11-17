@@ -19,6 +19,9 @@ export interface PasswordChangeInput {
   confirm: string
 }
 
+/** Machine-readable reasons a password change was rejected; the UI maps these to `settings.password.errors.<code>`. */
+export type PasswordChangeError = 'fill_all' | 'too_short' | 'mismatch' | 'same_as_current'
+
 export interface RoleBearingUser {
   role?: string | null
 }
@@ -37,20 +40,23 @@ export function maskApiKey(prefix: string): string {
 
 /**
  * Validate a password change before hitting the gateway. Returns the first
- * problem as a human-readable message, or `null` when the input is valid.
+ * problem as a stable code (the caller localizes it), or `null` when the input
+ * is valid.
  */
-export function validatePasswordChange({ current, next, confirm }: PasswordChangeInput): string | null {
+export function validatePasswordChange({ current, next, confirm }: PasswordChangeInput): PasswordChangeError | null {
   if (current.length === 0 || next.length === 0 || confirm.length === 0) {
-    return 'Fill in all password fields.'
+    return 'fill_all'
   }
-  if (next.length < MIN_PASSWORD_LENGTH) {
-    return `New password must be at least ${MIN_PASSWORD_LENGTH} characters.`
-  }
+  // Check the pair-level problems before length so a short-but-mismatched (or
+  // short-but-reused) pair reports the more specific reason.
   if (next !== confirm) {
-    return 'New passwords do not match.'
+    return 'mismatch'
   }
   if (next === current) {
-    return 'New password must differ from the current password.'
+    return 'same_as_current'
+  }
+  if (next.length < MIN_PASSWORD_LENGTH) {
+    return 'too_short'
   }
   return null
 }

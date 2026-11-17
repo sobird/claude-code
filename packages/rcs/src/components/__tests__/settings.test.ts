@@ -20,37 +20,29 @@ describe('maskApiKey', () => {
 
 describe('validatePasswordChange', () => {
   test('accepts a valid change', () => {
-    expect(
-      validatePasswordChange({ current: 'old-password', next: 'new-password', confirm: 'new-password' }),
-    ).toBeNull()
+    expect(validatePasswordChange({ current: 'old', next: 'new-password', confirm: 'new-password' })).toBeNull()
   })
 
   test('rejects missing fields', () => {
-    expect(validatePasswordChange({ current: '', next: 'new-password', confirm: 'new-password' })).toBe(
-      'Fill in all password fields.',
-    )
-    expect(validatePasswordChange({ current: 'old-password', next: '', confirm: '' })).toBe(
-      'Fill in all password fields.',
-    )
+    expect(validatePasswordChange({ current: '', next: 'new-password', confirm: 'new-password' })).toBe('fill_all')
   })
 
   test('rejects a short new password', () => {
-    const short = 'a'.repeat(MIN_PASSWORD_LENGTH - 1)
-    expect(validatePasswordChange({ current: 'old-password', next: short, confirm: short })).toBe(
-      `New password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
-    )
+    expect(
+      validatePasswordChange({
+        current: 'old',
+        next: 'a'.repeat(MIN_PASSWORD_LENGTH - 1),
+        confirm: 'a'.repeat(MIN_PASSWORD_LENGTH - 1),
+      }),
+    ).toBe('too_short')
   })
 
   test('rejects mismatched confirmation', () => {
-    expect(validatePasswordChange({ current: 'old-password', next: 'new-password', confirm: 'other-password' })).toBe(
-      'New passwords do not match.',
-    )
+    expect(validatePasswordChange({ current: 'old', next: 'new', confirm: 'other' })).toBe('mismatch')
   })
 
   test('rejects reusing the current password', () => {
-    expect(validatePasswordChange({ current: 'same-password', next: 'same-password', confirm: 'same-password' })).toBe(
-      'New password must differ from the current password.',
-    )
+    expect(validatePasswordChange({ current: 'same', next: 'same', confirm: 'same' })).toBe('same_as_current')
   })
 })
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { Download } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 
 import { Button } from '../ui/button'
@@ -31,6 +32,7 @@ function isIosSafari(): boolean {
  * the app is installed or the user dismisses the prompt.
  */
 export function InstallPrompt() {
+  const t = useTranslations('settings.install')
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null)
   const [ios, setIos] = useState(false)
   const [installed, setInstalled] = useState(false)
@@ -72,25 +74,23 @@ export function InstallPrompt() {
   return (
     <Card className="border-border bg-surface-1">
       <CardHeader>
-        <CardTitle className="font-display text-lg font-semibold text-text-primary">Install app</CardTitle>
-        <CardDescription className="text-sm text-text-muted">
-          Install Remote Control for quick access from your home screen or dock.
-        </CardDescription>
+        <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</CardTitle>
+        <CardDescription className="text-sm text-text-muted">{t('description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {promptEvent ? (
           <Button type="button" variant="brand" onClick={() => void handleInstall()}>
             <Download className="h-4 w-4" />
-            Install app
+            {t('button')}
           </Button>
         ) : (
           <p className="text-sm text-text-secondary">
-            On iOS Safari, tap the Share button, then choose <span className="font-medium">Add to Home Screen</span>.
+            {t.rich('iosHint', { b: (chunks) => <span className="font-medium">{chunks}</span> })}
           </p>
         )}
         <div>
           <Button type="button" variant="ghost" size="sm" onClick={() => setDismissed(true)}>
-            Not now
+            {t('dismiss')}
           </Button>
         </div>
       </CardContent>

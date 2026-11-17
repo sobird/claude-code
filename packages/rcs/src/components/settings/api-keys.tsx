@@ -1,9 +1,12 @@
 'use client'
 
 import { Copy, KeyRound, Plus, Trash2 } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { ApiError, createApiClient } from '../../lib/api-client'
+import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
+import { createApiClient } from '../../lib/api-client'
+import { formatIsoDate } from '../../lib/format'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
@@ -27,31 +30,21 @@ interface CreatedApiKey extends ApiKeyView {
   key: string
 }
 
-function toMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message
-  if (error instanceof Error) return error.message
-  return 'Something went wrong'
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString()
-}
-
-function formatLastUsed(iso: string | null): string {
-  return iso ? formatDate(iso) : 'Never'
-}
-
 /** Manage personal API keys: list, create (key shown once), and revoke. */
 export function ApiKeys() {
+  const t = useTranslations('settings.apiKeys')
+  const tCommon = useTranslations('common')
+  const tErrors = useTranslations('errors')
+  const locale = useLocale()
+  const describeError = useApiErrorMessage()
   const { token, tokenError, refresh } = useSettingsApi()
   // Key the client on `token`: a provider-held ref would lag one effect flush
   // behind this component's effects, sending the first request unauthenticated.
   const api = useMemo(() => createApiClient({ getToken: () => token, refreshToken: refresh }), [token, refresh])
   const [keys, setKeys] = useState<ApiKeyView[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
+  const [tokenFailed, setTokenFailed] = useState(false)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [name, setName] = useState('')
@@ -62,7 +55,7 @@ export function ApiKeys() {
 
   const [revokeTarget, setRevokeTarget] = useState<ApiKeyView | null>(null)
   const [revoking, setRevoking] = useState(false)
-  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<unknown>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -71,7 +64,7 @@ export function ApiKeys() {
       setKeys(Array.isArray(list) ? list : [])
       setError(null)
     } catch (loadError) {
-      setError(toMessage(loadError))
+      setError(loadError)
     } finally {
       setLoading(false)
     }
@@ -80,13 +73,20 @@ export function ApiKeys() {
   useEffect(() => {
     if (token === null) {
       if (tokenError !== null) {
-        setError('Unable to obtain an access token — check the gateway.')
+        setTokenFailed(true)
         setLoading(false)
       }
       return
     }
+    setTokenFailed(false)
     void load()
   }, [token, tokenError, load])
+
+  const errorMessage = tokenFailed
+    ? tErrors('tokenUnavailable')
+    : error !== null
+      ? describeError(error, 'errors.generic')
+      : null
 
   function openCreate(): void {
     setName('')
@@ -109,7 +109,7 @@ export function ApiKeys() {
       setName('')
       await load()
     } catch (createError) {
-      setActionError(toMessage(createError))
+      setActionError(createError)
       setCreateOpen(false)
     } finally {
       setCreating(false)
@@ -123,7 +123,7 @@ export function ApiKeys() {
       setCopied(true)
       setCopyError(null)
     } catch {
-      setCopyError('Could not copy automatically — select and copy the key manually.')
+      setCopyError(t('copyError'))
     }
   }
 
@@ -136,7 +136,7 @@ export function ApiKeys() {
       setRevokeTarget(null)
       await load()
     } catch (revokeError) {
-      setActionError(toMessage(revokeError))
+      setActionError(revokeError)
     } finally {
       setRevoking(false)
     }
@@ -147,14 +147,12 @@ export function ApiKeys() {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1.5">
-            <CardTitle className="font-display text-lg font-semibold text-text-primary">API keys</CardTitle>
-            <CardDescription className="text-sm text-text-muted">
-              Personal keys for scripts and integrations. Treat them like passwords.
-            </CardDescription>
+            <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</CardTitle>
+            <CardDescription className="text-sm text-text-muted">{t('description')}</CardDescription>
           </div>
           <Button type="button" variant="brand" size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4" />
-            New key
+            {t('newKey')}
           </Button>
         </div>
       </CardHeader>
@@ -164,8 +162,8 @@ export function ApiKeys() {
             <div className="flex items-start gap-2">
               <KeyRound className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />
               <div className="space-y-1">
-                <p className="font-display text-sm font-semibold text-text-primary">Your new API key</p>
-                <p className="text-sm text-text-secondary">Copy it now — this is the only time it will be shown.</p>
+                <p className="font-display text-sm font-semibold text-text-primary">{t('createdPanel.title')}</p>
+                <p className="text-sm text-text-secondary">{t('createdPanel.description')}</p>
               </div>
             </div>
             <pre className="overflow-x-auto rounded-md border border-border bg-surface-2 p-3 font-mono text-xs break-all whitespace-pre-wrap text-text-primary">
@@ -179,41 +177,41 @@ export function ApiKeys() {
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="brand" size="sm" onClick={() => void copyCreatedKey()}>
                 <Copy className="h-4 w-4" />
-                {copied ? 'Copied' : 'Copy key'}
+                {copied ? t('createdPanel.copied') : t('createdPanel.copy')}
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={() => setCreated(null)}>
-                Done
+                {tCommon('done')}
               </Button>
             </div>
           </div>
         ) : null}
 
-        {actionError ? (
+        {actionError !== null ? (
           <p
             role="alert"
             className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error"
           >
-            {actionError}
+            {describeError(actionError, 'errors.generic')}
           </p>
         ) : null}
 
-        {error ? (
+        {errorMessage !== null ? (
           <div
             role="alert"
             className="flex flex-col gap-2 rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error sm:flex-row sm:items-center sm:justify-between"
           >
-            <span>{error}</span>
+            <span>{errorMessage}</span>
             <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
-              Retry
+              {tCommon('retry')}
             </Button>
           </div>
         ) : null}
 
         {loading && keys.length === 0 ? (
-          <p className="text-sm text-text-muted">Loading keys…</p>
+          <p className="text-sm text-text-muted">{t('loading')}</p>
         ) : keys.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-surface-2 p-6 text-center text-sm text-text-muted">
-            No API keys yet.
+            {t('empty')}
           </div>
         ) : (
           <ul className="space-y-2">
@@ -226,15 +224,21 @@ export function ApiKeys() {
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate font-medium text-text-primary">{key.name || 'API key'}</span>
+                      <span className="truncate font-medium text-text-primary">
+                        {key.name || tCommon('defaultApiKeyName')}
+                      </span>
                       <Badge variant={revoked ? 'destructive' : 'secondary'} className="text-[11px]">
-                        {revoked ? 'Revoked' : 'Active'}
+                        {revoked ? t('revoked') : t('active')}
                       </Badge>
                     </div>
                     <div className="font-mono text-xs text-text-secondary">{maskApiKey(key.prefix)}</div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
-                      <span>Created {formatDate(key.created_at)}</span>
-                      <span>Last used {formatLastUsed(key.last_used_at)}</span>
+                      <span>{t('created', { date: formatIsoDate(key.created_at, locale) })}</span>
+                      <span>
+                        {t('lastUsed', {
+                          date: key.last_used_at ? formatIsoDate(key.last_used_at, locale) : tCommon('never'),
+                        })}
+                      </span>
                     </div>
                   </div>
                   <Button
@@ -249,7 +253,7 @@ export function ApiKeys() {
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
-                    Revoke
+                    {t('revoke')}
                   </Button>
                 </li>
               )
@@ -261,31 +265,31 @@ export function ApiKeys() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="rounded-2xl border-border bg-surface-1 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold text-text-primary">New API key</DialogTitle>
-            <DialogDescription className="text-sm text-text-muted">
-              Give the key a memorable name. The secret is shown once after creation.
-            </DialogDescription>
+            <DialogTitle className="font-display text-lg font-semibold text-text-primary">
+              {t('create.title')}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-text-muted">{t('create.description')}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="api-key-name" className="text-text-secondary">
-                Name (optional)
+                {t('create.name')}
               </Label>
               <Input
                 id="api-key-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="CI deploy"
+                placeholder={t('create.namePlaceholder')}
                 disabled={creating}
                 className="bg-surface-2"
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>
-                Cancel
+                {tCommon('cancel')}
               </Button>
               <Button type="submit" variant="brand" disabled={creating}>
-                {creating ? 'Creating…' : 'Create key'}
+                {creating ? t('create.creating') : t('create.submit')}
               </Button>
             </DialogFooter>
           </form>
@@ -300,17 +304,19 @@ export function ApiKeys() {
       >
         <DialogContent className="rounded-2xl border-border bg-surface-1 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold text-text-primary">Revoke API key</DialogTitle>
+            <DialogTitle className="font-display text-lg font-semibold text-text-primary">
+              {t('revokeDialog.title')}
+            </DialogTitle>
             <DialogDescription className="text-sm text-text-muted">
-              Any integration using “{revokeTarget?.name || 'this key'}” will stop working immediately.
+              {t('revokeDialog.description', { name: revokeTarget?.name || tCommon('defaultApiKeyName') })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setRevokeTarget(null)} disabled={revoking}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button type="button" variant="destructive" onClick={() => void handleRevoke()} disabled={revoking}>
-              {revoking ? 'Revoking…' : 'Revoke key'}
+              {revoking ? t('revokeDialog.revoking') : t('revokeDialog.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>

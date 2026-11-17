@@ -1,23 +1,21 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useMemo, useState, type FormEvent } from 'react'
 
-import { ApiError, createApiClient } from '../../lib/api-client'
+import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
+import { createApiClient } from '../../lib/api-client'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
-import { validatePasswordChange } from './settings-utils'
+import { MIN_PASSWORD_LENGTH, validatePasswordChange, type PasswordChangeError } from './settings-utils'
 import { useSettingsApi } from './use-settings-api'
-
-function toMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message
-  if (error instanceof Error) return error.message
-  return 'Failed to change password'
-}
 
 /** Change the signed-in user's password with inline validation and feedback. */
 export function PasswordForm() {
+  const t = useTranslations('settings.password')
+  const describeError = useApiErrorMessage()
   const { token, refresh } = useSettingsApi()
   // Key the client on `token`: a provider-held ref would lag one effect flush
   // behind this component's effects, sending the first request unauthenticated.
@@ -29,13 +27,20 @@ export function PasswordForm() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
+  const validationMessages: Record<PasswordChangeError, string> = {
+    fill_all: t('errors.fill_all'),
+    too_short: t('errors.too_short', { min: MIN_PASSWORD_LENGTH }),
+    mismatch: t('errors.mismatch'),
+    same_as_current: t('errors.same_as_current'),
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     if (pending) return
 
     const validation = validatePasswordChange({ current, next, confirm })
     if (validation) {
-      setError(validation)
+      setError(validationMessages[validation])
       setSuccess(null)
       return
     }
@@ -51,9 +56,9 @@ export function PasswordForm() {
       setCurrent('')
       setNext('')
       setConfirm('')
-      setSuccess('Password updated.')
+      setSuccess(t('success'))
     } catch (changeError) {
-      setError(toMessage(changeError))
+      setError(describeError(changeError, 'errors.generic'))
     } finally {
       setPending(false)
     }
@@ -62,16 +67,16 @@ export function PasswordForm() {
   return (
     <Card className="border-border bg-surface-1">
       <CardHeader>
-        <CardTitle className="font-display text-lg font-semibold text-text-primary">Password</CardTitle>
+        <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</CardTitle>
         <CardDescription className="text-sm text-text-muted">
-          Use at least 8 characters. You stay signed in after changing it.
+          {t('description', { min: MIN_PASSWORD_LENGTH })}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="current-password" className="text-text-secondary">
-              Current password
+              {t('current')}
             </Label>
             <Input
               id="current-password"
@@ -86,7 +91,7 @@ export function PasswordForm() {
 
           <div className="space-y-1.5">
             <Label htmlFor="new-password" className="text-text-secondary">
-              New password
+              {t('next')}
             </Label>
             <Input
               id="new-password"
@@ -101,7 +106,7 @@ export function PasswordForm() {
 
           <div className="space-y-1.5">
             <Label htmlFor="confirm-password" className="text-text-secondary">
-              Confirm new password
+              {t('confirm')}
             </Label>
             <Input
               id="confirm-password"
@@ -133,7 +138,7 @@ export function PasswordForm() {
           ) : null}
 
           <Button type="submit" variant="brand" disabled={pending}>
-            {pending ? 'Updating…' : 'Update password'}
+            {pending ? t('submitting') : t('submit')}
           </Button>
         </form>
       </CardContent>

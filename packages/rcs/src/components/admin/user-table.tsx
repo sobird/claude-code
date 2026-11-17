@@ -1,9 +1,12 @@
 'use client'
 
 import { Plus, RotateCcw } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { ApiError, createApiClient } from '../../lib/api-client'
+import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
+import { createApiClient } from '../../lib/api-client'
+import { formatIsoDate } from '../../lib/format'
 import { useSettingsApi } from '../settings/use-settings-api'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
@@ -39,20 +42,6 @@ interface CreateUserInput {
   role: Role
 }
 
-const CREATE_PASSWORD_HINT = 'Share this password with the user securely.'
-
-function toMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message
-  if (error instanceof Error) return error.message
-  return 'Something went wrong'
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString()
-}
-
 function isDisabled(user: AdminUser): boolean {
   return user.disabled_at !== null
 }
@@ -68,6 +57,8 @@ function RoleSelect({
   title?: string
   onChange: (role: Role) => void
 }) {
+  const t = useTranslations('admin.fields')
+  const tCommon = useTranslations('common')
   return (
     <Select
       value={value}
@@ -76,22 +67,23 @@ function RoleSelect({
         if (next === 'admin' || next === 'member') onChange(next)
       }}
     >
-      <SelectTrigger size="sm" className="w-32 bg-surface-2" aria-label="Role" title={title}>
+      <SelectTrigger size="sm" className="w-32 bg-surface-2" aria-label={t('role')} title={title}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="admin">Admin</SelectItem>
-        <SelectItem value="member">Member</SelectItem>
+        <SelectItem value="admin">{tCommon('role.admin')}</SelectItem>
+        <SelectItem value="member">{tCommon('role.member')}</SelectItem>
       </SelectContent>
     </Select>
   )
 }
 
 function StatusPill({ user }: { user: AdminUser }) {
+  const t = useTranslations('admin.status')
   const disabled = isDisabled(user)
   return (
     <Badge variant={disabled ? 'destructive' : 'secondary'} className="text-[11px]">
-      {disabled ? 'Disabled' : 'Enabled'}
+      {disabled ? t('disabled') : t('enabled')}
     </Badge>
   )
 }
@@ -109,6 +101,7 @@ function UserActions({
   onToggleDisabled: () => void
   onResetPassword: () => void
 }) {
+  const t = useTranslations('admin.actions')
   const disabled = isDisabled(user)
   const toggleDisabled = busy || lastAdmin
   return (
@@ -118,14 +111,14 @@ function UserActions({
         variant="outline"
         size="sm"
         disabled={toggleDisabled}
-        title={lastAdmin ? 'The last enabled admin cannot be disabled.' : undefined}
+        title={lastAdmin ? t('lastAdminDisable') : undefined}
         onClick={onToggleDisabled}
       >
-        {disabled ? 'Enable' : 'Disable'}
+        {disabled ? t('enable') : t('disable')}
       </Button>
       <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={onResetPassword}>
         <RotateCcw className="h-3.5 w-3.5" />
-        Reset password
+        {t('resetPassword')}
       </Button>
     </>
   )
@@ -140,6 +133,9 @@ function CreateUserDialog({
   onOpenChange: (open: boolean) => void
   onCreate: (input: CreateUserInput) => Promise<void>
 }) {
+  const t = useTranslations('admin.create')
+  const tCommon = useTranslations('common')
+  const describeError = useApiErrorMessage()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -162,7 +158,7 @@ function CreateUserDialog({
     if (pending) return
     const trimmedUsername = username.trim()
     if (!trimmedUsername || !password) {
-      setError('Username and password are required.')
+      setError(t('required'))
       return
     }
     setPending(true)
@@ -177,7 +173,7 @@ function CreateUserDialog({
       })
       onOpenChange(false)
     } catch (createError) {
-      setError(toMessage(createError))
+      setError(describeError(createError, 'errors.generic'))
     } finally {
       setPending(false)
     }
@@ -187,16 +183,14 @@ function CreateUserDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-2xl border-border bg-surface-1 sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-semibold text-text-primary">Create user</DialogTitle>
-          <DialogDescription className="text-sm text-text-muted">
-            New users can sign in immediately with this password.
-          </DialogDescription>
+          <DialogTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</DialogTitle>
+          <DialogDescription className="text-sm text-text-muted">{t('description')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="new-username" className="text-text-secondary">
-              Username
+              {t('username')}
             </Label>
             <Input
               id="new-username"
@@ -210,7 +204,7 @@ function CreateUserDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="new-display-name" className="text-text-secondary">
-              Display name (optional)
+              {t('displayName')}
             </Label>
             <Input
               id="new-display-name"
@@ -224,7 +218,7 @@ function CreateUserDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="new-user-password" className="text-text-secondary">
-              Password
+              {t('password')}
             </Label>
             <Input
               id="new-user-password"
@@ -235,12 +229,12 @@ function CreateUserDialog({
               disabled={pending}
               className="bg-surface-2"
             />
-            <p className="text-xs text-text-muted">{CREATE_PASSWORD_HINT}</p>
+            <p className="text-xs text-text-muted">{t('passwordHint')}</p>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="new-user-role" className="text-text-secondary">
-              Role
+              {t('role')}
             </Label>
             <Select
               value={role}
@@ -253,8 +247,8 @@ function CreateUserDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="member">Member</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="member">{tCommon('role.member')}</SelectItem>
+                <SelectItem value="admin">{tCommon('role.admin')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -267,10 +261,10 @@ function CreateUserDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button type="submit" variant="brand" disabled={pending}>
-              {pending ? 'Creating…' : 'Create user'}
+              {pending ? t('creating') : t('submit')}
             </Button>
           </DialogFooter>
         </form>
@@ -288,6 +282,9 @@ function ResetPasswordDialog({
   onClose: () => void
   onReset: (id: string, password: string) => Promise<void>
 }) {
+  const t = useTranslations('admin.reset')
+  const tCommon = useTranslations('common')
+  const describeError = useApiErrorMessage()
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -303,7 +300,7 @@ function ResetPasswordDialog({
     event.preventDefault()
     if (!user || pending) return
     if (password.length === 0) {
-      setError('Enter a new password.')
+      setError(t('required'))
       return
     }
     setPending(true)
@@ -312,7 +309,7 @@ function ResetPasswordDialog({
       await onReset(user.id, password)
       onClose()
     } catch (resetError) {
-      setError(toMessage(resetError))
+      setError(describeError(resetError, 'errors.generic'))
     } finally {
       setPending(false)
     }
@@ -327,16 +324,16 @@ function ResetPasswordDialog({
     >
       <DialogContent className="rounded-2xl border-border bg-surface-1 sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-semibold text-text-primary">Reset password</DialogTitle>
+          <DialogTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</DialogTitle>
           <DialogDescription className="text-sm text-text-muted">
-            Set a new password for {user?.username ?? 'this user'}. Their existing sessions stay signed in.
+            {t('description', { username: user?.username ?? t('thisUser') })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="reset-password" className="text-text-secondary">
-              New password
+              {t('password')}
             </Label>
             <Input
               id="reset-password"
@@ -357,10 +354,10 @@ function ResetPasswordDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button type="submit" variant="brand" disabled={pending}>
-              {pending ? 'Saving…' : 'Set password'}
+              {pending ? t('saving') : t('submit')}
             </Button>
           </DialogFooter>
         </form>
@@ -371,14 +368,23 @@ function ResetPasswordDialog({
 
 /** Admin user management: list, create, change role, enable/disable, reset password. */
 export function UserTable({ currentUserId }: { currentUserId: string }) {
+  const t = useTranslations('admin.users')
+  const tAdmin = useTranslations('admin')
+  const tFields = useTranslations('admin.fields')
+  const tNotices = useTranslations('admin.notices')
+  const tCommon = useTranslations('common')
+  const tErrors = useTranslations('errors')
+  const locale = useLocale()
+  const describeError = useApiErrorMessage()
   const { token, tokenError, refresh } = useSettingsApi()
   // Key the client on `token`: a provider-held ref would lag one effect flush
   // behind this component's effects, sending the first request unauthenticated.
   const api = useMemo(() => createApiClient({ getToken: () => token, refreshToken: refresh }), [token, refresh])
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
+  const [tokenFailed, setTokenFailed] = useState(false)
+  const [actionError, setActionError] = useState<unknown>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
@@ -391,7 +397,7 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
       setUsers(Array.isArray(list) ? list : [])
       setError(null)
     } catch (loadError) {
-      setError(toMessage(loadError))
+      setError(loadError)
     } finally {
       setLoading(false)
     }
@@ -400,13 +406,20 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
   useEffect(() => {
     if (token === null) {
       if (tokenError !== null) {
-        setError('Unable to obtain an access token — check the gateway.')
+        setTokenFailed(true)
         setLoading(false)
       }
       return
     }
+    setTokenFailed(false)
     void load()
   }, [token, tokenError, load])
+
+  const errorMessage = tokenFailed
+    ? tErrors('tokenUnavailable')
+    : error !== null
+      ? describeError(error, 'errors.generic')
+      : null
 
   const enabledAdmins = users.filter((user) => user.role === 'admin' && !isDisabled(user)).length
 
@@ -423,7 +436,7 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
       await api.patch<AdminUser>(`/web/admin/users/${id}`, patch)
       await load()
     } catch (mutationError) {
-      setActionError(toMessage(mutationError))
+      setActionError(mutationError)
     } finally {
       setBusyId(null)
     }
@@ -438,14 +451,14 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
       ...(input.displayName ? { displayName: input.displayName } : {}),
     })
     await load()
-    setNotice(`Created ${input.username}.`)
+    setNotice(tNotices('created', { username: input.username }))
   }
 
   async function resetPassword(id: string, password: string): Promise<void> {
     clearFeedback()
     await api.patch<AdminUser>(`/web/admin/users/${id}`, { password })
     await load()
-    setNotice('Password updated.')
+    setNotice(tNotices('passwordUpdated'))
   }
 
   function isLastEnabledAdmin(user: AdminUser): boolean {
@@ -457,26 +470,25 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1.5">
-            <CardTitle className="font-display text-lg font-semibold text-text-primary">Users</CardTitle>
+            <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</CardTitle>
             <CardDescription className="text-sm text-text-muted">
-              {users.length} {users.length === 1 ? 'user' : 'users'} · {enabledAdmins} enabled{' '}
-              {enabledAdmins === 1 ? 'admin' : 'admins'}
+              {t('description', { users: users.length, admins: enabledAdmins })}
             </CardDescription>
           </div>
           <Button type="button" variant="brand" size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
-            Create user
+            {t('create')}
           </Button>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {actionError ? (
+        {actionError !== null ? (
           <p
             role="alert"
             className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error"
           >
-            {actionError}
+            {describeError(actionError, 'errors.generic')}
           </p>
         ) : null}
 
@@ -489,23 +501,23 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
           </p>
         ) : null}
 
-        {error ? (
+        {errorMessage !== null ? (
           <div
             role="alert"
             className="flex flex-col gap-2 rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error sm:flex-row sm:items-center sm:justify-between"
           >
-            <span>{error}</span>
+            <span>{errorMessage}</span>
             <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
-              Retry
+              {tCommon('retry')}
             </Button>
           </div>
         ) : null}
 
         {loading && users.length === 0 ? (
-          <p className="text-sm text-text-muted">Loading users…</p>
+          <p className="text-sm text-text-muted">{t('loading')}</p>
         ) : users.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-surface-2 p-6 text-center text-sm text-text-muted">
-            No users yet.
+            {t('empty')}
           </div>
         ) : (
           <>
@@ -514,11 +526,11 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
                   <tr>
-                    <th className="px-4 py-3 font-medium">User</th>
-                    <th className="px-4 py-3 font-medium">Role</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Created</th>
-                    <th className="px-4 py-3 text-right font-medium">Actions</th>
+                    <th className="px-4 py-3 font-medium">{tFields('user')}</th>
+                    <th className="px-4 py-3 font-medium">{tFields('role')}</th>
+                    <th className="px-4 py-3 font-medium">{tFields('status')}</th>
+                    <th className="px-4 py-3 font-medium">{tFields('created')}</th>
+                    <th className="px-4 py-3 text-right font-medium">{tFields('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -530,7 +542,7 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
                           <div className="font-medium text-text-primary">
                             {user.username}
                             {user.id === currentUserId ? (
-                              <span className="ml-1.5 text-xs font-normal text-text-muted">(you)</span>
+                              <span className="ml-1.5 text-xs font-normal text-text-muted">{t('you')}</span>
                             ) : null}
                           </div>
                           {user.display_name ? (
@@ -541,7 +553,7 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
                           <RoleSelect
                             value={user.role}
                             disabled={busyId === user.id || lastAdmin}
-                            title={lastAdmin ? 'The last enabled admin cannot be demoted.' : undefined}
+                            title={lastAdmin ? tAdmin('actions.lastAdminDemote') : undefined}
                             onChange={(role) => void mutateUser(user.id, { role })}
                           />
                         </td>
@@ -549,7 +561,7 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
                           <StatusPill user={user} />
                         </td>
                         <td className="px-4 py-3 align-middle text-xs text-text-muted">
-                          {formatDate(user.created_at)}
+                          {formatIsoDate(user.created_at, locale)}
                         </td>
                         <td className="px-4 py-3 align-middle">
                           <div className="flex justify-end gap-2">
@@ -583,7 +595,7 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
                         <div className="truncate font-medium text-text-primary">
                           {user.username}
                           {user.id === currentUserId ? (
-                            <span className="ml-1.5 text-xs font-normal text-text-muted">(you)</span>
+                            <span className="ml-1.5 text-xs font-normal text-text-muted">{t('you')}</span>
                           ) : null}
                         </div>
                         {user.display_name ? (
@@ -593,13 +605,13 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
                       <StatusPill user={user} />
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-                      <span>Created {formatDate(user.created_at)}</span>
+                      <span>{t('createdAt', { date: formatIsoDate(user.created_at, locale) })}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <RoleSelect
                         value={user.role}
                         disabled={busyId === user.id || lastAdmin}
-                        title={lastAdmin ? 'The last enabled admin cannot be demoted.' : undefined}
+                        title={lastAdmin ? tAdmin('actions.lastAdminDemote') : undefined}
                         onChange={(role) => void mutateUser(user.id, { role })}
                       />
                       <UserActions

@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
 import { UserTable } from '../../../components/admin/user-table'
@@ -21,11 +22,13 @@ export default async function AdminPage() {
   const sessionUser = session?.user as SessionUser | undefined
   if (sessionUser?.role !== 'admin') redirect('/')
 
+  const t = await getTranslations('admin')
+
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-text-primary">Admin</h1>
-        <p className="text-sm text-text-secondary">Create users and manage roles, access, and passwords.</p>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-text-primary">{t('title')}</h1>
+        <p className="text-sm text-text-secondary">{t('description')}</p>
       </header>
 
       <SettingsApiProvider>

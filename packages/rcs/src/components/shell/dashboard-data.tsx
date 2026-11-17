@@ -9,6 +9,7 @@
  * while stale data stays on screen.
  */
 
+import { useTranslations } from 'next-intl'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useAccessToken } from '../../hooks/useAccessToken'
@@ -37,13 +38,15 @@ interface DashboardDataValue {
 
 const DashboardDataContext = createContext<DashboardDataValue | undefined>(undefined)
 
-function toMessage(error: unknown): string {
+function toMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) return error.message
   if (error instanceof Error) return error.message
-  return 'Failed to load dashboard data'
+  return fallback
 }
 
 export function DashboardDataProvider({ children }: { children: ReactNode }) {
+  const t = useTranslations('dashboard')
+  const tErrors = useTranslations('errors')
   const { token, refresh: refreshToken, error: tokenError } = useAccessToken()
   const tokenRef = useRef(token)
   const inFlightRef = useRef(false)
@@ -80,13 +83,13 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       setError(null)
       setConnection('connected')
     } catch (loadError) {
-      setError(toMessage(loadError))
+      setError(toMessage(loadError, t('loadError')))
       setConnection('error')
     } finally {
       inFlightRef.current = false
       setLoading(false)
     }
-  }, [api])
+  }, [api, t])
 
   const refresh = useCallback(() => {
     // Without a token the polling load is a no-op, so retry minting instead.
@@ -111,7 +114,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       // The token hook reports failures once its first attempt settles; only
       // then surface an error, so the initial in-flight mint keeps the skeleton.
       if (tokenError !== null) {
-        setError('Unable to obtain an access token — check the gateway.')
+        setError(tErrors('tokenUnavailable'))
         setConnection('error')
         setLoading(false)
       }
@@ -123,7 +126,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       void load()
     }, POLL_INTERVAL_MS)
     return () => clearInterval(timer)
-  }, [token, tokenError, load])
+  }, [token, tokenError, load, tErrors])
 
   const value = useMemo<DashboardDataValue>(
     () => ({

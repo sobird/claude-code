@@ -41,6 +41,7 @@
   },
   "dashboard": {
     "description": "Active environments and your Claude Code sessions.",
+    "loadError": "Failed to load dashboard data",
     "environments": {
       "title": "Environments",
       "empty": "No active environments. Start the CLI with <code>claude remote-control</code>.",
@@ -125,6 +126,13 @@
     "invalidCredentials": "Invalid username or password."
   },
   "settings": {
+    "title": "Settings",
+    "description": "Manage your account password, personal API keys, and app install.",
+    "account": {
+      "title": "Account",
+      "username": "Username",
+      "role": "Role"
+    },
     "language": {
       "title": "Language",
       "description": "Choose the language used by the web interface.",
@@ -132,10 +140,127 @@
       "zhCN": "简体中文",
       "en": "English",
       "error": "Could not save the language. Try again."
+    },
+    "password": {
+      "title": "Password",
+      "description": "Use at least {min} characters. You stay signed in after changing it.",
+      "current": "Current password",
+      "next": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "submitting": "Updating…",
+      "success": "Password updated.",
+      "errors": {
+        "fill_all": "Fill in all password fields.",
+        "too_short": "New password must be at least {min} characters.",
+        "mismatch": "New passwords do not match.",
+        "same_as_current": "New password must differ from the current password."
+      }
+    },
+    "apiKeys": {
+      "title": "API keys",
+      "description": "Personal keys for scripts and integrations. Treat them like passwords.",
+      "newKey": "New key",
+      "loading": "Loading keys…",
+      "empty": "No API keys yet.",
+      "active": "Active",
+      "revoked": "Revoked",
+      "created": "Created {date}",
+      "lastUsed": "Last used {date}",
+      "revoke": "Revoke",
+      "copyError": "Could not copy automatically — select and copy the key manually.",
+      "createdPanel": {
+        "title": "Your new API key",
+        "description": "Copy it now — this is the only time it will be shown.",
+        "copy": "Copy key",
+        "copied": "Copied"
+      },
+      "create": {
+        "title": "New API key",
+        "description": "Give the key a memorable name. The secret is shown once after creation.",
+        "name": "Name (optional)",
+        "namePlaceholder": "CI deploy",
+        "submit": "Create key",
+        "creating": "Creating…"
+      },
+      "revokeDialog": {
+        "title": "Revoke API key",
+        "description": "Any integration using “{name}” will stop working immediately.",
+        "submit": "Revoke key",
+        "revoking": "Revoking…"
+      }
+    },
+    "install": {
+      "title": "Install app",
+      "description": "Install Remote Control for quick access from your home screen or dock.",
+      "button": "Install app",
+      "iosHint": "On iOS Safari, tap the Share button, then choose <b>Add to Home Screen</b>.",
+      "dismiss": "Not now"
     }
+  },
+  "admin": {
+    "title": "Admin",
+    "description": "Create users and manage roles, access, and passwords.",
+    "users": {
+      "title": "Users",
+      "description": "{users, plural, one {# user} other {# users}} · {admins, plural, one {# enabled admin} other {# enabled admins}}",
+      "create": "Create user",
+      "loading": "Loading users…",
+      "empty": "No users yet.",
+      "you": "(you)",
+      "createdAt": "Created {date}"
+    },
+    "fields": {
+      "user": "User",
+      "role": "Role",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "actions": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "resetPassword": "Reset password",
+      "lastAdminDisable": "The last enabled admin cannot be disabled.",
+      "lastAdminDemote": "The last enabled admin cannot be demoted."
+    },
+    "create": {
+      "title": "Create user",
+      "description": "New users can sign in immediately with this password.",
+      "username": "Username",
+      "displayName": "Display name (optional)",
+      "password": "Password",
+      "passwordHint": "Share this password with the user securely.",
+      "role": "Role",
+      "required": "Username and password are required.",
+      "submit": "Create user",
+      "creating": "Creating…"
+    },
+    "reset": {
+      "title": "Reset password",
+      "description": "Set a new password for {username}. Their existing sessions stay signed in.",
+      "thisUser": "this user",
+      "password": "New password",
+      "required": "Enter a new password.",
+      "submit": "Set password",
+      "saving": "Saving…"
+    },
+    "notices": {
+      "created": "Created {username}.",
+      "passwordUpdated": "Password updated."
+    }
+  },
+  "offline": {
+    "title": "You are offline",
+    "description": "Remote Control needs a connection. Reconnect and the app will pick up where you left off."
   },
   "errors": {
     "generic": "Something went wrong",
+    "tokenUnavailable": "Unable to obtain an access token — check the gateway.",
     "codes": {
       "unauthorized": "You are not signed in.",
       "rate_limited": "Too many requests. Try again shortly.",
