@@ -420,6 +420,12 @@
     "title": "You are offline",
     "description": "Remote Control needs a connection. Reconnect and the app will pick up where you left off."
   },
+  "notifications": {
+    "title": "Claude needs your confirmation",
+    "permission": "Permission needed: {tool}",
+    "question": "Claude has a question for you",
+    "plan": "Claude has a plan ready for review"
+  },
   "errors": {
     "generic": "Something went wrong",
     "tokenUnavailable": "Unable to obtain an access token — check the gateway.",

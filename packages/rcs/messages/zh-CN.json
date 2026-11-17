@@ -420,6 +420,12 @@
     "title": "当前离线",
     "description": "远程控制需要网络连接。重新连接后，应用会从上次中断的地方继续。"
   },
+  "notifications": {
+    "title": "Claude 需要你确认",
+    "permission": "需要允许：{tool}",
+    "question": "Claude 有问题需要你回答",
+    "plan": "Claude 的计划等待你确认"
+  },
   "errors": {
     "generic": "出错了",
     "tokenUnavailable": "无法获取访问令牌——请检查网关。",
