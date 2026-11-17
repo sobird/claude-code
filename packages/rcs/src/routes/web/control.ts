@@ -23,10 +23,12 @@ import {
 import {
   BRIDGE_CONTROL_TIMEOUT_MS,
   cancelBridgeRequest,
+  modelOptionsFromResponse,
   requestBridgeControl,
   suggestionPathsFromResponse,
 } from '../../transport/bridge-requests.js'
 import { getEventBus, publishSessionEvent } from '../../transport/event-bus.js'
+import { loadModelCatalog } from '../../transport/model-catalog.js'
 import { sendToBridge } from '../../transport/ws-handler.js'
 import { legacyUserAuth, sessionClosed, webForbidden } from '../common.js'
 
@@ -123,6 +125,42 @@ app.get('/sessions/:id/file-suggestions', legacyUserAuth, async (c) => {
 
   const response = await pending
   return c.json({ suggestions: suggestionPathsFromResponse(response) }, 200)
+})
+
+/**
+ * GET /web/sessions/:id/models — Model list for the header switcher.
+ *
+ * The list comes from a server-initiated `initialize` control request over the live
+ * bridge socket and is cached per session: the CLI answers `initialize` only once per
+ * connection, so a second call would fail. A missing bridge or a timeout returns an
+ * empty list that is not cached (reopening retries); the UI then falls back to a
+ * free-form model id.
+ */
+app.get('/sessions/:id/models', legacyUserAuth, async (c) => {
+  const ownership = await checkOwnership(c, c.req.param('id'))
+  if (!ownership.ok) return ownership.response
+
+  const models = await loadModelCatalog(ownership.sessionId, async () => {
+    const requestId = `mdl_${randomUUID()}`
+    const pending = requestBridgeControl(
+      ownership.sessionId,
+      requestId,
+      { subtype: 'initialize' },
+      BRIDGE_CONTROL_TIMEOUT_MS,
+    )
+    const sent = sendToBridge(ownership.sessionId, {
+      type: 'control_request',
+      request_id: requestId,
+      request: { subtype: 'initialize' },
+    })
+    if (!sent) {
+      cancelBridgeRequest(ownership.sessionId, requestId)
+      return null
+    }
+    const response = await pending
+    return response ? modelOptionsFromResponse(response) : null
+  })
+  return c.json({ models }, 200)
 })
 
 /** POST /web/sessions/:id/interrupt — Interrupt and mark the session idle. */

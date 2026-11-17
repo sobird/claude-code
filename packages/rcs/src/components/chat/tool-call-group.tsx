@@ -7,7 +7,7 @@
 
 import { Check, ChevronRight, Loader2, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import type { ToolCallData, ToolCallEntry, ToolCallStatus } from '../../lib/session-reducer'
 import { canonicalToolName, summarizeToolCall } from '../../lib/tool-summary'
@@ -17,18 +17,28 @@ type ChatTranslator = ReturnType<typeof useTranslations<'chat'>>
 
 interface ToolCallGroupProps {
   entries: ToolCallEntry[]
+  /** Header-level "expand all" toggle; individual cards can still override it. */
+  expandAll?: boolean
 }
 
 /** Renders a single tool card, or a collapsible group when calls are adjacent. */
-export function ToolCallGroup({ entries }: ToolCallGroupProps) {
+export function ToolCallGroup({ entries, expandAll = false }: ToolCallGroupProps) {
   const t = useTranslations('chat')
-  const [expanded, setExpanded] = useState(false)
+  // `null` follows the global toggle; clicking a card pins its own state until
+  // the global toggle changes again.
+  const [override, setOverride] = useState<boolean | null>(null)
+  const expanded = override ?? expandAll
+  useEffect(() => setOverride(null), [expandAll])
 
   if (entries.length === 0) return null
 
   if (entries.length === 1) {
     const only = entries[0]
-    return <div className="pl-0 sm:pl-11">{only ? <SingleToolCard tool={only.toolCall} compact /> : null}</div>
+    return (
+      <div className="pl-0 sm:pl-11">
+        {only ? <SingleToolCard tool={only.toolCall} compact expandAll={expandAll} /> : null}
+      </div>
+    )
   }
 
   return (
@@ -37,7 +47,7 @@ export function ToolCallGroup({ entries }: ToolCallGroupProps) {
         <button
           type="button"
           className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-1/60"
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => setOverride(!expanded)}
         >
           <ChevronRight
             className={cn('h-3 w-3 text-text-muted transition-transform', expanded && 'rotate-90')}
@@ -48,7 +58,7 @@ export function ToolCallGroup({ entries }: ToolCallGroupProps) {
         {expanded ? (
           <div className="divide-y divide-border border-t border-border">
             {uniqueKeys(entries, (entry) => entry.toolCall.id).map(({ item, key }) => (
-              <SingleToolCard key={key} tool={item.toolCall} compact />
+              <SingleToolCard key={key} tool={item.toolCall} compact expandAll={expandAll} />
             ))}
           </div>
         ) : null}
@@ -60,11 +70,15 @@ export function ToolCallGroup({ entries }: ToolCallGroupProps) {
 interface SingleToolCardProps {
   tool: ToolCallData
   compact?: boolean
+  expandAll?: boolean
 }
 
-function SingleToolCard({ tool, compact }: SingleToolCardProps) {
+function SingleToolCard({ tool, compact, expandAll = false }: SingleToolCardProps) {
   const t = useTranslations('chat')
-  const [expanded, setExpanded] = useState(!compact)
+  const [override, setOverride] = useState<boolean | null>(null)
+  // Compact cards start collapsed; standalone (non-compact) cards start open.
+  const expanded = override ?? (expandAll || !compact)
+  useEffect(() => setOverride(null), [expandAll])
   const summary = summarizeToolCall(tool.title, tool.rawInput)
   const hasOutput =
     tool.status !== 'running' &&
@@ -76,7 +90,7 @@ function SingleToolCard({ tool, compact }: SingleToolCardProps) {
       <button
         type="button"
         className="group flex w-full items-center gap-2 text-left"
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => setOverride(!expanded)}
         aria-expanded={expanded}
       >
         <StatusIcon status={tool.status} />

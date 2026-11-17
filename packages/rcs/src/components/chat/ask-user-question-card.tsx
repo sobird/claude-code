@@ -9,8 +9,9 @@
 
 import { HelpCircle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { type KeyboardEvent as ReactKeyboardEvent, useState } from 'react'
 
+import { resolveAskQuestionKey } from '../../lib/ask-question-keys'
 import {
   buildAskUserAnswers,
   emptyDrafts,
@@ -32,11 +33,18 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
   const t = useTranslations('chat.askUserQuestion')
   const questions = parseAskUserQuestions(request.toolInput)
   const [drafts, setDrafts] = useState(() => emptyDrafts(questions))
+  const [activeQuestion, setActiveQuestion] = useState(0)
+  const [activeOption, setActiveOption] = useState(0)
+  const [keyboardActive, setKeyboardActive] = useState(false)
   const complete = isAskUserComplete(questions, drafts)
   const answers = buildAskUserAnswers(questions, drafts)
   // Like the CLI's review screen: partial answers submit with a warning, but
   // an entirely empty answer is blocked (Decline covers "answer nothing").
   const answered = Object.keys(answers).length > 0
+  // Clamp instead of syncing so a shrinking question list never points past it.
+  const currentQuestion = Math.min(activeQuestion, Math.max(questions.length - 1, 0))
+  const question = questions[currentQuestion]
+  const currentOption = Math.min(activeOption, Math.max((question?.options.length ?? 0) - 1, 0))
 
   const selectOption = (questionIndex: number, label: string) => {
     setDrafts((prev) => {
@@ -66,8 +74,70 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
     onRespond?.(request.requestId, { approved: true, updatedInput: { ...request.toolInput, answers } })
   }
 
+  // Number keys and arrows act only while focus is inside the card, so the
+  // page's own shortcuts keep working everywhere else. Editable targets —
+  // including the free-text answer — keep their keys.
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const action = resolveAskQuestionKey({
+      key: event.key,
+      optionCount: question?.options.length ?? 0,
+      inEditable: isEditableTarget(event.target),
+      isComposing: event.nativeEvent.isComposing,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      altKey: event.altKey,
+    })
+    if (action.action === 'ignore') return
+    event.preventDefault()
+    setKeyboardActive(true)
+
+    switch (action.action) {
+      case 'select': {
+        const option = question?.options[action.index]
+        if (option) {
+          selectOption(currentQuestion, option.label)
+          setActiveOption(action.index)
+        }
+        return
+      }
+      case 'next-question':
+        setActiveQuestion(Math.min(currentQuestion + 1, questions.length - 1))
+        setActiveOption(0)
+        return
+      case 'prev-question':
+        setActiveQuestion(Math.max(currentQuestion - 1, 0))
+        setActiveOption(0)
+        return
+      case 'next-option':
+        setActiveOption(Math.min(currentOption + 1, Math.max((question?.options.length ?? 0) - 1, 0)))
+        return
+      case 'prev-option':
+        setActiveOption(Math.max(currentOption - 1, 0))
+        return
+      case 'submit':
+        submit()
+        return
+      case 'decline':
+        onRespond?.(request.requestId, { approved: false })
+        return
+    }
+  }
+
   return (
-    <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-brand/30 bg-brand/5 px-3 py-3 sm:px-4">
+    <div
+      role="group"
+      // The card itself is a keyboard target: focusing it enables the shortcut
+      // set even before an option is clicked.
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focus anchor for the card's shortcuts
+      tabIndex={0}
+      data-testid="ask-question-card"
+      onKeyDown={handleKeyDown}
+      onFocus={() => setKeyboardActive(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setKeyboardActive(false)
+      }}
+      className="max-h-[50vh] overflow-y-auto rounded-xl border border-brand/30 bg-brand/5 px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:px-4"
+    >
       <div className="flex items-center gap-2 text-text-primary">
         <HelpCircle className="h-4 w-4 flex-shrink-0 text-brand" aria-hidden="true" />
         <span className="font-display text-sm font-medium">{t('title')}</span>
@@ -92,14 +162,17 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
               </legend>
 
               <div className="mt-2 space-y-1.5">
-                {question.options.map((option) => {
+                {question.options.map((option, optionIndex) => {
                   const checked = draft.selected.includes(option.label)
+                  const highlighted =
+                    keyboardActive && questionIndex === currentQuestion && optionIndex === currentOption
                   return (
                     <label
                       key={`${groupName}-${option.label}`}
                       className={cn(
                         'flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors',
                         checked ? 'border-brand bg-brand/10' : 'border-border bg-surface-1 hover:bg-surface-2',
+                        highlighted && 'ring-1 ring-brand/50',
                       )}
                     >
                       <input
@@ -164,4 +237,23 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
       </div>
     </div>
   )
+}
+
+/**
+ * Text entry keeps its own keys. Radios and checkboxes are deliberately excluded:
+ * with one focused, digits/arrows/Enter still drive the card. Buttons are left
+ * alone so Enter activates them normally.
+ */
+function isEditableTarget(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null
+  if (!element || typeof element.tagName !== 'string') return false
+  if (element.isContentEditable) return true
+  const tag = element.tagName
+  if (tag === 'TEXTAREA' || tag === 'SELECT') return true
+  if (tag === 'INPUT') {
+    const type = (element as HTMLInputElement).type
+    return type !== 'radio' && type !== 'checkbox'
+  }
+  if (tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY') return true
+  return element.closest('[role="button"]') !== null
 }

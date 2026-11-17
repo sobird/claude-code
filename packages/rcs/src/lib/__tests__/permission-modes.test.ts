@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   buildSetPermissionModeRequest,
   isWebPermissionMode,
+  nextWebPermissionMode,
   WEB_PERMISSION_MODES,
   type WebPermissionMode,
 } from '../permission-modes'
@@ -20,6 +21,22 @@ describe('isWebPermissionMode', () => {
     expect(isWebPermissionMode(undefined)).toBe(false)
     expect(isWebPermissionMode(null)).toBe(false)
     expect(isWebPermissionMode(1)).toBe(false)
+  })
+})
+
+describe('nextWebPermissionMode', () => {
+  test('cycles default → acceptEdits → plan → bypassPermissions → default', () => {
+    expect(nextWebPermissionMode('default')).toBe('acceptEdits')
+    expect(nextWebPermissionMode('acceptEdits')).toBe('plan')
+    expect(nextWebPermissionMode('plan')).toBe('bypassPermissions')
+    expect(nextWebPermissionMode('bypassPermissions')).toBe('default')
+  })
+
+  test('falls back to default from dontAsk, null, and unknown modes', () => {
+    expect(nextWebPermissionMode('dontAsk')).toBe('default')
+    expect(nextWebPermissionMode(null)).toBe('default')
+    expect(nextWebPermissionMode('auto')).toBe('default')
+    expect(nextWebPermissionMode('nonsense')).toBe('default')
   })
 })
 

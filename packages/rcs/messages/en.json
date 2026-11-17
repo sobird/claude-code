@@ -106,6 +106,15 @@
       "usage": {
         "compact": "{count} tokens",
         "detail": "Prompt {prompt} · cached {cached} · output {output}"
+      },
+      "model": {
+        "label": "Model",
+        "default": "Default (recommended)",
+        "custom": "Custom model…",
+        "customPlaceholder": "Model ID",
+        "apply": "Use model",
+        "loading": "Loading models…",
+        "empty": "The CLI reported no models; enter an ID."
       }
     }
   },
@@ -135,6 +144,8 @@
     "planTitle": "Execution plan",
     "turnDuration": "Took {seconds}s",
     "queued": "Queued",
+    "expandAll": "Expand all tools",
+    "collapseAll": "Collapse all tools",
     "tasks": {
       "title": "Tasks",
       "progress": "{done}/{total}",
@@ -158,6 +169,7 @@
       "alwaysDeny": "Always deny",
       "applySuggestion": "Apply suggested rule",
       "blockedPath": "Blocked path: {path}",
+      "reason": "Reason",
       "denyReason": "Reason (optional)",
       "denyPlaceholder": "Tell Claude what to change",
       "sendDeny": "Send denial"
@@ -180,6 +192,11 @@
       "label": "Files",
       "empty": "No matching files",
       "loading": "Loading files…"
+    },
+    "historyMenu": {
+      "label": "Prompt history",
+      "placeholder": "Search prompts…",
+      "empty": "No matching prompts"
     },
     "exitPlan": {
       "title": "Plan ready for review",
@@ -204,6 +221,8 @@
       "interrupt": "Interrupt the agent",
       "history": "Recall previous prompts",
       "commands": "Open the slash command menu",
+      "cycleMode": "Cycle the permission mode",
+      "searchHistory": "Search prompt history",
       "accept": "Accept the highlighted item",
       "approve": "Approve the plan",
       "reject": "Reject the plan",

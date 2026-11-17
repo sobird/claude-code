@@ -10,7 +10,7 @@
  * echo and history) so it shows immediately and survives a reload.
  */
 
-import { ArrowDown, ArrowLeft, Gauge, Keyboard, Loader2, Timer } from 'lucide-react'
+import { ArrowDown, ArrowLeft, Gauge, Keyboard, Loader2, Maximize2, Minimize2, Timer } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -24,7 +24,12 @@ import { withPendingApprovalCount } from '../../lib/approval-alert'
 import { buildUserContent, type AttachmentRef } from '../../lib/attachments'
 import { latestPrompt } from '../../lib/message-actions'
 import { earlierStartIndex, windowStartIndex } from '../../lib/message-window'
-import { buildSetPermissionModeRequest, type WebPermissionMode } from '../../lib/permission-modes'
+import { buildSetModelRequest, normalizeModelOptions, type ModelOption } from '../../lib/model-settings'
+import {
+  buildSetPermissionModeRequest,
+  nextWebPermissionMode,
+  type WebPermissionMode,
+} from '../../lib/permission-modes'
 import type { PermissionDecision } from '../../lib/permission-suggestions'
 import { randomUuid } from '../../lib/random-uuid'
 import {
@@ -45,6 +50,7 @@ import { StatusBadge } from '../shell/status-badge'
 import { Button } from '../ui/button'
 import { ChatInput } from './chat-input'
 import { AssistantBubble, UserBubble } from './message-bubble'
+import { ModelMenu } from './model-menu'
 import { PermissionModeMenu } from './permission-mode-menu'
 import { PermissionPanel } from './permission-panel'
 import { PlanView } from './plan-view'
@@ -133,6 +139,7 @@ function findMessageNode(el: HTMLElement, key: string): HTMLElement | null {
 export function SessionView({ sessionId }: { sessionId: string }) {
   const t = useTranslations('session.view')
   const tCommon = useTranslations('common')
+  const tChat = useTranslations('chat')
   const tShortcuts = useTranslations('chat.shortcuts')
   const describeError = useApiErrorMessage()
   const { token, refresh: refreshToken, error: tokenError } = useAccessToken()
@@ -163,6 +170,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   } | null>(null)
   const [atBottom, setAtBottom] = useState(true)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [expandAll, setExpandAll] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const atBottomRef = useRef(true)
   // First rendered item, pinned by key so appends never unmount what is on
@@ -572,6 +580,41 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [api, sessionId],
   )
 
+  // Shift+Tab walks the same cycle as the TUI; the menu and this share one sender.
+  const handleCycleMode = useCallback(() => {
+    void handleModeSelect(nextWebPermissionMode(chat.permissionMode))
+  }, [handleModeSelect, chat.permissionMode])
+
+  // Lazily fetch the CLI's model list; an unreachable CLI just leaves the menu
+  // on the free-text fallback rather than surfacing an error.
+  const loadModels = useCallback(async (): Promise<ModelOption[]> => {
+    try {
+      const result = await api.get<{ models?: unknown }>(`/web/sessions/${encodeURIComponent(sessionId)}/models`)
+      return normalizeModelOptions(result?.models)
+    } catch {
+      return []
+    }
+  }, [api, sessionId])
+
+  // Mirrors handleModeSelect: the reducer treats the POSTed request as pending,
+  // and the display moves when the CLI's control_response arrives.
+  const handleModelSelect = useCallback(
+    async (model: string | null) => {
+      setActionError(null)
+      try {
+        const result = await api.post<EventActionResponse>(
+          `/web/sessions/${encodeURIComponent(sessionId)}/control`,
+          buildSetModelRequest(randomUuid(), model),
+        )
+        const event = result?.event
+        if (event) setExtraEvents((prev) => [...prev, event])
+      } catch (error) {
+        setActionError(error)
+      }
+    },
+    [api, sessionId],
+  )
+
   const handleInterrupt = useCallback(async () => {
     setActionError(null)
     try {
@@ -645,6 +688,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               {t('usage.compact', { count: formatTokenCount(promptTokens(chat.lastUsage)) })}
             </span>
           ) : null}
+          <ModelMenu
+            model={chat.model}
+            pending={chat.pendingModel !== null}
+            disabled={closed}
+            onSelect={handleModelSelect}
+            loadModels={loadModels}
+          />
           <PermissionModeMenu
             mode={chat.permissionMode}
             pending={chat.pendingMode !== null}
@@ -652,6 +702,17 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             onSelect={handleModeSelect}
           />
           <StatusBadge status={displayStatus} />
+          <button
+            type="button"
+            onClick={() => setExpandAll((prev) => !prev)}
+            aria-label={expandAll ? tChat('collapseAll') : tChat('expandAll')}
+            title={expandAll ? tChat('collapseAll') : tChat('expandAll')}
+            aria-pressed={expandAll}
+            data-testid="toggle-expand-all"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary"
+          >
+            {expandAll ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
           <button
             type="button"
             onClick={() => setShortcutsOpen(true)}
@@ -714,6 +775,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         </div>
       ) : null}
 
+      {chat.modelError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
+        >
+          {chat.modelError}
+        </div>
+      ) : null}
+
       <div className="relative min-h-0 flex-1">
         <div
           ref={scrollRef}
@@ -743,6 +813,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 onEdit={closed ? undefined : handleEditMessage}
                 regenerateId={regenerateId}
                 onRegenerate={handleRegenerate}
+                expandAll={expandAll}
               />
             )}
             {failedSend ? (
@@ -786,6 +857,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         placeholder={closed ? t('archivedPlaceholder') : undefined}
         commands={chat.slashCommands}
         fileSuggestions={hasToken ? suggestFiles : undefined}
+        onCyclePermissionMode={
+          chat.permissionMode !== null && chat.pendingMode === null && !closed ? handleCycleMode : undefined
+        }
       />
     </div>
   )
@@ -796,11 +870,13 @@ function MessageThread({
   onEdit,
   regenerateId,
   onRegenerate,
+  expandAll = false,
 }: {
   items: KeyedItem[]
   onEdit?: (text: string) => Promise<void> | void
   regenerateId: string | null
   onRegenerate: () => Promise<void> | void
+  expandAll?: boolean
 }) {
   // Editing is a singleton mode: opening another bubble's editor closes the
   // previous one so there is only ever one draft in play.
@@ -812,7 +888,7 @@ function MessageThread({
       {items.map(({ item, key }) =>
         item.kind === 'tools' ? (
           <div key={key} data-message-key={key}>
-            <ToolCallGroup entries={item.entries} />
+            <ToolCallGroup entries={item.entries} expandAll={expandAll} />
           </div>
         ) : (
           <div key={key} data-message-key={key} className={spacingFor(item.entry)}>

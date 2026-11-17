@@ -13,6 +13,7 @@
 
 import { isSessionClosedStatus } from '../contracts'
 import { extractUserAttachments, type AttachmentRef } from './attachments'
+import { normalizeModel } from './model-settings'
 import { isWebPermissionMode, type WebPermissionMode } from './permission-modes'
 import type { PermissionSuggestion } from './permission-suggestions'
 import { tasksFromTaskState, tasksFromTodoWrite, type TaskItem } from './tasks'
@@ -136,6 +137,12 @@ export interface ChatState {
   pendingMode: { requestId: string; mode: WebPermissionMode } | null
   /** CLI rejection of the last mode switch (e.g. bypass is disabled). */
   modeError: string | null
+  /** Current model from `system/init`; `null` means the CLI default (or not yet reported). */
+  model: string | null
+  /** Model switch sent but not yet acknowledged by the CLI; `null` model resets to default. */
+  pendingModel: { requestId: string; model: string | null } | null
+  /** CLI rejection of the last model switch. */
+  modelError: string | null
   /** Wall-clock start of the running turn, from the newest user message. */
   turnStartedAt: number | null
   /** True between a turn's first event and its `result`; gates the queued hint. */
@@ -177,6 +184,9 @@ export const initialChatState: ChatState = {
   permissionMode: null,
   pendingMode: null,
   modeError: null,
+  model: null,
+  pendingModel: null,
+  modelError: null,
   turnStartedAt: null,
   turnOpen: false,
   tasks: [],
@@ -536,8 +546,19 @@ function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatStat
       ].slice(0, 100)
     : state.slashCommands
   const permissionMode = isWebPermissionMode(payload.permissionMode) ? payload.permissionMode : state.permissionMode
+  // A missing/invalid model keeps the last known one; the CLI always sends it in init.
+  const model = normalizeModel(payload.model) ?? state.model
 
-  return { ...state, slashCommands, permissionMode, pendingMode: null, modeError: null }
+  return {
+    ...state,
+    slashCommands,
+    permissionMode,
+    pendingMode: null,
+    modeError: null,
+    model,
+    pendingModel: null,
+    modelError: null,
+  }
 }
 
 function handlePermissionRequest(state: ChatState, event: SessionEventInput): ChatState {
@@ -547,9 +568,13 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
   if (!requestId) return state
 
   // Non-permission control requests share the envelope. `set_permission_mode`
-  // is echoed back as an outbound event, so it doubles as the pending tracker.
+  // and `set_model` are echoed back as outbound events, so they double as the
+  // pending trackers for their respective switches.
   const subtype = asText(request.subtype)
   if (subtype && subtype !== 'can_use_tool') {
+    if (subtype === 'set_model') {
+      return { ...state, pendingModel: { requestId, model: normalizeModel(request.model) }, modelError: null }
+    }
     if (subtype !== 'set_permission_mode' || !isWebPermissionMode(request.mode)) return state
     return { ...state, pendingMode: { requestId, mode: request.mode }, modeError: null }
   }
@@ -664,6 +689,17 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
     return { ...state, pendingMode: null, modeError: null, permissionMode: pendingMode.mode }
   }
 
+  // Likewise for a model switch. The success reply carries no model, so adopt the
+  // requested value; the next `system/init` corrects any alias the CLI normalized.
+  const pendingModel = state.pendingModel
+  if (pendingModel && pendingModel.requestId === requestId) {
+    const outcome = responseOutcome(payload)
+    if (outcome.subtype === 'error') {
+      return { ...state, pendingModel: null, modelError: outcome.error || 'set_model failed' }
+    }
+    return { ...state, pendingModel: null, modelError: null, model: pendingModel.model }
+  }
+
   const approved = payload.approved === true
   const pendingPermissions = state.pendingPermissions.filter((permission) => permission.requestId !== requestId)
 
@@ -715,6 +751,12 @@ function handleControlCancel(state: ChatState, event: SessionEventInput): ChatSt
     changed = true
   }
 
+  let pendingModel = state.pendingModel
+  if (pendingModel && pendingModel.requestId === requestId) {
+    pendingModel = null
+    changed = true
+  }
+
   let pendingPermissions = state.pendingPermissions
   if (pendingPermissions.some((permission) => permission.requestId === requestId)) {
     pendingPermissions = pendingPermissions.filter((permission) => permission.requestId !== requestId)
@@ -738,7 +780,7 @@ function handleControlCancel(state: ChatState, event: SessionEventInput): ChatSt
     changed = true
   }
 
-  return changed ? { ...state, pendingPermissions, pendingMode, modeError, entries } : state
+  return changed ? { ...state, pendingPermissions, pendingMode, modeError, pendingModel, entries } : state
 }
 
 function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatState {

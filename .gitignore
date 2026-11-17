@@ -45,3 +45,4 @@ package
 
 # Local git worktrees
 .worktrees/
+.playwright-mcp/

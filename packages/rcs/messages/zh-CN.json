@@ -106,6 +106,15 @@
       "usage": {
         "compact": "{count} 令牌",
         "detail": "提示 {prompt} · 缓存 {cached} · 输出 {output}"
+      },
+      "model": {
+        "label": "模型",
+        "default": "默认（推荐）",
+        "custom": "自定义模型…",
+        "customPlaceholder": "模型 ID",
+        "apply": "使用该模型",
+        "loading": "正在加载模型…",
+        "empty": "CLI 未上报模型列表，请手动输入 ID。"
       }
     }
   },
@@ -135,6 +144,8 @@
     "planTitle": "执行计划",
     "turnDuration": "用时 {seconds} 秒",
     "queued": "排队中",
+    "expandAll": "展开全部工具",
+    "collapseAll": "折叠全部工具",
     "tasks": {
       "title": "任务",
       "progress": "{done}/{total}",
@@ -158,6 +169,7 @@
       "alwaysDeny": "始终拒绝",
       "applySuggestion": "应用建议规则",
       "blockedPath": "被阻止的路径：{path}",
+      "reason": "原因",
       "denyReason": "拒绝原因（可选）",
       "denyPlaceholder": "告诉 Claude 需要如何修改",
       "sendDeny": "拒绝并发送"
@@ -180,6 +192,11 @@
       "label": "文件",
       "empty": "没有匹配的文件",
       "loading": "正在加载文件…"
+    },
+    "historyMenu": {
+      "label": "历史提示词",
+      "placeholder": "搜索历史提示词…",
+      "empty": "没有匹配的历史提示词"
     },
     "exitPlan": {
       "title": "计划待审批",
@@ -204,6 +221,8 @@
       "interrupt": "中断代理",
       "history": "召回历史输入",
       "commands": "打开斜杠命令菜单",
+      "cycleMode": "循环权限模式",
+      "searchHistory": "搜索历史提示词",
       "accept": "接受选中项",
       "approve": "批准计划",
       "reject": "拒绝计划",

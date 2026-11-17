@@ -4,6 +4,7 @@ import {
   cancelBridgeRequest,
   clearBridgeResponses,
   MAX_SUGGESTION_PATHS,
+  modelOptionsFromResponse,
   requestBridgeControl,
   settleBridgeResponse,
   suggestionPathsFromResponse,
@@ -59,6 +60,39 @@ describe('requestBridgeControl', () => {
     cancelBridgeRequest('s1', 'r1')
     await expect(promise).resolves.toBeNull()
     expect(settleBridgeResponse('s1', { request_id: 'r1' })).toBe(false)
+  })
+})
+
+describe('modelOptionsFromResponse', () => {
+  it('extracts models from the initialize success payload', () => {
+    expect(
+      modelOptionsFromResponse({
+        subtype: 'success',
+        response: {
+          models: [
+            { value: 'sonnet', displayName: 'Sonnet' },
+            { value: 'opus', displayName: 'Opus' },
+          ],
+        },
+      }),
+    ).toEqual([
+      { value: 'sonnet', displayName: 'Sonnet' },
+      { value: 'opus', displayName: 'Opus' },
+    ])
+  })
+
+  it('returns an empty list for errors and malformed payloads', () => {
+    expect(modelOptionsFromResponse({ subtype: 'error', response: { models: [] } })).toEqual([])
+    expect(modelOptionsFromResponse(null)).toEqual([])
+    expect(modelOptionsFromResponse('nope')).toEqual([])
+    expect(modelOptionsFromResponse({ subtype: 'success', response: { models: 'nope' } })).toEqual([])
+    expect(modelOptionsFromResponse({ subtype: 'success' })).toEqual([])
+  })
+
+  it('skips bad entries', () => {
+    expect(modelOptionsFromResponse({ subtype: 'success', response: { models: [{}, { value: 'sonnet' }] } })).toEqual([
+      { value: 'sonnet', displayName: 'sonnet' },
+    ])
   })
 })
 

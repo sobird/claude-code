@@ -1469,6 +1469,21 @@ describe('Web Control Routes', () => {
     expect(res.status).toBe(403)
   })
 
+  test('GET /web/sessions/:id/models returns an empty list without a bridge', async () => {
+    const res = await app.request(`/web/sessions/${sessionId}/models`, {
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(200)
+    expect((await resJson(res)).models).toEqual([])
+  })
+
+  test('GET /web/sessions/:id/models 403 for another member', async () => {
+    const res = await app.request(`/web/sessions/${sessionId}/models`, {
+      headers: bearer(s.otherToken),
+    })
+    expect(res.status).toBe(403)
+  })
+
   test('control routes 403 for another member', async () => {
     for (const path of ['events', 'control', 'interrupt']) {
       const res = await app.request(`/web/sessions/${sessionId}/${path}`, {

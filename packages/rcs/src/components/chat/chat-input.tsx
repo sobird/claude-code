@@ -7,13 +7,14 @@
 
 import { ImagePlus, Loader2, Send, Square, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type DragEvent as ReactDragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { MAX_ATTACHMENTS_PER_MESSAGE, type AttachmentRef } from '../../lib/attachments'
 import { isImageFile, prepareImageFile } from '../../lib/attachments-client'
 import { acceptCommand, commandQuery, filterCommands, moveIndex } from '../../lib/command-menu'
 import { resolveComposerKey } from '../../lib/composer-keys'
 import { applyFileSuggestion, fileQuery, type FileQueryToken } from '../../lib/file-completion'
+import { type HistoryMatch, searchHistory } from '../../lib/history-search'
 import { appendHistory, moveHistory } from '../../lib/input-history'
 import { randomUuid } from '../../lib/random-uuid'
 import { cn } from '../../lib/utils'
@@ -56,6 +57,8 @@ interface ChatInputProps {
   commands?: string[]
   /** Fetches `@` file completion for a path fragment; absent disables the menu. */
   fileSuggestions?: (query: string) => Promise<string[]>
+  /** Cycles the permission mode on Shift+Tab; absent leaves the shortcut to the browser. */
+  onCyclePermissionMode?: () => void
   className?: string
 }
 
@@ -68,6 +71,7 @@ export function ChatInput({
   placeholder,
   commands = [],
   fileSuggestions,
+  onCyclePermissionMode,
   className,
 }: ChatInputProps) {
   const t = useTranslations('chat')
@@ -89,6 +93,14 @@ export function ChatInput({
   const [history, setHistory] = useState<string[]>(loadHistory)
   const [historyIndex, setHistoryIndex] = useState<number | null>(null)
   const historyDraftRef = useRef('')
+  // Ctrl+R prompt search: a dedicated input over the same history list.
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchIndex, setSearchIndex] = useState(0)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  // Drag-and-drop target highlight while files hover the composer.
+  const [dragging, setDragging] = useState(false)
+  const dragDepthRef = useRef(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   // Images live in both state (render) and a ref (synchronous reads during a
@@ -182,6 +194,38 @@ export function ChatInput({
     [commitImages, uploadImage],
   )
 
+  const searchMatches = useMemo(
+    () => (searchOpen ? searchHistory(history, searchQuery) : []),
+    [searchOpen, history, searchQuery],
+  )
+  const activeSearchIndex = searchMatches.length === 0 ? 0 : Math.min(searchIndex, searchMatches.length - 1)
+
+  /** Closes the search overlay and returns focus to the composer. */
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false)
+    setSearchQuery('')
+    requestAnimationFrame(() => textareaRef.current?.focus())
+  }, [])
+
+  /** Writes a searched history entry into the textarea without sending it. */
+  const acceptSearchMatch = useCallback((match: HistoryMatch) => {
+    setText(match.text)
+    setSearchOpen(false)
+    setSearchQuery('')
+    setFileToken(null)
+    setFileItems([])
+    setHistoryIndex(null)
+    historyDraftRef.current = ''
+    requestAnimationFrame(() => {
+      const el = textareaRef.current
+      if (!el) return
+      el.focus()
+      el.style.height = 'auto'
+      el.style.height = `${Math.min(el.scrollHeight, 200)}px`
+      el.setSelectionRange(match.text.length, match.text.length)
+    })
+  }, [])
+
   const removeImage = useCallback(
     (key: string) => {
       const target = imagesRef.current.find((image) => image.key === key)
@@ -251,6 +295,8 @@ export function ChatInput({
       setText('')
       setFileToken(null)
       setFileItems([])
+      setSearchOpen(false)
+      setSearchQuery('')
       if (trimmed) {
         setHistory((prev) => appendHistory(prev, trimmed))
         setHistoryIndex(null)
@@ -312,14 +358,122 @@ export function ChatInput({
     })
   }, [])
 
+  // Dragging is only meaningful when attachments are accepted (images, editable session).
+  const dropEnabled = Boolean(uploadImage) && !disabled
+  const hasFiles = (event: ReactDragEvent<HTMLDivElement>): boolean => [...event.dataTransfer.types].includes('Files')
+  const dragHandlers = dropEnabled
+    ? {
+        onDragEnter: (event: ReactDragEvent<HTMLDivElement>) => {
+          if (!hasFiles(event)) return
+          event.preventDefault()
+          dragDepthRef.current += 1
+          setDragging(true)
+        },
+        onDragOver: (event: ReactDragEvent<HTMLDivElement>) => {
+          if (!hasFiles(event)) return
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'copy'
+        },
+        onDragLeave: (event: ReactDragEvent<HTMLDivElement>) => {
+          if (!hasFiles(event)) return
+          // Child nodes fire enter/leave as the pointer moves; count depth to
+          // avoid flickering the highlight.
+          dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
+          if (dragDepthRef.current === 0) setDragging(false)
+        },
+        onDrop: (event: ReactDragEvent<HTMLDivElement>) => {
+          if (!hasFiles(event)) return
+          event.preventDefault()
+          dragDepthRef.current = 0
+          setDragging(false)
+          addFiles([...event.dataTransfer.files])
+        },
+      }
+    : {}
+
   const uploading = images.some((image) => image.status === 'uploading')
   const hasReadyImage = images.some((image) => image.status === 'ready')
   const canSend = (text.trim().length > 0 || hasReadyImage) && !disabled && !sending && !uploading
   const resolvedPlaceholder = placeholder ?? t('placeholder', { product: tCommon('claude') })
 
   return (
-    <div className={cn('relative mx-auto w-full max-w-3xl', className)}>
-      {menuOpen ? (
+    <div
+      className={cn('relative mx-auto w-full max-w-3xl', className)}
+      data-testid="composer-drop-target"
+      {...dragHandlers}
+    >
+      {searchOpen ? (
+        <div
+          data-testid="history-search-menu"
+          role="dialog"
+          aria-label={t('historyMenu.label')}
+          className="absolute right-0 bottom-full left-0 z-30 mb-1 rounded-lg border border-border bg-surface-1 p-2 shadow-md"
+        >
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(event) => {
+              setSearchQuery(event.target.value)
+              setSearchIndex(0)
+            }}
+            onKeyDown={(event) => {
+              // The overlay owns these keys; keep document-level shortcuts out.
+              event.stopPropagation()
+              if (event.nativeEvent.isComposing) return
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                if (searchMatches.length > 0) {
+                  setSearchIndex(moveIndex(activeSearchIndex, event.key === 'ArrowDown' ? 1 : -1, searchMatches.length))
+                }
+                return
+              }
+              if (event.key === 'Enter' || event.key === 'Tab') {
+                event.preventDefault()
+                const match = searchMatches[activeSearchIndex]
+                if (match) acceptSearchMatch(match)
+                return
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                closeSearch()
+              }
+            }}
+            placeholder={t('historyMenu.placeholder')}
+            aria-label={t('historyMenu.label')}
+            data-testid="history-search-input"
+            className="mb-1 w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-text-primary outline-none focus:border-brand/50"
+          />
+          {searchMatches.length === 0 ? (
+            <div className="px-2 py-1.5 text-xs text-text-muted">{t('historyMenu.empty')}</div>
+          ) : (
+            <div role="listbox" aria-label={t('historyMenu.label')} className="max-h-56 overflow-y-auto">
+              {searchMatches.map((match, index) => (
+                <button
+                  key={`${match.index}-${match.text}`}
+                  type="button"
+                  role="option"
+                  aria-selected={index === activeSearchIndex}
+                  data-testid="history-search-option"
+                  title={match.text}
+                  // Keep focus in the search input; onClick would blur first.
+                  onMouseDown={(event) => {
+                    event.preventDefault()
+                    acceptSearchMatch(match)
+                  }}
+                  className={cn(
+                    'flex w-full items-center truncate rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+                    index === activeSearchIndex ? 'bg-brand/10 text-brand' : 'text-text-secondary hover:bg-surface-2',
+                  )}
+                >
+                  {match.text}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+      {menuOpen && !searchOpen ? (
         <div
           id="slash-command-menu"
           data-testid="slash-command-menu"
@@ -354,7 +508,7 @@ export function ChatInput({
           )}
         </div>
       ) : null}
-      {fileMenuOpen ? (
+      {fileMenuOpen && !searchOpen ? (
         <div
           id="file-completion-menu"
           data-testid="file-completion-menu"
@@ -392,7 +546,12 @@ export function ChatInput({
           )}
         </div>
       ) : null}
-      <div className="overflow-hidden rounded-xl border border-border bg-surface-2 transition-all focus-within:border-brand/50 focus-within:shadow-[0_0_0_3px_rgba(201,100,66,0.15)]">
+      <div
+        className={cn(
+          'overflow-hidden rounded-xl border border-border bg-surface-2 transition-all focus-within:border-brand/50 focus-within:shadow-[0_0_0_3px_rgba(201,100,66,0.15)]',
+          dragging && 'ring-2 ring-brand/40',
+        )}
+      >
         {images.length > 0 ? (
           <div
             data-testid="attachment-strip"
@@ -441,6 +600,10 @@ export function ChatInput({
               setFileToken(fileQuery(el.value, el.selectionStart ?? el.value.length))
               setFileIndex(0)
             }}
+            onFocus={() => {
+              // Clicking back into the composer dismisses the search overlay.
+              if (searchOpen) setSearchOpen(false)
+            }}
             onPaste={(event) => {
               const files = [...event.clipboardData.files]
               if (!files.some(isImageFile)) return
@@ -456,6 +619,30 @@ export function ChatInput({
             aria-autocomplete="list"
             onKeyDown={(event) => {
               const composing = event.nativeEvent.isComposing
+              // Shift+Tab cycles the permission mode (a global TUI key); menus do
+              // not swallow it while they are open.
+              if (!composing && event.key === 'Tab' && event.shiftKey && onCyclePermissionMode) {
+                event.preventDefault()
+                onCyclePermissionMode()
+                return
+              }
+              // Ctrl+R opens prompt-history search. Cmd+R stays the browser's reload.
+              if (
+                !composing &&
+                !disabled &&
+                event.key.toLowerCase() === 'r' &&
+                event.ctrlKey &&
+                !event.metaKey &&
+                !event.altKey &&
+                !event.shiftKey
+              ) {
+                event.preventDefault()
+                setSearchQuery('')
+                setSearchIndex(0)
+                setSearchOpen(true)
+                requestAnimationFrame(() => searchInputRef.current?.focus())
+                return
+              }
               // `@` completion owns the navigation keys while it has results; an
               // empty or still-loading list lets Enter submit as usual.
               if (fileMenuOpen && fileItems.length > 0 && !composing) {

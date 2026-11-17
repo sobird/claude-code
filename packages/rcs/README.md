@@ -40,7 +40,9 @@ and SSE stream.
   CLI); durable events replay on reload, and reconnects show a banner.
 - Markdown with syntax-highlighted code (lazy-loaded), collapsible thinking
   blocks, and tool cards that summarize the call (command, file, pattern…),
-  group repeated calls, and expand to the raw input and output.
+  group repeated calls, and expand to the raw input and output. A header toggle
+  expands or collapses every tool card at once; individual cards still toggle on
+  their own.
 - **History pages in as you scroll back** (100-event pages) without shifting
   the viewport. Long sessions render a bounded window of the newest messages
   (80 grouped items); scrolling near the top reveals older ones in the same
@@ -54,7 +56,8 @@ and SSE stream.
   (PNG/JPEG/GIF/WebP, up to 5 per message). Large images are downscaled and
   re-encoded as JPEG before upload, stored deduped by content hash, and sent to
   the CLI as base64 at delivery time; the transcript keeps only a reference, so
-  images still render after a reload.
+  images still render after a reload. Images can also be dragged onto the
+  composer.
 - Any prompt can be **edited in place** (the bubble becomes a textarea: Enter
   sends, Shift+Enter inserts a newline, Esc cancels), and the latest reply can
   be **regenerated**. Both resend as a new turn because the bridge has no
@@ -84,7 +87,9 @@ and SSE stream.
   agent runs.
 - **Prompt history**: ↑ recalls earlier prompts from the first line of the
   draft, ↓ walks forward and restores the draft after the newest entry. History
-  persists in `localStorage`, capped at 50 entries.
+  persists in `localStorage`, capped at 50 entries. Ctrl+R opens a filter over
+  the same history; ↑/↓ navigate, Enter/Tab insert without sending, Esc closes.
+  Only Ctrl+R is bound, so Cmd+R still reloads the page.
 - **Slash commands**: `/` opens a filtered menu of the bridge-safe commands
   reported by `system/init`; ↑/↓ navigate, Tab/Enter accept without sending, Esc
   closes. IME composition is ignored. The standalone `remote-control` CLI
@@ -101,15 +106,25 @@ and SSE stream.
   `system/init` and switches it with a `set_permission_mode` control request:
   ask each time, auto-accept edits, plan, don't ask, bypass. The UI updates only
   from the CLI's reply and surfaces CLI errors (for example bypass without
-  `--dangerously-skip-permissions`).
+  `--dangerously-skip-permissions`). Shift+Tab cycles the same modes in TUI
+  order (ask each time → auto-accept edits → plan → bypass); don't ask is not
+  part of the cycle.
+- **Model** control in the session header shows the model reported by
+  `system/init` and switches it with a `set_model` control request. The menu
+  lists the CLI's own models, fetched once per connection through an
+  `initialize` control request; the interactive REPL bridge reports none, so a
+  free-text model ID is always available as a fallback.
 
 ### Approvals
 
 - Permission cards show the tool input, a line diff for file edits, blocked-path
-  hints, and the CLI's suggestions (allow for this session / always / this
-  directory). Denials can carry a message back to the model.
+  hints, the CLI's `decision_reason` when it sends one, and the CLI's
+  suggestions (allow for this session / always / this directory). Denials can
+  carry a message back to the model.
 - **AskUserQuestion** renders the questions as radio/checkbox groups with a free
-  text "Other" answer and submits the CLI's answers map.
+  text "Other" answer and submits the CLI's answers map. With the card focused,
+  1–9 pick an option, ←/→ switch questions, ↑/↓ move the highlight, Enter
+  submits, and Esc declines; text fields keep their own keys.
 - **ExitPlanMode** renders the full plan as markdown with the permissions it
   requests, offering approve, approve-and-auto-accept-edits, or reject with
   feedback. The plan dialog supports `A` approve, `D` reject, `Enter` approve,

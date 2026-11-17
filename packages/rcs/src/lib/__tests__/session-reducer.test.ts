@@ -716,6 +716,147 @@ describe('reduceSessionEvent', () => {
   })
 })
 
+describe('model state', () => {
+  test('system init records the model', () => {
+    const state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', model: 'claude-sonnet-4-6' }))
+    expect(state.model).toBe('claude-sonnet-4-6')
+  })
+
+  test('system init ignores an invalid model but keeps the previous one', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', model: 'claude-opus-4-6' }))
+    state = reduceSessionEvent(state, event('system', { subtype: 'init', model: 42 }))
+    expect(state.model).toBe('claude-opus-4-6')
+
+    state = reduceSessionEvent(state, event('system', { subtype: 'init', model: '  ' }))
+    expect(state.model).toBe('claude-opus-4-6')
+  })
+
+  test('an outbound set_model request starts a pending model change', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event(
+        'control_request',
+        { type: 'control_request', request_id: 'mdl-1', request: { subtype: 'set_model', model: 'opus' } },
+        { direction: 'outbound' },
+      ),
+    )
+
+    expect(state.pendingModel).toEqual({ requestId: 'mdl-1', model: 'opus' })
+    expect(state.entries).toHaveLength(0)
+    expect(state.pendingPermissions).toHaveLength(0)
+  })
+
+  test('an outbound set_model without a model tracks a default reset', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', { request_id: 'mdl-1', request: { subtype: 'set_model' } }, { direction: 'outbound' }),
+    )
+    expect(state.pendingModel).toEqual({ requestId: 'mdl-1', model: null })
+  })
+
+  test('a successful model control_response adopts the requested value', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', model: 'sonnet' }))
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'mdl-1', request: { subtype: 'set_model', model: 'opus' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'mdl-1', subtype: 'success' } }),
+    )
+
+    expect(state.model).toBe('opus')
+    expect(state.pendingModel).toBeNull()
+    expect(state.modelError).toBeNull()
+  })
+
+  test('a successful default reset clears the model', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', model: 'sonnet' }))
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'mdl-1', request: { subtype: 'set_model' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'mdl-1', subtype: 'success' } }),
+    )
+
+    expect(state.model).toBeNull()
+  })
+
+  test('an error model control_response keeps the model and records the error', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', model: 'sonnet' }))
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'mdl-1', request: { subtype: 'set_model', model: 'nope' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'mdl-1', subtype: 'error', error: 'Unknown model' } }),
+    )
+
+    expect(state.model).toBe('sonnet')
+    expect(state.pendingModel).toBeNull()
+    expect(state.modelError).toBe('Unknown model')
+  })
+
+  test('mode and model settlements do not interfere', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('system', { subtype: 'init', permissionMode: 'default', model: 'sonnet' }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'mode-1', request: { subtype: 'set_permission_mode', mode: 'plan' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'mode-1', subtype: 'success' } }),
+    )
+
+    expect(state.permissionMode).toBe('plan')
+    expect(state.model).toBe('sonnet')
+    expect(state.pendingModel).toBeNull()
+    expect(state.modelError).toBeNull()
+
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'mdl-1', request: { subtype: 'set_model', model: 'opus' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'mdl-1', subtype: 'success' } }),
+    )
+
+    expect(state.permissionMode).toBe('plan')
+    expect(state.model).toBe('opus')
+    expect(state.pendingMode).toBeNull()
+    expect(state.modeError).toBeNull()
+  })
+
+  test('control_cancel_request clears a matching pending model change', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', { request_id: 'mdl-1', request: { subtype: 'set_model', model: 'opus' } }),
+    )
+    state = reduceSessionEvent(state, event('control_cancel_request', { request_id: 'mdl-1' }))
+
+    expect(state.pendingModel).toBeNull()
+    expect(state.modelError).toBeNull()
+  })
+
+  test('an unrelated control_response leaves the model state untouched', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', model: 'sonnet' }))
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'other', subtype: 'success' } }),
+    )
+
+    expect(state.model).toBe('sonnet')
+    expect(state.modelError).toBeNull()
+  })
+})
+
 describe('applyHistory', () => {
   test('history followed by a live duplicate of the same seqNum does not double-apply', () => {
     const a = event('assistant', { content: 'Hel' })

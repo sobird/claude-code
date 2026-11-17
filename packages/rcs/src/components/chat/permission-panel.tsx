@@ -186,6 +186,11 @@ function PermissionCard({
               {t('permission.blockedPath', { path: request.blockedPath })}
             </div>
           ) : null}
+          {request.decisionReason ? (
+            <div className="mt-0.5 text-xs text-warning-text/80">
+              {t('permission.reason')}: {request.decisionReason}
+            </div>
+          ) : null}
           {hunks ? (
             <div className="mt-1.5 space-y-2">
               {hunks.map((hunk, index) => (

@@ -17,6 +17,8 @@ const SECTIONS = [
       { keys: 'Shift+Enter', label: 'newline' },
       { keys: 'Esc', label: 'interrupt' },
       { keys: '↑ / ↓', label: 'history' },
+      { keys: 'Ctrl+R', label: 'searchHistory' },
+      { keys: 'Shift+Tab', label: 'cycleMode' },
       { keys: '/', label: 'commands' },
       { keys: 'Tab / Enter', label: 'accept' },
     ],

@@ -22,6 +22,7 @@ import { clearBridgeResponses, settleBridgeResponse } from './bridge-requests.js
 import { createAttachmentLoader, hasAttachmentRefs, hydrateClientPayload, toClientPayload } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'
 import { getEventBus, loadEventReplayWindow, publishInboundEvent, subscribeReplayThenLive } from './event-bus.js'
+import { clearModelCatalog } from './model-catalog.js'
 
 // Per-connection cleanup, keyed by sessionId (only one WS per session).
 interface CleanupEntry {
@@ -105,6 +106,8 @@ export async function handleWebSocketOpen(
     activeConnections.delete(existing.ws)
     // Direct requests written to the old socket are not replayed; fail them now.
     clearBridgeResponses(sessionId)
+    // The replacement child answers its own `initialize`; drop the stale catalog.
+    clearModelCatalog(sessionId)
   }
 
   const keepaliveIntervalMs =
@@ -240,6 +243,7 @@ export function handleWebSocketClose(ws: WSContext, sessionId: string, code?: nu
     stopKeepalive(entry)
     cleanupBySession.delete(sessionId)
     clearBridgeResponses(sessionId)
+    clearModelCatalog(sessionId)
   }
 }
 
@@ -351,6 +355,7 @@ export function closeAllConnections(): void {
     }
     cleanupBySession.delete(sessionId)
     clearBridgeResponses(sessionId)
+    clearModelCatalog(sessionId)
   }
   activeConnections.clear()
 }

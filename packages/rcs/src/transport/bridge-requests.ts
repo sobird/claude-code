@@ -8,6 +8,9 @@
  * through to the normal persisted-event path in `ingestBridgeMessage`.
  */
 
+import type { ModelOption } from '../lib/model-settings.js'
+import { normalizeModelOptions } from '../lib/model-settings.js'
+
 /** Paths returned to the web client per completion query. */
 export const MAX_SUGGESTION_PATHS = 20
 
@@ -123,4 +126,14 @@ export function suggestionPathsFromResponse(response: unknown): string[] {
     if (paths.length >= MAX_SUGGESTION_PATHS) break
   }
   return paths
+}
+
+/** Pull the model list out of an `initialize` control response, defensively. */
+export function modelOptionsFromResponse(response: unknown): ModelOption[] {
+  if (!response || typeof response !== 'object' || Array.isArray(response)) return []
+  const record = response as Record<string, unknown>
+  if (record.subtype !== 'success') return []
+  const payload = record.response
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return []
+  return normalizeModelOptions((payload as Record<string, unknown>).models)
 }
