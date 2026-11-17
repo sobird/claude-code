@@ -101,9 +101,10 @@ self.addEventListener('push', (event: Event) => {
           icon: '/icons/icon-192.png',
           data: { url: content.url },
         })
-      } catch {
-        // A failed `matchAll`/`showNotification` must not become an unhandled
-        // rejection that drops the notification silently.
+      } catch (error) {
+        // Keep a failed `matchAll`/`showNotification` from becoming an unhandled
+        // rejection; the notification is still skipped, but log it for DevTools.
+        console.error('[rcs] push notification failed:', error)
       }
     })(),
   )

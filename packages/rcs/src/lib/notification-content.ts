@@ -13,7 +13,10 @@ export interface NotificationContent {
   url: string
 }
 
-/** Session titles longer than this are clipped so the notification stays readable. */
+/**
+ * Session titles longer than this are clipped so the notification stays readable.
+ * Counts Unicode code points (via `Array.from`), not UTF-16 code units.
+ */
 export const MAX_TITLE_LENGTH = 60
 
 const KINDS = new Set<PushNotificationKind>(['permission', 'question', 'plan'])

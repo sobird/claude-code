@@ -8,8 +8,8 @@
  *
  * VAPID keys resolve in order: both environment values, then the stored settings row,
  * then a freshly generated pair that is persisted so restarts keep the same key.
- * `web-push` is imported lazily so builds and tests do not require it unless push is
- * actually enabled.
+ * `web-push` is imported lazily (via a literal dynamic import) so the gateway bundle
+ * carries it while builds and tests that never enable push still resolve it on demand.
  */
 
 import type { GatewayConfig } from '../config.js'
@@ -46,7 +46,8 @@ interface PushNotifierState {
 interface WebPushModule {
   default?: WebPushModule
   setVapidDetails(subject: string, publicKey: string, privateKey: string): void
-  generateVapidKeys(): { publicKey: string; privateKey: string }
+  /** Real `web-push` v4 exports this as `generateVAPIDKeys`. */
+  generateVAPIDKeys(): { publicKey: string; privateKey: string }
   sendNotification(
     subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
     payload: string,
@@ -60,14 +61,17 @@ const NOTIFICATION_TIMEOUT_MS = 5000
 let state: PushNotifierState | null = null
 const seen = new Map<string, number>()
 
-/** Lazily loads `web-push`; a literal-free specifier keeps it out of the bundle graph. */
+/**
+ * Lazily loads `web-push`. The specifier is a literal so `bun build` bundles the
+ * package into `dist/gateway.js` — the shipped Docker image has no `node_modules`.
+ * Being a dynamic import (not a top-level one) it still resolves on demand.
+ */
 async function createDefaultProvider(): Promise<PushNotifierProvider> {
-  const moduleName = 'web-push'
-  const mod = (await import(moduleName)) as WebPushModule
+  const mod = (await import('web-push')) as unknown as WebPushModule
   const webpush = mod.default ?? mod
   return {
     setVapidDetails: (subject, publicKey, privateKey) => webpush.setVapidDetails(subject, publicKey, privateKey),
-    generateVapidKeys: () => webpush.generateVapidKeys(),
+    generateVapidKeys: () => webpush.generateVAPIDKeys(),
     sendNotification: (subscription, payload, options) => webpush.sendNotification(subscription, payload, options),
   }
 }

@@ -43,6 +43,11 @@ function config(overrides: Record<string, string> = {}) {
   } as unknown as NodeJS.ProcessEnv)
 }
 
+// A real VAPID key pair: the real `web-push` `setVapidDetails` validates the
+// base64url key material, so placeholder strings would be rejected.
+const REAL_VAPID_PUBLIC_KEY = 'BM5UyYwR6QU20IEcZBlGJAD0a5BqlTbeJGv2yG1Up_gmDYspF00LiuH-VKGkF2KR9_rEYo0Ykml3D4zzRBkwTYE'
+const REAL_VAPID_PRIVATE_KEY = '-Gavixvdemehu1VOZ5SonwhgpJ9g7TkvUxlWHbM3MCE'
+
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 beforeEach(() => resetPushNotifierForTests())
@@ -274,5 +279,35 @@ describe('push notifier service', () => {
     notifyInboundEvent(session.id, 'control_request', confirmation)
     await flush()
     expect(sent).toHaveLength(0)
+  })
+
+  // No `provider`: these load the real `web-push` package, proving it resolves
+  // under Bun (the gateway bundle embeds the same module for the Docker image).
+  test('loads the real web-push module and enables push with env keys', async () => {
+    const repos = createMemoryRepositories()
+
+    await initPushNotifier({
+      config: config({
+        RCS_VAPID_PUBLIC_KEY: REAL_VAPID_PUBLIC_KEY,
+        RCS_VAPID_PRIVATE_KEY: REAL_VAPID_PRIVATE_KEY,
+      }),
+      repos,
+    })
+
+    expect(getPushPublicConfig()).toEqual({ enabled: true, publicKey: REAL_VAPID_PUBLIC_KEY })
+  })
+
+  test('generates and persists keys via the real web-push module', async () => {
+    const repos = createMemoryRepositories()
+
+    await initPushNotifier({
+      config: config({ RCS_VAPID_PUBLIC_KEY: '', RCS_VAPID_PRIVATE_KEY: '' }),
+      repos,
+    })
+
+    const stored = await repos.pushSettings.get()
+    expect(stored?.publicKey).toBeTruthy()
+    expect(stored?.privateKey).toBeTruthy()
+    expect(getPushPublicConfig()).toEqual({ enabled: true, publicKey: stored?.publicKey ?? null })
   })
 })
