@@ -94,6 +94,8 @@ export function shouldNotifyOnce(
 }
 
 const IPV4_PATTERN = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+const IPV4_MAPPED_PATTERN = /^::ffff:(.*)$/i
+const HEX_GROUP_PATTERN = /^[0-9a-f]{1,4}$/i
 
 /** Loopback/private/link-local/unspecified IPv4 ranges. */
 function isDisallowedIPv4(host: string): boolean {
@@ -110,9 +112,31 @@ function isDisallowedIPv4(host: string): boolean {
   )
 }
 
+/**
+ * Decodes the embedded IPv4 of an IPv4-mapped IPv6 host (`::ffff:…`) to dotted
+ * form, accepting both `127.0.0.1` and hex `7f00:1` tails. Returns `null` when
+ * the tail is malformed so the caller can fail closed.
+ */
+function mappedIPv4(remainder: string): string | null {
+  if (IPV4_PATTERN.test(remainder)) return remainder
+  const groups = remainder.split(':')
+  if (groups.length !== 2) return null
+  const [hiText, loText] = groups
+  if (!HEX_GROUP_PATTERN.test(hiText) || !HEX_GROUP_PATTERN.test(loText)) return null
+  const hi = parseInt(hiText, 16)
+  const lo = parseInt(loText, 16)
+  return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`
+}
+
 /** Loopback/unspecified/unique-local/link-local IPv6 ranges. */
 function isDisallowedIPv6(host: string): boolean {
   if (!host.includes(':')) return false
+  const mapped = IPV4_MAPPED_PATTERN.exec(host)
+  if (mapped) {
+    const ipv4 = mappedIPv4(mapped[1])
+    if (ipv4 === null || isDisallowedIPv4(ipv4)) return true
+    return false
+  }
   return (
     host === '::1' ||
     host === '::' ||

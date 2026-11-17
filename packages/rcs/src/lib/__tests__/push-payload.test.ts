@@ -111,6 +111,14 @@ describe('isAllowedPushEndpoint', () => {
     expect(isAllowedPushEndpoint('https://[fd12:3456::1]/x')).toBe(false)
     expect(isAllowedPushEndpoint('https://[fe80::1]/x')).toBe(false)
   })
+
+  test('rejects IPv4-mapped IPv6 literals for disallowed IPv4 ranges', () => {
+    expect(isAllowedPushEndpoint('https://[::ffff:127.0.0.1]/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://[::ffff:169.254.169.254]/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://[::ffff:10.0.0.1]/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://[::ffff:c0a8:101]/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://[::ffff:7f00:1]/x')).toBe(false)
+  })
 })
 
 describe('loadConfig VAPID fields', () => {
