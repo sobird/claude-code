@@ -2,15 +2,22 @@
  * Web control routes: user messages, control requests, and interrupts.
  *
  * All three resolve the session through the ownership helper, so an unknown or foreign
- * session yields 403 and a closed session yields 409 (`session_closed`). Published events
- * are persisted before fan-out so reconnecting clients can replay them.
+ * session yields 403 and an archived session yields 409 (`session_closed`). An `inactive`
+ * session is revived to `idle` by the write, so a reaped conversation is resumable rather
+ * than terminal. Published events are persisted before fan-out so reconnecting clients can
+ * replay them.
  */
 
 import { Hono } from 'hono'
 
 import type { AppContext, AppEnv } from '../../auth/context.js'
 import { isSessionClosedStatus } from '../../contracts.js'
-import { getSession, resolveOwnedWebSessionId, updateSessionStatus } from '../../services/session.js'
+import {
+  getSession,
+  reactivateInactiveSession,
+  resolveOwnedWebSessionId,
+  updateSessionStatus,
+} from '../../services/session.js'
 import { getEventBus, publishSessionEvent } from '../../transport/event-bus.js'
 import { legacyUserAuth, sessionClosed, webForbidden } from '../common.js'
 
@@ -31,6 +38,7 @@ async function checkOwnership(c: AppContext, requested: string): Promise<Ownersh
   if (isSessionClosedStatus(session.status)) {
     return { ok: false, response: sessionClosed(c, session.status) }
   }
+  await reactivateInactiveSession(repos, owned)
   return { ok: true, sessionId: owned }
 }
 

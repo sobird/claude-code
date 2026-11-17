@@ -19,6 +19,7 @@ import {
   getSession,
   listAllSessions,
   listWebSessionsByOwner,
+  reactivateInactiveSession,
   resolveOwnedWebSessionId,
   toWebSessionResponse,
 } from '../../services/session.js'
@@ -187,6 +188,8 @@ app.get('/sessions/:id/events', legacyUserAuth, async (c) => {
   const session = await getSession(repos, owned)
   if (!session) return webNotFound(c)
   if (isSessionClosedStatus(session.status)) return sessionClosed(c, session.status)
+  // Opening the stream is a resume signal: a reaped session comes back as `idle`.
+  await reactivateInactiveSession(repos, owned)
 
   const lastEventId = c.req.header('Last-Event-ID')
   const parsed = lastEventId ? Number.parseInt(lastEventId, 10) : 0

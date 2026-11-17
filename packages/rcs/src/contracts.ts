@@ -97,7 +97,12 @@ export interface SessionEventRecord {
 
 const CODE_SESSION_PREFIX = 'cse_'
 const WEB_SESSION_PREFIX = 'session_'
-const CLOSED_SESSION_STATUSES = new Set(['archived', 'inactive'])
+/**
+ * Statuses that make a session terminal. `inactive` is deliberately excluded: it is a
+ * liveness signal set by the disconnect monitor, and a user can resume such a session
+ * (see `reactivateInactiveSession`). Only an explicit archive is final.
+ */
+const CLOSED_SESSION_STATUSES = new Set(['archived'])
 
 export function toWebSessionId(sessionId: string): string {
   if (!sessionId.startsWith(CODE_SESSION_PREFIX)) return sessionId

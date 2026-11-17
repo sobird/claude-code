@@ -27,6 +27,7 @@ import {
   incrementEpoch,
   listSessionsByEnvironment,
   listWebSessionsByOwner,
+  reactivateInactiveSession,
   resolveExistingSessionId,
   resolveOwnedWebSessionId,
   updateSessionStatus,
@@ -143,6 +144,35 @@ describe('Session Service', () => {
     })
   })
 
+  describe('reactivateInactiveSession', () => {
+    test('revives an inactive session to idle and publishes the status change', async () => {
+      const s = await createCodeSession(repos, {})
+      await updateSessionStatus(repos, s.id, 'inactive')
+
+      expect(await reactivateInactiveSession(repos, s.id)).toBe('idle')
+      expect((await getSession(repos, s.id))?.status).toBe('idle')
+      const events = await repos.events.listSince(s.id, 0, 10)
+      expect(events.map((event) => event.payload)).toContainEqual({ status: 'idle' })
+    })
+
+    test('leaves an archived session terminal', async () => {
+      const s = await createCodeSession(repos, {})
+      await archiveSession(repos, s.id)
+
+      expect(await reactivateInactiveSession(repos, s.id)).toBe('archived')
+      expect((await getSession(repos, s.id))?.status).toBe('archived')
+    })
+
+    test('leaves a live session untouched and returns null for unknown ids', async () => {
+      const s = await createCodeSession(repos, {})
+      await updateSessionStatus(repos, s.id, 'running')
+
+      expect(await reactivateInactiveSession(repos, s.id)).toBe('running')
+      expect(await reactivateInactiveSession(repos, 'cse_missing')).toBeNull()
+      expect((await getSession(repos, s.id))?.status).toBe('running')
+    })
+  })
+
   describe('archiveSession', () => {
     test('sets status to archived and removes event bus', async () => {
       const s = await createCodeSession(repos, {})
@@ -176,10 +206,14 @@ describe('Session Service', () => {
       expect(sessions[0].id).toMatch(/^session_/)
     })
 
-    test('skips closed sessions', async () => {
-      const session = await createSession(repos, { ownerUserId: 'alice' })
-      await updateSessionStatus(repos, session.id, 'archived')
-      expect(await listWebSessionsByOwner(repos, { id: 'alice', role: 'member' })).toHaveLength(0)
+    test('skips archived sessions but lists inactive ones so they can be resumed', async () => {
+      const archived = await createSession(repos, { ownerUserId: 'alice' })
+      await updateSessionStatus(repos, archived.id, 'archived')
+      const inactive = await createSession(repos, { ownerUserId: 'alice' })
+      await updateSessionStatus(repos, inactive.id, 'inactive')
+
+      const sessions = await listWebSessionsByOwner(repos, { id: 'alice', role: 'member' })
+      expect(sessions.map((session) => session.id)).toEqual([inactive.id])
     })
 
     test('admins see every owner session', async () => {

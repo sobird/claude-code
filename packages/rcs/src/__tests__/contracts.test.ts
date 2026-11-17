@@ -11,6 +11,8 @@ test('session id mapping', () => {
 
 test('closed statuses', () => {
   expect(isSessionClosedStatus('archived')).toBe(true)
+  // A reaped session is resumable; only a deliberate archive is terminal.
+  expect(isSessionClosedStatus('inactive')).toBe(false)
   expect(isSessionClosedStatus('idle')).toBe(false)
   expect(isSessionClosedStatus(null)).toBe(false)
 })

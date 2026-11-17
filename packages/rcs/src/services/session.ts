@@ -203,6 +203,19 @@ export async function updateSessionStatus(repos: Repositories, sessionId: string
   })
 }
 
+/**
+ * Resume a session the disconnect monitor marked `inactive` when the user opens or writes
+ * to it. Archiving is a deliberate owner action and stays terminal. Returns the resulting
+ * status, or `null` when the session does not exist.
+ */
+export async function reactivateInactiveSession(repos: Repositories, sessionId: string): Promise<string | null> {
+  const record = await findSession(repos, sessionId)
+  if (!record) return null
+  if (record.status !== 'inactive') return record.status
+  await updateSessionStatus(repos, record.id, 'idle')
+  return 'idle'
+}
+
 export async function archiveSession(repos: Repositories, sessionId: string): Promise<void> {
   const canonicalId = await resolveSessionId(repos, sessionId)
   if (!canonicalId) return

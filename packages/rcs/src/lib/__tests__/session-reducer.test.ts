@@ -243,9 +243,10 @@ describe('reduceSessionEvent', () => {
     expect(state.closed).toBe(true)
   })
 
-  test('session_status inactive marks the session closed', () => {
+  test('session_status inactive is resumable, not closed', () => {
     const state = reduceSessionEvent(initialChatState, event('session_status', { status: 'inactive' }))
-    expect(state.closed).toBe(true)
+    expect(state.status).toBe('inactive')
+    expect(state.closed).toBe(false)
   })
 
   test('duplicate seqNum events are ignored and return the same state', () => {

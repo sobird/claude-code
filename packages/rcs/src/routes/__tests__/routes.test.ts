@@ -1114,18 +1114,19 @@ describe('Web Session Routes', () => {
     expect(new Set(adminSessions.map((sess) => sess.id))).toEqual(new Set([own, foreign, toWebSessionId(unowned.id)]))
   })
 
-  test('GET /web/sessions hides archived and inactive sessions', async () => {
+  test('GET /web/sessions hides archived sessions but keeps inactive ones resumable', async () => {
     const archived = await s.repos.sessions.create({ ownerUserId: s.member.id, status: 'archived' })
     const inactive = await s.repos.sessions.create({ ownerUserId: s.member.id, status: 'inactive' })
     const open = await s.repos.sessions.create({ ownerUserId: s.member.id, status: 'idle' })
+    const visible = new Set([toWebSessionId(inactive.id), toWebSessionId(open.id)])
 
     const sessions = await resJson(await app.request('/web/sessions', { headers: bearer(s.memberToken) }))
-    expect(sessions.map((sess: { id: string }) => sess.id)).toEqual([toWebSessionId(open.id)])
+    expect(new Set(sessions.map((sess: { id: string }) => sess.id))).toEqual(visible)
     expect(archived.id).not.toBe(open.id)
     expect(inactive.id).not.toBe(open.id)
 
     const all = await resJson(await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }))
-    expect(all.map((sess: { id: string }) => sess.id)).toEqual([toWebSessionId(open.id)])
+    expect(new Set(all.map((sess: { id: string }) => sess.id))).toEqual(visible)
   })
 
   test('GET /web/sessions/:id returns an owned session', async () => {
@@ -1287,6 +1288,16 @@ describe('Web Session Routes', () => {
     expect((await resJson(res)).error.type).toBe('session_closed')
   })
 
+  test('GET /web/sessions/:id/events resumes an inactive session', async () => {
+    const record = await s.repos.sessions.create({ ownerUserId: s.member.id, status: 'inactive' })
+    const res = await app.request(`/web/sessions/${toWebSessionId(record.id)}/events`, {
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(200)
+    await res.body?.cancel()
+    expect((await s.repos.sessions.getById(record.id))?.status).toBe('idle')
+  })
+
   test('POST /web/sessions with an unknown environment is rejected', async () => {
     const res = await app.request('/web/sessions', {
       method: 'POST',
@@ -1381,6 +1392,19 @@ describe('Web Control Routes', () => {
       body: JSON.stringify({ type: 'user', content: 'hello' }),
     })
     expect(res.status).toBe(403)
+  })
+
+  test('control routes resume an inactive session instead of rejecting it', async () => {
+    for (const path of ['events', 'control', 'interrupt']) {
+      const record = await s.repos.sessions.create({ ownerUserId: s.member.id, status: 'inactive' })
+      const res = await app.request(`/web/sessions/${toWebSessionId(record.id)}/${path}`, {
+        method: 'POST',
+        headers: bearer(s.memberToken),
+        body: JSON.stringify({ type: 'user', content: 'hello' }),
+      })
+      expect(res.status).toBe(200)
+      expect((await s.repos.sessions.getById(record.id))?.status).toBe('idle')
+    }
   })
 
   test('control routes 409 for archived sessions', async () => {
