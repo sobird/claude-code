@@ -3,6 +3,7 @@ import { NetworkOnly, Serwist } from 'serwist'
 import type { PrecacheEntry, RuntimeCaching } from 'serwist'
 
 import { parseNotificationPayload, shouldShowNotification, toNotificationContent } from '../lib/notification-content.js'
+import { clearPendingNavigation, setPendingNavigation } from '../lib/pending-navigation.js'
 
 // The project's tsconfig uses the DOM lib, whose service-worker globals are
 // limited; declare only the slice this entry reads. `__SW_MANIFEST` is
@@ -134,10 +135,16 @@ self.addEventListener('notificationclick', (event: Event) => {
   click.waitUntil(
     (async () => {
       try {
+        // Record the target before touching windows: on iOS the tap may relaunch
+        // the home-screen app at its start URL with no window to message, and
+        // only the app itself can act on the hand-off once it boots.
+        await setPendingNavigation(url)
+
         const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
         const exact = windows.find((client) => new URL(client.url).pathname === url)
         if (exact) {
           await exact.focus()
+          await clearPendingNavigation()
           return
         }
         // iOS often launches a home-screen app at its start URL and ignores the
@@ -147,12 +154,17 @@ self.addEventListener('notificationclick', (event: Event) => {
         if (target) {
           try {
             await target.navigate(url)
+            await clearPendingNavigation()
           } catch {
+            // Leave the hand-off in place: if the message is lost, the app still
+            // picks the target up when it next becomes visible.
             target.postMessage({ type: 'notification:navigate', url })
           }
           await target.focus()
           return
         }
+        // No window to steer: the launch below may land on the start URL, so
+        // leave the hand-off for the app to consume on boot.
         await self.clients.openWindow(url)
       } catch (error) {
         // Keep a failed `matchAll`/`focus`/`navigate`/`openWindow` from becoming
