@@ -318,6 +318,20 @@ a Serwist service worker served at `/serwist/sw.js`. Open the site in a
 supported browser and use "Install app". Manifest/service-worker routes are
 excluded from the auth middleware so installation works before login.
 
+## Push notifications
+
+The UI can push a notification to the owner when a session is waiting on a
+confirmation, even with the tab closed. Enable it per user under Settings.
+
+- Web Push requires HTTPS: set `RCS_DOMAIN` so Caddy serves the site over TLS.
+- iOS needs 16.4+ **and** the app added to the home screen; Android and desktop
+  browsers work directly.
+- The gateway needs outbound access to the browser push services
+  (`fcm.googleapis.com`, Apple's push endpoint, `updates.push.services.mozilla.com`).
+- VAPID keys are generated on first boot and stored in Postgres. Override them
+  with `RCS_VAPID_PUBLIC_KEY` / `RCS_VAPID_PRIVATE_KEY` (and optionally
+  `RCS_VAPID_SUBJECT`) in `.env`.
+
 ## Migrations
 
 - **Automatic:** the gateway calls `runMigrations` at startup (`server/index.ts`),

@@ -347,6 +347,21 @@ CLAUDE_CODE_POST_FOR_SESSION_INGRESS_V2=1
 CLAUDE_AGENT_SDK_VERSION=...
 ```
 
+## RCS 服务器推送通知
+
+`packages/rcs` 的 Web Push 通知使用的 VAPID 密钥。三个变量均可留空：不设置时网关会在首次启动时生成密钥对并保存到 Postgres，重启后沿用。
+
+```bash
+# 可选 - VAPID 公钥；仅当公钥与私钥同时设置时才覆盖数据库中已保存的密钥
+RCS_VAPID_PUBLIC_KEY=...
+
+# 可选 - VAPID 私钥；与公钥成对使用
+RCS_VAPID_PRIVATE_KEY=...
+
+# 可选 - VAPID subject，须为 mailto: 或 https: 地址，默认 mailto:noreply@localhost
+RCS_VAPID_SUBJECT=mailto:admin@example.com
+```
+
 ## 2.1.89 新增变量
 
 > `CLAUDE_CODE_BRIEF` 在 2.1.88 中即已存在（见上文），不在此重复列出。
