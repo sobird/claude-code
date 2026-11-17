@@ -6,6 +6,7 @@ import { logForDebugging } from 'src/utils/debug.js'
 
 import { getAllowedChannels } from '../../../bootstrap/state.js'
 import type { BridgePermissionCallbacks } from '../../../bridge/bridgePermissionCallbacks.js'
+import { augmentBridgePermissionInput } from '../../../bridge/bridgePlanInput.js'
 import { getTerminalFocused } from '../../../ink/terminal-focus-state.js'
 import {
   CHANNEL_PERMISSION_REQUEST_METHOD,
@@ -20,6 +21,7 @@ import {
 } from '../../../services/mcp/channelPermissions.js'
 import { executeAsyncClassifierCheck } from '../../../tools/BashTool/bashPermissions.js'
 import { BASH_TOOL_NAME } from '../../../tools/BashTool/toolName.js'
+import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../../tools/ExitPlanModeTool/constants.js'
 import {
   clearClassifierChecking,
   setClassifierApproval,
@@ -30,6 +32,7 @@ import { errorMessage } from '../../../utils/errors.js'
 import type { PermissionDecision } from '../../../utils/permissions/PermissionResult.js'
 import { hasPermissionsToUseTool } from '../../../utils/permissions/permissions.js'
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
+import { getPlan } from '../../../utils/plans.js'
 import type { PermissionContext } from '../PermissionContext.js'
 import { createResolveOnce } from '../PermissionContext.js'
 
@@ -229,10 +232,18 @@ function handleInteractivePermission(
   // `selected`, AskUserQuestion `answers`) tolerate the field being missing
   // so generic remote approval degrades gracefully instead of throwing.
   if (bridgeCallbacks && bridgeRequestId) {
+    // The plan body lives on disk, so remote clients only see `allowedPrompts`.
+    // Forward a display-only copy enriched with the plan; resolution below still
+    // uses `displayInput`, because ExitPlanMode treats an input `plan` as a user
+    // edit and would rewrite the plan file.
+    const bridgeInput =
+      ctx.tool.name === EXIT_PLAN_MODE_V2_TOOL_NAME
+        ? augmentBridgePermissionInput(ctx.tool.name, displayInput, getPlan(ctx.toolUseContext.agentId))
+        : displayInput
     bridgeCallbacks.sendRequest(
       bridgeRequestId,
       ctx.tool.name,
-      displayInput,
+      bridgeInput,
       ctx.toolUseID,
       description,
       result.suggestions,
