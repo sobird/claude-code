@@ -41,10 +41,20 @@ and SSE stream.
 - Markdown with syntax-highlighted code (lazy-loaded), collapsible thinking
   blocks, and tool cards that summarize the call (command, file, pattern…),
   group repeated calls, and expand to the raw input and output.
-- **Load earlier messages** paginates history in 100-event pages without
-  shifting the viewport.
+- **History pages in as you scroll back** (100-event pages) without shifting
+  the viewport. Long sessions render a bounded window of the newest messages
+  (80 grouped items); scrolling near the top reveals older ones in the same
+  chunks, keeping the message you were reading anchored in place, and fetches
+  another page once everything locally loaded is on screen. There is no
+  load-earlier button — a short session whose transcript fits the viewport
+  preloads the next page automatically.
 - A turn-duration line closes each completed turn.
 - Copy buttons on assistant replies and on your own messages.
+- **Image attachments**: paste an image or pick one with the composer button
+  (PNG/JPEG/GIF/WebP, up to 5 per message). Large images are downscaled and
+  re-encoded as JPEG before upload, stored deduped by content hash, and sent to
+  the CLI as base64 at delivery time; the transcript keeps only a reference, so
+  images still render after a reload.
 - Any prompt can be **edited in place** (the bubble becomes a textarea: Enter
   sends, Shift+Enter inserts a newline, Esc cancels), and the latest reply can
   be **regenerated**. Both resend as a new turn because the bridge has no

@@ -9,6 +9,7 @@
 
 import type { Database } from '../client'
 import { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys'
+import { createAttachmentRepository, createMemoryAttachmentRepository } from './attachments'
 import { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments'
 import { createEventRepository, createMemoryEventRepository } from './events'
 import { createMemorySessionWorkerRepository, createSessionWorkerRepository } from './session-workers'
@@ -26,6 +27,7 @@ export function createRepositories(db: Database): Repositories {
     workItems: createWorkItemRepository(db),
     sessionWorkers: createSessionWorkerRepository(db),
     events: createEventRepository(db),
+    attachments: createAttachmentRepository(db),
   }
 }
 
@@ -38,6 +40,7 @@ export function createMemoryRepositories(): Repositories {
     workItems: createMemoryWorkItemRepository(),
     sessionWorkers: createMemorySessionWorkerRepository(),
     events: createMemoryEventRepository(),
+    attachments: createMemoryAttachmentRepository(),
   }
 }
 
@@ -48,6 +51,7 @@ export const createUserRepositories = createRepositories
 export const createMemoryUserRepositories = createMemoryRepositories
 
 export { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys'
+export { createAttachmentRepository, createMemoryAttachmentRepository } from './attachments'
 export { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments'
 export { createEventRepository, createMemoryEventRepository } from './events'
 export { createMemorySessionRepository, createSessionRepository } from './sessions'
@@ -55,6 +59,8 @@ export { createMemorySessionWorkerRepository, createSessionWorkerRepository } fr
 export type {
   ApiKeyRepository,
   AppendEventInput,
+  AttachmentRepository,
+  CreateAttachmentInput,
   CreateApiKeyInput,
   CreateEnvironmentInput,
   CreateSessionInput,

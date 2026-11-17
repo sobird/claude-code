@@ -9,6 +9,7 @@
 
 import type {
   ApiKeyRecord,
+  AttachmentRecord,
   EnvironmentRecord,
   Role,
   SessionEventRecord,
@@ -169,6 +170,26 @@ export interface Repositories {
   workItems: WorkItemRepository
   sessionWorkers: SessionWorkerRepository
   events: EventRepository
+  attachments: AttachmentRepository
+}
+
+export interface CreateAttachmentInput {
+  ownerUserId: string
+  mediaType: string
+  /** sha256 hex of `data`, computed by the upload route. */
+  sha256: string
+  byteLength: number
+  data: Uint8Array
+}
+
+export interface AttachmentRepository {
+  /**
+   * Stores the bytes and returns the row; when the owner already has a row with the
+   * same hash it is returned instead (the unique `(owner, sha256)` index arbitrates
+   * concurrent uploads).
+   */
+  createOrGet(input: CreateAttachmentInput): Promise<AttachmentRecord>
+  getById(id: string): Promise<AttachmentRecord | null>
 }
 
 export interface EnqueueWorkItemInput {

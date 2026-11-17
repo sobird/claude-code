@@ -10,7 +10,7 @@
  * echo and history) so it shows immediately and survives a reload.
  */
 
-import { ArrowDown, ArrowLeft, Gauge, Keyboard, Timer } from 'lucide-react'
+import { ArrowDown, ArrowLeft, Gauge, Keyboard, Loader2, Timer } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -21,7 +21,9 @@ import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
 import { useSessionStream } from '../../hooks/useSessionStream'
 import { createApiClient } from '../../lib/api-client'
 import { withPendingApprovalCount } from '../../lib/approval-alert'
+import { buildUserContent, type AttachmentRef } from '../../lib/attachments'
 import { latestPrompt } from '../../lib/message-actions'
+import { earlierStartIndex, windowStartIndex } from '../../lib/message-window'
 import { buildSetPermissionModeRequest, type WebPermissionMode } from '../../lib/permission-modes'
 import type { PermissionDecision } from '../../lib/permission-suggestions'
 import { randomUuid } from '../../lib/random-uuid'
@@ -102,6 +104,32 @@ function groupToolCalls(entries: ThreadEntry[]): GroupedItem[] {
   return result
 }
 
+interface KeyedItem {
+  item: GroupedItem
+  key: string
+}
+
+function itemKey(item: GroupedItem): string {
+  // Tool groups are keyed by their newest call: when an older page merges a
+  // call into a group's front, the group keeps its key and a pinned window
+  // stays put. Keying by the first call would make the pin go stale there.
+  return item.kind === 'tools'
+    ? `tools-${item.entries[item.entries.length - 1]?.toolCall.id ?? 'empty'}`
+    : `entry-${item.entry.id}`
+}
+
+// Scrolling within this many pixels of the top reveals/fetches older items, so
+// history pages in as the reader scrolls back instead of behind a button.
+const AUTO_LOAD_TOP_PX = 160
+
+/** The rendered node for a transcript item, used to anchor scroll on reveal. */
+function findMessageNode(el: HTMLElement, key: string): HTMLElement | null {
+  for (const node of el.querySelectorAll<HTMLElement>('[data-message-key]')) {
+    if (node.dataset.messageKey === key) return node
+  }
+  return null
+}
+
 export function SessionView({ sessionId }: { sessionId: string }) {
   const t = useTranslations('session.view')
   const tCommon = useTranslations('common')
@@ -121,19 +149,37 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Cursor for the next older page; null once the whole history is loaded.
   const [nextBefore, setNextBefore] = useState<number | null>(null)
   const [loadingEarlier, setLoadingEarlier] = useState(false)
-  // Scroll height captured before prepending, so the viewport stays put.
-  const preserveScrollRef = useRef<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<unknown>(null)
   const [actionError, setActionError] = useState<unknown>(null)
   // Events folded in from a send response so the message shows immediately even
   // if the live stream hiccups; the SSE echo dedupes by seqNum/uuid.
   const [extraEvents, setExtraEvents] = useState<SessionEventInput[]>([])
-  const [failedSend, setFailedSend] = useState<{ text: string; uuid: string; error: unknown } | null>(null)
+  const [failedSend, setFailedSend] = useState<{
+    text: string
+    attachments: AttachmentRef[]
+    uuid: string
+    error: unknown
+  } | null>(null)
   const [atBottom, setAtBottom] = useState(true)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const atBottomRef = useRef(true)
+  // First rendered item, pinned by key so appends never unmount what is on
+  // screen and prepended pages resolve to the same item. Null until history
+  // lands, so the initial view is the newest window of the loaded transcript.
+  const [pinnedKey, setPinnedKey] = useState<string | null>(null)
+  // Pinned node's viewport top captured before a reveal; the layout effect
+  // restores it after the older items mount.
+  const revealAnchorRef = useRef<{ key: string; top: number } | null>(null)
+  // A server page that arrives with older events is followed by one local
+  // reveal so the click always shows something new.
+  const revealAfterLoadRef = useRef(false)
+  // Keeps the reveal anchor pinned through async reflow (the thread content
+  // resizes when a lazily-loaded markdown chunk replaces its plain-text
+  // fallback). See the anchoring layout effect; bounded by a short timer.
+  const settleRef = useRef<{ observer: ResizeObserver; timer: ReturnType<typeof setTimeout> } | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   // `?` opens the shortcut reference wherever the user is not typing.
   useEffect(() => {
@@ -189,8 +235,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     try {
       const page = await api.get<HistoryResponse>(`${path}/history?limit=100&before=${nextBefore}`)
       const older = Array.isArray(page.events) ? page.events : []
-      const el = scrollRef.current
-      if (el) preserveScrollRef.current = el.scrollHeight
+      if (older.length > 0) revealAfterLoadRef.current = true
       setHistory((prev) => {
         const merged = new Map<number, HistoryEvent>()
         for (const event of [...older, ...(prev ?? [])]) {
@@ -205,15 +250,6 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       setLoadingEarlier(false)
     }
   }, [api, sessionId, nextBefore, loadingEarlier])
-
-  // Prepended messages must not shift what the reader is looking at.
-  useLayoutEffect(() => {
-    const el = scrollRef.current
-    const previousHeight = preserveScrollRef.current
-    if (!el || previousHeight === null) return
-    el.scrollTop = el.scrollHeight - previousHeight
-    preserveScrollRef.current = null
-  }, [history])
 
   // Fold durable events first (history, live frames, locally-sent events) in
   // sequence order so an assistant reply never lands before its prompt. Streamed
@@ -235,6 +271,89 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const entryCount = entries.length
   const streaming = entries.some((entry) => entry.type === 'assistant_message' && entry.streaming)
 
+  // Only a bounded window of grouped items is mounted; older ones are revealed
+  // a chunk at a time before the server page behind them is fetched.
+  const keyed = useMemo<KeyedItem[]>(() => uniqueKeys(groupToolCalls(entries), itemKey), [entries])
+  const windowKeys = useMemo(() => keyed.map((item) => item.key), [keyed])
+  const windowStart = windowStartIndex(windowKeys, pinnedKey)
+  const visibleItems = useMemo(() => keyed.slice(windowStart), [keyed, windowStart])
+
+  // Pin once the durable history is in, so live frames that beat the fetch do
+  // not pin the window to a partial tail.
+  useEffect(() => {
+    if (pinnedKey !== null || !history) return
+    if (windowKeys.length === 0) return
+    setPinnedKey(windowKeys[windowStartIndex(windowKeys, null)])
+  }, [history, pinnedKey, windowKeys])
+
+  const revealEarlier = useCallback(() => {
+    const el = scrollRef.current
+    const first = windowKeys[windowStart]
+    if (!el || !first || windowStart === 0) return
+    const node = findMessageNode(el, first)
+    if (node) revealAnchorRef.current = { key: first, top: node.getBoundingClientRect().top }
+    setPinnedKey(windowKeys[earlierStartIndex(windowStart)])
+  }, [windowKeys, windowStart])
+
+  // Older items mount above the pinned one; put it back where it was so the
+  // reader's place does not jump. Tail-jump and streaming follow are separate.
+  //
+  // A one-shot commit fix is not enough: assistant text renders as a tall
+  // plain-text fallback until the lazily-loaded markdown chunk swaps in, which
+  // can collapse a long message by thousands of pixels a few frames later.
+  // Re-apply the anchor whenever the thread content resizes, bounded so a
+  // stale correction never fights later scrolling.
+  useLayoutEffect(() => {
+    const anchor = revealAnchorRef.current
+    const el = scrollRef.current
+    revealAnchorRef.current = null
+    if (!anchor || !el) return
+
+    const place = () => {
+      const node = findMessageNode(el, anchor.key)
+      if (!node) return
+      const delta = node.getBoundingClientRect().top - anchor.top
+      if (Math.abs(delta) > 0.5) el.scrollTop += delta
+    }
+
+    place()
+
+    // Async content (lazy markdown swapping in, fonts) can resize the thread
+    // after this commit; observe it and re-anchor until the layout settles.
+    // Growth below the anchor has no effect on its top, so streaming does not
+    // fight this.
+    if (settleRef.current !== null) {
+      settleRef.current.observer.disconnect()
+      clearTimeout(settleRef.current.timer)
+    }
+    const target = contentRef.current
+    if (target) {
+      const observer = new ResizeObserver(place)
+      observer.observe(target)
+      const timer = setTimeout(() => {
+        observer.disconnect()
+        settleRef.current = null
+      }, 2000)
+      settleRef.current = { observer, timer }
+    }
+  })
+
+  // Drop the observer when the view unmounts.
+  useEffect(() => {
+    return () => {
+      if (settleRef.current !== null) {
+        settleRef.current.observer.disconnect()
+        clearTimeout(settleRef.current.timer)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!revealAfterLoadRef.current) return
+    revealAfterLoadRef.current = false
+    revealEarlier()
+  }, [revealEarlier])
+
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
@@ -242,6 +361,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     atBottomRef.current = true
     setAtBottom(true)
   }, [])
+
+  // Near the top of the loaded window, keep feeding older items: reveal what is
+  // already loaded before fetching the next page. Runs from the scroll handler,
+  // so the reader just keeps scrolling up instead of pressing a button.
+  const maybeLoadEarlier = useCallback(() => {
+    const el = scrollRef.current
+    if (!el || el.scrollTop > AUTO_LOAD_TOP_PX) return
+    if (windowStart > 0) revealEarlier()
+    else if (nextBefore !== null) void loadEarlier()
+  }, [revealEarlier, windowStart, nextBefore, loadEarlier])
 
   // Release the follow as soon as the reader scrolls up, so re-reading older
   // messages is never yanked back to the newest one.
@@ -251,7 +380,18 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 120
     atBottomRef.current = near
     setAtBottom(near)
-  }, [])
+    maybeLoadEarlier()
+  }, [maybeLoadEarlier])
+
+  // When the loaded transcript is shorter than the viewport there is nothing to
+  // scroll, so the handler above never fires; fetch the next page directly so a
+  // short session is not stuck with unloadable history.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || loading || loadingEarlier || nextBefore === null) return
+    if (el.scrollHeight > el.clientHeight + 40) return
+    void loadEarlier()
+  }, [loading, loadingEarlier, nextBefore, entries.length, loadEarlier])
 
   // New entries follow the bottom only while the reader is already there.
   useEffect(() => {
@@ -297,24 +437,29 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, [streaming])
 
   const sendWithUuid = useCallback(
-    async (text: string, uuid: string) => {
+    async (text: string, uuid: string, attachments: AttachmentRef[] = []) => {
       setActionError(null)
+      // Images ride as reference blocks the gateway hydrates into base64 before
+      // the CLI sees them; a wire message needs `role` for the CLI normalizer.
+      const blocks = attachments.length > 0 ? buildUserContent(text, attachments) : null
+      const content = blocks ?? text
+      const message = blocks ? { role: 'user', content: blocks } : { content: text }
       try {
         const result = await api.post<EventActionResponse>(`/web/sessions/${encodeURIComponent(sessionId)}/events`, {
           type: 'user',
           uuid,
-          content: text,
-          message: { content: text },
+          content,
+          message,
         })
         const event = result?.event
         setExtraEvents((prev) => [
           ...prev,
-          event ?? { id: uuid, type: 'user', direction: 'outbound', payload: { content: text, uuid } },
+          event ?? { id: uuid, type: 'user', direction: 'outbound', payload: { content, message, uuid } },
         ])
         setFailedSend(null)
         scrollToBottom()
       } catch (error) {
-        setFailedSend({ text, uuid, error })
+        setFailedSend({ text, attachments, uuid, error })
         // Rethrow so the composer keeps the draft for a retry.
         throw error
       }
@@ -323,11 +468,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   )
 
   const handleSend = useCallback(
-    async (text: string) => {
+    async (text: string, attachments: AttachmentRef[]) => {
       // Generate the uuid once so the send body, the response event, a retry,
       // and a history reload all agree on the same entry id (reducer dedupes
       // by it, so a retry that the server already accepted cannot duplicate).
-      await sendWithUuid(text, randomUuid())
+      await sendWithUuid(text, randomUuid(), attachments)
     },
     [sendWithUuid],
   )
@@ -357,11 +502,21 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const failed = failedSend
     if (!failed) return
     try {
-      await sendWithUuid(failed.text, failed.uuid)
+      await sendWithUuid(failed.text, failed.uuid, failed.attachments)
     } catch {
       // The inline card already reports the failure.
     }
   }, [failedSend, sendWithUuid])
+
+  // Downscaled images are uploaded here, before the turn is sent, so the send
+  // body only carries references and a failure never leaves a half-sent turn.
+  const handleUploadImage = useCallback(
+    async (file: Blob): Promise<AttachmentRef> => {
+      const result = await api.upload<{ id: string; media_type: string }>('/web/attachments', file, file.type)
+      return { id: result.id, mediaType: result.media_type }
+    },
+    [api],
+  )
 
   const handlePermissionRespond = useCallback(
     async (requestId: string, decision: PermissionDecision) => {
@@ -550,21 +705,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         <div
           ref={scrollRef}
           onScroll={handleScroll}
+          // The reveal anchors the first rendered item itself; the browser's
+          // own scroll anchoring would pick a different node and add a second
+          // correction on top.
+          style={{ overflowAnchor: 'none' }}
           className="absolute inset-0 overflow-y-auto rounded-xl border border-border bg-surface-2 px-3 py-5 sm:px-6"
         >
-          <div className="mx-auto flex max-w-3xl flex-col gap-3">
-            {nextBefore !== null ? (
-              <div className="flex justify-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  data-testid="load-earlier"
-                  onClick={() => void loadEarlier()}
-                  disabled={loadingEarlier}
-                >
-                  {loadingEarlier ? t('loadingEarlier') : t('loadEarlier')}
-                </Button>
+          <div ref={contentRef} className="mx-auto flex max-w-3xl flex-col gap-3">
+            {loadingEarlier ? (
+              <div className="flex justify-center py-2" role="status" aria-label={t('loadingEarlier')}>
+                <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
               </div>
             ) : null}
             {loading && entries.length === 0 ? (
@@ -576,7 +726,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
               />
             ) : (
               <MessageThread
-                entries={entries}
+                items={visibleItems}
                 onEdit={closed ? undefined : handleEditMessage}
                 regenerateId={regenerateId}
                 onRegenerate={handleRegenerate}
@@ -616,6 +766,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       <ChatInput
         onSubmit={handleSend}
+        uploadImage={handleUploadImage}
         onInterrupt={handleInterrupt}
         isLoading={busy}
         disabled={closed || !hasToken}
@@ -627,20 +778,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 }
 
 function MessageThread({
-  entries,
+  items,
   onEdit,
   regenerateId,
   onRegenerate,
 }: {
-  entries: ThreadEntry[]
+  items: KeyedItem[]
   onEdit?: (text: string) => Promise<void> | void
   regenerateId: string | null
   onRegenerate: () => Promise<void> | void
 }) {
-  const grouped = groupToolCalls(entries)
-  const keyed = uniqueKeys(grouped, (item) =>
-    item.kind === 'tools' ? `tools-${item.entries[0]?.toolCall.id ?? 'empty'}` : `entry-${item.entry.id}`,
-  )
   // Editing is a singleton mode: opening another bubble's editor closes the
   // previous one so there is only ever one draft in play.
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -648,11 +795,13 @@ function MessageThread({
 
   return (
     <div className="flex flex-col gap-3">
-      {keyed.map(({ item, key }) =>
+      {items.map(({ item, key }) =>
         item.kind === 'tools' ? (
-          <ToolCallGroup key={key} entries={item.entries} />
+          <div key={key} data-message-key={key}>
+            <ToolCallGroup entries={item.entries} />
+          </div>
         ) : (
-          <div key={key} className={spacingFor(item.entry)}>
+          <div key={key} data-message-key={key} className={spacingFor(item.entry)}>
             <EntryRenderer
               entry={item.entry}
               editingId={editingId}

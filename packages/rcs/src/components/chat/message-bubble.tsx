@@ -9,7 +9,9 @@ import { Check, ChevronDown, Clock, Copy, Pencil, RotateCcw, Send, X } from 'luc
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { useAttachmentUrl } from '../../hooks/useAttachmentUrl'
 import { useSmoothText } from '../../hooks/useSmoothText'
+import type { AttachmentRef } from '../../lib/attachments'
 import { resolveEditKey } from '../../lib/composer-keys'
 import { assistantCopyText } from '../../lib/copy-text'
 import type { AssistantMessageEntry, UserMessageEntry } from '../../lib/session-reducer'
@@ -155,33 +157,44 @@ export function UserBubble({
               </button>
             </div>
           </div>
-        ) : entry.content ? (
-          <div className="relative overflow-hidden rounded-2xl rounded-br-md border border-user-bubble-border bg-user-bubble">
-            <div
-              ref={contentRef}
-              className={cn(
-                'whitespace-pre-wrap px-4 py-3 font-display text-sm leading-relaxed text-white',
-                !expanded && overflowing && 'overflow-hidden',
-              )}
-              style={!expanded && overflowing ? { maxHeight: `${COLLAPSED_MAX_HEIGHT}px` } : undefined}
-            >
-              {entry.content}
-            </div>
-            {!expanded && overflowing ? (
-              <div className="absolute inset-x-0 bottom-0 flex flex-col items-center bg-gradient-to-t from-user-bubble via-user-bubble/80 to-transparent pt-8">
-                <button
-                  type="button"
-                  onClick={() => setExpanded(true)}
-                  className="flex items-center gap-1 rounded-full px-3 py-1 font-display text-xs font-medium text-white/90 transition-colors hover:bg-white/15"
+        ) : entry.attachments?.length || entry.content ? (
+          <div className="flex flex-col items-end gap-2">
+            {entry.attachments?.length ? (
+              <div className="flex max-w-full flex-wrap justify-end gap-2">
+                {entry.attachments.map((attachment) => (
+                  <AttachmentThumb key={attachment.id} attachment={attachment} />
+                ))}
+              </div>
+            ) : null}
+            {entry.content ? (
+              <div className="relative overflow-hidden rounded-2xl rounded-br-md border border-user-bubble-border bg-user-bubble">
+                <div
+                  ref={contentRef}
+                  className={cn(
+                    'whitespace-pre-wrap px-4 py-3 font-display text-sm leading-relaxed text-white',
+                    !expanded && overflowing && 'overflow-hidden',
+                  )}
+                  style={!expanded && overflowing ? { maxHeight: `${COLLAPSED_MAX_HEIGHT}px` } : undefined}
                 >
-                  <span>{t('expand')}</span>
-                  <ChevronDown className="h-3 w-3" />
-                </button>
+                  {entry.content}
+                </div>
+                {!expanded && overflowing ? (
+                  <div className="absolute inset-x-0 bottom-0 flex flex-col items-center bg-gradient-to-t from-user-bubble via-user-bubble/80 to-transparent pt-8">
+                    <button
+                      type="button"
+                      onClick={() => setExpanded(true)}
+                      className="flex items-center gap-1 rounded-full px-3 py-1 font-display text-xs font-medium text-white/90 transition-colors hover:bg-white/15"
+                    >
+                      <span>{t('expand')}</span>
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
         ) : null}
-        {!editing && (entry.queued || entry.content) ? (
+        {!editing && (entry.queued || entry.content || entry.attachments?.length) ? (
           <div className="mt-1 flex items-center justify-end gap-2">
             {entry.queued ? (
               <span
@@ -209,6 +222,74 @@ export function UserBubble({
         ) : null}
       </div>
     </div>
+  )
+}
+
+/**
+ * Square preview of a stored image. The bearer token cannot ride on `<img src>`,
+ * so the hook fetches the bytes with the API client and hands back an object URL.
+ * Clicking opens a full-screen overlay rather than a new tab, so the image keeps
+ * the app's chrome-free viewing without leaving the transcript.
+ */
+function AttachmentThumb({ attachment }: { attachment: AttachmentRef }) {
+  const t = useTranslations('chat')
+  const url = useAttachmentUrl(attachment.id)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return undefined
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
+
+  if (!url) {
+    return (
+      <div
+        className="h-28 w-28 animate-pulse rounded-xl border border-user-bubble-border bg-surface-1 sm:h-32 sm:w-32"
+        aria-hidden="true"
+      />
+    )
+  }
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        data-testid="message-attachment"
+        aria-label={t('imageAlt')}
+        className="block h-28 w-28 cursor-zoom-in overflow-hidden rounded-xl border border-user-bubble-border bg-surface-1 sm:h-32 sm:w-32"
+      >
+        <img src={url} alt={t('imageAlt')} loading="lazy" className="h-full w-full object-cover" />
+      </button>
+      {open ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('imageAlt')}
+          data-testid="attachment-lightbox"
+          onClick={() => setOpen(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setOpen(false)
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+        >
+          <img src={url} alt={t('imageAlt')} className="max-h-full max-w-full rounded-lg object-contain shadow-2xl" />
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label={t('closeImage')}
+            title={t('closeImage')}
+            data-testid="attachment-lightbox-close"
+            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
+    </>
   )
 }
 

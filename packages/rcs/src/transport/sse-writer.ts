@@ -11,7 +11,7 @@ import type { Context } from 'hono'
 
 import { loadConfig } from '../config.js'
 import type { Repositories } from '../db/repositories/types.js'
-import { toSessionEventFrame, toWorkerClientFrame } from './client-payload.js'
+import { createAttachmentLoader, toHydratedWorkerFrame, toSessionEventFrame } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'
 import { getEventBus, loadEventReplayWindow, subscribeReplayThenLive } from './event-bus.js'
 
@@ -34,7 +34,8 @@ interface EventStreamOptions {
   fromSeqNum: number
   /** Replay even when the cursor is 0; the SSE routes default to true. */
   replay?: boolean
-  frame: (event: SessionEvent) => string
+  /** Frames may await work (attachment hydration); order is preserved per stream. */
+  frame: (event: SessionEvent) => string | Promise<string>
   /** Replay direction, pushed into the query so the window limit counts matching rows. */
   direction?: SessionEvent['direction']
   /** Extra filter applied to both the durable replay and live events. */
@@ -79,20 +80,32 @@ function createEventStream(c: Context, repos: Repositories, options: EventStream
         }
       }
 
+      // Serialize frame production: hydration is async and frames must keep seqNum order.
+      let frameChain = Promise.resolve()
+      const enqueueFrame = (event: SessionEvent) => {
+        frameChain = frameChain
+          .then(() => options.frame(event))
+          .then((chunk) => send(chunk))
+          .catch((error) => console.error('[sse] frame error:', error))
+      }
+
       const subscription = subscribeReplayThenLive({
         bus: getEventBus(options.sessionId),
         fromSeqNum: options.fromSeqNum,
         replay: options.replay ?? true,
         loadSince: () => loadReplay(repos, options),
         filterLiveEvent: options.include,
-        onReplayEvent: (event) => send(options.frame(event)),
-        onLiveEvent: (event) => send(options.frame(event)),
+        onReplayEvent: enqueueFrame,
+        onLiveEvent: enqueueFrame,
         isClosed: () => closed,
       })
       unsub = subscription.unsubscribe
 
       void (async () => {
         await subscription.ready
+        // Frames are produced asynchronously (hydration); let the replay window flush
+        // before the first keepalive so readers never see it ahead of a data frame.
+        await frameChain
         if (closed) return
         send(': keepalive\n\n')
         keepalive = setInterval(() => send(': keepalive\n\n'), KEEPALIVE_MS)
@@ -133,10 +146,11 @@ export function createSSEStream(c: Context, repos: Repositories, sessionId: stri
  * `Last-Event-ID` / `from_sequence_num` cursor (0 = no replay).
  */
 export function createWorkerEventStream(c: Context, repos: Repositories, sessionId: string, fromSeqNum = 0): Response {
+  const load = createAttachmentLoader(repos)
   return createEventStream(c, repos, {
     sessionId,
     fromSeqNum,
-    frame: toWorkerClientFrame,
+    frame: (event) => toHydratedWorkerFrame(event, load),
     direction: 'outbound',
     include: (event) => event.direction === 'outbound',
   })

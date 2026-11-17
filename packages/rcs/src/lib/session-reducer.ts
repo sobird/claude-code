@@ -12,6 +12,7 @@
  */
 
 import { isSessionClosedStatus } from '../contracts'
+import { extractUserAttachments, type AttachmentRef } from './attachments'
 import { isWebPermissionMode, type WebPermissionMode } from './permission-modes'
 import type { PermissionSuggestion } from './permission-suggestions'
 import { tasksFromTaskState, tasksFromTodoWrite, type TaskItem } from './tasks'
@@ -50,6 +51,8 @@ export interface UserMessageEntry {
   type: 'user_message'
   id: string
   content: string
+  /** Stored image references rendered from `/web/attachments/:id`. */
+  attachments?: AttachmentRef[]
   /** Sent while the agent was running; the CLI processes it after the turn. */
   queued?: boolean
 }
@@ -854,7 +857,9 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
         entries = settleToolResult(entries, result)
       }
       const text = extractEventText(event.payload)
-      if (!text) return entries === state.entries ? state : { ...state, entries }
+      // Image-only prompts have no text projection but still render.
+      const attachments = extractUserAttachments(event.payload)
+      if (!text && attachments.length === 0) return entries === state.entries ? state : { ...state, entries }
       const seqNum = numericSeqNum(event)
       const id = asText(payload.uuid) || (seqNum !== null ? String(seqNum) : event.id || `user-${entries.length}`)
       // Dedupe by uuid: an optimistic send and its history/echo counterpart
@@ -866,7 +871,16 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       const queued = state.status === 'running' || state.turnOpen
       return {
         ...state,
-        entries: [...entries, { type: 'user_message', id, content: text, ...(queued ? { queued: true } : {}) }],
+        entries: [
+          ...entries,
+          {
+            type: 'user_message',
+            id,
+            content: text,
+            ...(attachments.length > 0 ? { attachments } : {}),
+            ...(queued ? { queued: true } : {}),
+          },
+        ],
         // A new turn starts fresh; the previous failure no longer describes it.
         error: null,
         turnStartedAt: startedAt ?? state.turnStartedAt,

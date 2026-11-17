@@ -43,6 +43,13 @@
       "when": 1794913408882,
       "tag": "0005_hot-path-indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794934602267,
+      "tag": "0006_medical_jean_grey",
+      "breakpoints": true
     }
   ]
 }

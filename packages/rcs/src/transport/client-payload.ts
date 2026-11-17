@@ -6,7 +6,19 @@
  * produce the CCR `client_event` SSE frames consumed by the v2 worker stream.
  */
 
+import type { Repositories } from '../db/repositories/types.js'
+import { attachmentRefOfBlock } from '../lib/attachments.js'
 import type { SessionEvent } from './event-bus.js'
+
+/** Resolves a stored attachment to the bytes the CLI needs. */
+export type AttachmentLoader = (id: string) => Promise<{ mediaType: string; data: Uint8Array } | null>
+
+export function createAttachmentLoader(repos: Pick<Repositories, 'attachments'>): AttachmentLoader {
+  return async (id) => {
+    const record = await repos.attachments.getById(id)
+    return record ? { mediaType: record.mediaType, data: record.data } : null
+  }
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
@@ -172,17 +184,78 @@ export function toWorkerClientPayload(event: SessionEvent): Record<string, unkno
   return payload
 }
 
-/** Serialize one outbound event as a CCR `client_event` SSE frame. */
-export function toWorkerClientFrame(event: SessionEvent): string {
+/**
+ * Swap stored attachment references for base64 image blocks. Blocks whose id no
+ * longer resolves are dropped: sending an `attachment` source would make the
+ * CLI's image normalizer reject the whole message.
+ */
+async function hydrateMessage(message: unknown, load: AttachmentLoader): Promise<unknown> {
+  const record = asRecord(message)
+  if (!record || !Array.isArray(record.content)) return message
+  const content: unknown[] = []
+  for (const block of record.content) {
+    const ref = attachmentRefOfBlock(block)
+    if (!ref) {
+      content.push(block)
+      continue
+    }
+    const stored = await load(ref.id)
+    if (!stored) continue
+    content.push({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: stored.mediaType,
+        data: Buffer.from(stored.data).toString('base64'),
+      },
+    })
+  }
+  return { ...record, content }
+}
+
+/** Hydrates the wire message nested under `message`, leaving other payloads untouched. */
+export async function hydrateClientPayload(
+  payload: Record<string, unknown>,
+  load: AttachmentLoader,
+): Promise<Record<string, unknown>> {
+  const message = await hydrateMessage(payload.message, load)
+  return message === payload.message ? payload : { ...payload, message }
+}
+
+/** True when the wire message under `message` carries stored attachment refs. */
+export function hasAttachmentRefs(payload: Record<string, unknown>): boolean {
+  const message = asRecord(payload.message)
+  if (!message || !Array.isArray(message.content)) return false
+  return message.content.some((block) => attachmentRefOfBlock(block) !== null)
+}
+
+function workerFrame(event: SessionEvent, payload: Record<string, unknown>): string {
   const data = JSON.stringify({
     event_id: event.id,
     sequence_num: event.seqNum,
     event_type: event.type,
     source: 'client',
-    payload: toWorkerClientPayload(event),
+    payload,
     created_at: new Date(event.createdAt).toISOString(),
   })
   return `id: ${event.seqNum}\nevent: client_event\ndata: ${data}\n\n`
+}
+
+/** Serialize one outbound event as a CCR `client_event` SSE frame. */
+export function toWorkerClientFrame(event: SessionEvent): string {
+  return workerFrame(event, toWorkerClientPayload(event))
+}
+
+/** Legacy WS NDJSON line with attachments inlined as base64. */
+export async function toHydratedSDKMessage(event: SessionEvent, load: AttachmentLoader): Promise<string> {
+  const payload = await hydrateClientPayload(toClientPayload(event), load)
+  return JSON.stringify(payload) + '\n'
+}
+
+/** CCR `client_event` frame with attachments inlined as base64. */
+export async function toHydratedWorkerFrame(event: SessionEvent, load: AttachmentLoader): Promise<string> {
+  const payload = await hydrateClientPayload(toWorkerClientPayload(event), load)
+  return workerFrame(event, payload)
 }
 
 /**

@@ -7,11 +7,29 @@
  */
 
 import { sql } from 'drizzle-orm'
-import { bigserial, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import {
+  bigserial,
+  customType,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
 import type { Role } from '../contracts'
 
 export type EventDirection = 'inbound' | 'outbound'
+
+/** Raw bytes; postgres-js returns a Buffer and PGlite a Uint8Array. */
+const bytea = customType<{ data: Uint8Array }>({
+  dataType() {
+    return 'bytea'
+  },
+})
 
 const createdAt = () => timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
 const updatedAt = () => timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
@@ -163,6 +181,23 @@ export const sessionEvents = pgTable(
   ],
 )
 
+export const attachments = pgTable(
+  'attachments',
+  {
+    id: text('id').primaryKey(),
+    ownerUserId: uuid('owner_user_id')
+      .notNull()
+      .references(() => users.id),
+    mediaType: text('media_type').notNull(),
+    /** sha256 hex of `data`; unique per owner so dedupe never crosses accounts. */
+    sha256: text('sha256').notNull(),
+    byteLength: integer('byte_length').notNull(),
+    data: bytea('data').notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [uniqueIndex('attachments_owner_sha256_idx').on(table.ownerUserId, table.sha256)],
+)
+
 export const schema = {
   users,
   apiKeys,
@@ -171,4 +206,5 @@ export const schema = {
   sessionWorkers,
   workItems,
   sessionEvents,
+  attachments,
 }

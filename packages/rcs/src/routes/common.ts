@@ -54,7 +54,13 @@ export const workerOrEnvironmentAuth: MiddlewareHandler<AppEnv> = async (c, next
  * Nested gateway error shape. `code` is optional and only emitted by Web callers;
  * v1/v2/ACP responses must stay byte-identical, so omit it there.
  */
-export function jsonError(c: AppContext, type: string, message: string, status: 400 | 403 | 404 | 409, code?: string) {
+export function jsonError(
+  c: AppContext,
+  type: string,
+  message: string,
+  status: 400 | 403 | 404 | 409 | 413 | 415,
+  code?: string,
+) {
   return c.json(code === undefined ? { error: { type, message } } : { error: { type, message, code } }, status)
 }
 

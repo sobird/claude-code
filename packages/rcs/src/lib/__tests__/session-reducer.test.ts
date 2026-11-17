@@ -534,6 +534,49 @@ describe('reduceSessionEvent', () => {
     expect(state.entries[0]).toEqual({ type: 'user_message', id: 'uuid-1', content: 'hi' })
   })
 
+  test('user entries carry stored image references alongside the text', () => {
+    const blocks = [
+      { type: 'image', source: { type: 'attachment', attachment_id: 'att_1', media_type: 'image/png' } },
+      { type: 'text', text: 'look at this' },
+    ]
+    const state = reduceSessionEvent(
+      initialChatState,
+      event(
+        'user',
+        { uuid: 'uuid-img', content: blocks, message: { role: 'user', content: blocks } },
+        { direction: 'outbound' },
+      ),
+    )
+    expect(state.entries).toEqual([
+      {
+        type: 'user_message',
+        id: 'uuid-img',
+        content: 'look at this',
+        attachments: [{ id: 'att_1', mediaType: 'image/png' }],
+      },
+    ])
+  })
+
+  test('image-only user messages still become entries', () => {
+    const blocks = [{ type: 'image', source: { type: 'attachment', attachment_id: 'att_2', media_type: 'image/jpeg' } }]
+    const state = reduceSessionEvent(
+      initialChatState,
+      event(
+        'user',
+        { uuid: 'uuid-only-img', content: blocks, message: { role: 'user', content: blocks } },
+        { direction: 'outbound' },
+      ),
+    )
+    expect(state.entries).toEqual([
+      {
+        type: 'user_message',
+        id: 'uuid-only-img',
+        content: '',
+        attachments: [{ id: 'att_2', mediaType: 'image/jpeg' }],
+      },
+    ])
+  })
+
   test('replaying a user event with an already-present uuid does not mutate entries', () => {
     const first = event('user', { content: 'hi', uuid: 'uuid-1' }, { direction: 'outbound' })
     const state = reduceSessionEvent(initialChatState, first)

@@ -82,6 +82,18 @@ export interface WorkItemRecord {
   updatedAt: Date
 }
 
+export interface AttachmentRecord {
+  /** `att_…` id referenced from persisted user message blocks. */
+  id: string
+  ownerUserId: string
+  mediaType: string
+  /** sha256 hex of `data`; dedupe key within one owner. */
+  sha256: string
+  byteLength: number
+  data: Uint8Array
+  createdAt: Date
+}
+
 export interface SessionEventRecord {
   /** Globally monotonic bigserial id, used as the SSE `Last-Event-ID` / seqNum. */
   id: number

@@ -18,7 +18,7 @@ import type { WSContext } from 'hono/ws'
 
 import type { GatewayConfig } from '../config.js'
 import type { Repositories } from '../db/repositories/types.js'
-import { toClientPayload } from './client-payload.js'
+import { createAttachmentLoader, hasAttachmentRefs, hydrateClientPayload, toClientPayload } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'
 import { getEventBus, loadEventReplayWindow, publishInboundEvent, subscribeReplayThenLive } from './event-bus.js'
 
@@ -57,14 +57,10 @@ const DEFAULT_KEEPALIVE_INTERVAL_SECONDS = 20
 const NON_REPLAYABLE_EVENT_TYPES = new Set(['interrupt', 'control_request', 'control_response', 'permission_response'])
 
 /** NDJSON: every message must end with `\n` for the child process's line parser. */
-function toSDKMessage(event: SessionEvent): string {
-  return JSON.stringify(toClientPayload(event)) + '\n'
-}
-
-function sendEvent(ws: WSContext, event: SessionEvent): void {
+function sendPayload(ws: WSContext, payload: Record<string, unknown>): void {
   if (ws.readyState !== 1) return
   try {
-    ws.send(toSDKMessage(event))
+    ws.send(JSON.stringify(payload) + '\n')
   } catch (error) {
     console.error('[ws] send error:', error)
   }
@@ -118,6 +114,29 @@ export async function handleWebSocketOpen(
     }
   }, keepaliveIntervalMs)
 
+  const load = createAttachmentLoader(repos)
+  // Attachment hydration is async, so hydrated sends go through a promise chain to
+  // stay in seqNum order. The common (text-only) path still sends synchronously
+  // unless a hydration is already in flight ahead of it.
+  let sendChain = Promise.resolve()
+  let pendingHydrations = 0
+  const enqueue = (event: SessionEvent) => {
+    const payload = toClientPayload(event)
+    if (pendingHydrations === 0 && !hasAttachmentRefs(payload)) {
+      sendPayload(ws, payload)
+      return
+    }
+    pendingHydrations++
+    sendChain = sendChain
+      .then(async () => {
+        if (ws.readyState === 1) sendPayload(ws, await hydrateClientPayload(payload, load))
+      })
+      .catch((error) => console.error('[ws] send error:', error))
+      .finally(() => {
+        pendingHydrations--
+      })
+  }
+
   const subscription = subscribeReplayThenLive({
     bus: getEventBus(sessionId),
     fromSeqNum: 0,
@@ -129,8 +148,8 @@ export async function handleWebSocketOpen(
         (event) => !NON_REPLAYABLE_EVENT_TYPES.has(event.type),
       ),
     filterLiveEvent: (event) => event.direction === 'outbound',
-    onReplayEvent: (event) => sendEvent(ws, event),
-    onLiveEvent: (event) => sendEvent(ws, event),
+    onReplayEvent: enqueue,
+    onLiveEvent: enqueue,
     isClosed: () => ws.readyState !== 1,
   })
 

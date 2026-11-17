@@ -5,16 +5,28 @@
  * inserts a newline, and Escape/Stop interrupt while the agent is running.
  */
 
-import { Send, Square } from 'lucide-react'
+import { ImagePlus, Loader2, Send, Square, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { MAX_ATTACHMENTS_PER_MESSAGE, type AttachmentRef } from '../../lib/attachments'
+import { isImageFile, prepareImageFile } from '../../lib/attachments-client'
 import { acceptCommand, commandQuery, filterCommands, moveIndex } from '../../lib/command-menu'
 import { resolveComposerKey } from '../../lib/composer-keys'
 import { appendHistory, moveHistory } from '../../lib/input-history'
+import { randomUuid } from '../../lib/random-uuid'
 import { cn } from '../../lib/utils'
 
 const HISTORY_STORAGE_KEY = 'rcs:input-history'
+const ACCEPTED_IMAGE_TYPES = 'image/png,image/jpeg,image/gif,image/webp'
+
+/** An image staged in the composer, from paste or the file picker. */
+interface PendingImage {
+  key: string
+  previewUrl: string
+  status: 'uploading' | 'ready' | 'error'
+  ref?: AttachmentRef
+}
 
 function loadHistory(): string[] {
   if (typeof window === 'undefined') return []
@@ -30,7 +42,9 @@ function loadHistory(): string[] {
 
 interface ChatInputProps {
   /** May reject; on rejection the draft is kept so the user can retry. */
-  onSubmit: (text: string) => Promise<void> | void
+  onSubmit: (text: string, attachments: AttachmentRef[]) => Promise<void> | void
+  /** Uploads one prepared image and resolves its stored reference. */
+  uploadImage?: (file: Blob) => Promise<AttachmentRef>
   onInterrupt?: () => void
   isLoading?: boolean
   disabled?: boolean
@@ -42,6 +56,7 @@ interface ChatInputProps {
 
 export function ChatInput({
   onSubmit,
+  uploadImage,
   onInterrupt,
   isLoading = false,
   disabled = false,
@@ -62,6 +77,11 @@ export function ChatInput({
   const [historyIndex, setHistoryIndex] = useState<number | null>(null)
   const historyDraftRef = useRef('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  // Images live in both state (render) and a ref (synchronous reads during a
+  // paste and on unmount); `commitImages` keeps the two in lockstep.
+  const [images, setImages] = useState<PendingImage[]>([])
+  const imagesRef = useRef<PendingImage[]>([])
 
   useEffect(() => {
     try {
@@ -71,6 +91,63 @@ export function ChatInput({
     }
   }, [history])
 
+  const commitImages = useCallback((update: (prev: PendingImage[]) => PendingImage[]) => {
+    const next = update(imagesRef.current)
+    imagesRef.current = next
+    setImages(next)
+  }, [])
+
+  // Object URLs outlive the component unless revoked; drop them on unmount.
+  useEffect(
+    () => () => {
+      for (const image of imagesRef.current) URL.revokeObjectURL(image.previewUrl)
+    },
+    [],
+  )
+
+  /** Stages pasted or picked images, then uploads each and fills in its ref. */
+  const addFiles = useCallback(
+    (files: File[]) => {
+      if (!uploadImage) return
+      const candidates = files.filter(isImageFile)
+      if (candidates.length === 0) return
+      const room = Math.max(0, MAX_ATTACHMENTS_PER_MESSAGE - imagesRef.current.length)
+      const staged = candidates.slice(0, room).map((file) => ({
+        file,
+        key: randomUuid(),
+        previewUrl: URL.createObjectURL(file),
+      }))
+      if (staged.length === 0) return
+
+      commitImages((prev) => [
+        ...prev,
+        ...staged.map(({ key, previewUrl }) => ({ key, previewUrl, status: 'uploading' as const })),
+      ])
+      for (const { file, key } of staged) {
+        void (async () => {
+          try {
+            const ref = await uploadImage(await prepareImageFile(file))
+            commitImages((prev) =>
+              prev.map((image) => (image.key === key ? { ...image, status: 'ready', ref } : image)),
+            )
+          } catch {
+            commitImages((prev) => prev.map((image) => (image.key === key ? { ...image, status: 'error' } : image)))
+          }
+        })()
+      }
+    },
+    [commitImages, uploadImage],
+  )
+
+  const removeImage = useCallback(
+    (key: string) => {
+      const target = imagesRef.current.find((image) => image.key === key)
+      if (target) URL.revokeObjectURL(target.previewUrl)
+      commitImages((prev) => prev.filter((image) => image.key !== key))
+    },
+    [commitImages],
+  )
+
   const query = menuDismissed ? null : commandQuery(text)
   const items = query === null ? [] : filterCommands(commands, query)
   const menuOpen = !disabled && query !== null && commands.length > 0
@@ -78,16 +155,22 @@ export function ChatInput({
 
   const handleSubmit = useCallback(async () => {
     const trimmed = text.trim()
-    if (!trimmed || disabled || sending) return
+    const attachments = imagesRef.current.flatMap((image) => (image.status === 'ready' && image.ref ? [image.ref] : []))
+    const uploading = imagesRef.current.some((image) => image.status === 'uploading')
+    if ((!trimmed && attachments.length === 0) || disabled || sending || uploading) return
     setSending(true)
     try {
-      await onSubmit(trimmed)
-      // Only clear once the send resolved; a failure keeps the text so the
+      await onSubmit(trimmed, attachments)
+      // Only clear once the send resolved; a failure keeps the draft so the
       // user can retry (the parent surfaces the error).
       setText('')
-      setHistory((prev) => appendHistory(prev, trimmed))
-      setHistoryIndex(null)
-      historyDraftRef.current = ''
+      if (trimmed) {
+        setHistory((prev) => appendHistory(prev, trimmed))
+        setHistoryIndex(null)
+        historyDraftRef.current = ''
+      }
+      for (const image of imagesRef.current) URL.revokeObjectURL(image.previewUrl)
+      commitImages(() => [])
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
       }
@@ -96,7 +179,7 @@ export function ChatInput({
     } finally {
       setSending(false)
     }
-  }, [text, disabled, sending, onSubmit])
+  }, [text, disabled, sending, onSubmit, commitImages])
 
   const handleInput = useCallback((target: HTMLTextAreaElement) => {
     setText(target.value)
@@ -134,7 +217,9 @@ export function ChatInput({
     })
   }, [])
 
-  const canSend = text.trim().length > 0 && !disabled && !sending
+  const uploading = images.some((image) => image.status === 'uploading')
+  const hasReadyImage = images.some((image) => image.status === 'ready')
+  const canSend = (text.trim().length > 0 || hasReadyImage) && !disabled && !sending && !uploading
   const resolvedPlaceholder = placeholder ?? t('placeholder', { product: tCommon('claude') })
 
   return (
@@ -175,11 +260,54 @@ export function ChatInput({
         </div>
       ) : null}
       <div className="overflow-hidden rounded-xl border border-border bg-surface-2 transition-all focus-within:border-brand/50 focus-within:shadow-[0_0_0_3px_rgba(201,100,66,0.15)]">
+        {images.length > 0 ? (
+          <div
+            data-testid="attachment-strip"
+            className="flex flex-wrap gap-2 border-b border-border/60 px-3 pt-2.5 pb-1.5"
+          >
+            {images.map((image) => (
+              <div
+                key={image.key}
+                className="relative h-16 w-16 overflow-hidden rounded-lg border border-border bg-surface-1"
+              >
+                <img src={image.previewUrl} alt={t('imageAlt')} className="h-full w-full object-cover" />
+                {image.status === 'uploading' ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                    <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden="true" />
+                  </div>
+                ) : null}
+                {image.status === 'error' ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 px-1 text-center text-[10px] leading-tight text-white">
+                    {t('uploadFailed')}
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => removeImage(image.key)}
+                  aria-label={t('removeImage')}
+                  title={t('removeImage')}
+                  data-testid="attachment-remove"
+                  className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <div className="flex items-end gap-2 px-3 py-2.5">
           <textarea
             ref={textareaRef}
             value={text}
             onChange={(event) => handleInput(event.target)}
+            onPaste={(event) => {
+              const files = [...event.clipboardData.files]
+              if (!files.some(isImageFile)) return
+              // Images are attached, not pasted as text; the text part of the
+              // clipboard (if any) is dropped rather than left in the draft.
+              event.preventDefault()
+              addFiles(files)
+            }}
             role="combobox"
             aria-expanded={menuOpen}
             aria-controls={menuOpen ? 'slash-command-menu' : undefined}
@@ -260,6 +388,35 @@ export function ChatInput({
             >
               <Square className="h-3.5 w-3.5" fill="currentColor" />
             </button>
+          ) : null}
+          {uploadImage && !disabled ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_IMAGE_TYPES}
+                multiple
+                data-testid="attachment-input"
+                className="hidden"
+                onChange={(event) => {
+                  const files = [...(event.target.files ?? [])]
+                  // Reset so picking the same file twice still fires onChange.
+                  event.target.value = ''
+                  addFiles(files)
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={images.length >= MAX_ATTACHMENTS_PER_MESSAGE}
+                aria-label={t('addImages')}
+                title={t('addImages')}
+                data-testid="attach-image"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8"
+              >
+                <ImagePlus className="h-4 w-4" />
+              </button>
+            </>
           ) : null}
           <button
             type="button"

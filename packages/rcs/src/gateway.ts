@@ -25,6 +25,7 @@ import v2WorkerEvents from './routes/v2/worker-events.js'
 import v2Worker from './routes/v2/worker.js'
 import webAccount from './routes/web/account.js'
 import webAdmin from './routes/web/admin.js'
+import webAttachments from './routes/web/attachments.js'
 import webAuth from './routes/web/auth.js'
 import webControl from './routes/web/control.js'
 import webEnvironments from './routes/web/environments.js'
@@ -79,6 +80,7 @@ export function createGateway({ config, repos }: CreateGatewayOptions): Hono<App
   app.route('/web', webAuth)
   app.route('/web', webSessions)
   app.route('/web', webControl)
+  app.route('/web', webAttachments)
   app.route('/web', webEnvironments)
   app.route('/web', webAccount)
   app.route('/web', webAdmin)

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { toClientPayload, toSessionEventFrame } from '../client-payload.js'
+import { toClientPayload, toHydratedSDKMessage, toHydratedWorkerFrame, toSessionEventFrame } from '../client-payload.js'
 import type { SessionEvent } from '../event-bus.js'
 
 function makeEvent(overrides: Partial<SessionEvent> & Pick<SessionEvent, 'type' | 'sessionId'>): SessionEvent {
@@ -29,6 +29,73 @@ describe('toSessionEventFrame', () => {
     expect(frame.startsWith('event: message\n')).toBe(true)
     const data = JSON.parse(frame.split('data: ')[1]?.trim() ?? '{}') as { seqNum?: number }
     expect(data.seqNum).toBe(9_000_000)
+  })
+})
+
+// =============================================================================
+// attachment hydration
+// =============================================================================
+
+describe('attachment hydration', () => {
+  const refBlock = {
+    type: 'image',
+    source: { type: 'attachment', attachment_id: 'att_1', media_type: 'image/png' },
+  }
+  const unknownBlock = {
+    type: 'image',
+    source: { type: 'attachment', attachment_id: 'att_missing', media_type: 'image/png' },
+  }
+  const load = async (id: string) =>
+    id === 'att_1' ? { mediaType: 'image/png', data: new Uint8Array([1, 2, 3]) } : null
+
+  function userEvent() {
+    const content = [refBlock, { type: 'text', text: 'hi' }]
+    return makeEvent({
+      type: 'user',
+      sessionId: 'sess-a',
+      direction: 'outbound',
+      payload: { content, message: { role: 'user', content } },
+    })
+  }
+
+  test('toHydratedSDKMessage inlines base64 and keeps text', async () => {
+    const parsed = JSON.parse(await toHydratedSDKMessage(userEvent(), load)) as {
+      message: { content: unknown[] }
+    }
+    expect(parsed.message.content).toEqual([
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AQID' } },
+      { type: 'text', text: 'hi' },
+    ])
+  })
+
+  test('toHydratedWorkerFrame inlines base64 too', async () => {
+    const frame = await toHydratedWorkerFrame(userEvent(), load)
+    const payload = (JSON.parse(frame.split('data: ')[1]?.trim() ?? '{}') as { payload: { message: unknown } }).payload
+    expect(payload.message).toEqual({
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AQID' } },
+        { type: 'text', text: 'hi' },
+      ],
+    })
+  })
+
+  test('drops references that no longer resolve', async () => {
+    const content = [unknownBlock, { type: 'text', text: 'hi' }]
+    const event = makeEvent({
+      type: 'user',
+      sessionId: 'sess-b',
+      payload: { content, message: { role: 'user', content } },
+    })
+    const parsed = JSON.parse(await toHydratedSDKMessage(event, load)) as { message: { content: unknown[] } }
+    expect(parsed.message.content).toEqual([{ type: 'text', text: 'hi' }])
+  })
+
+  test('leaves non-user payloads untouched', async () => {
+    const event = makeEvent({ type: 'control_request', sessionId: 'sess-c', payload: { request_id: 'r1' } })
+    const parsed = JSON.parse(await toHydratedSDKMessage(event, load)) as Record<string, unknown>
+    expect(parsed.type).toBe('control_request')
+    expect(parsed.message).toBeUndefined()
   })
 })
 

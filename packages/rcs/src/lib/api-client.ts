@@ -19,6 +19,10 @@ export interface ApiClient {
   post: <T>(path: string, body?: unknown) => Promise<T>
   patch: <T>(path: string, body?: unknown) => Promise<T>
   delete: <T>(path: string) => Promise<T>
+  /** Fetch a binary response (attachments) with the same auth/refresh handling. */
+  blob: (path: string) => Promise<Blob>
+  /** Upload a raw binary body; `contentType` defaults to the blob's own type. */
+  upload: <T>(path: string, body: Blob, contentType?: string) => Promise<T>
 }
 
 /** Error thrown for non-2xx responses, carrying the HTTP status, message, and stable code. */
@@ -110,8 +114,24 @@ async function parseBody(response: Response): Promise<unknown> {
 export function createApiClient({ getToken, refreshToken, baseUrl }: ApiClientOptions): ApiClient {
   const base = baseUrl ?? getApiBaseUrl()
 
+  /** Runs `perform` with the current token, retrying once after a refresh on 401. */
+  async function authorized(perform: (token: string | null | undefined) => Promise<Response>): Promise<Response> {
+    let response = await perform(getToken())
+    if (response.status === 401) {
+      const refreshed = await refreshToken()
+      response = await perform(refreshed)
+    }
+    if (!response.ok) {
+      const parsed = await parseBody(response)
+      const extracted = extractApiError(parsed)
+      const message = extracted.message ?? (response.statusText || `HTTP ${response.status}`)
+      throw new ApiError(response.status, message, extracted.code)
+    }
+    return response
+  }
+
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const perform = async (token: string | null | undefined): Promise<Response> => {
+    const response = await authorized((token) => {
       const headers: Record<string, string> = {}
       if (token) headers.Authorization = `Bearer ${token}`
       const init: RequestInit = { method, headers }
@@ -120,21 +140,27 @@ export function createApiClient({ getToken, refreshToken, baseUrl }: ApiClientOp
         init.body = JSON.stringify(body)
       }
       return fetch(`${base}${path}`, init)
-    }
+    })
+    if (response.status === 204) return undefined as T
+    return (await parseBody(response)) as T
+  }
 
-    let response = await perform(getToken())
-    if (response.status === 401) {
-      const refreshed = await refreshToken()
-      response = await perform(refreshed)
-    }
+  async function fetchBlob(path: string): Promise<Blob> {
+    const response = await authorized((token) =>
+      fetch(`${base}${path}`, {
+        method: 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }),
+    )
+    return response.blob()
+  }
 
-    if (!response.ok) {
-      const parsed = await parseBody(response)
-      const extracted = extractApiError(parsed)
-      const message = extracted.message ?? (response.statusText || `HTTP ${response.status}`)
-      throw new ApiError(response.status, message, extracted.code)
-    }
-
+  async function upload<T>(path: string, body: Blob, contentType?: string): Promise<T> {
+    const response = await authorized((token) => {
+      const headers: Record<string, string> = { 'Content-Type': contentType ?? body.type }
+      if (token) headers.Authorization = `Bearer ${token}`
+      return fetch(`${base}${path}`, { method: 'POST', headers, body })
+    })
     if (response.status === 204) return undefined as T
     return (await parseBody(response)) as T
   }
@@ -144,5 +170,7 @@ export function createApiClient({ getToken, refreshToken, baseUrl }: ApiClientOp
     post: (path, body) => request('POST', path, body),
     patch: (path, body) => request('PATCH', path, body),
     delete: (path) => request('DELETE', path),
+    blob: fetchBlob,
+    upload,
   }
 }
