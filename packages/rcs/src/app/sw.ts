@@ -87,19 +87,24 @@ self.addEventListener('push', (event: Event) => {
 
   push.waitUntil(
     (async () => {
-      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      const visiblePaths = windows
-        .filter((client) => client.visibilityState === 'visible')
-        .map((client) => new URL(client.url).pathname)
-      if (!shouldShowNotification(visiblePaths, payload.sessionId)) return
+      try {
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        const visiblePaths = windows
+          .filter((client) => client.visibilityState === 'visible')
+          .map((client) => new URL(client.url).pathname)
+        if (!shouldShowNotification(visiblePaths, payload.sessionId)) return
 
-      const content = toNotificationContent(payload, workerLocale())
-      await self.registration.showNotification(content.title, {
-        body: content.body,
-        tag: content.tag,
-        icon: '/icons/icon-192.png',
-        data: { url: content.url },
-      })
+        const content = toNotificationContent(payload, workerLocale())
+        await self.registration.showNotification(content.title, {
+          body: content.body,
+          tag: content.tag,
+          icon: '/icons/icon-192.png',
+          data: { url: content.url },
+        })
+      } catch {
+        // A failed `matchAll`/`showNotification` must not become an unhandled
+        // rejection that drops the notification silently.
+      }
     })(),
   )
 })

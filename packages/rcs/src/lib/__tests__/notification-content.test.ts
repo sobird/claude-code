@@ -55,6 +55,22 @@ describe('toNotificationContent', () => {
     expect(title).toBe(`${'x'.repeat(MAX_TITLE_LENGTH)}…`)
   })
 
+  test('trims surrounding whitespace before truncating', () => {
+    const padded = { ...payload, sessionTitle: `  ${'x'.repeat(200)}  ` }
+    const title = toNotificationContent(padded, 'en').title
+    expect(title).toBe(`${'x'.repeat(MAX_TITLE_LENGTH)}…`)
+  })
+
+  test('truncation never splits a surrogate pair', () => {
+    // Each 🔔 is one code point but two UTF-16 units; the ellipsis must land on
+    // a code-point boundary rather than emitting a lone surrogate.
+    const emoji = { ...payload, sessionTitle: '🔔'.repeat(MAX_TITLE_LENGTH + 10) }
+    const title = toNotificationContent(emoji, 'en').title
+    expect(Array.from(title)).toHaveLength(MAX_TITLE_LENGTH + 1)
+    expect(title).toBe(`${'🔔'.repeat(MAX_TITLE_LENGTH)}…`)
+    expect(title).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/)
+  })
+
   test('question and plan bodies differ from permission and leak no placeholder', () => {
     const bodyFor = (kind: PushNotificationPayload['kind']) =>
       toNotificationContent({ ...payload, kind, toolName: 'SomeTool' }, 'en').body

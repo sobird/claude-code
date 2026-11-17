@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test'
+import { beforeEach, expect, test } from 'bun:test'
 
 import { loadConfig } from '../../config.js'
 import { createMemoryRepositories } from '../../db/repositories/index.js'

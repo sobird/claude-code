@@ -48,13 +48,17 @@ export function parseNotificationPayload(value: unknown): PushNotificationPayloa
 }
 
 function truncateTitle(title: string): string {
-  return title.length > MAX_TITLE_LENGTH ? `${title.slice(0, MAX_TITLE_LENGTH)}…` : title
+  // Count code points so an astral character (emoji, rare CJK) is not split
+  // into a lone surrogate at the boundary.
+  const chars = Array.from(title)
+  return chars.length > MAX_TITLE_LENGTH ? `${chars.slice(0, MAX_TITLE_LENGTH).join('')}…` : title
 }
 
 /** Localized title/body plus the dedupe tag and click-through URL. */
 export function toNotificationContent(payload: PushNotificationPayload, locale: 'en' | 'zh-CN'): NotificationContent {
   const copy = CATALOGS[locale].notifications
-  const title = payload.sessionTitle?.trim() ? truncateTitle(payload.sessionTitle) : copy.title
+  const sessionTitle = payload.sessionTitle?.trim()
+  const title = sessionTitle ? truncateTitle(sessionTitle) : copy.title
   return {
     title,
     body: copy[payload.kind].replace('{tool}', payload.toolName),
