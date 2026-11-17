@@ -23,7 +23,10 @@ async function pipeWithPrefix(stream: ReadableStream<Uint8Array>, label: string)
 }
 
 const children = specs.map(({ label, cmd }) => {
-  const child = Bun.spawn(cmd, { stdout: 'pipe', stderr: 'pipe' })
+  // Pass `env` explicitly: Bun.spawn only inherits the environment captured at
+  // process start, so the `NEXT_PUBLIC_RCS_API_URL` assignment above would not
+  // reach the children otherwise.
+  const child = Bun.spawn(cmd, { stdout: 'pipe', stderr: 'pipe', env: process.env })
   void pipeWithPrefix(child.stdout, label)
   void pipeWithPrefix(child.stderr, label)
   return child

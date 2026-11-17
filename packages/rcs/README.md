@@ -55,17 +55,30 @@ The `postgres`, `app`, `gateway` and `caddy` services share one image built from
 
 ### Without Docker (development)
 
+If you do not already have a Postgres 16 reachable, start one:
+
+```bash
+docker run -d --name rcs-pg -p 5432:5432 \
+  -e POSTGRES_USER=rcs -e POSTGRES_PASSWORD=rcs -e POSTGRES_DB=rcs \
+  postgres:16-alpine
+```
+
+Then run both processes from source:
+
 ```bash
 cd packages/rcs
 export DATABASE_URL=postgres://rcs:rcs@127.0.0.1:5432/rcs
 export RCS_AUTH_SECRET=$(openssl rand -hex 32)
 export ADMIN_USERNAME=admin ADMIN_PASSWORD=change-me
+export RCS_WEB_CORS_ORIGINS=http://localhost:3000   # dev UI calls the gateway cross-origin
 bun install
 bun run dev          # Next dev on :3000 + gateway on :4000
 ```
 
 `scripts/dev.ts` sets `NEXT_PUBLIC_RCS_API_URL=http://localhost:4000` for you;
-the UI calls the gateway directly in development.
+the UI calls the gateway directly in development. Because that is a cross-origin
+call, the UI origin must be in `RCS_WEB_CORS_ORIGINS` or `/web/*` responses carry
+no CORS headers.
 
 ## Accounts, roles and API keys
 
@@ -84,17 +97,22 @@ the UI calls the gateway directly in development.
 
 ## Pointing the CLI at this server
 
-`claude remote-control` (`claude rc`, `claude bridge`) talks to the gateway over
-HTTPS/HTTP using a bearer token. In this build the `CLAUDE_BRIDGE_*` overrides
-are gated on `USER_TYPE=ant`:
+`remote-control` talks to the gateway over HTTPS/HTTP using a bearer token. In
+this build the `CLAUDE_BRIDGE_*` overrides are gated on `USER_TYPE=ant`, and a
+configured `CLAUDE_BRIDGE_BASE_URL` marks the bridge as self-hosted — the
+claude.ai subscription/scope/GrowthBook gates are skipped, so no `/login` is
+needed:
 
 ```bash
 # CLAUDE_BRIDGE_OAUTH_TOKEN is a per-user API key created at /code/settings.
 USER_TYPE=ant \
 CLAUDE_BRIDGE_BASE_URL=https://rcs.example.com \
 CLAUDE_BRIDGE_OAUTH_TOKEN=rcs_... \
-claude remote-control
+bun scripts/dev.ts remote-control
 ```
+
+Run the command from this repository (or a build of it). The public npm `claude`
+binary does not contain the `CLAUDE_BRIDGE_*` overrides.
 
 - `CLAUDE_BRIDGE_BASE_URL` — public origin of this deployment.
 - `CLAUDE_BRIDGE_OAUTH_TOKEN` — a per-user RCS API key. It is sent as
@@ -204,13 +222,13 @@ unauthenticated `GET /web/sessions` → 401. It needs no database or external en
 2. Sign in as the bootstrap admin.
 3. In `/code/admin`, create a member user with a password.
 4. Sign in as that member and open `/code/settings`; create an API key and copy it.
-5. On the machine that will run sessions:
+5. On the machine that will run sessions (from `packages/rcs` in this repo):
 
    ```bash
    USER_TYPE=ant \
    CLAUDE_BRIDGE_BASE_URL=http://localhost \
    CLAUDE_BRIDGE_OAUTH_TOKEN=rcs_... \
-   claude remote-control
+   bun scripts/dev.ts remote-control
    ```
 
 6. The environment appears in the UI. Start a session (web UI or CLI), open it in
