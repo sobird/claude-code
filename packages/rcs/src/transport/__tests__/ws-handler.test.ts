@@ -219,6 +219,63 @@ describe('ingestBridgeMessage', () => {
     expect(events[0]?.type).toBe('unknown')
   })
 
+  test('drops replay acknowledgements instead of persisting them again', async () => {
+    // The child acks replayed user messages with `isReplay: true`. Persisting
+    // them adds a copy per reconnect, so the next replay window is larger and
+    // the child echoes more — an amplification loop that ends in a 400.
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'user',
+      message: { role: 'user', content: 'already processed' },
+      uuid: 'u_ack',
+      isReplay: true,
+    })
+
+    expect(events).toHaveLength(0)
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(0)
+  })
+
+  test('drops replayed assistant echoes instead of persisting them again', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'assistant',
+      message: { role: 'assistant', content: [{ type: 'text', text: 'echoed history' }] },
+      uuid: 'a_ack',
+      isReplay: true,
+    })
+
+    expect(events).toHaveLength(0)
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(0)
+  })
+
+  test('drops an unmarked echo whose uuid was already persisted', async () => {
+    // The child echoes replayed assistant history without an isReplay marker.
+    // Persisting it makes the next replay window larger, so the gateway must
+    // deduplicate by message uuid (the transport's documented contract).
+    await repos.events.append({
+      sessionId: 's1',
+      type: 'assistant',
+      payload: { uuid: 'a_echo', content: 'history' },
+      direction: 'outbound',
+      messageUuid: 'a_echo',
+    })
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'assistant',
+      message: { role: 'assistant', content: [{ type: 'text', text: 'history' }] },
+      uuid: 'a_echo',
+    })
+
+    expect(events).toHaveLength(0)
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(1)
+  })
+
   test('persists the event before it becomes observable', async () => {
     const events: SessionEvent[] = []
     getEventBus('s1').subscribe((event) => events.push(event))
@@ -232,16 +289,64 @@ describe('ingestBridgeMessage', () => {
 })
 
 describe('handleWebSocketOpen', () => {
-  test('replays durable events (inbound and outbound) from the repository', async () => {
-    await repos.events.append({ sessionId: 's1', type: 'user', payload: { content: 'hello' }, direction: 'outbound' })
-    await repos.events.append({ sessionId: 's1', type: 'assistant', payload: { content: 'hi' }, direction: 'inbound' })
+  test("replays outbound events only, never the child's own inbound history", async () => {
+    // The bridge dedupes replayed *user* messages against its local transcript, but
+    // injects every replayed *assistant* message into the live conversation. Replaying
+    // an assistant `tool_use` whose paired user `tool_result` gets skipped produces
+    // "tool_use ids were found without tool_result blocks" on the next API request.
+    await repos.events.append({
+      sessionId: 's1',
+      type: 'user',
+      payload: { uuid: 'u_prompt', content: 'hello' },
+      direction: 'outbound',
+    })
+    await repos.events.append({
+      sessionId: 's1',
+      type: 'assistant',
+      payload: {
+        uuid: 'a_tool',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'call_1', name: 'Bash', input: {} }],
+        },
+      },
+      direction: 'inbound',
+    })
+    await repos.events.append({
+      sessionId: 's1',
+      type: 'user',
+      payload: {
+        uuid: 'u_result',
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'call_1', content: 'ok' }],
+        },
+      },
+      direction: 'inbound',
+    })
 
     const ws = createMockWs()
     await handleWebSocketOpen(repos, makeConfig(), ws as never, 's1')
 
-    expect(ws.sent).toHaveLength(2)
+    expect(ws.sent).toHaveLength(1)
     expect(sentJson(ws, 0).type).toBe('user')
-    expect(sentJson(ws, 1).type).toBe('assistant')
+    expect((sentJson(ws, 0).message as Record<string, unknown>).content).toBe('hello')
+  })
+
+  test('does not replay control events to the bridge', async () => {
+    // Replaying a durable interrupt would abort the session on every
+    // reconnect, and replaying old control requests/responses feeds stale
+    // decisions back to the child (which echoes them, growing the window).
+    for (const type of ['interrupt', 'control_request', 'control_response', 'permission_response']) {
+      await repos.events.append({ sessionId: 'ctl', type, payload: { request_id: 'r1' }, direction: 'outbound' })
+    }
+    await repos.events.append({ sessionId: 'ctl', type: 'user', payload: { content: 'kept' }, direction: 'outbound' })
+
+    const ws = createMockWs()
+    await handleWebSocketOpen(repos, makeConfig(), ws as never, 'ctl')
+
+    expect(ws.sent).toHaveLength(1)
+    expect(sentJson(ws, 0).type).toBe('user')
   })
 
   test('replays synthetic user metadata back to the bridge', async () => {
@@ -403,7 +508,7 @@ describe('handleWebSocketClose', () => {
   })
 })
 
-describe('keepalive and dead-client detection', () => {
+describe('keepalive', () => {
   test('sends keep_alive frames on the configured interval', async () => {
     const ws = createMockWs()
     await handleWebSocketOpen(repos, makeConfig({ wsKeepaliveInterval: 0.02 }), ws as never, 'ka')
@@ -414,24 +519,17 @@ describe('keepalive and dead-client detection', () => {
     expect(ws.closes).toHaveLength(0)
   })
 
-  test('closes a connection that stops sending data', async () => {
+  test('keeps a read-only client connected without inbound data frames', async () => {
+    // The bridge uses a hybrid transport: the socket is read-only there and writes
+    // (including keep_alive) travel over HTTP POST, so inbound data-frame silence is
+    // not evidence of a dead client. Dead sockets are reaped by Bun's idleTimeout,
+    // which counts the client's protocol pings.
     const ws = createMockWs()
-    await handleWebSocketOpen(repos, makeConfig({ wsKeepaliveInterval: 0.02 }), ws as never, 'dead')
+    await handleWebSocketOpen(repos, makeConfig({ wsKeepaliveInterval: 0.02 }), ws as never, 'hybrid')
 
-    await sleep(110)
+    await sleep(120)
 
-    expect(ws.closes.some((entry) => entry.code === 1000 && entry.reason === 'client inactive')).toBe(true)
-  })
-
-  test('client activity postpones the dead-client close', async () => {
-    const ws = createMockWs()
-    await handleWebSocketOpen(repos, makeConfig({ wsKeepaliveInterval: 0.05 }), ws as never, 'alive')
-
-    for (let index = 0; index < 4; index++) {
-      await sleep(30)
-      await handleWebSocketMessage(repos, ws as never, 'alive', '{"type":"keep_alive"}\n')
-    }
-
+    expect(ws.sent.some((line) => line.includes('keep_alive'))).toBe(true)
     expect(ws.closes).toHaveLength(0)
   })
 })

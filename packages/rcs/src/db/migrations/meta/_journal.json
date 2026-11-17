@@ -15,6 +15,13 @@
       "when": 1794878169039,
       "tag": "0001_freezing_midnight",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794904878072,
+      "tag": "0002_fine_bloodaxe",
+      "breakpoints": true
     }
   ]
 }

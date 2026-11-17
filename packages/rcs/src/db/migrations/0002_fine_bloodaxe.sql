@@ -1,0 +1,2 @@
+ALTER TABLE "session_events" ADD COLUMN "message_uuid" text;--> statement-breakpoint
+CREATE INDEX "session_events_session_message_uuid_idx" ON "session_events" USING btree ("session_id","message_uuid");

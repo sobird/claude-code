@@ -10,7 +10,7 @@ import { Hono } from 'hono'
 
 import type { AppEnv } from '../../auth/context.js'
 import { getSession, updateSessionStatus } from '../../services/session.js'
-import { getEventBus, publishSessionEvent } from '../../transport/event-bus.js'
+import { getEventBus, publishInboundEvent } from '../../transport/event-bus.js'
 import { legacySessionIngressAuth, notFound, readJson } from '../common.js'
 
 const app = new Hono<AppEnv>()
@@ -42,7 +42,8 @@ app.post('/:id/worker/events', legacySessionIngressAuth, async (c) => {
   const events = extractWorkerEvents(body)
   for (const event of events) {
     const type = typeof event.type === 'string' && event.type ? event.type : 'message'
-    await publishSessionEvent(repos, getEventBus(sessionId), sessionId, type, event, 'inbound')
+    // Dedupe by message uuid: the bridge replays its buffer on reconnect.
+    await publishInboundEvent(repos, getEventBus(sessionId), sessionId, type, event)
   }
   await repos.sessions.update(sessionId, {})
   return c.json({ status: 'ok', count: events.length }, 200)

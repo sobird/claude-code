@@ -212,6 +212,11 @@ export interface AppendEventInput {
   type: string
   payload: unknown
   direction: SessionEventRecord['direction']
+  /**
+   * Set only for whole-message events whose uuid identifies the message. Streaming
+   * deltas leave it null so they are never mistaken for a replayed message.
+   */
+  messageUuid?: string | null
 }
 
 export interface EventRepository {
@@ -223,4 +228,6 @@ export interface EventRepository {
   listBefore(sessionId: string, beforeId: number, limit: number): Promise<SessionEventRecord[]>
   /** Highest event id for the session, or `null` when it has no events. */
   latestId(sessionId: string): Promise<number | null>
+  /** True when a whole-message event with this uuid is already persisted for the session. */
+  hasMessageUuid(sessionId: string, uuid: string): Promise<boolean>
 }

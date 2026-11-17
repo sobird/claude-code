@@ -92,6 +92,41 @@ describe('POST /v2/session_ingress/session/:id/events', () => {
     expect(stored[0]?.direction).toBe('inbound')
   })
 
+  test('persists a replayed message once across batch replays', async () => {
+    // The hybrid transport replays its write buffer on every reconnect; the same
+    // assistant message (same uuid) must not be stored again.
+    const session = await repos.sessions.create({})
+    const event = { type: 'assistant', uuid: 'a_replay', message: { role: 'assistant', content: 'history' } }
+
+    const post = (body: unknown) =>
+      app.request(`/v2/session_ingress/session/${session.id}/events`, {
+        method: 'POST',
+        headers: AUTH_HEADERS,
+        body: JSON.stringify(body),
+      })
+
+    expect((await post({ events: [event] })).status).toBe(200)
+    expect((await post({ events: [event] })).status).toBe(200)
+
+    const stored = await repos.events.listSince(session.id, 0, 10)
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.messageUuid).toBe('a_replay')
+  })
+
+  test('does not persist replay acknowledgements marked isReplay', async () => {
+    const session = await repos.sessions.create({})
+    const res = await app.request(`/v2/session_ingress/session/${session.id}/events`, {
+      method: 'POST',
+      headers: AUTH_HEADERS,
+      body: JSON.stringify({
+        events: [{ type: 'user', uuid: 'u_ack', isReplay: true, message: { role: 'user', content: 'done' } }],
+      }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(await repos.events.listSince(session.id, 0, 10)).toHaveLength(0)
+  })
+
   test('rejects requests without credentials', async () => {
     const session = await repos.sessions.create({})
     const res = await app.request(`/v2/session_ingress/session/${session.id}/events`, {

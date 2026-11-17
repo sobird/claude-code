@@ -124,9 +124,18 @@ export const sessionEvents = pgTable(
     type: text('type').notNull(),
     payload: jsonb('payload').$type<unknown>().notNull(),
     direction: text('direction').$type<EventDirection>().notNull(),
+    /**
+     * Message uuid for whole-message events (`user`/`assistant`/`system`/`result`), null
+     * for streaming deltas and uuid-less control traffic. The gateway deduplicates bridge
+     * writes by this value (the transport contract), so it must be indexed.
+     */
+    messageUuid: text('message_uuid'),
     createdAt: createdAt(),
   },
-  (table) => [index('session_events_session_id_idx').on(table.sessionId, table.id)],
+  (table) => [
+    index('session_events_session_id_idx').on(table.sessionId, table.id),
+    index('session_events_session_message_uuid_idx').on(table.sessionId, table.messageUuid),
+  ],
 )
 
 export const schema = {

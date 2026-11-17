@@ -25,6 +25,7 @@ export function createEventRepository(db: Database): EventRepository {
           type: input.type,
           payload: input.payload,
           direction: input.direction,
+          messageUuid: input.messageUuid ?? null,
           createdAt: new Date(),
         })
         .returning()
@@ -59,6 +60,15 @@ export function createEventRepository(db: Database): EventRepository {
         .limit(1)
       return row?.id ?? null
     },
+
+    async hasMessageUuid(sessionId, uuid) {
+      const [row] = await db
+        .select({ id: sessionEvents.id })
+        .from(sessionEvents)
+        .where(and(eq(sessionEvents.sessionId, sessionId), eq(sessionEvents.messageUuid, uuid)))
+        .limit(1)
+      return row !== undefined
+    },
   }
 }
 
@@ -88,6 +98,7 @@ export function createMemoryEventRepository(): EventRepository {
         type: input.type,
         payload: input.payload,
         direction: input.direction,
+        messageUuid: input.messageUuid ?? null,
         createdAt: new Date(),
       }
       eventsFor(input.sessionId).push(record)
@@ -115,6 +126,10 @@ export function createMemoryEventRepository(): EventRepository {
       const records = bySessionId.get(sessionId)
       if (!records || records.length === 0) return null
       return records.reduce((max, record) => Math.max(max, record.id), 0)
+    },
+
+    async hasMessageUuid(sessionId, uuid) {
+      return (bySessionId.get(sessionId) ?? []).some((record) => record.messageUuid === uuid)
     },
   }
 }

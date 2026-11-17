@@ -90,6 +90,8 @@ export interface SessionEventRecord {
   type: string
   payload: unknown
   direction: 'inbound' | 'outbound'
+  /** Whole-message uuid used for inbound dedupe; null for streaming deltas and control traffic. */
+  messageUuid: string | null
   createdAt: Date
 }
 

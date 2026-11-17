@@ -1,10 +1,14 @@
 /**
  * Bridge WebSocket transport.
  *
- * On open the socket replays durable history from `session_events` (all directions, so the
- * bridge can rebuild the conversation) and then receives live outbound events only. Inbound
- * bridge messages are persisted *before* they are published (write-through), and dead
- * clients are detected by a keepalive frame plus an inactivity deadline.
+ * On open the socket replays durable outbound events (work the bridge has not processed
+ * yet) and then receives live outbound events only. Inbound history is deliberately never
+ * replayed: the bridge deduplicates replayed *user* messages against its local transcript,
+ * but injects every replayed *assistant* message into the live conversation, so re-sending
+ * the child's own turns duplicates `tool_use` blocks whose `tool_result` partners were
+ * skipped (the model API rejects the request with a 400). Inbound bridge messages are
+ * persisted *before* they are published (write-through), and a keepalive frame keeps
+ * proxies from dropping an idle socket.
  *
  * Bun-specific behaviour lives in `ws-shared.ts`; this module only uses the runtime-neutral
  * `hono/ws` `WSContext` type.
@@ -16,15 +20,13 @@ import type { GatewayConfig } from '../config.js'
 import type { Repositories } from '../db/repositories/types.js'
 import { toClientPayload } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'
-import { getEventBus, loadEventReplayWindow, publishSessionEvent, subscribeReplayThenLive } from './event-bus.js'
+import { getEventBus, loadEventReplayWindow, publishInboundEvent, subscribeReplayThenLive } from './event-bus.js'
 
 // Per-connection cleanup, keyed by sessionId (only one WS per session).
 interface CleanupEntry {
   unsub: () => void
   keepalive: ReturnType<typeof setInterval> | null
   ws: WSContext
-  openTime: number
-  lastClientActivity: number
 }
 
 function stopKeepalive(entry: CleanupEntry): void {
@@ -46,6 +48,14 @@ const ingestQueues = new Map<string, Promise<void>>()
 
 const DEFAULT_KEEPALIVE_INTERVAL_SECONDS = 20
 
+/**
+ * Event types that must not be replayed to the bridge. A durable `interrupt`
+ * would abort the session on every reconnect; replayed control requests and
+ * responses feed stale decisions back to the child, which echoes them, growing
+ * the replay window each time.
+ */
+const NON_REPLAYABLE_EVENT_TYPES = new Set(['interrupt', 'control_request', 'control_response', 'permission_response'])
+
 /** NDJSON: every message must end with `\n` for the child process's line parser. */
 function toSDKMessage(event: SessionEvent): string {
   return JSON.stringify(toClientPayload(event)) + '\n'
@@ -63,7 +73,13 @@ function sendEvent(ws: WSContext, event: SessionEvent): void {
 /**
  * Called from `onOpen`: subscribe before reading durable history so no event can slip
  * across the replay→live boundary, then replay the newest `config.eventReplayLimit`
- * events (there is no cursor on this path) and forward live outbound events.
+ * outbound events (there is no cursor on this path) and forward live outbound events.
+ *
+ * Only *outbound* events are replayed. Replaying inbound assistant history to a
+ * reconnecting child duplicates its conversation: the child dedupes replayed user messages
+ * against its local transcript and acks them, but re-injects every replayed assistant
+ * message, so a duplicated `tool_use` is left without its (skipped) `tool_result` and the
+ * next API request fails with a 400.
  */
 export async function handleWebSocketOpen(
   repos: Repositories,
@@ -71,7 +87,6 @@ export async function handleWebSocketOpen(
   ws: WSContext,
   sessionId: string,
 ): Promise<void> {
-  const openTime = Date.now()
   activeConnections.add(ws)
 
   const existing = cleanupBySession.get(sessionId)
@@ -85,22 +100,15 @@ export async function handleWebSocketOpen(
     Math.max(config.wsKeepaliveInterval || 0, 0) > 0
       ? config.wsKeepaliveInterval * 1000
       : DEFAULT_KEEPALIVE_INTERVAL_SECONDS * 1000
-  // Three missed keepalives mark the client dead.
-  const clientActivityTimeoutMs = keepaliveIntervalMs * 3
 
-  const entry: CleanupEntry = { unsub: () => {}, keepalive: null, ws, openTime, lastClientActivity: Date.now() }
+  const entry: CleanupEntry = { unsub: () => {}, keepalive: null, ws }
+  // The bridge's hybrid transport writes over HTTP POST, so inbound WS data frames never
+  // arrive; only this keepalive frame (for proxy idle timers) is sent. Dead sockets are
+  // reaped by Bun's `idleTimeout`, which counts the client's periodic protocol pings —
+  // closing on data-frame silence here would kill healthy read-only connections.
   entry.keepalive = setInterval(() => {
     if (ws.readyState !== 1) {
       stopKeepalive(entry)
-      return
-    }
-    const silenceMs = Date.now() - entry.lastClientActivity
-    if (silenceMs > clientActivityTimeoutMs) {
-      try {
-        ws.close(1000, 'client inactive')
-      } catch {
-        stopKeepalive(entry)
-      }
       return
     }
     try {
@@ -114,7 +122,10 @@ export async function handleWebSocketOpen(
     bus: getEventBus(sessionId),
     fromSeqNum: 0,
     replay: true,
-    loadSince: () => loadEventReplayWindow(repos, sessionId, 0, config.eventReplayLimit),
+    loadSince: async () =>
+      (await loadEventReplayWindow(repos, sessionId, 0, config.eventReplayLimit)).filter(
+        (event) => event.direction === 'outbound' && !NON_REPLAYABLE_EVENT_TYPES.has(event.type),
+      ),
     filterLiveEvent: (event) => event.direction === 'outbound',
     onReplayEvent: (event) => sendEvent(ws, event),
     onLiveEvent: (event) => sendEvent(ws, event),
@@ -145,10 +156,6 @@ export function handleWebSocketMessage(
   data: string,
 ): Promise<void> {
   void ws
-  const entry = cleanupBySession.get(sessionId)
-  if (entry) {
-    entry.lastClientActivity = Date.now()
-  }
 
   const messages: Array<Record<string, unknown>> = []
   for (const line of data.split('\n')) {
@@ -225,6 +232,12 @@ export async function ingestBridgeMessage(
 ): Promise<SessionEvent | null> {
   if (msg.type === 'keep_alive') return null
 
+  // The child acks replayed user messages with `isReplay: true`. An ack is not a
+  // new event: persisting it adds a durable copy on every reconnect, the next
+  // replay window carries that copy back, and the child acks it again — the loop
+  // compounds until the model API rejects the duplicated tool_use blocks.
+  if (msg.isReplay === true) return null
+
   const eventType = deriveEventType(msg)
 
   let payload: unknown
@@ -260,7 +273,9 @@ export async function ingestBridgeMessage(
   }
 
   // Await persistence before publishing: subscribers must never observe an unpersisted event.
-  return publishSessionEvent(repos, getEventBus(sessionId), sessionId, eventType, payload, 'inbound')
+  // Dedupes by message uuid: replayed assistant history is echoed back unmarked, and
+  // persisting each echo grows the replay window on every reconnect.
+  return publishInboundEvent(repos, getEventBus(sessionId), sessionId, eventType, payload)
 }
 
 /** Gracefully close every active WebSocket connection (server shutdown). */

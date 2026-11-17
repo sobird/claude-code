@@ -18,7 +18,7 @@ import {
   updateSessionTitle,
 } from '../../services/session.js'
 import { createWorkItem } from '../../services/work-dispatch.js'
-import { getEventBus, publishSessionEvent } from '../../transport/event-bus.js'
+import { getEventBus, publishInboundEvent, publishSessionEvent } from '../../transport/event-bus.js'
 import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '../common.js'
 
 const app = new Hono<AppEnv>()
@@ -125,7 +125,8 @@ app.post('/:id/events', legacyUserAuth, async (c) => {
   const events = extractEvents(body)
   for (const event of events) {
     const type = typeof event.type === 'string' && event.type ? event.type : 'message'
-    await publishSessionEvent(repos, getEventBus(owned), owned, type, event, 'inbound')
+    // Dedupe by message uuid: the bridge replays its buffer on reconnect.
+    await publishInboundEvent(repos, getEventBus(owned), owned, type, event)
   }
   return c.json({ status: 'ok', events: events.length }, 200)
 })

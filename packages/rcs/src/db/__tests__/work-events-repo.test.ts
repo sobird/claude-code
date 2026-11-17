@@ -229,6 +229,38 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect(all.map((row) => row.id)).toEqual([first.id, second.id])
     })
 
+    test('hasMessageUuid finds a stored message uuid, scoped to one session', async () => {
+      const mine = await makeEnvironmentAndSession()
+      const other = await makeEnvironmentAndSession()
+      await repos.events.append({
+        sessionId: mine.sessionId,
+        type: 'assistant',
+        payload: { uuid: 'msg-1' },
+        direction: 'outbound',
+        messageUuid: 'msg-1',
+      })
+      await repos.events.append({
+        sessionId: other.sessionId,
+        type: 'assistant',
+        payload: { uuid: 'other-msg' },
+        direction: 'outbound',
+        messageUuid: 'other-msg',
+      })
+
+      expect(await repos.events.hasMessageUuid(mine.sessionId, 'msg-1')).toBe(true)
+      expect(await repos.events.hasMessageUuid(mine.sessionId, 'other-msg')).toBe(false)
+      expect(await repos.events.hasMessageUuid(other.sessionId, 'msg-1')).toBe(false)
+    })
+
+    test('hasMessageUuid ignores rows that carry no message uuid', async () => {
+      const { sessionId } = await makeEnvironmentAndSession()
+      // Streaming deltas keep a null message uuid so they are never mistaken for
+      // a complete message replay.
+      await repos.events.append({ sessionId, type: 'stream_event', payload: { uuid: 'chunk' }, direction: 'inbound' })
+
+      expect(await repos.events.hasMessageUuid(sessionId, 'chunk')).toBe(false)
+    })
+
     test('latestId returns the max id or null', async () => {
       const { sessionId } = await makeEnvironmentAndSession()
       expect(await repos.events.latestId(sessionId)).toBeNull()

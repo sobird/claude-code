@@ -249,6 +249,36 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
 }
 
 /**
+ * Event types whose `uuid` identifies a whole message, so a repeated uuid is a replay of
+ * a message that is already durable. Streaming deltas (`stream_event`, `partial_assistant`)
+ * share the eventual message uuid but are distinct events and must never be deduplicated.
+ */
+const UUID_IDENTIFIED_EVENT_TYPES = new Set(['user', 'assistant', 'system', 'result', 'result_success'])
+
+/** Extract the dedupe key for `type` from an already-normalized payload. */
+function messageUuidOf(type: string, normalizedPayload: unknown): string | null {
+  if (!UUID_IDENTIFIED_EVENT_TYPES.has(type)) return null
+  if (!normalizedPayload || typeof normalizedPayload !== 'object') return null
+  const uuid = (normalizedPayload as Record<string, unknown>).uuid
+  return typeof uuid === 'string' && uuid ? uuid : null
+}
+
+async function appendAndPublish(
+  repos: Repositories,
+  eventBus: EventBus | null,
+  sessionId: string,
+  type: string,
+  normalized: Record<string, unknown>,
+  direction: 'inbound' | 'outbound',
+  messageUuid: string | null,
+): Promise<SessionEvent> {
+  const record = await repos.events.append({ sessionId, type, payload: normalized, direction, messageUuid })
+  const event = toSessionEvent(record)
+  eventBus?.publish(event)
+  return event
+}
+
+/**
  * Persist a session event (write-through to `session_events`) and publish it to the
  * supplied bus. Returns the published event; its `seqNum` is the durable row id.
  */
@@ -261,10 +291,33 @@ export async function publishSessionEvent(
   direction: 'inbound' | 'outbound',
 ): Promise<SessionEvent> {
   const normalized = normalizePayload(type, payload)
-  const record = await repos.events.append({ sessionId, type, payload: normalized, direction })
-  const event = toSessionEvent(record)
-  eventBus?.publish(event)
-  return event
+  return appendAndPublish(repos, eventBus, sessionId, type, normalized, direction, messageUuidOf(type, normalized))
+}
+
+/**
+ * Persist an inbound bridge event unless a whole-message event with the same uuid is
+ * already durable for the session, and publish it.
+ *
+ * The bridge replays its history to the child on every reconnect; the child injects and
+ * echoes those messages back, and acks duplicate user prompts with `isReplay: true`.
+ * Persisting every echo makes the next replay window larger, so the loop compounds until
+ * the model API rejects duplicated `tool_use` blocks. The transport contract is explicit
+ * that the server deduplicates bridge writes by UUID (WebSocketTransport's reconnect
+ * replay), so this is the server's responsibility.
+ *
+ * Returns `null` when the event was dropped as a duplicate.
+ */
+export async function publishInboundEvent(
+  repos: Repositories,
+  eventBus: EventBus | null,
+  sessionId: string,
+  type: string,
+  payload: unknown,
+): Promise<SessionEvent | null> {
+  const normalized = normalizePayload(type, payload)
+  const messageUuid = messageUuidOf(type, normalized)
+  if (messageUuid && (await repos.events.hasMessageUuid(sessionId, messageUuid))) return null
+  return appendAndPublish(repos, eventBus, sessionId, type, normalized, 'inbound', messageUuid)
 }
 
 /** Map a persisted `session_events` row onto the in-process event shape. */

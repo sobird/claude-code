@@ -9,6 +9,7 @@ import {
   getAllEventBuses,
   getAcpEventBus,
   getEventBus,
+  publishInboundEvent,
   publishSessionEvent,
   removeAcpEventBus,
   removeEventBus,
@@ -182,6 +183,48 @@ describe('publishSessionEvent', () => {
     const event = await publishSessionEvent(repos, null, 's1', 'user', { content: 'x' }, 'outbound')
     expect(event.seqNum).toBeGreaterThan(0)
     expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(1)
+  })
+})
+
+describe('publishInboundEvent', () => {
+  test('drops a message whose uuid is already persisted', async () => {
+    const repos = createMemoryRepositories()
+    const first = await publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'a1' })
+    expect(first).not.toBeNull()
+
+    const echo = await publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'a1' })
+    expect(echo).toBeNull()
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(1)
+  })
+
+  test('drops a replay whose uuid was persisted outbound (a web prompt echo)', async () => {
+    const repos = createMemoryRepositories()
+    // The web composer persisted the prompt outbound; the bridge acks it inbound.
+    const prompt = await publishSessionEvent(repos, null, 's1', 'user', { uuid: 'u1', content: 'hi' }, 'outbound')
+    expect(prompt).not.toBeNull()
+
+    expect(await publishInboundEvent(repos, null, 's1', 'user', { uuid: 'u1', content: 'hi' })).toBeNull()
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(1)
+  })
+
+  test('never treats streaming deltas as message replays', async () => {
+    const repos = createMemoryRepositories()
+    // Stream chunks share the eventual assistant uuid but are distinct events.
+    expect(await publishInboundEvent(repos, null, 's1', 'stream_event', { uuid: 'a1' })).not.toBeNull()
+    expect(await publishInboundEvent(repos, null, 's1', 'partial_assistant', { uuid: 'a1' })).not.toBeNull()
+    // The complete assistant message still persists after its deltas.
+    expect(await publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'a1' })).not.toBeNull()
+
+    // But a repeated complete message is dropped.
+    expect(await publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'a1' })).toBeNull()
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(3)
+  })
+
+  test('persists events without a uuid every time', async () => {
+    const repos = createMemoryRepositories()
+    expect(await publishInboundEvent(repos, null, 's1', 'control_request', { request_id: 'r1' })).not.toBeNull()
+    expect(await publishInboundEvent(repos, null, 's1', 'control_request', { request_id: 'r1' })).not.toBeNull()
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(2)
   })
 })
 
