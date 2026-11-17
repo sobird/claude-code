@@ -81,13 +81,14 @@ async function resolveVapidKeys(
   if (vapidPublicKey && vapidPrivateKey) {
     return { publicKey: vapidPublicKey, privateKey: vapidPrivateKey, subject: config.vapidSubject }
   }
+
+  const stored = await repos.pushSettings.get()
+  if (stored) return stored
+
   if (vapidPublicKey || vapidPrivateKey) {
     log('[RCS] push notifications disabled: only one VAPID key is configured')
     return null
   }
-
-  const stored = await repos.pushSettings.get()
-  if (stored) return stored
 
   const generated = provider.generateVapidKeys()
   const keys: PushVapidKeys = {

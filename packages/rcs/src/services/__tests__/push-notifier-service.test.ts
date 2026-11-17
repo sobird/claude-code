@@ -50,7 +50,7 @@ beforeEach(() => resetPushNotifierForTests())
 describe('push notifier service', () => {
   test('does nothing before initialization', async () => {
     const repos = createMemoryRepositories()
-    const { provider, sent } = fakeProvider()
+    const { sent } = fakeProvider()
     const { user, session } = await seedSession(repos)
     await repos.pushSubscriptions.upsertForUser(user.id, {
       endpoint: 'https://push.example/a',
@@ -62,7 +62,6 @@ describe('push notifier service', () => {
     await flush()
 
     expect(sent).toHaveLength(0)
-    expect(provider).toBeDefined()
   })
 
   test('sends to every subscription of the owner with the right payload', async () => {
@@ -172,6 +171,29 @@ describe('push notifier service', () => {
     expect(sent).toHaveLength(1)
   })
 
+  test('waits for initialization when notified during init', async () => {
+    const repos = createMemoryRepositories()
+    const { provider, sent } = fakeProvider()
+    const { user, session } = await seedSession(repos)
+    await repos.pushSubscriptions.upsertForUser(user.id, {
+      endpoint: 'https://push.example/a',
+      p256dh: 'p1',
+      auth: 'a1',
+    })
+
+    const initPromise = initPushNotifier({ config: config(), repos, provider })
+    notifyInboundEvent(session.id, 'control_request', confirmation)
+    await initPromise
+    await flush()
+
+    expect(sent).toHaveLength(1)
+    expect(sent[0].endpoint).toBe('https://push.example/a')
+    const payload = sent[0].payload as { sessionId: string; toolName: string; kind: string }
+    expect(payload.sessionId).toBe(session.id)
+    expect(payload.toolName).toBe('Bash')
+    expect(payload.kind).toBe('permission')
+  })
+
   test('uses stored VAPID keys when env is absent', async () => {
     const repos = createMemoryRepositories()
     const vapidCalls: Array<[string, string, string]> = []
@@ -194,6 +216,29 @@ describe('push notifier service', () => {
 
     expect(getPushPublicConfig()).toEqual({ enabled: true, publicKey: 'stored' })
     expect(vapidCalls).toHaveLength(1)
+    expect(vapidCalls[0][0]).toBe('mailto:ops@example.com')
+    expect(vapidCalls[0][1]).toBe('stored')
+  })
+
+  test('uses stored VAPID keys when env is partially set', async () => {
+    const repos = createMemoryRepositories()
+    const vapidCalls: Array<[string, string, string]> = []
+    const { provider } = fakeProvider({
+      setVapidDetails(subject, publicKey, privateKey) {
+        vapidCalls.push([subject, publicKey, privateKey])
+      },
+    })
+    await repos.pushSettings.set({
+      publicKey: 'stored',
+      privateKey: 'stored-priv',
+      subject: 'mailto:ops@example.com',
+    })
+
+    await initPushNotifier({ config: config({ RCS_VAPID_PRIVATE_KEY: '' }), repos, provider })
+
+    expect(getPushPublicConfig()).toEqual({ enabled: true, publicKey: 'stored' })
+    expect(vapidCalls).toHaveLength(1)
+    expect(vapidCalls[0][0]).toBe('mailto:ops@example.com')
     expect(vapidCalls[0][1]).toBe('stored')
   })
 
