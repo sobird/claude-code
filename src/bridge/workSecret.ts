@@ -26,12 +26,16 @@ export function decodeWorkSecret(secret: string): WorkSecret {
  * Build a WebSocket SDK URL from the API base URL and session ID.
  * Strips the HTTP(S) protocol and constructs a ws(s):// ingress URL.
  *
+ * The transport protocol follows the base URL's scheme, not its host: a local
+ * dev gateway can serve HTTPS (e.g. mkcert), and connecting plain `ws://` to a
+ * TLS port fails with an opaque socket hang-up.
+ *
  * Uses /v2/ for localhost (direct to session-ingress, no Envoy rewrite)
  * and /v1/ for production (Envoy rewrites /v1/ → /v2/).
  */
 export function buildSdkUrl(apiBaseUrl: string, sessionId: string): string {
   const isLocalhost = apiBaseUrl.includes('localhost') || apiBaseUrl.includes('127.0.0.1')
-  const protocol = isLocalhost ? 'ws' : 'wss'
+  const protocol = apiBaseUrl.startsWith('https://') ? 'wss' : 'ws'
   const version = isLocalhost ? 'v2' : 'v1'
   const host = apiBaseUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')
   return `${protocol}://${host}/${version}/session_ingress/ws/${sessionId}`
