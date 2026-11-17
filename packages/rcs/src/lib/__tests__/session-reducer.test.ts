@@ -366,6 +366,64 @@ describe('reduceSessionEvent', () => {
     expect(tools(state)[0]?.toolCall.status).toBe('rejected')
   })
 
+  test('control_cancel_request clears the card and resumes a bound tool call', () => {
+    let state = reduceSessionEvent(initialChatState, event('tool_use', { tool_call_id: 'call-1', tool_name: 'Bash' }))
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'req-1', request: { subtype: 'can_use_tool', tool_name: 'Bash' } }),
+    )
+    state = reduceSessionEvent(state, event('control_cancel_request', { request_id: 'req-1' }))
+
+    expect(state.pendingPermissions).toHaveLength(0)
+    // The CLI resolved the request locally, so the call keeps going.
+    expect(tools(state)[0]?.toolCall.status).toBe('running')
+    expect(tools(state)[0]?.toolCall.permissionRequest).toBeUndefined()
+  })
+
+  test('control_cancel_request removes a standalone permission card', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', {
+        request_id: 'req-1',
+        request: { subtype: 'can_use_tool', tool_name: 'Bash' },
+      }),
+    )
+    expect(state.pendingPermissions).toHaveLength(1)
+    expect(tools(state)).toHaveLength(1)
+
+    state = reduceSessionEvent(state, event('control_cancel_request', { request_id: 'req-1' }))
+
+    expect(state.pendingPermissions).toHaveLength(0)
+    // A standalone card has no call behind it and will never settle; drop it.
+    expect(tools(state)).toHaveLength(0)
+  })
+
+  test('control_cancel_request clears a matching pending mode switch', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', permissionMode: 'default' }))
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'mode-1', request: { subtype: 'set_permission_mode', mode: 'plan' } }),
+    )
+    expect(state.pendingMode).not.toBeNull()
+
+    state = reduceSessionEvent(state, event('control_cancel_request', { request_id: 'mode-1' }))
+
+    expect(state.pendingMode).toBeNull()
+    expect(state.permissionMode).toBe('default')
+    expect(state.modeError).toBeNull()
+  })
+
+  test('control_cancel_request for another request leaves state untouched', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', { request_id: 'req-1', request: { subtype: 'can_use_tool', tool_name: 'Bash' } }),
+    )
+    const next = reduceSessionEvent(state, event('control_cancel_request', { request_id: 'other' }))
+
+    expect(next.pendingPermissions).toBe(state.pendingPermissions)
+    expect(next.entries).toBe(state.entries)
+  })
+
   test('approved standalone permission settles to complete', () => {
     let state = reduceSessionEvent(
       initialChatState,

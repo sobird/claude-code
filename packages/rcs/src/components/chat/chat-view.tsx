@@ -13,13 +13,14 @@
 import { ArrowDown, ArrowLeft } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { isSessionClosedStatus } from '../../contracts'
 import { useAccessToken } from '../../hooks/useAccessToken'
 import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
 import { useSessionStream } from '../../hooks/useSessionStream'
 import { createApiClient } from '../../lib/api-client'
+import { withPendingApprovalCount } from '../../lib/approval-alert'
 import { buildSetPermissionModeRequest, type WebPermissionMode } from '../../lib/permission-modes'
 import type { PermissionDecision } from '../../lib/permission-suggestions'
 import { randomUuid } from '../../lib/random-uuid'
@@ -109,6 +110,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   const [session, setSession] = useState<SessionDetail | null>(null)
   const [history, setHistory] = useState<HistoryEvent[] | null>(null)
+  // Cursor for the next older page; null once the whole history is loaded.
+  const [nextBefore, setNextBefore] = useState<number | null>(null)
+  const [loadingEarlier, setLoadingEarlier] = useState(false)
+  // Scroll height captured before prepending, so the viewport stays put.
+  const preserveScrollRef = useRef<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<unknown>(null)
   const [actionError, setActionError] = useState<unknown>(null)
@@ -134,6 +140,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       ])
       setSession(detail)
       setHistory(Array.isArray(page.events) ? page.events : [])
+      setNextBefore(typeof page.nextBefore === 'number' ? page.nextBefore : null)
     } catch (error) {
       setLoadError(error)
     } finally {
@@ -145,6 +152,39 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     if (!hasToken) return
     void load()
   }, [hasToken, load])
+
+  const loadEarlier = useCallback(async () => {
+    if (nextBefore === null || loadingEarlier) return
+    const path = `/web/sessions/${encodeURIComponent(sessionId)}`
+    setLoadingEarlier(true)
+    try {
+      const page = await api.get<HistoryResponse>(`${path}/history?limit=100&before=${nextBefore}`)
+      const older = Array.isArray(page.events) ? page.events : []
+      const el = scrollRef.current
+      if (el) preserveScrollRef.current = el.scrollHeight
+      setHistory((prev) => {
+        const merged = new Map<number, HistoryEvent>()
+        for (const event of [...older, ...(prev ?? [])]) {
+          if (!merged.has(event.seqNum)) merged.set(event.seqNum, event)
+        }
+        return [...merged.values()].toSorted((a, b) => a.seqNum - b.seqNum)
+      })
+      setNextBefore(typeof page.nextBefore === 'number' ? page.nextBefore : null)
+    } catch (error) {
+      setActionError(error)
+    } finally {
+      setLoadingEarlier(false)
+    }
+  }, [api, sessionId, nextBefore, loadingEarlier])
+
+  // Prepended messages must not shift what the reader is looking at.
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    const previousHeight = preserveScrollRef.current
+    if (!el || previousHeight === null) return
+    el.scrollTop = el.scrollHeight - previousHeight
+    preserveScrollRef.current = null
+  }, [history])
 
   // Fold durable events first (history, live frames, locally-sent events) in
   // sequence order so an assistant reply never lands before its prompt. Streamed
@@ -188,6 +228,30 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (atBottomRef.current) scrollToBottom()
   }, [entryCount, scrollToBottom])
+
+  // A hidden tab shows a count in its title while approvals wait, so the user
+  // knows to come back without watching the page.
+  const pendingApprovalCount = chat.pendingPermissions.length
+  useEffect(() => {
+    const base = document.title
+    let applied = false
+    const sync = () => {
+      const show = document.visibilityState === 'hidden' && pendingApprovalCount > 0
+      if (show && !applied) {
+        document.title = withPendingApprovalCount(base, pendingApprovalCount)
+        applied = true
+      } else if (!show && applied) {
+        document.title = base
+        applied = false
+      }
+    }
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      document.removeEventListener('visibilitychange', sync)
+      if (applied) document.title = base
+    }
+  }, [pendingApprovalCount])
 
   // While a reply streams, the text grows between reducer updates as it is
   // revealed, so follow it frame-by-frame while the reader is at the bottom.
@@ -404,6 +468,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           className="absolute inset-0 overflow-y-auto rounded-xl border border-border bg-surface-2 px-3 py-5 sm:px-6"
         >
           <div className="mx-auto flex max-w-3xl flex-col gap-3">
+            {nextBefore !== null ? (
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  data-testid="load-earlier"
+                  onClick={() => void loadEarlier()}
+                  disabled={loadingEarlier}
+                >
+                  {loadingEarlier ? t('loadingEarlier') : t('loadEarlier')}
+                </Button>
+              </div>
+            ) : null}
             {loading && entries.length === 0 ? (
               <EmptyState title={t('loading.title')} description={t('loading.description')} />
             ) : entries.length === 0 ? (

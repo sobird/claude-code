@@ -17,7 +17,7 @@
 
 import { Check, ClipboardCheck, Maximize2, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 
 import {
   permissionOptions,
@@ -25,6 +25,7 @@ import {
   type PermissionOption,
   type PermissionSuggestion,
 } from '../../lib/permission-suggestions'
+import { resolvePlanDialogKey } from '../../lib/plan-dialog-keys'
 import type { PendingPermission } from '../../lib/session-reducer'
 import { Button } from '../ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog'
@@ -84,6 +85,14 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
   const [dialogOpen, setDialogOpen] = useState(autoOpen)
   const [denyOpen, setDenyOpen] = useState(false)
   const [feedback, setFeedback] = useState('')
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const denyRef = useRef<HTMLTextAreaElement>(null)
+
+  // Opening the rejection form (button or the D shortcut) should let the user
+  // type the reason straight away.
+  useEffect(() => {
+    if (denyOpen) denyRef.current?.focus()
+  }, [denyOpen])
 
   const plan = typeof request.toolInput.plan === 'string' ? request.toolInput.plan : ''
   const preview = useMemo(() => planPreview(plan), [plan])
@@ -116,6 +125,31 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
   const submitDeny = () => {
     const message = feedback.trim()
     onRespond?.(request.requestId, { approved: false, ...(message ? { message } : {}) })
+  }
+
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement | null
+    const tag = target?.tagName
+    const action = resolvePlanDialogKey({
+      key: event.key,
+      denyOpen,
+      inEditable: tag === 'TEXTAREA' || tag === 'INPUT' || target?.isContentEditable === true,
+      onButton: tag === 'BUTTON' || target?.getAttribute('role') === 'button',
+      isComposing: event.nativeEvent.isComposing,
+      hasModifier: event.metaKey || event.ctrlKey || event.altKey,
+    })
+    if (!action) return
+
+    // stopPropagation keeps Radix's document-level Escape handler from closing
+    // the dialog while it is only cancelling the rejection form.
+    event.preventDefault()
+    event.stopPropagation()
+    if (action === 'approve') approve(false)
+    else if (action === 'deny') setDenyOpen(true)
+    else {
+      setDenyOpen(false)
+      setFeedback('')
+    }
   }
 
   const promptsSection =
@@ -161,6 +195,7 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
   const actions = denyOpen ? (
     <div className="mt-3 space-y-1.5">
       <textarea
+        ref={denyRef}
         className="w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         rows={2}
         placeholder={t('denyPlaceholder')}
@@ -252,7 +287,16 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
       {plan ? (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent
+            ref={dialogRef}
             data-testid="exit-plan-mode-dialog"
+            tabIndex={-1}
+            onOpenAutoFocus={(event) => {
+              // Focus the container instead of the first button so A/D/Enter
+              // stay shortcuts rather than button activations.
+              event.preventDefault()
+              dialogRef.current?.focus()
+            }}
+            onKeyDown={handleDialogKeyDown}
             className="flex max-h-[85dvh] flex-col gap-3 rounded-2xl border-border bg-surface-1 shadow-2xl sm:max-w-2xl"
           >
             <DialogHeader>

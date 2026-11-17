@@ -640,6 +640,52 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
   return changed ? { ...state, entries, pendingPermissions } : { ...state, pendingPermissions }
 }
 
+/**
+ * The CLI resolved a request locally (hook/classifier/recheck) and cancelled it
+ * instead of answering. Drop the matching card so it stops blocking the UI; a
+ * bound tool call resumes as running, a standalone card disappears.
+ */
+function handleControlCancel(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const requestId = requestIdOf(payload)
+  if (!requestId) return state
+
+  let changed = false
+
+  let pendingMode = state.pendingMode
+  let modeError = state.modeError
+  if (pendingMode && pendingMode.requestId === requestId) {
+    pendingMode = null
+    modeError = null
+    changed = true
+  }
+
+  let pendingPermissions = state.pendingPermissions
+  if (pendingPermissions.some((permission) => permission.requestId === requestId)) {
+    pendingPermissions = pendingPermissions.filter((permission) => permission.requestId !== requestId)
+    changed = true
+  }
+
+  let entries = state.entries
+  if (
+    entries.some((entry) => entry.type === 'tool_call' && entry.toolCall.permissionRequest?.requestId === requestId)
+  ) {
+    entries = entries.flatMap((entry) => {
+      if (entry.type !== 'tool_call' || entry.toolCall.permissionRequest?.requestId !== requestId) return [entry]
+      if (entry.toolCall.isStandalonePermission) return []
+      return [
+        {
+          type: 'tool_call' as const,
+          toolCall: { ...entry.toolCall, status: 'running' as const, permissionRequest: undefined },
+        },
+      ]
+    })
+    changed = true
+  }
+
+  return changed ? { ...state, pendingPermissions, pendingMode, modeError, entries } : state
+}
+
 function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
   const status = asText(payload.status)
@@ -757,6 +803,8 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
     case 'control_response':
     case 'permission_response':
       return handlePermissionResponse(state, event)
+    case 'control_cancel_request':
+      return handleControlCancel(state, event)
     case 'session_status':
       return handleSessionStatus(state, event)
     case 'system':

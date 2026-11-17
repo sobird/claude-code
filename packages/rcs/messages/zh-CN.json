@@ -91,6 +91,8 @@
       "archived": "会话已归档，无法发送新消息。",
       "archivedPlaceholder": "会话已归档",
       "jumpToLatest": "回到最新",
+      "loadEarlier": "加载更早的消息",
+      "loadingEarlier": "正在加载更早的消息…",
       "sendFailed": "消息发送失败。",
       "retrySend": "重新发送",
       "mode": {

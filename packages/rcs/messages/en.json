@@ -91,6 +91,8 @@
       "archived": "This session is archived and cannot accept new messages.",
       "archivedPlaceholder": "Session archived",
       "jumpToLatest": "Jump to latest",
+      "loadEarlier": "Load earlier messages",
+      "loadingEarlier": "Loading earlier…",
       "sendFailed": "Message failed to send.",
       "retrySend": "Retry send",
       "mode": {
