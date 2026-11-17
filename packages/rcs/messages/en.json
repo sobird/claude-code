@@ -120,6 +120,18 @@
       "group": "{count}× {name}",
       "grouped": "{total} tools: {tools}"
     },
+    "permission": {
+      "allowSession": "Allow for this session",
+      "allowAlways": "Always allow",
+      "acceptEdits": "Auto-accept file edits",
+      "allowDirectories": "Allow this directory",
+      "alwaysDeny": "Always deny",
+      "applySuggestion": "Apply suggested rule",
+      "blockedPath": "Blocked path: {path}",
+      "denyReason": "Reason (optional)",
+      "denyPlaceholder": "Tell Claude what to change",
+      "sendDeny": "Send denial"
+    },
     "askUserQuestion": {
       "title": "Questions from Claude",
       "selectOne": "Select one option",

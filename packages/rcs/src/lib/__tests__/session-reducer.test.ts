@@ -225,7 +225,13 @@ describe('reduceSessionEvent', () => {
     )
 
     expect(state.pendingPermissions).toEqual([
-      { requestId: 'req-1', toolName: 'Bash', toolInput: { command: 'ls' }, description: 'Run ls' },
+      {
+        requestId: 'req-1',
+        toolName: 'Bash',
+        toolInput: { command: 'ls' },
+        description: 'Run ls',
+        suggestions: [],
+      },
     ])
     expect(tools(state)[0]?.toolCall.status).toBe('waiting_for_confirmation')
     expect(tools(state)[0]?.toolCall.permissionRequest?.requestId).toBe('req-1')
@@ -268,6 +274,58 @@ describe('reduceSessionEvent', () => {
     const standalone = calls.find((call) => call.toolCall.id === 'permission-req-2')
     expect(standalone?.toolCall.isStandalonePermission).toBe(true)
     expect(state.pendingPermissions.map((permission) => permission.requestId)).toEqual(['req-1', 'req-2'])
+  })
+
+  test('control_request keeps permission suggestions and request context', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', {
+        request_id: 'req-1',
+        request: {
+          subtype: 'can_use_tool',
+          tool_name: 'Bash',
+          input: { command: 'npm run build' },
+          tool_use_id: 'toolu_1',
+          blocked_path: '/repo/node_modules',
+          permission_suggestions: [
+            {
+              type: 'addRules',
+              rules: [{ toolName: 'Bash', ruleContent: 'npm run:*' }],
+              behavior: 'allow',
+              destination: 'localSettings',
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(state.pendingPermissions[0]).toMatchObject({
+      requestId: 'req-1',
+      toolUseId: 'toolu_1',
+      blockedPath: '/repo/node_modules',
+      suggestions: [
+        {
+          type: 'addRules',
+          rules: [{ toolName: 'Bash', ruleContent: 'npm run:*' }],
+          behavior: 'allow',
+          destination: 'localSettings',
+        },
+      ],
+    })
+  })
+
+  test('a replayed control_request does not overwrite the pending suggestion list', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', {
+        request_id: 'req-1',
+        request: { tool_name: 'Bash', permission_suggestions: [{ type: 'setMode', mode: 'acceptEdits' }] },
+      }),
+    )
+    state = reduceSessionEvent(state, event('control_request', { request_id: 'req-1', request: { tool_name: 'Bash' } }))
+
+    expect(state.pendingPermissions).toHaveLength(1)
+    expect(state.pendingPermissions[0]?.suggestions).toEqual([{ type: 'setMode', mode: 'acceptEdits' }])
   })
 
   test('control_request without a running call creates a standalone permission card', () => {

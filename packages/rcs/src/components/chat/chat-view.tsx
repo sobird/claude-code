@@ -20,6 +20,7 @@ import { useAccessToken } from '../../hooks/useAccessToken'
 import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
 import { useSessionStream } from '../../hooks/useSessionStream'
 import { createApiClient } from '../../lib/api-client'
+import type { PermissionDecision } from '../../lib/permission-suggestions'
 import { randomUuid } from '../../lib/random-uuid'
 import {
   activeStreamEvents,
@@ -247,15 +248,19 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, [failedSend, sendWithUuid])
 
   const handlePermissionRespond = useCallback(
-    async (requestId: string, approved: boolean, updatedInput?: Record<string, unknown>) => {
+    async (requestId: string, decision: PermissionDecision) => {
       setActionError(null)
       try {
         await api.post(`/web/sessions/${encodeURIComponent(sessionId)}/control`, {
           type: 'permission_response',
-          approved,
+          approved: decision.approved,
           request_id: requestId,
           // AskUserQuestion answers ride back as the tool's updated input.
-          ...(updatedInput ? { updated_input: updatedInput } : {}),
+          ...(decision.updatedInput ? { updated_input: decision.updatedInput } : {}),
+          // "Always allow" rules the CLI applies and persists.
+          ...(decision.updatedPermissions?.length ? { updated_permissions: decision.updatedPermissions } : {}),
+          // Deny feedback the CLI forwards to the model.
+          ...(decision.message ? { message: decision.message } : {}),
         })
       } catch (error) {
         setActionError(error)

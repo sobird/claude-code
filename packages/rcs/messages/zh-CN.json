@@ -120,6 +120,18 @@
       "group": "{count}× {name}",
       "grouped": "共 {total} 个工具：{tools}"
     },
+    "permission": {
+      "allowSession": "本会话允许",
+      "allowAlways": "始终允许",
+      "acceptEdits": "自动接受文件编辑",
+      "allowDirectories": "允许此目录",
+      "alwaysDeny": "始终拒绝",
+      "applySuggestion": "应用建议规则",
+      "blockedPath": "被阻止的路径：{path}",
+      "denyReason": "拒绝原因（可选）",
+      "denyPlaceholder": "告诉 Claude 需要如何修改",
+      "sendDeny": "拒绝并发送"
+    },
     "askUserQuestion": {
       "title": "Claude 的提问",
       "selectOne": "选择一个选项",

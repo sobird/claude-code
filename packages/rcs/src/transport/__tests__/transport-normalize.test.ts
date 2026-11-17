@@ -128,6 +128,13 @@ describe('normalizePayload — field preservation', () => {
     expect(normalizePayload('permission', { updated_input: input }).updated_input).toEqual(input)
   })
 
+  test('preserves updated_permissions', () => {
+    const permissions = [{ type: 'setMode', mode: 'acceptEdits', destination: 'session' }]
+    expect(normalizePayload('permission', { updated_permissions: permissions }).updated_permissions).toEqual(
+      permissions,
+    )
+  })
+
   test('preserves message field for backward compat', () => {
     const message = { role: 'user', content: 'hi' }
     expect(normalizePayload('assistant', { message }).message).toEqual(message)

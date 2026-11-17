@@ -3,6 +3,11 @@
 /**
  * Pending permission cards, pinned above the chat input. Buttons are
  * thumb-friendly on mobile (full-width, 44px targets) and compact on desktop.
+ *
+ * Each card offers allow-once plus whatever the CLI suggested
+ * (`permission_suggestions`): "allow for session", "always allow", directory
+ * grants, auto-accept edits. Denying can attach a message the CLI passes back
+ * to the model.
  */
 
 import { Check, ShieldAlert, X } from 'lucide-react'
@@ -11,14 +16,18 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { isAskUserQuestionRequest } from '../../lib/ask-user-question'
 import { resolvePermissionKey } from '../../lib/permission-keys'
+import { permissionOptions, type PermissionDecision, type PermissionOption } from '../../lib/permission-suggestions'
 import type { PendingPermission } from '../../lib/session-reducer'
+import { diffLines, toolEditPreview } from '../../lib/text-diff'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { AskUserQuestionCard } from './ask-user-question-card'
 
+type ChatTranslator = ReturnType<typeof useTranslations<'chat'>>
+
 interface PermissionPanelProps {
   requests: PendingPermission[]
-  onRespond?: (requestId: string, approved: boolean, updatedInput?: Record<string, unknown>) => void
+  onRespond?: (requestId: string, decision: PermissionDecision) => void
   className?: string
 }
 
@@ -62,7 +71,7 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
         case 'allow':
         case 'deny': {
           const request = respondable[action.index]
-          if (request) onRespond?.(request.requestId, action.action === 'allow')
+          if (request) onRespond?.(request.requestId, { approved: action.action === 'allow' })
           return
         }
         case 'select':
@@ -112,10 +121,32 @@ function PermissionCard({
 }: {
   request: PendingPermission
   selected?: boolean
-  onRespond?: (requestId: string, approved: boolean, updatedInput?: Record<string, unknown>) => void
+  onRespond?: (requestId: string, decision: PermissionDecision) => void
 }) {
   const t = useTranslations('chat')
+  const [denyOpen, setDenyOpen] = useState(false)
+  const [feedback, setFeedback] = useState('')
+
+  const options = useMemo(() => permissionOptions(request.suggestions), [request.suggestions])
+  const allowOnce = options[0] ?? { id: 'allow-once', kind: 'allow-once' as const, suggestionIndex: null }
+  // The CLI's deny result schema has no updatedPermissions, so a deny-rule
+  // suggestion cannot be persisted from here; only allow-oriented ones show.
+  const extraOptions = options.filter((option) => option.kind !== 'allow-once' && option.kind !== 'always-deny')
+  const hunks = useMemo(() => toolEditPreview(request.toolInput), [request.toolInput])
   const inputPreview = formatInput(request.toolInput)
+
+  const applyOption = (option: PermissionOption) => {
+    const suggestion = option.suggestionIndex !== null ? request.suggestions[option.suggestionIndex] : undefined
+    onRespond?.(request.requestId, {
+      approved: true,
+      ...(suggestion ? { updatedPermissions: [suggestion] } : {}),
+    })
+  }
+
+  const submitDeny = () => {
+    const message = feedback.trim()
+    onRespond?.(request.requestId, { approved: false, ...(message ? { message } : {}) })
+  }
 
   return (
     <div
@@ -134,39 +165,156 @@ function PermissionCard({
           {request.description ? (
             <div className="mt-0.5 text-xs text-warning-text/80">{request.description}</div>
           ) : null}
+          {request.blockedPath ? (
+            <div className="mt-0.5 font-mono text-[11px] text-warning-text/80">
+              {t('permission.blockedPath', { path: request.blockedPath })}
+            </div>
+          ) : null}
+          {hunks ? (
+            <div className="mt-1.5 space-y-2">
+              {hunks.map((hunk, index) => (
+                <div key={index} className="overflow-hidden rounded-md border border-border/60 bg-surface-2/70">
+                  {hunk.isNewFile ? (
+                    <div className="border-b border-border/60 px-2 py-1 text-[10px] text-text-muted">+</div>
+                  ) : null}
+                  <pre className="max-h-56 overflow-auto px-0 py-1 font-mono text-[11px] leading-4">
+                    {diffLines(hunk.before, hunk.after).map((line, lineIndex) => (
+                      <div
+                        key={lineIndex}
+                        className={cn(
+                          'px-2',
+                          line.type === 'add' && 'bg-status-active/10 text-status-active',
+                          line.type === 'remove' && 'bg-status-error/10 text-status-error',
+                          line.type === 'context' && 'text-text-secondary',
+                        )}
+                      >
+                        {line.type === 'add' ? '+ ' : line.type === 'remove' ? '- ' : '  '}
+                        {line.text}
+                      </div>
+                    ))}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {inputPreview ? (
-            <pre className="mt-1.5 max-h-28 overflow-x-auto rounded-md bg-surface-2/70 p-2 font-mono text-[11px] text-text-secondary">
-              {inputPreview}
-            </pre>
+            <details className="mt-1.5" {...(hunks ? {} : { open: true })}>
+              <summary className="cursor-pointer list-none font-display text-[11px] text-text-muted transition-colors hover:text-text-secondary">
+                {t('toolRawInput')}
+              </summary>
+              <pre className="mt-1 max-h-28 overflow-x-auto rounded-md bg-surface-2/70 p-2 font-mono text-[11px] text-text-secondary">
+                {inputPreview}
+              </pre>
+            </details>
           ) : null}
         </div>
       </div>
-      <div className="mt-3 flex gap-2">
-        <Button
-          type="button"
-          variant="brand"
-          aria-keyshortcuts="a"
-          className="h-11 flex-1 sm:h-9 sm:flex-none sm:px-4"
-          onClick={() => onRespond?.(request.requestId, true)}
-        >
-          <Check className="h-4 w-4" />
-          {t('allow')}
-          <ShortcutHint label="A" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          aria-keyshortcuts="d"
-          className="h-11 flex-1 border-warning-border/40 text-warning-text hover:bg-warning-bg sm:h-9 sm:flex-none sm:px-4"
-          onClick={() => onRespond?.(request.requestId, false)}
-        >
-          <X className="h-4 w-4" />
-          {t('deny')}
-          <ShortcutHint label="D" />
-        </Button>
-      </div>
+
+      {extraOptions.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {extraOptions.map((option) => {
+            const detail = optionDetail(option)
+            return (
+              <Button
+                key={option.id}
+                type="button"
+                variant="outline"
+                className="h-9 gap-1.5 px-3 text-xs"
+                onClick={() => applyOption(option)}
+              >
+                <span>{optionLabel(option, t)}</span>
+                {detail ? <span className="font-mono text-[10px] text-text-muted">{detail}</span> : null}
+              </Button>
+            )
+          })}
+        </div>
+      ) : null}
+
+      {denyOpen ? (
+        <div className="mt-2 space-y-1.5">
+          <textarea
+            className="w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            rows={2}
+            placeholder={t('permission.denyPlaceholder')}
+            aria-label={t('permission.denyReason')}
+            value={feedback}
+            onChange={(event) => setFeedback(event.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" className="h-9 px-3" onClick={submitDeny}>
+              <X className="h-4 w-4" />
+              {t('permission.sendDeny')}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-9 px-3"
+              onClick={() => {
+                setDenyOpen(false)
+                setFeedback('')
+              }}
+            >
+              {t('cancel')}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3 flex gap-2">
+          <Button
+            type="button"
+            variant="brand"
+            aria-keyshortcuts="a"
+            className="h-11 flex-1 sm:h-9 sm:flex-none sm:px-4"
+            onClick={() => applyOption(allowOnce)}
+          >
+            <Check className="h-4 w-4" />
+            {t('allow')}
+            <ShortcutHint label="A" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            aria-keyshortcuts="d"
+            className="h-11 flex-1 border-warning-border/40 text-warning-text hover:bg-warning-bg sm:h-9 sm:flex-none sm:px-4"
+            onClick={() => setDenyOpen(true)}
+          >
+            <X className="h-4 w-4" />
+            {t('deny')}
+            <ShortcutHint label="D" />
+          </Button>
+        </div>
+      )}
     </div>
   )
+}
+
+function optionLabel(option: PermissionOption, t: ChatTranslator): string {
+  switch (option.kind) {
+    case 'allow-once':
+      return t('allow')
+    case 'allow-session':
+      return t('permission.allowSession')
+    case 'allow-always':
+      return t('permission.allowAlways')
+    case 'accept-edits':
+      return t('permission.acceptEdits')
+    case 'allow-directories':
+      return t('permission.allowDirectories')
+    case 'always-deny':
+      return t('permission.alwaysDeny')
+    case 'apply-suggestion':
+      return t('permission.applySuggestion')
+  }
+}
+
+function optionDetail(option: PermissionOption): string {
+  if (option.rules?.length) {
+    return option.rules
+      .map((rule) => (rule.ruleContent ? `${rule.toolName}(${rule.ruleContent})` : rule.toolName))
+      .join(', ')
+  }
+  if (option.directories?.length) return option.directories.join(', ')
+  return option.mode ?? ''
 }
 
 function ShortcutHint({ label }: { label: string }) {

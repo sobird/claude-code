@@ -12,6 +12,7 @@
  */
 
 import { isSessionClosedStatus } from '../contracts'
+import type { PermissionSuggestion } from './permission-suggestions'
 
 // =============================================================================
 // Chat model
@@ -80,9 +81,16 @@ export type ThreadEntry = UserMessageEntry | AssistantMessageEntry | ToolCallEnt
 
 export interface PendingPermission {
   requestId: string
+  toolUseId?: string
   toolName: string
   toolInput: Record<string, unknown>
   description?: string
+  /** CLI-proposed PermissionUpdate objects ("always allow …"). */
+  suggestions: PermissionSuggestion[]
+  /** Path that made the permission check fail, when the CLI reports one. */
+  blockedPath?: string
+  /** Free-text explanation from the CLI (not forwarded by the bridge today). */
+  decisionReason?: string
 }
 
 export interface ChatState {
@@ -441,11 +449,29 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
   const toolName = asText(request.tool_name) || ''
   const toolInput = asRecord(request.input) ?? asRecord(request.tool_input) ?? {}
   const description = asText(request.description)
+  const suggestions = Array.isArray(request.permission_suggestions)
+    ? (request.permission_suggestions.filter((item) => !!asRecord(item)) as unknown as PermissionSuggestion[])
+    : []
+  const toolUseId = asText(request.tool_use_id)
+  const blockedPath = asText(request.blocked_path)
+  const decisionReason = asText(request.decision_reason)
 
   const pendingExists = state.pendingPermissions.some((permission) => permission.requestId === requestId)
   const pendingPermissions = pendingExists
     ? state.pendingPermissions
-    : [...state.pendingPermissions, { requestId, toolName, toolInput, description }]
+    : [
+        ...state.pendingPermissions,
+        {
+          requestId,
+          ...(toolUseId ? { toolUseId } : {}),
+          toolName,
+          toolInput,
+          ...(description ? { description } : {}),
+          suggestions,
+          ...(blockedPath ? { blockedPath } : {}),
+          ...(decisionReason ? { decisionReason } : {}),
+        },
+      ]
 
   // Already bound to this exact request (replayed frame): don't create a second card.
   const alreadyBound = state.entries.some(

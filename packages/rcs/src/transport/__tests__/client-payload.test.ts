@@ -122,7 +122,7 @@ describe('toClientPayload — permission response', () => {
     expect(response.response.updatedInput).toEqual({})
   })
 
-  test('approved=false maps to deny behavior with error', () => {
+  test('approved=false maps to a deny result the CLI parses', () => {
     const result = toClientPayload(
       makeEvent({
         type: 'permission_response',
@@ -131,9 +131,9 @@ describe('toClientPayload — permission response', () => {
       }),
     )
     const response = (result as { response: Record<string, unknown> }).response
-    expect(response.subtype).toBe('error')
-    expect(response.error).toBe('Permission denied by user')
-    expect((response.response as { behavior: string }).behavior).toBe('deny')
+    // The CLI only parses the inner result when the outer subtype is success.
+    expect(response.subtype).toBe('success')
+    expect(response.response).toEqual({ behavior: 'deny', message: 'Permission denied by user' })
   })
 
   test('approved=false includes feedback message when provided', () => {
@@ -144,7 +144,8 @@ describe('toClientPayload — permission response', () => {
         payload: { approved: false, request_id: 'req-3', message: 'please revise' },
       }),
     )
-    expect((result as { response: Record<string, unknown> }).response.message).toBe('please revise')
+    const response = (result as { response: Record<string, unknown> }).response
+    expect(response.response).toEqual({ behavior: 'deny', message: 'please revise' })
   })
 
   test('passes through existingResponse directly', () => {

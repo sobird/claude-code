@@ -18,13 +18,14 @@ import {
   parseAskUserQuestions,
   toggleOption,
 } from '../../lib/ask-user-question'
+import type { PermissionDecision } from '../../lib/permission-suggestions'
 import type { PendingPermission } from '../../lib/session-reducer'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 
 interface AskUserQuestionCardProps {
   request: PendingPermission
-  onRespond?: (requestId: string, approved: boolean, updatedInput?: Record<string, unknown>) => void
+  onRespond?: (requestId: string, decision: PermissionDecision) => void
 }
 
 export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardProps) {
@@ -62,7 +63,7 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
 
   const submit = () => {
     if (!answered) return
-    onRespond?.(request.requestId, true, { ...request.toolInput, answers })
+    onRespond?.(request.requestId, { approved: true, updatedInput: { ...request.toolInput, answers } })
   }
 
   return (
@@ -154,7 +155,7 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
             type="button"
             variant="outline"
             className="h-11 flex-1 sm:h-9 sm:flex-none sm:px-4"
-            onClick={() => onRespond?.(request.requestId, false)}
+            onClick={() => onRespond?.(request.requestId, { approved: false })}
           >
             {t('decline')}
           </Button>

@@ -554,11 +554,12 @@ describe('toSDKMessage (via live outbound delivery)', () => {
     publishRaw(getEventBus('pr2'), 'pr2', 'permission_response', { approved: false, request_id: 'req2' })
 
     const message = sentJson(ws, ws.sent.length - 1)
-    const response = message.response as Record<string, unknown>
     expect(message.type).toBe('control_response')
-    expect(response.subtype).toBe('error')
-    expect(response.error).toBe('Permission denied by user')
-    expect((response.response as { behavior: string }).behavior).toBe('deny')
+    expect(message.response).toEqual({
+      subtype: 'success',
+      request_id: 'req2',
+      response: { behavior: 'deny', message: 'Permission denied by user' },
+    })
   })
 
   test('converts permission_response with an existing response object', async () => {
@@ -668,7 +669,11 @@ describe('toSDKMessage (via live outbound delivery)', () => {
     })
 
     const message = sentJson(ws, ws.sent.length - 1)
-    expect((message.response as Record<string, unknown>).message).toBe('Please add more tests')
+    expect(message.response).toEqual({
+      subtype: 'success',
+      request_id: 'req-dm1',
+      response: { behavior: 'deny', message: 'Please add more tests' },
+    })
   })
 
   test('does not forward inbound events to the WS', async () => {

@@ -92,23 +92,23 @@ export function toClientPayload(event: SessionEvent): Record<string, unknown> {
     return {
       type: 'control_response',
       response: {
-        subtype: approved ? 'success' : 'error',
+        // Denials must also use `success`: the CLI only parses the inner result
+        // when the outer subtype is success (`structuredIO` rejects otherwise).
+        subtype: 'success',
         request_id: payload?.request_id ?? '',
-        ...(approved
+        response: approved
           ? {
-              response: {
-                behavior: 'allow' as const,
-                // Required by the CLI's permission result schema; `{}` means
-                // "use the original tool input".
-                updatedInput: updatedInput ?? {},
-                ...(updatedPermissions ? { updatedPermissions } : {}),
-              },
+              behavior: 'allow' as const,
+              // Required by the CLI's permission result schema; `{}` means
+              // "use the original tool input".
+              updatedInput: updatedInput ?? {},
+              ...(updatedPermissions ? { updatedPermissions } : {}),
             }
           : {
-              error: 'Permission denied by user',
-              response: { behavior: 'deny' as const },
-              ...(feedbackMessage ? { message: feedbackMessage } : {}),
-            }),
+              behavior: 'deny' as const,
+              // The CLI reads the feedback from the inner message.
+              message: feedbackMessage ?? 'Permission denied by user',
+            },
       },
     }
   }

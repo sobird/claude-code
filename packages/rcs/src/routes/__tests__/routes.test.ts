@@ -971,9 +971,8 @@ describe('V2 Worker Events Routes', () => {
     })
     const frame = new TextDecoder().decode((await reader.read()).value)
     expect(frame).toContain('"payload":{"type":"control_response"')
-    expect(frame).toContain('"subtype":"error"')
-    expect(frame).toContain('"behavior":"deny"')
-    expect(frame).toContain('"message":"Need more detail"')
+    expect(frame).toContain('"subtype":"success"')
+    expect(frame).toContain('"response":{"behavior":"deny","message":"Need more detail"}')
     await reader.cancel()
   })
 
