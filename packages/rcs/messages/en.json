@@ -358,6 +358,21 @@
       "button": "Install app",
       "iosHint": "On iOS Safari, tap the Share button, then choose <b>Add to Home Screen</b>.",
       "dismiss": "Not now"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Get a browser notification when Claude needs your confirmation, even when this tab is in the background.",
+      "enable": "Enable notifications",
+      "disable": "Disable notifications",
+      "enabling": "Enabling…",
+      "enabled": "Notifications are on.",
+      "disabled": "Notifications are off.",
+      "unavailable": "Notifications are unavailable right now.",
+      "insecure": "Notifications require HTTPS. Open the app over a secure connection.",
+      "iosInstall": "Add this app to your Home Screen to enable notifications.",
+      "denied": "Notifications are blocked. Allow them in your browser settings, then reload.",
+      "error": "Could not update notifications. Try again.",
+      "devHint": "Notifications only work in production builds — the service worker does not run under next dev."
     }
   },
   "admin": {

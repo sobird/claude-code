@@ -358,6 +358,21 @@
       "button": "安装应用",
       "iosHint": "在 iOS Safari 中，点按“共享”按钮，然后选择<b>添加到主屏幕</b>。",
       "dismiss": "暂不"
+    },
+    "notifications": {
+      "title": "通知",
+      "description": "当 Claude 需要你确认时，即使此标签页在后台，也会收到浏览器通知。",
+      "enable": "启用通知",
+      "disable": "关闭通知",
+      "enabling": "正在启用…",
+      "enabled": "通知已开启。",
+      "disabled": "通知已关闭。",
+      "unavailable": "暂时无法使用通知。",
+      "insecure": "通知需要 HTTPS。请通过安全连接打开应用。",
+      "iosInstall": "将本应用添加到主屏幕后即可启用通知。",
+      "denied": "通知已被阻止。请在浏览器设置中允许通知，然后刷新页面。",
+      "error": "无法更新通知设置，请重试。",
+      "devHint": "通知仅在正式构建中生效——开发模式下不会运行 Service Worker。"
     }
   },
   "admin": {
