@@ -11,7 +11,7 @@ interface SessionListProps {
   sessions: SessionSummary[]
 }
 
-/** Newest-first session rows; each links to `/code/<session id>`. */
+/** Newest-first session rows; each links to `/<session id>`. */
 export function SessionList({ sessions }: SessionListProps) {
   const t = useTranslations('session')
   const locale = useLocale()

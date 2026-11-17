@@ -4,8 +4,8 @@
 # RCS_DOMAIN=rcs.example.com: automatic HTTPS via Caddy's public ACME flow.
 #
 # Same-origin routing is what lets the browser use relative URLs:
-#   /code/*                                             → Next UI (port 3000)
 #   /v1/* /v2/* /acp/* /web/* /api/oauth/* /health      → Bun gateway (port 4000)
+#   everything else                                     → Next UI (port 3000)
 # Caddy upgrades WebSocket connections (/acp/ws, /acp/relay) transparently.
 
 {$RCS_DOMAIN::80} {

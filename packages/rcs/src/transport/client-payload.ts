@@ -98,7 +98,9 @@ export function toClientPayload(event: SessionEvent): Record<string, unknown> {
           ? {
               response: {
                 behavior: 'allow' as const,
-                ...(updatedInput ? { updatedInput } : {}),
+                // Required by the CLI's permission result schema; `{}` means
+                // "use the original tool input".
+                updatedInput: updatedInput ?? {},
                 ...(updatedPermissions ? { updatedPermissions } : {}),
               },
             }

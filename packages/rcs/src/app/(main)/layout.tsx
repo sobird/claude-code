@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function MainLayout({ children }: { children: ReactNode }) {
   const session = await auth()
   const sessionUser = session?.user as SessionUser | undefined
-  if (!sessionUser) redirect('/login?next=/code')
+  if (!sessionUser) redirect('/login?next=/')
 
   const user = {
     id: sessionUser.id ?? '',

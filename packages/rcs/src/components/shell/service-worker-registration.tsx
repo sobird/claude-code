@@ -2,13 +2,14 @@
 
 import { useEffect } from 'react'
 
-const SERVICE_WORKER_URL = '/code/serwist/sw.js'
-const SERVICE_WORKER_SCOPE = '/code/'
+const SERVICE_WORKER_URL = '/serwist/sw.js'
+const SERVICE_WORKER_SCOPE = '/'
 
 /**
- * Registers the Serwist worker served by the `/code/serwist/[path]` route
- * handler. The route sets `Service-Worker-Allowed: /`, so the worker can claim
- * the whole `/code/` app scope even though its script lives one level deeper.
+ * Registers the Serwist worker served by the `/serwist/[path]` route handler.
+ * The route sets `Service-Worker-Allowed: /`, so the worker can claim the
+ * origin-root scope even though its script lives one level deeper. Gateway
+ * paths are marked network-only in the worker so it never caches them.
  *
  * Registration is client-only and production-only, so `next dev` is never
  * shadowed by a stale precache while iterating.

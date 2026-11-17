@@ -90,6 +90,20 @@ describe('toClientPayload — permission response', () => {
     expect((response.response as { behavior: string }).behavior).toBe('allow')
   })
 
+  test('approved=true without updated_input still sends an empty updatedInput record', () => {
+    // The CLI's permission result schema requires `updatedInput` on allow; an empty
+    // object means "use the original tool input" (see PermissionPromptToolResultSchema).
+    const result = toClientPayload(
+      makeEvent({
+        type: 'permission_response',
+        sessionId: 'sess-1b',
+        payload: { approved: true, request_id: 'req-1b' },
+      }),
+    )
+    const response = (result as { response: { response: Record<string, unknown> } }).response
+    expect(response.response.updatedInput).toEqual({})
+  })
+
   test('approved=false maps to deny behavior with error', () => {
     const result = toClientPayload(
       makeEvent({

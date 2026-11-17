@@ -11,6 +11,5 @@ export async function signOutAction(): Promise<void> {
   await signOut({ redirect: false })
   const jar = await cookies()
   jar.delete(LOCALE_COOKIE)
-  // `redirect` re-adds the `/code` basePath automatically.
   redirect('/login')
 }

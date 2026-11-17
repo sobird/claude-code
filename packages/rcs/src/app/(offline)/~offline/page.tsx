@@ -1,4 +1,4 @@
-/** Served at `/code/~offline` and precached as the service-worker fallback. */
+/** Served at `/~offline` and precached as the service-worker fallback. */
 export default function OfflinePage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-background p-6 text-center">

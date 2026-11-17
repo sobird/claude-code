@@ -8,7 +8,7 @@ interface SessionUser {
   role?: string
 }
 
-/** `/code` dashboard; the layout guarantees an authenticated session. */
+/** Dashboard; the layout guarantees an authenticated session. */
 export default async function DashboardPage() {
   const session = await auth()
   const sessionUser = session?.user as SessionUser | undefined

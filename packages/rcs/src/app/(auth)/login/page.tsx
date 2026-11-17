@@ -5,10 +5,8 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { LOCALE_COOKIE, localeCookieOptions, nextLocaleCookie } from '../../../i18n/locales'
-import { toActionRedirectPath } from '../../../lib/app-paths'
 import { signIn } from '../../../lib/auth'
 import { signInUrlHasError } from '../../../lib/auth-redirect'
-import { APP_BASE_PATH } from '../../../lib/auth.config'
 import { getRepositories } from '../../../lib/repos'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,13 +15,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Accepts only same-origin paths under `/code`; anything else falls back to the
+ * Accepts only same-origin absolute paths; anything else falls back to the
  * dashboard root so a crafted `next` cannot bounce users off-site.
  */
 function sanitizeNext(value: unknown): string {
-  if (typeof value !== 'string' || value.length === 0) return APP_BASE_PATH
-  if (value.includes('\\') || value.includes('://') || value.startsWith('//')) return APP_BASE_PATH
-  if (value !== APP_BASE_PATH && !value.startsWith(`${APP_BASE_PATH}/`)) return APP_BASE_PATH
+  if (typeof value !== 'string' || value.length === 0) return '/'
+  if (value.includes('\\') || value.includes('://') || value.startsWith('//')) return '/'
+  if (!value.startsWith('/')) return '/'
   return value
 }
 
@@ -47,8 +45,6 @@ async function authenticate(formData: FormData): Promise<void> {
     // the `?error=invalid` page — a later success then looks like a failure.
     const result = await signIn('credentials', { username, password, redirect: false, redirectTo: next })
     if (typeof result !== 'string' || signInUrlHasError(result)) {
-      // Next prepends the app basePath to server-action redirects, so pass the
-      // path *without* `/code` (adding it here yields `/code/code/login`).
       redirect(`/login?error=invalid&next=${encodeURIComponent(next)}`)
     }
 
@@ -58,7 +54,7 @@ async function authenticate(formData: FormData): Promise<void> {
     if (locale) jar.set(LOCALE_COOKIE, locale, localeCookieOptions())
     else jar.delete(LOCALE_COOKIE)
 
-    redirect(toActionRedirectPath(next))
+    redirect(next)
   } catch (error) {
     if (error instanceof AuthError) {
       redirect(`/login?error=invalid&next=${encodeURIComponent(next)}`)

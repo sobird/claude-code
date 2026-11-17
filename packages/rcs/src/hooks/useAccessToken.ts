@@ -16,7 +16,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 
 import { createAccessTokenStore, type AccessTokenSnapshot, type TokenMintResult } from '../lib/token-store'
 
-const ACCESS_TOKEN_PATH = '/code/api/access-token'
+const ACCESS_TOKEN_PATH = '/api/access-token'
 const DEFAULT_EXPIRES_IN_SECONDS = 300
 
 interface AccessTokenResponse {

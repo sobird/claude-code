@@ -1,7 +1,7 @@
 import { SessionView } from '../../../components/chat/chat-view'
 
 /**
- * `/code/:sessionId` — session detail.
+ * `/:sessionId` — session detail.
  *
  * The data is client-rendered with the access-token client (history + SSE);
  * the layout already guards authentication, so this server component only

@@ -1,20 +1,18 @@
 import type { Metadata, Viewport } from 'next'
 
-const BASE_PATH = '/code'
-
 export const baseMetadata: Metadata = {
   title: 'Remote Control Server',
   description: 'Remote control for Claude Code sessions',
   applicationName: 'Remote Control',
-  manifest: `${BASE_PATH}/manifest.webmanifest`,
+  manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Remote Control',
   },
   icons: {
-    icon: `${BASE_PATH}/icons/icon-192.png`,
-    apple: `${BASE_PATH}/icons/icon-192.png`,
+    icon: '/icons/icon-192.png',
+    apple: '/icons/icon-192.png',
   },
 }
 

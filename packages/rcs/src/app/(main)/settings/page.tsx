@@ -15,7 +15,7 @@ interface SessionUser {
   role?: string
 }
 
-/** `/code/settings` — account overview, password, API keys, and PWA install. */
+/** `/settings` — account overview, password, API keys, and PWA install. */
 export default async function SettingsPage() {
   const session = await auth()
   const sessionUser = session?.user as SessionUser | undefined

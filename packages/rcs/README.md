@@ -6,15 +6,15 @@ protocols.
 
 ```
               ┌────────────────────────── Caddy (single origin) ──────────────────────────┐
-  browser ───▶│ /code/*  → Next UI (:3000)        /v1 /v2 /acp /web → Bun gateway (:4000) │
+  browser ───▶│ /* → Next UI (:3000), except        /v1 /v2 /acp /web → Bun gateway (:4000) │
   CLI     ───▶│                                                                          │
               └──────────────────────────────────────────────────────────────────────────┘
                                         │                              │
                                         └───────── Postgres 16 ─────────┘
 ```
 
-- **Next UI** (`basePath: /code`, port 3000): login, dashboard, session detail,
-  settings (API keys), admin (user management), PWA.
+- **Next UI** (port 3000, served at the origin root): login, dashboard, session
+  detail, settings (API keys), admin (user management), PWA.
 - **Gateway** (Bun, port 4000): `/v1`, `/v2`, `/web`, `/acp`, `/health`. Applies
   database migrations at startup and runs the disconnect monitor.
 - **Caddy**: routes both surfaces on one origin so the browser can use relative
@@ -36,7 +36,7 @@ openssl rand -hex 32
 docker compose up -d --build
 ```
 
-Open <http://localhost/code/login> and sign in with the bootstrap admin.
+Open <http://localhost/login> and sign in with the bootstrap admin.
 
 By default Caddy serves plain HTTP on port 80, which is the intended
 local/demo mode. To serve over HTTPS, set `RCS_DOMAIN=rcs.example.com` (and
@@ -86,10 +86,10 @@ no CORS headers.
   (lowercased) with `ADMIN_PASSWORD` and role `admin`. It never runs again once
   any user exists. The Next process runs it from `src/instrumentation.ts` (and
   retries on login if the first attempt raced the schema).
-- Admins create and manage members at `/code/admin`. Roles are `admin` and
+- Admins create and manage members at `/admin`. Roles are `admin` and
   `member`; members only see their own sessions plus the shared "unclaimed"
   pool; admins see everything.
-- Each user creates and revokes **API keys** at `/code/settings`. Keys are shown
+- Each user creates and revokes **API keys** at `/settings`. Keys are shown
   once (`rcs_...`); only a SHA-256 hash is stored. The CLI authenticates with
   these keys.
 - `RCS_API_KEYS` (comma separated) remains as a legacy escape hatch; legacy keys
@@ -104,7 +104,7 @@ claude.ai subscription/scope/GrowthBook gates are skipped, so no `/login` is
 needed:
 
 ```bash
-# CLAUDE_BRIDGE_OAUTH_TOKEN is a per-user API key created at /code/settings.
+# CLAUDE_BRIDGE_OAUTH_TOKEN is a per-user API key created at /settings.
 USER_TYPE=ant \
 CLAUDE_BRIDGE_BASE_URL=https://rcs.example.com \
 CLAUDE_BRIDGE_OAUTH_TOKEN=rcs_... \
@@ -159,8 +159,8 @@ browser then calls relative URLs.
 
 ## PWA
 
-The UI is installable: it ships a web manifest (`/code/manifest.webmanifest`) and
-a Serwist service worker served at `/code/serwist/sw.js`. Open the site in a
+The UI is installable: it ships a web manifest (`/manifest.webmanifest`) and
+a Serwist service worker served at `/serwist/sw.js`. Open the site in a
 supported browser and use "Install app". Manifest/service-worker routes are
 excluded from the auth middleware so installation works before login.
 
@@ -183,11 +183,11 @@ excluded from the auth middleware so installation works before login.
 
 ## Healthchecks
 
-| Service  | Check                                        |
-| -------- | -------------------------------------------- |
-| gateway  | `curl -fsS http://127.0.0.1:4000/health`     |
-| app      | `curl -fsS http://127.0.0.1:3000/code/login` |
-| postgres | `pg_isready -U rcs -d rcs`                   |
+| Service  | Check                                    |
+| -------- | ---------------------------------------- |
+| gateway  | `curl -fsS http://127.0.0.1:4000/health` |
+| app      | `curl -fsS http://127.0.0.1:3000/login`  |
+| postgres | `pg_isready -U rcs -d rcs`               |
 
 `docker compose ps` shows them; `app` waits for `gateway` to be healthy so
 migrations exist before login/bootstrap.
@@ -218,10 +218,10 @@ unauthenticated `GET /web/sessions` → 401. It needs no database or external en
 
 ## Manual end-to-end smoke
 
-1. `docker compose up -d --build`, open `http://localhost/code/login`.
+1. `docker compose up -d --build`, open `http://localhost/login`.
 2. Sign in as the bootstrap admin.
-3. In `/code/admin`, create a member user with a password.
-4. Sign in as that member and open `/code/settings`; create an API key and copy it.
+3. In `/admin`, create a member user with a password.
+4. Sign in as that member and open `/settings`; create an API key and copy it.
 5. On the machine that will run sessions (from `packages/rcs` in this repo):
 
    ```bash

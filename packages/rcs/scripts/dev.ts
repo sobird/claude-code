@@ -1,5 +1,6 @@
-// Next rewrites are basePath-prefixed (`/code/web/*`) but the client fetches
-// same-origin `/web/*`, so dev needs the explicit gateway URL.
+// In production Caddy serves the UI and the gateway from one origin. In dev
+// the client talks to the gateway directly so SSE stays off Next's rewrite
+// proxy; `next.config.ts` also has matching rewrites for direct :3000 access.
 process.env.NEXT_PUBLIC_RCS_API_URL ??= 'http://localhost:4000'
 
 const specs: { label: string; cmd: string[] }[] = [

@@ -11,6 +11,7 @@ interface Manifest {
   name: string
   short_name: string
   description?: string
+  id: string
   display: string
   start_url: string
   scope: string
@@ -27,13 +28,22 @@ function loadManifest(): Promise<Manifest> {
 }
 
 describe('web app manifest', () => {
-  test('is standalone and scoped to /code/', async () => {
+  test('is standalone and scoped to the origin root', async () => {
     const manifest = await loadManifest()
 
     expect(manifest.display).toBe('standalone')
-    expect(manifest.start_url).toBe('/code/')
-    expect(manifest.scope).toBe('/code/')
+    expect(manifest.id).toBe('/')
+    expect(manifest.start_url).toBe('/')
+    expect(manifest.scope).toBe('/')
     expect(manifest.icons.map((icon) => icon.sizes)).toContain('512x512')
+  })
+
+  test('references icons from the origin root', async () => {
+    const manifest = await loadManifest()
+
+    for (const icon of manifest.icons) {
+      expect(icon.src.startsWith('/icons/')).toBe(true)
+    }
   })
 
   test('declares a maskable icon', async () => {
@@ -47,8 +57,8 @@ describe('web app manifest', () => {
   test('every referenced icon exists on disk', async () => {
     const manifest = await loadManifest()
     const checks = manifest.icons.map((icon) => {
-      // Manifest srcs are served under `/code`; map them back to `public/`.
-      const relative = icon.src.startsWith('/code/') ? icon.src.slice('/code/'.length) : icon.src.replace(/^\//, '')
+      // Manifest srcs are origin-root paths; map them back to `public/`.
+      const relative = icon.src.replace(/^\//, '')
       const exists = Bun.file(new URL(relative, publicDir)).exists()
       return exists
     })

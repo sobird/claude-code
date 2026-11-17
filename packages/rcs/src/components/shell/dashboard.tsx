@@ -36,7 +36,7 @@ function CliHint() {
   )
 }
 
-/** `/code` dashboard: environments, claimed sessions, and unclaimed sessions. */
+/** Dashboard: environments, claimed sessions, and unclaimed sessions. */
 export function Dashboard({ user }: { user: DashboardUser }) {
   const router = useRouter()
   const t = useTranslations('dashboard')
@@ -51,7 +51,6 @@ export function Dashboard({ user }: { user: DashboardUser }) {
 
   function handleCreated(session: CreatedSession): void {
     setDialogOpen(false)
-    // `basePath` is added automatically by the App Router.
     router.push(`/${session.id}`)
   }
 

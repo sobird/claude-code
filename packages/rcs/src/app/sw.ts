@@ -9,17 +9,17 @@ declare const self: {
   __SW_MANIFEST: (PrecacheEntry | string)[]
 }
 
-const BASE_PATH = '/code'
-const OFFLINE_URL = `${BASE_PATH}/~offline`
+const OFFLINE_URL = '/~offline'
 
 /**
  * Gateway endpoints stream or mutate state; they must never be served from the
- * cache. This also covers dev, where these paths proxy to the gateway.
+ * cache. This also covers dev, where these paths proxy to the gateway, and
+ * `/health`, which the proxy routes to the gateway on the same origin.
  */
-const NETWORK_ONLY_PATHS = ['/web', '/v1', '/v2', '/acp', '/api']
+const NETWORK_ONLY_PATHS = ['/web', '/v1', '/v2', '/acp', '/api', '/health']
 
 const networkOnly: RuntimeCaching[] = NETWORK_ONLY_PATHS.map((path) => ({
-  matcher: ({ sameOrigin, url }) => sameOrigin && url.pathname.startsWith(`${BASE_PATH}${path}`),
+  matcher: ({ sameOrigin, url }) => sameOrigin && url.pathname.startsWith(path),
   handler: new NetworkOnly(),
 }))
 

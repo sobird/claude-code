@@ -9,26 +9,14 @@
 import type { NextAuthConfig } from 'next-auth'
 
 import type { Role } from '../contracts'
-import { APP_BASE_PATH } from './app-paths'
 
-export { APP_BASE_PATH }
-
-/** Where unauthenticated users are sent (browser-facing, includes `basePath`). */
-export const LOGIN_PATH = `${APP_BASE_PATH}/login`
-
-/** Login route as seen by middleware/route handlers (`basePath` stripped). */
-export const LOGIN_ROUTE = '/login'
+/** Where unauthenticated users are sent. */
+export const LOGIN_PATH = '/login'
 
 /**
- * Auth.js API base path.
- *
- * The Browser-facing endpoint is `/code/api/auth/*` (route handler
- * `app/api/auth/[...nextauth]` plus Next's `basePath: '/code'`). However,
- * Next strips the app `basePath` from the URL handed to route handlers, so
- * Auth.js itself parses `/api/auth/*`. Using `/code/api/auth` here makes every
- * request to `/code/api/auth/*` fail with `400 Bad request` (UnknownAction).
- * Server-action `signIn`/`signOut` build URLs from this value and call Auth
- * directly, so they stay consistent.
+ * Auth.js API base path, matching the route handler at
+ * `app/api/auth/[...nextauth]`. Server-action `signIn`/`signOut` build URLs
+ * from this value and call Auth directly, so they stay consistent with it.
  */
 export const AUTH_BASE_PATH = '/api/auth'
 

@@ -5,7 +5,7 @@
  * the browser sends to the gateway as `Authorization: Bearer …`. Minting is
  * rate limited per `(ip, username)`; anonymous requests, missing users, and
  * disabled users get `401`, over-limit requests get `429`. Only `POST` is
- * exposed (the spec is `POST /code/api/access-token`).
+ * exposed (the spec is `POST /api/access-token`).
  */
 
 import { NextResponse } from 'next/server'

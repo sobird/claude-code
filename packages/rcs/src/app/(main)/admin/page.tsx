@@ -11,7 +11,7 @@ interface SessionUser {
 }
 
 /**
- * `/code/admin` — user management.
+ * `/admin` — user management.
  *
  * The app layout already guarantees an authenticated session; this check is
  * the role gate for the page itself (the gateway enforces it again on every
