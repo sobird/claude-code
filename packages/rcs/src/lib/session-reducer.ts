@@ -14,6 +14,7 @@
 import { isSessionClosedStatus } from '../contracts'
 import { isWebPermissionMode, type WebPermissionMode } from './permission-modes'
 import type { PermissionSuggestion } from './permission-suggestions'
+import { tasksFromTaskState, tasksFromTodoWrite, type TaskItem } from './tasks'
 
 // =============================================================================
 // Chat model
@@ -78,7 +79,17 @@ export interface PlanDisplayEntry {
   entries: PlanEntry[]
 }
 
-export type ThreadEntry = UserMessageEntry | AssistantMessageEntry | ToolCallEntry | PlanDisplayEntry
+/**
+ * Marker closing a completed turn; the view renders it as a muted line so the
+ * reader can see how long the CLI worked (history uses server timestamps).
+ */
+export interface TurnEndEntry {
+  type: 'turn_end'
+  id: string
+  durationMs: number
+}
+
+export type ThreadEntry = UserMessageEntry | AssistantMessageEntry | ToolCallEntry | PlanDisplayEntry | TurnEndEntry
 
 export interface PendingPermission {
   requestId: string
@@ -119,6 +130,10 @@ export interface ChatState {
   pendingMode: { requestId: string; mode: WebPermissionMode } | null
   /** CLI rejection of the last mode switch (e.g. bypass is disabled). */
   modeError: string | null
+  /** Wall-clock start of the running turn, from the newest user message. */
+  turnStartedAt: number | null
+  /** Latest task list from `TodoWrite` (or an upstream `task_state` payload). */
+  tasks: TaskItem[]
 }
 
 /**
@@ -152,6 +167,8 @@ export const initialChatState: ChatState = {
   permissionMode: null,
   pendingMode: null,
   modeError: null,
+  turnStartedAt: null,
+  tasks: [],
 }
 
 // =============================================================================
@@ -164,6 +181,17 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function asText(value: unknown): string {
   return typeof value === 'string' ? value : ''
+}
+
+/**
+ * Server time for history rows, client receive time for live frames: durable
+ * rows carry `createdAt`, SSE frames only `receivedAt`.
+ */
+function eventTimeOf(event: SessionEventInput): number | null {
+  for (const value of [event.createdAt, event.receivedAt]) {
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value
+  }
+  return null
 }
 
 /** Pull a display string out of a `content` / `message.content` payload. */
@@ -342,13 +370,19 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
   if (text) entries = appendAssistantText(entries, text, nextId)
 
   const blocks = collectToolUseBlocks(payload)
+  let tasks = base.tasks
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
     if (!block) continue
-    entries = [...entries, toolCallFromBlock(block, `call-${seqNum ?? entries.length}-${i}`)]
+    const entry = toolCallFromBlock(block, `call-${seqNum ?? entries.length}-${i}`)
+    entries = [...entries, entry]
+    if (entry.toolCall.title === 'TodoWrite') {
+      const parsed = tasksFromTodoWrite(entry.toolCall.rawInput)
+      if (parsed) tasks = parsed
+    }
   }
 
-  return { ...base, entries, seenAssistantUuids }
+  return { ...base, entries, seenAssistantUuids, tasks }
 }
 
 function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
@@ -356,16 +390,18 @@ function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
   const seqNum = numericSeqNum(event)
   const id = asText(payload.tool_call_id) || `call-${seqNum ?? state.entries.length}`
   const input = asRecord(payload.tool_input)
+  const title = asText(payload.tool_name) || ''
   const entry: ToolCallEntry = {
     type: 'tool_call',
     toolCall: {
       id,
-      title: asText(payload.tool_name) || '',
+      title,
       status: 'running',
       rawInput: input ?? {},
     },
   }
-  return { ...state, entries: [...state.entries, entry] }
+  const parsedTasks = title === 'TodoWrite' ? tasksFromTodoWrite(input) : null
+  return { ...state, entries: [...state.entries, entry], ...(parsedTasks ? { tasks: parsedTasks } : {}) }
 }
 
 function mostRecentRunningIndex(entries: ThreadEntry[]): number {
@@ -729,9 +765,23 @@ function handleStreamEvent(state: ChatState, event: SessionEventInput): ChatStat
 function handleResult(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
   const base = dropStreaming(state)
+
+  // Close the running turn with its wall-clock length. The marker is dropped
+  // when the start time is unknown (e.g. history older than the first page).
+  let entries = base.entries
+  const endedAt = eventTimeOf(event)
+  if (base.turnStartedAt !== null && endedAt !== null) {
+    const seqNum = numericSeqNum(event)
+    const id = asText(payload.uuid) || event.id || (seqNum !== null ? `result-${seqNum}` : '')
+    if (id) {
+      entries = [...entries, { type: 'turn_end', id, durationMs: Math.max(0, endedAt - base.turnStartedAt) }]
+    }
+  }
+  const closed = { ...base, entries, turnStartedAt: null }
+
   const subtype = asText(payload.subtype)
-  if (!subtype || subtype === 'success') return { ...base, error: null }
-  return { ...base, error: asText(payload.result) || subtype }
+  if (!subtype || subtype === 'success') return { ...closed, error: null }
+  return { ...closed, error: asText(payload.result) || subtype }
 }
 
 function handleError(state: ChatState, event: SessionEventInput): ChatState {
@@ -784,11 +834,13 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       // Dedupe by uuid: an optimistic send and its history/echo counterpart
       // share the uuid even when their seqNums differ.
       if (entries.some((entry) => entry.type === 'user_message' && entry.id === id)) return { ...state, entries }
+      const startedAt = eventTimeOf(event)
       return {
         ...state,
         entries: [...entries, { type: 'user_message', id, content: text }],
         // A new turn starts fresh; the previous failure no longer describes it.
         error: null,
+        turnStartedAt: startedAt ?? state.turnStartedAt,
       }
     }
     case 'assistant':
@@ -805,6 +857,10 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       return handlePermissionResponse(state, event)
     case 'control_cancel_request':
       return handleControlCancel(state, event)
+    case 'task_state': {
+      const parsed = tasksFromTaskState(asRecord(event.payload) ?? {})
+      return parsed ? { ...state, tasks: parsed } : state
+    }
     case 'session_status':
       return handleSessionStatus(state, event)
     case 'system':

@@ -10,7 +10,7 @@
  * echo and history) so it shows immediately and survives a reload.
  */
 
-import { ArrowDown, ArrowLeft } from 'lucide-react'
+import { ArrowDown, ArrowLeft, Timer } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -32,7 +32,9 @@ import {
   type SessionEventInput,
   type ThreadEntry,
   type ToolCallEntry,
+  type TurnEndEntry,
 } from '../../lib/session-reducer'
+import { formatTurnSeconds } from '../../lib/turn-duration'
 import { cn, uniqueKeys } from '../../lib/utils'
 import { StatusBadge } from '../shell/status-badge'
 import { Button } from '../ui/button'
@@ -41,6 +43,7 @@ import { AssistantBubble, UserBubble } from './message-bubble'
 import { PermissionModeMenu } from './permission-mode-menu'
 import { PermissionPanel } from './permission-panel'
 import { PlanView } from './plan-view'
+import { TaskPanel } from './task-panel'
 import { ToolCallGroup } from './tool-call-group'
 
 interface SessionDetail {
@@ -514,6 +517,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         ) : null}
       </div>
 
+      <TaskPanel tasks={chat.tasks} />
+
       <PermissionPanel requests={chat.pendingPermissions} onRespond={handlePermissionRespond} />
 
       {closed ? (
@@ -563,9 +568,21 @@ function EntryRenderer({ entry }: { entry: Exclude<ThreadEntry, ToolCallEntry> }
       return <AssistantBubble entry={entry} />
     case 'plan':
       return <PlanView entry={entry} />
+    case 'turn_end':
+      return <TurnEndLine entry={entry} />
     default:
       return null
   }
+}
+
+function TurnEndLine({ entry }: { entry: TurnEndEntry }) {
+  const t = useTranslations('chat')
+  return (
+    <div className="flex items-center justify-center gap-1.5 font-display text-[11px] text-text-muted">
+      <Timer className="h-3 w-3" aria-hidden="true" />
+      {t('turnDuration', { seconds: formatTurnSeconds(entry.durationMs) })}
+    </div>
+  )
 }
 
 function spacingFor(entry: Exclude<ThreadEntry, ToolCallEntry>): string {

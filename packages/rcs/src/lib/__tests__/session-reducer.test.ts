@@ -10,6 +10,7 @@ import {
   type ChatState,
   type SessionEventInput,
   type ToolCallEntry,
+  type TurnEndEntry,
 } from '../session-reducer'
 
 let nextSeqNum = 1
@@ -893,5 +894,126 @@ describe('immutability', () => {
     expect(assistants(before)[0]?.chunks).toEqual([{ type: 'message', text: 'Hello' }])
     expect(before.seenSeqNums).toEqual(snapshotSeen)
     expect(after.seenSeqNums.size).toBe(snapshotSeen.size + 1)
+  })
+})
+
+describe('turn duration', () => {
+  function turnEnds(state: ChatState): TurnEndEntry[] {
+    return state.entries.filter((entry): entry is TurnEndEntry => entry.type === 'turn_end')
+  }
+
+  test('a result closes the turn opened by the last user message', () => {
+    let state = reduceSessionEvent(initialChatState, event('user', { content: 'hello' }, { createdAt: 1_000 }))
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }, { createdAt: 3_500 }))
+
+    expect(turnEnds(state)).toHaveLength(1)
+    expect(turnEnds(state)[0]?.durationMs).toBe(2_500)
+    expect(state.turnStartedAt).toBeNull()
+  })
+
+  test('a result without a preceding user message adds nothing', () => {
+    const state = reduceSessionEvent(initialChatState, event('result', { subtype: 'success' }, { createdAt: 5_000 }))
+
+    expect(turnEnds(state)).toHaveLength(0)
+  })
+
+  test('a replayed duplicate user event does not restart the clock', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('user', { content: 'hello', uuid: 'u-1' }, { createdAt: 1_000 }),
+    )
+    state = reduceSessionEvent(state, event('user', { content: 'hello', uuid: 'u-1' }, { createdAt: 2_000 }))
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }, { createdAt: 3_000 }))
+
+    expect(turnEnds(state)[0]?.durationMs).toBe(2_000)
+  })
+
+  test('failed results still record the turn length', () => {
+    let state = reduceSessionEvent(initialChatState, event('user', { content: 'hello' }, { createdAt: 1_000 }))
+    state = reduceSessionEvent(
+      state,
+      event('result', { subtype: 'error_during_execution', result: 'boom' }, { createdAt: 4_000 }),
+    )
+
+    expect(turnEnds(state)[0]?.durationMs).toBe(3_000)
+    expect(state.error).toBe('boom')
+  })
+
+  test('live frames fall back to receivedAt when createdAt is absent', () => {
+    let state = reduceSessionEvent(initialChatState, event('user', { content: 'hello' }, { receivedAt: 10_000 }))
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }, { receivedAt: 12_000 }))
+
+    expect(turnEnds(state)[0]?.durationMs).toBe(2_000)
+  })
+})
+
+describe('session tasks', () => {
+  function todoBlock(todos: unknown[]) {
+    return { type: 'tool_use', id: 'tool-1', name: 'TodoWrite', input: { todos } }
+  }
+
+  test('a TodoWrite block in an assistant message replaces the task list', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        message: {
+          content: [todoBlock([{ content: 'One', status: 'in_progress', activeForm: 'Doing one' }])],
+        },
+      }),
+    )
+
+    expect(state.tasks).toEqual([{ id: '0', content: 'One', status: 'in_progress', activeForm: 'Doing one' }])
+  })
+
+  test('a later TodoWrite replaces the previous list and an empty list clears it', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', { message: { content: [todoBlock([{ content: 'One', status: 'pending' }])] } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('assistant', { message: { content: [todoBlock([{ content: 'Two', status: 'in_progress' }])] } }),
+    )
+    expect(state.tasks.map((task) => task.content)).toEqual(['Two'])
+
+    state = reduceSessionEvent(state, event('assistant', { message: { content: [todoBlock([])] } }))
+    expect(state.tasks).toEqual([])
+  })
+
+  test('other tools leave the task list alone', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', { message: { content: [todoBlock([{ content: 'One', status: 'pending' }])] } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('assistant', {
+        message: { content: [{ type: 'tool_use', id: 'tool-2', name: 'Bash', input: { command: 'ls' } }] },
+      }),
+    )
+
+    expect(state.tasks.map((task) => task.content)).toEqual(['One'])
+  })
+
+  test('a standalone tool_use event for TodoWrite updates the list', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('tool_use', {
+        tool_call_id: 'call-9',
+        tool_name: 'TodoWrite',
+        tool_input: { todos: [{ content: 'Standalone', status: 'completed' }] },
+      }),
+    )
+
+    expect(state.tasks).toEqual([{ id: '0', content: 'Standalone', status: 'completed', activeForm: undefined }])
+  })
+
+  test('task_state events map onto the same list shape', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('task_state', { task_list_id: 'team', tasks: [{ id: 't1', subject: 'Investigate', status: 'pending' }] }),
+    )
+
+    expect(state.tasks).toEqual([{ id: 't1', content: 'Investigate', status: 'pending', activeForm: undefined }])
   })
 })

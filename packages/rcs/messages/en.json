@@ -112,6 +112,8 @@
     "enterHint": "Enter to send, Shift+Enter for a new line",
     "busyHint": "Enter to queue a message, Esc to interrupt",
     "expand": "Expand",
+    "copy": "Copy",
+    "copied": "Copied",
     "thought": "Thinking",
     "allow": "Allow",
     "deny": "Deny",
@@ -120,6 +122,12 @@
     "running": "running",
     "waiting": "waiting",
     "planTitle": "Execution plan",
+    "turnDuration": "Took {seconds}s",
+    "tasks": {
+      "title": "Tasks",
+      "progress": "{done}/{total}",
+      "waiting": "Waiting to start"
+    },
     "priority": {
       "high": "High",
       "medium": "Medium",

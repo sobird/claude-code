@@ -112,6 +112,8 @@
     "enterHint": "Enter 发送，Shift+Enter 换行",
     "busyHint": "Enter 排队发送，Esc 中断",
     "expand": "展开",
+    "copy": "复制",
+    "copied": "已复制",
     "thought": "思考过程",
     "allow": "允许",
     "deny": "拒绝",
@@ -120,6 +122,12 @@
     "running": "运行中",
     "waiting": "等待中",
     "planTitle": "执行计划",
+    "turnDuration": "用时 {seconds} 秒",
+    "tasks": {
+      "title": "任务",
+      "progress": "{done}/{total}",
+      "waiting": "等待开始"
+    },
     "priority": {
       "high": "高",
       "medium": "中",

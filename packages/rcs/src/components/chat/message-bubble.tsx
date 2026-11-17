@@ -5,11 +5,12 @@
  * reducer's `UserMessageEntry` / `AssistantMessageEntry` model.
  */
 
-import { ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Copy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { useSmoothText } from '../../hooks/useSmoothText'
+import { assistantCopyText } from '../../lib/copy-text'
 import type { AssistantMessageEntry, UserMessageEntry } from '../../lib/session-reducer'
 import { cn } from '../../lib/utils'
 import { MarkdownText, usePacedText } from './markdown'
@@ -36,7 +37,7 @@ export function UserBubble({ entry }: { entry: UserMessageEntry }) {
 
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] sm:max-w-[70%]">
+      <div className="group/bubble max-w-[85%] sm:max-w-[70%]">
         {entry.content ? (
           <div className="relative overflow-hidden rounded-2xl rounded-br-md border border-user-bubble-border bg-user-bubble">
             <div
@@ -63,14 +64,59 @@ export function UserBubble({ entry }: { entry: UserMessageEntry }) {
             ) : null}
           </div>
         ) : null}
+        {entry.content ? (
+          <div className="mt-1 flex justify-end">
+            <CopyButton text={entry.content} />
+          </div>
+        ) : null}
       </div>
     </div>
+  )
+}
+
+/** Copies a message's text; the icon flips to a check for a beat afterwards. */
+function CopyButton({ text }: { text: string }) {
+  const t = useTranslations('chat')
+  const [copied, setCopied] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    },
+    [],
+  )
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard access can be denied; the text stays selectable by hand.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      data-testid="copy-message"
+      title={t('copy')}
+      aria-label={t('copy')}
+      onClick={() => void copy()}
+      className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      <span className="sr-only">{copied ? t('copied') : t('copy')}</span>
+    </button>
   )
 }
 
 /** Left-aligned assistant message with the Anthropic mark and editable prose. */
 export function AssistantBubble({ entry }: { entry: AssistantMessageEntry }) {
   const tCommon = useTranslations('common')
+  const copyText = entry.streaming ? '' : assistantCopyText(entry.chunks)
   return (
     <div className="flex items-start gap-3 sm:gap-4">
       <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand/10">
@@ -92,6 +138,7 @@ export function AssistantBubble({ entry }: { entry: AssistantMessageEntry }) {
             <MarkdownText key={key} text={chunk.text} />
           )
         })}
+        {copyText ? <CopyButton text={copyText} /> : null}
       </div>
     </div>
   )
