@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import { AuthError } from 'next-auth'
 import { redirect } from 'next/navigation'
 
-import { signIn } from '../../lib/auth'
-import { APP_BASE_PATH } from '../../lib/auth.config'
+import { signIn } from '../../../lib/auth'
+import { APP_BASE_PATH } from '../../../lib/auth.config'
 
 export const metadata: Metadata = {
   title: 'Sign in · Remote Control Server',
