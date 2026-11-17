@@ -21,6 +21,7 @@ import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
 import { useSessionStream } from '../../hooks/useSessionStream'
 import { createApiClient } from '../../lib/api-client'
 import { withPendingApprovalCount } from '../../lib/approval-alert'
+import { latestPrompt } from '../../lib/message-actions'
 import { buildSetPermissionModeRequest, type WebPermissionMode } from '../../lib/permission-modes'
 import type { PermissionDecision } from '../../lib/permission-suggestions'
 import { randomUuid } from '../../lib/random-uuid'
@@ -331,6 +332,27 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [sendWithUuid],
   )
 
+  // Editing and regenerating both append a turn: the bridge cannot rewind the
+  // CLI's conversation, so the previous exchange stays in the transcript.
+  const latestPromptText = useMemo(() => latestPrompt(entries), [entries])
+
+  // Rethrows on failure so the inline editor stays open for a retry.
+  const handleEditMessage = useCallback(
+    async (text: string) => {
+      await sendWithUuid(text, randomUuid())
+    },
+    [sendWithUuid],
+  )
+
+  const handleRegenerate = useCallback(async () => {
+    if (!latestPromptText) return
+    try {
+      await sendWithUuid(latestPromptText, randomUuid())
+    } catch {
+      // sendWithUuid surfaces failures through the retry card.
+    }
+  }, [latestPromptText, sendWithUuid])
+
   const handleRetrySend = useCallback(async () => {
     const failed = failedSend
     if (!failed) return
@@ -398,6 +420,14 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Bridges do not always publish session_status; an open turn (until its
   // result) drives the busy affordances just as well.
   const busy = chat.status === 'running' || chat.turnOpen
+  // Only the newest completed reply can be regenerated, and only while idle.
+  const regenerateId =
+    !closed && !busy && hasToken && latestPromptText !== null
+      ? (entries.findLast(
+          (entry): entry is Extract<ThreadEntry, { type: 'assistant_message' }> =>
+            entry.type === 'assistant_message' && !entry.streaming,
+        )?.id ?? null)
+      : null
   // The streamed bubble already shows progress once its first delta lands.
   const streamingHasText = entries.some(
     (entry) => entry.type === 'assistant_message' && entry.streaming && entry.chunks.length > 0,
@@ -545,7 +575,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 description={t('empty.description', { product: tCommon('claude') })}
               />
             ) : (
-              <MessageThread entries={entries} />
+              <MessageThread
+                entries={entries}
+                onEdit={closed ? undefined : handleEditMessage}
+                regenerateId={regenerateId}
+                onRegenerate={handleRegenerate}
+              />
             )}
             {failedSend ? (
               <FailedSendCard text={failedSend.text} error={failedSend.error} onRetry={handleRetrySend} />
@@ -591,11 +626,25 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   )
 }
 
-function MessageThread({ entries }: { entries: ThreadEntry[] }) {
+function MessageThread({
+  entries,
+  onEdit,
+  regenerateId,
+  onRegenerate,
+}: {
+  entries: ThreadEntry[]
+  onEdit?: (text: string) => Promise<void> | void
+  regenerateId: string | null
+  onRegenerate: () => Promise<void> | void
+}) {
   const grouped = groupToolCalls(entries)
   const keyed = uniqueKeys(grouped, (item) =>
     item.kind === 'tools' ? `tools-${item.entries[0]?.toolCall.id ?? 'empty'}` : `entry-${item.entry.id}`,
   )
+  // Editing is a singleton mode: opening another bubble's editor closes the
+  // previous one so there is only ever one draft in play.
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const cancelEdit = useCallback(() => setEditingId(null), [])
 
   return (
     <div className="flex flex-col gap-3">
@@ -604,7 +653,15 @@ function MessageThread({ entries }: { entries: ThreadEntry[] }) {
           <ToolCallGroup key={key} entries={item.entries} />
         ) : (
           <div key={key} className={spacingFor(item.entry)}>
-            <EntryRenderer entry={item.entry} />
+            <EntryRenderer
+              entry={item.entry}
+              editingId={editingId}
+              onStartEdit={setEditingId}
+              onCancelEdit={cancelEdit}
+              onEdit={onEdit}
+              regenerateId={regenerateId}
+              onRegenerate={onRegenerate}
+            />
           </div>
         ),
       )}
@@ -612,12 +669,36 @@ function MessageThread({ entries }: { entries: ThreadEntry[] }) {
   )
 }
 
-function EntryRenderer({ entry }: { entry: Exclude<ThreadEntry, ToolCallEntry> }) {
+function EntryRenderer({
+  entry,
+  editingId,
+  onStartEdit,
+  onCancelEdit,
+  onEdit,
+  regenerateId,
+  onRegenerate,
+}: {
+  entry: Exclude<ThreadEntry, ToolCallEntry>
+  editingId: string | null
+  onStartEdit: (id: string) => void
+  onCancelEdit: () => void
+  onEdit?: (text: string) => Promise<void> | void
+  regenerateId: string | null
+  onRegenerate: () => Promise<void> | void
+}) {
   switch (entry.type) {
     case 'user_message':
-      return <UserBubble entry={entry} />
+      return (
+        <UserBubble
+          entry={entry}
+          editing={onEdit !== undefined && editingId === entry.id}
+          onStartEdit={() => onStartEdit(entry.id)}
+          onCancelEdit={onCancelEdit}
+          onEdit={onEdit}
+        />
+      )
     case 'assistant_message':
-      return <AssistantBubble entry={entry} />
+      return <AssistantBubble entry={entry} canRegenerate={entry.id === regenerateId} onRegenerate={onRegenerate} />
     case 'plan':
       return <PlanView entry={entry} />
     case 'turn_end':

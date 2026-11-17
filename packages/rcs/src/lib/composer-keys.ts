@@ -21,3 +21,20 @@ export function resolveComposerKey({ key, shiftKey, isComposing, isLoading }: Co
   if (key === 'Escape' && isLoading) return 'interrupt'
   return 'ignore'
 }
+
+export type EditKeyAction = 'submit' | 'cancel' | 'newline' | 'ignore'
+
+export interface EditKeyInput {
+  key: string
+  shiftKey: boolean
+  /** IME composition in progress; the key belongs to the input method. */
+  isComposing: boolean
+}
+
+/** Keyboard policy for the in-bubble message editor. */
+export function resolveEditKey({ key, shiftKey, isComposing }: EditKeyInput): EditKeyAction {
+  if (isComposing) return 'ignore'
+  if (key === 'Enter') return shiftKey ? 'newline' : 'submit'
+  if (key === 'Escape') return 'cancel'
+  return 'ignore'
+}

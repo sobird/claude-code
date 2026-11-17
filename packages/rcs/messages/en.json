@@ -119,6 +119,8 @@
     "expand": "Expand",
     "copy": "Copy",
     "copied": "Copied",
+    "edit": "Edit",
+    "regenerate": "Regenerate",
     "thought": "Thinking",
     "allow": "Allow",
     "deny": "Deny",

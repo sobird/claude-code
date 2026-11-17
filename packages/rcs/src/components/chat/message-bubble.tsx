@@ -5,11 +5,12 @@
  * reducer's `UserMessageEntry` / `AssistantMessageEntry` model.
  */
 
-import { Check, ChevronDown, Clock, Copy } from 'lucide-react'
+import { Check, ChevronDown, Clock, Copy, Pencil, RotateCcw, Send, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { useSmoothText } from '../../hooks/useSmoothText'
+import { resolveEditKey } from '../../lib/composer-keys'
 import { assistantCopyText } from '../../lib/copy-text'
 import type { AssistantMessageEntry, UserMessageEntry } from '../../lib/session-reducer'
 import { cn } from '../../lib/utils'
@@ -18,12 +19,34 @@ import { MarkdownText, usePacedText } from './markdown'
 // Collapsed user-message height (px) before the "expand" affordance appears.
 const COLLAPSED_MAX_HEIGHT = 200
 
+const ACTION_BUTTON_CLASS =
+  'flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60'
+
 /** Right-aligned user message with brand-tinted bubble and collapse-on-overflow. */
-export function UserBubble({ entry }: { entry: UserMessageEntry }) {
+export function UserBubble({
+  entry,
+  editing = false,
+  onStartEdit,
+  onCancelEdit,
+  onEdit,
+}: {
+  entry: UserMessageEntry
+  /** Parent-owned so at most one bubble is being edited at a time. */
+  editing?: boolean
+  onStartEdit?: () => void
+  /** Leaves edit mode (cancel or after a successful send). */
+  onCancelEdit?: () => void
+  /** Sends the edited text as a new turn; the original message is kept. */
+  onEdit?: (text: string) => Promise<void> | void
+}) {
   const t = useTranslations('chat')
+  const tCommon = useTranslations('common')
   const [expanded, setExpanded] = useState(false)
   const [overflowing, setOverflowing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
+  const editorRef = useRef<HTMLTextAreaElement>(null)
 
   const checkOverflow = useCallback(() => {
     const el = contentRef.current
@@ -35,10 +58,104 @@ export function UserBubble({ entry }: { entry: UserMessageEntry }) {
     checkOverflow()
   }, [checkOverflow, entry.content])
 
+  const resizeEditor = useCallback((el: HTMLTextAreaElement) => {
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, COLLAPSED_MAX_HEIGHT)}px`
+  }, [])
+
+  // Entering edit mode refills the draft from the saved text and focuses the
+  // caret at the end; switching between bubbles resets the draft the same way.
+  useEffect(() => {
+    if (!editing) return
+    setDraft(entry.content)
+    setSending(false)
+    requestAnimationFrame(() => {
+      const el = editorRef.current
+      if (!el) return
+      el.focus()
+      resizeEditor(el)
+      const end = entry.content.length
+      el.setSelectionRange(end, end)
+    })
+  }, [editing, entry.content, resizeEditor])
+
+  const submitEdit = useCallback(async () => {
+    const trimmed = draft.trim()
+    if (!trimmed || sending) return
+    setSending(true)
+    try {
+      await onEdit?.(trimmed)
+      onCancelEdit?.()
+    } catch {
+      // Keep the editor open; the parent's retry card reports the failure.
+    } finally {
+      setSending(false)
+    }
+  }, [draft, onCancelEdit, onEdit, sending])
+
+  const canSend = draft.trim().length > 0 && !sending
+
+  // While editing, the bubble becomes a composer-shaped field that spans the
+  // chat column, so long prompts are easy to revise on a phone.
   return (
-    <div className="flex justify-end">
-      <div className="group/bubble max-w-[85%] sm:max-w-[70%]">
-        {entry.content ? (
+    <div className={editing ? 'flex w-full' : 'flex justify-end'}>
+      <div className={cn('group/bubble', editing ? 'w-full' : 'max-w-[85%] sm:max-w-[70%]')}>
+        {editing ? (
+          <div className="overflow-hidden rounded-xl border border-user-bubble transition-colors focus-within:border-brand">
+            <div className="flex items-end gap-2 px-3 py-2.5">
+              <textarea
+                ref={editorRef}
+                data-testid="edit-message-input"
+                value={draft}
+                aria-label={t('edit')}
+                rows={1}
+                onChange={(event) => {
+                  setDraft(event.target.value)
+                  resizeEditor(event.target)
+                }}
+                onKeyDown={(event) => {
+                  const action = resolveEditKey({
+                    key: event.key,
+                    shiftKey: event.shiftKey,
+                    isComposing: event.nativeEvent.isComposing,
+                  })
+                  if (action === 'submit') {
+                    event.preventDefault()
+                    void submitEdit()
+                  } else if (action === 'cancel') {
+                    event.preventDefault()
+                    onCancelEdit?.()
+                  }
+                }}
+                className="max-h-[200px] min-h-[24px] flex-1 resize-none bg-transparent text-left font-display text-sm leading-normal text-text-primary outline-none"
+              />
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                aria-label={tCommon('cancel')}
+                title={tCommon('cancel')}
+                data-testid="edit-message-cancel"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                data-testid="edit-message-send"
+                onClick={() => void submitEdit()}
+                disabled={!canSend}
+                aria-label={t('send')}
+                title={t('send')}
+                className={cn(
+                  'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-all',
+                  canSend ? 'bg-brand text-white hover:bg-brand-light' : 'bg-surface-1 text-text-muted',
+                )}
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        ) : entry.content ? (
           <div className="relative overflow-hidden rounded-2xl rounded-br-md border border-user-bubble-border bg-user-bubble">
             <div
               ref={contentRef}
@@ -64,7 +181,7 @@ export function UserBubble({ entry }: { entry: UserMessageEntry }) {
             ) : null}
           </div>
         ) : null}
-        {entry.queued || entry.content ? (
+        {!editing && (entry.queued || entry.content) ? (
           <div className="mt-1 flex items-center justify-end gap-2">
             {entry.queued ? (
               <span
@@ -74,6 +191,18 @@ export function UserBubble({ entry }: { entry: UserMessageEntry }) {
                 <Clock className="h-3 w-3" aria-hidden="true" />
                 {t('queued')}
               </span>
+            ) : null}
+            {entry.content && onEdit ? (
+              <button
+                type="button"
+                data-testid="edit-message"
+                title={t('edit')}
+                aria-label={t('edit')}
+                onClick={onStartEdit}
+                className={ACTION_BUTTON_CLASS}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
             ) : null}
             {entry.content ? <CopyButton text={entry.content} /> : null}
           </div>
@@ -114,7 +243,7 @@ function CopyButton({ text }: { text: string }) {
       title={t('copy')}
       aria-label={t('copy')}
       onClick={() => void copy()}
-      className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      className={ACTION_BUTTON_CLASS}
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
       <span className="sr-only">{copied ? t('copied') : t('copy')}</span>
@@ -123,7 +252,16 @@ function CopyButton({ text }: { text: string }) {
 }
 
 /** Left-aligned assistant message with the Anthropic mark and editable prose. */
-export function AssistantBubble({ entry }: { entry: AssistantMessageEntry }) {
+export function AssistantBubble({
+  entry,
+  canRegenerate = false,
+  onRegenerate,
+}: {
+  entry: AssistantMessageEntry
+  /** Only the latest completed reply offers this; it resends the last prompt. */
+  canRegenerate?: boolean
+  onRegenerate?: () => Promise<void> | void
+}) {
   const tCommon = useTranslations('common')
   const copyText = entry.streaming ? '' : assistantCopyText(entry.chunks)
   return (
@@ -147,9 +285,44 @@ export function AssistantBubble({ entry }: { entry: AssistantMessageEntry }) {
             <MarkdownText key={key} text={chunk.text} />
           )
         })}
-        {copyText ? <CopyButton text={copyText} /> : null}
+        {copyText || (canRegenerate && onRegenerate) ? (
+          <div className="flex items-center gap-1">
+            {copyText ? <CopyButton text={copyText} /> : null}
+            {canRegenerate && onRegenerate ? <RegenerateButton onRegenerate={onRegenerate} /> : null}
+          </div>
+        ) : null}
       </div>
     </div>
+  )
+}
+
+/**
+ * Resends the last prompt as a new turn. The CLI cannot rewind, so the
+ * previous reply stays in the transcript.
+ */
+function RegenerateButton({ onRegenerate }: { onRegenerate: () => Promise<void> | void }) {
+  const t = useTranslations('chat')
+  const [pending, setPending] = useState(false)
+  const run = async () => {
+    setPending(true)
+    try {
+      await onRegenerate()
+    } finally {
+      setPending(false)
+    }
+  }
+  return (
+    <button
+      type="button"
+      data-testid="regenerate-message"
+      title={t('regenerate')}
+      aria-label={t('regenerate')}
+      disabled={pending}
+      onClick={() => void run()}
+      className={ACTION_BUTTON_CLASS}
+    >
+      <RotateCcw className={cn('h-3.5 w-3.5', pending && 'animate-spin')} />
+    </button>
   )
 }
 

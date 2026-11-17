@@ -45,6 +45,11 @@ and SSE stream.
   shifting the viewport.
 - A turn-duration line closes each completed turn.
 - Copy buttons on assistant replies and on your own messages.
+- Any prompt can be **edited in place** (the bubble becomes a textarea: Enter
+  sends, Shift+Enter inserts a newline, Esc cancels), and the latest reply can
+  be **regenerated**. Both resend as a new turn because the bridge has no
+  conversation rewind: the previous exchange stays in the transcript and files
+  are not restored.
 - The header shows recent **token usage** (prompt = input + cached) from the
   latest assistant message, with the breakdown in the tooltip; the CLI reports
   `total_cost_usd` as 0, so cost is not shown.
