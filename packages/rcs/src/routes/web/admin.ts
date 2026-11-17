@@ -49,10 +49,10 @@ app.post('/admin/users', async (c) => {
   const password = typeof body.password === 'string' ? body.password : ''
 
   if (!username || !password) {
-    return c.json({ error: 'username and password are required' }, 400)
+    return c.json({ error: 'username and password are required', code: 'validation_failed' }, 400)
   }
   if (await repos.users.getByUsername(username.toLowerCase())) {
-    return c.json({ error: 'username already exists' }, 409)
+    return c.json({ error: 'username already exists', code: 'username_taken' }, 409)
   }
 
   const user = await repos.users.create({
@@ -68,12 +68,12 @@ app.post('/admin/users', async (c) => {
 app.patch('/admin/users/:id', async (c) => {
   const repos = c.get('repos')
   const target = await repos.users.getById(c.req.param('id'))
-  if (!target) return c.json({ error: 'user not found' }, 404)
+  if (!target) return c.json({ error: 'user not found', code: 'user_not_found' }, 404)
 
   const body = await readJson(c)
   const role = parseRole(body.role)
   if (body.role !== undefined && role === undefined) {
-    return c.json({ error: 'invalid role' }, 400)
+    return c.json({ error: 'invalid role', code: 'invalid_role' }, 400)
   }
   const disabled = typeof body.disabled === 'boolean' ? body.disabled : undefined
   const displayName = typeof body.displayName === 'string' ? body.displayName : undefined
@@ -90,9 +90,9 @@ app.patch('/admin/users/:id', async (c) => {
     const result = await repos.users.updateGuarded(target.id, patch)
     if (!result.updated) {
       if (result.reason === 'last_admin') {
-        return c.json({ error: 'cannot demote or disable the last enabled admin' }, 409)
+        return c.json({ error: 'cannot demote or disable the last enabled admin', code: 'last_admin' }, 409)
       }
-      return c.json({ error: 'user not found' }, 404)
+      return c.json({ error: 'user not found', code: 'user_not_found' }, 404)
     }
   }
   if (password !== undefined) await repos.users.setPasswordHash(target.id, await hashPassword(password))

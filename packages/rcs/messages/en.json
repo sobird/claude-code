@@ -42,5 +42,26 @@
       "error": "Could not save the language. Try again."
     }
   },
-  "errors": { "generic": "Something went wrong", "codes": {} }
+  "errors": {
+    "generic": "Something went wrong",
+    "codes": {
+      "unauthorized": "You are not signed in.",
+      "rate_limited": "Too many requests. Try again shortly.",
+      "invalid_locale": "That language is not supported.",
+      "session_not_found": "Session not found.",
+      "environment_not_found": "Environment not found.",
+      "forbidden": "You do not have access to this resource.",
+      "environment_forbidden": "That environment belongs to another user.",
+      "session_closed": "This session is closed.",
+      "user_not_found": "User not found.",
+      "current_password_incorrect": "Current password is incorrect.",
+      "new_password_required": "A new password is required.",
+      "api_key_not_found": "API key not found.",
+      "validation_failed": "Check the highlighted fields and try again.",
+      "username_taken": "That username is already taken.",
+      "invalid_role": "That role is not valid.",
+      "last_admin": "The last enabled admin cannot be demoted or disabled.",
+      "session_id_required": "A session ID is required."
+    }
+  }
 }

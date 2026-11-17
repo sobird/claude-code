@@ -42,5 +42,26 @@
       "error": "无法保存语言，请重试。"
     }
   },
-  "errors": { "generic": "出错了", "codes": {} }
+  "errors": {
+    "generic": "出错了",
+    "codes": {
+      "unauthorized": "未登录。",
+      "rate_limited": "请求过于频繁，请稍后再试。",
+      "invalid_locale": "不支持该语言。",
+      "session_not_found": "会话不存在。",
+      "environment_not_found": "环境不存在。",
+      "forbidden": "你没有访问此资源的权限。",
+      "environment_forbidden": "该环境属于其他用户。",
+      "session_closed": "该会话已关闭。",
+      "user_not_found": "用户不存在。",
+      "current_password_incorrect": "当前密码不正确。",
+      "new_password_required": "需要提供新密码。",
+      "api_key_not_found": "API 密钥不存在。",
+      "validation_failed": "请检查标出的字段后重试。",
+      "username_taken": "该用户名已被占用。",
+      "invalid_role": "该角色无效。",
+      "last_admin": "无法降级或停用最后一个启用的管理员。",
+      "session_id_required": "需要提供会话 ID。"
+    }
+  }
 }

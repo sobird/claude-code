@@ -23,7 +23,14 @@ import {
 } from '../../services/session.js'
 import { createWorkItem } from '../../services/work-dispatch.js'
 import { createSSEStream } from '../../transport/sse-writer.js'
-import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment, sessionClosed } from '../common.js'
+import {
+  legacyUserAuth,
+  readJson,
+  resolveDispatchEnvironment,
+  sessionClosed,
+  webForbidden,
+  webNotFound,
+} from '../common.js'
 
 const app = new Hono<AppEnv>()
 const DEFAULT_HISTORY_LIMIT = 100
@@ -85,8 +92,9 @@ app.post('/sessions', legacyUserAuth, async (c) => {
     // Web is a new surface: reject unknown environments outright and block members from
     // dispatching onto another user's environment.
     const access = await resolveDispatchEnvironment(c, environmentId)
-    if (!access.environment) return notFound(c, 'Environment not found')
-    if (access.forbiddenForCaller) return forbidden(c, 'Environment belongs to another user')
+    if (!access.environment) return webNotFound(c, 'Environment not found', 'environment_not_found')
+    if (access.forbiddenForCaller)
+      return webForbidden(c, 'Environment belongs to another user', 'environment_forbidden')
   }
 
   const session = await createSession(repos, {
@@ -123,12 +131,12 @@ app.get('/sessions/all', legacyUserAuth, async (c) => {
 app.get('/sessions/:id', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
+  if (!(await getSession(repos, requested))) return webNotFound(c)
   const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  if (!owned) return webForbidden(c)
 
   const session = await getSession(repos, owned)
-  if (!session) return notFound(c)
+  if (!session) return webNotFound(c)
   const worker = await repos.sessionWorkers.get(owned)
   const automationState = getAutomationStateSnapshot(worker?.externalMetadata)
   const response = toWebSessionResponse(session)
@@ -139,9 +147,9 @@ app.get('/sessions/:id', legacyUserAuth, async (c) => {
 app.get('/sessions/:id/history', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
+  if (!(await getSession(repos, requested))) return webNotFound(c)
   const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  if (!owned) return webForbidden(c)
 
   const limitParam = Number.parseInt(c.req.query('limit') ?? '', 10)
   const limit = Number.isFinite(limitParam)
@@ -168,12 +176,12 @@ app.get('/sessions/:id/history', legacyUserAuth, async (c) => {
 app.get('/sessions/:id/events', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
+  if (!(await getSession(repos, requested))) return webNotFound(c)
   const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  if (!owned) return webForbidden(c)
 
   const session = await getSession(repos, owned)
-  if (!session) return notFound(c)
+  if (!session) return webNotFound(c)
   if (isSessionClosedStatus(session.status)) return sessionClosed(c, session.status)
 
   const lastEventId = c.req.header('Last-Event-ID')

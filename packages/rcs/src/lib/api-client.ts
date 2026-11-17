@@ -21,14 +21,16 @@ export interface ApiClient {
   delete: <T>(path: string) => Promise<T>
 }
 
-/** Error thrown for non-2xx responses, carrying the HTTP status and message. */
+/** Error thrown for non-2xx responses, carrying the HTTP status, message, and stable code. */
 export class ApiError extends Error {
   readonly status: number
+  readonly code?: string
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -47,17 +49,47 @@ export function getApiBaseUrl(): string {
   return configured.replace(/\/+$/, '')
 }
 
+/** Stable code and/or human-readable message from either gateway error shape. */
+export interface ExtractedApiError {
+  code?: string
+  message?: string
+}
+
+/**
+ * Unwrap a gateway error body. Flat Web errors are `{ error: '…', code? }`;
+ * nested gateway errors are `{ error: { type, message, code? } }`. Nested errors
+ * fall back to `type` as the stable code so callers have something to translate.
+ */
+export function extractApiError(body: unknown): ExtractedApiError {
+  if (!body || typeof body !== 'object' || !('error' in body)) return {}
+  const outer = body as { error: unknown; code?: unknown }
+  const error = outer.error
+
+  if (typeof error === 'string' && error.length > 0) {
+    if (typeof outer.code === 'string' && outer.code.length > 0) return { code: outer.code, message: error }
+    return { message: error }
+  }
+
+  if (error && typeof error === 'object') {
+    const nested = error as { type?: unknown; message?: unknown; code?: unknown }
+    const result: ExtractedApiError = {}
+    const code =
+      typeof nested.code === 'string' && nested.code.length > 0
+        ? nested.code
+        : typeof nested.type === 'string' && nested.type.length > 0
+          ? nested.type
+          : undefined
+    if (code !== undefined) result.code = code
+    if (typeof nested.message === 'string' && nested.message.length > 0) result.message = nested.message
+    return result
+  }
+
+  return {}
+}
+
 /** Extract a human-readable message from either gateway error shape. */
 export function extractErrorMessage(body: unknown, fallback: string): string {
-  if (body && typeof body === 'object' && 'error' in body) {
-    const error = (body as { error: unknown }).error
-    if (typeof error === 'string' && error.length > 0) return error
-    if (error && typeof error === 'object') {
-      const message = (error as { message?: unknown }).message
-      if (typeof message === 'string' && message.length > 0) return message
-    }
-  }
-  return fallback
+  return extractApiError(body).message ?? fallback
 }
 
 async function parseBody(response: Response): Promise<unknown> {
@@ -93,8 +125,9 @@ export function createApiClient({ getToken, refreshToken, baseUrl }: ApiClientOp
 
     if (!response.ok) {
       const parsed = await parseBody(response)
-      const message = extractErrorMessage(parsed, response.statusText || `HTTP ${response.status}`)
-      throw new ApiError(response.status, message)
+      const extracted = extractApiError(parsed)
+      const message = extracted.message ?? (response.statusText || `HTTP ${response.status}`)
+      throw new ApiError(response.status, message, extracted.code)
     }
 
     if (response.status === 204) return undefined as T

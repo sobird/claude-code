@@ -1609,3 +1609,15 @@ describe('Web Admin Routes', () => {
     expect((await s.repos.users.getById(s.admin.id))?.role).toBe('member')
   })
 })
+
+test('web errors carry stable codes and v1 errors do not', async () => {
+  const flat = await app.request('/web/account/password', {
+    method: 'POST',
+    headers: bearer(s.memberToken),
+    body: JSON.stringify({ currentPassword: 'wrong', newPassword: 'new-secret' }),
+  })
+  expect(((await resJson(flat)) as { code?: string }).code).toBe('current_password_incorrect')
+
+  const nested = await app.request('/web/sessions/nope', { headers: bearer(s.memberToken) })
+  expect(((await resJson(nested)) as { error: { code?: string } }).error.code).toBe('session_not_found')
+})

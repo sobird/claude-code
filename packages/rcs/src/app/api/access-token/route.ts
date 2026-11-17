@@ -24,13 +24,13 @@ const tokenLimiter = createRateLimiter({ limit: 5, windowMs: 60_000 })
 async function mintAccessToken(request: Request): Promise<Response> {
   const session = await auth()
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'unauthorized', code: 'unauthorized' }, { status: 401 })
   }
 
   const username = session.user.name ?? ''
   const ip = getClientIp(request.headers)
   if (!tokenLimiter.check(`${ip}:${username}`)) {
-    return NextResponse.json({ error: 'rate limited' }, { status: 429 })
+    return NextResponse.json({ error: 'rate limited', code: 'rate_limited' }, { status: 429 })
   }
 
   try {

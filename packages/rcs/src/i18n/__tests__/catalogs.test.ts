@@ -2,6 +2,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { CATALOGS } from '../catalogs'
+import { KNOWN_ERROR_CODES } from '../error-codes'
 
 function flatten(value: unknown, prefix = ''): Map<string, string> {
   const out = new Map<string, string>()
@@ -28,6 +29,13 @@ describe('message catalogs', () => {
     const zh = flatten(CATALOGS['zh-CN'])
     for (const [key, text] of en) {
       expect({ key, placeholders: placeholders(zh.get(key) ?? '') }).toEqual({ key, placeholders: placeholders(text) })
+    }
+  })
+
+  test('every known server code has copy in both catalogs', () => {
+    for (const code of KNOWN_ERROR_CODES) {
+      expect(typeof (CATALOGS.en.errors.codes as Record<string, string>)[code]).toBe('string')
+      expect(typeof (CATALOGS['zh-CN'].errors.codes as Record<string, string>)[code]).toBe('string')
     }
   })
 })

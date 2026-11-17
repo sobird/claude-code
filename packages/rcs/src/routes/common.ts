@@ -50,8 +50,12 @@ export const workerOrEnvironmentAuth: MiddlewareHandler<AppEnv> = async (c, next
   return legacyEnvironmentAuth(c, next)
 }
 
-export function jsonError(c: AppContext, type: string, message: string, status: 400 | 403 | 404 | 409) {
-  return c.json({ error: { type, message } }, status)
+/**
+ * Nested gateway error shape. `code` is optional and only emitted by Web callers;
+ * v1/v2/ACP responses must stay byte-identical, so omit it there.
+ */
+export function jsonError(c: AppContext, type: string, message: string, status: 400 | 403 | 404 | 409, code?: string) {
+  return c.json(code === undefined ? { error: { type, message } } : { error: { type, message, code } }, status)
 }
 
 export function notFound(c: AppContext, message = 'Session not found') {
@@ -62,8 +66,18 @@ export function forbidden(c: AppContext, message = 'Not your session') {
   return jsonError(c, 'forbidden', message, 403)
 }
 
+/** Web-only `notFound` with a stable code the browser can translate. */
+export function webNotFound(c: AppContext, message = 'Session not found', code = 'session_not_found') {
+  return jsonError(c, 'not_found', message, 404, code)
+}
+
+/** Web-only `forbidden` with a stable code the browser can translate. */
+export function webForbidden(c: AppContext, message = 'Not your session', code = 'forbidden') {
+  return jsonError(c, 'forbidden', message, 403, code)
+}
+
 export function sessionClosed(c: AppContext, status: string) {
-  return jsonError(c, 'session_closed', `Session is ${status}`, 409)
+  return jsonError(c, 'session_closed', `Session is ${status}`, 409, 'session_closed')
 }
 
 export interface DispatchEnvironmentAccess {

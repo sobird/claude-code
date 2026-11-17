@@ -35,11 +35,11 @@ app.post('/account/password', legacyUserAuth, async (c) => {
   const newPassword = typeof body.newPassword === 'string' ? body.newPassword : ''
 
   const user = await repos.users.getById(c.get('user').id)
-  if (!user) return c.json({ error: 'user not found' }, 401)
+  if (!user) return c.json({ error: 'user not found', code: 'user_not_found' }, 401)
   if (!(await verifyPassword(currentPassword, user.passwordHash))) {
-    return c.json({ error: 'current password is incorrect' }, 400)
+    return c.json({ error: 'current password is incorrect', code: 'current_password_incorrect' }, 400)
   }
-  if (!newPassword) return c.json({ error: 'newPassword is required' }, 400)
+  if (!newPassword) return c.json({ error: 'newPassword is required', code: 'new_password_required' }, 400)
 
   await repos.users.setPasswordHash(user.id, await hashPassword(newPassword))
   return c.json({ status: 'ok' }, 200)
@@ -72,7 +72,7 @@ app.delete('/api-keys/:id', legacyUserAuth, async (c) => {
   const id = c.req.param('id')
   const keys = await repos.apiKeys.listByUser(c.get('user').id)
   const key = keys.find((record) => record.id === id)
-  if (!key) return c.json({ error: 'API key not found' }, 404)
+  if (!key) return c.json({ error: 'API key not found', code: 'api_key_not_found' }, 404)
   await repos.apiKeys.revoke(key.id, new Date())
   return c.json({ status: 'ok' }, 200)
 })

@@ -10,7 +10,7 @@ import { Hono } from 'hono'
 import type { AppEnv } from '../../auth/context.js'
 import { toWebSessionId } from '../../contracts.js'
 import { getSession, resolveOwnedWebSessionId } from '../../services/session.js'
-import { forbidden, legacyUserAuth, notFound, readJson } from '../common.js'
+import { legacyUserAuth, readJson, webForbidden, webNotFound } from '../common.js'
 
 const app = new Hono<AppEnv>()
 
@@ -21,12 +21,12 @@ app.post('/bind', legacyUserAuth, async (c) => {
   const requested = typeof body.sessionId === 'string' ? body.sessionId : ''
 
   if (!requested) {
-    return c.json({ error: 'sessionId is required' }, 400)
+    return c.json({ error: 'sessionId is required', code: 'session_id_required' }, 400)
   }
-  if (!(await getSession(repos, requested))) return notFound(c)
+  if (!(await getSession(repos, requested))) return webNotFound(c)
 
   const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  if (!owned) return webForbidden(c)
 
   return c.json({ ok: true, sessionId: toWebSessionId(owned) }, 200)
 })

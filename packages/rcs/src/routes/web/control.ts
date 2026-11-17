@@ -12,7 +12,7 @@ import type { AppContext, AppEnv } from '../../auth/context.js'
 import { isSessionClosedStatus } from '../../contracts.js'
 import { getSession, resolveOwnedWebSessionId, updateSessionStatus } from '../../services/session.js'
 import { getEventBus, publishSessionEvent } from '../../transport/event-bus.js'
-import { forbidden, legacyUserAuth, sessionClosed } from '../common.js'
+import { legacyUserAuth, sessionClosed, webForbidden } from '../common.js'
 
 const app = new Hono<AppEnv>()
 
@@ -21,13 +21,13 @@ type Ownership = { ok: true; sessionId: string } | { ok: false; response: Respon
 async function checkOwnership(c: AppContext, requested: string): Promise<Ownership> {
   const repos = c.get('repos')
   if (!(await getSession(repos, requested))) {
-    return { ok: false, response: forbidden(c) }
+    return { ok: false, response: webForbidden(c) }
   }
   const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return { ok: false, response: forbidden(c) }
+  if (!owned) return { ok: false, response: webForbidden(c) }
 
   const session = await getSession(repos, owned)
-  if (!session) return { ok: false, response: forbidden(c) }
+  if (!session) return { ok: false, response: webForbidden(c) }
   if (isSessionClosedStatus(session.status)) {
     return { ok: false, response: sessionClosed(c, session.status) }
   }
