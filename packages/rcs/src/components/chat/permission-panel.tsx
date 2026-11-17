@@ -124,6 +124,7 @@ function PermissionCard({
   onRespond?: (requestId: string, decision: PermissionDecision) => void
 }) {
   const t = useTranslations('chat')
+  const tc = useTranslations('common')
   const [denyOpen, setDenyOpen] = useState(false)
   const [feedback, setFeedback] = useState('')
 
@@ -259,7 +260,7 @@ function PermissionCard({
                 setFeedback('')
               }}
             >
-              {t('cancel')}
+              {tc('cancel')}
             </Button>
           </div>
         </div>
