@@ -119,6 +119,16 @@
       "total": "{count, plural, other {# 个工具调用}}",
       "group": "{count}× {name}",
       "grouped": "共 {total} 个工具：{tools}"
+    },
+    "askUserQuestion": {
+      "title": "Claude 的提问",
+      "selectOne": "选择一个选项",
+      "selectMany": "选择一个或多个选项",
+      "other": "其他",
+      "otherPlaceholder": "输入自定义回答",
+      "submit": "提交回答",
+      "decline": "拒绝回答",
+      "incomplete": "请回答所有问题后继续。"
     }
   },
   "auth": {

@@ -7,29 +7,37 @@
 
 import { Check, ShieldAlert, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
+import { isAskUserQuestionRequest } from '../../lib/ask-user-question'
 import { resolvePermissionKey } from '../../lib/permission-keys'
 import type { PendingPermission } from '../../lib/session-reducer'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
+import { AskUserQuestionCard } from './ask-user-question-card'
 
 interface PermissionPanelProps {
   requests: PendingPermission[]
-  onRespond?: (requestId: string, approved: boolean) => void
+  onRespond?: (requestId: string, approved: boolean, updatedInput?: Record<string, unknown>) => void
   className?: string
 }
 
 export function PermissionPanel({ requests, onRespond, className }: PermissionPanelProps) {
   const [selected, setSelected] = useState(0)
+  // AskUserQuestion prompts are answered in their own card, so keyboard
+  // approval shortcuts only navigate the plain allow/deny cards.
+  const respondable = useMemo(
+    () => requests.filter((request) => !isAskUserQuestionRequest(request.toolName, request.toolInput)),
+    [requests],
+  )
   // Clamp instead of syncing state so a shrinking request list never selects
   // an index that no longer exists.
-  const activeIndex = Math.min(selected, Math.max(requests.length - 1, 0))
+  const activeIndex = Math.min(selected, Math.max(respondable.length - 1, 0))
 
   // Keyboard-only approvals: a document listener covers the case where focus is
   // still on the composer or elsewhere. Editable elements keep their keys.
   useEffect(() => {
-    if (requests.length === 0) return undefined
+    if (respondable.length === 0) return undefined
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return
@@ -39,7 +47,7 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
       )
       const action = resolvePermissionKey({
         key: event.key,
-        requestCount: requests.length,
+        requestCount: respondable.length,
         selectedIndex: activeIndex,
         inEditable,
         isComposing: event.isComposing,
@@ -53,7 +61,7 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
       switch (action.action) {
         case 'allow':
         case 'deny': {
-          const request = requests[action.index]
+          const request = respondable[action.index]
           if (request) onRespond?.(request.requestId, action.action === 'allow')
           return
         }
@@ -61,7 +69,7 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
           setSelected(action.index)
           return
         case 'next':
-          setSelected(Math.min(activeIndex + 1, requests.length - 1))
+          setSelected(Math.min(activeIndex + 1, respondable.length - 1))
           return
         case 'previous':
           setSelected(Math.max(activeIndex - 1, 0))
@@ -71,21 +79,27 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [activeIndex, onRespond, requests])
+  }, [activeIndex, onRespond, respondable])
 
   if (requests.length === 0) return null
+
+  const activeRequestId = respondable[activeIndex]?.requestId
 
   return (
     <div className={cn('mx-auto w-full max-w-3xl px-1 sm:px-0', className)}>
       <div className="space-y-2">
-        {requests.map((request, index) => (
-          <PermissionCard
-            key={request.requestId}
-            request={request}
-            selected={index === activeIndex}
-            onRespond={onRespond}
-          />
-        ))}
+        {requests.map((request) =>
+          isAskUserQuestionRequest(request.toolName, request.toolInput) ? (
+            <AskUserQuestionCard key={request.requestId} request={request} onRespond={onRespond} />
+          ) : (
+            <PermissionCard
+              key={request.requestId}
+              request={request}
+              selected={request.requestId === activeRequestId}
+              onRespond={onRespond}
+            />
+          ),
+        )}
       </div>
     </div>
   )
@@ -98,7 +112,7 @@ function PermissionCard({
 }: {
   request: PendingPermission
   selected?: boolean
-  onRespond?: (requestId: string, approved: boolean) => void
+  onRespond?: (requestId: string, approved: boolean, updatedInput?: Record<string, unknown>) => void
 }) {
   const t = useTranslations('chat')
   const inputPreview = formatInput(request.toolInput)

@@ -119,6 +119,16 @@
       "total": "{count, plural, one {# tool call} other {# tool calls}}",
       "group": "{count}× {name}",
       "grouped": "{total} tools: {tools}"
+    },
+    "askUserQuestion": {
+      "title": "Questions from Claude",
+      "selectOne": "Select one option",
+      "selectMany": "Select one or more options",
+      "other": "Other",
+      "otherPlaceholder": "Type a custom answer",
+      "submit": "Submit answers",
+      "decline": "Decline",
+      "incomplete": "Answer every question to continue."
     }
   },
   "auth": {

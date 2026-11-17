@@ -36,6 +36,23 @@ describe('summarizeToolCall', () => {
     expect(fieldKeys('Bash', { command: 'pwd' })).toEqual(['command'])
   })
 
+  test('AskUserQuestion lists each question and summarizes the first', () => {
+    const result = summarizeToolCall('AskUserQuestion', {
+      questions: [
+        { header: 'Genre', question: 'Which genre?', options: [{ label: 'A' }] },
+        { header: 'Extras', question: 'Which extras?', options: [{ label: 'B' }] },
+      ],
+    })
+
+    expect(result.name).toBe('AskUserQuestion')
+    expect(result.summary).toBe('Which genre?')
+    expect(result.fields).toEqual([
+      { key: 'question 1', value: 'Which genre?' },
+      { key: 'question 2', value: 'Which extras?' },
+    ])
+    expect(result.fallback).toBe(false)
+  })
+
   test('Read accepts file_path or the older path field', () => {
     expect(summarizeToolCall('Read', { file_path: '/tmp/a.ts' }).summary).toBe('/tmp/a.ts')
     expect(summarizeToolCall('Read', { path: '/tmp/b.ts' }).summary).toBe('/tmp/b.ts')

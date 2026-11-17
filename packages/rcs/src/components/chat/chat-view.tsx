@@ -247,13 +247,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, [failedSend, sendWithUuid])
 
   const handlePermissionRespond = useCallback(
-    async (requestId: string, approved: boolean) => {
+    async (requestId: string, approved: boolean, updatedInput?: Record<string, unknown>) => {
       setActionError(null)
       try {
         await api.post(`/web/sessions/${encodeURIComponent(sessionId)}/control`, {
           type: 'permission_response',
           approved,
           request_id: requestId,
+          // AskUserQuestion answers ride back as the tool's updated input.
+          ...(updatedInput ? { updated_input: updatedInput } : {}),
         })
       } catch (error) {
         setActionError(error)

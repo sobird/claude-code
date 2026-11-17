@@ -104,6 +104,14 @@ export function summarizeToolCall(
       add('taskId', input.taskId ?? input.task_id)
       add('status', input.status)
       break
+    case 'AskUserQuestion': {
+      const questions = Array.isArray(input.questions) ? input.questions : []
+      questions.forEach((item, index) => {
+        add(`question ${index + 1}`, asRecord(item)?.question)
+      })
+      summary = fields[0]?.value ?? ''
+      break
+    }
     case 'Brief':
       add('message', input.message)
       break
