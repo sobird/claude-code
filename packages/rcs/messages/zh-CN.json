@@ -1,0 +1,36 @@
+{
+  "common": {
+    "appName": "远程控制",
+    "appDescription": "用于 Claude Code 会话的远程控制",
+    "account": "账户",
+    "retry": "重试",
+    "cancel": "取消",
+    "done": "完成",
+    "back": "返回",
+    "never": "永不",
+    "claude": "Claude",
+    "role": { "admin": "管理员", "member": "成员" },
+    "theme": { "light": "浅色", "dark": "深色", "system": "跟随系统" },
+    "toggleTheme": "切换主题",
+    "connection": {
+      "disconnected": "未连接",
+      "connecting": "正在连接...",
+      "connected": "已连接",
+      "error": "连接错误"
+    },
+    "status": {
+      "active": "活跃",
+      "running": "运行中",
+      "idle": "空闲",
+      "inactive": "未激活",
+      "requires_action": "需要操作",
+      "archived": "已归档",
+      "error": "错误",
+      "online": "在线",
+      "offline": "离线"
+    },
+    "defaultSessionTitle": "新会话",
+    "defaultApiKeyName": "API 密钥"
+  },
+  "errors": { "generic": "出错了", "codes": {} }
+}

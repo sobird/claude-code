@@ -1,0 +1,36 @@
+{
+  "common": {
+    "appName": "Remote Control",
+    "appDescription": "Remote control for Claude Code sessions",
+    "account": "Account",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "done": "Done",
+    "back": "Back",
+    "never": "Never",
+    "claude": "Claude",
+    "role": { "admin": "Admin", "member": "Member" },
+    "theme": { "light": "Light", "dark": "Dark", "system": "System" },
+    "toggleTheme": "Toggle theme",
+    "connection": {
+      "disconnected": "Disconnected",
+      "connecting": "Connecting...",
+      "connected": "Connected",
+      "error": "Connection error"
+    },
+    "status": {
+      "active": "Active",
+      "running": "Running",
+      "idle": "Idle",
+      "inactive": "Inactive",
+      "requires_action": "Requires action",
+      "archived": "Archived",
+      "error": "Error",
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "defaultSessionTitle": "New Session",
+    "defaultApiKeyName": "API key"
+  },
+  "errors": { "generic": "Something went wrong", "codes": {} }
+}

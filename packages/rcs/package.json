@@ -47,6 +47,7 @@
     "motion": "^12.29.2",
     "next": "^16.4.6",
     "next-auth": "^5.0.0-beta.32",
+    "next-intl": "^4.15.1",
     "postgres": "^4.1.1",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.4.3",
