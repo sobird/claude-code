@@ -9,9 +9,9 @@
 import type { NextAuthConfig } from 'next-auth'
 
 import type { Role } from '../contracts'
+import { APP_BASE_PATH } from './app-paths'
 
-/** Next `basePath`; every route below is prefixed with it. */
-export const APP_BASE_PATH = '/code'
+export { APP_BASE_PATH }
 
 /** Where unauthenticated users are sent (browser-facing, includes `basePath`). */
 export const LOGIN_PATH = `${APP_BASE_PATH}/login`

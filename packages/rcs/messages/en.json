@@ -32,5 +32,15 @@
     "defaultSessionTitle": "New Session",
     "defaultApiKeyName": "API key"
   },
+  "settings": {
+    "language": {
+      "title": "Language",
+      "description": "Choose the language used by the web interface.",
+      "label": "Interface language",
+      "zhCN": "简体中文",
+      "en": "English",
+      "error": "Could not save the language. Try again."
+    }
+  },
   "errors": { "generic": "Something went wrong", "codes": {} }
 }

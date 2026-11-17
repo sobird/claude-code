@@ -1,5 +1,6 @@
 import { ApiKeys } from '../../../components/settings/api-keys'
 import { InstallPrompt } from '../../../components/settings/install-prompt'
+import { LanguageSelector } from '../../../components/settings/language-selector'
 import { PasswordForm } from '../../../components/settings/password-form'
 import { SettingsApiProvider } from '../../../components/settings/use-settings-api'
 import { Badge } from '../../../components/ui/badge'
@@ -47,6 +48,8 @@ export default async function SettingsPage() {
           </dl>
         </CardContent>
       </Card>
+
+      <LanguageSelector />
 
       <SettingsApiProvider>
         <PasswordForm />
