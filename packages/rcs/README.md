@@ -21,6 +21,83 @@ protocols.
   URLs (`/web/...`, `/acp/...`) and WebSocket upgrades work without extra
   configuration in production.
 
+## Web UI
+
+The Next app (`src/app`) is the operator surface over the gateway's `/web` API
+and SSE stream.
+
+### Dashboard
+
+- Lists active environments (`Claude Code` / `ACP Agent`) and sessions; members
+  see their own plus the shared unclaimed pool, admins see everyone.
+- **New session** starts a session on a connected environment (or leaves it
+  unassigned) with an optional title.
+- The empty state shows the CLI command used to connect a machine.
+
+### Session chat
+
+- Live text via SSE deltas (set `CLAUDE_CODE_INCLUDE_PARTIAL_MESSAGES=1` on the
+  CLI); durable events replay on reload, and reconnects show a banner.
+- Markdown with syntax-highlighted code (lazy-loaded), collapsible thinking
+  blocks, and tool cards that summarize the call (command, file, pattern…),
+  group repeated calls, and expand to the raw input and output.
+- **Load earlier messages** paginates history in 100-event pages without
+  shifting the viewport.
+- A turn-duration line closes each completed turn.
+- Copy buttons on assistant replies and on your own messages.
+- **Todo panel**: derived from `TodoWrite` input (the same source the TUI uses),
+  showing a progress bar and the active item, collapsing to a summary line, and
+  hiding once everything is done. Upstream `task_state` events are accepted too
+  if a bridge sends them.
+- Auto-follows streaming output while you are at the bottom; scrolling up
+  reveals a **Jump to latest** button. Failed sends show an inline retry card.
+- Archived sessions disable the composer; a disconnected stream shows the
+  gateway error.
+- While the tab is hidden and approvals are waiting, the tab title shows the
+  pending count.
+
+### Composer
+
+- Enter sends; Shift+Enter inserts a newline. Mid-turn sends are queued by the
+  CLI (matching the TUI); Esc or the stop button interrupts while the agent
+  runs.
+- **Prompt history**: ↑ recalls earlier prompts from the first line of the
+  draft, ↓ walks forward and restores the draft after the newest entry. History
+  persists in `localStorage`, capped at 50 entries.
+- **Slash commands**: `/` opens a filtered menu of the bridge-safe commands
+  reported by `system/init`; ↑/↓ navigate, Tab/Enter accept without sending, Esc
+  closes. IME composition is ignored. The standalone `remote-control` CLI
+  reports the list at the start of every turn; with the interactive REPL bridge
+  set `CLAUDE_INTERNAL_FC_OVERRIDES='{"tengu_bridge_system_init":true}'` to
+  receive it on connect.
+- **Permission mode** control in the session header shows the mode reported by
+  `system/init` and switches it with a `set_permission_mode` control request:
+  ask each time, auto-accept edits, plan, don't ask, bypass. The UI updates only
+  from the CLI's reply and surfaces CLI errors (for example bypass without
+  `--dangerously-skip-permissions`).
+
+### Approvals
+
+- Permission cards show the tool input, a line diff for file edits, blocked-path
+  hints, and the CLI's suggestions (allow for this session / always / this
+  directory). Denials can carry a message back to the model.
+- **AskUserQuestion** renders the questions as radio/checkbox groups with a free
+  text "Other" answer and submits the CLI's answers map.
+- **ExitPlanMode** renders the full plan as markdown with the permissions it
+  requests, offering approve, approve-and-auto-accept-edits, or reject with
+  feedback. The plan dialog supports `A` approve, `D` reject, `Enter` approve,
+  and `Esc` close while it is not typing.
+- If the CLI resolves a request locally (hook, classifier, permission-mode
+  recheck) it sends `control_cancel_request`; the web drops the stale card and
+  the bound tool call resumes instead of hanging.
+
+### Settings and account
+
+- Password change, personal API keys (shown once, hashed at rest), and a
+  light/dark/system theme.
+- **Language**: per-user interface language (简体中文 / English), with
+  `Accept-Language` negotiation for API responses.
+
 ## Quick start (Docker Compose)
 
 ```bash
