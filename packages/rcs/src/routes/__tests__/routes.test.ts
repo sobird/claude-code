@@ -475,6 +475,15 @@ describe('V1 Work Routes', () => {
     envSecret = body.environment_secret
   })
 
+  test('GET /v1/environments/:id/work/poll revives an environment the reaper marked disconnected', async () => {
+    await s.repos.environments.update(envId, { status: 'disconnected' })
+    const res = await app.request(`/v1/environments/${envId}/work/poll`, {
+      headers: bearer(envSecret),
+    })
+    expect(res.status).toBe(204)
+    expect((await s.repos.environments.getById(envId))?.status).toBe('active')
+  })
+
   test('GET /v1/environments/:id/work/poll returns 204 when no work', async () => {
     const res = await app.request(`/v1/environments/${envId}/work/poll`, {
       headers: bearer(envSecret),
@@ -586,6 +595,39 @@ describe('V2 Code Session Routes', () => {
     expect(body.session.id).toMatch(/^cse_/)
     expect(body.session.title).toBe('Code Session')
     expect(body.session.owner_user_id).toBe(s.member.id)
+  })
+
+  test('POST /v1/code/sessions rejects an environment owned by another user', async () => {
+    const env = await s.repos.environments.create({ ownerUserId: s.other.id })
+    const res = await app.request('/v1/code/sessions', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ environment_id: env.id }),
+    })
+    expect(res.status).toBe(403)
+    expect(await s.repos.sessions.listByOwner(s.member.id)).toHaveLength(0)
+  })
+
+  test('POST /v1/code/sessions binds a session to the caller-s own environment', async () => {
+    const env = await s.repos.environments.create({ ownerUserId: s.member.id })
+    const res = await app.request('/v1/code/sessions', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ environment_id: env.id }),
+    })
+    expect(res.status).toBe(200)
+    const body = await resJson(res)
+    expect(body.session.environment_id).toBe(env.id)
+    expect(body.session.owner_user_id).toBe(s.member.id)
+  })
+
+  test('POST /v1/code/sessions returns 404 for an unknown environment id', async () => {
+    const res = await app.request('/v1/code/sessions', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ environment_id: 'env_missing' }),
+    })
+    expect(res.status).toBe(404)
   })
 
   test('POST /v1/code/sessions/:id/bridge returns bridge info with JWT', async () => {

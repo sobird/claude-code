@@ -284,6 +284,17 @@ describe('Environment Service', () => {
       expect(await listActiveEnvironments(repos, { isAdmin: true })).toHaveLength(1)
     })
 
+    test('reuses a disconnected environment id instead of creating a new one', async () => {
+      const first = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      await repos.environments.update(first.environment_id, { status: 'disconnected' })
+      const second = await registerEnvironment(repos, {
+        environmentId: first.environment_id,
+        ownerUserId: 'user_1',
+      })
+      expect(second.environment_id).toBe(first.environment_id)
+      expect((await repos.environments.getById(first.environment_id))?.status).toBe('active')
+    })
+
     test('creates a new environment when re-registering with a foreign environment id', async () => {
       const owner = await registerEnvironment(repos, { ownerUserId: 'user_1' })
       const intruder = await registerEnvironment(repos, {
@@ -350,6 +361,20 @@ describe('Environment Service', () => {
       await updatePollTime(repos, result.environment_id)
       const after = await repos.environments.getById(result.environment_id)
       expect(after?.lastPollAt?.getTime()).toBeGreaterThanOrEqual(before?.lastPollAt?.getTime() ?? 0)
+    })
+
+    test('revives a disconnected environment when it polls', async () => {
+      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      await repos.environments.update(result.environment_id, { status: 'disconnected' })
+      await updatePollTime(repos, result.environment_id)
+      expect((await repos.environments.getById(result.environment_id))?.status).toBe('active')
+    })
+
+    test('does not revive a deregistered environment', async () => {
+      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      await deregisterEnvironment(repos, result.environment_id)
+      await updatePollTime(repos, result.environment_id)
+      expect((await repos.environments.getById(result.environment_id))?.status).toBe('deregistered')
     })
   })
 

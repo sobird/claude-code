@@ -154,8 +154,20 @@ export async function reconnectEnvironment(repos: Repositories, environmentId: s
   await repos.environments.update(environmentId, { status: 'active' })
 }
 
+/**
+ * Record a successful poll and revive a worker-side liveness status. The reaper flips a
+ * quiet environment to `disconnected`/`offline`; a poll is proof the worker is alive, so
+ * ignoring it here would leave the environment permanently unusable. `deregistered` is a
+ * deliberate owner action and is never revived.
+ */
 export async function updatePollTime(repos: Repositories, environmentId: string): Promise<void> {
-  await repos.environments.update(environmentId, { lastPollAt: new Date() })
+  const environment = await repos.environments.getById(environmentId)
+  if (!environment) return
+  const revive = environment.status === 'disconnected' || environment.status === 'offline'
+  await repos.environments.update(environmentId, {
+    lastPollAt: new Date(),
+    ...(revive ? { status: 'active' } : {}),
+  })
 }
 
 export async function listActiveEnvironments(

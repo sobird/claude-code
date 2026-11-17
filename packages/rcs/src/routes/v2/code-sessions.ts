@@ -11,16 +11,27 @@ import type { AppEnv } from '../../auth/context.js'
 import { signWorkerToken } from '../../auth/tokens.js'
 import { loadConfig } from '../../config.js'
 import { createCodeSession, getSession, incrementEpoch, resolveOwnedWebSessionId } from '../../services/session.js'
-import { forbidden, legacyUserAuth, notFound, readJson } from '../common.js'
+import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '../common.js'
 
 const app = new Hono<AppEnv>()
 
 /** POST /v1/code/sessions — Create a code session. */
 app.post('/', legacyUserAuth, async (c) => {
   const body = await readJson(c)
+  const environmentId = typeof body.environment_id === 'string' ? body.environment_id : null
+
+  // Binding a session to an environment decides which machine later dispatches it, so a
+  // caller may only target an environment they own. Without this check a member can plant a
+  // session on a foreign environment that the victim's bridge replays on reconnect.
+  if (environmentId) {
+    const access = await resolveDispatchEnvironment(c, environmentId)
+    if (!access.environment) return notFound(c, 'Environment not found')
+    if (access.forbiddenForCaller) return forbidden(c, 'Environment belongs to another user')
+  }
+
   const session = await createCodeSession(c.get('repos'), {
     ownerUserId: c.get('user').id,
-    environmentId: typeof body.environment_id === 'string' ? body.environment_id : null,
+    environmentId,
     title: typeof body.title === 'string' ? body.title : null,
     source: typeof body.source === 'string' ? body.source : 'remote-control',
     permissionMode: typeof body.permission_mode === 'string' ? body.permission_mode : null,

@@ -146,6 +146,16 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect(await repos.environments.findReusable({ environmentId: env.id, ownerUserId: other.id })).toBeNull()
     })
 
+    test('findReusable reuses a disconnected environment owned by the caller', async () => {
+      const owner = await repos.users.create({ username: 'reuse-disconnected', passwordHash: 'x', role: 'member' })
+      const other = await repos.users.create({ username: 'reuse-other', passwordHash: 'x', role: 'member' })
+      const env = await repos.environments.create({ ownerUserId: owner.id })
+      await repos.environments.update(env.id, { status: 'disconnected' })
+
+      expect((await repos.environments.findReusable({ environmentId: env.id, ownerUserId: owner.id }))?.id).toBe(env.id)
+      expect(await repos.environments.findReusable({ environmentId: env.id, ownerUserId: other.id })).toBeNull()
+    })
+
     test('findReusable ignores inactive environments and unknown ids', async () => {
       const owner = await repos.users.create({ username: 'reuse-owner', passwordHash: 'x', role: 'member' })
       const env = await repos.environments.create({ ownerUserId: owner.id })

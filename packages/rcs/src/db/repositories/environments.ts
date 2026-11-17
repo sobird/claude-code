@@ -1,17 +1,22 @@
 /**
  * Environment repository: Postgres (Drizzle) and in-memory implementations.
  *
- * `findReusable` is ownership-safe: it only returns an active environment whose
+ * `findReusable` is ownership-safe: it only returns a live environment whose
  * `ownerUserId` matches the caller, so a stale or foreign `environment_id` can never
- * reattach a client to another user's environment.
+ * reattach a client to another user's environment. `disconnected`/`offline` are
+ * worker-side liveness states the reaper sets, so they stay reusable; `deregistered` is a
+ * deliberate owner action and does not.
  */
 
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 
 import type { EnvironmentRecord } from '../../contracts'
 import type { Database } from '../client'
 import { environments } from '../schema'
 import type { CreateEnvironmentInput, EnvironmentPatch, EnvironmentRepository } from './types'
+
+/** Statuses a returning worker may reclaim; deregistered/archived ids are not reusable. */
+const REUSABLE_ENVIRONMENT_STATUSES = ['active', 'disconnected', 'offline']
 
 export function createEnvironmentRepository(db: Database): EnvironmentRepository {
   return {
@@ -71,7 +76,7 @@ export function createEnvironmentRepository(db: Database): EnvironmentRepository
           and(
             eq(environments.id, input.environmentId),
             eq(environments.ownerUserId, input.ownerUserId),
-            eq(environments.status, 'active'),
+            inArray(environments.status, REUSABLE_ENVIRONMENT_STATUSES),
           ),
         )
         .limit(1)
@@ -158,7 +163,8 @@ export function createMemoryEnvironmentRepository(): EnvironmentRepository {
     async findReusable(input) {
       const record = byId.get(input.environmentId)
       if (!record) return null
-      if (record.ownerUserId !== input.ownerUserId || record.status !== 'active') return null
+      if (record.ownerUserId !== input.ownerUserId) return null
+      if (!REUSABLE_ENVIRONMENT_STATUSES.includes(record.status)) return null
       return cloneEnvironment(record)
     },
 
