@@ -91,6 +91,12 @@ and SSE stream.
   reports the list at the start of every turn; with the interactive REPL bridge
   set `CLAUDE_INTERNAL_FC_OVERRIDES='{"tengu_bridge_system_init":true}'` to
   receive it on connect.
+- **`@` file references**: `@` opens a menu of paths from the CLI's project index
+  (git-aware), filtered as you type; ↑/↓ navigate, Tab/Enter insert the path
+  without sending, Esc closes. Paths with spaces are inserted as `@"…"`.
+  Completion queries travel over the bridge socket directly — they are not
+  stored in `session_events`. If the bridge is offline or slow the menu degrades
+  to plain text entry. Both bridge modes serve the queries.
 - **Permission mode** control in the session header shows the mode reported by
   `system/init` and switches it with a `set_permission_mode` control request:
   ask each time, auto-accept edits, plan, don't ask, bypass. The UI updates only

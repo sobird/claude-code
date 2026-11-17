@@ -33,6 +33,7 @@ import {
   type ChannelEntry,
 } from 'src/bootstrap/state.js'
 import { buildBridgeConnectUrl } from 'src/bridge/bridgeStatusUtil.js'
+import { collectFileSuggestions } from 'src/bridge/fileSuggestions.js'
 import { resolveAndPrepend } from 'src/bridge/inboundAttachments.js'
 import { extractInboundMessageFields } from 'src/bridge/inboundMessages.js'
 import type { ReplBridgeHandle } from 'src/bridge/replBridge.js'
@@ -2578,6 +2579,15 @@ function runHeadlessStreaming(
             }
           }
           sendControlResponseSuccess(message)
+        } else if (message.request.subtype === 'file_suggestions') {
+          // `@` completion for remote clients; reuses the TUI's project index.
+          const { query } = message.request as { query?: unknown }
+          try {
+            const suggestions = await collectFileSuggestions(typeof query === 'string' ? query : '')
+            sendControlResponseSuccess(message, { suggestions })
+          } catch (error) {
+            sendControlResponseError(message, errorMessage(error))
+          }
         } else if (message.request.subtype === 'mcp_status') {
           sendControlResponseSuccess(message, {
             mcpServers: buildMcpServerStatuses(),

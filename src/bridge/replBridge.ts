@@ -167,6 +167,8 @@ export type BridgeCoreParams = {
    * the callback lets the throw escape here.
    */
   onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
+  /** Answers `@` completion queries from remote clients; absent replies with an empty list. */
+  onFileSuggestions?: (query: string) => Promise<string[]> | string[]
   onStateChange?: (state: BridgeState, detail?: string) => void
   /**
    * Fires on each real user message to flow through writeMessages() until
@@ -262,6 +264,7 @@ export async function initBridgeCore(params: BridgeCoreParams): Promise<BridgeCo
     onSetModel,
     onSetMaxThinkingTokens,
     onSetPermissionMode,
+    onFileSuggestions,
     onStateChange,
     onUserMessage,
     perpetual,
@@ -1087,15 +1090,19 @@ export async function initBridgeCore(params: BridgeCoreParams): Promise<BridgeCo
       // Closure adapter over the shared handleServerControlRequest —
       // captures transport/currentSessionId so the transport.setOnData
       // callback below doesn't need to thread them through.
-      const onServerControlRequest = (request: SDKControlRequest): void =>
-        handleServerControlRequest(request, {
+      const onServerControlRequest = (request: SDKControlRequest): void => {
+        // Fire-and-forget: file_suggestions awaits the project index, and the
+        // transport callback cannot block the read loop.
+        void handleServerControlRequest(request, {
           transport,
           sessionId: currentSessionId,
           onInterrupt,
           onSetModel,
           onSetMaxThinkingTokens,
           onSetPermissionMode,
+          onFileSuggestions,
         })
+      }
 
       let initialFlushDone = false
 

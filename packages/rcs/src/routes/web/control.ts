@@ -8,6 +8,8 @@
  * replay them.
  */
 
+import { randomUUID } from 'node:crypto'
+
 import { Hono } from 'hono'
 
 import type { AppContext, AppEnv } from '../../auth/context.js'
@@ -18,7 +20,14 @@ import {
   resolveOwnedWebSessionId,
   updateSessionStatus,
 } from '../../services/session.js'
+import {
+  BRIDGE_CONTROL_TIMEOUT_MS,
+  cancelBridgeRequest,
+  requestBridgeControl,
+  suggestionPathsFromResponse,
+} from '../../transport/bridge-requests.js'
 import { getEventBus, publishSessionEvent } from '../../transport/event-bus.js'
+import { sendToBridge } from '../../transport/ws-handler.js'
 import { legacyUserAuth, sessionClosed, webForbidden } from '../common.js'
 
 const app = new Hono<AppEnv>()
@@ -78,6 +87,42 @@ app.post('/sessions/:id/control', legacyUserAuth, async (c) => {
     'outbound',
   )
   return c.json({ status: 'ok', event }, 200)
+})
+
+/** Longest completion query forwarded to the bridge; the CLI index caps far lower. */
+const MAX_SUGGESTION_QUERY_LENGTH = 256
+
+/**
+ * GET /web/sessions/:id/file-suggestions?q= — `@` file completion.
+ *
+ * The request is written straight to the session's live bridge socket and awaited through
+ * the in-memory broker, so typing never grows `session_events`. A missing bridge or a slow
+ * child degrades to an empty list rather than an error: completion is best-effort.
+ */
+app.get('/sessions/:id/file-suggestions', legacyUserAuth, async (c) => {
+  const ownership = await checkOwnership(c, c.req.param('id'))
+  if (!ownership.ok) return ownership.response
+
+  const query = (c.req.query('q') ?? '').slice(0, MAX_SUGGESTION_QUERY_LENGTH)
+  const requestId = `fs_${randomUUID()}`
+  const pending = requestBridgeControl(
+    ownership.sessionId,
+    requestId,
+    { subtype: 'file_suggestions', query },
+    BRIDGE_CONTROL_TIMEOUT_MS,
+  )
+  const sent = sendToBridge(ownership.sessionId, {
+    type: 'control_request',
+    request_id: requestId,
+    request: { subtype: 'file_suggestions', query },
+  })
+  if (!sent) {
+    cancelBridgeRequest(ownership.sessionId, requestId)
+    return c.json({ suggestions: [] }, 200)
+  }
+
+  const response = await pending
+  return c.json({ suggestions: suggestionPathsFromResponse(response) }, 200)
 })
 
 /** POST /web/sessions/:id/interrupt — Interrupt and mark the session idle. */

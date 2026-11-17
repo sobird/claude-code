@@ -176,6 +176,11 @@
       "label": "Slash commands",
       "empty": "No matching commands"
     },
+    "fileMenu": {
+      "label": "Files",
+      "empty": "No matching files",
+      "loading": "Loading files…"
+    },
     "exitPlan": {
       "title": "Plan ready for review",
       "approve": "Approve plan",

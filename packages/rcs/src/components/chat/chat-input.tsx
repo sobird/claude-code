@@ -13,12 +13,15 @@ import { MAX_ATTACHMENTS_PER_MESSAGE, type AttachmentRef } from '../../lib/attac
 import { isImageFile, prepareImageFile } from '../../lib/attachments-client'
 import { acceptCommand, commandQuery, filterCommands, moveIndex } from '../../lib/command-menu'
 import { resolveComposerKey } from '../../lib/composer-keys'
+import { applyFileSuggestion, fileQuery, type FileQueryToken } from '../../lib/file-completion'
 import { appendHistory, moveHistory } from '../../lib/input-history'
 import { randomUuid } from '../../lib/random-uuid'
 import { cn } from '../../lib/utils'
 
 const HISTORY_STORAGE_KEY = 'rcs:input-history'
 const ACCEPTED_IMAGE_TYPES = 'image/png,image/jpeg,image/gif,image/webp'
+// Typing pauses shorter than this skip the round-trip to the bridge.
+const FILE_COMPLETION_DEBOUNCE_MS = 120
 
 /** An image staged in the composer, from paste or the file picker. */
 interface PendingImage {
@@ -51,6 +54,8 @@ interface ChatInputProps {
   placeholder?: string
   /** Bridge-safe slash commands from `system/init`; empty hides the menu. */
   commands?: string[]
+  /** Fetches `@` file completion for a path fragment; absent disables the menu. */
+  fileSuggestions?: (query: string) => Promise<string[]>
   className?: string
 }
 
@@ -62,6 +67,7 @@ export function ChatInput({
   disabled = false,
   placeholder,
   commands = [],
+  fileSuggestions,
   className,
 }: ChatInputProps) {
   const t = useTranslations('chat')
@@ -72,6 +78,13 @@ export function ChatInput({
   // an accepted command keep the list closed without extra bookkeeping.
   const [menuIndex, setMenuIndex] = useState(0)
   const [menuDismissed, setMenuDismissed] = useState(false)
+  // `@` completion: the token under the caret (null closes the menu) and its
+  // fetched paths. Dismissal behaves like the slash menu's.
+  const [fileToken, setFileToken] = useState<FileQueryToken | null>(null)
+  const [fileItems, setFileItems] = useState<string[]>([])
+  const [fileIndex, setFileIndex] = useState(0)
+  const [fileLoading, setFileLoading] = useState(false)
+  const [fileDismissed, setFileDismissed] = useState(false)
   // Prompt recall: index into `history`, or null while editing the draft.
   const [history, setHistory] = useState<string[]>(loadHistory)
   const [historyIndex, setHistoryIndex] = useState<number | null>(null)
@@ -90,6 +103,36 @@ export function ChatInput({
       // Private mode and quota errors just disable persistence.
     }
   }, [history])
+
+  const fileQueryText = fileToken?.query ?? null
+  const fileMenuActive = Boolean(fileSuggestions) && fileQueryText !== null && !fileDismissed
+  useEffect(() => {
+    if (!fileMenuActive || fileQueryText === null || !fileSuggestions) {
+      setFileItems([])
+      setFileLoading(false)
+      return
+    }
+    let cancelled = false
+    setFileLoading(true)
+    const timer = setTimeout(() => {
+      fileSuggestions(fileQueryText)
+        .then((paths) => {
+          if (cancelled) return
+          setFileItems(paths)
+          setFileIndex(0)
+        })
+        .catch(() => {
+          if (!cancelled) setFileItems([])
+        })
+        .finally(() => {
+          if (!cancelled) setFileLoading(false)
+        })
+    }, FILE_COMPLETION_DEBOUNCE_MS)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [fileMenuActive, fileQueryText, fileSuggestions])
 
   const commitImages = useCallback((update: (prev: PendingImage[]) => PendingImage[]) => {
     const next = update(imagesRef.current)
@@ -152,6 +195,48 @@ export function ChatInput({
   const items = query === null ? [] : filterCommands(commands, query)
   const menuOpen = !disabled && query !== null && commands.length > 0
   const activeIndex = items.length === 0 ? 0 : Math.min(menuIndex, items.length - 1)
+  const fileMenuOpen = !disabled && fileMenuActive
+  const activeFileIndex = fileItems.length === 0 ? 0 : Math.min(fileIndex, fileItems.length - 1)
+  const activeDescendant =
+    menuOpen && items.length > 0
+      ? `slash-command-${activeIndex}`
+      : fileMenuOpen && fileItems.length > 0
+        ? `file-completion-${activeFileIndex}`
+        : undefined
+  const controlsId = menuOpen ? 'slash-command-menu' : fileMenuOpen ? 'file-completion-menu' : undefined
+
+  /** Points the completion menu at the `@` token under the caret, if any. */
+  const syncFileToken = useCallback(
+    (value: string, caret: number) => {
+      if (!fileSuggestions) return
+      setFileToken(fileQuery(value, caret))
+      setFileIndex(0)
+      setFileDismissed(false)
+    },
+    [fileSuggestions],
+  )
+
+  const acceptFile = useCallback(
+    (path: string) => {
+      if (!fileToken) return
+      const current = textareaRef.current?.value ?? text
+      const next = applyFileSuggestion(current, fileToken, path)
+      setText(next.text)
+      setFileToken(null)
+      setFileItems([])
+      setFileDismissed(true)
+      setHistoryIndex(null)
+      requestAnimationFrame(() => {
+        const el = textareaRef.current
+        if (!el) return
+        el.focus()
+        el.setSelectionRange(next.caret, next.caret)
+        el.style.height = 'auto'
+        el.style.height = `${Math.min(el.scrollHeight, 200)}px`
+      })
+    },
+    [fileToken, text],
+  )
 
   const handleSubmit = useCallback(async () => {
     const trimmed = text.trim()
@@ -164,6 +249,8 @@ export function ChatInput({
       // Only clear once the send resolved; a failure keeps the draft so the
       // user can retry (the parent surfaces the error).
       setText('')
+      setFileToken(null)
+      setFileItems([])
       if (trimmed) {
         setHistory((prev) => appendHistory(prev, trimmed))
         setHistoryIndex(null)
@@ -181,18 +268,24 @@ export function ChatInput({
     }
   }, [text, disabled, sending, onSubmit, commitImages])
 
-  const handleInput = useCallback((target: HTMLTextAreaElement) => {
-    setText(target.value)
-    setMenuDismissed(false)
-    setMenuIndex(0)
-    setHistoryIndex(null)
-    target.style.height = 'auto'
-    target.style.height = `${Math.min(target.scrollHeight, 200)}px`
-  }, [])
+  const handleInput = useCallback(
+    (target: HTMLTextAreaElement) => {
+      setText(target.value)
+      setMenuDismissed(false)
+      setMenuIndex(0)
+      setHistoryIndex(null)
+      syncFileToken(target.value, target.selectionStart ?? target.value.length)
+      target.style.height = 'auto'
+      target.style.height = `${Math.min(target.scrollHeight, 200)}px`
+    },
+    [syncFileToken],
+  )
 
   /** Writes a recalled entry into the textarea and keeps its height in sync. */
   const recall = useCallback((next: { index: number | null; text: string }) => {
     setText(next.text)
+    setFileToken(null)
+    setFileItems([])
     setHistoryIndex(next.index)
     const el = textareaRef.current
     if (!el) return
@@ -205,6 +298,8 @@ export function ChatInput({
   const accept = useCallback((name: string) => {
     const next = acceptCommand(name)
     setText(next)
+    setFileToken(null)
+    setFileItems([])
     setMenuIndex(0)
     setMenuDismissed(true)
     requestAnimationFrame(() => {
@@ -259,6 +354,44 @@ export function ChatInput({
           )}
         </div>
       ) : null}
+      {fileMenuOpen ? (
+        <div
+          id="file-completion-menu"
+          data-testid="file-completion-menu"
+          role="listbox"
+          aria-label={t('fileMenu.label')}
+          className="absolute right-0 bottom-full left-0 z-20 mb-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-1 p-1 shadow-md"
+        >
+          {fileItems.length === 0 ? (
+            <div className="px-2 py-1.5 text-xs text-text-muted">
+              {fileLoading ? t('fileMenu.loading') : t('fileMenu.empty')}
+            </div>
+          ) : (
+            fileItems.map((path, index) => (
+              <button
+                key={path}
+                id={`file-completion-${index}`}
+                type="button"
+                role="option"
+                aria-selected={index === activeFileIndex}
+                data-testid="file-completion-option"
+                title={path}
+                // Keep focus in the textarea; onClick would blur first.
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  acceptFile(path)
+                }}
+                className={cn(
+                  'flex w-full items-center truncate rounded-md px-2 py-1.5 text-left font-mono text-xs transition-colors',
+                  index === activeFileIndex ? 'bg-brand/10 text-brand' : 'text-text-secondary hover:bg-surface-2',
+                )}
+              >
+                {path}
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
       <div className="overflow-hidden rounded-xl border border-border bg-surface-2 transition-all focus-within:border-brand/50 focus-within:shadow-[0_0_0_3px_rgba(201,100,66,0.15)]">
         {images.length > 0 ? (
           <div
@@ -300,6 +433,14 @@ export function ChatInput({
             ref={textareaRef}
             value={text}
             onChange={(event) => handleInput(event.target)}
+            // Moving the caret (arrows, click, home/end) retargets the `@` menu
+            // without reopening one the user dismissed.
+            onSelect={(event) => {
+              if (!fileSuggestions) return
+              const el = event.currentTarget
+              setFileToken(fileQuery(el.value, el.selectionStart ?? el.value.length))
+              setFileIndex(0)
+            }}
             onPaste={(event) => {
               const files = [...event.clipboardData.files]
               if (!files.some(isImageFile)) return
@@ -309,13 +450,35 @@ export function ChatInput({
               addFiles(files)
             }}
             role="combobox"
-            aria-expanded={menuOpen}
-            aria-controls={menuOpen ? 'slash-command-menu' : undefined}
-            aria-activedescendant={menuOpen && items.length > 0 ? `slash-command-${activeIndex}` : undefined}
+            aria-expanded={menuOpen || fileMenuOpen}
+            aria-controls={controlsId}
+            aria-activedescendant={activeDescendant}
             aria-autocomplete="list"
             onKeyDown={(event) => {
               const composing = event.nativeEvent.isComposing
-              // While the menu is open it owns the navigation keys; everything
+              // `@` completion owns the navigation keys while it has results; an
+              // empty or still-loading list lets Enter submit as usual.
+              if (fileMenuOpen && fileItems.length > 0 && !composing) {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                  event.preventDefault()
+                  setFileIndex(moveIndex(activeFileIndex, event.key === 'ArrowDown' ? 1 : -1, fileItems.length))
+                  return
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  setFileDismissed(true)
+                  return
+                }
+                if (event.key === 'Tab' || (event.key === 'Enter' && !event.shiftKey)) {
+                  const path = fileItems[activeFileIndex]
+                  if (path) {
+                    event.preventDefault()
+                    acceptFile(path)
+                    return
+                  }
+                }
+              }
+              // While the slash menu is open it owns the navigation keys; everything
               // else (including IME composition) falls through to the composer.
               if (menuOpen && !composing) {
                 if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

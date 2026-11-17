@@ -18,6 +18,7 @@ import type { WSContext } from 'hono/ws'
 
 import type { GatewayConfig } from '../config.js'
 import type { Repositories } from '../db/repositories/types.js'
+import { clearBridgeResponses, settleBridgeResponse } from './bridge-requests.js'
 import { createAttachmentLoader, hasAttachmentRefs, hydrateClientPayload, toClientPayload } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'
 import { getEventBus, loadEventReplayWindow, publishInboundEvent, subscribeReplayThenLive } from './event-bus.js'
@@ -67,6 +68,18 @@ function sendPayload(ws: WSContext, payload: Record<string, unknown>): void {
 }
 
 /**
+ * Write a frame straight to the session's live bridge socket, bypassing persistence and
+ * replay. Used for throwaway control traffic such as `@` file completion, whose request
+ * and response must not grow `session_events`. Returns false when no bridge is connected.
+ */
+export function sendToBridge(sessionId: string, payload: Record<string, unknown>): boolean {
+  const entry = cleanupBySession.get(sessionId)
+  if (!entry || entry.ws.readyState !== 1) return false
+  sendPayload(entry.ws, payload)
+  return true
+}
+
+/**
  * Called from `onOpen`: subscribe before reading durable history so no event can slip
  * across the replay→live boundary, then replay the newest `config.eventReplayLimit`
  * outbound events (there is no cursor on this path) and forward live outbound events.
@@ -90,6 +103,8 @@ export async function handleWebSocketOpen(
     existing.unsub()
     stopKeepalive(existing)
     activeConnections.delete(existing.ws)
+    // Direct requests written to the old socket are not replayed; fail them now.
+    clearBridgeResponses(sessionId)
   }
 
   const keepaliveIntervalMs =
@@ -224,6 +239,7 @@ export function handleWebSocketClose(ws: WSContext, sessionId: string, code?: nu
     entry.unsub()
     stopKeepalive(entry)
     cleanupBySession.delete(sessionId)
+    clearBridgeResponses(sessionId)
   }
 }
 
@@ -299,6 +315,10 @@ export async function ingestBridgeMessage(
   } else if (eventType === 'control_request') {
     payload = { request_id: msg.request_id, request: msg.request }
   } else if (eventType === 'control_response') {
+    // Responses to direct (unpersisted) requests are claimed by their waiter and must not
+    // be stored or replayed; everything else follows the durable event path.
+    const response = msg.response as Record<string, unknown> | undefined
+    if (response && settleBridgeResponse(sessionId, response)) return null
     payload = { response: msg.response }
   } else if (eventType === 'result' || eventType === 'result_success') {
     payload = { subtype: msg.subtype, uuid: msg.uuid, result: msg.result }
@@ -330,6 +350,7 @@ export function closeAllConnections(): void {
       // ignore errors during shutdown
     }
     cleanupBySession.delete(sessionId)
+    clearBridgeResponses(sessionId)
   }
   activeConnections.clear()
 }

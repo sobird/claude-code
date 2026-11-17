@@ -1454,6 +1454,21 @@ describe('Web Control Routes', () => {
     expect(interruptRes.status).toBe(200)
   })
 
+  test('GET /web/sessions/:id/file-suggestions returns an empty list without a bridge', async () => {
+    const res = await app.request(`/web/sessions/${sessionId}/file-suggestions?q=src%2F`, {
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(200)
+    expect((await resJson(res)).suggestions).toEqual([])
+  })
+
+  test('GET /web/sessions/:id/file-suggestions 403 for another member', async () => {
+    const res = await app.request(`/web/sessions/${sessionId}/file-suggestions`, {
+      headers: bearer(s.otherToken),
+    })
+    expect(res.status).toBe(403)
+  })
+
   test('control routes 403 for another member', async () => {
     for (const path of ['events', 'control', 'interrupt']) {
       const res = await app.request(`/web/sessions/${sessionId}/${path}`, {

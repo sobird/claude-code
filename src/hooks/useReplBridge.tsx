@@ -9,6 +9,7 @@ import {
   isBridgePermissionResponse,
 } from '../bridge/bridgePermissionCallbacks.js'
 import { buildBridgeConnectUrl } from '../bridge/bridgeStatusUtil.js'
+import { collectFileSuggestions } from '../bridge/fileSuggestions.js'
 import { extractInboundMessageFields } from '../bridge/inboundMessages.js'
 import type { BridgeState, ReplBridgeHandle } from '../bridge/replBridge.js'
 import { setReplBridgeHandle } from '../bridge/replBridgeHandle.js'
@@ -488,6 +489,7 @@ export function useReplBridge(
               })
               return { ok: true }
             },
+            onFileSuggestions: (query) => collectFileSuggestions(query),
             onStateChange: handleStateChange,
             initialMessages: messages.length > 0 ? messages : undefined,
             getMessages: () => messagesRef.current,

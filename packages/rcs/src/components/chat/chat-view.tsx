@@ -228,6 +228,19 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     void load()
   }, [hasToken, load])
 
+  // `@` completion is best-effort: failures and malformed payloads fall back to
+  // an empty list so the composer never blocks on the bridge.
+  const suggestFiles = useCallback(
+    async (query: string): Promise<string[]> => {
+      const res = await api.get<{ suggestions?: unknown }>(
+        `/web/sessions/${encodeURIComponent(sessionId)}/file-suggestions?q=${encodeURIComponent(query)}`,
+      )
+      const suggestions = res?.suggestions
+      return Array.isArray(suggestions) ? suggestions.filter((path): path is string => typeof path === 'string') : []
+    },
+    [api, sessionId],
+  )
+
   const loadEarlier = useCallback(async () => {
     if (nextBefore === null || loadingEarlier) return
     const path = `/web/sessions/${encodeURIComponent(sessionId)}`
@@ -772,6 +785,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         disabled={closed || !hasToken}
         placeholder={closed ? t('archivedPlaceholder') : undefined}
         commands={chat.slashCommands}
+        fileSuggestions={hasToken ? suggestFiles : undefined}
       />
     </div>
   )

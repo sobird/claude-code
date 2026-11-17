@@ -193,6 +193,8 @@ export type ServerControlRequestHandlers = {
   onSetModel?: (model: string | undefined) => void
   onSetMaxThinkingTokens?: (maxTokens: number | null) => void
   onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
+  /** Answers `@` completion queries from remote clients; absent replies with an empty list. */
+  onFileSuggestions?: (query: string) => Promise<string[]> | string[]
 }
 
 const OUTBOUND_ONLY_ERROR = 'This session is outbound-only. Enable Remote Control locally to allow inbound control.'
@@ -206,9 +208,20 @@ const OUTBOUND_ONLY_ERROR = 'This session is outbound-only. Enable Remote Contro
  * Previously a closure inside initBridgeCore's onWorkReceived; now takes
  * collaborators as params so both cores can use it.
  */
-export function handleServerControlRequest(request: SDKControlRequest, handlers: ServerControlRequestHandlers): void {
-  const { transport, sessionId, outboundOnly, onInterrupt, onSetModel, onSetMaxThinkingTokens, onSetPermissionMode } =
-    handlers
+export async function handleServerControlRequest(
+  request: SDKControlRequest,
+  handlers: ServerControlRequestHandlers,
+): Promise<void> {
+  const {
+    transport,
+    sessionId,
+    outboundOnly,
+    onInterrupt,
+    onSetModel,
+    onSetMaxThinkingTokens,
+    onSetPermissionMode,
+    onFileSuggestions,
+  } = handlers
   if (!transport) {
     logForDebugging('[bridge:repl] Cannot respond to control_request: transport not configured')
     return
@@ -308,6 +321,22 @@ export function handleServerControlRequest(request: SDKControlRequest, handlers:
             error: verdict.error,
           },
         }
+      }
+      break
+    }
+
+    case 'file_suggestions': {
+      // `@` completion for remote clients. Missing callback answers with an
+      // empty list so the client can fall back to plain text entry.
+      const { query } = request.request as { query?: unknown }
+      const suggestions = onFileSuggestions ? await onFileSuggestions(typeof query === 'string' ? query : '') : []
+      response = {
+        type: 'control_response',
+        response: {
+          subtype: 'success',
+          request_id: request.request_id,
+          response: { suggestions },
+        },
       }
       break
     }

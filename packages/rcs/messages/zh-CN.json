@@ -176,6 +176,11 @@
       "label": "斜杠命令",
       "empty": "没有匹配的命令"
     },
+    "fileMenu": {
+      "label": "文件",
+      "empty": "没有匹配的文件",
+      "loading": "正在加载文件…"
+    },
     "exitPlan": {
       "title": "计划待审批",
       "approve": "批准计划",

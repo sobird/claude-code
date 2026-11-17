@@ -58,6 +58,8 @@ export type InitBridgeOptions = {
   onSetModel?: (model: string | undefined) => void
   onSetMaxThinkingTokens?: (maxTokens: number | null) => void
   onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
+  /** Answers `@` completion queries from remote clients; absent replies with an empty list. */
+  onFileSuggestions?: (query: string) => Promise<string[]> | string[]
   onStateChange?: (state: BridgeState, detail?: string) => void
   initialMessages?: Message[]
   // Explicit session name from `/remote-control <name>`. When set, overrides
@@ -92,6 +94,7 @@ export async function initReplBridge(options?: InitBridgeOptions): Promise<ReplB
     onSetModel,
     onSetMaxThinkingTokens,
     onSetPermissionMode,
+    onFileSuggestions,
     onStateChange,
     initialMessages,
     getMessages,
@@ -390,6 +393,7 @@ export async function initReplBridge(options?: InitBridgeOptions): Promise<ReplB
       onSetModel,
       onSetMaxThinkingTokens,
       onSetPermissionMode,
+      onFileSuggestions,
       onStateChange,
       outboundOnly,
       tags,
@@ -479,6 +483,7 @@ export async function initReplBridge(options?: InitBridgeOptions): Promise<ReplB
     onSetModel,
     onSetMaxThinkingTokens,
     onSetPermissionMode,
+    onFileSuggestions,
     onStateChange,
     perpetual,
   })

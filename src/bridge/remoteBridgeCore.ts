@@ -110,6 +110,8 @@ export type EnvLessBridgeParams = {
   onSetModel?: (model: string | undefined) => void
   onSetMaxThinkingTokens?: (maxTokens: number | null) => void
   onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
+  /** Answers `@` completion queries from remote clients; absent replies with an empty list. */
+  onFileSuggestions?: (query: string) => Promise<string[]> | string[]
   onStateChange?: (state: BridgeState, detail?: string) => void
   /**
    * When true, skip opening the SSE read stream — only the CCRClient write
@@ -145,6 +147,7 @@ export async function initEnvLessBridgeCore(params: EnvLessBridgeParams): Promis
     onSetModel,
     onSetMaxThinkingTokens,
     onSetPermissionMode,
+    onFileSuggestions,
     onStateChange,
     outboundOnly,
     tags,
@@ -374,13 +377,14 @@ export async function initEnvLessBridgeCore(params: EnvLessBridgeParams): Promis
             }
           : undefined,
         (req) =>
-          handleServerControlRequest(req, {
+          void handleServerControlRequest(req, {
             transport,
             sessionId,
             onInterrupt,
             onSetModel,
             onSetMaxThinkingTokens,
             onSetPermissionMode,
+            onFileSuggestions,
             outboundOnly,
           }),
       )

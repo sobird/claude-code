@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import type { GatewayConfig } from '../../config.js'
 import { createMemoryRepositories } from '../../db/repositories/index.js'
 import type { Repositories } from '../../db/repositories/types.js'
+import { requestBridgeControl } from '../bridge-requests.js'
 import type { SessionEvent } from '../event-bus.js'
 import { getAllEventBuses, getEventBus, removeEventBus } from '../event-bus.js'
 import {
@@ -11,6 +12,7 @@ import {
   handleWebSocketMessage,
   handleWebSocketOpen,
   ingestBridgeMessage,
+  sendToBridge,
 } from '../ws-handler.js'
 
 interface MockWs {
@@ -544,6 +546,51 @@ describe('handleWebSocketMessage', () => {
     await handleWebSocketMessage(repos, ws as never, 's1', 'not json\n')
 
     expect(events).toHaveLength(0)
+  })
+})
+
+describe('sendToBridge', () => {
+  test('writes NDJSON to the live socket', async () => {
+    const ws = createMockWs()
+    await handleWebSocketOpen(repos, makeConfig(), ws as never, 'direct1')
+
+    expect(sendToBridge('direct1', { type: 'control_request', request_id: 'r1' })).toBe(true)
+    expect(ws.sent.at(-1)).toBe('{"type":"control_request","request_id":"r1"}\n')
+  })
+
+  test('returns false without a live connection', () => {
+    expect(sendToBridge('missing', { type: 'control_request' })).toBe(false)
+  })
+})
+
+describe('control_response for direct requests', () => {
+  test('settles the waiter without persisting or publishing the response', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+    const pending = requestBridgeControl('s1', 'r1', { subtype: 'file_suggestions' }, 1000)
+
+    const stored = await ingestBridgeMessage(repos, 's1', {
+      type: 'control_response',
+      response: { subtype: 'success', request_id: 'r1', response: { suggestions: ['a.ts'] } },
+    })
+
+    expect(stored).toBeNull()
+    await expect(pending).resolves.toEqual({
+      subtype: 'success',
+      request_id: 'r1',
+      response: { suggestions: ['a.ts'] },
+    })
+    expect(events).toHaveLength(0)
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(0)
+  })
+
+  test('persists a response that no waiter claims', async () => {
+    const stored = await ingestBridgeMessage(repos, 's1', {
+      type: 'control_response',
+      response: { subtype: 'success', request_id: 'unknown' },
+    })
+
+    expect(stored?.type).toBe('control_response')
   })
 })
 
