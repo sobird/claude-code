@@ -32,6 +32,21 @@ const SECTIONS = [
       { keys: 'Esc', label: 'close' },
     ],
   },
+  {
+    title: 'navigation',
+    items: [
+      { keys: 'Shift+↑', label: 'enterCursor' },
+      { keys: '↑ / ↓ / j / k', label: 'history' },
+      { keys: 'Enter', label: 'cursorEnter' },
+      { keys: 'c', label: 'cursorCopy' },
+      { keys: 'p', label: 'cursorPrimary' },
+      { keys: 'Esc', label: 'cursorBack' },
+    ],
+  },
+  {
+    title: 'transcript',
+    items: [{ keys: 'Ctrl+O', label: 'toggleVerbose' }],
+  },
 ] as const
 
 export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {

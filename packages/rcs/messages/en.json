@@ -86,7 +86,13 @@
         "title": "Start a conversation",
         "description": "Send a message to start chatting with {product}."
       },
-      "thinking": "{product} is working…",
+      "working": "{product} is working…",
+      "thinking": {
+        "label": "Thinking",
+        "default": "Default",
+        "on": "On",
+        "off": "Off"
+      },
       "reconnecting": "Reconnecting to live updates…",
       "disconnected": "Live updates disconnected: {error}",
       "archived": "This session is archived and cannot accept new messages.",
@@ -146,6 +152,37 @@
     "queued": "Queued",
     "expandAll": "Expand all tools",
     "collapseAll": "Collapse all tools",
+    "verbose": {
+      "show": "Show detailed transcript",
+      "hide": "Hide detailed transcript"
+    },
+    "system": {
+      "compacted": "Conversation compacted",
+      "microcompacted": "Context microcompacted",
+      "allowed": "Allowed {commands}",
+      "memorySaved": "Memory saved: {paths}",
+      "apiError": "API error",
+      "hookSummary": "Stop hooks ran",
+      "localCommand": "Local command"
+    },
+    "messageActions": {
+      "edit": "Edit",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "copy": "Copy",
+      "copyPrimary": "Copy {label}",
+      "copyPrimaryGeneric": "Copy primary input",
+      "navigate": "Navigate",
+      "back": "Exit",
+      "primary": {
+        "path": "path",
+        "command": "command",
+        "pattern": "pattern",
+        "url": "link",
+        "query": "query",
+        "prompt": "prompt"
+      }
+    },
     "tasks": {
       "title": "Tasks",
       "progress": "{done}/{total}",
@@ -168,6 +205,9 @@
       "allowDirectories": "Allow this directory",
       "alwaysDeny": "Always deny",
       "applySuggestion": "Apply suggested rule",
+      "editRule": "Edit rule",
+      "rulePlaceholder": "Bash(npm test:*)",
+      "applyRule": "Use rule",
       "blockedPath": "Blocked path: {path}",
       "reason": "Reason",
       "denyReason": "Reason (optional)",
@@ -216,6 +256,8 @@
       "description": "Keys that work across the session view.",
       "composer": "Composer",
       "approvals": "Approvals",
+      "navigation": "Message navigation",
+      "transcript": "Transcript",
       "send": "Send the message",
       "newline": "Insert a new line",
       "interrupt": "Interrupt the agent",
@@ -227,7 +269,13 @@
       "approve": "Approve the plan",
       "reject": "Reject the plan",
       "approveEnter": "Approve (plan dialog)",
-      "close": "Close the dialog or rejection input"
+      "close": "Close the dialog or rejection input",
+      "toggleVerbose": "Toggle the detailed transcript",
+      "enterCursor": "Navigate messages (Shift+↑)",
+      "cursorEnter": "Enter edits a message or expands a tool group",
+      "cursorCopy": "Copy the selected message",
+      "cursorPrimary": "Copy the tool's primary input",
+      "cursorBack": "Exit message navigation"
     }
   },
   "auth": {

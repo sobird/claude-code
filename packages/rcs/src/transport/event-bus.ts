@@ -254,12 +254,21 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
   if (p.message) normalized.message = p.message
 
   // `system/init` drives the web slash-command menu and permission-mode control,
-  // so lift its flat fields out of `raw` where clients look for them.
+  // so lift its flat fields out of `raw` where clients look for them. The
+  // detailed-transcript fields (compaction level, retried commands, saved
+  // paths) ride along the same way.
   if (type === 'system') {
     if (Array.isArray(p.slash_commands)) normalized.slash_commands = p.slash_commands
     if (typeof p.permissionMode === 'string') normalized.permissionMode = p.permissionMode
     if (typeof p.model === 'string') normalized.model = p.model
     if (typeof p.fast_mode_state === 'string') normalized.fast_mode_state = p.fast_mode_state
+    if (typeof p.level === 'string') normalized.level = p.level
+    if (Array.isArray(p.commands)) {
+      normalized.commands = p.commands.filter((item) => typeof item === 'string')
+    }
+    if (Array.isArray(p.writtenPaths)) {
+      normalized.writtenPaths = p.writtenPaths.filter((item) => typeof item === 'string')
+    }
   }
 
   if (type === 'task_state') {

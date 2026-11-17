@@ -237,6 +237,40 @@ describe('ingestBridgeMessage', () => {
     expect(payload?.slash_commands).toBeUndefined()
   })
 
+  test('keeps the transcript fields the detailed web view renders', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'compact_boundary',
+      content: 'Context compacted',
+      level: 'info',
+      compactMetadata: { trigger: 'auto' },
+      uuid: 'sys-1',
+    })
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'permission_retry',
+      commands: ['Bash(npm test:*)', 42],
+      uuid: 'sys-2',
+    })
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'memory_saved',
+      writtenPaths: ['/repo/CLAUDE.md'],
+      uuid: 'sys-3',
+    })
+
+    expect(events).toHaveLength(3)
+    const [compact, retry, memory] = events.map((event) => event.payload as Record<string, unknown> | undefined)
+    expect(compact).toMatchObject({ subtype: 'compact_boundary', content: 'Context compacted', level: 'info' })
+    // Metadata objects stay out of the browser payload.
+    expect(compact?.compactMetadata).toBeUndefined()
+    expect(retry).toMatchObject({ subtype: 'permission_retry', commands: ['Bash(npm test:*)'] })
+    expect(memory).toMatchObject({ subtype: 'memory_saved', writtenPaths: ['/repo/CLAUDE.md'] })
+  })
+
   test('handles control_response type', async () => {
     const events: SessionEvent[] = []
     getEventBus('s1').subscribe((event) => events.push(event))

@@ -10,13 +10,20 @@
  * to the model.
  */
 
-import { Check, ShieldAlert, X } from 'lucide-react'
+import { Check, Pencil, ShieldAlert, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useState } from 'react'
 
 import { isAskUserQuestionRequest } from '../../lib/ask-user-question'
 import { resolvePermissionKey } from '../../lib/permission-keys'
-import { permissionOptions, type PermissionDecision, type PermissionOption } from '../../lib/permission-suggestions'
+import {
+  editableRule,
+  permissionOptions,
+  withRuleContent,
+  type PermissionDecision,
+  type PermissionOption,
+  type PermissionSuggestion,
+} from '../../lib/permission-suggestions'
 import type { PendingPermission } from '../../lib/session-reducer'
 import { diffLines, toolEditPreview } from '../../lib/text-diff'
 import { cn } from '../../lib/utils'
@@ -142,6 +149,9 @@ function PermissionCard({
   const tc = useTranslations('common')
   const [denyOpen, setDenyOpen] = useState(false)
   const [feedback, setFeedback] = useState('')
+  // Inline editor for the single allow rule an `addRules` suggestion carries.
+  const [editingOptionId, setEditingOptionId] = useState<string | null>(null)
+  const [ruleDraft, setRuleDraft] = useState('')
 
   const options = useMemo(() => permissionOptions(request.suggestions), [request.suggestions])
   const allowOnce = options[0] ?? { id: 'allow-once', kind: 'allow-once' as const, suggestionIndex: null }
@@ -151,12 +161,23 @@ function PermissionCard({
   const hunks = useMemo(() => toolEditPreview(request.toolInput), [request.toolInput])
   const inputPreview = formatInput(request.toolInput)
 
+  const suggestionFor = (option: PermissionOption): PermissionSuggestion | undefined =>
+    option.suggestionIndex !== null ? request.suggestions[option.suggestionIndex] : undefined
+
   const applyOption = (option: PermissionOption) => {
-    const suggestion = option.suggestionIndex !== null ? request.suggestions[option.suggestionIndex] : undefined
+    const suggestion = suggestionFor(option)
     onRespond?.(request.requestId, {
       approved: true,
       ...(suggestion ? { updatedPermissions: [suggestion] } : {}),
     })
+  }
+
+  // Apply the suggestion with the rule's content swapped for the draft: the
+  // user can turn `Bash` into `Bash(npm test:*)` before "always allowing".
+  const applyEditedRule = (option: PermissionOption) => {
+    const suggestion = suggestionFor(option)
+    if (!suggestion) return
+    onRespond?.(request.requestId, { approved: true, updatedPermissions: [withRuleContent(suggestion, ruleDraft)] })
   }
 
   const submitDeny = () => {
@@ -235,17 +256,78 @@ function PermissionCard({
         <div className="mt-2 flex flex-wrap gap-2">
           {extraOptions.map((option) => {
             const detail = optionDetail(option)
+            const suggestion = suggestionFor(option)
+            const rule = suggestion ? editableRule(suggestion) : null
+            const editing = rule !== null && editingOptionId === option.id
             return (
-              <Button
-                key={option.id}
-                type="button"
-                variant="surface"
-                className="h-9 gap-1.5 px-3 text-xs"
-                onClick={() => applyOption(option)}
-              >
-                <span>{optionLabel(option, t)}</span>
-                {detail ? <span className="font-mono text-[10px] text-text-muted">{detail}</span> : null}
-              </Button>
+              <div key={option.id} className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="surface"
+                    className="h-9 gap-1.5 px-3 text-xs"
+                    onClick={() => applyOption(option)}
+                  >
+                    <span>{optionLabel(option, t)}</span>
+                    {detail ? <span className="font-mono text-[10px] text-text-muted">{detail}</span> : null}
+                  </Button>
+                  {rule ? (
+                    <Button
+                      type="button"
+                      variant="surface"
+                      aria-label={t('permission.editRule')}
+                      title={t('permission.editRule')}
+                      data-testid="permission-edit-rule"
+                      className="h-9 w-9 px-0"
+                      onClick={() => {
+                        setRuleDraft(rule.ruleContent)
+                        setEditingOptionId((prev) => (prev === option.id ? null : option.id))
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  ) : null}
+                </div>
+                {editing && rule ? (
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 font-mono text-[11px] text-text-secondary">
+                    <span className="flex-shrink-0">{rule.toolName}(</span>
+                    <input
+                      data-testid="permission-rule-input"
+                      aria-label={t('permission.editRule')}
+                      placeholder={t('permission.rulePlaceholder')}
+                      value={ruleDraft}
+                      onChange={(event) => setRuleDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          applyEditedRule(option)
+                        } else if (event.key === 'Escape') {
+                          event.preventDefault()
+                          setEditingOptionId(null)
+                        }
+                      }}
+                      className="min-w-0 flex-1 rounded border border-border bg-surface-1 px-1.5 py-0.5 font-mono text-[11px] text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
+                    />
+                    <span className="flex-shrink-0">)</span>
+                    <Button
+                      type="button"
+                      variant="brand"
+                      className="h-7 px-2 text-[11px]"
+                      onClick={() => applyEditedRule(option)}
+                    >
+                      {t('permission.applyRule')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="surface"
+                      className="h-7 border-transparent bg-transparent px-2 text-[11px] shadow-none hover:bg-surface-2"
+                      onClick={() => setEditingOptionId(null)}
+                    >
+                      {tc('cancel')}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
             )
           })}
         </div>

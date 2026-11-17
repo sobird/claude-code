@@ -10,7 +10,18 @@
  * echo and history) so it shows immediately and survives a reload.
  */
 
-import { ArrowDown, ArrowLeft, Gauge, Keyboard, Loader2, Maximize2, Minimize2, Timer } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowLeft,
+  Gauge,
+  Info,
+  Keyboard,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  ScrollText,
+  Timer,
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -22,7 +33,20 @@ import { useSessionStream } from '../../hooks/useSessionStream'
 import { createApiClient } from '../../lib/api-client'
 import { withPendingApprovalCount } from '../../lib/approval-alert'
 import { buildUserContent, type AttachmentRef } from '../../lib/attachments'
-import { latestPrompt } from '../../lib/message-actions'
+import {
+  copyTextForEntry,
+  cursorEnterAction,
+  latestPrompt,
+  primaryInputOf,
+  toolGroupCopyText,
+} from '../../lib/message-actions'
+import {
+  latestUserKey,
+  moveCursorKey,
+  resolveCursorKey,
+  type CursorItem,
+  type CursorKind,
+} from '../../lib/message-cursor'
 import { earlierStartIndex, windowStartIndex } from '../../lib/message-window'
 import { buildSetModelRequest, normalizeModelOptions, type ModelOption } from '../../lib/model-settings'
 import {
@@ -38,11 +62,13 @@ import {
   initialChatState,
   isEphemeralEvent,
   type SessionEventInput,
+  type SystemEntry,
   type ThreadEntry,
   type ToolCallEntry,
   type TurnEndEntry,
 } from '../../lib/session-reducer'
 import { isHelpShortcut } from '../../lib/shortcut-help'
+import { buildSetThinkingRequest, type ThinkingChoice } from '../../lib/thinking'
 import { formatTokenCount, promptTokens } from '../../lib/token-usage'
 import { formatTurnSeconds } from '../../lib/turn-duration'
 import { cn, uniqueKeys } from '../../lib/utils'
@@ -56,6 +82,7 @@ import { PermissionPanel } from './permission-panel'
 import { PlanView } from './plan-view'
 import { ShortcutsDialog } from './shortcuts-dialog'
 import { TaskPanel } from './task-panel'
+import { ThinkingMenu } from './thinking-menu'
 import { ToolCallGroup } from './tool-call-group'
 
 interface SessionDetail {
@@ -124,6 +151,30 @@ function itemKey(item: GroupedItem): string {
     : `entry-${item.entry.id}`
 }
 
+const ENTRY_CURSOR_KIND: Record<Exclude<ThreadEntry, ToolCallEntry>['type'], CursorKind> = {
+  user_message: 'user',
+  assistant_message: 'assistant',
+  plan: 'plan',
+  system: 'system',
+  turn_end: 'turn_end',
+}
+
+/** The keyboard cursor's coarse view of an item. */
+function cursorKindOf(item: GroupedItem): CursorKind {
+  return item.kind === 'tools' ? 'tools' : ENTRY_CURSOR_KIND[item.entry.type]
+}
+
+/** Newest tool call in a group whose PRIMARY_INPUT field is extractable. */
+function newestPrimaryInput(entries: ToolCallEntry[]) {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i]
+    if (!entry) continue
+    const primary = primaryInputOf(entry.toolCall.title, entry.toolCall.rawInput)
+    if (primary) return primary
+  }
+  return null
+}
+
 // Scrolling within this many pixels of the top reveals/fetches older items, so
 // history pages in as the reader scrolls back instead of behind a button.
 const AUTO_LOAD_TOP_PX = 160
@@ -171,6 +222,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [atBottom, setAtBottom] = useState(true)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [expandAll, setExpandAll] = useState(false)
+  // The detailed transcript adds informational system rows (compaction, API
+  // errors, hook summaries); hidden by default, like the TUI's ctrl+o.
+  const [verbose, setVerbose] = useState(false)
+  // Keyboard cursor over the visible transcript; null while inactive.
+  const [cursorKey, setCursorKey] = useState<string | null>(null)
+  // Per-group expansion override (missing = follow the global expandAll).
+  const [toolOverrides, setToolOverrides] = useState<Record<string, boolean>>({})
+  // Editing is a singleton mode lifted here so the keyboard cursor can open it.
+  const [editingId, setEditingId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const atBottomRef = useRef(true)
   // First rendered item, pinned by key so appends never unmount what is on
@@ -204,6 +264,21 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       if (!open) return
       event.preventDefault()
       setShortcutsOpen(true)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  // Ctrl+O toggles the detailed transcript, matching the TUI.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.metaKey || event.altKey || event.shiftKey) return
+      if (!event.ctrlKey || event.key.toLowerCase() !== 'o') return
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable === true) return
+      event.preventDefault()
+      setVerbose((prev) => !prev)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -292,12 +367,36 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const entryCount = entries.length
   const streaming = entries.some((entry) => entry.type === 'assistant_message' && entry.streaming)
 
+  // Hidden system rows are filtered from display only; prompt/turn logic reads
+  // the full `entries` list.
+  const displayEntries = useMemo(
+    () => (verbose ? entries : entries.filter((entry) => entry.type !== 'system')),
+    [entries, verbose],
+  )
+
   // Only a bounded window of grouped items is mounted; older ones are revealed
   // a chunk at a time before the server page behind them is fetched.
-  const keyed = useMemo<KeyedItem[]>(() => uniqueKeys(groupToolCalls(entries), itemKey), [entries])
+  const keyed = useMemo<KeyedItem[]>(() => uniqueKeys(groupToolCalls(displayEntries), itemKey), [displayEntries])
   const windowKeys = useMemo(() => keyed.map((item) => item.key), [keyed])
   const windowStart = windowStartIndex(windowKeys, pinnedKey)
   const visibleItems = useMemo(() => keyed.slice(windowStart), [keyed, windowStart])
+
+  // Keyboard cursor view of the visible window.
+  const cursorItems = useMemo<CursorItem[]>(
+    () => visibleItems.map(({ item, key }) => ({ key, kind: cursorKindOf(item) })),
+    [visibleItems],
+  )
+  const visibleByKey = useMemo(() => new Map(visibleItems.map(({ item, key }) => [key, item])), [visibleItems])
+  const cursorItem = cursorKey === null ? null : (cursorItems.find((item) => item.key === cursorKey) ?? null)
+  const cursorGroup = cursorKey === null ? undefined : visibleByKey.get(cursorKey)
+  // `p` only has something to copy when the selected tool group exposes one.
+  const cursorPrimary = cursorGroup?.kind === 'tools' ? newestPrimaryInput(cursorGroup.entries) : null
+
+  const isToolExpanded = useCallback((key: string) => toolOverrides[key] ?? expandAll, [toolOverrides, expandAll])
+  const toggleToolExpanded = useCallback(
+    (key: string) => setToolOverrides((prev) => ({ ...prev, [key]: !(prev[key] ?? expandAll) })),
+    [expandAll],
+  )
 
   // Pin once the durable history is in, so live frames that beat the fetch do
   // not pin the window to a partial tail.
@@ -615,6 +714,25 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [api, sessionId],
   )
 
+  // Same shape as the model switch: POST the control_request, fold it locally,
+  // and let the CLI's control_response move the label.
+  const handleThinkingSelect = useCallback(
+    async (choice: ThinkingChoice) => {
+      setActionError(null)
+      try {
+        const result = await api.post<EventActionResponse>(
+          `/web/sessions/${encodeURIComponent(sessionId)}/control`,
+          buildSetThinkingRequest(randomUuid(), choice),
+        )
+        const event = result?.event
+        if (event) setExtraEvents((prev) => [...prev, event])
+      } catch (error) {
+        setActionError(error)
+      }
+    },
+    [api, sessionId],
+  )
+
   const handleInterrupt = useCallback(async () => {
     setActionError(null)
     try {
@@ -654,6 +772,88 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // `describeError` renders it verbatim instead of the generic fallback.
   const failedToLoad = loadError ?? (tokenError ? new Error(tokenError) : null)
   const failedToLoadText = failedToLoad ? describeError(failedToLoad, 'errors.generic') : null
+
+  const copyToClipboard = useCallback((text: string) => {
+    if (!text || !navigator.clipboard) return
+    void navigator.clipboard.writeText(text).catch(() => {})
+  }, [])
+
+  // Keyboard message actions, mirroring the TUI: Shift+↑ enters the cursor and
+  // the arrows/j/k move it. The permission panel listens on `document` and
+  // calls preventDefault for its own keys; a `window` listener runs after it,
+  // so `event.defaultPrevented` keeps those shortcuts from being stolen.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || shortcutsOpen) return
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable === true) return
+
+      const action = resolveCursorKey({
+        key: event.key,
+        shiftKey: event.shiftKey,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        isComposing: event.isComposing,
+        cursorActive: cursorKey !== null,
+      })
+      if (action.action === 'ignore') return
+
+      const item = cursorKey !== null ? visibleByKey.get(cursorKey) : undefined
+      switch (action.action) {
+        case 'enter-cursor':
+          setCursorKey(latestUserKey(cursorItems))
+          ;(document.activeElement as HTMLElement | null)?.blur()
+          break
+        case 'move':
+          setCursorKey(moveCursorKey(cursorItems, cursorKey, action.move))
+          break
+        case 'enter': {
+          if (!item || cursorKey === null) break
+          const enter = cursorEnterAction({ key: cursorKey, kind: cursorKindOf(item) })
+          if (enter === 'edit' && item.kind === 'entry' && item.entry.type === 'user_message' && !closed) {
+            setEditingId(item.entry.id)
+            setCursorKey(null)
+          } else if (enter === 'toggle' && item.kind === 'tools') {
+            toggleToolExpanded(cursorKey)
+          }
+          break
+        }
+        case 'copy':
+          if (!item) break
+          copyToClipboard(item.kind === 'tools' ? toolGroupCopyText(item.entries) : copyTextForEntry(item.entry))
+          break
+        case 'copy-primary': {
+          const primary = item?.kind === 'tools' ? newestPrimaryInput(item.entries) : null
+          if (primary) copyToClipboard(primary.value)
+          break
+        }
+        case 'exit':
+          setCursorKey(null)
+          break
+      }
+      event.preventDefault()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [cursorKey, cursorItems, visibleByKey, closed, shortcutsOpen, toggleToolExpanded, copyToClipboard])
+
+  // A cursor pointing at an item that left the visible window (a reveal, a
+  // transcript filter toggle) re-lands on the nearest item instead of vanishing.
+  useEffect(() => {
+    if (cursorKey === null) return
+    if (cursorItems.some((item) => item.key === cursorKey)) return
+    setCursorKey(moveCursorKey(cursorItems, cursorKey, 'prev'))
+  }, [cursorItems, cursorKey])
+
+  // Keep the selected item on screen as the cursor moves.
+  useEffect(() => {
+    if (cursorKey === null) return
+    const el = scrollRef.current
+    if (!el) return
+    findMessageNode(el, cursorKey)?.scrollIntoView({ block: 'nearest' })
+  }, [cursorKey])
 
   return (
     <div className="flex h-[calc(100dvh-9rem)] min-h-[28rem] flex-col gap-3">
@@ -695,6 +895,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             onSelect={handleModelSelect}
             loadModels={loadModels}
           />
+          <ThinkingMenu
+            value={chat.thinking}
+            pending={chat.pendingThinking !== null}
+            disabled={closed}
+            onSelect={handleThinkingSelect}
+          />
           <PermissionModeMenu
             mode={chat.permissionMode}
             pending={chat.pendingMode !== null}
@@ -704,7 +910,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           <StatusBadge status={displayStatus} />
           <button
             type="button"
-            onClick={() => setExpandAll((prev) => !prev)}
+            onClick={() => {
+              // A fresh global toggle clears per-group overrides so every card
+              // follows the header switch.
+              setToolOverrides({})
+              setExpandAll((prev) => !prev)
+            }}
             aria-label={expandAll ? tChat('collapseAll') : tChat('expandAll')}
             title={expandAll ? tChat('collapseAll') : tChat('expandAll')}
             aria-pressed={expandAll}
@@ -712,6 +923,17 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary"
           >
             {expandAll ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setVerbose((prev) => !prev)}
+            aria-label={verbose ? tChat('verbose.hide') : tChat('verbose.show')}
+            title={verbose ? tChat('verbose.hide') : tChat('verbose.show')}
+            aria-pressed={verbose}
+            data-testid="toggle-verbose"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary aria-pressed:bg-surface-1 aria-pressed:text-text-primary"
+          >
+            <ScrollText className="h-4 w-4" />
           </button>
           <button
             type="button"
@@ -784,6 +1006,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         </div>
       ) : null}
 
+      {chat.thinkingError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
+        >
+          {chat.thinkingError}
+        </div>
+      ) : null}
+
       <div className="relative min-h-0 flex-1">
         <div
           ref={scrollRef}
@@ -814,13 +1045,19 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 regenerateId={regenerateId}
                 onRegenerate={handleRegenerate}
                 expandAll={expandAll}
+                editingId={editingId}
+                onStartEdit={setEditingId}
+                onCancelEdit={() => setEditingId(null)}
+                selectedKey={cursorKey}
+                isToolExpanded={isToolExpanded}
+                onToggleTools={toggleToolExpanded}
               />
             )}
             {failedSend ? (
               <FailedSendCard text={failedSend.text} error={failedSend.error} onRetry={handleRetrySend} />
             ) : null}
             {busy && !streamingHasText ? (
-              <ThinkingIndicator label={t('thinking', { product: tCommon('claude') })} />
+              <ThinkingIndicator label={t('working', { product: tCommon('claude') })} />
             ) : null}
           </div>
         </div>
@@ -841,6 +1078,21 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       <TaskPanel tasks={chat.tasks} />
 
       <PermissionPanel requests={chat.pendingPermissions} onRespond={handlePermissionRespond} />
+
+      {cursorItem ? (
+        <MessageActionsBar
+          enterLabel={
+            cursorItem.kind === 'user'
+              ? tChat('messageActions.edit')
+              : cursorItem.kind === 'tools'
+                ? isToolExpanded(cursorItem.key)
+                  ? tChat('messageActions.collapse')
+                  : tChat('messageActions.expand')
+                : null
+          }
+          showPrimary={cursorPrimary !== null}
+        />
+      ) : null}
 
       {closed ? (
         <div className="rounded-lg border border-border bg-surface-1 px-3 py-2 text-center text-xs text-text-muted">
@@ -871,39 +1123,60 @@ function MessageThread({
   regenerateId,
   onRegenerate,
   expandAll = false,
+  editingId,
+  onStartEdit,
+  onCancelEdit,
+  selectedKey,
+  isToolExpanded,
+  onToggleTools,
 }: {
   items: KeyedItem[]
   onEdit?: (text: string) => Promise<void> | void
   regenerateId: string | null
   onRegenerate: () => Promise<void> | void
   expandAll?: boolean
+  /** Editing is a singleton lifted to the view so the keyboard cursor can open it. */
+  editingId: string | null
+  onStartEdit: (id: string) => void
+  onCancelEdit: () => void
+  /** Keyboard-cursor selection, keyed like the grouped items. */
+  selectedKey: string | null
+  isToolExpanded: (key: string) => boolean
+  onToggleTools: (key: string) => void
 }) {
-  // Editing is a singleton mode: opening another bubble's editor closes the
-  // previous one so there is only ever one draft in play.
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const cancelEdit = useCallback(() => setEditingId(null), [])
-
   return (
     <div className="flex flex-col gap-3">
-      {items.map(({ item, key }) =>
-        item.kind === 'tools' ? (
-          <div key={key} data-message-key={key}>
-            <ToolCallGroup entries={item.entries} expandAll={expandAll} />
+      {items.map(({ item, key }) => {
+        const selected = selectedKey === key
+        const selection = cn('rounded-lg transition-shadow', selected && 'bg-brand/5 ring-1 ring-brand/40')
+        return item.kind === 'tools' ? (
+          <div key={key} data-message-key={key} data-selected={selected ? '' : undefined} className={selection}>
+            <ToolCallGroup
+              entries={item.entries}
+              expandAll={expandAll}
+              expanded={isToolExpanded(key)}
+              onToggleExpanded={() => onToggleTools(key)}
+            />
           </div>
         ) : (
-          <div key={key} data-message-key={key} className={spacingFor(item.entry)}>
+          <div
+            key={key}
+            data-message-key={key}
+            data-selected={selected ? '' : undefined}
+            className={cn(spacingFor(item.entry), selection)}
+          >
             <EntryRenderer
               entry={item.entry}
               editingId={editingId}
-              onStartEdit={setEditingId}
-              onCancelEdit={cancelEdit}
+              onStartEdit={onStartEdit}
+              onCancelEdit={onCancelEdit}
               onEdit={onEdit}
               regenerateId={regenerateId}
               onRegenerate={onRegenerate}
             />
           </div>
-        ),
-      )}
+        )
+      })}
     </div>
   )
 }
@@ -940,11 +1213,73 @@ function EntryRenderer({
       return <AssistantBubble entry={entry} canRegenerate={entry.id === regenerateId} onRegenerate={onRegenerate} />
     case 'plan':
       return <PlanView entry={entry} />
+    case 'system':
+      return <SystemRow entry={entry} />
     case 'turn_end':
       return <TurnEndLine entry={entry} />
     default:
       return null
   }
+}
+
+function SystemRow({ entry }: { entry: SystemEntry }) {
+  const t = useTranslations('chat')
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-center gap-1.5 font-display text-[11px]',
+        entry.level === 'error' ? 'text-status-error' : 'text-text-muted',
+      )}
+    >
+      <Info className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+      <span className="truncate">{systemText(entry, t)}</span>
+    </div>
+  )
+}
+
+function systemText(entry: SystemEntry, t: ReturnType<typeof useTranslations<'chat'>>): string {
+  switch (entry.subtype) {
+    case 'compact_boundary':
+      return t('system.compacted')
+    case 'microcompact_boundary':
+      return t('system.microcompacted')
+    case 'permission_retry':
+      return t('system.allowed', { commands: entry.commands?.join(', ') ?? '' })
+    case 'memory_saved':
+      return t('system.memorySaved', { paths: entry.writtenPaths?.join(', ') ?? '' })
+    case 'api_error':
+      return entry.content ?? t('system.apiError')
+    case 'stop_hook_summary':
+      return entry.content ?? t('system.hookSummary')
+    case 'local_command':
+      return entry.content ?? t('system.localCommand')
+    default:
+      return entry.content ?? entry.subtype
+  }
+}
+
+function MessageActionsBar({ enterLabel, showPrimary }: { enterLabel: string | null; showPrimary: boolean }) {
+  const t = useTranslations('chat')
+  const hint = (keys: string, label: string) => (
+    <span key={keys} className="flex items-center gap-1">
+      <kbd className="rounded border border-border bg-surface-2 px-1 font-mono text-[10px] text-text-secondary">
+        {keys}
+      </kbd>
+      <span>{label}</span>
+    </span>
+  )
+  return (
+    <div
+      data-testid="message-actions-bar"
+      className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg border border-border bg-surface-1 px-3 py-1.5 font-display text-[11px] text-text-muted"
+    >
+      {hint('↑/↓', t('messageActions.navigate'))}
+      {enterLabel ? hint('Enter', enterLabel) : null}
+      {hint('c', t('messageActions.copy'))}
+      {showPrimary ? hint('p', t('messageActions.copyPrimaryGeneric')) : null}
+      {hint('Esc', t('messageActions.back'))}
+    </div>
+  )
 }
 
 function TurnEndLine({ entry }: { entry: TurnEndEntry }) {

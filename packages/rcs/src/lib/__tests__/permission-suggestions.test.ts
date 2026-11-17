@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { permissionOptions, type PermissionSuggestion } from '../permission-suggestions'
+import { editableRule, permissionOptions, type PermissionSuggestion, withRuleContent } from '../permission-suggestions'
 
 function kinds(suggestions: PermissionSuggestion[]) {
   return permissionOptions(suggestions).map((option) => option.kind)
@@ -95,5 +95,66 @@ describe('permissionOptions', () => {
       { type: 'setMode', mode: 'acceptEdits', destination: 'session' },
     ])
     expect(options.map((option) => option.suggestionIndex)).toEqual([null, 0, 2])
+  })
+})
+
+describe('editableRule', () => {
+  test('a single allow rule is editable', () => {
+    const suggestion: PermissionSuggestion = {
+      type: 'addRules',
+      rules: [{ toolName: 'Bash', ruleContent: 'npm test:*' }],
+      behavior: 'allow',
+      destination: 'session',
+    }
+    expect(editableRule(suggestion)).toEqual({ toolName: 'Bash', ruleContent: 'npm test:*' })
+  })
+
+  test('a rule without content starts empty', () => {
+    const suggestion: PermissionSuggestion = { type: 'addRules', rules: [{ toolName: 'Read' }], behavior: 'allow' }
+    expect(editableRule(suggestion)).toEqual({ toolName: 'Read', ruleContent: '' })
+  })
+
+  test('multiple rules, deny rules, and non-addRules are not editable', () => {
+    expect(
+      editableRule({
+        type: 'addRules',
+        rules: [
+          { toolName: 'Bash', ruleContent: 'a' },
+          { toolName: 'Read', ruleContent: 'b' },
+        ],
+        behavior: 'allow',
+      }),
+    ).toBeNull()
+    expect(
+      editableRule({ type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: 'rm:*' }], behavior: 'deny' }),
+    ).toBeNull()
+    expect(editableRule({ type: 'setMode', mode: 'acceptEdits' })).toBeNull()
+    expect(editableRule({ type: 'addRules', rules: [], behavior: 'allow' })).toBeNull()
+  })
+})
+
+describe('withRuleContent', () => {
+  const suggestion: PermissionSuggestion = {
+    type: 'addRules',
+    rules: [{ toolName: 'Bash', ruleContent: 'npm test:*' }],
+    behavior: 'allow',
+    destination: 'session',
+  }
+
+  test('replaces the rule content without modifying the original', () => {
+    const edited = withRuleContent(suggestion, '  npm run test:*  ')
+    expect(edited).toEqual({
+      type: 'addRules',
+      rules: [{ toolName: 'Bash', ruleContent: 'npm run test:*' }],
+      behavior: 'allow',
+      destination: 'session',
+    })
+    expect(edited).not.toBe(suggestion)
+    expect(suggestion.rules?.[0]?.ruleContent).toBe('npm test:*')
+  })
+
+  test('an empty value drops the rule content', () => {
+    const edited = withRuleContent(suggestion, '   ')
+    expect(edited.rules).toEqual([{ toolName: 'Bash' }])
   })
 })

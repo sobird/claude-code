@@ -52,6 +52,16 @@ and SSE stream.
   preloads the next page automatically.
 - A turn-duration line closes each completed turn.
 - Copy buttons on assistant replies and on your own messages.
+- **Keyboard message navigation** mirrors the TUI: Shift+↑ enters the cursor on
+  the newest prompt, ↑/↓ or j/k move, Shift+↑/↓ hop between user messages,
+  Cmd+↑/↓ jump to the ends. Enter edits a selected prompt or expands/collapses a
+  tool group, `c` copies the message, `p` copies the selected tool's primary
+  input (command, path, pattern…), and Esc or Ctrl+C exits. The cursor only binds
+  while no input is focused and never steals keys the approvals panel handles.
+- **Detailed transcript** (header toggle or Ctrl+O, like the TUI) reveals
+  informational rows the reducer otherwise hides: context compaction, API
+  errors, stop-hook summaries, saved memory, permission retries, and local
+  command output.
 - **Image attachments**: paste an image or pick one with the composer button
   (PNG/JPEG/GIF/WebP, up to 5 per message). Large images are downscaled and
   re-encoded as JPEG before upload, stored deduped by content hash, and sent to
@@ -114,6 +124,13 @@ and SSE stream.
   lists the CLI's own models, fetched once per connection through an
   `initialize` control request; the interactive REPL bridge reports none, so a
   free-text model ID is always available as a fallback.
+- **Extended thinking** control sends `set_max_thinking_tokens`: Default (`null`,
+  the CLI's own default), On (an explicit budget the CLI clamps to the model's
+  output limit), or Off (`0`). `system/init` carries no thinking state, so the
+  header shows only the last choice confirmed by the CLI and resets to Default on
+  reload. On the interactive REPL bridge (`useReplBridge`) a `0` budget is read
+  as enabled — the print/SDK path used by `remote-control` behaves correctly, so
+  toggle thinking in the TUI there if the REPL bridge ignores Off.
 
 ### Approvals
 
@@ -121,6 +138,10 @@ and SSE stream.
   hints, the CLI's `decision_reason` when it sends one, and the CLI's
   suggestions (allow for this session / always / this directory). Denials can
   carry a message back to the model.
+- An "always allow" suggestion that carries exactly one rule gets an **edit**
+  button: rewrite the rule content (`Bash` → `Bash(npm test:*)`) before applying
+  it. An empty value persists the bare tool rule. Multi-rule, deny, and mode
+  suggestions are still applied as sent.
 - **AskUserQuestion** renders the questions as radio/checkbox groups with a free
   text "Other" answer and submits the CLI's answers map. With the card focused,
   1–9 pick an option, ←/→ switch questions, ↑/↓ move the highlight, Enter

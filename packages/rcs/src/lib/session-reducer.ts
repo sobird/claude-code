@@ -17,6 +17,7 @@ import { normalizeModel } from './model-settings'
 import { isWebPermissionMode, type WebPermissionMode } from './permission-modes'
 import type { PermissionSuggestion } from './permission-suggestions'
 import { tasksFromTaskState, tasksFromTodoWrite, type TaskItem } from './tasks'
+import { thinkingChoiceFromPayload, type ThinkingChoice, type ThinkingState } from './thinking'
 import { usageFromPayload, type TokenUsage } from './token-usage'
 
 // =============================================================================
@@ -96,7 +97,27 @@ export interface TurnEndEntry {
   durationMs: number
 }
 
-export type ThreadEntry = UserMessageEntry | AssistantMessageEntry | ToolCallEntry | PlanDisplayEntry | TurnEndEntry
+/**
+ * Informational transcript row (compaction, API errors, hook summaries, …),
+ * rendered only while the detailed-transcript toggle is on.
+ */
+export interface SystemEntry {
+  type: 'system'
+  id: string
+  subtype: string
+  content?: string
+  level?: string
+  commands?: string[]
+  writtenPaths?: string[]
+}
+
+export type ThreadEntry =
+  | UserMessageEntry
+  | AssistantMessageEntry
+  | ToolCallEntry
+  | PlanDisplayEntry
+  | SystemEntry
+  | TurnEndEntry
 
 export interface PendingPermission {
   requestId: string
@@ -143,6 +164,15 @@ export interface ChatState {
   pendingModel: { requestId: string; model: string | null } | null
   /** CLI rejection of the last model switch. */
   modelError: string | null
+  /**
+   * Last web-requested thinking state the CLI confirmed; `null` is the CLI
+   * default (or unknown — `system/init` carries no thinking state).
+   */
+  thinking: ThinkingState
+  /** Thinking switch sent but not yet acknowledged by the CLI. */
+  pendingThinking: { requestId: string; choice: ThinkingChoice } | null
+  /** CLI rejection of the last thinking switch. */
+  thinkingError: string | null
   /** Wall-clock start of the running turn, from the newest user message. */
   turnStartedAt: number | null
   /** True between a turn's first event and its `result`; gates the queued hint. */
@@ -187,6 +217,9 @@ export const initialChatState: ChatState = {
   model: null,
   pendingModel: null,
   modelError: null,
+  thinking: null,
+  pendingThinking: null,
+  thinkingError: null,
   turnStartedAt: null,
   turnOpen: false,
   tasks: [],
@@ -518,11 +551,23 @@ function handleToolResult(state: ChatState, event: SessionEventInput): ChatState
   return { ...state, entries: replaceEntry(state.entries, index, next) }
 }
 
+/** Informational system subtypes the detailed transcript renders as rows. */
+const SYSTEM_ROW_SUBTYPES = new Set([
+  'compact_boundary',
+  'microcompact_boundary',
+  'local_command',
+  'api_error',
+  'memory_saved',
+  'stop_hook_summary',
+  'permission_retry',
+])
+
 /**
  * `system/init` carries the bridge-safe slash commands and the current
  * permission mode; `system/status` reports the live mode after a change the
  * web did not initiate (e.g. approving ExitPlanMode with auto-accept edits).
- * Every other system subtype is informational noise here.
+ * The informational subtypes in SYSTEM_ROW_SUBTYPES become transcript rows;
+ * everything else is still ignored.
  *
  * A reconnect re-sends init, so a later message simply replaces the previous
  * snapshot (history replays fold in sequence order).
@@ -538,27 +583,45 @@ function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatStat
     return { ...state, permissionMode: payload.permissionMode }
   }
 
-  if (subtype !== 'init') return state
+  if (subtype === 'init') {
+    const slashCommands = Array.isArray(payload.slash_commands)
+      ? [
+          ...new Set(payload.slash_commands.filter((item): item is string => typeof item === 'string' && item !== '')),
+        ].slice(0, 100)
+      : state.slashCommands
+    const permissionMode = isWebPermissionMode(payload.permissionMode) ? payload.permissionMode : state.permissionMode
+    // A missing/invalid model keeps the last known one; the CLI always sends it in init.
+    const model = normalizeModel(payload.model) ?? state.model
 
-  const slashCommands = Array.isArray(payload.slash_commands)
-    ? [
-        ...new Set(payload.slash_commands.filter((item): item is string => typeof item === 'string' && item !== '')),
-      ].slice(0, 100)
-    : state.slashCommands
-  const permissionMode = isWebPermissionMode(payload.permissionMode) ? payload.permissionMode : state.permissionMode
-  // A missing/invalid model keeps the last known one; the CLI always sends it in init.
-  const model = normalizeModel(payload.model) ?? state.model
-
-  return {
-    ...state,
-    slashCommands,
-    permissionMode,
-    pendingMode: null,
-    modeError: null,
-    model,
-    pendingModel: null,
-    modelError: null,
+    return {
+      ...state,
+      slashCommands,
+      permissionMode,
+      pendingMode: null,
+      modeError: null,
+      model,
+      pendingModel: null,
+      modelError: null,
+    }
   }
+
+  if (!SYSTEM_ROW_SUBTYPES.has(subtype)) return state
+
+  const seqNum = numericSeqNum(event)
+  const entry: SystemEntry = {
+    type: 'system',
+    id: event.id || (seqNum !== null ? `system-${seqNum}` : `system-${state.entries.length}`),
+    subtype,
+    ...(typeof payload.content === 'string' ? { content: payload.content } : {}),
+    ...(typeof payload.level === 'string' ? { level: payload.level } : {}),
+    ...(Array.isArray(payload.commands)
+      ? { commands: payload.commands.filter((item): item is string => typeof item === 'string') }
+      : {}),
+    ...(Array.isArray(payload.writtenPaths)
+      ? { writtenPaths: payload.writtenPaths.filter((item): item is string => typeof item === 'string') }
+      : {}),
+  }
+  return { ...state, entries: [...state.entries, entry] }
 }
 
 function handlePermissionRequest(state: ChatState, event: SessionEventInput): ChatState {
@@ -574,6 +637,14 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
   if (subtype && subtype !== 'can_use_tool') {
     if (subtype === 'set_model') {
       return { ...state, pendingModel: { requestId, model: normalizeModel(request.model) }, modelError: null }
+    }
+    if (subtype === 'set_max_thinking_tokens') {
+      // The echoed request carries the budget the web sent: null = default,
+      // 0 = off, >0 = on.
+      const raw = request.max_thinking_tokens
+      const choice: ThinkingChoice =
+        raw === null || raw === undefined ? 'default' : (thinkingChoiceFromPayload(raw) ?? 'default')
+      return { ...state, pendingThinking: { requestId, choice }, thinkingError: null }
     }
     if (subtype !== 'set_permission_mode' || !isWebPermissionMode(request.mode)) return state
     return { ...state, pendingMode: { requestId, mode: request.mode }, modeError: null }
@@ -700,6 +771,22 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
     return { ...state, pendingModel: null, modelError: null, model: pendingModel.model }
   }
 
+  // And for a thinking switch. `default` clears the adopted state; the CLI does
+  // not echo the effective budget, so this only remembers the web's last choice.
+  const pendingThinking = state.pendingThinking
+  if (pendingThinking && pendingThinking.requestId === requestId) {
+    const outcome = responseOutcome(payload)
+    if (outcome.subtype === 'error') {
+      return { ...state, pendingThinking: null, thinkingError: outcome.error || 'set_max_thinking_tokens failed' }
+    }
+    return {
+      ...state,
+      pendingThinking: null,
+      thinkingError: null,
+      thinking: pendingThinking.choice === 'default' ? null : pendingThinking.choice,
+    }
+  }
+
   const approved = payload.approved === true
   const pendingPermissions = state.pendingPermissions.filter((permission) => permission.requestId !== requestId)
 
@@ -757,6 +844,12 @@ function handleControlCancel(state: ChatState, event: SessionEventInput): ChatSt
     changed = true
   }
 
+  let pendingThinking = state.pendingThinking
+  if (pendingThinking && pendingThinking.requestId === requestId) {
+    pendingThinking = null
+    changed = true
+  }
+
   let pendingPermissions = state.pendingPermissions
   if (pendingPermissions.some((permission) => permission.requestId === requestId)) {
     pendingPermissions = pendingPermissions.filter((permission) => permission.requestId !== requestId)
@@ -780,7 +873,9 @@ function handleControlCancel(state: ChatState, event: SessionEventInput): ChatSt
     changed = true
   }
 
-  return changed ? { ...state, pendingPermissions, pendingMode, modeError, pendingModel, entries } : state
+  return changed
+    ? { ...state, pendingPermissions, pendingMode, modeError, pendingModel, pendingThinking, entries }
+    : state
 }
 
 function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatState {

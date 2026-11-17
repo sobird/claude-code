@@ -19,16 +19,36 @@ interface ToolCallGroupProps {
   entries: ToolCallEntry[]
   /** Header-level "expand all" toggle; individual cards can still override it. */
   expandAll?: boolean
+  /**
+   * Parent-controlled expansion (the keyboard cursor toggles a group with
+   * Enter). When provided, clicking the group header defers to
+   * `onToggleExpanded` instead of the internal override.
+   */
+  expanded?: boolean
+  onToggleExpanded?: () => void
 }
 
 /** Renders a single tool card, or a collapsible group when calls are adjacent. */
-export function ToolCallGroup({ entries, expandAll = false }: ToolCallGroupProps) {
+export function ToolCallGroup({
+  entries,
+  expandAll = false,
+  expanded: controlled,
+  onToggleExpanded,
+}: ToolCallGroupProps) {
   const t = useTranslations('chat')
   // `null` follows the global toggle; clicking a card pins its own state until
   // the global toggle changes again.
   const [override, setOverride] = useState<boolean | null>(null)
-  const expanded = override ?? expandAll
+  const expanded = controlled ?? override ?? expandAll
   useEffect(() => setOverride(null), [expandAll])
+
+  const toggle = () => {
+    if (controlled !== undefined) {
+      onToggleExpanded?.()
+      return
+    }
+    setOverride(!expanded)
+  }
 
   if (entries.length === 0) return null
 
@@ -36,7 +56,15 @@ export function ToolCallGroup({ entries, expandAll = false }: ToolCallGroupProps
     const only = entries[0]
     return (
       <div className="pl-0 sm:pl-11">
-        {only ? <SingleToolCard tool={only.toolCall} compact expandAll={expandAll} /> : null}
+        {only ? (
+          <SingleToolCard
+            tool={only.toolCall}
+            compact
+            expandAll={expandAll}
+            expanded={controlled}
+            onToggle={controlled !== undefined ? onToggleExpanded : undefined}
+          />
+        ) : null}
       </div>
     )
   }
@@ -47,7 +75,7 @@ export function ToolCallGroup({ entries, expandAll = false }: ToolCallGroupProps
         <button
           type="button"
           className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-1/60"
-          onClick={() => setOverride(!expanded)}
+          onClick={toggle}
         >
           <ChevronRight
             className={cn('h-3 w-3 text-text-muted transition-transform', expanded && 'rotate-90')}
@@ -71,14 +99,24 @@ interface SingleToolCardProps {
   tool: ToolCallData
   compact?: boolean
   expandAll?: boolean
+  /** Parent-controlled expansion for a single-card group (keyboard cursor). */
+  expanded?: boolean
+  onToggle?: () => void
 }
 
-function SingleToolCard({ tool, compact, expandAll = false }: SingleToolCardProps) {
+function SingleToolCard({ tool, compact, expandAll = false, expanded: controlled, onToggle }: SingleToolCardProps) {
   const t = useTranslations('chat')
   const [override, setOverride] = useState<boolean | null>(null)
   // Compact cards start collapsed; standalone (non-compact) cards start open.
-  const expanded = override ?? (expandAll || !compact)
+  const expanded = controlled ?? override ?? (expandAll || !compact)
   useEffect(() => setOverride(null), [expandAll])
+  const toggle = () => {
+    if (controlled !== undefined) {
+      onToggle?.()
+      return
+    }
+    setOverride(!expanded)
+  }
   const summary = summarizeToolCall(tool.title, tool.rawInput)
   const hasOutput =
     tool.status !== 'running' &&
@@ -90,7 +128,7 @@ function SingleToolCard({ tool, compact, expandAll = false }: SingleToolCardProp
       <button
         type="button"
         className="group flex w-full items-center gap-2 text-left"
-        onClick={() => setOverride(!expanded)}
+        onClick={toggle}
         aria-expanded={expanded}
       >
         <StatusIcon status={tool.status} />

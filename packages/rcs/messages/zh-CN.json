@@ -86,7 +86,13 @@
         "title": "开始对话",
         "description": "发送消息以开始与 {product} 对话。"
       },
-      "thinking": "{product} 正在处理…",
+      "working": "{product} 正在处理…",
+      "thinking": {
+        "label": "思考",
+        "default": "默认",
+        "on": "开启",
+        "off": "关闭"
+      },
       "reconnecting": "正在重新连接实时更新…",
       "disconnected": "实时更新已断开：{error}",
       "archived": "会话已归档，无法发送新消息。",
@@ -146,6 +152,37 @@
     "queued": "排队中",
     "expandAll": "展开全部工具",
     "collapseAll": "折叠全部工具",
+    "verbose": {
+      "show": "显示详细转录",
+      "hide": "隐藏详细转录"
+    },
+    "system": {
+      "compacted": "上下文已压缩",
+      "microcompacted": "上下文已微压缩",
+      "allowed": "已允许 {commands}",
+      "memorySaved": "已保存记忆：{paths}",
+      "apiError": "API 错误",
+      "hookSummary": "停止钩子已执行",
+      "localCommand": "本地命令"
+    },
+    "messageActions": {
+      "edit": "编辑",
+      "expand": "展开",
+      "collapse": "折叠",
+      "copy": "复制",
+      "copyPrimary": "复制{label}",
+      "copyPrimaryGeneric": "复制主参数",
+      "navigate": "导航",
+      "back": "退出",
+      "primary": {
+        "path": "路径",
+        "command": "命令",
+        "pattern": "模式",
+        "url": "链接",
+        "query": "搜索词",
+        "prompt": "提示词"
+      }
+    },
     "tasks": {
       "title": "任务",
       "progress": "{done}/{total}",
@@ -168,6 +205,9 @@
       "allowDirectories": "允许此目录",
       "alwaysDeny": "始终拒绝",
       "applySuggestion": "应用建议规则",
+      "editRule": "编辑规则",
+      "rulePlaceholder": "Bash(npm test:*)",
+      "applyRule": "使用此规则",
       "blockedPath": "被阻止的路径：{path}",
       "reason": "原因",
       "denyReason": "拒绝原因（可选）",
@@ -216,6 +256,8 @@
       "description": "会话视图中可用的快捷键。",
       "composer": "输入框",
       "approvals": "审批",
+      "navigation": "消息导航",
+      "transcript": "转录",
       "send": "发送消息",
       "newline": "换行",
       "interrupt": "中断代理",
@@ -227,7 +269,13 @@
       "approve": "批准计划",
       "reject": "拒绝计划",
       "approveEnter": "批准（弹窗）",
-      "close": "关闭弹窗或拒绝输入"
+      "close": "关闭弹窗或拒绝输入",
+      "toggleVerbose": "切换详细转录（Ctrl+O）",
+      "enterCursor": "进入消息导航（Shift+↑）",
+      "cursorEnter": "Enter 编辑消息或展开工具组",
+      "cursorCopy": "复制选中的消息",
+      "cursorPrimary": "复制工具主参数",
+      "cursorBack": "退出消息导航"
     }
   },
   "auth": {

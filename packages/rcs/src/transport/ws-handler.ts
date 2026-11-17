@@ -313,6 +313,14 @@ export async function ingestBridgeMessage(
       ...(typeof msg.permissionMode === 'string' ? { permissionMode: msg.permissionMode } : {}),
       ...(typeof msg.model === 'string' ? { model: msg.model } : {}),
       ...(typeof msg.fast_mode_state === 'string' ? { fast_mode_state: msg.fast_mode_state } : {}),
+      // Detailed-transcript fields: compaction notices, API errors, permission
+      // retries, and saved-memory paths. Metadata objects stay out.
+      ...(typeof msg.content === 'string' ? { content: msg.content } : {}),
+      ...(typeof msg.level === 'string' ? { level: msg.level } : {}),
+      ...(Array.isArray(msg.commands) ? { commands: msg.commands.filter((item) => typeof item === 'string') } : {}),
+      ...(Array.isArray(msg.writtenPaths)
+        ? { writtenPaths: msg.writtenPaths.filter((item) => typeof item === 'string') }
+        : {}),
       ...(msg.message ? { message: msg.message } : {}),
       uuid: msg.uuid,
     }

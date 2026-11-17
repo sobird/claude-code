@@ -857,6 +857,203 @@ describe('model state', () => {
   })
 })
 
+describe('thinking state', () => {
+  test('starts empty', () => {
+    expect(initialChatState.thinking).toBeNull()
+    expect(initialChatState.pendingThinking).toBeNull()
+    expect(initialChatState.thinkingError).toBeNull()
+  })
+
+  test('an outbound set_max_thinking_tokens request starts a pending change', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event(
+        'control_request',
+        { request_id: 'think-1', request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: 31999 } },
+        { direction: 'outbound' },
+      ),
+    )
+
+    expect(state.pendingThinking).toEqual({ requestId: 'think-1', choice: 'on' })
+    expect(state.thinkingError).toBeNull()
+    expect(state.entries).toHaveLength(0)
+  })
+
+  test('the echoed budget maps to the choice', () => {
+    const off = reduceSessionEvent(
+      initialChatState,
+      event('control_request', {
+        request_id: 'think-1',
+        request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: 0 },
+      }),
+    )
+    expect(off.pendingThinking).toEqual({ requestId: 'think-1', choice: 'off' })
+
+    const reset = reduceSessionEvent(
+      initialChatState,
+      event('control_request', {
+        request_id: 'think-2',
+        request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: null },
+      }),
+    )
+    expect(reset.pendingThinking).toEqual({ requestId: 'think-2', choice: 'default' })
+  })
+
+  test('a successful response adopts the choice', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', {
+        request_id: 'think-1',
+        request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: 31999 },
+      }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'think-1', subtype: 'success' } }),
+    )
+
+    expect(state.thinking).toBe('on')
+    expect(state.pendingThinking).toBeNull()
+    expect(state.thinkingError).toBeNull()
+  })
+
+  test('a default reset clears the adopted choice', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', {
+        request_id: 'think-1',
+        request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: 31999 },
+      }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'think-1', subtype: 'success' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_request', {
+        request_id: 'think-2',
+        request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: null },
+      }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'think-2', subtype: 'success' } }),
+    )
+
+    expect(state.thinking).toBeNull()
+  })
+
+  test('an error response keeps the state and records the error', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', {
+        request_id: 'think-1',
+        request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: 0 },
+      }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', {
+        response: { request_id: 'think-1', subtype: 'error', error: 'thinking unsupported' },
+      }),
+    )
+
+    expect(state.thinking).toBeNull()
+    expect(state.pendingThinking).toBeNull()
+    expect(state.thinkingError).toBe('thinking unsupported')
+  })
+
+  test('control_cancel_request clears a matching pending change', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('control_request', {
+        request_id: 'think-1',
+        request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: 31999 },
+      }),
+    )
+    state = reduceSessionEvent(state, event('control_cancel_request', { request_id: 'think-1' }))
+
+    expect(state.pendingThinking).toBeNull()
+  })
+
+  test('mode, model, and thinking settlements do not interfere', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('system', { subtype: 'init', permissionMode: 'default', model: 'sonnet' }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_request', {
+        request_id: 'think-1',
+        request: { subtype: 'set_max_thinking_tokens', max_thinking_tokens: 31999 },
+      }),
+    )
+    // A mode response for a different request must not settle the thinking request.
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'other', subtype: 'success' } }),
+    )
+
+    expect(state.pendingThinking).toEqual({ requestId: 'think-1', choice: 'on' })
+    expect(state.thinking).toBeNull()
+
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'think-1', subtype: 'success' } }),
+    )
+    expect(state.pendingThinking).toBeNull()
+    expect(state.pendingMode).toBeNull()
+    expect(state.pendingModel).toBeNull()
+  })
+})
+
+describe('system transcript rows', () => {
+  test('compact_boundary appends a row with content and level', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('system', { subtype: 'compact_boundary', content: 'Compacted', level: 'info' }),
+    )
+    const rows = state.entries.filter((entry) => entry.type === 'system')
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ type: 'system', subtype: 'compact_boundary', content: 'Compacted', level: 'info' })
+  })
+
+  test('permission_retry keeps commands and memory_saved keeps writtenPaths', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('system', { subtype: 'permission_retry', commands: ['Bash(npm test:*)', 42] }),
+    )
+    state = reduceSessionEvent(state, event('system', { subtype: 'memory_saved', writtenPaths: ['/repo/a.md'] }))
+    const rows = state.entries.filter((entry) => entry.type === 'system')
+
+    expect(rows[0]).toMatchObject({ commands: ['Bash(npm test:*)'] })
+    expect(rows[1]).toMatchObject({ writtenPaths: ['/repo/a.md'] })
+  })
+
+  test('init and status do not append rows', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', slash_commands: [] }))
+    state = reduceSessionEvent(state, event('system', { subtype: 'status', permissionMode: 'plan' }))
+    expect(state.entries).toHaveLength(0)
+  })
+
+  test('unknown subtypes are ignored', () => {
+    const state = reduceSessionEvent(initialChatState, event('system', { subtype: 'api_metrics', content: 'x' }))
+    expect(state.entries).toHaveLength(0)
+  })
+
+  test('a replayed row dedupes by seqNum', () => {
+    const sequence = nextSeqNum
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'local_command', content: '/compact' }))
+    state = reduceSessionEvent(
+      state,
+      event('system', { subtype: 'local_command', content: '/compact' }, { seqNum: sequence }),
+    )
+    expect(state.entries.filter((entry) => entry.type === 'system')).toHaveLength(1)
+  })
+})
+
 describe('applyHistory', () => {
   test('history followed by a live duplicate of the same seqNum does not double-apply', () => {
     const a = event('assistant', { content: 'Hel' })

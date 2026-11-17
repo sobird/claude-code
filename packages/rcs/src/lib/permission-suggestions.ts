@@ -71,6 +71,41 @@ function dedupeKey(suggestion: PermissionSuggestion): string {
   ])
 }
 
+export interface EditableRule {
+  toolName: string
+  ruleContent: string
+}
+
+/**
+ * The one rule a permission card lets the user edit: a single allow rule from
+ * an `addRules` suggestion. Multi-rule, deny, and non-rule suggestions keep
+ * their original echo-only behavior.
+ */
+export function editableRule(suggestion: PermissionSuggestion): EditableRule | null {
+  if (suggestion.type !== 'addRules' || suggestion.behavior === 'deny') return null
+  const rules = suggestion.rules
+  if (!rules || rules.length !== 1) return null
+  const rule = rules[0]
+  if (!rule || typeof rule.toolName !== 'string' || !rule.toolName) return null
+  return { toolName: rule.toolName, ruleContent: rule.ruleContent ?? '' }
+}
+
+/**
+ * Copy of `suggestion` with the unique rule's content replaced (trimmed); an
+ * empty value drops `ruleContent`, leaving the bare `Tool` rule. The original
+ * object is never mutated.
+ */
+export function withRuleContent(suggestion: PermissionSuggestion, ruleContent: string): PermissionSuggestion {
+  const rules = suggestion.rules
+  if (!rules || rules.length !== 1 || !rules[0]) return suggestion
+  const trimmed = ruleContent.trim()
+  const rule = rules[0]
+  return {
+    ...suggestion,
+    rules: [trimmed ? { ...rule, ruleContent: trimmed } : { toolName: rule.toolName }],
+  }
+}
+
 /** One allow-once option followed by one option per distinct suggestion. */
 export function permissionOptions(suggestions: PermissionSuggestion[] = []): PermissionOption[] {
   const options: PermissionOption[] = [{ id: 'allow-once', kind: 'allow-once', suggestionIndex: null }]
