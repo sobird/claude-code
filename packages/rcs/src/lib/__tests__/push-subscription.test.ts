@@ -32,8 +32,11 @@ describe('detectPushState', () => {
     expect(detectPushState({ ...healthy, secureContext: false, hasPushManager: false })).toBe('insecure')
   })
 
-  test('prefers a missing API over iOS outside standalone mode', () => {
-    expect(detectPushState({ ...healthy, isIos: true, isStandalone: false, hasPushManager: false })).toBe('unsupported')
+  test('prefers iOS install guidance over a missing API', () => {
+    // Non-installed iOS Safari lacks PushManager; the install hint must still show.
+    expect(detectPushState({ ...healthy, isIos: true, isStandalone: false, hasPushManager: false })).toBe(
+      'ios-needs-install',
+    )
   })
 
   test('reports ios-needs-install for iOS outside standalone mode', () => {

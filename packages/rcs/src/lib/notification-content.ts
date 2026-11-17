@@ -64,7 +64,7 @@ export function toNotificationContent(payload: PushNotificationPayload, locale: 
   const title = sessionTitle ? truncateTitle(sessionTitle) : copy.title
   return {
     title,
-    body: copy[payload.kind].replace('{tool}', payload.toolName),
+    body: copy[payload.kind].replace('{tool}', () => payload.toolName),
     tag: `session:${payload.sessionId}:${payload.requestId}`,
     url: `/${payload.sessionId}`,
   }

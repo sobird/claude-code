@@ -9,6 +9,7 @@
 import { Hono } from 'hono'
 
 import type { AppEnv } from '../../auth/context.js'
+import { isAllowedPushEndpoint } from '../../lib/push-payload.js'
 import { getPushPublicConfig } from '../../services/push-notifier.js'
 import { legacyUserAuth, readJson } from '../common.js'
 
@@ -28,7 +29,7 @@ app.post('/push/subscriptions', legacyUserAuth, async (c) => {
   const p256dh = typeof keys.p256dh === 'string' ? keys.p256dh : ''
   const auth = typeof keys.auth === 'string' ? keys.auth : ''
 
-  if (!endpoint || !p256dh || !auth) {
+  if (!endpoint || !p256dh || !auth || !isAllowedPushEndpoint(endpoint)) {
     return c.json({ error: 'invalid subscription', code: 'invalid_subscription' }, 400)
   }
 

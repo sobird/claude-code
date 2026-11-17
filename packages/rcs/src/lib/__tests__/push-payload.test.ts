@@ -1,7 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 
 import { loadConfig } from '../../config.js'
-import { buildNotificationPayload, isConfirmationRequest, shouldNotifyOnce } from '../push-payload.js'
+import {
+  buildNotificationPayload,
+  isAllowedPushEndpoint,
+  isConfirmationRequest,
+  shouldNotifyOnce,
+} from '../push-payload.js'
 
 const nested = {
   request_id: 'req-1',
@@ -62,6 +67,49 @@ describe('shouldNotifyOnce', () => {
     expect(shouldNotifyOnce(seen, 's1:req-1', 1_000)).toBe(true)
     expect(shouldNotifyOnce(seen, 's1:req-1', 2_000)).toBe(false)
     expect(shouldNotifyOnce(seen, 's1:req-1', 70_000)).toBe(true)
+  })
+})
+
+describe('isAllowedPushEndpoint', () => {
+  test('accepts a standard HTTPS push endpoint', () => {
+    expect(isAllowedPushEndpoint('https://fcm.googleapis.com/fcm/send/abc')).toBe(true)
+    expect(isAllowedPushEndpoint('https://push.example/abc')).toBe(true)
+    // An explicit :443 is the browser default and equivalent to no port.
+    expect(isAllowedPushEndpoint('https://push.example:443/abc')).toBe(true)
+  })
+
+  test('rejects non-HTTPS, garbage, and non-URL values', () => {
+    expect(isAllowedPushEndpoint('http://fcm.googleapis.com/x')).toBe(false)
+    expect(isAllowedPushEndpoint('not a url')).toBe(false)
+    expect(isAllowedPushEndpoint('')).toBe(false)
+  })
+
+  test('rejects localhost and .local/.localhost names', () => {
+    expect(isAllowedPushEndpoint('https://localhost/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://something.localhost/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://printer.local/x')).toBe(false)
+  })
+
+  test('rejects a non-default port', () => {
+    expect(isAllowedPushEndpoint('https://push.example:8443/x')).toBe(false)
+  })
+
+  test('rejects loopback, private, link-local, and unspecified IPv4 literals', () => {
+    expect(isAllowedPushEndpoint('https://127.0.0.1/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://10.0.0.5/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://172.16.0.1/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://172.31.255.255/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://192.168.1.1/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://169.254.169.254/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://0.0.0.0/x')).toBe(false)
+  })
+
+  test('rejects loopback, unspecified, unique-local, and link-local IPv6 literals', () => {
+    expect(isAllowedPushEndpoint('https://[::1]/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://[::]/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://[fc00::1]/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://[fd12:3456::1]/x')).toBe(false)
+    expect(isAllowedPushEndpoint('https://[fe80::1]/x')).toBe(false)
   })
 })
 

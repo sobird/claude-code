@@ -128,6 +128,21 @@ describe('Web Push Routes', () => {
     expect(await s.repos.pushSubscriptions.listByUser(s.member.id)).toHaveLength(0)
   })
 
+  test('POST /web/push/subscriptions rejects a non-HTTPS endpoint and stores nothing', async () => {
+    const res = await app.request('/web/push/subscriptions', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({
+        endpoint: 'http://fcm.googleapis.com/x',
+        keys: { p256dh: 'p256dh-value', auth: 'auth-value' },
+      }),
+    })
+    expect(res.status).toBe(400)
+    const body = await resJson(res)
+    expect(body.code).toBe('invalid_subscription')
+    expect(await s.repos.pushSubscriptions.listByUser(s.member.id)).toHaveLength(0)
+  })
+
   test('DELETE /web/push/subscriptions removes only the caller row for the endpoint', async () => {
     const endpoint = 'https://push.example/e?x=1'
     // The caller subscribes, then another account signs in on the same browser and the

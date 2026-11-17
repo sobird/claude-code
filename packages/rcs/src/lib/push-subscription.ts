@@ -20,13 +20,14 @@ export interface PushEnvironment {
 
 /**
  * Pick the most relevant reason push cannot (yet) be enabled. Order matters:
- * an insecure origin blocks everything, missing APIs are unrecoverable, and an
- * iOS browser tab has to be installed before it exposes PushManager.
+ * an insecure origin blocks everything, and an iOS browser tab has to be
+ * installed before it exposes PushManager, so the install hint must win over
+ * the generic "unsupported" state (non-installed iOS Safari lacks PushManager).
  */
 export function detectPushState(env: PushEnvironment): PushState {
   if (!env.secureContext) return 'insecure'
-  if (!env.hasServiceWorker || !env.hasPushManager || !env.hasNotification) return 'unsupported'
   if (env.isIos && !env.isStandalone) return 'ios-needs-install'
+  if (!env.hasServiceWorker || !env.hasPushManager || !env.hasNotification) return 'unsupported'
   if (env.permission === 'denied') return 'denied'
   return 'available'
 }

@@ -94,6 +94,8 @@ async function resolveVapidKeys(
     return null
   }
 
+  // First-boot generation assumes a single gateway instance: with multiple
+  // replicas racing this path, each could generate and persist a different pair.
   const generated = provider.generateVapidKeys()
   const keys: PushVapidKeys = {
     publicKey: generated.publicKey,
@@ -148,7 +150,9 @@ export function getPushPublicConfig(): { enabled: boolean; publicKey: string | n
 export function notifyInboundEvent(sessionId: string, type: string, payload: unknown): void {
   const current = state
   if (!current) return
-  void current.ready.then(() => run(current, sessionId, type, payload)).catch(() => {})
+  void current.ready
+    .then(() => run(current, sessionId, type, payload))
+    .catch((error) => log('[RCS] push notify failed:', error))
 }
 
 async function run(current: PushNotifierState, sessionId: string, type: string, payload: unknown): Promise<void> {

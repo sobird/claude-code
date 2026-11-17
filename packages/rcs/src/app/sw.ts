@@ -119,14 +119,20 @@ self.addEventListener('notificationclick', (event: Event) => {
 
   click.waitUntil(
     (async () => {
-      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      for (const client of windows) {
-        if (new URL(client.url).pathname === url) {
-          await client.focus()
-          return
+      try {
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        for (const client of windows) {
+          if (new URL(client.url).pathname === url) {
+            await client.focus()
+            return
+          }
         }
+        await self.clients.openWindow(url)
+      } catch (error) {
+        // Keep a failed `matchAll`/`focus`/`openWindow` from becoming an unhandled
+        // rejection; the click is still skipped, but log it for DevTools.
+        console.error('[rcs] notification click failed:', error)
       }
-      await self.clients.openWindow(url)
     })(),
   )
 })

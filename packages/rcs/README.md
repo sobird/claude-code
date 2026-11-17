@@ -330,7 +330,9 @@ confirmation, even with the tab closed. Enable it per user under Settings.
   (`fcm.googleapis.com`, Apple's push endpoint, `updates.push.services.mozilla.com`).
 - VAPID keys are generated on first boot and stored in Postgres. Override them
   with `RCS_VAPID_PUBLIC_KEY` / `RCS_VAPID_PRIVATE_KEY` (and optionally
-  `RCS_VAPID_SUBJECT`) in `.env`.
+  `RCS_VAPID_SUBJECT`) in `.env`. Setting a different key pair than the one
+  existing subscriptions were created with invalidates those subscriptions, so
+  affected browsers must re-subscribe.
 
 ## Migrations
 

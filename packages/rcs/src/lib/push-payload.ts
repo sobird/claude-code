@@ -92,3 +92,68 @@ export function shouldNotifyOnce(
   seen.set(key, now)
   return true
 }
+
+const IPV4_PATTERN = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+
+/** Loopback/private/link-local/unspecified IPv4 ranges. */
+function isDisallowedIPv4(host: string): boolean {
+  const match = IPV4_PATTERN.exec(host)
+  if (!match) return false
+  const [a, b, c, d] = match.slice(1).map(Number)
+  return (
+    a === 127 ||
+    a === 10 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 169 && b === 254) ||
+    (a === 0 && b === 0 && c === 0 && d === 0)
+  )
+}
+
+/** Loopback/unspecified/unique-local/link-local IPv6 ranges. */
+function isDisallowedIPv6(host: string): boolean {
+  if (!host.includes(':')) return false
+  return (
+    host === '::1' ||
+    host === '::' ||
+    host.startsWith('fc') ||
+    host.startsWith('fd') ||
+    host.startsWith('fe8') ||
+    host.startsWith('fe9') ||
+    host.startsWith('fea') ||
+    host.startsWith('feb')
+  )
+}
+
+/**
+ * True when `value` is a push endpoint the gateway may safely POST to.
+ *
+ * `web-push` sends notifications by issuing an HTTPS request to the stored
+ * endpoint, so an unvalidated value is a server-side request forgery vector: an
+ * authenticated member could point it at an internal host. Browser push
+ * endpoints are always HTTPS on port 443, so anything else is rejected, as are
+ * localhost and loopback/private/link-local IP literals.
+ *
+ * Runtime-neutral: uses only the global `URL` so the worker bundle can load it.
+ */
+export function isAllowedPushEndpoint(value: string): boolean {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return false
+  }
+
+  if (url.protocol !== 'https:') return false
+  if (url.port !== '' && url.port !== '443') return false
+
+  const hostname = url.hostname.toLowerCase()
+  if (!hostname) return false
+  if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')) return false
+
+  // `URL.hostname` brackets IPv6 literals; strip them so both forms are checked.
+  const host = hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname
+  if (isDisallowedIPv4(host) || isDisallowedIPv6(host)) return false
+
+  return true
+}
