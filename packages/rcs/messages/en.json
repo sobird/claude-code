@@ -128,7 +128,7 @@
       "otherPlaceholder": "Type a custom answer",
       "submit": "Submit answers",
       "decline": "Decline",
-      "incomplete": "Answer every question to continue."
+      "incomplete": "You have not answered all questions"
     }
   },
   "auth": {

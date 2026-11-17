@@ -32,6 +32,10 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
   const questions = parseAskUserQuestions(request.toolInput)
   const [drafts, setDrafts] = useState(() => emptyDrafts(questions))
   const complete = isAskUserComplete(questions, drafts)
+  const answers = buildAskUserAnswers(questions, drafts)
+  // Like the CLI's review screen: partial answers submit with a warning, but
+  // an entirely empty answer is blocked (Decline covers "answer nothing").
+  const answered = Object.keys(answers).length > 0
 
   const selectOption = (questionIndex: number, label: string) => {
     setDrafts((prev) => {
@@ -57,8 +61,8 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
   }
 
   const submit = () => {
-    if (!complete) return
-    onRespond?.(request.requestId, true, { ...request.toolInput, answers: buildAskUserAnswers(questions, drafts) })
+    if (!answered) return
+    onRespond?.(request.requestId, true, { ...request.toolInput, answers })
   }
 
   return (
@@ -141,7 +145,7 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
             type="button"
             variant="brand"
             className="h-11 flex-1 sm:h-9 sm:flex-none sm:px-4"
-            disabled={!complete}
+            disabled={!answered}
             onClick={submit}
           >
             {t('submit')}
