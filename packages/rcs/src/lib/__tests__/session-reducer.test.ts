@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
+  activeStreamEvents,
   applyHistory,
   initialChatState,
+  isEphemeralEvent,
   reduceSessionEvent,
   type AssistantMessageEntry,
   type ChatState,
@@ -384,6 +386,142 @@ test('a permission request without a tool name is left empty', () => {
     event('control_request', { request_id: 'r1', request: { subtype: 'can_use_tool', input: {} } }),
   )
   expect(state.pendingPermissions[0]?.toolName).toBe('')
+})
+
+// Streaming frames are live-only: the bridge marks them `ephemeral` and the SSE
+// frame omits `id:`. The payload is the raw SDK stream event under `event`.
+function streamEvent(inner: Record<string, unknown>, overrides: Partial<SessionEventInput> = {}): SessionEventInput {
+  return event('stream_event', { type: 'stream_event', event: inner }, { ephemeral: true, ...overrides })
+}
+
+function textDelta(text: string): Record<string, unknown> {
+  return { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } }
+}
+
+function thinkingDelta(thinking: string): Record<string, unknown> {
+  return { type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking } }
+}
+
+describe('streaming deltas', () => {
+  test('text deltas accumulate into one transient assistant entry', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent({ type: 'message_start' }))
+    state = reduceSessionEvent(state, streamEvent(textDelta('Hel')))
+    state = reduceSessionEvent(state, streamEvent(textDelta('lo')))
+
+    expect(assistants(state)).toHaveLength(1)
+    expect(assistants(state)[0]?.chunks).toEqual([{ type: 'message', text: 'Hello' }])
+    expect(assistants(state)[0]?.streaming).toBe(true)
+  })
+
+  test('thinking deltas become a thought chunk', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(thinkingDelta('pondering')))
+    state = reduceSessionEvent(state, streamEvent(textDelta('answer')))
+
+    expect(assistants(state)[0]?.chunks).toEqual([
+      { type: 'thought', text: 'pondering' },
+      { type: 'message', text: 'answer' },
+    ])
+  })
+
+  test('message_start resets the transient entry instead of merging messages', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('first')))
+    state = reduceSessionEvent(state, streamEvent({ type: 'message_start' }))
+    state = reduceSessionEvent(state, streamEvent(textDelta('second')))
+
+    expect(assistants(state)).toHaveLength(1)
+    expect(assistants(state)[0]?.chunks).toEqual([{ type: 'message', text: 'second' }])
+  })
+
+  test('the complete assistant message replaces the streamed prefix without duplication', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('Hel')))
+    state = reduceSessionEvent(state, streamEvent(textDelta('lo')))
+    state = reduceSessionEvent(state, event('assistant', { uuid: 'msg-1', content: 'Hello' }))
+
+    expect(assistants(state)).toHaveLength(1)
+    expect(assistants(state)[0]?.chunks).toEqual([{ type: 'message', text: 'Hello' }])
+    expect(assistants(state)[0]?.streaming).toBeUndefined()
+  })
+
+  test('streaming frames are not deduped or tracked as durable sequence numbers', () => {
+    const frame = streamEvent(textDelta('a'))
+    const state = reduceSessionEvent(initialChatState, frame)
+
+    expect(state.seenSeqNums.size).toBe(0)
+    expect(state.lastSeqNum).toBe(0)
+  })
+
+  test('a failed result surfaces its message and drops the streaming entry', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('partial')))
+    state = reduceSessionEvent(state, event('result', { subtype: 'error_during_execution', result: 'boom' }))
+
+    expect(state.error).toBe('boom')
+    expect(assistants(state)).toHaveLength(0)
+  })
+
+  test('a failed result without a message falls back to the subtype', () => {
+    const state = reduceSessionEvent(initialChatState, event('result', { subtype: 'error_max_turns' }))
+    expect(state.error).toBe('error_max_turns')
+  })
+
+  test('a successful result clears a prior error', () => {
+    let state = reduceSessionEvent(initialChatState, event('error', { message: 'oops' }))
+    expect(state.error).toBe('oops')
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }))
+
+    expect(state.error).toBeNull()
+  })
+
+  test('a non-running session status drops the streaming entry', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('partial')))
+    state = reduceSessionEvent(state, event('session_status', { status: 'idle' }))
+
+    expect(assistants(state)).toHaveLength(0)
+  })
+
+  test('a new user message clears the prior error', () => {
+    let state = reduceSessionEvent(initialChatState, event('error', { message: 'oops' }))
+    state = reduceSessionEvent(state, event('user', { content: 'try again' }))
+
+    expect(state.error).toBeNull()
+  })
+})
+
+describe('activeStreamEvents', () => {
+  test('keeps only the deltas that arrive after the last terminal durable event', () => {
+    const frames: SessionEventInput[] = [
+      streamEvent(textDelta('old'), { seqNum: 9_000_000_001 }),
+      event('assistant', { content: 'done' }, { seqNum: 5 }),
+      streamEvent(textDelta('new'), { seqNum: 9_000_000_002 }),
+      streamEvent(textDelta('er'), { seqNum: 9_000_000_003 }),
+    ]
+
+    expect(activeStreamEvents(frames).map((frame) => frame.seqNum)).toEqual([9_000_000_002, 9_000_000_003])
+  })
+
+  test('returns an empty window when the turn already ended durably', () => {
+    const frames: SessionEventInput[] = [
+      streamEvent(textDelta('a'), { seqNum: 9_000_000_001 }),
+      event('result', { subtype: 'success' }, { seqNum: 5 }),
+    ]
+
+    expect(activeStreamEvents(frames)).toEqual([])
+  })
+
+  test('keeps deltas that arrive before any terminal event', () => {
+    const frames: SessionEventInput[] = [
+      event('user', { content: 'hi' }, { seqNum: 1 }),
+      streamEvent(textDelta('a'), { seqNum: 9_000_000_001 }),
+    ]
+
+    expect(activeStreamEvents(frames)).toHaveLength(1)
+  })
+})
+
+test('isEphemeralEvent recognizes stream frames even without the transport flag', () => {
+  expect(isEphemeralEvent({ type: 'stream_event' })).toBe(true)
+  expect(isEphemeralEvent({ type: 'stream_event', ephemeral: false })).toBe(true)
+  expect(isEphemeralEvent({ type: 'assistant', ephemeral: true })).toBe(true)
+  expect(isEphemeralEvent({ type: 'assistant' })).toBe(false)
 })
 
 describe('immutability', () => {

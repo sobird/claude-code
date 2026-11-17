@@ -52,6 +52,8 @@ export interface AssistantMessageEntry {
   type: 'assistant_message'
   id: string
   chunks: AssistantChunk[]
+  /** Transient bubble fed by `stream_event` deltas; replaced by the durable message. */
+  streaming?: boolean
 }
 
 export interface ToolCallEntry {
@@ -115,6 +117,8 @@ export interface SessionEventInput {
   sessionId?: string
   createdAt?: number
   receivedAt?: number
+  /** Live-only frame (SSE without an `id:`); falls outside the durable sequence. */
+  ephemeral?: boolean
 }
 
 export const initialChatState: ChatState = {
@@ -179,6 +183,14 @@ function numericSeqNum(event: SessionEventInput): number | null {
 // Reducer
 // =============================================================================
 
+/**
+ * Streaming snapshots are published live without a durable row and never replayed,
+ * so they must bypass the seqNum/uuid dedupe bookkeeping entirely.
+ */
+export function isEphemeralEvent(event: SessionEventInput): boolean {
+  return event.ephemeral === true || event.type === 'stream_event'
+}
+
 function isDuplicate(state: ChatState, event: SessionEventInput): boolean {
   const seqNum = numericSeqNum(event)
   if (seqNum !== null) return state.seenSeqNums.has(seqNum)
@@ -212,6 +224,45 @@ function replaceEntry(entries: ThreadEntry[], index: number, entry: ThreadEntry)
   const next = entries.slice()
   next[index] = entry
   return next
+}
+
+const STREAMING_ENTRY_ID = 'streaming'
+
+/** Remove the transient streamed bubble; the durable message replaces it. */
+function dropStreaming(state: ChatState): ChatState {
+  if (!state.entries.some((entry) => entry.type === 'assistant_message' && entry.streaming)) return state
+  return {
+    ...state,
+    entries: state.entries.filter((entry) => !(entry.type === 'assistant_message' && entry.streaming)),
+  }
+}
+
+function appendStreaming(state: ChatState, kind: 'message' | 'thought', text: string): ChatState {
+  if (!text) return state
+  const chunk: AssistantChunk = kind === 'message' ? { type: 'message', text } : { type: 'thought', text }
+  const last = state.entries[state.entries.length - 1]
+
+  if (last && last.type === 'assistant_message' && last.streaming) {
+    const chunks = last.chunks.slice()
+    const lastChunk = chunks[chunks.length - 1]
+    if (lastChunk && lastChunk.type === kind) {
+      chunks[chunks.length - 1] =
+        kind === 'message'
+          ? { type: 'message', text: lastChunk.text + text }
+          : { type: 'thought', text: lastChunk.text + text }
+    } else {
+      chunks.push(chunk)
+    }
+    return { ...state, entries: replaceEntry(state.entries, state.entries.length - 1, { ...last, chunks }) }
+  }
+
+  return {
+    ...state,
+    entries: [
+      ...state.entries,
+      { type: 'assistant_message', id: STREAMING_ENTRY_ID, chunks: [chunk], streaming: true },
+    ],
+  }
 }
 
 function appendAssistantText(entries: ThreadEntry[], text: string, eventId: string): ThreadEntry[] {
@@ -263,7 +314,9 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
   const seenAssistantUuids = new Set(state.seenAssistantUuids)
   seenAssistantUuids.add(messageUuid)
 
-  let entries = state.entries
+  // The durable message supersedes the streamed prefix.
+  const base = dropStreaming(state)
+  let entries = base.entries
   const text = typeof payload.content === 'string' ? payload.content : extractEventText(payload)
   if (text) entries = appendAssistantText(entries, text, nextId)
 
@@ -274,7 +327,7 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
     entries = [...entries, toolCallFromBlock(block, `call-${seqNum ?? entries.length}-${i}`)]
   }
 
-  return { ...state, entries, seenAssistantUuids }
+  return { ...base, entries, seenAssistantUuids }
 }
 
 function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
@@ -440,7 +493,33 @@ function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatSt
   const payload = asRecord(event.payload) ?? {}
   const status = asText(payload.status)
   if (!status) return state
-  return { ...state, status, closed: isSessionClosedStatus(status) }
+  // The turn stopped (idle/archived/inactive): any in-flight stream is stale.
+  const base = status === 'running' ? state : dropStreaming(state)
+  return { ...base, status, closed: isSessionClosedStatus(status) }
+}
+
+/** `stream_event` payloads wrap the raw SDK event under `event`. */
+function handleStreamEvent(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const stream = asRecord(payload.event) ?? payload
+  const type = asText(stream.type)
+
+  if (type === 'message_start') return dropStreaming(state)
+  if (type !== 'content_block_delta') return state
+
+  const delta = asRecord(stream.delta)
+  if (!delta) return state
+  if (delta.type === 'text_delta') return appendStreaming(state, 'message', asText(delta.text))
+  if (delta.type === 'thinking_delta') return appendStreaming(state, 'thought', asText(delta.thinking))
+  return state
+}
+
+function handleResult(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const base = dropStreaming(state)
+  const subtype = asText(payload.subtype)
+  if (!subtype || subtype === 'success') return { ...base, error: null }
+  return { ...base, error: asText(payload.result) || subtype }
 }
 
 function handleError(state: ChatState, event: SessionEventInput): ChatState {
@@ -492,6 +571,8 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       return {
         ...state,
         entries: [...state.entries, { type: 'user_message', id, content: text }],
+        // A new turn starts fresh; the previous failure no longer describes it.
+        error: null,
       }
     }
     case 'assistant':
@@ -512,18 +593,51 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       return handleError(state, event)
     case 'plan':
       return handlePlan(state, event)
+    case 'stream_event':
+      return handleStreamEvent(state, event)
+    case 'result':
+    case 'result_success':
+      return handleResult(state, event)
+    case 'interrupt':
+      return dropStreaming(state)
     default:
-      // partial_assistant, result, result_success, system, task_state,
-      // automation_state, status, … are intentionally ignored.
+      // partial_assistant, system, task_state, automation_state, status, … are
+      // intentionally ignored.
       return state
   }
 }
 
 /** Fold one history row or live frame into the chat state. */
 export function reduceSessionEvent(state: ChatState, event: SessionEventInput): ChatState {
+  // Ephemeral frames are never replayed, so they skip the durable dedupe sets.
+  if (isEphemeralEvent(event)) return applyEvent(state, event)
   if (isDuplicate(state, event)) return state
   const seeded = markSeen(state, event)
   return applyEvent(seeded, event)
+}
+
+/** Durable event types that close the current streamed assistant message. */
+const TERMINAL_STREAM_EVENT_TYPES = new Set([
+  'assistant',
+  'result',
+  'result_success',
+  'session_status',
+  'interrupt',
+  'error',
+])
+
+/**
+ * The live delta window to replay on top of durable history: every ephemeral
+ * frame that arrived after the last terminal durable event. Feeding the whole
+ * live log would resurrect a finished streamed bubble on each render pass.
+ */
+export function activeStreamEvents(events: readonly SessionEventInput[]): SessionEventInput[] {
+  let start = 0
+  for (let i = 0; i < events.length; i++) {
+    const candidate = events[i]
+    if (candidate && !isEphemeralEvent(candidate) && TERMINAL_STREAM_EVENT_TYPES.has(candidate.type)) start = i + 1
+  }
+  return events.slice(start).filter(isEphemeralEvent)
 }
 
 /** Fold a page of durable history (oldest→newest) through the reducer. */

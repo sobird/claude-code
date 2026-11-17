@@ -111,6 +111,7 @@ needed:
 USER_TYPE=ant \
 CLAUDE_BRIDGE_BASE_URL=https://rcs.example.com \
 CLAUDE_BRIDGE_OAUTH_TOKEN=rcs_... \
+CLAUDE_CODE_INCLUDE_PARTIAL_MESSAGES=1 \
 bun scripts/dev.ts remote-control
 ```
 
@@ -122,6 +123,10 @@ binary does not contain the `CLAUDE_BRIDGE_*` overrides.
   `Authorization: Bearer …` on every bridge call.
 - `CLAUDE_BRIDGE_SESSION_INGRESS_URL` — optional; defaults to the base URL.
   Set it explicitly only if session ingress is served from a different host.
+- `CLAUDE_CODE_INCLUDE_PARTIAL_MESSAGES=1` — optional but recommended: makes the
+  session child emit `stream_event` deltas, so the web UI renders text as it is
+  generated instead of waiting for each complete message. Deltas are live-only;
+  the gateway never persists them.
 - `CLAUDE_BRIDGE_USE_CCR_V2` — **do not set it against this gateway.** The
   gateway always reports `use_code_sessions: false`; the v2 code-sessions path
   this override forces authenticates with a worker JWT against
@@ -231,6 +236,7 @@ unauthenticated `GET /web/sessions` → 401. It needs no database or external en
    USER_TYPE=ant \
    CLAUDE_BRIDGE_BASE_URL=http://localhost \
    CLAUDE_BRIDGE_OAUTH_TOKEN=rcs_... \
+   CLAUDE_CODE_INCLUDE_PARTIAL_MESSAGES=1 \
    bun scripts/dev.ts remote-control
    ```
 

@@ -25,6 +25,8 @@ export interface SessionStreamEvent {
   sessionId: string
   /** `Date.now()` at the moment the live frame was parsed. */
   receivedAt: number
+  /** The SSE frame carried no `id:`, so this event has no durable counterpart. */
+  ephemeral?: boolean
 }
 
 export interface UseSessionStreamResult {
@@ -40,7 +42,7 @@ interface RawFrameData {
   seqNum?: unknown
 }
 
-function toStreamEvent(sessionId: string, data: string): SessionStreamEvent | null {
+function toStreamEvent(sessionId: string, data: string, ephemeral: boolean): SessionStreamEvent | null {
   let parsed: RawFrameData
   try {
     parsed = JSON.parse(data) as RawFrameData
@@ -55,6 +57,7 @@ function toStreamEvent(sessionId: string, data: string): SessionStreamEvent | nu
     direction: parsed.direction === 'outbound' ? 'outbound' : 'inbound',
     sessionId,
     receivedAt: Date.now(),
+    ephemeral,
   }
 }
 
@@ -102,7 +105,7 @@ export function useSessionStream(sessionId: string | null): UseSessionStreamResu
       },
       onEvent: (frame) => {
         if (isStale()) return
-        const event = toStreamEvent(sessionId, frame.data)
+        const event = toStreamEvent(sessionId, frame.data, frame.id === undefined)
         if (!event) return
         if (seen.has(event.seqNum)) return
         seen.add(event.seqNum)

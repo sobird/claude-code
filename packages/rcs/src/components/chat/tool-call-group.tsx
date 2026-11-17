@@ -11,17 +11,15 @@ import { useState } from 'react'
 
 import type { ToolCallData, ToolCallEntry, ToolCallStatus } from '../../lib/session-reducer'
 import { cn, uniqueKeys } from '../../lib/utils'
-import { Button } from '../ui/button'
 
 type ChatTranslator = ReturnType<typeof useTranslations<'chat'>>
 
 interface ToolCallGroupProps {
   entries: ToolCallEntry[]
-  onPermissionRespond?: (requestId: string, approved: boolean) => void
 }
 
 /** Renders a single tool card, or a collapsible group when calls are adjacent. */
-export function ToolCallGroup({ entries, onPermissionRespond }: ToolCallGroupProps) {
+export function ToolCallGroup({ entries }: ToolCallGroupProps) {
   const t = useTranslations('chat')
   const [expanded, setExpanded] = useState(false)
 
@@ -29,11 +27,7 @@ export function ToolCallGroup({ entries, onPermissionRespond }: ToolCallGroupPro
 
   if (entries.length === 1) {
     const only = entries[0]
-    return (
-      <div className="pl-0 sm:pl-11">
-        {only ? <SingleToolCard tool={only.toolCall} compact onPermissionRespond={onPermissionRespond} /> : null}
-      </div>
-    )
+    return <div className="pl-0 sm:pl-11">{only ? <SingleToolCard tool={only.toolCall} compact /> : null}</div>
   }
 
   return (
@@ -53,7 +47,7 @@ export function ToolCallGroup({ entries, onPermissionRespond }: ToolCallGroupPro
         {expanded ? (
           <div className="divide-y divide-border border-t border-border">
             {uniqueKeys(entries, (entry) => entry.toolCall.id).map(({ item, key }) => (
-              <SingleToolCard key={key} tool={item.toolCall} compact onPermissionRespond={onPermissionRespond} />
+              <SingleToolCard key={key} tool={item.toolCall} compact />
             ))}
           </div>
         ) : null}
@@ -65,17 +59,15 @@ export function ToolCallGroup({ entries, onPermissionRespond }: ToolCallGroupPro
 interface SingleToolCardProps {
   tool: ToolCallData
   compact?: boolean
-  onPermissionRespond?: (requestId: string, approved: boolean) => void
 }
 
-function SingleToolCard({ tool, compact, onPermissionRespond }: SingleToolCardProps) {
+function SingleToolCard({ tool, compact }: SingleToolCardProps) {
   const t = useTranslations('chat')
   const [expanded, setExpanded] = useState(!compact)
   const hasOutput =
     tool.status !== 'running' &&
     tool.status !== 'waiting_for_confirmation' &&
     (tool.rawOutput !== undefined || tool.status === 'error')
-  const requestId = tool.permissionRequest?.requestId
 
   return (
     <div className={cn('px-3', compact ? 'py-1.5' : 'py-2')}>
@@ -96,31 +88,6 @@ function SingleToolCard({ tool, compact, onPermissionRespond }: SingleToolCardPr
           <span className="text-[10px] text-brand">{t('waiting')}</span>
         ) : null}
       </button>
-
-      {tool.status === 'waiting_for_confirmation' && requestId ? (
-        <div className="mt-2 flex gap-2 sm:ml-5">
-          <Button
-            type="button"
-            size="sm"
-            variant="brand"
-            className="h-10 flex-1 sm:h-8 sm:flex-none"
-            onClick={() => onPermissionRespond?.(requestId, true)}
-          >
-            <Check className="h-4 w-4" />
-            {t('allow')}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-10 flex-1 border-warning-border/40 text-warning-text sm:h-8 sm:flex-none"
-            onClick={() => onPermissionRespond?.(requestId, false)}
-          >
-            <X className="h-4 w-4" />
-            {t('deny')}
-          </Button>
-        </div>
-      ) : null}
 
       {expanded ? (
         <div className="mt-2 space-y-2 sm:ml-5">

@@ -97,6 +97,7 @@
     "send": "Send",
     "interrupt": "Interrupt",
     "enterHint": "Enter to send, Shift+Enter for a new line",
+    "busyHint": "Enter to queue a message, Esc to interrupt",
     "expand": "Expand",
     "thought": "Thinking",
     "allow": "Allow",

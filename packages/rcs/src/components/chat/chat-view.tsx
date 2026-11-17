@@ -22,8 +22,10 @@ import { useSessionStream } from '../../hooks/useSessionStream'
 import { createApiClient } from '../../lib/api-client'
 import { randomUuid } from '../../lib/random-uuid'
 import {
+  activeStreamEvents,
   applyHistory,
   initialChatState,
+  isEphemeralEvent,
   type SessionEventInput,
   type ThreadEntry,
   type ToolCallEntry,
@@ -138,24 +140,34 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     void load()
   }, [hasToken, load])
 
-  // Fold history first, then live frames and locally-sent events, all ordered
-  // by durable sequence so an assistant reply never lands before its prompt.
+  // Fold durable events first (history, live frames, locally-sent events) in
+  // sequence order so an assistant reply never lands before its prompt. Streamed
+  // deltas carry no durable sequence, so they are replayed separately on top:
+  // only the window after the last terminal event is still live.
   const chat = useMemo(() => {
     const merged: SessionEventInput[] = []
     for (const event of history ?? []) merged.push(event)
     for (const event of stream.events) merged.push(event)
     for (const event of extraEvents) merged.push(event)
-    merged.sort((a, b) => (a.seqNum ?? 0) - (b.seqNum ?? 0))
-    return applyHistory(initialChatState, merged)
+    const durable = merged
+      .filter((event) => !isEphemeralEvent(event))
+      .toSorted((a, b) => (a.seqNum ?? 0) - (b.seqNum ?? 0))
+    const historyState = applyHistory(initialChatState, durable)
+    return applyHistory(historyState, activeStreamEvents(stream.events))
   }, [history, stream.events, extraEvents])
 
   const entries = chat.entries
   const entryCount = entries.length
+  // Streaming grows one entry instead of adding one, so track its tail length
+  // to keep the newest text in view.
+  const tail = entries[entries.length - 1]
+  const streamTailLength =
+    tail?.type === 'assistant_message' && tail.streaming ? (tail.chunks[tail.chunks.length - 1]?.text.length ?? 0) : 0
 
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [entryCount])
+  }, [entryCount, streamTailLength])
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -214,6 +226,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // outside the loaded history window.
   const closed = chat.closed || isSessionClosedStatus(session?.status)
   const busy = chat.status === 'running'
+  // The streamed bubble already shows progress once its first delta lands.
+  const streamingHasText = entries.some(
+    (entry) => entry.type === 'assistant_message' && entry.streaming && entry.chunks.length > 0,
+  )
   const displayStatus = chat.status ?? session?.status ?? 'active'
   const reconnectMessage =
     stream.status === 'error'
@@ -277,6 +293,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         </div>
       ) : null}
 
+      {chat.error ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
+        >
+          {chat.error}
+        </div>
+      ) : null}
+
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto rounded-xl border border-border bg-surface-2 px-3 py-5 sm:px-6"
@@ -287,9 +312,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           ) : entries.length === 0 ? (
             <EmptyState title={t('empty.title')} description={t('empty.description', { product: tCommon('claude') })} />
           ) : (
-            <MessageThread entries={entries} onPermissionRespond={handlePermissionRespond} />
+            <MessageThread entries={entries} />
           )}
-          {busy ? <ThinkingIndicator label={t('thinking', { product: tCommon('claude') })} /> : null}
+          {busy && !streamingHasText ? (
+            <ThinkingIndicator label={t('thinking', { product: tCommon('claude') })} />
+          ) : null}
         </div>
       </div>
 
@@ -312,13 +339,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   )
 }
 
-function MessageThread({
-  entries,
-  onPermissionRespond,
-}: {
-  entries: ThreadEntry[]
-  onPermissionRespond: (requestId: string, approved: boolean) => void
-}) {
+function MessageThread({ entries }: { entries: ThreadEntry[] }) {
   const grouped = groupToolCalls(entries)
   const keyed = uniqueKeys(grouped, (item) =>
     item.kind === 'tools' ? `tools-${item.entries[0]?.toolCall.id ?? 'empty'}` : `entry-${item.entry.id}`,
@@ -328,7 +349,7 @@ function MessageThread({
     <div className="flex flex-col gap-3">
       {keyed.map(({ item, key }) =>
         item.kind === 'tools' ? (
-          <ToolCallGroup key={key} entries={item.entries} onPermissionRespond={onPermissionRespond} />
+          <ToolCallGroup key={key} entries={item.entries} />
         ) : (
           <div key={key} className={spacingFor(item.entry)}>
             <EntryRenderer entry={item.entry} />

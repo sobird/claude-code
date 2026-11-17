@@ -1,14 +1,15 @@
 'use client'
 
 /**
- * Chat composer with Enter-to-send and Shift+Enter newline. Enabled input
- * becomes an interrupt control while the agent is busy.
+ * Chat composer. Enter sends (mid-turn messages are queued by the CLI), Shift+Enter
+ * inserts a newline, and Escape/Stop interrupt while the agent is running.
  */
 
 import { Send, Square } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useCallback, useRef, useState } from 'react'
 
+import { resolveComposerKey } from '../../lib/composer-keys'
 import { cn } from '../../lib/utils'
 
 interface ChatInputProps {
@@ -72,10 +73,18 @@ export function ChatInput({
             value={text}
             onChange={(event) => handleInput(event.target)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+              const action = resolveComposerKey({
+                key: event.key,
+                shiftKey: event.shiftKey,
+                isComposing: event.nativeEvent.isComposing,
+                isLoading,
+              })
+              if (action === 'submit') {
                 event.preventDefault()
-                if (isLoading) onInterrupt?.()
-                else void handleSubmit()
+                void handleSubmit()
+              } else if (action === 'interrupt') {
+                event.preventDefault()
+                onInterrupt?.()
               }
             }}
             placeholder={resolvedPlaceholder}
@@ -83,26 +92,34 @@ export function ChatInput({
             rows={1}
             className="max-h-[200px] min-h-[24px] flex-1 resize-none border-none bg-transparent font-display text-sm leading-normal text-text-primary outline-none placeholder:text-text-muted disabled:cursor-not-allowed disabled:opacity-60"
           />
+          {isLoading && onInterrupt ? (
+            <button
+              type="button"
+              onClick={onInterrupt}
+              aria-label={t('interrupt')}
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-text-primary text-surface-2 transition-all hover:bg-text-secondary sm:h-8 sm:w-8"
+            >
+              <Square className="h-3.5 w-3.5" fill="currentColor" />
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={isLoading ? onInterrupt : () => void handleSubmit()}
-            disabled={!isLoading && !canSend}
-            aria-label={isLoading ? t('interrupt') : t('send')}
+            onClick={() => void handleSubmit()}
+            disabled={!canSend}
+            aria-label={t('send')}
             className={cn(
               'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-all sm:h-8 sm:w-8',
-              isLoading
-                ? 'bg-text-primary text-surface-2 hover:bg-text-secondary'
-                : canSend
-                  ? 'bg-brand text-white hover:bg-brand-light hover:scale-[1.05] active:scale-[0.97]'
-                  : 'bg-surface-1 text-text-muted',
+              canSend
+                ? 'bg-brand text-white hover:bg-brand-light hover:scale-[1.05] active:scale-[0.97]'
+                : 'bg-surface-1 text-text-muted',
             )}
           >
-            {isLoading ? <Square className="h-3.5 w-3.5" fill="currentColor" /> : <Send className="h-4 w-4" />}
+            <Send className="h-4 w-4" />
           </button>
         </div>
       </div>
       <div className="mt-1.5 text-center">
-        <span className="font-display text-[11px] text-text-muted">{t('enterHint')}</span>
+        <span className="font-display text-[11px] text-text-muted">{isLoading ? t('busyHint') : t('enterHint')}</span>
       </div>
     </div>
   )

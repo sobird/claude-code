@@ -97,6 +97,7 @@
     "send": "发送",
     "interrupt": "中断",
     "enterHint": "Enter 发送，Shift+Enter 换行",
+    "busyHint": "Enter 排队发送，Esc 中断",
     "expand": "展开",
     "thought": "思考过程",
     "allow": "允许",
