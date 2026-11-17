@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 
 import { loadConfig } from '../../config.js'
+import { toWebSessionId } from '../../contracts.js'
 import { createMemoryRepositories } from '../../db/repositories/index.js'
 import {
   getPushPublicConfig,
@@ -91,7 +92,7 @@ describe('push notifier service', () => {
     expect(sent.map((entry) => entry.endpoint).toSorted()).toEqual(['https://push.example/a', 'https://push.example/b'])
     for (const entry of sent) {
       const payload = entry.payload as { sessionId: string; toolName: string; kind: string }
-      expect(payload.sessionId).toBe(session.id)
+      expect(payload.sessionId).toBe(toWebSessionId(session.id))
       expect(payload.toolName).toBe('Bash')
       expect(payload.kind).toBe('permission')
     }
@@ -194,7 +195,7 @@ describe('push notifier service', () => {
     expect(sent).toHaveLength(1)
     expect(sent[0].endpoint).toBe('https://push.example/a')
     const payload = sent[0].payload as { sessionId: string; toolName: string; kind: string }
-    expect(payload.sessionId).toBe(session.id)
+    expect(payload.sessionId).toBe(toWebSessionId(session.id))
     expect(payload.toolName).toBe('Bash')
     expect(payload.kind).toBe('permission')
   })

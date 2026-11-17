@@ -42,6 +42,11 @@ describe('buildNotificationPayload', () => {
     })
   })
 
+  test('emits the web-facing session id so the worker can match visible paths', () => {
+    const payload = buildNotificationPayload({ id: 'cse_abc', title: null }, 'control_request', nested)
+    expect(payload?.sessionId).toBe('session_abc')
+  })
+
   test('maps AskUserQuestion and ExitPlanMode kinds', () => {
     const kindOf = (tool: string) =>
       buildNotificationPayload({ id: 's1', title: null }, 'control_request', {

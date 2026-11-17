@@ -55,7 +55,6 @@ export function Notifications() {
   // same way ApiKeys does.
   const api = useMemo(() => createApiClient({ getToken: () => token, refreshToken: refresh }), [token, refresh])
 
-  const isDev = process.env.NODE_ENV !== 'production'
   const [detected, setDetected] = useState(false)
   const [mode, setMode] = useState<PushState>('unsupported')
   const [permission, setPermission] = useState<NotificationPermission>('default')
@@ -162,7 +161,7 @@ export function Notifications() {
 
   const tokenWaiting = token === null && tokenError === null
   const tokenUnavailable = token === null && tokenError !== null
-  const canToggle = detected && token !== null && mode === 'available' && !unavailable && !isDev
+  const canToggle = detected && token !== null && mode === 'available' && !unavailable
 
   const statusLines: string[] = []
   if (tokenUnavailable) {
@@ -174,7 +173,6 @@ export function Notifications() {
     else if (mode === 'denied') statusLines.push(t('denied'))
     else if (unavailable) statusLines.push(t('unavailable'))
     else statusLines.push(subscribed ? t('enabled') : t('disabled'))
-    if (isDev) statusLines.push(t('devHint'))
   }
 
   const errorMessage = error !== null ? describeError(error, 'settings.notifications.error') : null

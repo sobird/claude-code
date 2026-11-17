@@ -324,6 +324,10 @@ The UI can push a notification to the owner when a session is waiting on a
 confirmation, even with the tab closed. Enable it per user under Settings.
 
 - Web Push requires HTTPS: set `RCS_DOMAIN` so Caddy serves the site over TLS.
+- To test locally, run `bun run dev` with a local certificate pair (discovered
+  under `~/certificates`, or set `RCS_DEV_TLS_CERT` / `RCS_DEV_TLS_KEY`); both
+  the UI and the gateway serve HTTPS. The service worker registers in dev with
+  all caching disabled, so push works without shadowing dev assets.
 - iOS needs 16.4+ **and** the app added to the home screen; Android and desktop
   browsers work directly.
 - The gateway needs outbound access to the browser push services

@@ -45,9 +45,20 @@ startDisconnectMonitor({ repos, config })
 
 await initPushNotifier({ config, repos })
 
+// Optional TLS for local development (scripts/dev.ts points both processes at a
+// certificate pair). In production Caddy terminates TLS, so these stay unset.
+const tlsCertPath = process.env.RCS_TLS_CERT?.trim()
+const tlsKeyPath = process.env.RCS_TLS_KEY?.trim()
+const tls =
+  tlsCertPath && tlsKeyPath
+    ? { cert: await Bun.file(tlsCertPath).text(), key: await Bun.file(tlsKeyPath).text() }
+    : undefined
+if (tls) log('[RCS] TLS enabled (RCS_TLS_CERT/RCS_TLS_KEY)')
+
 export default {
   port: config.port,
   hostname: config.host,
+  ...(tls ? { tls } : {}),
   fetch: app.fetch,
   websocket: {
     ...websocket,

@@ -1,6 +1,7 @@
 import { beforeEach, expect, test } from 'bun:test'
 
 import { loadConfig } from '../../config.js'
+import { toWebSessionId } from '../../contracts.js'
 import { createMemoryRepositories } from '../../db/repositories/index.js'
 import { initPushNotifier, resetPushNotifierForTests } from '../../services/push-notifier.js'
 import { publishInboundEvent } from '../event-bus.js'
@@ -39,7 +40,7 @@ test('publishing an inbound confirmation reaches the owner’s subscription', as
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   expect(sent).toHaveLength(1)
-  expect(sent[0]).toMatchObject({ sessionId: session.id, toolName: 'Edit', kind: 'permission' })
+  expect(sent[0]).toMatchObject({ sessionId: toWebSessionId(session.id), toolName: 'Edit', kind: 'permission' })
 })
 
 test('publishing an outbound-style event type does not notify', async () => {

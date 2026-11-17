@@ -47,22 +47,31 @@ const networkOnly: RuntimeCaching[] = NETWORK_ONLY_PATHS.map((path) => ({
   handler: new NetworkOnly(),
 }))
 
+// `next dev` registers this worker too so push can be tested locally. Dev
+// assets are hashed and unstable, so caching any of them would shadow HMR;
+// in dev the worker handles no requests and only serves the push handlers.
+const isDev = process.env.NODE_ENV !== 'production'
+
 const serwist = new Serwist({
-  precacheEntries: self.__SW_MANIFEST,
+  precacheEntries: isDev ? [] : self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
   // Network-only rules must come first: defaultCache falls through to a
   // NetworkFirst catch-all that would otherwise cache gateway responses.
-  runtimeCaching: [...networkOnly, ...defaultCache],
-  fallbacks: {
-    entries: [
-      {
-        url: OFFLINE_URL,
-        matcher: ({ request }) => request.destination === 'document',
-      },
-    ],
-  },
+  runtimeCaching: isDev ? networkOnly : [...networkOnly, ...defaultCache],
+  ...(isDev
+    ? {}
+    : {
+        fallbacks: {
+          entries: [
+            {
+              url: OFFLINE_URL,
+              matcher: ({ request }) => request.destination === 'document',
+            },
+          ],
+        },
+      }),
 })
 
 serwist.addEventListeners()

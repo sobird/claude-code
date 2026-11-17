@@ -371,8 +371,7 @@
       "insecure": "Notifications require HTTPS. Open the app over a secure connection.",
       "iosInstall": "Add this app to your Home Screen to enable notifications.",
       "denied": "Notifications are blocked. Allow them in your browser settings, then reload.",
-      "error": "Could not update notifications. Try again.",
-      "devHint": "Notifications only work in production builds — the service worker does not run under next dev."
+      "error": "Could not update notifications. Try again."
     }
   },
   "admin": {

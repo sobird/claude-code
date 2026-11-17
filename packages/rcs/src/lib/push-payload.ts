@@ -6,6 +6,8 @@
  * imports so both runtimes can load it.
  */
 
+import { toWebSessionId } from '../contracts.js'
+
 export type PushNotificationKind = 'permission' | 'question' | 'plan'
 
 export interface PushNotificationPayload {
@@ -67,7 +69,10 @@ export function buildNotificationPayload(
   return {
     v: 1,
     kind: notificationKind(toolName),
-    sessionId: session.id,
+    // The service worker compares this against window paths and opens it on
+    // click, both in the web-facing `session_…` form the app routes on — not
+    // the canonical `cse_…` id the database uses.
+    sessionId: toWebSessionId(session.id),
     ...(sessionTitle ? { sessionTitle } : {}),
     toolName,
     ...(description ? { description } : {}),

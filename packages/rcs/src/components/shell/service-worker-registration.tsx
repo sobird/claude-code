@@ -11,12 +11,12 @@ const SERVICE_WORKER_SCOPE = '/'
  * origin-root scope even though its script lives one level deeper. Gateway
  * paths are marked network-only in the worker so it never caches them.
  *
- * Registration is client-only and production-only, so `next dev` is never
- * shadowed by a stale precache while iterating.
+ * Registration also happens under `next dev` so push notifications can be
+ * tested locally; the worker itself disables all caching in dev so it never
+ * shadows dev assets.
  */
 export function ServiceWorkerRegistration(): null {
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') return
     if (!('serviceWorker' in navigator)) return
 
     navigator.serviceWorker.register(SERVICE_WORKER_URL, { scope: SERVICE_WORKER_SCOPE }).catch((error: unknown) => {
