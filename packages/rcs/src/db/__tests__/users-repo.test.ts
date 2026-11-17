@@ -246,6 +246,16 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       const revoked = await repos.apiKeys.getByHash('hash-mo')
       expect(revoked?.revokedAt?.getTime()).toBe(revokedAt.getTime())
     })
+
+    test('locale defaults to null and can be set or cleared', async () => {
+      const repos = makeRepos()
+      const user = await repos.users.create({ username: 'locale-user', passwordHash: 'x', role: 'member' })
+      expect(user.locale).toBeNull()
+      await repos.users.update(user.id, { locale: 'zh-CN' })
+      expect((await repos.users.getById(user.id))?.locale).toBe('zh-CN')
+      await repos.users.update(user.id, { locale: null })
+      expect((await repos.users.getById(user.id))?.locale).toBeNull()
+    })
   })
 }
 

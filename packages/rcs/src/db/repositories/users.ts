@@ -55,6 +55,7 @@ export function createUserRepository(db: Database): UserRepository {
       const values: Partial<typeof users.$inferInsert> = { updatedAt: new Date() }
       if (patch.role !== undefined) values.role = patch.role
       if (patch.displayName !== undefined) values.displayName = patch.displayName
+      if (patch.locale !== undefined) values.locale = patch.locale
       await db.update(users).set(values).where(eq(users.id, id))
     },
 
@@ -125,6 +126,7 @@ export function createMemoryUserRepository(): UserRepository {
         displayName: input.displayName ?? null,
         passwordHash: input.passwordHash,
         role: input.role,
+        locale: null,
         disabledAt: null,
         createdAt: now,
         updatedAt: now,
@@ -161,6 +163,7 @@ export function createMemoryUserRepository(): UserRepository {
       if (!record) return
       if (patch.role !== undefined) record.role = patch.role
       if (patch.displayName !== undefined) record.displayName = patch.displayName
+      if (patch.locale !== undefined) record.locale = patch.locale
       record.updatedAt = new Date()
     },
 

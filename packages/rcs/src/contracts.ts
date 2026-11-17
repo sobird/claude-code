@@ -14,6 +14,7 @@ export interface UserRecord {
   displayName: string | null
   passwordHash: string
   role: Role
+  locale: string | null
   disabledAt: Date | null
   createdAt: Date
   updatedAt: Date

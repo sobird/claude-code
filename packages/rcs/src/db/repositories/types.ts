@@ -38,6 +38,7 @@ export interface CreateApiKeyInput {
 export interface UserPatch {
   role?: Role
   displayName?: string | null
+  locale?: string | null
 }
 
 /** Atomic last-admin guard input; `disabledAt: undefined` leaves the flag unchanged. */

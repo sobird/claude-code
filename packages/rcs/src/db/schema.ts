@@ -22,6 +22,8 @@ export const users = pgTable('users', {
   displayName: text('display_name'),
   passwordHash: text('password_hash').notNull(),
   role: text('role').$type<Role>().notNull().default('member'),
+  /** Preferred UI locale; validated at the API boundary, so no DB check constraint. */
+  locale: text('locale'),
   disabledAt: timestamp('disabled_at', { withTimezone: true, mode: 'date' }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
