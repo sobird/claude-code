@@ -394,6 +394,17 @@ function streamEvent(inner: Record<string, unknown>, overrides: Partial<SessionE
   return event('stream_event', { type: 'stream_event', event: inner }, { ephemeral: true, ...overrides })
 }
 
+// The gateway's `normalizePayload` wraps every inbound message as
+// `{ content, raw }` before publishing it, so the live SSE stream nests the SDK
+// stream event under `raw.event` — not at the top level like `streamEvent` above.
+function normalizedStreamEvent(inner: Record<string, unknown>, overrides: Partial<SessionEventInput> = {}) {
+  return event(
+    'stream_event',
+    { content: '', raw: { type: 'stream_event', uuid: 'stream-uuid', event: inner } },
+    { ephemeral: true, ...overrides },
+  )
+}
+
 function textDelta(text: string): Record<string, unknown> {
   return { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } }
 }
@@ -407,6 +418,16 @@ describe('streaming deltas', () => {
     let state = reduceSessionEvent(initialChatState, streamEvent({ type: 'message_start' }))
     state = reduceSessionEvent(state, streamEvent(textDelta('Hel')))
     state = reduceSessionEvent(state, streamEvent(textDelta('lo')))
+
+    expect(assistants(state)).toHaveLength(1)
+    expect(assistants(state)[0]?.chunks).toEqual([{ type: 'message', text: 'Hello' }])
+    expect(assistants(state)[0]?.streaming).toBe(true)
+  })
+
+  test('gateway-normalized payloads (event nested under raw) stream like raw ones', () => {
+    let state = reduceSessionEvent(initialChatState, normalizedStreamEvent({ type: 'message_start' }))
+    state = reduceSessionEvent(state, normalizedStreamEvent(textDelta('Hel')))
+    state = reduceSessionEvent(state, normalizedStreamEvent(textDelta('lo')))
 
     expect(assistants(state)).toHaveLength(1)
     expect(assistants(state)[0]?.chunks).toEqual([{ type: 'message', text: 'Hello' }])

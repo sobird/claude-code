@@ -158,16 +158,28 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   const entries = chat.entries
   const entryCount = entries.length
-  // Streaming grows one entry instead of adding one, so track its tail length
-  // to keep the newest text in view.
-  const tail = entries[entries.length - 1]
-  const streamTailLength =
-    tail?.type === 'assistant_message' && tail.streaming ? (tail.chunks[tail.chunks.length - 1]?.text.length ?? 0) : 0
+  const streaming = entries.some((entry) => entry.type === 'assistant_message' && entry.streaming)
 
+  // New entries always bring the thread to the bottom.
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [entryCount, streamTailLength])
+  }, [entryCount])
+
+  // While a reply streams, the text grows between reducer updates as it is
+  // revealed, so follow it frame-by-frame — but only while the reader is
+  // already near the bottom, so scrolling up to re-read releases the follow.
+  useEffect(() => {
+    if (!streaming) return undefined
+    let frame = 0
+    const follow = () => {
+      const el = scrollRef.current
+      if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 200) el.scrollTop = el.scrollHeight
+      frame = requestAnimationFrame(follow)
+    }
+    frame = requestAnimationFrame(follow)
+    return () => cancelAnimationFrame(frame)
+  }, [streaming])
 
   const handleSend = useCallback(
     async (text: string) => {

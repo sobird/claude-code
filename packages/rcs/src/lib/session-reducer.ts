@@ -498,10 +498,25 @@ function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatSt
   return { ...base, status, closed: isSessionClosedStatus(status) }
 }
 
+/**
+ * Locate the raw SDK stream event inside a `stream_event` payload.
+ *
+ * Raw frames wrap it under `event`. The gateway's `normalizePayload` stores every
+ * inbound message as `{ content, raw }` before publishing it, so the live SSE stream
+ * nests the SDK message under `raw` and the event under `raw.event`.
+ */
+function streamEventOf(payload: Record<string, unknown>): Record<string, unknown> {
+  const direct = asRecord(payload.event)
+  if (direct) return direct
+  const nested = asRecord(asRecord(payload.raw)?.event)
+  if (nested) return nested
+  return payload
+}
+
 /** `stream_event` payloads wrap the raw SDK event under `event`. */
 function handleStreamEvent(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
-  const stream = asRecord(payload.event) ?? payload
+  const stream = streamEventOf(payload)
   const type = asText(stream.type)
 
   if (type === 'message_start') return dropStreaming(state)

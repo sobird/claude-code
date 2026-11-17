@@ -7,8 +7,9 @@
 
 import { ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { useSmoothText } from '../../hooks/useSmoothText'
 import type { AssistantMessageEntry, UserMessageEntry } from '../../lib/session-reducer'
 import { cn } from '../../lib/utils'
 
@@ -76,25 +77,29 @@ export function AssistantBubble({ entry }: { entry: AssistantMessageEntry }) {
       </div>
       <div className="min-w-0 flex-1 space-y-3">
         <span className="font-display text-sm font-semibold text-text-primary">{tCommon('claude')}</span>
-        {entry.chunks.map((chunk) =>
-          chunk.type === 'thought' ? (
-            <ThoughtBlock key={`thought-${chunk.text}`} text={chunk.text} />
+        {entry.chunks.map((chunk, index) => {
+          // Stable keys: the active chunk's text grows on every delta, and a
+          // text-derived key would remount the node (and restart the reveal) each
+          // time. Chunks are only appended, so the index is stable.
+          const source = entry.streaming ? <SmoothText text={chunk.text} /> : chunk.text
+          return chunk.type === 'thought' ? (
+            <ThoughtBlock key={`chunk-${index}`} content={source} />
           ) : (
             <div
-              key={`message-${chunk.text}`}
+              key={`chunk-${index}`}
               className="whitespace-pre-wrap break-words font-sans text-sm leading-[1.75] text-text-primary"
               style={{ overflowWrap: 'anywhere' }}
             >
-              {chunk.text}
+              {source}
             </div>
-          ),
-        )}
+          )
+        })}
       </div>
     </div>
   )
 }
 
-function ThoughtBlock({ text }: { text: string }) {
+function ThoughtBlock({ content }: { content: ReactNode }) {
   const t = useTranslations('chat')
   return (
     <details className="group rounded-lg border border-border bg-surface-1/60 px-3 py-2">
@@ -104,9 +109,14 @@ function ThoughtBlock({ text }: { text: string }) {
           {t('thought')}
         </span>
       </summary>
-      <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary">{text}</div>
+      <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary">{content}</div>
     </details>
   )
+}
+
+/** Streams its text in progressively; used for the chunks of a live reply. */
+function SmoothText({ text }: { text: string }) {
+  return <>{useSmoothText(text)}</>
 }
 
 function ClaudeMark() {
