@@ -185,7 +185,12 @@ export function toWorkerClientFrame(event: SessionEvent): string {
   return `id: ${event.seqNum}\nevent: client_event\ndata: ${data}\n\n`
 }
 
-/** Serialize one event as a web-UI `message` SSE frame. */
+/**
+ * Serialize one event as a web-UI `message` SSE frame.
+ *
+ * Ephemeral frames omit `id:`: their sequence number is in-memory only, and a client
+ * that resumed from it would skip every durable event written afterwards.
+ */
 export function toSessionEventFrame(event: SessionEvent): string {
   const data = JSON.stringify({
     type: event.type,
@@ -193,5 +198,6 @@ export function toSessionEventFrame(event: SessionEvent): string {
     direction: event.direction,
     seqNum: event.seqNum,
   })
-  return `id: ${event.seqNum}\nevent: message\ndata: ${data}\n\n`
+  const idLine = event.ephemeral ? '' : `id: ${event.seqNum}\n`
+  return `${idLine}event: message\ndata: ${data}\n\n`
 }

@@ -15,20 +15,25 @@ import { legacySessionIngressAuth, notFound, readJson } from '../common.js'
 
 const app = new Hono<AppEnv>()
 
-/** Unwrap CCR `{ events: [{ payload }] }` batches into the event objects. */
-function extractWorkerEvents(body: unknown): Array<Record<string, unknown>> {
+interface WorkerEventEntry {
+  event: Record<string, unknown>
+  /** The client marks stream snapshots `ephemeral: true`: live-only, never persisted. */
+  ephemeral: boolean
+}
+
+/** Unwrap CCR `{ events: [{ payload, ephemeral }] }` batches into events plus their flags. */
+function extractWorkerEvents(body: unknown): WorkerEventEntry[] {
   const direct = body as Record<string, unknown> | null
   const candidates: unknown =
     direct && Array.isArray(direct.events) ? direct.events : Array.isArray(body) ? body : [body]
 
   return (candidates as unknown[])
     .filter((event): event is Record<string, unknown> => !!event && typeof event === 'object' && !Array.isArray(event))
-    .map((event) => {
-      const wrapped = event.payload
-      if (wrapped && typeof wrapped === 'object' && !Array.isArray(wrapped)) {
-        return wrapped as Record<string, unknown>
-      }
-      return event
+    .map((entry) => {
+      const wrapped = entry.payload
+      const event =
+        wrapped && typeof wrapped === 'object' && !Array.isArray(wrapped) ? (wrapped as Record<string, unknown>) : entry
+      return { event, ephemeral: entry.ephemeral === true }
     })
 }
 
@@ -40,10 +45,11 @@ app.post('/:id/worker/events', legacySessionIngressAuth, async (c) => {
 
   const body: unknown = await c.req.json().catch(() => [])
   const events = extractWorkerEvents(body)
-  for (const event of events) {
+  for (const { event, ephemeral } of events) {
     const type = typeof event.type === 'string' && event.type ? event.type : 'message'
-    // Dedupe by message uuid: the bridge replays its buffer on reconnect.
-    await publishInboundEvent(repos, getEventBus(sessionId), sessionId, type, event)
+    // Dedupe by message uuid: the bridge replays its buffer on reconnect. Ephemeral
+    // stream snapshots are live-only, so they never enter durable history.
+    await publishInboundEvent(repos, getEventBus(sessionId), sessionId, type, event, { ephemeral })
   }
   await repos.sessions.update(sessionId, {})
   return c.json({ status: 'ok', count: events.length }, 200)

@@ -838,6 +838,33 @@ describe('V2 Worker Events Routes', () => {
     expect((events[0]?.payload as { content?: string } | undefined)?.content).toBe('response')
   })
 
+  test('POST worker/events keeps ephemeral stream deltas out of durable history', async () => {
+    const id = await createCodeSession()
+    const res = await app.request(`/v1/code/sessions/${id}/worker/events`, {
+      method: 'POST',
+      headers: LEGACY_HEADERS,
+      body: JSON.stringify({
+        worker_epoch: 1,
+        events: [
+          {
+            payload: {
+              type: 'stream_event',
+              uuid: 'm1',
+              event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'part' } },
+            },
+            ephemeral: true,
+          },
+          { payload: { type: 'assistant', uuid: 'm1', content: 'complete' } },
+        ],
+      }),
+    })
+    expect(res.status).toBe(200)
+    expect((await resJson(res)).count).toBe(2)
+
+    const events = await s.repos.events.listSince(id, 0, 10)
+    expect(events.map((event) => event.type)).toEqual(['assistant'])
+  })
+
   test('GET worker/events/stream emits client_event frames', async () => {
     const id = await createCodeSession()
     const streamRes = await app.request(`/v1/code/sessions/${id}/worker/events/stream`, {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { toClientPayload } from '../client-payload.js'
+import { toClientPayload, toSessionEventFrame } from '../client-payload.js'
 import type { SessionEvent } from '../event-bus.js'
 
 function makeEvent(overrides: Partial<SessionEvent> & Pick<SessionEvent, 'type' | 'sessionId'>): SessionEvent {
@@ -13,6 +13,24 @@ function makeEvent(overrides: Partial<SessionEvent> & Pick<SessionEvent, 'type' 
     ...overrides,
   }
 }
+
+describe('toSessionEventFrame', () => {
+  test('prefixes durable frames with the bigserial id', () => {
+    const frame = toSessionEventFrame(makeEvent({ type: 'assistant', sessionId: 's1', seqNum: 42 }))
+    expect(frame).toContain('id: 42\n')
+    expect(frame).toContain('event: message\n')
+  })
+
+  test('omits the id line for ephemeral frames so they never become a resume cursor', () => {
+    const frame = toSessionEventFrame(
+      makeEvent({ type: 'stream_event', sessionId: 's1', seqNum: 9_000_000, ephemeral: true }),
+    )
+    expect(frame).not.toMatch(/^id:/m)
+    expect(frame.startsWith('event: message\n')).toBe(true)
+    const data = JSON.parse(frame.split('data: ')[1]?.trim() ?? '{}') as { seqNum?: number }
+    expect(data.seqNum).toBe(9_000_000)
+  })
+})
 
 // =============================================================================
 // user / user_message

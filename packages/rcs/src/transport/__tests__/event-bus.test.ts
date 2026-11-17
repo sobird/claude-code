@@ -207,17 +207,58 @@ describe('publishInboundEvent', () => {
     expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(1)
   })
 
-  test('never treats streaming deltas as message replays', async () => {
+  test('streaming deltas are live-only and never become durable messages', async () => {
     const repos = createMemoryRepositories()
-    // Stream chunks share the eventual assistant uuid but are distinct events.
+    // Stream chunks share the eventual assistant uuid but are distinct live-only events.
     expect(await publishInboundEvent(repos, null, 's1', 'stream_event', { uuid: 'a1' })).not.toBeNull()
     expect(await publishInboundEvent(repos, null, 's1', 'partial_assistant', { uuid: 'a1' })).not.toBeNull()
-    // The complete assistant message still persists after its deltas.
+    // The complete assistant message is the durable one.
     expect(await publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'a1' })).not.toBeNull()
 
-    // But a repeated complete message is dropped.
+    // A repeated complete message is still dropped as a replay.
     expect(await publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'a1' })).toBeNull()
-    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(3)
+    const persisted = await repos.events.listSince('s1', 0, 10)
+    expect(persisted.map((event) => event.type)).toEqual(['assistant'])
+  })
+
+  test('publishes ephemeral deltas live without allocating durable rows', async () => {
+    const repos = createMemoryRepositories()
+    const bus = getEventBus('ephemeral-live')
+    const received: SessionEvent[] = []
+    bus.subscribe((event) => received.push(event))
+    try {
+      const delta = await publishInboundEvent(repos, bus, 'ephemeral-live', 'stream_event', {
+        uuid: 'm1',
+        content: 'partial',
+      })
+
+      if (!delta) throw new Error('expected the ephemeral delta to be published')
+      expect(delta.ephemeral).toBe(true)
+      expect(await repos.events.listSince('ephemeral-live', 0, 10)).toHaveLength(0)
+      expect(received).toHaveLength(1)
+      expect(received[0]?.ephemeral).toBe(true)
+      expect(received[0]?.seqNum).toBe(delta.seqNum)
+    } finally {
+      removeEventBus('ephemeral-live')
+    }
+  })
+
+  test('honors an explicit ephemeral flag for any type', async () => {
+    const repos = createMemoryRepositories()
+    const event = await publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'm1' }, { ephemeral: true })
+
+    expect(event?.ephemeral).toBe(true)
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(0)
+  })
+
+  test('allocates distinct sequence numbers to ephemeral events', async () => {
+    const repos = createMemoryRepositories()
+    const first = await publishInboundEvent(repos, null, 's1', 'stream_event', { uuid: 'm1' })
+    const second = await publishInboundEvent(repos, null, 's1', 'stream_event', { uuid: 'm1' })
+
+    expect(first).not.toBeNull()
+    expect(second).not.toBeNull()
+    expect(second?.seqNum).toBeGreaterThan(first?.seqNum ?? 0)
   })
 
   test('concurrent duplicate writes persist exactly one event', async () => {

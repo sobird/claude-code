@@ -16,10 +16,19 @@ export interface SessionEvent {
   type: string
   payload: unknown
   direction: 'inbound' | 'outbound'
-  /** Durable bigserial id (`session_events.id`), used as the SSE sequence cursor. */
+  /**
+   * Sequence number. Durable events use the `session_events.id` bigserial (the SSE
+   * cursor); live-only events use a reserved in-memory range and never advance it.
+   */
   seqNum: number
   /** Epoch milliseconds. */
   createdAt: number
+  /**
+   * Live-only event (streaming deltas): delivered to connected subscribers, never
+   * persisted and never replayed. Its frame carries no SSE `id:`, so it is never a
+   * `Last-Event-ID` cursor.
+   */
+  ephemeral?: boolean
 }
 
 export type SessionEventSubscriber = (event: SessionEvent) => void
@@ -295,6 +304,48 @@ export async function publishSessionEvent(
 }
 
 /**
+ * Event types that are inherently live-only: the bridge re-emits a full-so-far snapshot
+ * roughly every 100ms while a message streams. No consumer replays them (the web reducer
+ * ignores them; the bridge and worker streams replay outbound only), so persisting them
+ * only grows `session_events` and doubles the payload under `raw`.
+ */
+const EPHEMERAL_EVENT_TYPES = new Set(['stream_event', 'partial_assistant'])
+
+/**
+ * Ephemeral events have no durable row, but SSE consumers still need a unique numeric
+ * `seqNum` for per-connection dedupe. Allocate from a reserved high range that durable
+ * bigserial ids will not reach in practice; the frame omits `id:`, so this value never
+ * becomes a resume cursor.
+ */
+const EPHEMERAL_SEQ_BASE = Number.MAX_SAFE_INTEGER - 2 ** 32
+let ephemeralSeqNum = EPHEMERAL_SEQ_BASE
+
+export interface PublishInboundOptions {
+  /** The client marks stream snapshots `ephemeral: true`; publish live without persisting. */
+  ephemeral?: boolean
+}
+
+function publishEphemeralEvent(
+  eventBus: EventBus | null,
+  sessionId: string,
+  type: string,
+  normalized: Record<string, unknown>,
+): SessionEvent {
+  const event: SessionEvent = {
+    id: crypto.randomUUID(),
+    sessionId,
+    type,
+    payload: normalized,
+    direction: 'inbound',
+    seqNum: ++ephemeralSeqNum,
+    createdAt: Date.now(),
+    ephemeral: true,
+  }
+  eventBus?.publish(event)
+  return event
+}
+
+/**
  * Persist an inbound bridge event unless a whole-message event with the same uuid is
  * already durable for the session, and publish it.
  *
@@ -305,6 +356,9 @@ export async function publishSessionEvent(
  * that the server deduplicates bridge writes by UUID (WebSocketTransport's reconnect
  * replay), so this is the server's responsibility.
  *
+ * Ephemeral events (explicit flag or a streaming-delta type) skip persistence entirely
+ * and are delivered live only.
+ *
  * Returns `null` when the event was dropped as a duplicate.
  */
 export async function publishInboundEvent(
@@ -313,8 +367,12 @@ export async function publishInboundEvent(
   sessionId: string,
   type: string,
   payload: unknown,
+  options?: PublishInboundOptions,
 ): Promise<SessionEvent | null> {
   const normalized = normalizePayload(type, payload)
+  if (options?.ephemeral === true || EPHEMERAL_EVENT_TYPES.has(type)) {
+    return publishEphemeralEvent(eventBus, sessionId, type, normalized)
+  }
   const messageUuid = messageUuidOf(type, normalized)
   // Cheap early exit for the common sequential replay; the read is not authoritative.
   if (messageUuid && (await repos.events.hasMessageUuid(sessionId, messageUuid))) return null
