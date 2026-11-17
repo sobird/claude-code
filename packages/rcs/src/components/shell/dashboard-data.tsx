@@ -13,7 +13,8 @@ import { useTranslations } from 'next-intl'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useAccessToken } from '../../hooks/useAccessToken'
-import { ApiError, createApiClient } from '../../lib/api-client'
+import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
+import { createApiClient } from '../../lib/api-client'
 import type { ConnectionState } from '../ui/connection-status'
 import type { CreatedSession, EnvironmentSummary, SessionSummary } from './types'
 
@@ -38,14 +39,8 @@ interface DashboardDataValue {
 
 const DashboardDataContext = createContext<DashboardDataValue | undefined>(undefined)
 
-function toMessage(error: unknown, fallback: string): string {
-  if (error instanceof ApiError) return error.message
-  if (error instanceof Error) return error.message
-  return fallback
-}
-
 export function DashboardDataProvider({ children }: { children: ReactNode }) {
-  const t = useTranslations('dashboard')
+  const describeError = useApiErrorMessage()
   const tErrors = useTranslations('errors')
   const { token, refresh: refreshToken, error: tokenError } = useAccessToken()
   const tokenRef = useRef(token)
@@ -83,13 +78,13 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       setError(null)
       setConnection('connected')
     } catch (loadError) {
-      setError(toMessage(loadError, t('loadError')))
+      setError(describeError(loadError, 'dashboard.loadError'))
       setConnection('error')
     } finally {
       inFlightRef.current = false
       setLoading(false)
     }
-  }, [api, t])
+  }, [api, describeError])
 
   const refresh = useCallback(() => {
     // Without a token the polling load is a no-op, so retry minting instead.

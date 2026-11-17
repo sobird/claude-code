@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
@@ -9,7 +9,7 @@ import { RootShell } from '../../components/shell/root-shell'
 import { loadMessages } from '../../i18n/catalogs'
 import { resolveRequestLocale } from '../../i18n/server'
 import { auth } from '../../lib/auth'
-import { localizedAppMetadata } from '../../lib/metadata'
+import { baseViewport, localizedAppMetadata } from '../../lib/metadata'
 import { signOutAction } from './actions'
 
 // oxlint-disable-next-line import/no-unassigned-import -- global stylesheet side effect
@@ -20,6 +20,8 @@ interface SessionUser {
   name?: string | null
   role?: string
 }
+
+export const viewport: Viewport = baseViewport
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await resolveRequestLocale()

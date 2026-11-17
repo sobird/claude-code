@@ -67,6 +67,18 @@ export function resolveLocale(input: { cookie?: string | null; acceptLanguage?: 
   return nextLocaleCookie(input.cookie) ?? negotiateLocale(input.acceptLanguage) ?? DEFAULT_LOCALE
 }
 
-export function localeCookieOptions(): { path: '/'; maxAge: number; sameSite: 'lax' } {
-  return { path: '/', maxAge: LOCALE_COOKIE_MAX_AGE, sameSite: 'lax' }
+export function localeCookieOptions(): {
+  path: '/'
+  maxAge: number
+  sameSite: 'lax'
+  httpOnly: true
+  secure: boolean
+} {
+  return {
+    path: '/',
+    maxAge: LOCALE_COOKIE_MAX_AGE,
+    sameSite: 'lax',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+  }
 }

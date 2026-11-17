@@ -1,14 +1,16 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
 
 import { RootShell } from '../../components/shell/root-shell'
 import { loadMessages } from '../../i18n/catalogs'
 import { resolveRequestLocale } from '../../i18n/server'
-import { localizedAppMetadata } from '../../lib/metadata'
+import { baseViewport, localizedAppMetadata } from '../../lib/metadata'
 
 // oxlint-disable-next-line import/no-unassigned-import -- global stylesheet side effect
 import '../globals.css'
+
+export const viewport: Viewport = baseViewport
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await resolveRequestLocale()
