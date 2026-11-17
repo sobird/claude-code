@@ -15,6 +15,12 @@ import { toCompatibleCodeSessionId, type WorkItemRecord } from '../contracts.js'
 import type { Repositories } from '../db/repositories/types.js'
 import { notifyWorkAvailable, waitForWorkAvailable } from './transport.js'
 
+/**
+ * Lease window used when a poll omits `reclaim_older_than_ms`. Matches the upstream
+ * server default (`work_service.py:24`) and the bridge client's `pollConfigDefaults.ts`.
+ */
+export const DEFAULT_RECLAIM_OLDER_THAN_MS = 5000
+
 export interface WorkResponse {
   id: string
   type: 'work'
@@ -97,21 +103,29 @@ export async function createWorkItem(repos: Repositories, environmentId: string,
 /**
  * Long-poll for work. Claims once; when nothing is pending, waits on the environment
  * notifier until an item is enqueued or the timeout elapses, then claims again.
+ *
+ * `reclaimOlderThanMs` is the client's `reclaim_older_than_ms` lease window: dispatched
+ * work older than it is re-delivered. It defaults to `DEFAULT_RECLAIM_OLDER_THAN_MS`; an
+ * invalid value falls back to that default rather than disabling recovery.
  */
 export async function pollWork(
   repos: Repositories,
   environmentId: string,
   timeoutSeconds?: number,
+  reclaimOlderThanMs?: number,
 ): Promise<WorkResponse | null> {
   const config = loadConfig()
   // Query-param-derived values can arrive as NaN/Infinity/negative; fall back to the
   // configured timeout so a bad value cannot tight-spin or wait forever.
   const requested = timeoutSeconds ?? config.pollTimeout
   const timeout = Number.isFinite(requested) && requested >= 0 ? requested : config.pollTimeout
+  const requestedReclaim = reclaimOlderThanMs ?? DEFAULT_RECLAIM_OLDER_THAN_MS
+  const reclaimWindow =
+    Number.isFinite(requestedReclaim) && requestedReclaim > 0 ? requestedReclaim : DEFAULT_RECLAIM_OLDER_THAN_MS
   const deadline = Date.now() + timeout * 1000
 
   for (;;) {
-    const item = await repos.workItems.claimNext(environmentId)
+    const item = await repos.workItems.claimNext(environmentId, { reclaimOlderThanMs: reclaimWindow })
     if (item) return toWorkResponse(item)
 
     const remaining = deadline - Date.now()

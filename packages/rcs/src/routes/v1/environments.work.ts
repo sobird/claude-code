@@ -38,7 +38,11 @@ app.get('/:id/work/poll', legacyEnvironmentAuth, async (c) => {
 
   const timeoutParam = c.req.query('timeout')
   const timeout = timeoutParam === undefined ? undefined : Number.parseFloat(timeoutParam)
-  const work = await pollWork(repos, environmentId, timeout)
+  // The bridge client sends this on every poll (default 5000ms); stale dispatched work is
+  // re-delivered so a missed ack (expired ingress token) does not strand the session.
+  const reclaimParam = c.req.query('reclaim_older_than_ms')
+  const reclaimOlderThanMs = reclaimParam === undefined ? undefined : Number.parseFloat(reclaimParam)
+  const work = await pollWork(repos, environmentId, timeout, reclaimOlderThanMs)
 
   // 204 lets the client's HTTP layer parse the empty body as null.
   if (!work) return c.body(null, 204)

@@ -5,9 +5,13 @@
  * primitive: it selects the oldest pending row inside a transaction with
  * `FOR UPDATE SKIP LOCKED`, so concurrent polls from one environment never deliver the
  * same item twice (other pollers skip the locked row instead of blocking).
+ *
+ * A dispatched item is a lease: its `updatedAt` is the last delivery or heartbeat. Poll
+ * passing `reclaimOlderThanMs` returns leases older than that window to `pending` in the
+ * same transaction, so a worker that lost its ack (stale ingress token) is re-delivered.
  */
 
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, lt } from 'drizzle-orm'
 
 import type { WorkItemRecord } from '../../contracts'
 import type { Database } from '../client'
@@ -33,8 +37,24 @@ export function createWorkItemRepository(db: Database): WorkItemRepository {
       return row
     },
 
-    async claimNext(environmentId) {
+    async claimNext(environmentId, options) {
+      const reclaimOlderThanMs = options?.reclaimOlderThanMs
       return db.transaction(async (tx) => {
+        if (reclaimOlderThanMs !== undefined && Number.isFinite(reclaimOlderThanMs) && reclaimOlderThanMs > 0) {
+          // Runs before the select, inside the same transaction: leases made stale by a
+          // missed ack/heartbeat go back to `pending` and are eligible for this claim.
+          await tx
+            .update(workItems)
+            .set({ state: 'pending', updatedAt: new Date() })
+            .where(
+              and(
+                eq(workItems.environmentId, environmentId),
+                eq(workItems.state, 'dispatched'),
+                lt(workItems.updatedAt, new Date(Date.now() - reclaimOlderThanMs)),
+              ),
+            )
+        }
+
         const [candidate] = await tx
           .select()
           .from(workItems)
@@ -95,7 +115,22 @@ export function createMemoryWorkItemRepository(): WorkItemRepository {
       return cloneWorkItem(record)
     },
 
-    async claimNext(environmentId) {
+    async claimNext(environmentId, options) {
+      const reclaimOlderThanMs = options?.reclaimOlderThanMs
+      if (reclaimOlderThanMs !== undefined && Number.isFinite(reclaimOlderThanMs) && reclaimOlderThanMs > 0) {
+        const cutoff = Date.now() - reclaimOlderThanMs
+        for (const record of byId.values()) {
+          if (
+            record.environmentId === environmentId &&
+            record.state === 'dispatched' &&
+            record.updatedAt.getTime() < cutoff
+          ) {
+            record.state = 'pending'
+            record.updatedAt = new Date()
+          }
+        }
+      }
+
       // No `await` between the scan and the write, so this is synchronous-atomic.
       const candidate = [...byId.values()]
         .filter((record) => record.environmentId === environmentId && record.state === 'pending')

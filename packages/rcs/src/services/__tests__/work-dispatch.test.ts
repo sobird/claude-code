@@ -126,6 +126,16 @@ describe('Work Dispatch', () => {
       expect((await repos.workItems.getById(workId))?.state).toBe('dispatched')
     })
 
+    test('reclaimOlderThanMs re-dispatches work that was never acknowledged', async () => {
+      const workId = await createWorkItem(repos, envId, sessionId)
+      expect((await pollWork(repos, envId, 1))?.id).toBe(workId)
+      await Bun.sleep(10)
+
+      const reclaimed = await pollWork(repos, envId, 1, 1)
+      expect(reclaimed?.id).toBe(workId)
+      expect(reclaimed?.state).toBe('dispatched')
+    })
+
     test('does not return work for a different environment', async () => {
       const env2 = await repos.environments.create({ ownerUserId: 'user_1' })
       await createWorkItem(repos, envId, sessionId)

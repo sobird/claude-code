@@ -96,6 +96,52 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect(claimed[0]?.state).toBe('dispatched')
     })
 
+    test('claimNext reclaims a stale dispatched item when reclaimOlderThanMs elapses', async () => {
+      const { environmentId, sessionId } = await makeEnvironmentAndSession()
+      const item = await repos.workItems.enqueue({ environmentId, sessionId, secret: 'stale' })
+
+      expect((await repos.workItems.claimNext(environmentId))?.id).toBe(item.id)
+      await Bun.sleep(10)
+
+      const reclaimed = await repos.workItems.claimNext(environmentId, { reclaimOlderThanMs: 1 })
+      expect(reclaimed?.id).toBe(item.id)
+      expect(reclaimed?.state).toBe('dispatched')
+    })
+
+    test('claimNext leaves a dispatched item alone inside the reclaim window', async () => {
+      const { environmentId, sessionId } = await makeEnvironmentAndSession()
+      await repos.workItems.enqueue({ environmentId, sessionId, secret: 'fresh' })
+      await repos.workItems.claimNext(environmentId)
+
+      expect(await repos.workItems.claimNext(environmentId, { reclaimOlderThanMs: 60_000 })).toBeNull()
+    })
+
+    test('claimNext does not reclaim acknowledged or completed items', async () => {
+      const { environmentId, sessionId } = await makeEnvironmentAndSession()
+      const acked = await repos.workItems.enqueue({ environmentId, sessionId, secret: 'acked' })
+      await repos.workItems.claimNext(environmentId)
+      await repos.workItems.setState(acked.id, 'acked')
+
+      const completed = await repos.workItems.enqueue({ environmentId, sessionId, secret: 'completed' })
+      await repos.workItems.claimNext(environmentId)
+      await repos.workItems.setState(completed.id, 'completed')
+
+      await Bun.sleep(10)
+      expect(await repos.workItems.claimNext(environmentId, { reclaimOlderThanMs: 1 })).toBeNull()
+      expect((await repos.workItems.getById(acked.id))?.state).toBe('acked')
+      expect((await repos.workItems.getById(completed.id))?.state).toBe('completed')
+    })
+
+    test('claimNext never reclaims without an explicit positive threshold', async () => {
+      const { environmentId, sessionId } = await makeEnvironmentAndSession()
+      await repos.workItems.enqueue({ environmentId, sessionId, secret: 'stale' })
+      await repos.workItems.claimNext(environmentId)
+      await Bun.sleep(10)
+
+      expect(await repos.workItems.claimNext(environmentId)).toBeNull()
+      expect(await repos.workItems.claimNext(environmentId, { reclaimOlderThanMs: 0 })).toBeNull()
+    })
+
     test('setState transitions state and bump refreshes updatedAt', async () => {
       const { environmentId, sessionId } = await makeEnvironmentAndSession()
       const item = await repos.workItems.enqueue({ environmentId, sessionId, secret: 's' })

@@ -491,6 +491,33 @@ describe('V1 Work Routes', () => {
     expect(res.status).toBe(204)
   })
 
+  test('GET /v1/environments/:id/work/poll reclaims a dispatched item after reclaim_older_than_ms', async () => {
+    const sessRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({ environment_id: envId }),
+    })
+    const sessionId = (await resJson(sessRes)).id
+
+    const first = await resJson(
+      await app.request(`/v1/environments/${envId}/work/poll`, { headers: bearer(envSecret) }),
+    )
+    expect(toWebSessionId(first.data.id)).toBe(sessionId)
+
+    // A freshly dispatched item is inside the default lease window, so an empty poll 204s.
+    const fresh = await app.request(`/v1/environments/${envId}/work/poll?timeout=0`, {
+      headers: bearer(envSecret),
+    })
+    expect(fresh.status).toBe(204)
+
+    await Bun.sleep(10)
+    const reclaimed = await app.request(`/v1/environments/${envId}/work/poll?reclaim_older_than_ms=1`, {
+      headers: bearer(envSecret),
+    })
+    expect(reclaimed.status).toBe(200)
+    expect((await resJson(reclaimed)).id).toBe(first.id)
+  })
+
   test('work lifecycle: create -> poll -> ack -> stop', async () => {
     const sessRes = await app.request('/v1/sessions', {
       method: 'POST',

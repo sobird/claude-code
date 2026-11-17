@@ -178,14 +178,25 @@ export interface EnqueueWorkItemInput {
   secret: string
 }
 
+export interface ClaimNextOptions {
+  /**
+   * Lease reclaim window. When positive, `dispatched` items whose `updatedAt` is older than
+   * this many milliseconds are returned to `pending` before the claim, so work the worker
+   * never acknowledged (stale `session_ingress_token`, failed ack) is delivered again.
+   * Omitted or non-positive disables reclaim.
+   */
+  reclaimOlderThanMs?: number
+}
+
 export interface WorkItemRepository {
   /** Creates a `pending` work item with a generated `work_…` id. */
   enqueue(input: EnqueueWorkItemInput): Promise<WorkItemRecord>
   /**
    * Atomically claims the oldest pending item for the environment and marks it
-   * `dispatched`; returns `null` when there is nothing to claim.
+   * `dispatched`; returns `null` when there is nothing to claim. With
+   * `reclaimOlderThanMs`, stale dispatched items are first put back to `pending`.
    */
-  claimNext(environmentId: string): Promise<WorkItemRecord | null>
+  claimNext(environmentId: string, options?: ClaimNextOptions): Promise<WorkItemRecord | null>
   getById(id: string): Promise<WorkItemRecord | null>
   /** Transition the item's state (`pending`/`dispatched`/`acked`/`completed`). */
   setState(id: string, state: string): Promise<void>
