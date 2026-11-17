@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 
 import { DashboardDataProvider } from '../../components/shell/dashboard-data'
 import { Navbar } from '../../components/shell/navbar'
+import { NotificationNavigation } from '../../components/shell/notification-navigation'
 import { RootShell } from '../../components/shell/root-shell'
 import { loadMessages } from '../../i18n/catalogs'
 import { resolveRequestLocale } from '../../i18n/server'
@@ -52,6 +53,7 @@ export default async function MainLayout({ children }: { children: ReactNode }) 
       <NextIntlClientProvider locale={locale} messages={messages}>
         <DashboardDataProvider>
           <Navbar user={user} signOutAction={signOutAction} />
+          <NotificationNavigation />
           <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8">{children}</main>
         </DashboardDataProvider>
       </NextIntlClientProvider>

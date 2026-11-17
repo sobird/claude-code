@@ -38,7 +38,9 @@ const DEFAULT_DISCONNECT_TIMEOUT = 300
 const DEFAULT_WS_IDLE_TIMEOUT = 30
 const DEFAULT_WS_KEEPALIVE_INTERVAL = 20
 const DEFAULT_EVENT_REPLAY_LIMIT = 5000
-const DEFAULT_VAPID_SUBJECT = 'mailto:noreply@localhost'
+// Apple's push service rejects a VAPID subject whose domain has no public TLD
+// (`mailto:noreply@localhost` → 403 BadJwtToken), so default to a valid address.
+const DEFAULT_VAPID_SUBJECT = 'mailto:noreply@example.com'
 
 function readInt(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
   const raw = env[name]?.trim()

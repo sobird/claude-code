@@ -87,7 +87,11 @@ async function resolveVapidKeys(
   }
 
   const stored = await repos.pushSettings.get()
-  if (stored) return stored
+  if (stored) {
+    // The subject is deployment config, not key material: take it from config on
+    // every boot so a fixed default also repairs rows persisted by older boots.
+    return { ...stored, subject: config.vapidSubject }
+  }
 
   if (vapidPublicKey || vapidPrivateKey) {
     log('[RCS] push notifications disabled: only one VAPID key is configured')

@@ -337,6 +337,10 @@ confirmation, even with the tab closed. Enable it per user under Settings.
   `RCS_VAPID_SUBJECT`) in `.env`. Setting a different key pair than the one
   existing subscriptions were created with invalidates those subscriptions, so
   affected browsers must re-subscribe.
+- `RCS_VAPID_SUBJECT` defaults to `mailto:noreply@example.com`; set it to a
+  contact address you own. Apple's push service rejects subjects whose domain
+  has no public TLD (for example `mailto:noreply@localhost`) with
+  `403 BadJwtToken`, breaking iOS notifications.
 
 ## Migrations
 

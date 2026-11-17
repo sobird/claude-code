@@ -12,10 +12,15 @@ declare const self: {
   addEventListener(type: 'push' | 'notificationclick', listener: (event: Event) => void): void
   registration: { showNotification(title: string, options: Record<string, unknown>): Promise<void> }
   clients: {
-    matchAll(options: {
-      type: 'window'
-      includeUncontrolled: boolean
-    }): Promise<Array<{ url: string; visibilityState: string; focus(): Promise<unknown> }>>
+    matchAll(options: { type: 'window'; includeUncontrolled: boolean }): Promise<
+      Array<{
+        url: string
+        visibilityState: string
+        focus(): Promise<unknown>
+        navigate(url: string): Promise<unknown>
+        postMessage(message: unknown): void
+      }>
+    >
     openWindow(url: string): Promise<unknown>
   }
   navigator: { language: string }
@@ -130,16 +135,28 @@ self.addEventListener('notificationclick', (event: Event) => {
     (async () => {
       try {
         const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-        for (const client of windows) {
-          if (new URL(client.url).pathname === url) {
-            await client.focus()
-            return
+        const exact = windows.find((client) => new URL(client.url).pathname === url)
+        if (exact) {
+          await exact.focus()
+          return
+        }
+        // iOS often launches a home-screen app at its start URL and ignores the
+        // URL passed to `openWindow`, so steer a running window directly. Fall
+        // back to a router message where `navigate` is unavailable.
+        const target = windows[0]
+        if (target) {
+          try {
+            await target.navigate(url)
+          } catch {
+            target.postMessage({ type: 'notification:navigate', url })
           }
+          await target.focus()
+          return
         }
         await self.clients.openWindow(url)
       } catch (error) {
-        // Keep a failed `matchAll`/`focus`/`openWindow` from becoming an unhandled
-        // rejection; the click is still skipped, but log it for DevTools.
+        // Keep a failed `matchAll`/`focus`/`navigate`/`openWindow` from becoming
+        // an unhandled rejection; the click is still skipped, but log it for DevTools.
         console.error('[rcs] notification click failed:', error)
       }
     })(),

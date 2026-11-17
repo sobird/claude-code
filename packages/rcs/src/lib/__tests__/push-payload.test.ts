@@ -135,7 +135,7 @@ describe('loadConfig VAPID fields', () => {
     } as unknown as NodeJS.ProcessEnv)
     expect(config.vapidPublicKey).toBe('pub')
     expect(config.vapidPrivateKey).toBe('priv')
-    expect(config.vapidSubject).toBe('mailto:noreply@localhost')
+    expect(config.vapidSubject).toBe('mailto:noreply@example.com')
   })
 
   test('treats missing or empty values as null', () => {

@@ -222,7 +222,9 @@ describe('push notifier service', () => {
 
     expect(getPushPublicConfig()).toEqual({ enabled: true, publicKey: 'stored' })
     expect(vapidCalls).toHaveLength(1)
-    expect(vapidCalls[0][0]).toBe('mailto:ops@example.com')
+    // The subject is deployment config: the stored row's subject is ignored so a
+    // fixed default repairs rows persisted by older boots.
+    expect(vapidCalls[0][0]).toBe('mailto:noreply@example.com')
     expect(vapidCalls[0][1]).toBe('stored')
   })
 
@@ -244,7 +246,7 @@ describe('push notifier service', () => {
 
     expect(getPushPublicConfig()).toEqual({ enabled: true, publicKey: 'stored' })
     expect(vapidCalls).toHaveLength(1)
-    expect(vapidCalls[0][0]).toBe('mailto:ops@example.com')
+    expect(vapidCalls[0][0]).toBe('mailto:noreply@example.com')
     expect(vapidCalls[0][1]).toBe('stored')
   })
 
