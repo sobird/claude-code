@@ -8,6 +8,7 @@
 
 import type { SessionEventRecord } from '../contracts.js'
 import type { Repositories } from '../db/repositories/types.js'
+import { notifyInboundEvent } from '../services/push-notifier.js'
 
 export interface SessionEvent {
   /** Event UUID (`session_events.event_id`). */
@@ -410,6 +411,7 @@ export async function publishInboundEvent(
   if (!record) return null
   const event = toSessionEvent(record)
   eventBus?.publish(event)
+  notifyInboundEvent(sessionId, type, normalized)
   return event
 }
 

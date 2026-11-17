@@ -13,6 +13,7 @@ import { createRepositories } from '../src/db/repositories/index.js'
 import { createGateway } from '../src/gateway.js'
 import { log } from '../src/logger.js'
 import { startDisconnectMonitor, stopDisconnectMonitor } from '../src/services/disconnect-monitor.js'
+import { initPushNotifier } from '../src/services/push-notifier.js'
 import { closeAllRelayConnections } from '../src/transport/acp-relay-handler.js'
 import { closeAllAcpConnections } from '../src/transport/acp-ws-handler.js'
 import { closeAllConnections } from '../src/transport/ws-handler.js'
@@ -41,6 +42,8 @@ log(`[RCS] WebSocket idle timeout: ${config.wsIdleTimeout}s (protocol-level ping
 log(`[RCS] WebSocket keepalive interval: ${config.wsKeepaliveInterval}s (data frames)`)
 
 startDisconnectMonitor({ repos, config })
+
+await initPushNotifier({ config, repos })
 
 export default {
   port: config.port,
