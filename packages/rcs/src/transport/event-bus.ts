@@ -316,8 +316,20 @@ export async function publishInboundEvent(
 ): Promise<SessionEvent | null> {
   const normalized = normalizePayload(type, payload)
   const messageUuid = messageUuidOf(type, normalized)
+  // Cheap early exit for the common sequential replay; the read is not authoritative.
   if (messageUuid && (await repos.events.hasMessageUuid(sessionId, messageUuid))) return null
-  return appendAndPublish(repos, eventBus, sessionId, type, normalized, 'inbound', messageUuid)
+  // The durable key is the real guard: two concurrent writers can both pass the check above.
+  const record = await repos.events.appendIfAbsent({
+    sessionId,
+    type,
+    payload: normalized,
+    direction: 'inbound',
+    messageUuid,
+  })
+  if (!record) return null
+  const event = toSessionEvent(record)
+  eventBus?.publish(event)
+  return event
 }
 
 /** Map a persisted `session_events` row onto the in-process event shape. */

@@ -6,7 +6,8 @@
  * except for users and API keys, which use UUIDs. Timestamps are `timestamptz`.
  */
 
-import { bigserial, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { bigserial, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 import type { Role } from '../contracts'
 
@@ -134,7 +135,13 @@ export const sessionEvents = pgTable(
   },
   (table) => [
     index('session_events_session_id_idx').on(table.sessionId, table.id),
-    index('session_events_session_message_uuid_idx').on(table.sessionId, table.messageUuid),
+    /**
+     * Durable dedupe key for bridge replays: at most one *inbound* event per message uuid.
+     * Partial, because outbound writes deliberately re-emit the same uuid.
+     */
+    uniqueIndex('session_events_session_message_uuid_idx')
+      .on(table.sessionId, table.messageUuid)
+      .where(sql`direction = 'inbound' AND message_uuid IS NOT NULL`),
   ],
 )
 

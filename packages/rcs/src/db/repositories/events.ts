@@ -12,24 +12,32 @@ import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 import type { SessionEventRecord } from '../../contracts'
 import type { Database } from '../client'
 import { sessionEvents } from '../schema'
-import type { EventRepository } from './types'
+import type { AppendEventInput, EventRepository } from './types'
+
+function insertValues(input: AppendEventInput) {
+  return {
+    eventId: crypto.randomUUID(),
+    sessionId: input.sessionId,
+    type: input.type,
+    payload: input.payload,
+    direction: input.direction,
+    messageUuid: input.messageUuid ?? null,
+    createdAt: new Date(),
+  }
+}
 
 export function createEventRepository(db: Database): EventRepository {
   return {
     async append(input) {
-      const [row] = await db
-        .insert(sessionEvents)
-        .values({
-          eventId: crypto.randomUUID(),
-          sessionId: input.sessionId,
-          type: input.type,
-          payload: input.payload,
-          direction: input.direction,
-          messageUuid: input.messageUuid ?? null,
-          createdAt: new Date(),
-        })
-        .returning()
+      const [row] = await db.insert(sessionEvents).values(insertValues(input)).returning()
       return row
+    },
+
+    async appendIfAbsent(input) {
+      // The partial unique index (`inbound` + non-null `message_uuid`) is the arbiter;
+      // `DO NOTHING` without a target also covers it. A conflict yields no returned row.
+      const [row] = await db.insert(sessionEvents).values(insertValues(input)).onConflictDoNothing().returning()
+      return row ?? null
     },
 
     async listSince(sessionId, afterId, limit) {
@@ -61,6 +69,16 @@ export function createEventRepository(db: Database): EventRepository {
       return row?.id ?? null
     },
 
+    async latestCreatedAt(sessionId) {
+      const [row] = await db
+        .select({ createdAt: sessionEvents.createdAt })
+        .from(sessionEvents)
+        .where(eq(sessionEvents.sessionId, sessionId))
+        .orderBy(desc(sessionEvents.id))
+        .limit(1)
+      return row?.createdAt ?? null
+    },
+
     async hasMessageUuid(sessionId, uuid) {
       const [row] = await db
         .select({ id: sessionEvents.id })
@@ -88,21 +106,36 @@ export function createMemoryEventRepository(): EventRepository {
     return created
   }
 
+  // No `await` between id allocation and insertion, so ids stay unique.
+  function insert(input: AppendEventInput): SessionEventRecord {
+    const record: SessionEventRecord = {
+      id: nextId++,
+      eventId: crypto.randomUUID(),
+      sessionId: input.sessionId,
+      type: input.type,
+      payload: input.payload,
+      direction: input.direction,
+      messageUuid: input.messageUuid ?? null,
+      createdAt: new Date(),
+    }
+    eventsFor(input.sessionId).push(record)
+    return cloneEvent(record)
+  }
+
   return {
     async append(input) {
-      // No `await` between id allocation and insertion, so ids stay unique.
-      const record: SessionEventRecord = {
-        id: nextId++,
-        eventId: crypto.randomUUID(),
-        sessionId: input.sessionId,
-        type: input.type,
-        payload: input.payload,
-        direction: input.direction,
-        messageUuid: input.messageUuid ?? null,
-        createdAt: new Date(),
+      return insert(input)
+    },
+
+    async appendIfAbsent(input) {
+      if (input.direction === 'inbound' && input.messageUuid) {
+        // No `await` between this check and the insert, mirroring the Postgres unique key.
+        const duplicate = eventsFor(input.sessionId).some(
+          (record) => record.direction === 'inbound' && record.messageUuid === input.messageUuid,
+        )
+        if (duplicate) return null
       }
-      eventsFor(input.sessionId).push(record)
-      return cloneEvent(record)
+      return insert(input)
     },
 
     async listSince(sessionId, afterId, limit) {
@@ -126,6 +159,13 @@ export function createMemoryEventRepository(): EventRepository {
       const records = bySessionId.get(sessionId)
       if (!records || records.length === 0) return null
       return records.reduce((max, record) => Math.max(max, record.id), 0)
+    },
+
+    async latestCreatedAt(sessionId) {
+      const records = bySessionId.get(sessionId)
+      if (!records || records.length === 0) return null
+      const newest = records.reduce((latest, record) => (record.id > latest.id ? record : latest))
+      return new Date(newest.createdAt)
     },
 
     async hasMessageUuid(sessionId, uuid) {

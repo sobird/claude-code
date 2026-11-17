@@ -261,6 +261,115 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect(await repos.events.hasMessageUuid(sessionId, 'chunk')).toBe(false)
     })
 
+    test('appendIfAbsent stores the first inbound message uuid and drops the duplicate', async () => {
+      const { sessionId } = await makeEnvironmentAndSession()
+      const first = await repos.events.appendIfAbsent({
+        sessionId,
+        type: 'assistant',
+        payload: { uuid: 'dup-1' },
+        direction: 'inbound',
+        messageUuid: 'dup-1',
+      })
+      const duplicate = await repos.events.appendIfAbsent({
+        sessionId,
+        type: 'assistant',
+        payload: { uuid: 'dup-1' },
+        direction: 'inbound',
+        messageUuid: 'dup-1',
+      })
+
+      expect(first).not.toBeNull()
+      expect(duplicate).toBeNull()
+      expect(await repos.events.listSince(sessionId, 0, 100)).toHaveLength(1)
+    })
+
+    test('appendIfAbsent lets exactly one of two concurrent duplicates win', async () => {
+      const { sessionId } = await makeEnvironmentAndSession()
+      const input = {
+        sessionId,
+        type: 'assistant',
+        payload: { uuid: 'race-1' },
+        direction: 'inbound' as const,
+        messageUuid: 'race-1',
+      }
+
+      const results = await Promise.all([repos.events.appendIfAbsent(input), repos.events.appendIfAbsent(input)])
+
+      expect(results.filter(Boolean)).toHaveLength(1)
+      expect(await repos.events.listSince(sessionId, 0, 100)).toHaveLength(1)
+    })
+
+    test('appendIfAbsent scopes the dedupe key to one session', async () => {
+      const mine = await makeEnvironmentAndSession()
+      const other = await makeEnvironmentAndSession()
+
+      const first = await repos.events.appendIfAbsent({
+        sessionId: mine.sessionId,
+        type: 'assistant',
+        payload: {},
+        direction: 'inbound',
+        messageUuid: 'shared-1',
+      })
+      const second = await repos.events.appendIfAbsent({
+        sessionId: other.sessionId,
+        type: 'assistant',
+        payload: {},
+        direction: 'inbound',
+        messageUuid: 'shared-1',
+      })
+
+      expect(first).not.toBeNull()
+      expect(second).not.toBeNull()
+    })
+
+    test('appendIfAbsent ignores outbound rewrites and uuid-less events', async () => {
+      const { sessionId } = await makeEnvironmentAndSession()
+      // The server may rewrite the same outbound message uuid; only inbound can conflict.
+      await repos.events.append({
+        sessionId,
+        type: 'assistant',
+        payload: {},
+        direction: 'outbound',
+        messageUuid: 'o-1',
+      })
+      const outboundAgain = await repos.events.append({
+        sessionId,
+        type: 'assistant',
+        payload: {},
+        direction: 'outbound',
+        messageUuid: 'o-1',
+      })
+      // Streaming deltas share a uuid but carry no message uuid, so they never dedupe.
+      const chunkA = await repos.events.appendIfAbsent({
+        sessionId,
+        type: 'stream_event',
+        payload: {},
+        direction: 'inbound',
+      })
+      const chunkB = await repos.events.appendIfAbsent({
+        sessionId,
+        type: 'stream_event',
+        payload: {},
+        direction: 'inbound',
+      })
+
+      expect(outboundAgain).not.toBeNull()
+      expect(chunkA).not.toBeNull()
+      expect(chunkB).not.toBeNull()
+    })
+
+    test('latestCreatedAt returns null without events and the newest event time otherwise', async () => {
+      const { sessionId } = await makeEnvironmentAndSession()
+      expect(await repos.events.latestCreatedAt(sessionId)).toBeNull()
+
+      const first = await repos.events.append({ sessionId, type: 'a', payload: {}, direction: 'inbound' })
+      const last = await repos.events.append({ sessionId, type: 'b', payload: {}, direction: 'outbound' })
+
+      expect((await repos.events.latestCreatedAt(sessionId))?.getTime()).toBe(last.createdAt.getTime())
+      expect(last.createdAt.getTime()).toBeGreaterThanOrEqual(first.createdAt.getTime())
+      expect(await repos.events.latestCreatedAt('cse_missing')).toBeNull()
+    })
+
     test('latestId returns the max id or null', async () => {
       const { sessionId } = await makeEnvironmentAndSession()
       expect(await repos.events.latestId(sessionId)).toBeNull()

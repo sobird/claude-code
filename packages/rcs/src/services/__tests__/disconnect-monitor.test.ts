@@ -5,10 +5,79 @@ import { loadConfig } from '../../config.js'
 import { createMemoryRepositories } from '../../db/repositories/index.js'
 import type { Repositories } from '../../db/repositories/types.js'
 import { getAllEventBuses, getEventBus, removeEventBus } from '../../transport/event-bus.js'
-import { runDisconnectMonitorSweep, startDisconnectMonitor, stopDisconnectMonitor } from '../disconnect-monitor.js'
+import {
+  isSessionStale,
+  runDisconnectMonitorSweep,
+  startDisconnectMonitor,
+  stopDisconnectMonitor,
+} from '../disconnect-monitor.js'
 
 const AUTH_SECRET = 'test-secret'
 const DISCONNECT_TIMEOUT_SECONDS = 300
+
+describe('session staleness', () => {
+  const timeoutMs = DISCONNECT_TIMEOUT_SECONDS * 1000
+  const now = Date.parse('2026-05-01T12:00:00.000Z')
+  const staleDate = new Date(now - timeoutMs * 2 - 1)
+  const freshDate = new Date(now - 1_000)
+
+  test('a recently updated session is live', () => {
+    expect(
+      isSessionStale({
+        sessionUpdatedAt: freshDate,
+        latestEventAt: null,
+        environmentLastPollAt: null,
+        now,
+        timeoutMs,
+      }),
+    ).toBe(false)
+  })
+
+  test('a recent event keeps an otherwise quiet session live', () => {
+    expect(
+      isSessionStale({
+        sessionUpdatedAt: staleDate,
+        latestEventAt: freshDate,
+        environmentLastPollAt: null,
+        now,
+        timeoutMs,
+      }),
+    ).toBe(false)
+  })
+
+  test('a polling environment keeps an idle session live', () => {
+    expect(
+      isSessionStale({
+        sessionUpdatedAt: staleDate,
+        latestEventAt: staleDate,
+        environmentLastPollAt: freshDate,
+        now,
+        timeoutMs,
+      }),
+    ).toBe(false)
+  })
+
+  test('a session with no recent activity anywhere is stale', () => {
+    expect(
+      isSessionStale({
+        sessionUpdatedAt: staleDate,
+        latestEventAt: staleDate,
+        environmentLastPollAt: staleDate,
+        now,
+        timeoutMs,
+      }),
+    ).toBe(true)
+    expect(
+      isSessionStale({
+        sessionUpdatedAt: staleDate,
+        latestEventAt: null,
+        environmentLastPollAt: null,
+        now,
+        timeoutMs,
+      }),
+    ).toBe(true)
+  })
+})
 
 describe('Disconnect Monitor Logic', () => {
   let repos: Repositories
@@ -90,6 +159,23 @@ describe('Disconnect Monitor Logic', () => {
     await runDisconnectMonitorSweep(repos, config, now)
 
     expect(events).toContainEqual({ type: 'session_status', payload: { status: 'inactive' } })
+  })
+
+  test('keeps a quiet session alive while its environment is still polling', async () => {
+    const timeoutMs = DISCONNECT_TIMEOUT_SECONDS * 1000
+    // The sweep clock is 2x the window past "now" so the session row itself is stale; only
+    // the environment's poll proves the worker machine is still connected.
+    const now = Date.now() + timeoutMs * 2 + 60_000
+    const env = await repos.environments.create({
+      ownerUserId: 'user_1',
+      lastPollAt: new Date(now - 30_000),
+    })
+    const session = await repos.sessions.create({ environmentId: env.id })
+    await repos.sessions.update(session.id, { status: 'idle' })
+
+    await runDisconnectMonitorSweep(repos, config, now)
+
+    expect((await repos.sessions.getById(session.id))?.status).toBe('idle')
   })
 
   test('start and stop are idempotent', () => {

@@ -222,12 +222,22 @@ export interface AppendEventInput {
 export interface EventRepository {
   /** Persists an event and returns the inserted row (including its `bigserial` id). */
   append(input: AppendEventInput): Promise<SessionEventRecord>
+  /**
+   * Persists an inbound event unless an inbound row with the same `(session_id, message_uuid)`
+   * already exists; returns `null` when the write lost to the durable unique key. This is the
+   * atomic dedupe that closes the read-then-insert race in `hasMessageUuid` (concurrent
+   * bridge replays / HTTP writers), which otherwise duplicate `tool_use` messages and wedge
+   * the next model request. Outbound rewrites are never deduplicated.
+   */
+  appendIfAbsent(input: AppendEventInput): Promise<SessionEventRecord | null>
   /** Events with `id > afterId`, ascending (SSE `Last-Event-ID` replay). */
   listSince(sessionId: string, afterId: number, limit: number): Promise<SessionEventRecord[]>
   /** Events with `id < beforeId`, newest-first window returned in display order. */
   listBefore(sessionId: string, beforeId: number, limit: number): Promise<SessionEventRecord[]>
   /** Highest event id for the session, or `null` when it has no events. */
   latestId(sessionId: string): Promise<number | null>
+  /** `created_at` of the newest event, or `null` when it has none. Session activity signal. */
+  latestCreatedAt(sessionId: string): Promise<Date | null>
   /** True when a whole-message event with this uuid is already persisted for the session. */
   hasMessageUuid(sessionId: string, uuid: string): Promise<boolean>
 }

@@ -220,6 +220,19 @@ describe('publishInboundEvent', () => {
     expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(3)
   })
 
+  test('concurrent duplicate writes persist exactly one event', async () => {
+    const repos = createMemoryRepositories()
+    // Both pass the read-side check before either insert lands; the durable unique key must
+    // still let only one through, or the next model request sees duplicate tool_use blocks.
+    const results = await Promise.all([
+      publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'race-1' }),
+      publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'race-1' }),
+    ])
+
+    expect(results.filter(Boolean)).toHaveLength(1)
+    expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(1)
+  })
+
   test('persists events without a uuid every time', async () => {
     const repos = createMemoryRepositories()
     expect(await publishInboundEvent(repos, null, 's1', 'control_request', { request_id: 'r1' })).not.toBeNull()
