@@ -241,10 +241,24 @@ export interface EventRepository {
    * the next model request. Outbound rewrites are never deduplicated.
    */
   appendIfAbsent(input: AppendEventInput): Promise<SessionEventRecord | null>
-  /** Events with `id > afterId`, ascending (SSE `Last-Event-ID` replay). */
-  listSince(sessionId: string, afterId: number, limit: number): Promise<SessionEventRecord[]>
+  /**
+   * Events with `id > afterId`, ascending (SSE `Last-Event-ID` replay). `direction` filters
+   * inside the query so `limit` counts matching rows — a dense backlog of the other
+   * direction must not crowd the replay window.
+   */
+  listSince(
+    sessionId: string,
+    afterId: number,
+    limit: number,
+    direction?: SessionEventRecord['direction'],
+  ): Promise<SessionEventRecord[]>
   /** Events with `id < beforeId`, newest-first window returned in display order. */
-  listBefore(sessionId: string, beforeId: number, limit: number): Promise<SessionEventRecord[]>
+  listBefore(
+    sessionId: string,
+    beforeId: number,
+    limit: number,
+    direction?: SessionEventRecord['direction'],
+  ): Promise<SessionEventRecord[]>
   /** Highest event id for the session, or `null` when it has no events. */
   latestId(sessionId: string): Promise<number | null>
   /** `created_at` of the newest event, or `null` when it has none. Session activity signal. */

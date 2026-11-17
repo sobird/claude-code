@@ -67,7 +67,15 @@ app.post('/', legacyUserAuth, async (c) => {
 
   if (Array.isArray(body.events)) {
     const id = canonicalId(session.id)
-    for (const event of extractEvents(body.events)) {
+    for (const entry of extractEvents(body.events)) {
+      // The bridge wraps preloaded history as `{ type: 'event', data: SDKMessage }`.
+      // Persist the SDK message itself; storing the wrapper would replay an event the
+      // child's message normalizer cannot parse.
+      const data = entry.data
+      const event: Record<string, unknown> =
+        entry.type === 'event' && data && typeof data === 'object' && !Array.isArray(data)
+          ? (data as Record<string, unknown>)
+          : entry
       const type = typeof event.type === 'string' && event.type ? event.type : 'init'
       await publishSessionEvent(repos, getEventBus(id), id, type, event, 'outbound')
     }

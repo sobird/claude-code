@@ -122,9 +122,11 @@ export async function handleWebSocketOpen(
     bus: getEventBus(sessionId),
     fromSeqNum: 0,
     replay: true,
+    // Only outbound events are replayed, and the direction filter runs inside the query so
+    // an inbound backlog cannot consume the replay window.
     loadSince: async () =>
-      (await loadEventReplayWindow(repos, sessionId, 0, config.eventReplayLimit)).filter(
-        (event) => event.direction === 'outbound' && !NON_REPLAYABLE_EVENT_TYPES.has(event.type),
+      (await loadEventReplayWindow(repos, sessionId, 0, config.eventReplayLimit, 'outbound')).filter(
+        (event) => !NON_REPLAYABLE_EVENT_TYPES.has(event.type),
       ),
     filterLiveEvent: (event) => event.direction === 'outbound',
     onReplayEvent: (event) => sendEvent(ws, event),

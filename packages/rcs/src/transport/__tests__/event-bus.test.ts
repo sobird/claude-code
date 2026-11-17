@@ -9,6 +9,7 @@ import {
   getAllEventBuses,
   getAcpEventBus,
   getEventBus,
+  loadEventReplayWindow,
   publishInboundEvent,
   publishSessionEvent,
   removeAcpEventBus,
@@ -183,6 +184,20 @@ describe('publishSessionEvent', () => {
     const event = await publishSessionEvent(repos, null, 's1', 'user', { content: 'x' }, 'outbound')
     expect(event.seqNum).toBeGreaterThan(0)
     expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(1)
+  })
+})
+
+describe('loadEventReplayWindow', () => {
+  test('applies the direction filter before the limit', async () => {
+    const repos = createMemoryRepositories()
+    await publishSessionEvent(repos, null, 's1', 'user', { content: 'in' }, 'inbound')
+    const outbound = await publishSessionEvent(repos, null, 's1', 'assistant', { content: 'out' }, 'outbound')
+    await publishSessionEvent(repos, null, 's1', 'user', { content: 'in2' }, 'inbound')
+
+    // The worker stream only replays outbound events; a dense inbound backlog must not
+    // consume the window.
+    const window = await loadEventReplayWindow(repos, 's1', 0, 1, 'outbound')
+    expect(window.map((event) => event.id)).toEqual([outbound.id])
   })
 })
 

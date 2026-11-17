@@ -30,18 +30,22 @@ export const users = pgTable('users', {
   updatedAt: updatedAt(),
 })
 
-export const apiKeys = pgTable('api_keys', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id),
-  name: text('name').notNull(),
-  tokenPrefix: text('token_prefix').notNull(),
-  tokenHash: text('token_hash').notNull().unique(),
-  lastUsedAt: timestamp('last_used_at', { withTimezone: true, mode: 'date' }),
-  revokedAt: timestamp('revoked_at', { withTimezone: true, mode: 'date' }),
-  createdAt: createdAt(),
-})
+export const apiKeys = pgTable(
+  'api_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    name: text('name').notNull(),
+    tokenPrefix: text('token_prefix').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true, mode: 'date' }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true, mode: 'date' }),
+    createdAt: createdAt(),
+  },
+  (table) => [index('api_keys_user_id_idx').on(table.userId)],
+)
 
 export const environments = pgTable(
   'environments',
@@ -79,7 +83,11 @@ export const sessions = pgTable(
     updatedAt: updatedAt(),
     archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'date' }),
   },
-  (table) => [index('sessions_owner_status_idx').on(table.ownerUserId, table.status)],
+  (table) => [
+    index('sessions_owner_status_idx').on(table.ownerUserId, table.status),
+    /** Environment scoping: reconnect dispatch and stop paths list sessions by env. */
+    index('sessions_environment_id_idx').on(table.environmentId),
+  ],
 )
 
 export const sessionWorkers = pgTable('session_workers', {

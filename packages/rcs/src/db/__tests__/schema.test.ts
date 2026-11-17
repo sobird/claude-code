@@ -1,5 +1,7 @@
 import { afterAll, expect, test } from 'bun:test'
 
+import { sql } from 'drizzle-orm'
+
 import { createPgliteDatabase, runMigrations } from '../client.js'
 import { schema, sessions, users } from '../schema.js'
 
@@ -17,6 +19,18 @@ test('users username is unique and lowercase-normalized by callers', async () =>
     error = caught
   }
   expect(error).toBeInstanceOf(Error)
+})
+
+test('hot-path ownership lookups are indexed', async () => {
+  // Env scoping lists sessions by environment, and key auth resolves keys by user.
+  const result: unknown = await ctx.db.execute(sql`
+    SELECT indexname FROM pg_indexes
+    WHERE indexname IN ('sessions_environment_id_idx', 'api_keys_user_id_idx')
+    ORDER BY indexname
+  `)
+  // PGlite returns `{ rows }`; the postgres-js driver returns a row list.
+  const rows = (Array.isArray(result) ? result : (result as { rows: unknown[] }).rows) as Array<{ indexname: string }>
+  expect(rows.map((row) => row.indexname)).toEqual(['api_keys_user_id_idx', 'sessions_environment_id_idx'])
 })
 
 test('session events auto-increment ids', async () => {

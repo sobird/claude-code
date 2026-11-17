@@ -343,6 +343,27 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect(all.map((row) => row.id)).toEqual([first.id, second.id])
     })
 
+    test('listSince filters by direction before applying the limit', async () => {
+      const { sessionId } = await makeEnvironmentAndSession()
+      await repos.events.append({ sessionId, type: 'user', payload: {}, direction: 'inbound' })
+      const outbound = await repos.events.append({ sessionId, type: 'assistant', payload: {}, direction: 'outbound' })
+      await repos.events.append({ sessionId, type: 'user', payload: {}, direction: 'inbound' })
+
+      // A dense inbound backlog must not crowd outbound events out of the replay window.
+      const rows = await repos.events.listSince(sessionId, 0, 1, 'outbound')
+      expect(rows.map((row) => row.id)).toEqual([outbound.id])
+    })
+
+    test('listBefore filters by direction before applying the limit', async () => {
+      const { sessionId } = await makeEnvironmentAndSession()
+      const outbound = await repos.events.append({ sessionId, type: 'assistant', payload: {}, direction: 'outbound' })
+      await repos.events.append({ sessionId, type: 'user', payload: {}, direction: 'inbound' })
+      await repos.events.append({ sessionId, type: 'user', payload: {}, direction: 'inbound' })
+
+      const rows = await repos.events.listBefore(sessionId, outbound.id + 100, 1, 'outbound')
+      expect(rows.map((row) => row.id)).toEqual([outbound.id])
+    })
+
     test('hasMessageUuid finds a stored message uuid, scoped to one session', async () => {
       const mine = await makeEnvironmentAndSession()
       const other = await makeEnvironmentAndSession()

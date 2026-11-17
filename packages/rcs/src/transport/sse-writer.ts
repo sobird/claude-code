@@ -35,7 +35,9 @@ interface EventStreamOptions {
   /** Replay even when the cursor is 0; the SSE routes default to true. */
   replay?: boolean
   frame: (event: SessionEvent) => string
-  /** Direction filter applied to both the durable replay and live events. */
+  /** Replay direction, pushed into the query so the window limit counts matching rows. */
+  direction?: SessionEvent['direction']
+  /** Extra filter applied to both the durable replay and live events. */
   include?: (event: SessionEvent) => boolean
 }
 
@@ -45,6 +47,7 @@ async function loadReplay(repos: Repositories, options: EventStreamOptions): Pro
     options.sessionId,
     options.fromSeqNum,
     loadConfig().eventReplayLimit,
+    options.direction,
   )
   return options.include ? events.filter(options.include) : events
 }
@@ -134,6 +137,7 @@ export function createWorkerEventStream(c: Context, repos: Repositories, session
     sessionId,
     fromSeqNum,
     frame: toWorkerClientFrame,
+    direction: 'outbound',
     include: (event) => event.direction === 'outbound',
   })
 }

@@ -40,20 +40,24 @@ export function createEventRepository(db: Database): EventRepository {
       return row ?? null
     },
 
-    async listSince(sessionId, afterId, limit) {
+    async listSince(sessionId, afterId, limit, direction) {
+      const filters = [eq(sessionEvents.sessionId, sessionId), gt(sessionEvents.id, afterId)]
+      if (direction) filters.push(eq(sessionEvents.direction, direction))
       return db
         .select()
         .from(sessionEvents)
-        .where(and(eq(sessionEvents.sessionId, sessionId), gt(sessionEvents.id, afterId)))
+        .where(and(...filters))
         .orderBy(asc(sessionEvents.id))
         .limit(limit)
     },
 
-    async listBefore(sessionId, beforeId, limit) {
+    async listBefore(sessionId, beforeId, limit, direction) {
+      const filters = [eq(sessionEvents.sessionId, sessionId), lt(sessionEvents.id, beforeId)]
+      if (direction) filters.push(eq(sessionEvents.direction, direction))
       const rows = await db
         .select()
         .from(sessionEvents)
-        .where(and(eq(sessionEvents.sessionId, sessionId), lt(sessionEvents.id, beforeId)))
+        .where(and(...filters))
         .orderBy(desc(sessionEvents.id))
         .limit(limit)
       return rows.toReversed()
@@ -138,17 +142,17 @@ export function createMemoryEventRepository(): EventRepository {
       return insert(input)
     },
 
-    async listSince(sessionId, afterId, limit) {
+    async listSince(sessionId, afterId, limit, direction) {
       return (bySessionId.get(sessionId) ?? [])
-        .filter((record) => record.id > afterId)
+        .filter((record) => record.id > afterId && (!direction || record.direction === direction))
         .toSorted((a, b) => a.id - b.id)
         .slice(0, limit)
         .map(cloneEvent)
     },
 
-    async listBefore(sessionId, beforeId, limit) {
+    async listBefore(sessionId, beforeId, limit, direction) {
       return (bySessionId.get(sessionId) ?? [])
-        .filter((record) => record.id < beforeId)
+        .filter((record) => record.id < beforeId && (!direction || record.direction === direction))
         .toSorted((a, b) => b.id - a.id)
         .slice(0, limit)
         .toReversed()

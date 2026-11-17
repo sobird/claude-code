@@ -417,14 +417,17 @@ export async function loadEventReplayWindow(
   sessionId: string,
   cursor: number,
   limit: number,
+  direction?: SessionEventRecord['direction'],
 ): Promise<SessionEvent[]> {
+  // `direction` is applied inside the query, so the limit counts replayable rows instead
+  // of being consumed by a backlog of the other direction.
   if (cursor > 0) {
-    return (await repos.events.listSince(sessionId, cursor, limit)).map(toSessionEvent)
+    return (await repos.events.listSince(sessionId, cursor, limit, direction)).map(toSessionEvent)
   }
 
   const latest = await repos.events.latestId(sessionId)
   if (latest === null) return []
-  return (await repos.events.listBefore(sessionId, latest + 1, limit)).map(toSessionEvent)
+  return (await repos.events.listBefore(sessionId, latest + 1, limit, direction)).map(toSessionEvent)
 }
 
 export interface ReplayThenLiveOptions {

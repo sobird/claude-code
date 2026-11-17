@@ -339,6 +339,33 @@ describe('V1 Session Routes', () => {
     expect(workRes.status).toBe(200)
   })
 
+  test('POST /v1/sessions unwraps client event envelopes into SDK messages', async () => {
+    const sessRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({
+        // The bridge sends history as `{ type: 'event', data: SDKMessage }`.
+        events: [
+          {
+            type: 'event',
+            data: {
+              type: 'user',
+              uuid: 'msg-1',
+              message: { role: 'user', content: [{ type: 'text', text: 'history' }] },
+            },
+          },
+        ],
+      }),
+    })
+    expect(sessRes.status).toBe(200)
+    const { id } = await resJson(sessRes)
+    const events = await s.repos.events.listSince(id.replace(/^session_/, 'cse_'), 0, 10)
+    expect(events.map((e) => e.type)).toEqual(['user'])
+    const payload = events[0]?.payload as Record<string, unknown>
+    expect(payload.content).toBe('history')
+    expect(payload.uuid).toBe('msg-1')
+  })
+
   test('POST /v1/sessions with events publishes initial events', async () => {
     const sessRes = await app.request('/v1/sessions', {
       method: 'POST',
