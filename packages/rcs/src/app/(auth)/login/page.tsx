@@ -1,9 +1,14 @@
 import type { Metadata } from 'next'
 import { AuthError } from 'next-auth'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
+import { LOCALE_COOKIE, localeCookieOptions, nextLocaleCookie } from '../../../i18n/locales'
+import { toActionRedirectPath } from '../../../lib/app-paths'
 import { signIn } from '../../../lib/auth'
+import { signInUrlHasError } from '../../../lib/auth-redirect'
 import { APP_BASE_PATH } from '../../../lib/auth.config'
+import { getRepositories } from '../../../lib/repos'
 
 export const metadata: Metadata = {
   title: 'Sign in · Remote Control Server',
@@ -33,11 +38,24 @@ async function authenticate(formData: FormData): Promise<void> {
   const next = sanitizeNext(readField(formData, 'next'))
 
   try {
-    await signIn('credentials', { username, password, redirectTo: next })
-  } catch (error) {
-    if (error instanceof AuthError) {
+    // `{ redirect: false }` makes `signIn` return the redirect URL instead of
+    // throwing on bad credentials; the failure shows up as an `error` param.
+    const result = await signIn('credentials', { username, password, redirect: false })
+    if (typeof result !== 'string' || signInUrlHasError(result)) {
       // Next prepends the app basePath to server-action redirects, so pass the
       // path *without* `/code` (adding it here yields `/code/code/login`).
+      redirect(`/login?error=invalid&next=${encodeURIComponent(next)}`)
+    }
+
+    const record = await getRepositories().users.getByUsername(username.toLowerCase())
+    const locale = nextLocaleCookie(record?.locale)
+    const jar = await cookies()
+    if (locale) jar.set(LOCALE_COOKIE, locale, localeCookieOptions())
+    else jar.delete(LOCALE_COOKIE)
+
+    redirect(toActionRedirectPath(next))
+  } catch (error) {
+    if (error instanceof AuthError) {
       redirect(`/login?error=invalid&next=${encodeURIComponent(next)}`)
     }
     throw error
