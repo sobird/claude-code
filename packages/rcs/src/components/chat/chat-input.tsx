@@ -7,11 +7,26 @@
 
 import { Send, Square } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { acceptCommand, commandQuery, filterCommands, moveIndex } from '../../lib/command-menu'
 import { resolveComposerKey } from '../../lib/composer-keys'
+import { appendHistory, moveHistory } from '../../lib/input-history'
 import { cn } from '../../lib/utils'
+
+const HISTORY_STORAGE_KEY = 'rcs:input-history'
+
+function loadHistory(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+  } catch {
+    return []
+  }
+}
 
 interface ChatInputProps {
   /** May reject; on rejection the draft is kept so the user can retry. */
@@ -42,7 +57,19 @@ export function ChatInput({
   // an accepted command keep the list closed without extra bookkeeping.
   const [menuIndex, setMenuIndex] = useState(0)
   const [menuDismissed, setMenuDismissed] = useState(false)
+  // Prompt recall: index into `history`, or null while editing the draft.
+  const [history, setHistory] = useState<string[]>(loadHistory)
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null)
+  const historyDraftRef = useRef('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history))
+    } catch {
+      // Private mode and quota errors just disable persistence.
+    }
+  }, [history])
 
   const query = menuDismissed ? null : commandQuery(text)
   const items = query === null ? [] : filterCommands(commands, query)
@@ -58,6 +85,9 @@ export function ChatInput({
       // Only clear once the send resolved; a failure keeps the text so the
       // user can retry (the parent surfaces the error).
       setText('')
+      setHistory((prev) => appendHistory(prev, trimmed))
+      setHistoryIndex(null)
+      historyDraftRef.current = ''
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
       }
@@ -72,8 +102,21 @@ export function ChatInput({
     setText(target.value)
     setMenuDismissed(false)
     setMenuIndex(0)
+    setHistoryIndex(null)
     target.style.height = 'auto'
     target.style.height = `${Math.min(target.scrollHeight, 200)}px`
+  }, [])
+
+  /** Writes a recalled entry into the textarea and keeps its height in sync. */
+  const recall = useCallback((next: { index: number | null; text: string }) => {
+    setText(next.text)
+    setHistoryIndex(next.index)
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`
+    const end = next.text.length
+    requestAnimationFrame(() => el.setSelectionRange(end, end))
   }, [])
 
   const accept = useCallback((name: string) => {
@@ -164,6 +207,29 @@ export function ChatInput({
                     accept(item)
                     return
                   }
+                }
+              }
+              // ArrowUp/Down recall prompts like the TUI: up starts from the
+              // newest entry when the caret is on the first line (or while
+              // already navigating); down walks forward and restores the draft.
+              const recalling = historyIndex !== null
+              const beforeCaret = text.slice(0, event.currentTarget.selectionStart)
+              const onFirstLine = !beforeCaret.includes('\n')
+              if (event.key === 'ArrowUp' && (onFirstLine || recalling)) {
+                const moved = moveHistory(history, historyIndex, -1, historyDraftRef.current)
+                if (moved) {
+                  if (!recalling) historyDraftRef.current = text
+                  event.preventDefault()
+                  recall(moved)
+                  return
+                }
+              }
+              if (event.key === 'ArrowDown' && recalling) {
+                const moved = moveHistory(history, historyIndex, 1, historyDraftRef.current)
+                if (moved) {
+                  event.preventDefault()
+                  recall(moved)
+                  return
                 }
               }
               const action = resolveComposerKey({
