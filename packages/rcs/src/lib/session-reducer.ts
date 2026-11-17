@@ -355,6 +355,59 @@ function mostRecentRunningIndex(entries: ThreadEntry[]): number {
   return -1
 }
 
+interface ToolResultBlock {
+  id: string
+  content: string
+  isError: boolean
+}
+
+/** Concatenates the text blocks of a tool_result's content. */
+function textFromBlocks(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (!Array.isArray(value)) return ''
+  return value
+    .map((item) => asRecord(item))
+    .filter((block): block is Record<string, unknown> => !!block && block.type === 'text')
+    .map((block) => asText(block.text))
+    .join('')
+}
+
+/**
+ * The CLI reports tool results as a synthetic `user` turn whose content is a
+ * list of `tool_result` blocks — not as a standalone `tool_result` event. Pull
+ * them out so the matching tool card leaves its running state.
+ */
+function collectUserToolResults(payload: Record<string, unknown>): ToolResultBlock[] {
+  const message = asRecord(payload.message)
+  const content = message && Array.isArray(message.content) ? message.content : payload.content
+  if (!Array.isArray(content)) return []
+
+  const results: ToolResultBlock[] = []
+  for (const item of content) {
+    const block = asRecord(item)
+    if (!block || block.type !== 'tool_result') continue
+    const id = asText(block.tool_use_id)
+    if (!id) continue
+    results.push({ id, content: textFromBlocks(block.content), isError: block.is_error === true })
+  }
+  return results
+}
+
+function settleToolResult(entries: ThreadEntry[], result: ToolResultBlock): ThreadEntry[] {
+  const index = findToolCallIndex(entries, result.id)
+  if (index < 0) return entries
+  const entry = entries[index]
+  if (!entry || entry.type !== 'tool_call') return entries
+  return replaceEntry(entries, index, {
+    type: 'tool_call',
+    toolCall: {
+      ...entry.toolCall,
+      status: result.isError ? 'error' : 'complete',
+      rawOutput: { output: result.content },
+    },
+  })
+}
+
 function handleToolResult(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
   const toolCallId = asText(payload.tool_call_id)
@@ -576,16 +629,20 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       const payload = asRecord(event.payload) ?? {}
       // Replay acknowledgments echo a message the history already holds.
       if (payload.isReplay === true) return state
+      let entries = state.entries
+      for (const result of collectUserToolResults(payload)) {
+        entries = settleToolResult(entries, result)
+      }
       const text = extractEventText(event.payload)
-      if (!text) return state
+      if (!text) return entries === state.entries ? state : { ...state, entries }
       const seqNum = numericSeqNum(event)
-      const id = asText(payload.uuid) || (seqNum !== null ? String(seqNum) : event.id || `user-${state.entries.length}`)
+      const id = asText(payload.uuid) || (seqNum !== null ? String(seqNum) : event.id || `user-${entries.length}`)
       // Dedupe by uuid: an optimistic send and its history/echo counterpart
       // share the uuid even when their seqNums differ.
-      if (state.entries.some((entry) => entry.type === 'user_message' && entry.id === id)) return state
+      if (entries.some((entry) => entry.type === 'user_message' && entry.id === id)) return { ...state, entries }
       return {
         ...state,
-        entries: [...state.entries, { type: 'user_message', id, content: text }],
+        entries: [...entries, { type: 'user_message', id, content: text }],
         // A new turn starts fresh; the previous failure no longer describes it.
         error: null,
       }

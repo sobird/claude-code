@@ -109,6 +109,111 @@ describe('reduceSessionEvent', () => {
     expect(tools(state)[0]?.toolCall.status).toBe('error')
   })
 
+  test('tool_result blocks inside a user message complete the matching call', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        content: '',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'toolu_1', name: 'Bash', input: { command: 'ls' } }],
+        },
+      }),
+    )
+    // The CLI reports tool results as a synthetic user turn with tool_result blocks.
+    state = reduceSessionEvent(
+      state,
+      event('user', {
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'a.txt\nb.txt' }],
+        },
+      }),
+    )
+
+    const [call] = tools(state)
+    expect(call?.toolCall.status).toBe('complete')
+    expect(call?.toolCall.rawOutput).toEqual({ output: 'a.txt\nb.txt' })
+    // A tool-result turn is not a user message bubble.
+    expect(state.entries.filter((entry) => entry.type === 'user_message')).toHaveLength(0)
+  })
+
+  test('multiple tool_result blocks settle every call and join text blocks', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        content: '',
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'tool_use', id: 'toolu_1', name: 'Read', input: {} },
+            { type: 'tool_use', id: 'toolu_2', name: 'Bash', input: {} },
+          ],
+        },
+      }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('user', {
+        message: {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu_1',
+              content: [
+                { type: 'text', text: 'part one ' },
+                { type: 'image', source: {} },
+                { type: 'text', text: 'part two' },
+              ],
+            },
+            { type: 'tool_result', tool_use_id: 'toolu_2', content: 'denied', is_error: true },
+          ],
+        },
+      }),
+    )
+
+    const calls = tools(state)
+    expect(calls.find((call) => call.toolCall.id === 'toolu_1')?.toolCall).toMatchObject({
+      status: 'complete',
+      rawOutput: { output: 'part one part two' },
+    })
+    expect(calls.find((call) => call.toolCall.id === 'toolu_2')?.toolCall.status).toBe('error')
+  })
+
+  test('a user turn with text and tool_result renders the bubble and settles the call', () => {
+    let state = reduceSessionEvent(initialChatState, event('tool_use', { tool_call_id: 'call-1', tool_name: 'Bash' }))
+    state = reduceSessionEvent(
+      state,
+      event('user', {
+        content: 'look at this',
+        message: {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'look at this' },
+            { type: 'tool_result', tool_use_id: 'call-1', content: 'ok' },
+          ],
+        },
+      }),
+    )
+
+    expect(tools(state)[0]?.toolCall.status).toBe('complete')
+    expect(state.entries.filter((entry) => entry.type === 'user_message')).toHaveLength(1)
+  })
+
+  test('a tool_result for an unknown call is ignored', () => {
+    let state = reduceSessionEvent(initialChatState, event('tool_use', { tool_call_id: 'call-1', tool_name: 'Bash' }))
+    const before = tools(state)[0]?.toolCall
+    state = reduceSessionEvent(
+      state,
+      event('user', {
+        message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call-other', content: 'x' }] },
+      }),
+    )
+
+    expect(tools(state)[0]?.toolCall).toEqual(before)
+  })
+
   test('control_request creates a pending permission and marks the call waiting', () => {
     let state = reduceSessionEvent(initialChatState, event('tool_use', { tool_call_id: 'call-1', tool_name: 'Bash' }))
     state = reduceSessionEvent(
