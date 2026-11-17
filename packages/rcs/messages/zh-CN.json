@@ -89,7 +89,10 @@
       "reconnecting": "正在重新连接实时更新…",
       "disconnected": "实时更新已断开：{error}",
       "archived": "会话已归档，无法发送新消息。",
-      "archivedPlaceholder": "会话已归档"
+      "archivedPlaceholder": "会话已归档",
+      "jumpToLatest": "回到最新",
+      "sendFailed": "消息发送失败。",
+      "retrySend": "重新发送"
     }
   },
   "chat": {
@@ -103,6 +106,7 @@
     "allow": "允许",
     "deny": "拒绝",
     "toolFallback": "工具",
+    "toolRawInput": "原始输入",
     "running": "运行中",
     "waiting": "等待中",
     "planTitle": "执行计划",

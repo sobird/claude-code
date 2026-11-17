@@ -3,6 +3,14 @@
 
 @import 'tailwindcss';
 
+/* Streamdown ships its own Tailwind classes (bg-muted, border-border, dark:…);
+   Tailwind skips node_modules by default, so point it at the dist folder. */
+@source '../../node_modules/streamdown/dist';
+
+/* The app toggles dark mode with a `.dark` class on the root element, so the
+   `dark:` variant must follow the class rather than the OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ============================================================
    Theme — refined stone palette (warm gray, not beige)
    Ported from the legacy Vite UI so the rewrite keeps one look.

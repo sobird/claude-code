@@ -89,7 +89,10 @@
       "reconnecting": "Reconnecting to live updates…",
       "disconnected": "Live updates disconnected: {error}",
       "archived": "This session is archived and cannot accept new messages.",
-      "archivedPlaceholder": "Session archived"
+      "archivedPlaceholder": "Session archived",
+      "jumpToLatest": "Jump to latest",
+      "sendFailed": "Message failed to send.",
+      "retrySend": "Retry send"
     }
   },
   "chat": {
@@ -103,6 +106,7 @@
     "allow": "Allow",
     "deny": "Deny",
     "toolFallback": "Tool",
+    "toolRawInput": "Raw input",
     "running": "running",
     "waiting": "waiting",
     "planTitle": "Execution plan",

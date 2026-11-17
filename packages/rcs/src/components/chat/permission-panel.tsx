@@ -7,7 +7,9 @@
 
 import { Check, ShieldAlert, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useEffect, useState } from 'react'
 
+import { resolvePermissionKey } from '../../lib/permission-keys'
 import type { PendingPermission } from '../../lib/session-reducer'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
@@ -19,13 +21,70 @@ interface PermissionPanelProps {
 }
 
 export function PermissionPanel({ requests, onRespond, className }: PermissionPanelProps) {
+  const [selected, setSelected] = useState(0)
+  // Clamp instead of syncing state so a shrinking request list never selects
+  // an index that no longer exists.
+  const activeIndex = Math.min(selected, Math.max(requests.length - 1, 0))
+
+  // Keyboard-only approvals: a document listener covers the case where focus is
+  // still on the composer or elsewhere. Editable elements keep their keys.
+  useEffect(() => {
+    if (requests.length === 0) return undefined
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return
+      const target = event.target as HTMLElement | null
+      const inEditable = Boolean(
+        target?.closest('textarea, input, select, button, a[href], summary, [role="button"], [contenteditable="true"]'),
+      )
+      const action = resolvePermissionKey({
+        key: event.key,
+        requestCount: requests.length,
+        selectedIndex: activeIndex,
+        inEditable,
+        isComposing: event.isComposing,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        altKey: event.altKey,
+      })
+      if (action.action === 'ignore') return
+      event.preventDefault()
+
+      switch (action.action) {
+        case 'allow':
+        case 'deny': {
+          const request = requests[action.index]
+          if (request) onRespond?.(request.requestId, action.action === 'allow')
+          return
+        }
+        case 'select':
+          setSelected(action.index)
+          return
+        case 'next':
+          setSelected(Math.min(activeIndex + 1, requests.length - 1))
+          return
+        case 'previous':
+          setSelected(Math.max(activeIndex - 1, 0))
+          return
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [activeIndex, onRespond, requests])
+
   if (requests.length === 0) return null
 
   return (
     <div className={cn('mx-auto w-full max-w-3xl px-1 sm:px-0', className)}>
       <div className="space-y-2">
-        {requests.map((request) => (
-          <PermissionCard key={request.requestId} request={request} onRespond={onRespond} />
+        {requests.map((request, index) => (
+          <PermissionCard
+            key={request.requestId}
+            request={request}
+            selected={index === activeIndex}
+            onRespond={onRespond}
+          />
         ))}
       </div>
     </div>
@@ -34,16 +93,24 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
 
 function PermissionCard({
   request,
+  selected,
   onRespond,
 }: {
   request: PendingPermission
+  selected?: boolean
   onRespond?: (requestId: string, approved: boolean) => void
 }) {
   const t = useTranslations('chat')
   const inputPreview = formatInput(request.toolInput)
 
   return (
-    <div className="rounded-xl border border-warning-border/30 bg-warning-bg/60 px-3 py-3 sm:px-4">
+    <div
+      aria-current={selected ? 'true' : undefined}
+      className={cn(
+        'rounded-xl border border-warning-border/30 bg-warning-bg/60 px-3 py-3 sm:px-4',
+        selected && 'ring-2 ring-brand',
+      )}
+    >
       <div className="flex items-start gap-3">
         <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning-text" aria-hidden="true" />
         <div className="min-w-0 flex-1">
@@ -64,23 +131,35 @@ function PermissionCard({
         <Button
           type="button"
           variant="brand"
+          aria-keyshortcuts="a"
           className="h-11 flex-1 sm:h-9 sm:flex-none sm:px-4"
           onClick={() => onRespond?.(request.requestId, true)}
         >
           <Check className="h-4 w-4" />
           {t('allow')}
+          <ShortcutHint label="A" />
         </Button>
         <Button
           type="button"
           variant="outline"
+          aria-keyshortcuts="d"
           className="h-11 flex-1 border-warning-border/40 text-warning-text hover:bg-warning-bg sm:h-9 sm:flex-none sm:px-4"
           onClick={() => onRespond?.(request.requestId, false)}
         >
           <X className="h-4 w-4" />
           {t('deny')}
+          <ShortcutHint label="D" />
         </Button>
       </div>
     </div>
+  )
+}
+
+function ShortcutHint({ label }: { label: string }) {
+  return (
+    <kbd className="ml-1 hidden rounded border border-current/30 px-1 font-mono text-[10px] leading-4 opacity-70 sm:inline">
+      {label}
+    </kbd>
   )
 }
 

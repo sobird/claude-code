@@ -10,7 +10,7 @@
  * echo and history) so it shows immediately and survives a reload.
  */
 
-import { ArrowLeft } from 'lucide-react'
+import { ArrowDown, ArrowLeft } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -112,7 +112,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Events folded in from a send response so the message shows immediately even
   // if the live stream hiccups; the SSE echo dedupes by seqNum/uuid.
   const [extraEvents, setExtraEvents] = useState<SessionEventInput[]>([])
+  const [failedSend, setFailedSend] = useState<{ text: string; uuid: string; error: unknown } | null>(null)
+  const [atBottom, setAtBottom] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const atBottomRef = useRef(true)
 
   const hasToken = token !== null
   const stream = useSessionStream(sessionId)
@@ -160,33 +163,46 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const entryCount = entries.length
   const streaming = entries.some((entry) => entry.type === 'assistant_message' && entry.streaming)
 
-  // New entries always bring the thread to the bottom.
-  useEffect(() => {
+  const scrollToBottom = useCallback(() => {
     const el = scrollRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [entryCount])
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+    atBottomRef.current = true
+    setAtBottom(true)
+  }, [])
+
+  // Release the follow as soon as the reader scrolls up, so re-reading older
+  // messages is never yanked back to the newest one.
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+    atBottomRef.current = near
+    setAtBottom(near)
+  }, [])
+
+  // New entries follow the bottom only while the reader is already there.
+  useEffect(() => {
+    if (atBottomRef.current) scrollToBottom()
+  }, [entryCount, scrollToBottom])
 
   // While a reply streams, the text grows between reducer updates as it is
-  // revealed, so follow it frame-by-frame — but only while the reader is
-  // already near the bottom, so scrolling up to re-read releases the follow.
+  // revealed, so follow it frame-by-frame while the reader is at the bottom.
   useEffect(() => {
     if (!streaming) return undefined
     let frame = 0
     const follow = () => {
       const el = scrollRef.current
-      if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 200) el.scrollTop = el.scrollHeight
+      if (el && atBottomRef.current) el.scrollTop = el.scrollHeight
       frame = requestAnimationFrame(follow)
     }
     frame = requestAnimationFrame(follow)
     return () => cancelAnimationFrame(frame)
   }, [streaming])
 
-  const handleSend = useCallback(
-    async (text: string) => {
+  const sendWithUuid = useCallback(
+    async (text: string, uuid: string) => {
       setActionError(null)
-      // Generate the uuid once so the send body, the response event, and a
-      // history reload all agree on the same entry id (reducer dedupes by it).
-      const uuid = randomUuid()
       try {
         const result = await api.post<EventActionResponse>(`/web/sessions/${encodeURIComponent(sessionId)}/events`, {
           type: 'user',
@@ -199,14 +215,36 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           ...prev,
           event ?? { id: uuid, type: 'user', direction: 'outbound', payload: { content: text, uuid } },
         ])
+        setFailedSend(null)
+        scrollToBottom()
       } catch (error) {
-        setActionError(error)
+        setFailedSend({ text, uuid, error })
         // Rethrow so the composer keeps the draft for a retry.
         throw error
       }
     },
-    [api, sessionId],
+    [api, sessionId, scrollToBottom],
   )
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      // Generate the uuid once so the send body, the response event, a retry,
+      // and a history reload all agree on the same entry id (reducer dedupes
+      // by it, so a retry that the server already accepted cannot duplicate).
+      await sendWithUuid(text, randomUuid())
+    },
+    [sendWithUuid],
+  )
+
+  const handleRetrySend = useCallback(async () => {
+    const failed = failedSend
+    if (!failed) return
+    try {
+      await sendWithUuid(failed.text, failed.uuid)
+    } catch {
+      // The inline card already reports the failure.
+    }
+  }, [failedSend, sendWithUuid])
 
   const handlePermissionRespond = useCallback(
     async (requestId: string, approved: boolean) => {
@@ -314,22 +352,43 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         </div>
       ) : null}
 
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto rounded-xl border border-border bg-surface-2 px-3 py-5 sm:px-6"
-      >
-        <div className="mx-auto flex max-w-3xl flex-col gap-3">
-          {loading && entries.length === 0 ? (
-            <EmptyState title={t('loading.title')} description={t('loading.description')} />
-          ) : entries.length === 0 ? (
-            <EmptyState title={t('empty.title')} description={t('empty.description', { product: tCommon('claude') })} />
-          ) : (
-            <MessageThread entries={entries} />
-          )}
-          {busy && !streamingHasText ? (
-            <ThinkingIndicator label={t('thinking', { product: tCommon('claude') })} />
-          ) : null}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="absolute inset-0 overflow-y-auto rounded-xl border border-border bg-surface-2 px-3 py-5 sm:px-6"
+        >
+          <div className="mx-auto flex max-w-3xl flex-col gap-3">
+            {loading && entries.length === 0 ? (
+              <EmptyState title={t('loading.title')} description={t('loading.description')} />
+            ) : entries.length === 0 ? (
+              <EmptyState
+                title={t('empty.title')}
+                description={t('empty.description', { product: tCommon('claude') })}
+              />
+            ) : (
+              <MessageThread entries={entries} />
+            )}
+            {failedSend ? (
+              <FailedSendCard text={failedSend.text} error={failedSend.error} onRetry={handleRetrySend} />
+            ) : null}
+            {busy && !streamingHasText ? (
+              <ThinkingIndicator label={t('thinking', { product: tCommon('claude') })} />
+            ) : null}
+          </div>
         </div>
+        {!atBottom ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={scrollToBottom}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 gap-1.5 rounded-full shadow-md"
+          >
+            <ArrowDown className="h-3.5 w-3.5" />
+            {t('jumpToLatest')}
+          </Button>
+        ) : null}
       </div>
 
       <PermissionPanel requests={chat.pendingPermissions} onRespond={handlePermissionRespond} />
@@ -396,6 +455,25 @@ function EmptyState({ title, description }: { title: string; description: string
     <div className="flex min-h-[16rem] flex-col items-center justify-center gap-2 p-8 text-center">
       <h2 className="font-display text-base font-semibold text-text-primary">{title}</h2>
       <p className="max-w-xs text-sm leading-relaxed text-text-muted">{description}</p>
+    </div>
+  )
+}
+
+function FailedSendCard({ text, error, onRetry }: { text: string; error: unknown; onRetry: () => void }) {
+  const t = useTranslations('session.view')
+  const describeError = useApiErrorMessage()
+  return (
+    <div
+      role="alert"
+      className="ml-auto flex max-w-[85%] flex-col items-end gap-1.5 rounded-xl border border-status-error/30 bg-status-error/10 px-4 py-3 text-sm text-status-error sm:max-w-[70%]"
+    >
+      <p className="max-w-full truncate font-display">{text}</p>
+      <p className="text-xs">
+        {t('sendFailed')} {describeError(error, 'errors.generic')}
+      </p>
+      <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+        {t('retrySend')}
+      </Button>
     </div>
   )
 }

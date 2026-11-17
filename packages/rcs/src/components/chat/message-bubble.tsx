@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useSmoothText } from '../../hooks/useSmoothText'
 import type { AssistantMessageEntry, UserMessageEntry } from '../../lib/session-reducer'
 import { cn } from '../../lib/utils'
+import { MarkdownText, usePacedText } from './markdown'
 
 // Collapsed user-message height (px) before the "expand" affordance appears.
 const COLLAPSED_MAX_HEIGHT = 200
@@ -81,17 +82,14 @@ export function AssistantBubble({ entry }: { entry: AssistantMessageEntry }) {
           // Stable keys: the active chunk's text grows on every delta, and a
           // text-derived key would remount the node (and restart the reveal) each
           // time. Chunks are only appended, so the index is stable.
-          const source = entry.streaming ? <SmoothText text={chunk.text} /> : chunk.text
-          return chunk.type === 'thought' ? (
-            <ThoughtBlock key={`chunk-${index}`} content={source} />
+          const key = `chunk-${index}`
+          if (chunk.type === 'thought') {
+            return <ThoughtBlock key={key} content={entry.streaming ? <SmoothText text={chunk.text} /> : chunk.text} />
+          }
+          return entry.streaming ? (
+            <StreamingMarkdown key={key} text={chunk.text} />
           ) : (
-            <div
-              key={`chunk-${index}`}
-              className="whitespace-pre-wrap break-words font-sans text-sm leading-[1.75] text-text-primary"
-              style={{ overflowWrap: 'anywhere' }}
-            >
-              {source}
-            </div>
+            <MarkdownText key={key} text={chunk.text} />
           )
         })}
       </div>
@@ -114,9 +112,16 @@ function ThoughtBlock({ content }: { content: ReactNode }) {
   )
 }
 
-/** Streams its text in progressively; used for the chunks of a live reply. */
+/** Streams its text in progressively; used for collapsed thought blocks. */
 function SmoothText({ text }: { text: string }) {
   return <>{useSmoothText(text)}</>
+}
+
+/** Live markdown: the smooth reveal drives the text, pacing caps re-parses. */
+function StreamingMarkdown({ text }: { text: string }) {
+  const smoothed = useSmoothText(text)
+  const paced = usePacedText(smoothed, 80)
+  return <MarkdownText text={paced} streaming />
 }
 
 function ClaudeMark() {

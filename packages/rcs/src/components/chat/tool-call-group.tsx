@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import type { ToolCallData, ToolCallEntry, ToolCallStatus } from '../../lib/session-reducer'
+import { canonicalToolName, summarizeToolCall } from '../../lib/tool-summary'
 import { cn, uniqueKeys } from '../../lib/utils'
 
 type ChatTranslator = ReturnType<typeof useTranslations<'chat'>>
@@ -64,6 +65,7 @@ interface SingleToolCardProps {
 function SingleToolCard({ tool, compact }: SingleToolCardProps) {
   const t = useTranslations('chat')
   const [expanded, setExpanded] = useState(!compact)
+  const summary = summarizeToolCall(tool.title, tool.rawInput)
   const hasOutput =
     tool.status !== 'running' &&
     tool.status !== 'waiting_for_confirmation' &&
@@ -79,7 +81,8 @@ function SingleToolCard({ tool, compact }: SingleToolCardProps) {
       >
         <StatusIcon status={tool.status} />
         <span className="truncate font-display text-xs font-medium text-text-secondary transition-colors group-hover:text-text-primary">
-          {tool.title || t('toolFallback')}
+          {summary.name || t('toolFallback')}
+          {summary.summary ? <span className="ml-1.5 font-normal text-text-muted">{summary.summary}</span> : null}
         </span>
         {tool.status === 'running' ? (
           <span className="animate-pulse text-[10px] text-status-running">{t('running')}</span>
@@ -91,10 +94,25 @@ function SingleToolCard({ tool, compact }: SingleToolCardProps) {
 
       {expanded ? (
         <div className="mt-2 space-y-2 sm:ml-5">
+          {summary.fields.length > 0 ? (
+            <div className="space-y-1 rounded-md bg-surface-1 p-2 font-mono text-[11px] text-text-secondary">
+              {summary.fields.map((field) => (
+                <div key={field.key} className="flex gap-2 whitespace-pre-wrap break-words">
+                  <span className="flex-shrink-0 text-text-muted">{field.key}</span>
+                  <span className="min-w-0">{field.value}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {tool.rawInput && Object.keys(tool.rawInput).length > 0 ? (
-            <pre className="max-h-36 overflow-x-auto rounded-md bg-surface-1 p-2 font-mono text-[11px] text-text-secondary">
-              {truncate(JSON.stringify(tool.rawInput, null, 2), 2000)}
-            </pre>
+            <details>
+              <summary className="cursor-pointer list-none font-display text-[11px] text-text-muted transition-colors hover:text-text-secondary">
+                {t('toolRawInput')}
+              </summary>
+              <pre className="mt-1 max-h-36 overflow-x-auto rounded-md bg-surface-1 p-2 font-mono text-[11px] text-text-secondary">
+                {truncate(JSON.stringify(tool.rawInput, null, 2), 2000)}
+              </pre>
+            </details>
           ) : null}
           {hasOutput ? (
             <pre
@@ -140,7 +158,7 @@ export function summarizeTools(entries: ToolCallEntry[]): {
 } {
   const counts = new Map<string, number>()
   for (const entry of entries) {
-    const name = simplifyToolName(entry.toolCall.title)
+    const name = canonicalToolName(entry.toolCall.title)
     counts.set(name, (counts.get(name) ?? 0) + 1)
   }
   return { total: entries.length, groups: [...counts].map(([name, count]) => ({ name, count })) }
@@ -157,11 +175,6 @@ function buildSummary(entries: ToolCallEntry[], t: ChatTranslator): string {
 
   if (parts.length === 1) return parts[0] ?? ''
   return t('summary.grouped', { total, tools: parts.join(', ') })
-}
-
-function simplifyToolName(title: string): string {
-  const match = title.match(/^(\w+)/)
-  return match ? (match[1] ?? title) : title
 }
 
 function formatOutput(tool: ToolCallData): string {
