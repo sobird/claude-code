@@ -11,13 +11,15 @@
  */
 
 import { ArrowLeft } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { isSessionClosedStatus } from '../../contracts'
 import { useAccessToken } from '../../hooks/useAccessToken'
+import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
 import { useSessionStream } from '../../hooks/useSessionStream'
-import { ApiError, createApiClient } from '../../lib/api-client'
+import { createApiClient } from '../../lib/api-client'
 import {
   applyHistory,
   initialChatState,
@@ -65,12 +67,6 @@ type GroupedItem =
   | { kind: 'entry'; entry: Exclude<ThreadEntry, ToolCallEntry> }
   | { kind: 'tools'; entries: ToolCallEntry[] }
 
-function toMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message
-  if (error instanceof Error) return error.message
-  return 'Something went wrong'
-}
-
 function groupToolCalls(entries: ThreadEntry[]): GroupedItem[] {
   const result: GroupedItem[] = []
   let tools: ToolCallEntry[] = []
@@ -93,6 +89,9 @@ function groupToolCalls(entries: ThreadEntry[]): GroupedItem[] {
 }
 
 export function SessionView({ sessionId }: { sessionId: string }) {
+  const t = useTranslations('session.view')
+  const tCommon = useTranslations('common')
+  const describeError = useApiErrorMessage()
   const { token, refresh: refreshToken, error: tokenError } = useAccessToken()
   const tokenRef = useRef(token)
 
@@ -105,8 +104,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [session, setSession] = useState<SessionDetail | null>(null)
   const [history, setHistory] = useState<HistoryEvent[] | null>(null)
   const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<unknown>(null)
+  const [actionError, setActionError] = useState<unknown>(null)
   // Events folded in from a send response so the message shows immediately even
   // if the live stream hiccups; the SSE echo dedupes by seqNum/uuid.
   const [extraEvents, setExtraEvents] = useState<SessionEventInput[]>([])
@@ -127,7 +126,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       setSession(detail)
       setHistory(Array.isArray(page.events) ? page.events : [])
     } catch (error) {
-      setLoadError(toMessage(error))
+      setLoadError(error)
     } finally {
       setLoading(false)
     }
@@ -176,7 +175,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           event ?? { id: uuid, type: 'user', direction: 'outbound', payload: { content: text, uuid } },
         ])
       } catch (error) {
-        setActionError(toMessage(error))
+        setActionError(error)
         // Rethrow so the composer keeps the draft for a retry.
         throw error
       }
@@ -194,7 +193,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           request_id: requestId,
         })
       } catch (error) {
-        setActionError(toMessage(error))
+        setActionError(error)
       }
     },
     [api, sessionId],
@@ -205,7 +204,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     try {
       await api.post(`/web/sessions/${encodeURIComponent(sessionId)}/interrupt`, {})
     } catch (error) {
-      setActionError(toMessage(error))
+      setActionError(error)
     }
   }, [api, sessionId])
 
@@ -215,9 +214,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const closed = chat.closed || isSessionClosedStatus(session?.status)
   const busy = chat.status === 'running'
   const displayStatus = chat.status ?? session?.status ?? 'active'
-  const reconnectError = stream.status === 'error' ? (stream.error ?? 'Live updates disconnected') : null
-  const reconnecting = stream.status === 'reconnecting'
-  const failedToLoad = loadError ?? tokenError
+  const reconnectMessage =
+    stream.status === 'error'
+      ? t('disconnected', { error: stream.error ?? '' })
+      : stream.status === 'reconnecting'
+        ? t('reconnecting')
+        : null
+  // `useAccessToken` surfaces a ready-made message string; wrap it so
+  // `describeError` renders it verbatim instead of the generic fallback.
+  const failedToLoad = loadError ?? (tokenError ? new Error(tokenError) : null)
+  const failedToLoadText = failedToLoad ? describeError(failedToLoad, 'errors.generic') : null
 
   return (
     <div className="flex h-[calc(100dvh-9rem)] min-h-[28rem] flex-col gap-3">
@@ -226,7 +232,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           <Link
             href="/"
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary"
-            aria-label="Back to dashboard"
+            aria-label={t('back')}
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -245,19 +251,19 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           role="alert"
           className="flex flex-col gap-2 rounded-xl border border-status-error/30 bg-status-error/10 px-4 py-3 text-sm text-status-error sm:flex-row sm:items-center sm:justify-between"
         >
-          <span>{failedToLoad}</span>
+          <span>{failedToLoadText}</span>
           <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
-            Retry
+            {tCommon('retry')}
           </Button>
         </div>
       ) : null}
 
-      {reconnectError || reconnecting ? (
+      {reconnectMessage ? (
         <div
           role="status"
           className="rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-xs text-status-warning"
         >
-          {reconnectError ? `Live updates disconnected: ${reconnectError}` : 'Reconnecting to live updates…'}
+          {reconnectMessage}
         </div>
       ) : null}
 
@@ -266,7 +272,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           role="alert"
           className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
         >
-          {actionError}
+          {describeError(actionError, 'errors.generic')}
         </div>
       ) : null}
 
@@ -276,13 +282,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-3">
           {loading && entries.length === 0 ? (
-            <EmptyState title="Loading conversation…" description="Fetching session history." />
+            <EmptyState title={t('loading.title')} description={t('loading.description')} />
           ) : entries.length === 0 ? (
-            <EmptyState title="开始对话" description="输入消息开始与 Claude 对话。" />
+            <EmptyState title={t('empty.title')} description={t('empty.description', { product: tCommon('claude') })} />
           ) : (
             <MessageThread entries={entries} onPermissionRespond={handlePermissionRespond} />
           )}
-          {busy ? <ThinkingIndicator /> : null}
+          {busy ? <ThinkingIndicator label={t('thinking', { product: tCommon('claude') })} /> : null}
         </div>
       </div>
 
@@ -290,7 +296,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       {closed ? (
         <div className="rounded-lg border border-border bg-surface-1 px-3 py-2 text-center text-xs text-text-muted">
-          会话已归档，无法发送新消息。
+          {t('archived')}
         </div>
       ) : null}
 
@@ -299,7 +305,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         onInterrupt={handleInterrupt}
         isLoading={busy}
         disabled={closed || !hasToken}
-        placeholder={closed ? 'Session archived' : undefined}
+        placeholder={closed ? t('archivedPlaceholder') : undefined}
       />
     </div>
   )
@@ -360,7 +366,7 @@ function EmptyState({ title, description }: { title: string; description: string
   )
 }
 
-function ThinkingIndicator() {
+function ThinkingIndicator({ label }: { label: string }) {
   return (
     <div className="flex items-start gap-3 sm:gap-4">
       <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand/10">
@@ -370,7 +376,7 @@ function ThinkingIndicator() {
           <Dot delay="300ms" />
         </span>
       </div>
-      <span className="pt-2 font-display text-xs text-text-muted">Claude is working…</span>
+      <span className="pt-2 font-display text-xs text-text-muted">{label}</span>
     </div>
   )
 }

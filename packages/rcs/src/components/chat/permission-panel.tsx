@@ -6,6 +6,7 @@
  */
 
 import { Check, ShieldAlert, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 import type { PendingPermission } from '../../lib/session-reducer'
 import { cn } from '../../lib/utils'
@@ -38,6 +39,7 @@ function PermissionCard({
   request: PendingPermission
   onRespond?: (requestId: string, approved: boolean) => void
 }) {
+  const t = useTranslations('chat')
   const inputPreview = formatInput(request.toolInput)
 
   return (
@@ -45,7 +47,9 @@ function PermissionCard({
       <div className="flex items-start gap-3">
         <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning-text" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <div className="font-display text-sm font-medium text-warning-text">{request.toolName}</div>
+          <div className="font-display text-sm font-medium text-warning-text">
+            {request.toolName || t('toolFallback')}
+          </div>
           {request.description ? (
             <div className="mt-0.5 text-xs text-warning-text/80">{request.description}</div>
           ) : null}
@@ -64,7 +68,7 @@ function PermissionCard({
           onClick={() => onRespond?.(request.requestId, true)}
         >
           <Check className="h-4 w-4" />
-          允许
+          {t('allow')}
         </Button>
         <Button
           type="button"
@@ -73,7 +77,7 @@ function PermissionCard({
           onClick={() => onRespond?.(request.requestId, false)}
         >
           <X className="h-4 w-4" />
-          拒绝
+          {t('deny')}
         </Button>
       </div>
     </div>

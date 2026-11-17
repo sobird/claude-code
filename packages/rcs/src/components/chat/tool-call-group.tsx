@@ -6,11 +6,14 @@
  */
 
 import { Check, ChevronRight, Loader2, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import type { ToolCallData, ToolCallEntry, ToolCallStatus } from '../../lib/session-reducer'
 import { cn, uniqueKeys } from '../../lib/utils'
 import { Button } from '../ui/button'
+
+type ChatTranslator = ReturnType<typeof useTranslations<'chat'>>
 
 interface ToolCallGroupProps {
   entries: ToolCallEntry[]
@@ -19,6 +22,7 @@ interface ToolCallGroupProps {
 
 /** Renders a single tool card, or a collapsible group when calls are adjacent. */
 export function ToolCallGroup({ entries, onPermissionRespond }: ToolCallGroupProps) {
+  const t = useTranslations('chat')
   const [expanded, setExpanded] = useState(false)
 
   if (entries.length === 0) return null
@@ -44,7 +48,7 @@ export function ToolCallGroup({ entries, onPermissionRespond }: ToolCallGroupPro
             className={cn('h-3 w-3 text-text-muted transition-transform', expanded && 'rotate-90')}
             aria-hidden="true"
           />
-          <span className="font-display text-xs text-text-muted">{buildSummary(entries)}</span>
+          <span className="font-display text-xs text-text-muted">{buildSummary(entries, t)}</span>
         </button>
         {expanded ? (
           <div className="divide-y divide-border border-t border-border">
@@ -65,6 +69,7 @@ interface SingleToolCardProps {
 }
 
 function SingleToolCard({ tool, compact, onPermissionRespond }: SingleToolCardProps) {
+  const t = useTranslations('chat')
   const [expanded, setExpanded] = useState(!compact)
   const hasOutput =
     tool.status !== 'running' &&
@@ -82,12 +87,14 @@ function SingleToolCard({ tool, compact, onPermissionRespond }: SingleToolCardPr
       >
         <StatusIcon status={tool.status} />
         <span className="truncate font-display text-xs font-medium text-text-secondary transition-colors group-hover:text-text-primary">
-          {tool.title}
+          {tool.title || t('toolFallback')}
         </span>
         {tool.status === 'running' ? (
-          <span className="animate-pulse text-[10px] text-status-running">running</span>
+          <span className="animate-pulse text-[10px] text-status-running">{t('running')}</span>
         ) : null}
-        {tool.status === 'waiting_for_confirmation' ? <span className="text-[10px] text-brand">waiting</span> : null}
+        {tool.status === 'waiting_for_confirmation' ? (
+          <span className="text-[10px] text-brand">{t('waiting')}</span>
+        ) : null}
       </button>
 
       {tool.status === 'waiting_for_confirmation' && requestId ? (
@@ -100,7 +107,7 @@ function SingleToolCard({ tool, compact, onPermissionRespond }: SingleToolCardPr
             onClick={() => onPermissionRespond?.(requestId, true)}
           >
             <Check className="h-4 w-4" />
-            允许
+            {t('allow')}
           </Button>
           <Button
             type="button"
@@ -110,7 +117,7 @@ function SingleToolCard({ tool, compact, onPermissionRespond }: SingleToolCardPr
             onClick={() => onPermissionRespond?.(requestId, false)}
           >
             <X className="h-4 w-4" />
-            拒绝
+            {t('deny')}
           </Button>
         </div>
       ) : null}
@@ -156,19 +163,33 @@ function StatusIcon({ status }: { status: ToolCallStatus }) {
   }
 }
 
-function buildSummary(entries: ToolCallEntry[]): string {
+/**
+ * Counts calls per simplified tool name, preserving first-seen order so the
+ * summary reads in the order the agent made the calls.
+ */
+export function summarizeTools(entries: ToolCallEntry[]): {
+  total: number
+  groups: Array<{ name: string; count: number }>
+} {
   const counts = new Map<string, number>()
   for (const entry of entries) {
     const name = simplifyToolName(entry.toolCall.title)
     counts.set(name, (counts.get(name) ?? 0) + 1)
   }
+  return { total: entries.length, groups: [...counts].map(([name, count]) => ({ name, count })) }
+}
 
-  const parts: string[] = []
-  for (const [name, count] of counts) parts.push(count === 1 ? name : `${count} 次${name}`)
+function buildSummary(entries: ToolCallEntry[], t: ChatTranslator): string {
+  const { total, groups } = summarizeTools(entries)
+  if (groups.length === 0) return t('summary.total', { count: total })
 
-  if (parts.length === 0) return `${entries.length} 个工具调用`
+  const parts = groups.map((group) => {
+    const name = group.name || t('toolFallback')
+    return group.count === 1 ? name : t('summary.group', { count: group.count, name })
+  })
+
   if (parts.length === 1) return parts[0] ?? ''
-  return `${entries.length} 个工具: ${parts.join('、')}`
+  return t('summary.grouped', { total, tools: parts.join(', ') })
 }
 
 function simplifyToolName(title: string): string {

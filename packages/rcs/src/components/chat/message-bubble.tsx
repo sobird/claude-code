@@ -6,6 +6,7 @@
  */
 
 import { ChevronDown } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { AssistantMessageEntry, UserMessageEntry } from '../../lib/session-reducer'
@@ -16,6 +17,7 @@ const COLLAPSED_MAX_HEIGHT = 200
 
 /** Right-aligned user message with brand-tinted bubble and collapse-on-overflow. */
 export function UserBubble({ entry }: { entry: UserMessageEntry }) {
+  const t = useTranslations('chat')
   const [expanded, setExpanded] = useState(false)
   const [overflowing, setOverflowing] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -52,7 +54,7 @@ export function UserBubble({ entry }: { entry: UserMessageEntry }) {
                   onClick={() => setExpanded(true)}
                   className="flex items-center gap-1 rounded-full px-3 py-1 font-display text-xs font-medium text-white/90 transition-colors hover:bg-white/15"
                 >
-                  <span>展开</span>
+                  <span>{t('expand')}</span>
                   <ChevronDown className="h-3 w-3" />
                 </button>
               </div>
@@ -66,13 +68,14 @@ export function UserBubble({ entry }: { entry: UserMessageEntry }) {
 
 /** Left-aligned assistant message with the Anthropic mark and editable prose. */
 export function AssistantBubble({ entry }: { entry: AssistantMessageEntry }) {
+  const tCommon = useTranslations('common')
   return (
     <div className="flex items-start gap-3 sm:gap-4">
       <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand/10">
         <ClaudeMark />
       </div>
       <div className="min-w-0 flex-1 space-y-3">
-        <span className="font-display text-sm font-semibold text-text-primary">Claude</span>
+        <span className="font-display text-sm font-semibold text-text-primary">{tCommon('claude')}</span>
         {entry.chunks.map((chunk) =>
           chunk.type === 'thought' ? (
             <ThoughtBlock key={`thought-${chunk.text}`} text={chunk.text} />
@@ -92,12 +95,13 @@ export function AssistantBubble({ entry }: { entry: AssistantMessageEntry }) {
 }
 
 function ThoughtBlock({ text }: { text: string }) {
+  const t = useTranslations('chat')
   return (
     <details className="group rounded-lg border border-border bg-surface-1/60 px-3 py-2">
       <summary className="cursor-pointer list-none font-display text-xs font-medium text-text-muted transition-colors hover:text-text-secondary">
         <span className="inline-flex items-center gap-1.5">
           <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
-          思考过程
+          {t('thought')}
         </span>
       </summary>
       <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary">{text}</div>

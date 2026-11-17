@@ -73,6 +73,46 @@
   "session": {
     "list": {
       "empty": "暂无会话。"
+    },
+    "view": {
+      "back": "返回仪表盘",
+      "loading": {
+        "title": "正在加载对话…",
+        "description": "正在获取会话历史。"
+      },
+      "empty": {
+        "title": "开始对话",
+        "description": "发送消息以开始与 {product} 对话。"
+      },
+      "thinking": "{product} 正在处理…",
+      "reconnecting": "正在重新连接实时更新…",
+      "disconnected": "实时更新已断开：{error}",
+      "archived": "会话已归档，无法发送新消息。",
+      "archivedPlaceholder": "会话已归档"
+    }
+  },
+  "chat": {
+    "placeholder": "给 {product} 发送消息…",
+    "send": "发送",
+    "interrupt": "中断",
+    "enterHint": "Enter 发送，Shift+Enter 换行",
+    "expand": "展开",
+    "thought": "思考过程",
+    "allow": "允许",
+    "deny": "拒绝",
+    "toolFallback": "工具",
+    "running": "运行中",
+    "waiting": "等待中",
+    "planTitle": "执行计划",
+    "priority": {
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    },
+    "summary": {
+      "total": "{count, plural, other {# 个工具调用}}",
+      "group": "{count}× {name}",
+      "grouped": "共 {total} 个工具：{tools}"
     }
   },
   "auth": {

@@ -368,6 +368,23 @@ describe('applyHistory', () => {
   })
 })
 
+test('missing tool names are left empty for the UI to localize', () => {
+  const state = reduceSessionEvent(
+    initialChatState,
+    event('assistant', { content: [{ type: 'tool_use', id: 't1', input: {} }] }),
+  )
+  const call = state.entries.find((entry) => entry.type === 'tool_call')
+  expect(call?.type === 'tool_call' ? call.toolCall.title : 'x').toBe('')
+})
+
+test('a permission request without a tool name is left empty', () => {
+  const state = reduceSessionEvent(
+    initialChatState,
+    event('control_request', { request_id: 'r1', request: { subtype: 'can_use_tool', input: {} } }),
+  )
+  expect(state.pendingPermissions[0]?.toolName).toBe('')
+})
+
 describe('immutability', () => {
   test('does not mutate the previous state', () => {
     const before = reduceSessionEvent(initialChatState, event('assistant', { content: 'Hello' }))

@@ -73,6 +73,46 @@
   "session": {
     "list": {
       "empty": "No sessions yet."
+    },
+    "view": {
+      "back": "Back to dashboard",
+      "loading": {
+        "title": "Loading conversation…",
+        "description": "Fetching session history."
+      },
+      "empty": {
+        "title": "Start a conversation",
+        "description": "Send a message to start chatting with {product}."
+      },
+      "thinking": "{product} is working…",
+      "reconnecting": "Reconnecting to live updates…",
+      "disconnected": "Live updates disconnected: {error}",
+      "archived": "This session is archived and cannot accept new messages.",
+      "archivedPlaceholder": "Session archived"
+    }
+  },
+  "chat": {
+    "placeholder": "Message {product}…",
+    "send": "Send",
+    "interrupt": "Interrupt",
+    "enterHint": "Enter to send, Shift+Enter for a new line",
+    "expand": "Expand",
+    "thought": "Thinking",
+    "allow": "Allow",
+    "deny": "Deny",
+    "toolFallback": "Tool",
+    "running": "running",
+    "waiting": "waiting",
+    "planTitle": "Execution plan",
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "summary": {
+      "total": "{count, plural, one {# tool call} other {# tool calls}}",
+      "group": "{count}× {name}",
+      "grouped": "{total} tools: {tools}"
     }
   },
   "auth": {

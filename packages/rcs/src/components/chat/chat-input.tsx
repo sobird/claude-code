@@ -6,6 +6,7 @@
  */
 
 import { Send, Square } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useCallback, useRef, useState } from 'react'
 
 import { cn } from '../../lib/utils'
@@ -25,9 +26,11 @@ export function ChatInput({
   onInterrupt,
   isLoading = false,
   disabled = false,
-  placeholder = '给 Claude 发送消息…',
+  placeholder,
   className,
 }: ChatInputProps) {
+  const t = useTranslations('chat')
+  const tCommon = useTranslations('common')
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -58,6 +61,7 @@ export function ChatInput({
   }, [])
 
   const canSend = text.trim().length > 0 && !disabled && !sending
+  const resolvedPlaceholder = placeholder ?? t('placeholder', { product: tCommon('claude') })
 
   return (
     <div className={cn('mx-auto w-full max-w-3xl', className)}>
@@ -74,7 +78,7 @@ export function ChatInput({
                 else void handleSubmit()
               }
             }}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             disabled={disabled}
             rows={1}
             className="max-h-[200px] min-h-[24px] flex-1 resize-none border-none bg-transparent font-display text-sm leading-normal text-text-primary outline-none placeholder:text-text-muted disabled:cursor-not-allowed disabled:opacity-60"
@@ -83,7 +87,7 @@ export function ChatInput({
             type="button"
             onClick={isLoading ? onInterrupt : () => void handleSubmit()}
             disabled={!isLoading && !canSend}
-            aria-label={isLoading ? '中断' : '发送'}
+            aria-label={isLoading ? t('interrupt') : t('send')}
             className={cn(
               'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-all sm:h-8 sm:w-8',
               isLoading
@@ -98,7 +102,7 @@ export function ChatInput({
         </div>
       </div>
       <div className="mt-1.5 text-center">
-        <span className="font-display text-[11px] text-text-muted">Enter 发送，Shift+Enter 换行</span>
+        <span className="font-display text-[11px] text-text-muted">{t('enterHint')}</span>
       </div>
     </div>
   )

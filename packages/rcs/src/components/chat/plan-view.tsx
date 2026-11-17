@@ -6,12 +6,14 @@
  */
 
 import { CheckCircle2, ChevronRight, Circle, Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import type { PlanDisplayEntry, PlanEntry, PlanEntryPriority, PlanEntryStatus } from '../../lib/session-reducer'
 import { cn } from '../../lib/utils'
 
 export function PlanView({ entry }: { entry: PlanDisplayEntry }) {
+  const t = useTranslations('chat')
   const [collapsed, setCollapsed] = useState(false)
   const { entries } = entry
 
@@ -34,7 +36,7 @@ export function PlanView({ entry }: { entry: PlanDisplayEntry }) {
             className={cn('h-3 w-3 flex-shrink-0 text-text-muted transition-transform', !collapsed && 'rotate-90')}
             aria-hidden="true"
           />
-          <span className="font-display text-xs font-medium text-text-secondary">执行计划</span>
+          <span className="font-display text-xs font-medium text-text-secondary">{t('planTitle')}</span>
           <span className="font-mono text-[10px] text-text-muted">
             {completed}/{total}
           </span>
@@ -105,13 +107,8 @@ const PRIORITY_STYLES: Record<PlanEntryPriority, string> = {
   low: 'bg-surface-1 text-text-muted',
 }
 
-const PRIORITY_LABELS: Record<PlanEntryPriority, string> = {
-  high: '高',
-  medium: '中',
-  low: '低',
-}
-
 function PriorityBadge({ priority }: { priority: PlanEntryPriority }) {
+  const t = useTranslations('chat.priority')
   return (
     <span
       className={cn(
@@ -119,7 +116,7 @@ function PriorityBadge({ priority }: { priority: PlanEntryPriority }) {
         PRIORITY_STYLES[priority],
       )}
     >
-      {PRIORITY_LABELS[priority]}
+      {t(priority)}
     </span>
   )
 }

@@ -232,8 +232,9 @@ function appendAssistantText(entries: ThreadEntry[], text: string, eventId: stri
 
 function collectToolUseBlocks(payload: Record<string, unknown>): Record<string, unknown>[] {
   const message = asRecord(payload.message)
-  if (!message || !Array.isArray(message.content)) return []
-  return message.content
+  const content = message && Array.isArray(message.content) ? message.content : payload.content
+  if (!Array.isArray(content)) return []
+  return content
     .map((block) => asRecord(block))
     .filter((block): block is Record<string, unknown> => !!block && block.type === 'tool_use')
 }
@@ -244,7 +245,7 @@ function toolCallFromBlock(block: Record<string, unknown>, fallbackId: string): 
     type: 'tool_call',
     toolCall: {
       id: asText(block.id) || fallbackId,
-      title: asText(block.name) || 'tool',
+      title: asText(block.name) || '',
       status: 'running',
       rawInput: input ?? {},
     },
@@ -285,7 +286,7 @@ function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
     type: 'tool_call',
     toolCall: {
       id,
-      title: asText(payload.tool_name) || 'tool',
+      title: asText(payload.tool_name) || '',
       status: 'running',
       rawInput: input ?? {},
     },
@@ -331,7 +332,7 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
   const requestId = asText(payload.request_id)
   if (!requestId) return state
 
-  const toolName = asText(request.tool_name) || 'unknown'
+  const toolName = asText(request.tool_name) || ''
   const toolInput = asRecord(request.input) ?? asRecord(request.tool_input) ?? {}
   const description = asText(request.description)
 
@@ -444,7 +445,7 @@ function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatSt
 
 function handleError(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
-  const message = asText(payload.message) || asText(payload.content) || 'Unknown error'
+  const message = asText(payload.message) || asText(payload.content) || ''
   return { ...state, error: message }
 }
 
