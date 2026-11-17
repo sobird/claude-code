@@ -57,6 +57,12 @@
   --color-status-error: #b83b31;
   --color-status-warning: #b88630;
 
+  /* Diff lines — light tints that keep contrast on the stone surfaces */
+  --color-diff-add-bg: oklch(0.94 0.045 150);
+  --color-diff-add-text: oklch(0.42 0.1 150);
+  --color-diff-remove-bg: oklch(0.95 0.05 25);
+  --color-diff-remove-text: oklch(0.48 0.15 25);
+
   /* Tool card */
   --color-tool-card: #f6f5f2;
 
@@ -104,7 +110,9 @@
   --color-surface-3: #3a3835;
   --color-text-primary: #efeee9;
   --color-text-secondary: #969088;
-  --color-text-muted: #5e5a54;
+  /* Light-mode muted sits around 3:1 on the stone surfaces; the old #5e5a54
+     only reached ~2:1 on dark surfaces, so lift it to the same ballpark. */
+  --color-text-muted: #7d776f;
   --color-bg-inverted: #f6f5f2;
   --color-text-inverted: #2c2a28;
   --color-user-bubble: #c96442;
@@ -115,6 +123,40 @@
   --color-warning-bg: oklch(0.22 0.03 75);
   --color-warning-border: oklch(0.62 0.12 75);
   --color-warning-text: oklch(0.82 0.08 85);
+
+  /* Status accents are used as both text and `/10`–`/15` tinted chips. The
+     light values drop to ~3:1 on dark surfaces, so brighten them for legibility. */
+  --color-status-active: oklch(0.78 0.12 150);
+  --color-status-running: oklch(0.78 0.09 245);
+  --color-status-idle: oklch(0.78 0.12 300);
+  --color-status-error: oklch(0.72 0.16 25);
+  --color-status-warning: oklch(0.82 0.12 85);
+
+  /* shadcn/ui tokens used by ported widgets and streamdown's markdown
+     (inline code is `bg-muted` with inherited text). Without these the
+     light values leak into dark mode and code becomes light-on-light. */
+  --color-background: #1a1917;
+  --color-foreground: #efeee9;
+  --color-card: #222120;
+  --color-card-foreground: #efeee9;
+  --color-popover: #222120;
+  --color-popover-foreground: #efeee9;
+  --color-primary: #efeee9;
+  --color-primary-foreground: #1a1917;
+  --color-secondary: #2c2a28;
+  --color-secondary-foreground: #efeee9;
+  /* Inline code chips sit on the chat pane (`bg-surface-2`, also #2c2a28), so
+     matching that value made the chip vanish; step up to surface-3 instead. */
+  --color-muted: #3a3835;
+  --color-muted-foreground: #969088;
+  --color-accent: #2c2a28;
+  --color-accent-foreground: #efeee9;
+  --color-input: #3a3835;
+
+  --color-diff-add-bg: oklch(0.3 0.05 150);
+  --color-diff-add-text: oklch(0.82 0.12 150);
+  --color-diff-remove-bg: oklch(0.3 0.06 25);
+  --color-diff-remove-text: oklch(0.82 0.12 25);
 }
 
 /* ============================================================
@@ -132,6 +174,13 @@
   ::before,
   ::after {
     border-color: var(--color-border);
+  }
+
+  /* Rendered markdown inline code inherits the message text color, which sat
+     too close to streamdown's `bg-muted` chip in dark mode. Pin it to the
+     primary text color; code blocks (`pre > code`) keep their shiki theme. */
+  [data-streamdown] :not(pre) > code {
+    color: var(--color-text-primary);
   }
 }
 

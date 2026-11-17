@@ -183,8 +183,8 @@ function PermissionCard({
                         key={lineIndex}
                         className={cn(
                           'px-2',
-                          line.type === 'add' && 'bg-status-active/10 text-status-active',
-                          line.type === 'remove' && 'bg-status-error/10 text-status-error',
+                          line.type === 'add' && 'bg-diff-add-bg text-diff-add-text',
+                          line.type === 'remove' && 'bg-diff-remove-bg text-diff-remove-text',
                           line.type === 'context' && 'text-text-secondary',
                         )}
                       >
@@ -218,7 +218,7 @@ function PermissionCard({
               <Button
                 key={option.id}
                 type="button"
-                variant="outline"
+                variant="surface"
                 className="h-9 gap-1.5 px-3 text-xs"
                 onClick={() => applyOption(option)}
               >
@@ -241,14 +241,19 @@ function PermissionCard({
             onChange={(event) => setFeedback(event.target.value)}
           />
           <div className="flex gap-2">
-            <Button type="button" variant="outline" className="h-9 px-3" onClick={submitDeny}>
+            <Button
+              type="button"
+              variant="surface"
+              className="h-9 border-warning-border/40 px-3 text-warning-text hover:bg-warning-bg hover:text-warning-text"
+              onClick={submitDeny}
+            >
               <X className="h-4 w-4" />
               {t('permission.sendDeny')}
             </Button>
             <Button
               type="button"
-              variant="ghost"
-              className="h-9 px-3"
+              variant="surface"
+              className="h-9 border-transparent bg-transparent px-3 shadow-none hover:bg-surface-2"
               onClick={() => {
                 setDenyOpen(false)
                 setFeedback('')
@@ -273,9 +278,9 @@ function PermissionCard({
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="surface"
             aria-keyshortcuts="d"
-            className="h-11 flex-1 border-warning-border/40 text-warning-text hover:bg-warning-bg sm:h-9 sm:flex-none sm:px-4"
+            className="h-11 flex-1 border-warning-border/40 bg-warning-bg/40 text-warning-text hover:bg-warning-bg hover:text-warning-text sm:h-9 sm:flex-none sm:px-4"
             onClick={() => setDenyOpen(true)}
           >
             <X className="h-4 w-4" />

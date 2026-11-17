@@ -22,7 +22,7 @@ export function StatusBadge({ status }: { status: string }) {
     <span
       className={cn(
         'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-        statusStyles[status] ?? 'bg-surface-3 text-text-secondary',
+        statusStyles[status] ?? 'bg-surface-3 text-text-primary',
       )}
     >
       {label}

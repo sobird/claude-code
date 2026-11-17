@@ -18,6 +18,10 @@ const buttonVariants = cva(
         ghost: 'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
         link: 'text-primary underline-offset-4 hover:underline',
         brand: 'bg-brand text-white hover:bg-brand-light',
+        // Token-based neutral chip; unlike `outline` it follows the app's
+        // stone surface palette in both light and dark themes.
+        surface:
+          'border border-border bg-surface-1 text-text-secondary shadow-xs hover:bg-surface-2 hover:text-text-primary',
       },
       size: {
         default: 'h-9 px-4 py-2 has-[>svg]:px-3',

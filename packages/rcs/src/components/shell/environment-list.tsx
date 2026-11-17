@@ -19,7 +19,9 @@ export function EnvironmentList({ environments }: EnvironmentListProps) {
     return (
       <div className="rounded-xl border border-border bg-surface-1 p-8 text-center text-sm text-text-muted">
         {t.rich('environments.empty', {
-          code: (chunks) => <code className="rounded bg-surface-3 px-1.5 py-0.5 font-mono text-xs">{chunks}</code>,
+          code: (chunks) => (
+            <code className="rounded bg-surface-3 px-1.5 py-0.5 font-mono text-xs text-text-primary">{chunks}</code>
+          ),
         })}
       </div>
     )
