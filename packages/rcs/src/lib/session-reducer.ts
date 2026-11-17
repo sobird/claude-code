@@ -15,6 +15,7 @@ import { isSessionClosedStatus } from '../contracts'
 import { isWebPermissionMode, type WebPermissionMode } from './permission-modes'
 import type { PermissionSuggestion } from './permission-suggestions'
 import { tasksFromTaskState, tasksFromTodoWrite, type TaskItem } from './tasks'
+import { usageFromPayload, type TokenUsage } from './token-usage'
 
 // =============================================================================
 // Chat model
@@ -49,6 +50,8 @@ export interface UserMessageEntry {
   type: 'user_message'
   id: string
   content: string
+  /** Sent while the agent was running; the CLI processes it after the turn. */
+  queued?: boolean
 }
 
 export interface AssistantMessageEntry {
@@ -132,8 +135,12 @@ export interface ChatState {
   modeError: string | null
   /** Wall-clock start of the running turn, from the newest user message. */
   turnStartedAt: number | null
+  /** True between a turn's first event and its `result`; gates the queued hint. */
+  turnOpen: boolean
   /** Latest task list from `TodoWrite` (or an upstream `task_state` payload). */
   tasks: TaskItem[]
+  /** Usage of the most recent assistant message; `null` until one reports it. */
+  lastUsage: TokenUsage | null
 }
 
 /**
@@ -168,7 +175,9 @@ export const initialChatState: ChatState = {
   pendingMode: null,
   modeError: null,
   turnStartedAt: null,
+  turnOpen: false,
   tasks: [],
+  lastUsage: null,
 }
 
 // =============================================================================
@@ -382,7 +391,14 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
     }
   }
 
-  return { ...base, entries, seenAssistantUuids, tasks }
+  return {
+    ...base,
+    entries,
+    seenAssistantUuids,
+    tasks,
+    lastUsage: usageFromPayload(payload) ?? base.lastUsage,
+    turnOpen: true,
+  }
 }
 
 function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
@@ -728,7 +744,10 @@ function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatSt
   if (!status) return state
   // The turn stopped (idle/archived/inactive): any in-flight stream is stale.
   const base = status === 'running' ? state : dropStreaming(state)
-  return { ...base, status, closed: isSessionClosedStatus(status) }
+  // A reported non-running state ends the queue window even if no result event
+  // arrived (crashed or interrupted turns).
+  const turnOpen = status === 'running' || status === 'requires_action'
+  return { ...base, status, closed: isSessionClosedStatus(status), turnOpen }
 }
 
 /**
@@ -769,6 +788,13 @@ function handleResult(state: ChatState, event: SessionEventInput): ChatState {
   // Close the running turn with its wall-clock length. The marker is dropped
   // when the start time is unknown (e.g. history older than the first page).
   let entries = base.entries
+
+  // The CLI picks up messages queued during this turn as soon as it ends.
+  if (entries.some((entry) => entry.type === 'user_message' && entry.queued)) {
+    entries = entries.map((entry) =>
+      entry.type === 'user_message' && entry.queued ? { ...entry, queued: undefined } : entry,
+    )
+  }
   const endedAt = eventTimeOf(event)
   if (base.turnStartedAt !== null && endedAt !== null) {
     const seqNum = numericSeqNum(event)
@@ -777,7 +803,7 @@ function handleResult(state: ChatState, event: SessionEventInput): ChatState {
       entries = [...entries, { type: 'turn_end', id, durationMs: Math.max(0, endedAt - base.turnStartedAt) }]
     }
   }
-  const closed = { ...base, entries, turnStartedAt: null }
+  const closed = { ...base, entries, turnStartedAt: null, turnOpen: false }
 
   const subtype = asText(payload.subtype)
   if (!subtype || subtype === 'success') return { ...closed, error: null }
@@ -835,12 +861,16 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       // share the uuid even when their seqNums differ.
       if (entries.some((entry) => entry.type === 'user_message' && entry.id === id)) return { ...state, entries }
       const startedAt = eventTimeOf(event)
+      // Queued = the CLI is mid-turn. Bridges do not always publish
+      // session_status, so an open turn is the reliable signal.
+      const queued = state.status === 'running' || state.turnOpen
       return {
         ...state,
-        entries: [...entries, { type: 'user_message', id, content: text }],
+        entries: [...entries, { type: 'user_message', id, content: text, ...(queued ? { queued: true } : {}) }],
         // A new turn starts fresh; the previous failure no longer describes it.
         error: null,
         turnStartedAt: startedAt ?? state.turnStartedAt,
+        turnOpen: true,
       }
     }
     case 'assistant':

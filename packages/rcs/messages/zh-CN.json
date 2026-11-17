@@ -14,6 +14,7 @@
     "cancel": "取消",
     "done": "完成",
     "back": "返回",
+    "close": "关闭",
     "never": "永不",
     "claude": "Claude",
     "role": { "admin": "管理员", "member": "成员" },
@@ -102,6 +103,10 @@
         "plan": "计划模式",
         "bypassPermissions": "跳过权限",
         "dontAsk": "不再询问"
+      },
+      "usage": {
+        "compact": "{count} 令牌",
+        "detail": "提示 {prompt} · 缓存 {cached} · 输出 {output}"
       }
     }
   },
@@ -123,6 +128,7 @@
     "waiting": "等待中",
     "planTitle": "执行计划",
     "turnDuration": "用时 {seconds} 秒",
+    "queued": "排队中",
     "tasks": {
       "title": "任务",
       "progress": "{done}/{total}",
@@ -175,6 +181,23 @@
       "missingPlan": "网页端暂无法显示计划正文。",
       "viewPlan": "查看计划",
       "dialogDescription": "查看完整计划，然后批准或告诉 Claude 需要修改的地方。"
+    },
+    "shortcuts": {
+      "open": "键盘快捷键",
+      "title": "键盘快捷键",
+      "description": "会话视图中可用的快捷键。",
+      "composer": "输入框",
+      "approvals": "审批",
+      "send": "发送消息",
+      "newline": "换行",
+      "interrupt": "中断代理",
+      "history": "召回历史输入",
+      "commands": "打开斜杠命令菜单",
+      "accept": "接受选中项",
+      "approve": "批准计划",
+      "reject": "拒绝计划",
+      "approveEnter": "批准（弹窗）",
+      "close": "关闭弹窗或拒绝输入"
     }
   },
   "auth": {

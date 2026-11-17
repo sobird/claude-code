@@ -45,6 +45,11 @@ and SSE stream.
   shifting the viewport.
 - A turn-duration line closes each completed turn.
 - Copy buttons on assistant replies and on your own messages.
+- The header shows recent **token usage** (prompt = input + cached) from the
+  latest assistant message, with the breakdown in the tooltip; the CLI reports
+  `total_cost_usd` as 0, so cost is not shown.
+- A **keyboard shortcut** reference opens from the header icon or the `?` key
+  (outside inputs).
 - **Todo panel**: derived from `TodoWrite` input (the same source the TUI uses),
   showing a progress bar and the active item, collapsing to a summary line, and
   hiding once everything is done. Upstream `task_state` events are accepted too
@@ -59,8 +64,9 @@ and SSE stream.
 ### Composer
 
 - Enter sends; Shift+Enter inserts a newline. Mid-turn sends are queued by the
-  CLI (matching the TUI); Esc or the stop button interrupts while the agent
-  runs.
+  CLI (matching the TUI) and show a **Queued** label under the bubble until the
+  current turn's result arrives; Esc or the stop button interrupts while the
+  agent runs.
 - **Prompt history**: ↑ recalls earlier prompts from the first line of the
   draft, ↓ walks forward and restores the draft after the newest entry. History
   persists in `localStorage`, capped at 50 entries.

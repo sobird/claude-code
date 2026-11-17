@@ -10,7 +10,7 @@
  * echo and history) so it shows immediately and survives a reload.
  */
 
-import { ArrowDown, ArrowLeft, Timer } from 'lucide-react'
+import { ArrowDown, ArrowLeft, Gauge, Keyboard, Timer } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -34,6 +34,8 @@ import {
   type ToolCallEntry,
   type TurnEndEntry,
 } from '../../lib/session-reducer'
+import { isHelpShortcut } from '../../lib/shortcut-help'
+import { formatTokenCount, promptTokens } from '../../lib/token-usage'
 import { formatTurnSeconds } from '../../lib/turn-duration'
 import { cn, uniqueKeys } from '../../lib/utils'
 import { StatusBadge } from '../shell/status-badge'
@@ -43,6 +45,7 @@ import { AssistantBubble, UserBubble } from './message-bubble'
 import { PermissionModeMenu } from './permission-mode-menu'
 import { PermissionPanel } from './permission-panel'
 import { PlanView } from './plan-view'
+import { ShortcutsDialog } from './shortcuts-dialog'
 import { TaskPanel } from './task-panel'
 import { ToolCallGroup } from './tool-call-group'
 
@@ -101,6 +104,7 @@ function groupToolCalls(entries: ThreadEntry[]): GroupedItem[] {
 export function SessionView({ sessionId }: { sessionId: string }) {
   const t = useTranslations('session.view')
   const tCommon = useTranslations('common')
+  const tShortcuts = useTranslations('chat.shortcuts')
   const describeError = useApiErrorMessage()
   const { token, refresh: refreshToken, error: tokenError } = useAccessToken()
   const tokenRef = useRef(token)
@@ -126,8 +130,29 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [extraEvents, setExtraEvents] = useState<SessionEventInput[]>([])
   const [failedSend, setFailedSend] = useState<{ text: string; uuid: string; error: unknown } | null>(null)
   const [atBottom, setAtBottom] = useState(true)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const atBottomRef = useRef(true)
+
+  // `?` opens the shortcut reference wherever the user is not typing.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      const inEditable = tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable === true
+      const open = isHelpShortcut({
+        key: event.key,
+        inEditable,
+        hasModifier: event.metaKey || event.ctrlKey || event.altKey,
+        isComposing: event.isComposing,
+      })
+      if (!open) return
+      event.preventDefault()
+      setShortcutsOpen(true)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   const hasToken = token !== null
   const stream = useSessionStream(sessionId)
@@ -370,7 +395,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // archived session never shows an enabled composer when its status event is
   // outside the loaded history window.
   const closed = chat.closed || isSessionClosedStatus(session?.status)
-  const busy = chat.status === 'running'
+  // Bridges do not always publish session_status; an open turn (until its
+  // result) drives the busy affordances just as well.
+  const busy = chat.status === 'running' || chat.turnOpen
   // The streamed bubble already shows progress once its first delta lands.
   const streamingHasText = entries.some(
     (entry) => entry.type === 'assistant_message' && entry.streaming && entry.chunks.length > 0,
@@ -406,6 +433,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           </div>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
+          {chat.lastUsage ? (
+            <span
+              data-testid="token-usage"
+              title={t('usage.detail', {
+                prompt: String(promptTokens(chat.lastUsage)),
+                cached: String(chat.lastUsage.cached),
+                output: String(chat.lastUsage.output),
+              })}
+              className="hidden items-center gap-1 rounded-md border border-border bg-surface-1 px-2 py-1 font-mono text-[11px] text-text-muted sm:flex"
+            >
+              <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('usage.compact', { count: formatTokenCount(promptTokens(chat.lastUsage)) })}
+            </span>
+          ) : null}
           <PermissionModeMenu
             mode={chat.permissionMode}
             pending={chat.pendingMode !== null}
@@ -413,8 +454,19 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             onSelect={handleModeSelect}
           />
           <StatusBadge status={displayStatus} />
+          <button
+            type="button"
+            onClick={() => setShortcutsOpen(true)}
+            aria-label={tShortcuts('open')}
+            title={tShortcuts('open')}
+            data-testid="shortcuts-button"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary"
+          >
+            <Keyboard className="h-4 w-4" />
+          </button>
         </div>
       </header>
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       {failedToLoad ? (
         <div

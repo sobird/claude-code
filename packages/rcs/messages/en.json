@@ -14,6 +14,7 @@
     "cancel": "Cancel",
     "done": "Done",
     "back": "Back",
+    "close": "Close",
     "never": "Never",
     "claude": "Claude",
     "role": { "admin": "Admin", "member": "Member" },
@@ -102,6 +103,10 @@
         "plan": "Plan mode",
         "bypassPermissions": "Bypass permissions",
         "dontAsk": "Don't ask"
+      },
+      "usage": {
+        "compact": "{count} tokens",
+        "detail": "Prompt {prompt} · cached {cached} · output {output}"
       }
     }
   },
@@ -123,6 +128,7 @@
     "waiting": "waiting",
     "planTitle": "Execution plan",
     "turnDuration": "Took {seconds}s",
+    "queued": "Queued",
     "tasks": {
       "title": "Tasks",
       "progress": "{done}/{total}",
@@ -175,6 +181,23 @@
       "missingPlan": "Plan content is unavailable in the web view.",
       "viewPlan": "View plan",
       "dialogDescription": "Review the plan, then approve it or tell Claude what to change."
+    },
+    "shortcuts": {
+      "open": "Keyboard shortcuts",
+      "title": "Keyboard shortcuts",
+      "description": "Keys that work across the session view.",
+      "composer": "Composer",
+      "approvals": "Approvals",
+      "send": "Send the message",
+      "newline": "Insert a new line",
+      "interrupt": "Interrupt the agent",
+      "history": "Recall previous prompts",
+      "commands": "Open the slash command menu",
+      "accept": "Accept the highlighted item",
+      "approve": "Approve the plan",
+      "reject": "Reject the plan",
+      "approveEnter": "Approve (plan dialog)",
+      "close": "Close the dialog or rejection input"
     }
   },
   "auth": {

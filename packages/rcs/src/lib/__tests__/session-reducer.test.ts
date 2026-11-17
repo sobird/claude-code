@@ -1017,3 +1017,90 @@ describe('session tasks', () => {
     expect(state.tasks).toEqual([{ id: 't1', content: 'Investigate', status: 'pending', activeForm: undefined }])
   })
 })
+
+describe('queued prompts', () => {
+  function userEntry(state: ChatState) {
+    const entry = state.entries.find((item) => item.type === 'user_message')
+    return entry?.type === 'user_message' ? entry : undefined
+  }
+
+  test('a message sent while the agent is running is marked queued', () => {
+    let state = reduceSessionEvent(initialChatState, event('session_status', { status: 'running' }))
+    state = reduceSessionEvent(state, event('user', { content: 'next task', uuid: 'u1' }))
+
+    expect(userEntry(state)?.queued).toBe(true)
+  })
+
+  test('a message sent while idle is not queued', () => {
+    let state = reduceSessionEvent(initialChatState, event('session_status', { status: 'idle' }))
+    state = reduceSessionEvent(state, event('user', { content: 'hello', uuid: 'u1' }))
+
+    expect(userEntry(state)?.queued).toBeUndefined()
+  })
+
+  test('a message sent mid-turn is queued even without session_status events', () => {
+    // The bridge does not always publish session_status; an open turn is the
+    // signal that a new prompt lands in the CLI's queue.
+    let state = reduceSessionEvent(initialChatState, event('user', { content: 'start', uuid: 'u1' }))
+    state = reduceSessionEvent(state, event('assistant', { content: 'working', uuid: 'a1' }))
+    state = reduceSessionEvent(state, event('user', { content: 'next task', uuid: 'u2' }))
+
+    const entries = state.entries.filter((entry) => entry.type === 'user_message')
+    const second = entries[1]?.type === 'user_message' ? entries[1] : undefined
+    expect(second?.content).toBe('next task')
+    expect(second?.queued).toBe(true)
+  })
+
+  test('an idle session_status closes the queued window', () => {
+    let state = reduceSessionEvent(initialChatState, event('user', { content: 'start', uuid: 'u1' }))
+    state = reduceSessionEvent(state, event('session_status', { status: 'idle' }))
+    state = reduceSessionEvent(state, event('user', { content: 'again', uuid: 'u2' }))
+
+    const entries = state.entries.filter((entry) => entry.type === 'user_message')
+    const second = entries[1]?.type === 'user_message' ? entries[1] : undefined
+    expect(second?.queued).toBeUndefined()
+  })
+
+  test('a message sent after the turn ended is not queued', () => {
+    let state = reduceSessionEvent(initialChatState, event('user', { content: 'start', uuid: 'u1' }))
+    state = reduceSessionEvent(state, event('result', { subtype: 'success', uuid: 'r1' }))
+    state = reduceSessionEvent(state, event('user', { content: 'again', uuid: 'u2' }))
+
+    const entries = state.entries.filter((entry) => entry.type === 'user_message')
+    const second = entries[1]?.type === 'user_message' ? entries[1] : undefined
+    expect(second?.queued).toBeUndefined()
+  })
+
+  test('the turn result clears the queued flags', () => {
+    let state = reduceSessionEvent(initialChatState, event('session_status', { status: 'running' }))
+    state = reduceSessionEvent(state, event('user', { content: 'next task', uuid: 'u1' }))
+    state = reduceSessionEvent(state, event('result', { subtype: 'success', uuid: 'r1' }))
+
+    expect(state.entries.filter((entry) => entry.type === 'user_message')).toHaveLength(1)
+    expect(userEntry(state)?.queued).toBeUndefined()
+  })
+})
+
+describe('token usage', () => {
+  test('an assistant message records its usage', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        message: { usage: { input_tokens: 10, output_tokens: 3, cache_read_input_tokens: 90 } },
+        content: 'hi',
+      }),
+    )
+
+    expect(state.lastUsage).toEqual({ input: 10, cached: 90, output: 3 })
+  })
+
+  test('messages without usage keep the previous value', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', { message: { usage: { input_tokens: 10, output_tokens: 3 } }, content: 'hi' }),
+    )
+    state = reduceSessionEvent(state, event('assistant', { content: 'more' }))
+
+    expect(state.lastUsage).toEqual({ input: 10, cached: 0, output: 3 })
+  })
+})

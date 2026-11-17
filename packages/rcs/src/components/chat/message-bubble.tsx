@@ -5,7 +5,7 @@
  * reducer's `UserMessageEntry` / `AssistantMessageEntry` model.
  */
 
-import { Check, ChevronDown, Copy } from 'lucide-react'
+import { Check, ChevronDown, Clock, Copy } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
@@ -64,9 +64,18 @@ export function UserBubble({ entry }: { entry: UserMessageEntry }) {
             ) : null}
           </div>
         ) : null}
-        {entry.content ? (
-          <div className="mt-1 flex justify-end">
-            <CopyButton text={entry.content} />
+        {entry.queued || entry.content ? (
+          <div className="mt-1 flex items-center justify-end gap-2">
+            {entry.queued ? (
+              <span
+                data-testid="queued-message"
+                className="flex items-center gap-1 font-display text-[11px] text-text-muted"
+              >
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {t('queued')}
+              </span>
+            ) : null}
+            {entry.content ? <CopyButton text={entry.content} /> : null}
           </div>
         ) : null}
       </div>
