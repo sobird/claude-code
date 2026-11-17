@@ -42,6 +42,54 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect((await repos.workItems.getById(item.id))?.id).toBe(item.id)
     })
 
+    test('enqueue reuses a pending item for the same session instead of stacking work', async () => {
+      const { environmentId, sessionId } = await makeEnvironmentAndSession()
+      const first = await repos.workItems.enqueue({ environmentId, sessionId, secret: 'old' })
+      const second = await repos.workItems.enqueue({ environmentId, sessionId, secret: 'new' })
+
+      expect(second.id).toBe(first.id)
+      expect(second.state).toBe('pending')
+      expect(second.secret).toBe('new')
+      // Exactly one claimable item: the duplicate dispatch path is gone.
+      expect((await repos.workItems.claimNext(environmentId))?.secret).toBe('new')
+      expect(await repos.workItems.claimNext(environmentId)).toBeNull()
+    })
+
+    test('concurrent enqueues for one session converge on a single item', async () => {
+      const { environmentId, sessionId } = await makeEnvironmentAndSession()
+      const [a, b] = await Promise.all([
+        repos.workItems.enqueue({ environmentId, sessionId, secret: 'a' }),
+        repos.workItems.enqueue({ environmentId, sessionId, secret: 'b' }),
+      ])
+
+      expect(a.id).toBe(b.id)
+      expect((await repos.workItems.claimNext(environmentId))?.id).toBe(a.id)
+      expect(await repos.workItems.claimNext(environmentId)).toBeNull()
+    })
+
+    test('enqueue refreshes the secret of a dispatched item without duplicating it', async () => {
+      const { environmentId, sessionId } = await makeEnvironmentAndSession()
+      const item = await repos.workItems.enqueue({ environmentId, sessionId, secret: 'old' })
+      await repos.workItems.claimNext(environmentId)
+
+      const again = await repos.workItems.enqueue({ environmentId, sessionId, secret: 'new' })
+      expect(again.id).toBe(item.id)
+      expect(again.secret).toBe('new')
+      expect((await repos.workItems.getById(item.id))?.state).toBe('dispatched')
+      expect(await repos.workItems.claimNext(environmentId, { reclaimOlderThanMs: 60_000 })).toBeNull()
+    })
+
+    test('enqueue creates a fresh item once the previous one is acked', async () => {
+      const { environmentId, sessionId } = await makeEnvironmentAndSession()
+      const first = await repos.workItems.enqueue({ environmentId, sessionId, secret: 'old' })
+      await repos.workItems.claimNext(environmentId)
+      await repos.workItems.setState(first.id, 'acked')
+
+      const second = await repos.workItems.enqueue({ environmentId, sessionId, secret: 'new' })
+      expect(second.id).not.toBe(first.id)
+      expect(second.state).toBe('pending')
+    })
+
     test('getById returns null for unknown work items', async () => {
       expect(await repos.workItems.getById('work_missing')).toBeNull()
     })
@@ -49,6 +97,9 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
     test('claimNext dispatches the oldest pending item for the environment only', async () => {
       const target = await makeEnvironmentAndSession()
       const other = await makeEnvironmentAndSession()
+      // A second session in the same environment: one session only ever has one in-flight
+      // work item, so the ordering assertion needs two distinct sessions.
+      const secondSession = await repos.sessions.create({ environmentId: target.environmentId })
       const first = await repos.workItems.enqueue({
         environmentId: target.environmentId,
         sessionId: target.sessionId,
@@ -58,7 +109,7 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       await Bun.sleep(5)
       await repos.workItems.enqueue({
         environmentId: target.environmentId,
-        sessionId: target.sessionId,
+        sessionId: secondSession.id,
         secret: 'second',
       })
       await repos.workItems.enqueue({
@@ -210,6 +261,23 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect(cleared.externalMetadata).toBeNull()
       expect(cleared.requiresActionDetails).toBeNull()
       expect(cleared.lastHeartbeatAt).toBeNull()
+    })
+
+    test('session worker upsert merges concurrent partial patches without losing either', async () => {
+      const { sessionId } = await makeEnvironmentAndSession()
+      await repos.sessionWorkers.upsert(sessionId, { workerStatus: 'starting' })
+
+      // Heartbeat and status updates arrive together; neither may overwrite the other
+      // with a stale read snapshot.
+      const heartbeat = new Date('2026-05-06T07:08:09.000Z')
+      await Promise.all([
+        repos.sessionWorkers.upsert(sessionId, { lastHeartbeatAt: heartbeat }),
+        repos.sessionWorkers.upsert(sessionId, { workerStatus: 'running' }),
+      ])
+
+      const merged = await repos.sessionWorkers.get(sessionId)
+      expect(merged?.workerStatus).toBe('running')
+      expect(merged?.lastHeartbeatAt?.getTime()).toBe(heartbeat.getTime())
     })
 
     test('events append returns an ascending bigserial id and a generated eventId', async () => {

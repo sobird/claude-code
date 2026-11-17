@@ -6,7 +6,7 @@
  * (`null` clears it), matching the legacy worker heartbeat protocol.
  */
 
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 import type { SessionWorkerRecord } from '../../contracts'
 import type { Database } from '../client'
@@ -30,34 +30,40 @@ export function createSessionWorkerRepository(db: Database): SessionWorkerReposi
     },
 
     async upsert(sessionId, patch) {
-      const [existing] = await db.select().from(sessionWorkers).where(eq(sessionWorkers.sessionId, sessionId)).limit(1)
-
       const now = new Date()
-      const values = {
-        sessionId,
-        workerStatus: patch.workerStatus !== undefined ? patch.workerStatus : (existing?.workerStatus ?? null),
-        externalMetadata: mergeExternalMetadata(existing?.externalMetadata ?? null, patch.externalMetadata),
-        requiresActionDetails:
-          patch.requiresActionDetails !== undefined
-            ? patch.requiresActionDetails
-            : (existing?.requiresActionDetails ?? null),
-        lastHeartbeatAt:
-          patch.lastHeartbeatAt !== undefined ? patch.lastHeartbeatAt : (existing?.lastHeartbeatAt ?? null),
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now,
-      }
-
+      // No read-modify-write: a heartbeat and a status update arriving together would each
+      // write back a stale snapshot and clobber the other. Only the provided columns are
+      // touched, and `external_metadata` merges inside the statement.
       const [row] = await db
         .insert(sessionWorkers)
-        .values(values)
+        .values({
+          sessionId,
+          workerStatus: patch.workerStatus ?? null,
+          externalMetadata: patch.externalMetadata ?? null,
+          requiresActionDetails: patch.requiresActionDetails ?? null,
+          lastHeartbeatAt: patch.lastHeartbeatAt ?? null,
+          createdAt: now,
+          updatedAt: now,
+        })
         .onConflictDoUpdate({
           target: sessionWorkers.sessionId,
           set: {
-            workerStatus: values.workerStatus,
-            externalMetadata: values.externalMetadata,
-            requiresActionDetails: values.requiresActionDetails,
-            lastHeartbeatAt: values.lastHeartbeatAt,
             updatedAt: now,
+            ...(patch.workerStatus !== undefined ? { workerStatus: patch.workerStatus } : {}),
+            ...(patch.requiresActionDetails !== undefined
+              ? { requiresActionDetails: patch.requiresActionDetails }
+              : {}),
+            ...(patch.lastHeartbeatAt !== undefined ? { lastHeartbeatAt: patch.lastHeartbeatAt } : {}),
+            ...(patch.externalMetadata !== undefined
+              ? {
+                  externalMetadata:
+                    patch.externalMetadata === null
+                      ? null
+                      : sql`COALESCE(${sessionWorkers.externalMetadata}, '{}'::jsonb) || ${JSON.stringify(
+                          patch.externalMetadata,
+                        )}::jsonb`,
+                }
+              : {}),
           },
         })
         .returning()

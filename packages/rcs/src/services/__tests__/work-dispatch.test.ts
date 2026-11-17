@@ -202,6 +202,21 @@ describe('Work Dispatch', () => {
       expect(workIds).toHaveLength(1)
     })
 
+    test('a repeated reconnect does not stack duplicate work for the same session', async () => {
+      await repos.sessions.create({ environmentId: envId })
+      const first = await reconnectWorkForEnvironment(repos, envId)
+      const second = await reconnectWorkForEnvironment(repos, envId)
+
+      expect(second).toEqual(first)
+      // Every session still has exactly one claimable item.
+      const claimed = await Promise.all([
+        pollWork(repos, envId, 0),
+        pollWork(repos, envId, 0),
+        pollWork(repos, envId, 0),
+      ])
+      expect(claimed.filter(Boolean)).toHaveLength(2)
+    })
+
     test('returns empty for environment with no sessions', async () => {
       const emptyEnv = await repos.environments.create({ ownerUserId: 'user_1' })
       const workIds = await reconnectWorkForEnvironment(repos, emptyEnv.id)

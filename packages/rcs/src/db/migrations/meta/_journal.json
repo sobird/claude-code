@@ -29,6 +29,13 @@
       "when": 1794911225144,
       "tag": "0003_high_logan",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794912943098,
+      "tag": "0004_work-item-inflight",
+      "breakpoints": true
     }
   ]
 }

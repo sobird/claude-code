@@ -9,9 +9,13 @@
  * A dispatched item is a lease: its `updatedAt` is the last delivery or heartbeat. Poll
  * passing `reclaimOlderThanMs` returns leases older than that window to `pending` in the
  * same transaction, so a worker that lost its ack (stale ingress token) is re-delivered.
+ *
+ * A session has at most one in-flight (`pending`/`dispatched`) item — enforced by a
+ * partial unique index — so re-dispatching on reconnect refreshes that row's secret
+ * instead of stacking a duplicate the worker could launch twice.
  */
 
-import { and, asc, eq, lt } from 'drizzle-orm'
+import { and, asc, eq, lt, sql } from 'drizzle-orm'
 
 import type { WorkItemRecord } from '../../contracts'
 import type { Database } from '../client'
@@ -22,6 +26,9 @@ export function createWorkItemRepository(db: Database): WorkItemRepository {
   return {
     async enqueue(input) {
       const now = new Date()
+      // One in-flight item per session: the bridge re-dispatches every idle session on
+      // reconnect, so an existing pending/dispatched row absorbs the new secret (fresh
+      // worker token) instead of stacking a duplicate the worker could launch twice.
       const [row] = await db
         .insert(workItems)
         .values({
@@ -32,6 +39,11 @@ export function createWorkItemRepository(db: Database): WorkItemRepository {
           secret: input.secret,
           createdAt: now,
           updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: workItems.sessionId,
+          targetWhere: sql`state IN ('pending', 'dispatched')`,
+          set: { secret: input.secret, updatedAt: now },
         })
         .returning()
       return row
@@ -102,6 +114,17 @@ export function createMemoryWorkItemRepository(): WorkItemRepository {
   return {
     async enqueue(input: EnqueueWorkItemInput) {
       const now = new Date()
+      // Same one-in-flight invariant as the Postgres implementation.
+      const inFlight = [...byId.values()].find(
+        (record) =>
+          record.sessionId === input.sessionId && (record.state === 'pending' || record.state === 'dispatched'),
+      )
+      if (inFlight) {
+        inFlight.secret = input.secret
+        inFlight.updatedAt = now
+        return cloneWorkItem(inFlight)
+      }
+
       const record: WorkItemRecord = {
         id: `work_${crypto.randomUUID()}`,
         environmentId: input.environmentId,

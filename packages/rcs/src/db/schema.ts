@@ -110,7 +110,17 @@ export const workItems = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (table) => [index('work_items_environment_state_idx').on(table.environmentId, table.state)],
+  (table) => [
+    index('work_items_environment_state_idx').on(table.environmentId, table.state),
+    /**
+     * At most one in-flight item per session. Bridge reconnects re-dispatch every idle
+     * session, so without this a session can stack pending rows and be launched twice.
+     * `enqueue` upserts against this index instead of inserting blindly.
+     */
+    uniqueIndex('work_items_session_inflight_idx')
+      .on(table.sessionId)
+      .where(sql`state IN ('pending', 'dispatched')`),
+  ],
 )
 
 export const sessionEvents = pgTable(
