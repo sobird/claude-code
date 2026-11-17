@@ -40,7 +40,10 @@ async function authenticate(formData: FormData): Promise<void> {
   try {
     // `{ redirect: false }` makes `signIn` return the redirect URL instead of
     // throwing on bad credentials; the failure shows up as an `error` param.
-    const result = await signIn('credentials', { username, password, redirect: false })
+    // Pass an explicit `redirectTo` too: without it, next-auth derives the
+    // callback URL from the request `Referer`, which after a failed attempt is
+    // the `?error=invalid` page — a later success then looks like a failure.
+    const result = await signIn('credentials', { username, password, redirect: false, redirectTo: next })
     if (typeof result !== 'string' || signInUrlHasError(result)) {
       // Next prepends the app basePath to server-action redirects, so pass the
       // path *without* `/code` (adding it here yields `/code/code/login`).
