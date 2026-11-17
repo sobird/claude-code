@@ -37,11 +37,11 @@ async function mintAccessToken(request: Request): Promise<Response> {
     // Missing and disabled users both yield `null`; answer the same 401 either way.
     const token = await mintAccessTokenForSession(session, getRepositories())
     if (token === null) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'unauthorized', code: 'unauthorized' }, { status: 401 })
     }
     return NextResponse.json({ token, expiresIn: ACCESS_TOKEN_TTL_SECONDS })
   } catch {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'unauthorized', code: 'unauthorized' }, { status: 401 })
   }
 }
 
