@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -23,12 +24,13 @@ function SectionSkeletons({ rows }: { rows: number }) {
 }
 
 function CliHint() {
+  const t = useTranslations('dashboard')
   return (
     <div className="space-y-2 rounded-xl border border-dashed border-border bg-surface-1 p-8 text-center">
-      <p className="text-sm font-medium text-text-primary">No sessions yet</p>
-      <p className="text-sm text-text-muted">Connect a machine and start a remote session with:</p>
+      <p className="text-sm font-medium text-text-primary">{t('sessions.empty.title')}</p>
+      <p className="text-sm text-text-muted">{t('sessions.empty.description')}</p>
       <pre className="mx-auto max-w-full overflow-x-auto rounded-lg border border-border bg-surface-0 px-3 py-2 text-left font-mono text-xs text-text-secondary">
-        <code>{'CLAUDE_BRIDGE_BASE_URL=<gateway-link> claude remote-control'}</code>
+        <code>{t('sessions.empty.command')}</code>
       </pre>
     </div>
   )
@@ -37,6 +39,8 @@ function CliHint() {
 /** `/code` dashboard: environments, claimed sessions, and unclaimed sessions. */
 export function Dashboard({ user }: { user: DashboardUser }) {
   const router = useRouter()
+  const t = useTranslations('dashboard')
+  const tCommon = useTranslations('common')
   const { sessions, environments, loading, error, refresh, createSession } = useDashboardData()
   const [dialogOpen, setDialogOpen] = useState(false)
 
@@ -54,8 +58,8 @@ export function Dashboard({ user }: { user: DashboardUser }) {
   return (
     <div className="space-y-10">
       <header className="space-y-1">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-text-primary">Dashboard</h1>
-        <p className="text-sm text-text-secondary">Active environments and your Claude Code sessions.</p>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-text-primary">{tCommon('dashboard')}</h1>
+        <p className="text-sm text-text-secondary">{t('description')}</p>
       </header>
 
       {error ? (
@@ -65,14 +69,14 @@ export function Dashboard({ user }: { user: DashboardUser }) {
         >
           <span>{error}</span>
           <Button type="button" variant="outline" size="sm" onClick={refresh}>
-            Retry
+            {tCommon('retry')}
           </Button>
         </div>
       ) : null}
 
       <section aria-labelledby="environments-heading" className="space-y-4">
         <h2 id="environments-heading" className="font-display text-lg font-semibold text-text-primary">
-          Environments
+          {t('environments.title')}
         </h2>
         {loading && environments.length === 0 ? (
           <SectionSkeletons rows={2} />
@@ -84,10 +88,10 @@ export function Dashboard({ user }: { user: DashboardUser }) {
       <section aria-labelledby="sessions-heading" className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <h2 id="sessions-heading" className="font-display text-lg font-semibold text-text-primary">
-            Sessions
+            {tCommon('sessions')}
           </h2>
           <Button type="button" variant="brand" size="sm" onClick={() => setDialogOpen(true)}>
-            + New Session
+            {t('sessions.new')}
           </Button>
         </div>
         {loading && sessions.length === 0 ? (
@@ -103,9 +107,9 @@ export function Dashboard({ user }: { user: DashboardUser }) {
         <section aria-labelledby="unclaimed-heading" className="space-y-4">
           <div className="space-y-1">
             <h2 id="unclaimed-heading" className="font-display text-lg font-semibold text-text-primary">
-              Unclaimed
+              {t('unclaimed.title')}
             </h2>
-            <p className="text-sm text-text-muted">Sessions that are not owned by anyone yet.</p>
+            <p className="text-sm text-text-muted">{t('unclaimed.description')}</p>
           </div>
           <SessionList sessions={unclaimedSessions} />
         </section>

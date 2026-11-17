@@ -39,6 +39,42 @@
     "defaultSessionTitle": "New Session",
     "defaultApiKeyName": "API key"
   },
+  "dashboard": {
+    "description": "Active environments and your Claude Code sessions.",
+    "environments": {
+      "title": "Environments",
+      "empty": "No active environments. Start the CLI with <code>claude remote-control</code>.",
+      "acpAgent": "ACP Agent",
+      "claudeCode": "Claude Code"
+    },
+    "sessions": {
+      "new": "+ New Session",
+      "empty": {
+        "title": "No sessions yet",
+        "description": "Connect a machine and start a remote session with:",
+        "command": "CLAUDE_BRIDGE_BASE_URL='<gateway-link>' claude remote-control"
+      }
+    },
+    "unclaimed": {
+      "title": "Unclaimed",
+      "description": "Sessions that are not owned by anyone yet."
+    },
+    "newSession": {
+      "title": "New Session",
+      "description": "Start a session on a connected environment (or leave it unassigned).",
+      "titleLabel": "Title (optional)",
+      "titlePlaceholder": "My session",
+      "environmentLabel": "Environment",
+      "noEnvironment": "No environment",
+      "create": "Create session",
+      "creating": "Creating…"
+    }
+  },
+  "session": {
+    "list": {
+      "empty": "No sessions yet."
+    }
+  },
   "auth": {
     "pageTitle": "Sign in · Remote Control Server",
     "brand": "Remote Control Server",

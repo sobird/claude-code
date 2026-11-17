@@ -1,4 +1,8 @@
-import { formatTime } from '../../lib/utils'
+'use client'
+
+import { useLocale, useTranslations } from 'next-intl'
+
+import { formatEpochSeconds } from '../../lib/format'
 import { StatusBadge } from './status-badge'
 import type { EnvironmentSummary } from './types'
 
@@ -8,11 +12,15 @@ interface EnvironmentListProps {
 
 /** Active bridge/ACP environments the user can dispatch sessions onto. */
 export function EnvironmentList({ environments }: EnvironmentListProps) {
+  const t = useTranslations('dashboard')
+  const locale = useLocale()
+
   if (environments.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-surface-1 p-8 text-center text-sm text-text-muted">
-        No active environments. Start the CLI with{' '}
-        <code className="rounded bg-surface-3 px-1.5 py-0.5 font-mono text-xs">claude remote-control</code>.
+        {t.rich('environments.empty', {
+          code: (chunks) => <code className="rounded bg-surface-3 px-1.5 py-0.5 font-mono text-xs">{chunks}</code>,
+        })}
       </div>
     )
   }
@@ -38,7 +46,7 @@ export function EnvironmentList({ environments }: EnvironmentListProps) {
                       : 'rounded-full bg-status-running/15 px-2 py-0.5 text-xs font-medium text-status-running'
                   }
                 >
-                  {isAcp ? 'ACP Agent' : 'Claude Code'}
+                  {isAcp ? t('environments.acpAgent') : t('environments.claudeCode')}
                 </span>
               </div>
               <div className="truncate text-sm text-text-muted">{environment.directory || ''}</div>
@@ -48,7 +56,7 @@ export function EnvironmentList({ environments }: EnvironmentListProps) {
               <div className="mt-1 text-xs text-text-muted">
                 {environment.branch || ''}
                 {environment.branch && environment.last_poll_at ? ' · ' : ''}
-                {environment.last_poll_at ? formatTime(environment.last_poll_at) : ''}
+                {environment.last_poll_at ? formatEpochSeconds(environment.last_poll_at, locale) : ''}
               </div>
             </div>
           </div>

@@ -1,20 +1,25 @@
+'use client'
+
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 
-import { formatTime } from '../../lib/utils'
+import { formatEpochSeconds } from '../../lib/format'
 import { StatusBadge } from './status-badge'
 import type { SessionSummary } from './types'
 
 interface SessionListProps {
   sessions: SessionSummary[]
-  emptyMessage?: string
 }
 
 /** Newest-first session rows; each links to `/code/<session id>`. */
-export function SessionList({ sessions, emptyMessage = 'No sessions yet.' }: SessionListProps) {
+export function SessionList({ sessions }: SessionListProps) {
+  const t = useTranslations('session')
+  const locale = useLocale()
+
   if (sessions.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-surface-1 p-8 text-center text-sm text-text-muted">
-        {emptyMessage}
+        {t('list.empty')}
       </div>
     )
   }
@@ -35,7 +40,9 @@ export function SessionList({ sessions, emptyMessage = 'No sessions yet.' }: Ses
           </div>
           <div className="flex flex-shrink-0 items-center gap-3">
             <StatusBadge status={session.status} />
-            <span className="hidden text-xs text-text-muted sm:inline">{formatTime(session.updated_at)}</span>
+            <span className="hidden text-xs text-text-muted sm:inline">
+              {formatEpochSeconds(session.updated_at, locale)}
+            </span>
           </div>
         </Link>
       ))}

@@ -1,7 +1,9 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEffect, useState, type FormEvent } from 'react'
 
+import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
 import { Button } from '../ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Input } from '../ui/input'
@@ -21,9 +23,12 @@ interface NewSessionDialogProps {
 
 /** Create-session form: optional title plus an optional bridge environment. */
 export function NewSessionDialog({ open, environments, onClose, onCreate, onCreated }: NewSessionDialogProps) {
+  const t = useTranslations('dashboard')
+  const tCommon = useTranslations('common')
+  const describeError = useApiErrorMessage()
   const [title, setTitle] = useState('')
   const [environmentId, setEnvironmentId] = useState(NO_ENVIRONMENT)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
   const [pending, setPending] = useState(false)
 
   useEffect(() => {
@@ -47,7 +52,7 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
       const created = await onCreate(input)
       onCreated(created)
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Failed to create session')
+      setError(createError)
       setPending(false)
     }
   }
@@ -61,22 +66,22 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
     >
       <DialogContent className="rounded-2xl border-border bg-surface-1 shadow-2xl sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-semibold text-text-primary">New Session</DialogTitle>
-          <DialogDescription className="text-sm text-text-muted">
-            Start a session on a connected environment (or leave it unassigned).
-          </DialogDescription>
+          <DialogTitle className="font-display text-lg font-semibold text-text-primary">
+            {t('newSession.title')}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-text-muted">{t('newSession.description')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="session-title" className="text-text-secondary">
-              Title (optional)
+              {t('newSession.titleLabel')}
             </Label>
             <Input
               id="session-title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="My session"
+              placeholder={t('newSession.titlePlaceholder')}
               disabled={pending}
               className="bg-surface-2"
             />
@@ -84,14 +89,14 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
 
           <div className="space-y-1.5">
             <Label htmlFor="session-environment" className="text-text-secondary">
-              Environment
+              {t('newSession.environmentLabel')}
             </Label>
             <Select value={environmentId} onValueChange={setEnvironmentId} disabled={pending}>
               <SelectTrigger id="session-environment" className="w-full bg-surface-2">
-                <SelectValue placeholder="No environment" />
+                <SelectValue placeholder={t('newSession.noEnvironment')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_ENVIRONMENT}>No environment</SelectItem>
+                <SelectItem value={NO_ENVIRONMENT}>{t('newSession.noEnvironment')}</SelectItem>
                 {environments.map((environment) => (
                   <SelectItem key={environment.id} value={environment.id}>
                     {environment.machine_name || environment.id}
@@ -104,16 +109,16 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
 
           {error ? (
             <p role="alert" className="text-sm text-status-error">
-              {error}
+              {describeError(error, 'errors.generic')}
             </p>
           ) : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
-              Cancel
+              {tCommon('cancel')}
             </Button>
             <Button type="submit" variant="brand" disabled={pending}>
-              {pending ? 'Creating…' : 'Create session'}
+              {pending ? t('newSession.creating') : t('newSession.create')}
             </Button>
           </DialogFooter>
         </form>
