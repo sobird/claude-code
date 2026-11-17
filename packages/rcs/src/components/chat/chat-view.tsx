@@ -20,6 +20,7 @@ import { useAccessToken } from '../../hooks/useAccessToken'
 import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
 import { useSessionStream } from '../../hooks/useSessionStream'
 import { createApiClient } from '../../lib/api-client'
+import { randomUuid } from '../../lib/random-uuid'
 import {
   applyHistory,
   initialChatState,
@@ -161,7 +162,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       setActionError(null)
       // Generate the uuid once so the send body, the response event, and a
       // history reload all agree on the same entry id (reducer dedupes by it).
-      const uuid = crypto.randomUUID()
+      const uuid = randomUuid()
       try {
         const result = await api.post<EventActionResponse>(`/web/sessions/${encodeURIComponent(sessionId)}/events`, {
           type: 'user',

@@ -35,9 +35,11 @@ export class ApiError extends Error {
 }
 
 /**
- * Base URL for gateway API calls. Uses `NEXT_PUBLIC_RCS_API_URL` when set (dev
- * points straight at the gateway) and otherwise returns `''` so fetches stay
- * same-origin (production serves both from one origin).
+ * Base URL for gateway API calls. `NEXT_PUBLIC_RCS_API_URL` wins when set. In
+ * production an empty value keeps fetches same-origin (one origin behind the
+ * reverse proxy); in development it targets the gateway on the page's own host,
+ * because Next's dev rewrite proxy buffers SSE until the response completes.
+ * Deriving the host (rather than hardcoding localhost) keeps LAN access working.
  *
  * `process.env.NEXT_PUBLIC_RCS_API_URL` must stay a literal member expression so
  * Next's compiler inlines it into client bundles; tests set `process.env` before
@@ -45,8 +47,11 @@ export class ApiError extends Error {
  */
 export function getApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_RCS_API_URL
-  if (typeof configured !== 'string' || configured.length === 0) return ''
-  return configured.replace(/\/+$/, '')
+  if (typeof configured === 'string' && configured.length > 0) return configured.replace(/\/+$/, '')
+  if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:4000`
+  }
+  return ''
 }
 
 /** Stable code and/or human-readable message from either gateway error shape. */

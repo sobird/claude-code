@@ -1,7 +1,31 @@
-// In production Caddy serves the UI and the gateway from one origin. In dev
-// the client talks to the gateway directly so SSE stays off Next's rewrite
-// proxy; `next.config.ts` also has matching rewrites for direct :3000 access.
-process.env.NEXT_PUBLIC_RCS_API_URL ??= 'http://localhost:4000'
+// In production Caddy serves the UI and the gateway from one origin. In dev the
+// client calls the gateway directly: Next's dev rewrite proxy buffers SSE until
+// the response ends. The client derives the gateway host from the page host, so
+// localhost and LAN addresses both work.
+import { networkInterfaces } from 'node:os'
+
+const UI_PORT = 3000
+
+function localUiOrigins(): string[] {
+  const hosts = ['localhost', '127.0.0.1']
+  for (const infos of Object.values(networkInterfaces())) {
+    for (const info of infos ?? []) {
+      if (info.family === 'IPv4' && !info.internal) hosts.push(info.address)
+    }
+  }
+  return hosts.map((host) => `http://${host}:${UI_PORT}`)
+}
+
+// Direct gateway calls are cross-origin, so seed the allowlist with every local
+// UI origin while keeping whatever the caller configured explicitly.
+process.env.RCS_WEB_CORS_ORIGINS = [
+  ...new Set(
+    [process.env.RCS_WEB_CORS_ORIGINS ?? '', ...localUiOrigins()]
+      .flatMap((entry) => entry.split(','))
+      .map((entry) => entry.trim())
+      .filter(Boolean),
+  ),
+].join(',')
 
 const specs: { label: string; cmd: string[] }[] = [
   { label: 'web', cmd: ['bunx', 'next', 'dev', '--port', '3000'] },

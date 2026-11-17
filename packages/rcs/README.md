@@ -70,15 +70,18 @@ cd packages/rcs
 export DATABASE_URL=postgres://rcs:rcs@127.0.0.1:5432/rcs
 export RCS_AUTH_SECRET=$(openssl rand -hex 32)
 export ADMIN_USERNAME=admin ADMIN_PASSWORD=change-me
-export RCS_WEB_CORS_ORIGINS=http://localhost:3000   # dev UI calls the gateway cross-origin
 bun install
 bun run dev          # Next dev on :3000 + gateway on :4000
 ```
 
-`scripts/dev.ts` sets `NEXT_PUBLIC_RCS_API_URL=http://localhost:4000` for you;
-the UI calls the gateway directly in development. Because that is a cross-origin
-call, the UI origin must be in `RCS_WEB_CORS_ORIGINS` or `/web/*` responses carry
-no CORS headers.
+In development the UI calls the gateway directly, because Next's dev rewrite
+proxy buffers SSE until the response completes. The client targets port 4000 on
+the same host the page was loaded from, so both `http://localhost:3000` and
+`http://<host-ip>:3000` work. Those calls are cross-origin, so `scripts/dev.ts`
+seeds `RCS_WEB_CORS_ORIGINS` with the matching UI origins (localhost and the
+machine's local IPv4 addresses) while preserving any origins you configured. Set
+`NEXT_PUBLIC_RCS_API_URL` before `bun run dev` to point the UI at a different
+gateway origin.
 
 ## Accounts, roles and API keys
 
