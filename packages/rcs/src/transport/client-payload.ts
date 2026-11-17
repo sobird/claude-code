@@ -12,6 +12,30 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
 }
 
+/** An Anthropic wire message: `{ role, content }` with block or string content. */
+function isWireMessage(value: unknown): boolean {
+  const record = asRecord(value)
+  return !!record && typeof record.role === 'string' && 'content' in record
+}
+
+/**
+ * Restore the original wire message from a persisted payload.
+ *
+ * `normalizePayload` stores a display projection — flat `content` text plus the original
+ * under `message` — and rows replayed before this unwrapping existed got that projection
+ * nested again on every reconnect. Walk the `message` chain down to the layer that is an
+ * actual `{ role, content }` message: the projection's own `content` is a string, which
+ * the CLI's message normalizer cannot map over content blocks.
+ */
+function unwrapWireMessage(payload: unknown): Record<string, unknown> | null {
+  let current = asRecord(payload)
+  for (let depth = 0; current && depth < 16; depth++) {
+    if (isWireMessage(current)) return current
+    current = asRecord(current.message)
+  }
+  return null
+}
+
 /**
  * Convert an internal session event into the SDK/control message shape that bridge workers
  * consume on both the legacy WS path and the v2 worker SSE path.
@@ -26,9 +50,28 @@ export function toClientPayload(event: SessionEvent): Record<string, unknown> {
       uuid: messageUuid,
       session_id: event.sessionId,
       ...(payload?.isSynthetic === true ? { isSynthetic: true } : {}),
-      message: {
+      message: unwrapWireMessage(payload) ?? {
         role: 'user',
-        content: payload?.content ?? payload?.message ?? '',
+        content:
+          typeof payload?.content === 'string'
+            ? payload.content
+            : typeof payload?.message === 'string'
+              ? payload.message
+              : '',
+      },
+    }
+  }
+
+  if (event.type === 'assistant') {
+    // Restore the wire message so replayed history has block-array content; the
+    // normalized projection's string `content` crashes the CLI's message normalizer.
+    return {
+      type: 'assistant',
+      uuid: messageUuid,
+      session_id: event.sessionId,
+      message: unwrapWireMessage(payload) ?? {
+        role: 'assistant',
+        content: [{ type: 'text', text: typeof payload?.content === 'string' ? payload.content : '' }],
       },
     }
   }

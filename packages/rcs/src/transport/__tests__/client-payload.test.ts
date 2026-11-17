@@ -201,17 +201,82 @@ describe('toClientPayload — control_request', () => {
 })
 
 // =============================================================================
+// assistant message
+// =============================================================================
+
+describe('toClientPayload — assistant message', () => {
+  test('restores the wire message from the normalized payload', () => {
+    const wire = { role: 'assistant', content: [{ type: 'text', text: 'response text' }] }
+    const result = toClientPayload(
+      makeEvent({
+        type: 'assistant',
+        sessionId: 'sess-1',
+        payload: { uuid: 'u-1', content: 'response text', raw: { message: wire, uuid: 'u-1' }, message: wire },
+      }),
+    )
+    expect(result.type).toBe('assistant')
+    expect(result.uuid).toBe('u-1')
+    expect(result.session_id).toBe('sess-1')
+    expect((result as { message: unknown }).message).toEqual(wire)
+  })
+
+  test('unwraps projections nested by replayed echoes', () => {
+    const wire = { role: 'assistant', content: [{ type: 'text', text: 'hi' }] }
+    // Each reconnect persisted the previous projection as `message`, so the chain
+    // grows one level per cycle; the oldest projection still holds the wire message.
+    const result = toClientPayload(
+      makeEvent({
+        type: 'assistant',
+        sessionId: 'sess-2',
+        payload: { content: 'hi', message: { content: 'hi', message: wire } },
+      }),
+    )
+    expect((result as { message: unknown }).message).toEqual(wire)
+  })
+
+  test('falls back to a text block when no wire message survived', () => {
+    const result = toClientPayload(
+      makeEvent({ type: 'assistant', sessionId: 'sess-3', payload: { uuid: 'u-1', content: 'response text' } }),
+    )
+    expect((result as { message: unknown }).message).toEqual({
+      role: 'assistant',
+      content: [{ type: 'text', text: 'response text' }],
+    })
+  })
+})
+
+// =============================================================================
+// user wire message blocks
+// =============================================================================
+
+describe('toClientPayload — user wire message', () => {
+  test('preserves block content such as tool results', () => {
+    const wire = {
+      role: 'user',
+      content: [{ type: 'tool_result', tool_use_id: 'tool-1', content: 'ok' }],
+    }
+    const result = toClientPayload(
+      makeEvent({
+        type: 'user',
+        sessionId: 'sess-1',
+        payload: { uuid: 'u-9', content: 'ok', message: wire },
+      }),
+    )
+    expect((result as { message: unknown }).message).toEqual(wire)
+  })
+})
+
+// =============================================================================
 // default fallback
 // =============================================================================
 
 describe('toClientPayload — default types', () => {
   test('passes through unknown type with type/uuid/session_id/message', () => {
-    const result = toClientPayload(
-      makeEvent({ type: 'assistant', sessionId: 'sess-1', payload: { uuid: 'u-1', content: 'response text' } }),
-    )
-    expect(result.type).toBe('assistant')
+    const payload = { uuid: 'u-1', content: 'result text' }
+    const result = toClientPayload(makeEvent({ type: 'result', sessionId: 'sess-1', payload }))
+    expect(result.type).toBe('result')
     expect(result.uuid).toBe('u-1')
     expect(result.session_id).toBe('sess-1')
-    expect(result.message).toEqual({ uuid: 'u-1', content: 'response text' })
+    expect(result.message).toEqual(payload)
   })
 })
