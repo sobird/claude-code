@@ -82,8 +82,9 @@ export function Notifications() {
         const registration = await navigator.serviceWorker.ready
         const existing = await registration.pushManager.getSubscription()
         if (!existing) return
-        const request = subscriptionToRequest(existing)
-        if (request) await api.post('/web/push/subscriptions', request)
+        const request = subscriptionToRequest(existing.toJSON())
+        if (!request) return
+        await api.post('/web/push/subscriptions', request)
         if (!cancelled) setSubscribed(true)
       } catch (reconcileError) {
         if (!cancelled) setError(reconcileError)
@@ -102,10 +103,13 @@ export function Notifications() {
     try {
       const result = await Notification.requestPermission()
       setPermission(result)
-      if (result !== 'granted') {
+      // A dismissed prompt resolves to 'default', not 'denied'; keep the card
+      // retryable in that case and only latch when the user actually refused.
+      if (result === 'denied') {
         setMode('denied')
         return
       }
+      if (result !== 'granted') return
 
       const config = await api.get<PushConfig>('/web/push/config')
       if (!config.enabled || !config.publicKey) {
@@ -118,7 +122,7 @@ export function Notifications() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(config.publicKey),
       })
-      const request = subscriptionToRequest(subscription)
+      const request = subscriptionToRequest(subscription.toJSON())
       if (!request) {
         setError(new Error(t('error')))
         return
@@ -142,9 +146,13 @@ export function Notifications() {
       if (subscription) {
         const { endpoint } = subscription
         await subscription.unsubscribe()
+        // The browser subscription is gone whether or not the DELETE below
+        // succeeds, so reflect that immediately and surface request errors apart.
+        setSubscribed(false)
         await api.delete(`/web/push/subscriptions?endpoint=${encodeURIComponent(endpoint)}`)
+      } else {
+        setSubscribed(false)
       }
-      setSubscribed(false)
     } catch (disableError) {
       setError(disableError)
     } finally {

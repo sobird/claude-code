@@ -43,8 +43,13 @@ export function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return bytes
 }
 
+/**
+ * The JSON shape produced by `PushSubscription.toJSON()`. A live
+ * `PushSubscription` exposes no `keys` property, so callers must serialize
+ * first; `endpoint` is optional on that type and is rejected when absent.
+ */
 export interface PushSubscriptionLike {
-  endpoint: string
+  endpoint?: string
   keys?: { p256dh?: string; auth?: string }
 }
 
@@ -54,13 +59,14 @@ export interface PushSubscriptionRequest {
 }
 
 /**
- * Convert a `PushSubscription` into the gateway payload. Returns `null` when
- * the endpoint or either key is blank, so callers never post an unusable row.
+ * Convert a `PushSubscription.toJSON()` payload into the gateway payload.
+ * Returns `null` when the endpoint or either key is blank, so callers never
+ * post an unusable row.
  */
 export function subscriptionToRequest(subscription: PushSubscriptionLike): PushSubscriptionRequest | null {
-  const endpoint = subscription.endpoint.trim()
+  const endpoint = subscription.endpoint?.trim()
   const p256dh = subscription.keys?.p256dh?.trim()
   const auth = subscription.keys?.auth?.trim()
-  if (endpoint.length === 0 || !p256dh || !auth) return null
+  if (!endpoint || !p256dh || !auth) return null
   return { endpoint, keys: { p256dh, auth } }
 }
