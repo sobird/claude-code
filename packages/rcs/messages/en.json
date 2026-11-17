@@ -92,7 +92,15 @@
       "archivedPlaceholder": "Session archived",
       "jumpToLatest": "Jump to latest",
       "sendFailed": "Message failed to send.",
-      "retrySend": "Retry send"
+      "retrySend": "Retry send",
+      "mode": {
+        "label": "Permission mode",
+        "default": "Ask each time",
+        "acceptEdits": "Auto-accept edits",
+        "plan": "Plan mode",
+        "bypassPermissions": "Bypass permissions",
+        "dontAsk": "Don't ask"
+      }
     }
   },
   "chat": {
@@ -141,6 +149,22 @@
       "submit": "Submit answers",
       "decline": "Decline",
       "incomplete": "You have not answered all questions"
+    },
+    "commandMenu": {
+      "label": "Slash commands",
+      "empty": "No matching commands"
+    },
+    "exitPlan": {
+      "title": "Plan ready for review",
+      "approve": "Approve plan",
+      "approveAutoAccept": "Approve and auto-accept edits",
+      "deny": "Reject plan",
+      "denyPlaceholder": "Tell Claude what to change",
+      "sendDeny": "Send rejection",
+      "allowedPrompts": "Requested permissions",
+      "missingPlan": "Plan content is unavailable in the web view.",
+      "viewPlan": "View plan",
+      "dialogDescription": "Review the plan, then approve it or tell Claude what to change."
     }
   },
   "auth": {

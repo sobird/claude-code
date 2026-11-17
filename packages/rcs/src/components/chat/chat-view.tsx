@@ -20,6 +20,7 @@ import { useAccessToken } from '../../hooks/useAccessToken'
 import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
 import { useSessionStream } from '../../hooks/useSessionStream'
 import { createApiClient } from '../../lib/api-client'
+import { buildSetPermissionModeRequest, type WebPermissionMode } from '../../lib/permission-modes'
 import type { PermissionDecision } from '../../lib/permission-suggestions'
 import { randomUuid } from '../../lib/random-uuid'
 import {
@@ -36,6 +37,7 @@ import { StatusBadge } from '../shell/status-badge'
 import { Button } from '../ui/button'
 import { ChatInput } from './chat-input'
 import { AssistantBubble, UserBubble } from './message-bubble'
+import { PermissionModeMenu } from './permission-mode-menu'
 import { PermissionPanel } from './permission-panel'
 import { PlanView } from './plan-view'
 import { ToolCallGroup } from './tool-call-group'
@@ -269,6 +271,25 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [api, sessionId],
   )
 
+  // Fold the POSTed control_request back in immediately: the reducer treats it
+  // as the pending mode switch, and a flaky SSE stream would otherwise lose it.
+  const handleModeSelect = useCallback(
+    async (mode: WebPermissionMode) => {
+      setActionError(null)
+      try {
+        const result = await api.post<EventActionResponse>(
+          `/web/sessions/${encodeURIComponent(sessionId)}/control`,
+          buildSetPermissionModeRequest(randomUuid(), mode),
+        )
+        const event = result?.event
+        if (event) setExtraEvents((prev) => [...prev, event])
+      } catch (error) {
+        setActionError(error)
+      }
+    },
+    [api, sessionId],
+  )
+
   const handleInterrupt = useCallback(async () => {
     setActionError(null)
     try {
@@ -317,7 +338,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             <p className="truncate font-mono text-xs text-text-muted">{sessionId}</p>
           </div>
         </div>
-        <StatusBadge status={displayStatus} />
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <PermissionModeMenu
+            mode={chat.permissionMode}
+            pending={chat.pendingMode !== null}
+            disabled={closed}
+            onSelect={handleModeSelect}
+          />
+          <StatusBadge status={displayStatus} />
+        </div>
       </header>
 
       {failedToLoad ? (
@@ -356,6 +385,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
         >
           {chat.error}
+        </div>
+      ) : null}
+
+      {chat.modeError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
+        >
+          {chat.modeError}
         </div>
       ) : null}
 
@@ -412,6 +450,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         isLoading={busy}
         disabled={closed || !hasToken}
         placeholder={closed ? t('archivedPlaceholder') : undefined}
+        commands={chat.slashCommands}
       />
     </div>
   )

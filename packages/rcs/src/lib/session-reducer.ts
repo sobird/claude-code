@@ -12,6 +12,7 @@
  */
 
 import { isSessionClosedStatus } from '../contracts'
+import { isWebPermissionMode, type WebPermissionMode } from './permission-modes'
 import type { PermissionSuggestion } from './permission-suggestions'
 
 // =============================================================================
@@ -110,6 +111,14 @@ export interface ChatState {
    */
   seenAssistantUuids: Set<string>
   error: string | null
+  /** Bridge-safe slash commands from the latest `system/init` (empty until one arrives). */
+  slashCommands: string[]
+  /** Current CLI permission mode from `system/init`; `null` hides the mode control. */
+  permissionMode: string | null
+  /** Mode switch sent but not yet acknowledged by the CLI. */
+  pendingMode: { requestId: string; mode: WebPermissionMode } | null
+  /** CLI rejection of the last mode switch (e.g. bypass is disabled). */
+  modeError: string | null
 }
 
 /**
@@ -139,6 +148,10 @@ export const initialChatState: ChatState = {
   seenEventIds: new Set<string>(),
   seenAssistantUuids: new Set<string>(),
   error: null,
+  slashCommands: [],
+  permissionMode: null,
+  pendingMode: null,
+  modeError: null,
 }
 
 // =============================================================================
@@ -440,11 +453,51 @@ function handleToolResult(state: ChatState, event: SessionEventInput): ChatState
   return { ...state, entries: replaceEntry(state.entries, index, next) }
 }
 
+/**
+ * `system/init` carries the bridge-safe slash commands and the current
+ * permission mode; `system/status` reports the live mode after a change the
+ * web did not initiate (e.g. approving ExitPlanMode with auto-accept edits).
+ * Every other system subtype is informational noise here.
+ *
+ * A reconnect re-sends init, so a later message simply replaces the previous
+ * snapshot (history replays fold in sequence order).
+ */
+function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatState {
+  const payload = asRecord(event.payload) ?? {}
+  const subtype = asText(payload.subtype)
+
+  if (subtype === 'status') {
+    // Status carries no commands, so only the mode moves; an unrecognized value
+    // (e.g. CLI-only `auto`) leaves the last known mode in place.
+    if (!isWebPermissionMode(payload.permissionMode) || payload.permissionMode === state.permissionMode) return state
+    return { ...state, permissionMode: payload.permissionMode }
+  }
+
+  if (subtype !== 'init') return state
+
+  const slashCommands = Array.isArray(payload.slash_commands)
+    ? [
+        ...new Set(payload.slash_commands.filter((item): item is string => typeof item === 'string' && item !== '')),
+      ].slice(0, 100)
+    : state.slashCommands
+  const permissionMode = isWebPermissionMode(payload.permissionMode) ? payload.permissionMode : state.permissionMode
+
+  return { ...state, slashCommands, permissionMode, pendingMode: null, modeError: null }
+}
+
 function handlePermissionRequest(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
   const request = asRecord(payload.request) ?? payload
   const requestId = asText(payload.request_id)
   if (!requestId) return state
+
+  // Non-permission control requests share the envelope. `set_permission_mode`
+  // is echoed back as an outbound event, so it doubles as the pending tracker.
+  const subtype = asText(request.subtype)
+  if (subtype && subtype !== 'can_use_tool') {
+    if (subtype !== 'set_permission_mode' || !isWebPermissionMode(request.mode)) return state
+    return { ...state, pendingMode: { requestId, mode: request.mode }, modeError: null }
+  }
 
   const toolName = asText(request.tool_name) || ''
   const toolInput = asRecord(request.input) ?? asRecord(request.tool_input) ?? {}
@@ -532,10 +585,29 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
   }
 }
 
+/** The CLI's control_response nests its outcome under `response`. */
+function responseOutcome(payload: Record<string, unknown>): { subtype: string; error: string } {
+  const response = asRecord(payload.response) ?? {}
+  return {
+    subtype: asText(response.subtype) || asText(payload.subtype),
+    error: asText(response.error) || asText(payload.error),
+  }
+}
+
 function handlePermissionResponse(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
   const requestId = requestIdOf(payload)
   if (!requestId) return state
+
+  // A mode switch resolves against pendingMode, not against a permission card.
+  const pendingMode = state.pendingMode
+  if (pendingMode && pendingMode.requestId === requestId) {
+    const outcome = responseOutcome(payload)
+    if (outcome.subtype === 'error') {
+      return { ...state, pendingMode: null, modeError: outcome.error || 'set_permission_mode failed' }
+    }
+    return { ...state, pendingMode: null, modeError: null, permissionMode: pendingMode.mode }
+  }
 
   const approved = payload.approved === true
   const pendingPermissions = state.pendingPermissions.filter((permission) => permission.requestId !== requestId)
@@ -687,6 +759,8 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       return handlePermissionResponse(state, event)
     case 'session_status':
       return handleSessionStatus(state, event)
+    case 'system':
+      return handleSystemEvent(state, event)
     case 'error':
       return handleError(state, event)
     case 'plan':
@@ -699,7 +773,7 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
     case 'interrupt':
       return dropStreaming(state)
     default:
-      // partial_assistant, system, task_state, automation_state, status, … are
+      // partial_assistant, task_state, automation_state, status, … are
       // intentionally ignored.
       return state
   }

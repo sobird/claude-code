@@ -185,6 +185,56 @@ describe('ingestBridgeMessage', () => {
     expect(events[0]?.type).toBe('system')
   })
 
+  test('keeps the flat init fields the web UI reads', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'init',
+      session_id: 's1',
+      slash_commands: ['compact', 'clear'],
+      permissionMode: 'plan',
+      model: 'claude-opus-4-6',
+      fast_mode_state: 'off',
+      tools: ['Bash'],
+      mcp_servers: [{ name: 'secret', status: 'connected' }],
+      uuid: 'init-1',
+    })
+
+    expect(events).toHaveLength(1)
+    expect(events[0]?.type).toBe('system')
+    const payload = events[0]?.payload as Record<string, unknown> | undefined
+    expect(payload).toMatchObject({
+      subtype: 'init',
+      slash_commands: ['compact', 'clear'],
+      permissionMode: 'plan',
+      model: 'claude-opus-4-6',
+      fast_mode_state: 'off',
+      uuid: 'init-1',
+    })
+    // Whitelisted on purpose: tool/MCP inventories stay out of the web payload.
+    expect(payload?.tools).toBeUndefined()
+    expect(payload?.mcp_servers).toBeUndefined()
+  })
+
+  test('keeps the message body on non-init system messages', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'compact_boundary',
+      message: { content: 'compacted' },
+      uuid: 'sys-1',
+    })
+
+    const payload = events[0]?.payload as Record<string, unknown> | undefined
+    expect(payload?.subtype).toBe('compact_boundary')
+    expect(payload?.message).toEqual({ content: 'compacted' })
+    expect(payload?.slash_commands).toBeUndefined()
+  })
+
   test('handles control_response type', async () => {
     const events: SessionEvent[] = []
     getEventBus('s1').subscribe((event) => events.push(event))

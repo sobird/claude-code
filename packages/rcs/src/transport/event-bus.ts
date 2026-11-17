@@ -243,11 +243,24 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
 
   if (p.request_id) normalized.request_id = p.request_id
   if (p.request) normalized.request = p.request
+  // `control_response` carries its correlation id and result inside `response`;
+  // the web reducer settles pending control requests (e.g. set_permission_mode)
+  // from it, so it must stay at the top level as well as in `raw`.
+  if (p.response) normalized.response = p.response
   if (p.approved !== undefined) normalized.approved = p.approved
   if (p.updated_input) normalized.updated_input = p.updated_input
   if (p.updated_permissions !== undefined) normalized.updated_permissions = p.updated_permissions
 
   if (p.message) normalized.message = p.message
+
+  // `system/init` drives the web slash-command menu and permission-mode control,
+  // so lift its flat fields out of `raw` where clients look for them.
+  if (type === 'system') {
+    if (Array.isArray(p.slash_commands)) normalized.slash_commands = p.slash_commands
+    if (typeof p.permissionMode === 'string') normalized.permissionMode = p.permissionMode
+    if (typeof p.model === 'string') normalized.model = p.model
+    if (typeof p.fast_mode_state === 'string') normalized.fast_mode_state = p.fast_mode_state
+  }
 
   if (type === 'task_state') {
     if (typeof p.task_list_id === 'string') normalized.task_list_id = p.task_list_id

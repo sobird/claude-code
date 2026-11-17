@@ -500,6 +500,118 @@ describe('reduceSessionEvent', () => {
     const [call] = tools(state)
     expect(call?.toolCall).toMatchObject({ id: 'tool-1', title: 'Read', status: 'running' })
   })
+
+  test('system init records slash commands and the permission mode', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('system', { subtype: 'init', slash_commands: ['compact', 'clear'], permissionMode: 'plan' }),
+    )
+
+    expect(state.slashCommands).toEqual(['compact', 'clear'])
+    expect(state.permissionMode).toBe('plan')
+  })
+
+  test('system init ignores unsupported permission modes but keeps the old one', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('system', { subtype: 'init', slash_commands: ['compact'], permissionMode: 'plan' }),
+    )
+    state = reduceSessionEvent(state, event('system', { subtype: 'init', permissionMode: 'auto' }))
+
+    expect(state.permissionMode).toBe('plan')
+  })
+
+  test('repeated system init overwrites commands and filters junk entries', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('system', { subtype: 'init', slash_commands: ['compact', 1, null, 'compact', 'clear'] }),
+    )
+    state = reduceSessionEvent(state, event('system', { subtype: 'init', slash_commands: ['cost'] }))
+
+    expect(state.slashCommands).toEqual(['cost'])
+  })
+
+  test('non-init system events are ignored', () => {
+    const state = reduceSessionEvent(initialChatState, event('system', { subtype: 'other', permissionMode: 'plan' }))
+    expect(state.permissionMode).toBeNull()
+    expect(state.slashCommands).toEqual([])
+  })
+
+  test('system status adopts the CLI-reported permission mode', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('system', { subtype: 'init', slash_commands: ['compact'], permissionMode: 'plan' }),
+    )
+    state = reduceSessionEvent(state, event('system', { subtype: 'status', permissionMode: 'acceptEdits' }))
+
+    expect(state.permissionMode).toBe('acceptEdits')
+    // Status never carries commands, so the init snapshot must survive.
+    expect(state.slashCommands).toEqual(['compact'])
+  })
+
+  test('system status ignores unsupported permission modes', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', permissionMode: 'plan' }))
+    state = reduceSessionEvent(state, event('system', { subtype: 'status', permissionMode: 'auto' }))
+
+    expect(state.permissionMode).toBe('plan')
+  })
+
+  test('an outbound set_permission_mode request starts a pending mode change', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event(
+        'control_request',
+        { type: 'control_request', request_id: 'mode-1', request: { subtype: 'set_permission_mode', mode: 'plan' } },
+        { direction: 'outbound' },
+      ),
+    )
+
+    expect(state.pendingMode).toEqual({ requestId: 'mode-1', mode: 'plan' })
+    expect(state.entries).toHaveLength(0)
+    expect(state.pendingPermissions).toHaveLength(0)
+  })
+
+  test('a successful mode control_response adopts the requested mode', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', permissionMode: 'default' }))
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'mode-1', request: { subtype: 'set_permission_mode', mode: 'plan' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { request_id: 'mode-1', subtype: 'success' } }),
+    )
+
+    expect(state.permissionMode).toBe('plan')
+    expect(state.pendingMode).toBeNull()
+    expect(state.modeError).toBeNull()
+  })
+
+  test('an error mode control_response keeps the mode and records the error', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', permissionMode: 'default' }))
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'mode-1', request: { subtype: 'set_permission_mode', mode: 'plan' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', {
+        response: { request_id: 'mode-1', subtype: 'error', error: 'bypass disabled' },
+      }),
+    )
+
+    expect(state.permissionMode).toBe('default')
+    expect(state.pendingMode).toBeNull()
+    expect(state.modeError).toBe('bypass disabled')
+  })
+
+  test('an unrelated control_response leaves the mode state untouched', () => {
+    let state = reduceSessionEvent(initialChatState, event('system', { subtype: 'init', permissionMode: 'default' }))
+    state = reduceSessionEvent(state, event('permission_response', { request_id: 'other', approved: true }))
+
+    expect(state.permissionMode).toBe('default')
+    expect(state.modeError).toBeNull()
+  })
 })
 
 describe('applyHistory', () => {

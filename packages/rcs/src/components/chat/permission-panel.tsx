@@ -22,8 +22,8 @@ import { diffLines, toolEditPreview } from '../../lib/text-diff'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { AskUserQuestionCard } from './ask-user-question-card'
-
-type ChatTranslator = ReturnType<typeof useTranslations<'chat'>>
+import { ExitPlanModeCard, isExitPlanModeRequest } from './exit-plan-mode-card'
+import { optionDetail, optionLabel } from './permission-option-labels'
 
 interface PermissionPanelProps {
   requests: PendingPermission[]
@@ -36,7 +36,11 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
   // AskUserQuestion prompts are answered in their own card, so keyboard
   // approval shortcuts only navigate the plain allow/deny cards.
   const respondable = useMemo(
-    () => requests.filter((request) => !isAskUserQuestionRequest(request.toolName, request.toolInput)),
+    () =>
+      requests.filter(
+        (request) =>
+          !isAskUserQuestionRequest(request.toolName, request.toolInput) && !isExitPlanModeRequest(request.toolName),
+      ),
     [requests],
   )
   // Clamp instead of syncing state so a shrinking request list never selects
@@ -93,6 +97,10 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
   if (requests.length === 0) return null
 
   const activeRequestId = respondable[activeIndex]?.requestId
+  // Only the newest plan request auto-opens its dialog; older queued ones stay
+  // behind the inline card so overlays never stack.
+  const exitPlanRequests = requests.filter((request) => isExitPlanModeRequest(request.toolName))
+  const autoOpenExitPlanId = exitPlanRequests[exitPlanRequests.length - 1]?.requestId
 
   return (
     <div className={cn('mx-auto w-full max-w-3xl px-1 sm:px-0', className)}>
@@ -100,6 +108,13 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
         {requests.map((request) =>
           isAskUserQuestionRequest(request.toolName, request.toolInput) ? (
             <AskUserQuestionCard key={request.requestId} request={request} onRespond={onRespond} />
+          ) : isExitPlanModeRequest(request.toolName) ? (
+            <ExitPlanModeCard
+              key={request.requestId}
+              request={request}
+              onRespond={onRespond}
+              autoOpen={request.requestId === autoOpenExitPlanId}
+            />
           ) : (
             <PermissionCard
               key={request.requestId}
@@ -292,35 +307,6 @@ function PermissionCard({
       )}
     </div>
   )
-}
-
-function optionLabel(option: PermissionOption, t: ChatTranslator): string {
-  switch (option.kind) {
-    case 'allow-once':
-      return t('allow')
-    case 'allow-session':
-      return t('permission.allowSession')
-    case 'allow-always':
-      return t('permission.allowAlways')
-    case 'accept-edits':
-      return t('permission.acceptEdits')
-    case 'allow-directories':
-      return t('permission.allowDirectories')
-    case 'always-deny':
-      return t('permission.alwaysDeny')
-    case 'apply-suggestion':
-      return t('permission.applySuggestion')
-  }
-}
-
-function optionDetail(option: PermissionOption): string {
-  if (option.rules?.length) {
-    return option.rules
-      .map((rule) => (rule.ruleContent ? `${rule.toolName}(${rule.ruleContent})` : rule.toolName))
-      .join(', ')
-  }
-  if (option.directories?.length) return option.directories.join(', ')
-  return option.mode ?? ''
 }
 
 function ShortcutHint({ label }: { label: string }) {

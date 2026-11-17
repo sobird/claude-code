@@ -258,11 +258,24 @@ export async function ingestBridgeMessage(
         .join('')
     }
     payload = { message: msg.message, uuid: msg.uuid, content: text }
-  } else if (eventType === 'user' || eventType === 'system') {
+  } else if (eventType === 'user') {
     payload = {
       message: msg.message,
       uuid: msg.uuid,
       ...(typeof msg.isSynthetic === 'boolean' ? { isSynthetic: msg.isSynthetic } : {}),
+    }
+  } else if (eventType === 'system') {
+    // `system/init` carries the flat fields the web UI needs (slash commands,
+    // permission mode). Whitelist them so tool/MCP inventories never reach the
+    // browser, matching the CLI's own bridge-safe message shape.
+    payload = {
+      ...(typeof msg.subtype === 'string' ? { subtype: msg.subtype } : {}),
+      ...(Array.isArray(msg.slash_commands) ? { slash_commands: msg.slash_commands } : {}),
+      ...(typeof msg.permissionMode === 'string' ? { permissionMode: msg.permissionMode } : {}),
+      ...(typeof msg.model === 'string' ? { model: msg.model } : {}),
+      ...(typeof msg.fast_mode_state === 'string' ? { fast_mode_state: msg.fast_mode_state } : {}),
+      ...(msg.message ? { message: msg.message } : {}),
+      uuid: msg.uuid,
     }
   } else if (eventType === 'control_request') {
     payload = { request_id: msg.request_id, request: msg.request }

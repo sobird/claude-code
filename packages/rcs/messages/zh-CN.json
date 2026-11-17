@@ -92,7 +92,15 @@
       "archivedPlaceholder": "会话已归档",
       "jumpToLatest": "回到最新",
       "sendFailed": "消息发送失败。",
-      "retrySend": "重新发送"
+      "retrySend": "重新发送",
+      "mode": {
+        "label": "权限模式",
+        "default": "每次询问",
+        "acceptEdits": "自动接受编辑",
+        "plan": "计划模式",
+        "bypassPermissions": "跳过权限",
+        "dontAsk": "不再询问"
+      }
     }
   },
   "chat": {
@@ -141,6 +149,22 @@
       "submit": "提交回答",
       "decline": "拒绝回答",
       "incomplete": "你还有问题未回答"
+    },
+    "commandMenu": {
+      "label": "斜杠命令",
+      "empty": "没有匹配的命令"
+    },
+    "exitPlan": {
+      "title": "计划待审批",
+      "approve": "批准计划",
+      "approveAutoAccept": "批准并自动接受编辑",
+      "deny": "拒绝计划",
+      "denyPlaceholder": "告诉 Claude 需要如何修改",
+      "sendDeny": "拒绝并发送",
+      "allowedPrompts": "计划请求的权限",
+      "missingPlan": "网页端暂无法显示计划正文。",
+      "viewPlan": "查看计划",
+      "dialogDescription": "查看完整计划，然后批准或告诉 Claude 需要修改的地方。"
     }
   },
   "auth": {

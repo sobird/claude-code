@@ -127,6 +127,12 @@ binary does not contain the `CLAUDE_BRIDGE_*` overrides.
   session child emit `stream_event` deltas, so the web UI renders text as it is
   generated instead of waiting for each complete message. Deltas are live-only;
   the gateway never persists them.
+- `CLAUDE_INTERNAL_FC_OVERRIDES` — only relevant to the interactive REPL bridge
+  (the `/remote-control` command): set `{"tengu_bridge_system_init":true}` to
+  make it send `system/init` on connect. Standalone `remote-control` sessions do
+  not need it — the session child emits `system/init` at the start of every
+  turn, so the slash-command menu and the header mode control appear after the
+  first message. The override only applies with `USER_TYPE=ant`.
 - `CLAUDE_BRIDGE_USE_CCR_V2` — **do not set it against this gateway.** The
   gateway always reports `use_code_sessions: false`; the v2 code-sessions path
   this override forces authenticates with a worker JWT against

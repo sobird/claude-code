@@ -135,6 +135,11 @@ describe('normalizePayload — field preservation', () => {
     )
   })
 
+  test('preserves the control_response response envelope', () => {
+    const response = { subtype: 'success', request_id: 'req-1', response: { mode: 'plan' } }
+    expect(normalizePayload('control_response', { response }).response).toEqual(response)
+  })
+
   test('preserves message field for backward compat', () => {
     const message = { role: 'user', content: 'hi' }
     expect(normalizePayload('assistant', { message }).message).toEqual(message)
