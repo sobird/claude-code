@@ -42,7 +42,7 @@ export function NotebookEditToolDiff(props: Props): React.ReactNode {
     () =>
       getFsImplementation()
         .readFile(props.notebook_path, { encoding: 'utf-8' })
-        .then((content) => safeParseJSON(content))
+        .then((content) => safeParseJSON(content) as NotebookContent | null)
         .catch(() => null),
     [props.notebook_path],
   )

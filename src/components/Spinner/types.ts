@@ -1,3 +1,9 @@
-// Auto-generated stub — replace with real implementation
-export type SpinnerMode = unknown
-export type RGBColor = unknown
+/** Stream phase driving the spinner glyph and animation. */
+export type SpinnerMode = 'responding' | 'requesting' | 'thinking' | 'tool-use' | 'tool-input'
+
+/** RGB color used for spinner color interpolation. */
+export type RGBColor = {
+  r: number
+  g: number
+  b: number
+}

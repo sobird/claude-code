@@ -1,3 +1,5 @@
-// Auto-generated stub — replace with real implementation
-export type FeedbackSurveyResponse = unknown
-export type FeedbackSurveyType = unknown
+/** Digit-key response options shown by the feedback survey. */
+export type FeedbackSurveyResponse = 'dismissed' | 'bad' | 'fine' | 'good'
+
+/** Which survey surface produced the response; recorded in analytics. */
+export type FeedbackSurveyType = 'session' | 'post_compact' | 'memory'
