@@ -1251,6 +1251,31 @@ describe('activeStreamEvents', () => {
 
     expect(activeStreamEvents(frames)).toHaveLength(1)
   })
+
+  test('a durable subagent message only closes its own thread window', () => {
+    const frames: SessionEventInput[] = [
+      streamEvent(textDelta('main-prefix'), { seqNum: 9_000_000_001 }),
+      subagentStreamEvent(textDelta('sub-prefix'), 'toolu_x'),
+      event('assistant', { content: 'sub done', parent_tool_use_id: 'toolu_x' }, { seqNum: 5 }),
+      streamEvent(textDelta('main-tail'), { seqNum: 9_000_000_003 }),
+    ]
+
+    // The subagent's durable message retires its streamed prefix; the main
+    // thread is still streaming, so its deltas survive on both sides.
+    expect(activeStreamEvents(frames).map((frame) => frame.seqNum)).toEqual([9_000_000_001, 9_000_000_003])
+  })
+
+  test('a durable main-thread message keeps an in-flight subagent window', () => {
+    const frames: SessionEventInput[] = [
+      subagentStreamEvent(textDelta('sub-a'), 'toolu_x'),
+      event('assistant', { content: 'main done' }, { seqNum: 5 }),
+      subagentStreamEvent(textDelta('sub-b'), 'toolu_x'),
+    ]
+
+    expect(activeStreamEvents(frames).map((frame) => frame.seqNum)).toEqual(
+      frames.filter(isEphemeralEvent).map((frame) => frame.seqNum),
+    )
+  })
 })
 
 test('isEphemeralEvent recognizes stream frames even without the transport flag', () => {
@@ -1473,6 +1498,10 @@ function subagentAssistant(text: string, parent: string = AGENT_CALL): SessionEv
   return event('assistant', { content: text, parent_tool_use_id: parent })
 }
 
+function subagentStreamEvent(inner: Record<string, unknown>, parent: string = AGENT_CALL): SessionEventInput {
+  return event('stream_event', { type: 'stream_event', parent_tool_use_id: parent, event: inner }, { ephemeral: true })
+}
+
 describe('subagent messages', () => {
   test('subagent assistant text does not merge into the main assistant message', () => {
     let state = reduceSessionEvent(initialChatState, event('assistant', { content: 'main' }))
@@ -1578,19 +1607,81 @@ describe('subagent messages', () => {
     expect(tools(state)[0]?.toolCall.status).toBe('complete')
   })
 
-  test('a subagent stream delta does not pollute the main streaming bubble', () => {
+  test('a subagent stream delta streams in its own bubble under the Agent call', () => {
     let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('main')))
-    state = reduceSessionEvent(
-      state,
+    state = reduceSessionEvent(state, subagentStreamEvent(textDelta('sub')))
+
+    const streaming = assistants(state).filter((entry) => entry.streaming)
+    expect(streaming).toHaveLength(2)
+    expect(streaming.find((entry) => entry.parentToolUseId === undefined)?.chunks).toEqual([
+      { type: 'message', text: 'main' },
+    ])
+    expect(streaming.find((entry) => entry.parentToolUseId === AGENT_CALL)?.chunks).toEqual([
+      { type: 'message', text: 'sub' },
+    ])
+  })
+
+  test('interleaved deltas accumulate in their own threads', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('a')))
+    state = reduceSessionEvent(state, subagentStreamEvent(textDelta('x')))
+    state = reduceSessionEvent(state, streamEvent(textDelta('b')))
+    state = reduceSessionEvent(state, subagentStreamEvent(textDelta('y')))
+
+    const streaming = assistants(state).filter((entry) => entry.streaming)
+    expect(streaming.find((entry) => entry.parentToolUseId === undefined)?.chunks).toEqual([
+      { type: 'message', text: 'ab' },
+    ])
+    expect(streaming.find((entry) => entry.parentToolUseId === AGENT_CALL)?.chunks).toEqual([
+      { type: 'message', text: 'xy' },
+    ])
+  })
+
+  test('reads the parent pointer from gateway-normalized raw stream payloads', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
       event(
         'stream_event',
-        { type: 'stream_event', parent_tool_use_id: AGENT_CALL, event: textDelta('sub') },
+        { content: '', raw: { type: 'stream_event', parent_tool_use_id: AGENT_CALL, event: textDelta('sub') } },
         { ephemeral: true },
       ),
     )
 
-    expect(assistants(state)).toHaveLength(1)
-    expect(assistants(state)[0]?.chunks).toEqual([{ type: 'message', text: 'main' }])
+    expect(assistants(state)[0]?.parentToolUseId).toBe(AGENT_CALL)
+  })
+
+  test('message_start resets only its own thread', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('main')))
+    state = reduceSessionEvent(state, subagentStreamEvent(textDelta('sub')))
+    state = reduceSessionEvent(state, subagentStreamEvent({ type: 'message_start' }))
+    state = reduceSessionEvent(state, subagentStreamEvent(textDelta('next')))
+
+    const streaming = assistants(state).filter((entry) => entry.streaming)
+    expect(streaming.find((entry) => entry.parentToolUseId === undefined)?.chunks).toEqual([
+      { type: 'message', text: 'main' },
+    ])
+    expect(streaming.find((entry) => entry.parentToolUseId === AGENT_CALL)?.chunks).toEqual([
+      { type: 'message', text: 'next' },
+    ])
+  })
+
+  test('a durable subagent message replaces only its own streamed bubble', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('main')))
+    state = reduceSessionEvent(state, subagentStreamEvent(textDelta('sub')))
+    state = reduceSessionEvent(state, subagentAssistant('sub'))
+
+    const streaming = assistants(state).filter((entry) => entry.streaming)
+    expect(streaming).toHaveLength(1)
+    expect(streaming[0]?.chunks).toEqual([{ type: 'message', text: 'main' }])
+    const sub = assistants(state).find((entry) => entry.parentToolUseId === AGENT_CALL && !entry.streaming)
+    expect(sub?.chunks).toEqual([{ type: 'message', text: 'sub' }])
+  })
+
+  test('a turn result drops every thread\u2019s streaming bubble', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('main')))
+    state = reduceSessionEvent(state, subagentStreamEvent(textDelta('sub')))
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }))
+
+    expect(assistants(state).filter((entry) => entry.streaming)).toHaveLength(0)
   })
 })
 

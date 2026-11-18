@@ -30,6 +30,7 @@ import {
   reactivateInactiveSession,
   resolveExistingSessionId,
   resolveOwnedWebSessionId,
+  unarchiveSession,
   updateSessionStatus,
   updateSessionTitle,
 } from '../session.js'
@@ -180,6 +181,50 @@ describe('Session Service', () => {
       await archiveSession(repos, s.id)
       expect((await getSession(repos, s.id))?.status).toBe('archived')
       expect(getAllEventBuses().has(s.id)).toBe(false)
+    })
+  })
+
+  describe('unarchiveSession', () => {
+    test('restores an archived session to idle and publishes the status change', async () => {
+      const s = await createCodeSession(repos, {})
+      await archiveSession(repos, s.id)
+
+      await unarchiveSession(repos, s.id)
+
+      expect((await getSession(repos, s.id))?.status).toBe('idle')
+      const events = await repos.events.listSince(s.id, 0, 10)
+      expect(events.map((event) => event.payload)).toContainEqual({ status: 'idle' })
+    })
+
+    test('clears archivedAt set by the repository archive path', async () => {
+      const s = await createCodeSession(repos, {})
+      await repos.sessions.archive(s.id, new Date())
+      expect((await repos.sessions.getById(s.id))?.archivedAt).not.toBeNull()
+
+      await unarchiveSession(repos, s.id)
+
+      const record = await repos.sessions.getById(s.id)
+      expect(record?.archivedAt).toBeNull()
+      expect(record?.status).toBe('idle')
+    })
+
+    test('leaves a live session idle and ignores unknown ids', async () => {
+      await unarchiveSession(repos, 'cse_missing')
+      const s = await createCodeSession(repos, {})
+      await unarchiveSession(repos, s.id)
+      expect((await getSession(repos, s.id))?.status).toBe('idle')
+    })
+
+    test('makes the session visible in the owner listing again', async () => {
+      const s = await createSession(repos, { ownerUserId: 'alice' })
+      await archiveSession(repos, s.id)
+      expect(await listWebSessionsByOwner(repos, { id: 'alice', role: 'member' })).toHaveLength(0)
+
+      await unarchiveSession(repos, s.id)
+
+      expect((await listWebSessionsByOwner(repos, { id: 'alice', role: 'member' })).map((item) => item.id)).toEqual([
+        s.id,
+      ])
     })
   })
 

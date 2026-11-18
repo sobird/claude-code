@@ -223,6 +223,18 @@ export async function archiveSession(repos: Repositories, sessionId: string): Pr
   removeEventBus(canonicalId)
 }
 
+/**
+ * Restore an archived session to `idle`. Archiving is terminal for the disconnect
+ * monitor (`reactivateInactiveSession` refuses it), so only this explicit action
+ * clears it, including the `archivedAt` column set by repository-level archives.
+ */
+export async function unarchiveSession(repos: Repositories, sessionId: string): Promise<void> {
+  const record = await findSession(repos, sessionId)
+  if (!record) return
+  if (record.archivedAt !== null) await repos.sessions.update(record.id, { archivedAt: null })
+  await updateSessionStatus(repos, record.id, 'idle')
+}
+
 export async function incrementEpoch(repos: Repositories, sessionId: string): Promise<number> {
   const canonicalId = await resolveSessionId(repos, sessionId)
   if (!canonicalId) throw new Error('Session not found')

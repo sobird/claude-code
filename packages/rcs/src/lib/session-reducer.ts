@@ -353,8 +353,27 @@ function replaceEntry(entries: ThreadEntry[], index: number, entry: ThreadEntry)
 
 const STREAMING_ENTRY_ID = 'streaming'
 
-/** Remove the transient streamed bubble; the durable message replaces it. */
-function dropStreaming(state: ChatState): ChatState {
+/** Transient bubble id per thread; the main thread keeps the historical id. */
+function streamingEntryId(parentToolUseId?: string): string {
+  return parentToolUseId ? `${STREAMING_ENTRY_ID}:${parentToolUseId}` : STREAMING_ENTRY_ID
+}
+
+function isStreamingEntry(entry: ThreadEntry, parentToolUseId?: string): entry is AssistantMessageEntry {
+  return entry.type === 'assistant_message' && entry.streaming === true && entry.parentToolUseId === parentToolUseId
+}
+
+/**
+ * Remove the transient streamed bubble for one thread (`undefined` = main thread);
+ * the durable message replaces it. Threads stream independently, so a durable
+ * subagent message must not clear the main-thread prefix.
+ */
+function dropThreadStreaming(state: ChatState, parentToolUseId?: string): ChatState {
+  if (!state.entries.some((entry) => isStreamingEntry(entry, parentToolUseId))) return state
+  return { ...state, entries: state.entries.filter((entry) => !isStreamingEntry(entry, parentToolUseId)) }
+}
+
+/** The turn ended or was interrupted: every thread's streamed bubble is stale. */
+function dropAllStreaming(state: ChatState): ChatState {
   if (!state.entries.some((entry) => entry.type === 'assistant_message' && entry.streaming)) return state
   return {
     ...state,
@@ -362,13 +381,24 @@ function dropStreaming(state: ChatState): ChatState {
   }
 }
 
-function appendStreaming(state: ChatState, kind: 'message' | 'thought', text: string): ChatState {
+/**
+ * Append a delta to its thread's transient bubble. Threads interleave in the
+ * flat transcript, so the bubble is located by parent pointer rather than by
+ * position — a subagent delta never merges into the main thread's text.
+ */
+function appendStreaming(
+  state: ChatState,
+  kind: 'message' | 'thought',
+  text: string,
+  parentToolUseId?: string,
+): ChatState {
   if (!text) return state
   const chunk: AssistantChunk = kind === 'message' ? { type: 'message', text } : { type: 'thought', text }
-  const last = state.entries[state.entries.length - 1]
 
-  if (last && last.type === 'assistant_message' && last.streaming) {
-    const chunks = last.chunks.slice()
+  for (let i = state.entries.length - 1; i >= 0; i--) {
+    const entry = state.entries[i]
+    if (!entry || !isStreamingEntry(entry, parentToolUseId)) continue
+    const chunks = entry.chunks.slice()
     const lastChunk = chunks[chunks.length - 1]
     if (lastChunk && lastChunk.type === kind) {
       chunks[chunks.length - 1] =
@@ -378,14 +408,20 @@ function appendStreaming(state: ChatState, kind: 'message' | 'thought', text: st
     } else {
       chunks.push(chunk)
     }
-    return { ...state, entries: replaceEntry(state.entries, state.entries.length - 1, { ...last, chunks }) }
+    return { ...state, entries: replaceEntry(state.entries, i, { ...entry, chunks }) }
   }
 
   return {
     ...state,
     entries: [
       ...state.entries,
-      { type: 'assistant_message', id: STREAMING_ENTRY_ID, chunks: [chunk], streaming: true },
+      {
+        type: 'assistant_message',
+        id: streamingEntryId(parentToolUseId),
+        chunks: [chunk],
+        streaming: true,
+        ...(parentToolUseId ? { parentToolUseId } : {}),
+      },
     ],
   }
 }
@@ -460,9 +496,9 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
   const seenAssistantUuids = new Set(state.seenAssistantUuids)
   seenAssistantUuids.add(messageUuid)
 
-  // The durable main-thread message supersedes the streamed prefix. A subagent
-  // message says nothing about the main thread's stream, so it leaves it alone.
-  const base = parentToolUseId ? state : dropStreaming(state)
+  // A durable message supersedes its own thread's streamed prefix; other threads'
+  // bubbles (main vs. subagent) keep streaming.
+  const base = dropThreadStreaming(state, parentToolUseId)
   let entries = base.entries
   const text = typeof payload.content === 'string' ? payload.content : extractEventText(payload)
   if (text) entries = appendAssistantText(entries, text, nextId, parentToolUseId)
@@ -940,7 +976,7 @@ function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatSt
   const status = asText(payload.status)
   if (!status) return state
   // The turn stopped (idle/archived/inactive): any in-flight stream is stale.
-  const base = status === 'running' ? state : dropStreaming(state)
+  const base = status === 'running' ? state : dropAllStreaming(state)
   // A reported non-running state ends the queue window even if no result event
   // arrived (crashed or interrupted turns).
   const turnOpen = status === 'running' || status === 'requires_action'
@@ -962,28 +998,30 @@ function streamEventOf(payload: Record<string, unknown>): Record<string, unknown
   return payload
 }
 
-/** `stream_event` payloads wrap the raw SDK event under `event`. */
+/**
+ * `stream_event` payloads wrap the raw SDK event under `event`. Deltas are
+ * keyed by their thread (`parent_tool_use_id`): main-thread text streams in the
+ * plain bubble, while subagent text streams inside its own Agent card.
+ */
 function handleStreamEvent(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
-  // Subagent deltas are a separate stream; the transient bubble models the
-  // main thread only, so they are ignored until the overlay is parent-keyed.
-  if (parentToolUseIdOf(payload)) return state
+  const parentToolUseId = parentToolUseIdOf(payload)
   const stream = streamEventOf(payload)
   const type = asText(stream.type)
 
-  if (type === 'message_start') return dropStreaming(state)
+  if (type === 'message_start') return dropThreadStreaming(state, parentToolUseId)
   if (type !== 'content_block_delta') return state
 
   const delta = asRecord(stream.delta)
   if (!delta) return state
-  if (delta.type === 'text_delta') return appendStreaming(state, 'message', asText(delta.text))
-  if (delta.type === 'thinking_delta') return appendStreaming(state, 'thought', asText(delta.thinking))
+  if (delta.type === 'text_delta') return appendStreaming(state, 'message', asText(delta.text), parentToolUseId)
+  if (delta.type === 'thinking_delta') return appendStreaming(state, 'thought', asText(delta.thinking), parentToolUseId)
   return state
 }
 
 function handleResult(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
-  const base = dropStreaming(state)
+  const base = dropAllStreaming(state)
 
   // Close the running turn with its wall-clock length. The marker is dropped
   // when the start time is unknown (e.g. history older than the first page).
@@ -1119,7 +1157,7 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
     case 'result_success':
       return handleResult(state, event)
     case 'interrupt':
-      return dropStreaming(state)
+      return dropAllStreaming(state)
     default:
       // partial_assistant, task_state, automation_state, status, … are
       // intentionally ignored.
@@ -1150,14 +1188,34 @@ const TERMINAL_STREAM_EVENT_TYPES = new Set([
  * The live delta window to replay on top of durable history: every ephemeral
  * frame that arrived after the last terminal durable event. Feeding the whole
  * live log would resurrect a finished streamed bubble on each render pass.
+ *
+ * Windows are per thread: a durable assistant message retires only its own
+ * thread's prefix (a subagent finishing must not blank the main stream, and
+ * vice versa), while turn-ending events close every thread.
  */
 export function activeStreamEvents(events: readonly SessionEventInput[]): SessionEventInput[] {
-  let start = 0
+  let globalStart = 0
+  const threadStarts = new Map<string, number>()
+
+  // First pass: the last cut per thread (and the last turn-ending cut overall).
   for (let i = 0; i < events.length; i++) {
     const candidate = events[i]
-    if (candidate && !isEphemeralEvent(candidate) && TERMINAL_STREAM_EVENT_TYPES.has(candidate.type)) start = i + 1
+    if (!candidate || isEphemeralEvent(candidate)) continue
+    if (!TERMINAL_STREAM_EVENT_TYPES.has(candidate.type)) continue
+    if (candidate.type === 'assistant') {
+      threadStarts.set(parentToolUseIdOf(asRecord(candidate.payload) ?? {}) ?? '', i + 1)
+    } else {
+      globalStart = i + 1
+      threadStarts.clear()
+    }
   }
-  return events.slice(start).filter(isEphemeralEvent)
+
+  // Second pass: frames that survived every cut applying to their thread.
+  return events.filter((candidate, i) => {
+    if (!isEphemeralEvent(candidate)) return false
+    const thread = parentToolUseIdOf(asRecord(candidate.payload) ?? {}) ?? ''
+    return i >= globalStart && i >= (threadStarts.get(thread) ?? 0)
+  })
 }
 
 /** Fold a page of durable history (oldest→newest) through the reducer. */

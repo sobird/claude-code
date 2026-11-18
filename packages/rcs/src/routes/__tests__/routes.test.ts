@@ -213,6 +213,68 @@ describe('V1 Session Routes', () => {
     expect(body.status).toBe('archived')
   })
 
+  test('POST /v1/sessions/:id/unarchive restores an archived session', async () => {
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({}),
+    })
+    const { id } = await resJson(createRes)
+    await app.request(`/v1/sessions/${id}/archive`, { method: 'POST', headers: bearer(s.adminToken) })
+
+    const unarchiveRes = await app.request(`/v1/sessions/${id}/unarchive`, {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+    })
+    expect(unarchiveRes.status).toBe(200)
+
+    const getRes = await app.request(`/v1/sessions/${id}`, { headers: bearer(s.adminToken) })
+    expect(getRes.status).toBe(200)
+    expect((await resJson(getRes)).status).toBe('idle')
+  })
+
+  test('POST /v1/sessions/:id/unarchive resolves compat code session ids', async () => {
+    const createRes = await app.request('/v1/code/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({}),
+    })
+    const { session } = await resJson(createRes)
+    const compatId = toWebSessionId(session.id)
+    await app.request(`/v1/sessions/${compatId}/archive`, { method: 'POST', headers: bearer(s.adminToken) })
+
+    const unarchiveRes = await app.request(`/v1/sessions/${compatId}/unarchive`, {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+    })
+    expect(unarchiveRes.status).toBe(200)
+
+    const getRes = await app.request(`/v1/sessions/${compatId}`, { headers: bearer(s.adminToken) })
+    expect((await resJson(getRes)).status).toBe('idle')
+  })
+
+  test('POST /v1/sessions/:id/unarchive rejects another owner and unknown ids', async () => {
+    const mine = await s.repos.sessions.create({ ownerUserId: s.member.id, status: 'archived' })
+
+    const forbidden = await app.request(`/v1/sessions/${mine.id}/unarchive`, {
+      method: 'POST',
+      headers: bearer(s.otherToken),
+    })
+    expect(forbidden.status).toBe(403)
+
+    const missing = await app.request('/v1/sessions/cse_missing/unarchive', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+    })
+    expect(missing.status).toBe(404)
+
+    const owner = await app.request(`/v1/sessions/${mine.id}/unarchive`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(owner.status).toBe(200)
+  })
+
   test('POST /v1/sessions/:id/events publishes events', async () => {
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',

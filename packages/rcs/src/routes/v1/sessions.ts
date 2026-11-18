@@ -15,6 +15,7 @@ import {
   createSession,
   getSession,
   resolveOwnedWebSessionId,
+  unarchiveSession,
   updateSessionTitle,
 } from '../../services/session.js'
 import { createWorkItem } from '../../services/work-dispatch.js'
@@ -118,6 +119,18 @@ app.post('/:id/archive', legacyUserAuth, async (c) => {
   if (!owned) return forbidden(c)
 
   await archiveSession(repos, owned)
+  return c.json({ status: 'ok' }, 200)
+})
+
+/** POST /v1/sessions/:id/unarchive — Restore an archived session the caller owns. */
+app.post('/:id/unarchive', legacyUserAuth, async (c) => {
+  const repos = c.get('repos')
+  const requested = c.req.param('id')
+  if (!(await getSession(repos, requested))) return notFound(c)
+  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
+  if (!owned) return forbidden(c)
+
+  await unarchiveSession(repos, owned)
   return c.json({ status: 'ok' }, 200)
 })
 
