@@ -44,3 +44,15 @@ export function getBridgeBaseUrl(): string {
 export function isSelfHostedBridge(): boolean {
   return !!getBridgeBaseUrlOverride()
 }
+
+/**
+ * Org UUID header for bridge session API calls. Self-hosted gateways have no
+ * OAuth org, so they get a fixed sentinel; the real OAuth client otherwise.
+ */
+export async function getBridgeOrgUUID(): Promise<string | null> {
+  if (isSelfHostedBridge()) {
+    return 'self-hosted'
+  }
+  const { getOrganizationUUID } = await import('../services/oauth/client.js')
+  return getOrganizationUUID()
+}

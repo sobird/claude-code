@@ -57,7 +57,7 @@ export const features = [
   // 'HOOK_PROMPTS',
   // 'IS_LIBC_GLIBC',
   // 'IS_LIBC_MUSL',
-  // 'KAIROS',
+  'KAIROS',
   'KAIROS_BRIEF',
   // 'KAIROS_CHANNELS',
   // 'KAIROS_DREAM',
