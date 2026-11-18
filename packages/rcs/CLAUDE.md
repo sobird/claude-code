@@ -1,0 +1,41 @@
+# CLAUDE.md — packages/rcs
+
+Guidance for working inside `packages/rcs` (`@sobird/rcs`), the self-hosted
+remote-control server: Next.js 16 App Router UI, Bun/Hono gateway, Drizzle with
+Postgres, next-auth, serwist PWA.
+
+## Commands
+
+Run from the repository root (recommended — these never touch the CLI):
+
+- `bun run rcs:dev` — Next dev on :3000 + gateway on :4000
+- `bun run rcs:typecheck` — `tsc --noEmit` with `packages/rcs/tsconfig.json`
+- `bun run rcs:lint` — oxlint over `src/` and `server/` (root config, per-file tsconfig)
+- `bun run rcs:test` — `bun test` (PGlite; no Postgres required)
+- `bun run rcs:build` — `next build` (standalone output)
+
+From `packages/rcs`, the same scripts exist as `bun run dev|typecheck|test|build`,
+plus `bun run smoke` (boots the gateway in-process). TypeScript and oxlint come
+from the root install (hoisted); the package does not pin them.
+
+## Dev setup
+
+`bun run rcs:dev` needs Postgres 16 plus `DATABASE_URL`, `RCS_AUTH_SECRET` (any
+hex string), and on first boot `ADMIN_USERNAME` / `ADMIN_PASSWORD`. Put them in
+`packages/rcs/.env` — Bun loads it by cwd, and the repo-root `.env` belongs to
+the CLI. `RCS_WEB_CORS_ORIGINS` is auto-seeded in dev. See `.env.example` for the
+rest and `README.md` for the full environment table.
+
+## Boundaries
+
+- This package has no build-time dependency on the CLI's `src/`; keep it that
+  way. There is no `src/*` path alias — use relative imports only.
+- Root `typecheck` / `lint` / `test` exclude this package. Use the `rcs:*` gates;
+  do not widen the root gates to "fix" them.
+- Formatting is shared (root oxfmt): no semicolons, single quotes, 2-space indent,
+  120 columns.
+- Docker still builds from the repository root because this package is a Bun
+  workspace member; `Dockerfile.dockerignore` patterns are root-relative.
+- CI: `.github/workflows/rcs.yml`. Releases are manual (`0.1.0`);
+  release-please excludes `packages/rcs` from the CLI's versioning.
+- `next dev` writes a managed `AGENTS.md` here; it is gitignored.

@@ -1,3 +1,4 @@
 .next/
 *.tsbuildinfo
 next-env.d.ts
+AGENTS.md
