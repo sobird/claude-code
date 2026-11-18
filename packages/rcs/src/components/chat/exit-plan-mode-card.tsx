@@ -32,6 +32,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { MarkdownText } from './markdown'
 import { optionDetail, optionLabel } from './permission-option-labels'
 
+import styles from './exit-plan-mode-card.module.css'
+
 const EXIT_PLAN_MODE_TOOL_NAME = 'ExitPlanMode'
 
 export function isExitPlanModeRequest(toolName: string): boolean {
@@ -154,15 +156,12 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
 
   const promptsSection =
     allowedPrompts.length > 0 ? (
-      <div className="mt-3">
-        <div className="font-display text-[11px] text-text-muted">{t('allowedPrompts')}</div>
-        <div className="mt-1 flex flex-wrap gap-1.5">
+      <div className={styles.prompts}>
+        <div className={styles.promptsLabel}>{t('allowedPrompts')}</div>
+        <div className={styles.promptList}>
           {allowedPrompts.map((prompt, index) => (
-            <span
-              key={`${prompt.tool}-${index}`}
-              className="rounded-full border border-border bg-surface-1 px-2 py-0.5 font-mono text-[11px] text-text-secondary"
-            >
-              {prompt.tool ? <span className="text-brand">{prompt.tool}</span> : null}
+            <span key={`${prompt.tool}-${index}`} className={styles.promptChip}>
+              {prompt.tool ? <span className={styles.promptTool}>{prompt.tool}</span> : null}
               {prompt.tool && prompt.prompt ? ' · ' : null}
               {prompt.prompt}
             </span>
@@ -173,7 +172,7 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
 
   const extraOptionsSection =
     extraOptions.length > 0 ? (
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className={styles.extraOptions}>
         {extraOptions.map((option) => {
           const detail = optionDetail(option)
           return (
@@ -181,11 +180,11 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
               key={option.id}
               type="button"
               variant="surface"
-              className="h-9 gap-1.5 px-3 text-xs"
+              className={styles.optionButton}
               onClick={() => applyOption(option)}
             >
               <span>{optionLabel(option, tChat)}</span>
-              {detail ? <span className="font-mono text-[10px] text-text-muted">{detail}</span> : null}
+              {detail ? <span className={styles.detail}>{detail}</span> : null}
             </Button>
           )
         })}
@@ -193,30 +192,25 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
     ) : null
 
   const actions = denyOpen ? (
-    <div className="mt-3 space-y-1.5">
+    <div className={styles.denyForm}>
       <textarea
         ref={denyRef}
-        className="w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className={styles.denyInput}
         rows={2}
         placeholder={t('denyPlaceholder')}
         aria-label={t('deny')}
         value={feedback}
         onChange={(event) => setFeedback(event.target.value)}
       />
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="surface"
-          className="h-9 border-warning-border/40 px-3 text-warning-text hover:bg-warning-bg hover:text-warning-text"
-          onClick={submitDeny}
-        >
-          <X className="h-4 w-4" />
+      <div className={styles.denyButtons}>
+        <Button type="button" variant="surface" className={styles.denySendButton} onClick={submitDeny}>
+          <X className={styles.icon} />
           {t('sendDeny')}
         </Button>
         <Button
           type="button"
           variant="surface"
-          className="h-9 border-transparent bg-transparent px-3 shadow-none hover:bg-surface-2"
+          className={styles.cancelButton}
           onClick={() => {
             setDenyOpen(false)
             setFeedback('')
@@ -227,21 +221,16 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
       </div>
     </div>
   ) : (
-    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-      <Button type="button" variant="brand" className="h-11 sm:h-9 sm:px-4" onClick={() => approve(false)}>
-        <Check className="h-4 w-4" />
+    <div className={styles.actions}>
+      <Button type="button" variant="brand" className={styles.actionButton} onClick={() => approve(false)}>
+        <Check className={styles.icon} />
         {t('approve')}
       </Button>
-      <Button type="button" variant="surface" className="h-11 sm:h-9 sm:px-4" onClick={() => approve(true)}>
+      <Button type="button" variant="surface" className={styles.actionButton} onClick={() => approve(true)}>
         {t('approveAutoAccept')}
       </Button>
-      <Button
-        type="button"
-        variant="surface"
-        className="h-11 border-warning-border/40 bg-warning-bg/40 text-warning-text hover:bg-warning-bg hover:text-warning-text sm:h-9 sm:px-4"
-        onClick={() => setDenyOpen(true)}
-      >
-        <X className="h-4 w-4" />
+      <Button type="button" variant="surface" className={styles.denyActionButton} onClick={() => setDenyOpen(true)}>
+        <X className={styles.icon} />
         {t('deny')}
       </Button>
     </div>
@@ -249,29 +238,25 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
 
   return (
     <>
-      <div data-testid="exit-plan-mode-card" className="rounded-xl border border-brand/30 bg-brand/5 px-3 py-3 sm:px-4">
-        <div className="flex items-center gap-2 text-text-primary">
-          <ClipboardCheck className="h-4 w-4 flex-shrink-0 text-brand" aria-hidden="true" />
-          <span className="flex-1 font-display text-sm font-medium">{t('title')}</span>
+      <div data-testid="exit-plan-mode-card" className={styles.card}>
+        <div className={styles.header}>
+          <ClipboardCheck className={styles.headerIcon} aria-hidden="true" />
+          <span className={styles.title}>{t('title')}</span>
           {plan ? (
             <Button
               type="button"
               variant="surface"
               data-testid="exit-plan-view"
-              className="h-8 gap-1 px-2 text-xs"
+              className={styles.viewButton}
               onClick={() => setDialogOpen(true)}
             >
-              <Maximize2 className="h-3.5 w-3.5" />
+              <Maximize2 className={styles.icon} />
               {t('viewPlan')}
             </Button>
           ) : null}
         </div>
 
-        {plan ? (
-          <p className="mt-2 line-clamp-3 whitespace-pre-line text-xs leading-relaxed text-text-secondary">{preview}</p>
-        ) : (
-          <p className="mt-2 text-xs text-text-muted">{t('missingPlan')}</p>
-        )}
+        {plan ? <p className={styles.preview}>{preview}</p> : <p className={styles.missing}>{t('missingPlan')}</p>}
 
         {promptsSection}
 
@@ -297,14 +282,14 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
               dialogRef.current?.focus()
             }}
             onKeyDown={handleDialogKeyDown}
-            className="flex max-h-[85dvh] flex-col gap-3 rounded-2xl border-border bg-surface-1 shadow-2xl sm:max-w-2xl"
+            className={styles.dialog}
           >
             <DialogHeader>
-              <DialogTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</DialogTitle>
-              <DialogDescription className="text-sm text-text-muted">{t('dialogDescription')}</DialogDescription>
+              <DialogTitle className={styles.dialogTitle}>{t('title')}</DialogTitle>
+              <DialogDescription className={styles.dialogDescription}>{t('dialogDescription')}</DialogDescription>
             </DialogHeader>
 
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-surface-2/70 px-3 py-2">
+            <div className={styles.dialogBody}>
               <MarkdownText text={plan} />
             </div>
 
