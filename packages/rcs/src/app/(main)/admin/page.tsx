@@ -5,6 +5,8 @@ import { UserTable } from '../../../components/admin/user-table'
 import { SettingsApiProvider } from '../../../components/settings/use-settings-api'
 import { auth } from '../../../lib/auth'
 
+import styles from './page.module.css'
+
 interface SessionUser {
   id?: string
   role?: string
@@ -25,10 +27,10 @@ export default async function AdminPage() {
   const t = await getTranslations('admin')
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-text-primary">{t('title')}</h1>
-        <p className="text-sm text-text-secondary">{t('description')}</p>
+    <div className={styles.root}>
+      <header className={styles.header}>
+        <h1 className={styles.title}>{t('title')}</h1>
+        <p className={styles.description}>{t('description')}</p>
       </header>
 
       <SettingsApiProvider>

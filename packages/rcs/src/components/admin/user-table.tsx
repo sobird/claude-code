@@ -16,6 +16,8 @@ import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 
+import styles from './user-table.module.css'
+
 type Role = 'admin' | 'member'
 
 interface AdminUser {
@@ -67,7 +69,7 @@ function RoleSelect({
         if (next === 'admin' || next === 'member') onChange(next)
       }}
     >
-      <SelectTrigger size="sm" className="w-32 bg-surface-2" aria-label={t('role')} title={title}>
+      <SelectTrigger size="sm" className={styles.roleTrigger} aria-label={t('role')} title={title}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -82,7 +84,7 @@ function StatusPill({ user }: { user: AdminUser }) {
   const t = useTranslations('admin.status')
   const disabled = isDisabled(user)
   return (
-    <Badge variant={disabled ? 'destructive' : 'secondary'} className="text-[11px]">
+    <Badge variant={disabled ? 'destructive' : 'secondary'} className={styles.statusPill}>
       {disabled ? t('disabled') : t('enabled')}
     </Badge>
   )
@@ -117,7 +119,7 @@ function UserActions({
         {disabled ? t('enable') : t('disable')}
       </Button>
       <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={onResetPassword}>
-        <RotateCcw className="h-3.5 w-3.5" />
+        <RotateCcw className={styles.smallIcon} />
         {t('resetPassword')}
       </Button>
     </>
@@ -181,15 +183,15 @@ function CreateUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-2xl border-border bg-surface-1 sm:max-w-md">
+      <DialogContent className={styles.dialog}>
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</DialogTitle>
-          <DialogDescription className="text-sm text-text-muted">{t('description')}</DialogDescription>
+          <DialogTitle className={styles.dialogTitle}>{t('title')}</DialogTitle>
+          <DialogDescription className={styles.dialogDescription}>{t('description')}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="new-username" className="text-text-secondary">
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <Label htmlFor="new-username" className={styles.label}>
               {t('username')}
             </Label>
             <Input
@@ -198,12 +200,12 @@ function CreateUserDialog({
               onChange={(event) => setUsername(event.target.value)}
               autoComplete="off"
               disabled={pending}
-              className="bg-surface-2"
+              className={styles.input}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="new-display-name" className="text-text-secondary">
+          <div className={styles.field}>
+            <Label htmlFor="new-display-name" className={styles.label}>
               {t('displayName')}
             </Label>
             <Input
@@ -212,12 +214,12 @@ function CreateUserDialog({
               onChange={(event) => setDisplayName(event.target.value)}
               autoComplete="off"
               disabled={pending}
-              className="bg-surface-2"
+              className={styles.input}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="new-user-password" className="text-text-secondary">
+          <div className={styles.field}>
+            <Label htmlFor="new-user-password" className={styles.label}>
               {t('password')}
             </Label>
             <Input
@@ -227,13 +229,13 @@ function CreateUserDialog({
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="new-password"
               disabled={pending}
-              className="bg-surface-2"
+              className={styles.input}
             />
-            <p className="text-xs text-text-muted">{t('passwordHint')}</p>
+            <p className={styles.hint}>{t('passwordHint')}</p>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="new-user-role" className="text-text-secondary">
+          <div className={styles.field}>
+            <Label htmlFor="new-user-role" className={styles.label}>
               {t('role')}
             </Label>
             <Select
@@ -243,7 +245,7 @@ function CreateUserDialog({
               }}
               disabled={pending}
             >
-              <SelectTrigger id="new-user-role" className="w-full bg-surface-2">
+              <SelectTrigger id="new-user-role" className={styles.fullTrigger}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -254,7 +256,7 @@ function CreateUserDialog({
           </div>
 
           {error ? (
-            <p role="alert" className="text-sm text-status-error">
+            <p role="alert" className={styles.formError}>
               {error}
             </p>
           ) : null}
@@ -322,17 +324,17 @@ function ResetPasswordDialog({
         if (!open) onClose()
       }}
     >
-      <DialogContent className="rounded-2xl border-border bg-surface-1 sm:max-w-md">
+      <DialogContent className={styles.dialog}>
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</DialogTitle>
-          <DialogDescription className="text-sm text-text-muted">
+          <DialogTitle className={styles.dialogTitle}>{t('title')}</DialogTitle>
+          <DialogDescription className={styles.dialogDescription}>
             {t('description', { username: user?.username ?? t('thisUser') })}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="reset-password" className="text-text-secondary">
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <Label htmlFor="reset-password" className={styles.label}>
               {t('password')}
             </Label>
             <Input
@@ -342,12 +344,12 @@ function ResetPasswordDialog({
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="new-password"
               disabled={pending}
-              className="bg-surface-2"
+              className={styles.input}
             />
           </div>
 
           {error ? (
-            <p role="alert" className="text-sm text-status-error">
+            <p role="alert" className={styles.formError}>
               {error}
             </p>
           ) : null}
@@ -466,46 +468,37 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
   }
 
   return (
-    <Card className="border-border bg-surface-1">
+    <Card className={styles.card}>
       <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1.5">
-            <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</CardTitle>
-            <CardDescription className="text-sm text-text-muted">
+        <div className={styles.header}>
+          <div className={styles.heading}>
+            <CardTitle className={styles.title}>{t('title')}</CardTitle>
+            <CardDescription className={styles.description}>
               {t('description', { users: users.length, admins: enabledAdmins })}
             </CardDescription>
           </div>
           <Button type="button" variant="brand" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
+            <Plus className={styles.icon} />
             {t('create')}
           </Button>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className={styles.content}>
         {actionError !== null ? (
-          <p
-            role="alert"
-            className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error"
-          >
+          <p role="alert" className={styles.error}>
             {describeError(actionError, 'errors.generic')}
           </p>
         ) : null}
 
         {notice ? (
-          <p
-            role="status"
-            className="rounded-lg border border-status-active/30 bg-status-active/10 px-3 py-2 text-sm text-status-active"
-          >
+          <p role="status" className={styles.notice}>
             {notice}
           </p>
         ) : null}
 
         {errorMessage !== null ? (
-          <div
-            role="alert"
-            className="flex flex-col gap-2 rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error sm:flex-row sm:items-center sm:justify-between"
-          >
+          <div role="alert" className={styles.errorBanner}>
             <span>{errorMessage}</span>
             <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
               {tCommon('retry')}
@@ -514,42 +507,36 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
         ) : null}
 
         {loading && users.length === 0 ? (
-          <p className="text-sm text-text-muted">{t('loading')}</p>
+          <p className={styles.muted}>{t('loading')}</p>
         ) : users.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border bg-surface-2 p-6 text-center text-sm text-text-muted">
-            {t('empty')}
-          </div>
+          <div className={styles.empty}>{t('empty')}</div>
         ) : (
           <>
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-border text-xs uppercase tracking-wide text-text-muted">
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead className={styles.thead}>
                   <tr>
-                    <th className="px-4 py-3 font-medium">{tFields('user')}</th>
-                    <th className="px-4 py-3 font-medium">{tFields('role')}</th>
-                    <th className="px-4 py-3 font-medium">{tFields('status')}</th>
-                    <th className="px-4 py-3 font-medium">{tFields('created')}</th>
-                    <th className="px-4 py-3 text-right font-medium">{tFields('actions')}</th>
+                    <th className={styles.th}>{tFields('user')}</th>
+                    <th className={styles.th}>{tFields('role')}</th>
+                    <th className={styles.th}>{tFields('status')}</th>
+                    <th className={styles.th}>{tFields('created')}</th>
+                    <th className={styles.thEnd}>{tFields('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((user) => {
                     const lastAdmin = isLastEnabledAdmin(user)
                     return (
-                      <tr key={user.id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-3 align-middle">
-                          <div className="font-medium text-text-primary">
+                      <tr key={user.id} className={styles.tr}>
+                        <td className={styles.td}>
+                          <div className={styles.username}>
                             {user.username}
-                            {user.id === currentUserId ? (
-                              <span className="ml-1.5 text-xs font-normal text-text-muted">{t('you')}</span>
-                            ) : null}
+                            {user.id === currentUserId ? <span className={styles.you}>{t('you')}</span> : null}
                           </div>
-                          {user.display_name ? (
-                            <div className="text-xs text-text-muted">{user.display_name}</div>
-                          ) : null}
+                          {user.display_name ? <div className={styles.subtext}>{user.display_name}</div> : null}
                         </td>
-                        <td className="px-4 py-3 align-middle">
+                        <td className={styles.td}>
                           <RoleSelect
                             value={user.role}
                             disabled={busyId === user.id || lastAdmin}
@@ -557,14 +544,12 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
                             onChange={(role) => void mutateUser(user.id, { role })}
                           />
                         </td>
-                        <td className="px-4 py-3 align-middle">
+                        <td className={styles.td}>
                           <StatusPill user={user} />
                         </td>
-                        <td className="px-4 py-3 align-middle text-xs text-text-muted">
-                          {formatIsoDate(user.created_at, locale)}
-                        </td>
-                        <td className="px-4 py-3 align-middle">
-                          <div className="flex justify-end gap-2">
+                        <td className={styles.tdMuted}>{formatIsoDate(user.created_at, locale)}</td>
+                        <td className={styles.td}>
+                          <div className={styles.rowActions}>
                             <UserActions
                               user={user}
                               busy={busyId === user.id}
@@ -585,29 +570,25 @@ export function UserTable({ currentUserId }: { currentUserId: string }) {
             </div>
 
             {/* Mobile cards */}
-            <ul className="space-y-2 md:hidden">
+            <ul className={styles.cards}>
               {users.map((user) => {
                 const lastAdmin = isLastEnabledAdmin(user)
                 return (
-                  <li key={user.id} className="space-y-3 rounded-xl border border-border bg-surface-2 px-4 py-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium text-text-primary">
+                  <li key={user.id} className={styles.cardItem}>
+                    <div className={styles.cardHeader}>
+                      <div className={styles.cardBody}>
+                        <div className={styles.cardUsername}>
                           {user.username}
-                          {user.id === currentUserId ? (
-                            <span className="ml-1.5 text-xs font-normal text-text-muted">{t('you')}</span>
-                          ) : null}
+                          {user.id === currentUserId ? <span className={styles.you}>{t('you')}</span> : null}
                         </div>
-                        {user.display_name ? (
-                          <div className="truncate text-xs text-text-muted">{user.display_name}</div>
-                        ) : null}
+                        {user.display_name ? <div className={styles.cardSubtext}>{user.display_name}</div> : null}
                       </div>
                       <StatusPill user={user} />
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                    <div className={styles.cardMeta}>
                       <span>{t('createdAt', { date: formatIsoDate(user.created_at, locale) })}</span>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className={styles.cardActions}>
                       <RoleSelect
                         value={user.role}
                         disabled={busyId === user.id || lastAdmin}

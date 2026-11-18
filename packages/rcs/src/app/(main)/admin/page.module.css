@@ -1,0 +1,22 @@
+.root > * + * {
+  margin-top: 1.5rem;
+}
+
+.header > * + * {
+  margin-top: 0.25rem;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: calc(2 / 1.5);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-text-primary);
+}
+
+.description {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-secondary);
+}
