@@ -147,6 +147,7 @@
     "toolRawInput": "Raw input",
     "running": "running",
     "waiting": "waiting",
+    "agentSteps": "{count, plural, one {# step} other {# steps}}",
     "planTitle": "Execution plan",
     "turnDuration": "Took {seconds}s",
     "queued": "Queued",

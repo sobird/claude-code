@@ -440,7 +440,7 @@ export async function runBridgeLoop(
 
       // If the session was killed by the timeout watchdog, treat it as a
       // failed session (not a server/shutdown interrupt) so we still call
-      // stopWork and archiveSession below.
+      // stopWork below.
       const wasTimedOut = timedOutSessions.delete(sessionId)
       const status: SessionDoneStatus = wasTimedOut && rawStatus === 'interrupted' ? 'failed' : rawStatus
       const durationMs = Date.now() - startTime
@@ -509,20 +509,9 @@ export async function runBridgeLoop(
       // loop so the bridge exits cleanly.
       if (status !== 'interrupted' && !loopSignal.aborted) {
         if (config.spawnMode !== 'single-session') {
-          // Multi-session: archive the completed session so it doesn't linger
-          // as stale in the web UI. archiveSession is idempotent (409 if already
-          // archived), so double-archiving at shutdown is safe.
-          // sessionId arrived as cse_* from the work poll (infrastructure-layer
-          // tag). archiveSession hits /v1/sessions/{id}/archive which is the
-          // compat surface and validates TagSession (session_*). Re-tag — same
-          // UUID underneath.
-          trackCleanup(
-            api
-              .archiveSession(compatId)
-              .catch((err: unknown) =>
-                logger.logVerbose(`Failed to archive session ${sessionId}: ${errorMessage(err)}`),
-              ),
-          )
+          // Multi-session: leave the completed session resumable. Archiving it
+          // here would be terminal and force the user to start over; the web UI
+          // shows its real status from the session status events.
           logForDebugging(`[bridge:session] Session ${status}, returning to idle (multi-session mode)`)
         } else {
           // Single-session: coupled lifecycle — tear down environment
@@ -1217,21 +1206,11 @@ export async function runBridgeLoop(
     loop_duration_ms: loopDurationMs,
   })
 
-  // Graceful shutdown: kill active sessions, report them as interrupted,
-  // archive sessions, then deregister the environment so the web UI shows
-  // the bridge as offline.
-
-  // Collect all session IDs to archive on exit. This includes:
-  // 1. Active sessions (snapshot before killing — onSessionDone clears maps)
-  // 2. The initial auto-created session (may never have had work dispatched)
-  // api.archiveSession is idempotent (409 if already archived), so
-  // double-archiving is safe.
-  const sessionsToArchive = new Set(activeSessions.keys())
-  if (initialSessionId) {
-    sessionsToArchive.add(initialSessionId)
-  }
-  // Snapshot before killing — onSessionDone clears sessionCompatIds.
-  const compatIdSnapshot = new Map(sessionCompatIds)
+  // Graceful shutdown: kill active sessions, report them as interrupted, then
+  // deregister the environment so the web UI shows the bridge as offline.
+  // Sessions are deliberately left unarchived: archive is a user decision, and
+  // the gateway marks the session `inactive` (resumable) once the environment
+  // goes quiet.
 
   if (activeSessions.size > 0) {
     logForDebugging(`[bridge:shutdown] Shutting down ${activeSessions.size} active session(s)`)
@@ -1314,19 +1293,6 @@ export async function runBridgeLoop(
     logger.logStatus(`Resume this session by running \`claude remote-control --continue\``)
     logForDebugging(`[bridge:shutdown] Skipping archive+deregister to allow resume of session ${initialSessionId}`)
     return
-  }
-
-  // Archive all known sessions so they don't linger as idle/running on the
-  // server after the bridge goes offline.
-  if (sessionsToArchive.size > 0) {
-    logForDebugging(`[bridge:shutdown] Archiving ${sessionsToArchive.size} session(s)`)
-    await Promise.allSettled(
-      [...sessionsToArchive].map((sessionId) =>
-        api
-          .archiveSession(compatIdSnapshot.get(sessionId) ?? toCompatSessionId(sessionId))
-          .catch((err) => logger.logVerbose(`Failed to archive session ${sessionId}: ${errorMessage(err)}`)),
-      ),
-    )
   }
 
   // Deregister the environment so the web UI shows the bridge as offline

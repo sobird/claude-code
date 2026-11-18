@@ -65,11 +65,19 @@ export interface AssistantMessageEntry {
   chunks: AssistantChunk[]
   /** Transient bubble fed by `stream_event` deltas; replaced by the durable message. */
   streaming?: boolean
+  /**
+   * Agent tool call this message belongs to. Subagent traffic arrives as
+   * ordinary assistant/user messages tagged with `parent_tool_use_id`; the
+   * transcript stays flat and the view nests by this pointer.
+   */
+  parentToolUseId?: string
 }
 
 export interface ToolCallEntry {
   type: 'tool_call'
   toolCall: ToolCallData
+  /** Agent tool call this tool ran under, when issued by a subagent. */
+  parentToolUseId?: string
 }
 
 export type PlanEntryPriority = 'high' | 'medium' | 'low'
@@ -239,6 +247,19 @@ function asText(value: unknown): string {
 }
 
 /**
+ * Parent Agent tool call id for subagent traffic. The CLI puts
+ * `parent_tool_use_id` at the top level of derived assistant/user messages;
+ * the gateway's `normalizePayload` keeps the original under `raw`, so read
+ * either shape.
+ */
+function parentToolUseIdOf(payload: Record<string, unknown>): string | undefined {
+  const direct = asText(payload.parent_tool_use_id)
+  if (direct) return direct
+  const nested = asText(asRecord(payload.raw)?.parent_tool_use_id)
+  return nested || undefined
+}
+
+/**
  * Server time for history rows, client receive time for live frames: durable
  * rows carry `createdAt`, SSE frames only `receivedAt`.
  */
@@ -369,9 +390,16 @@ function appendStreaming(state: ChatState, kind: 'message' | 'thought', text: st
   }
 }
 
-function appendAssistantText(entries: ThreadEntry[], text: string, eventId: string): ThreadEntry[] {
+function appendAssistantText(
+  entries: ThreadEntry[],
+  text: string,
+  eventId: string,
+  parentToolUseId?: string,
+): ThreadEntry[] {
   const last = entries[entries.length - 1]
-  if (last && last.type === 'assistant_message') {
+  // Only continue a message from the same thread; a subagent turn never
+  // appends into the main-thread bubble (or into another agent's).
+  if (last && last.type === 'assistant_message' && last.parentToolUseId === parentToolUseId) {
     const chunks = last.chunks.slice()
     const lastChunk = chunks[chunks.length - 1]
     if (lastChunk && lastChunk.type === 'message') {
@@ -382,7 +410,15 @@ function appendAssistantText(entries: ThreadEntry[], text: string, eventId: stri
     return replaceEntry(entries, entries.length - 1, { ...last, chunks })
   }
 
-  return [...entries, { type: 'assistant_message', id: eventId, chunks: [{ type: 'message', text }] }]
+  return [
+    ...entries,
+    {
+      type: 'assistant_message',
+      id: eventId,
+      chunks: [{ type: 'message', text }],
+      ...(parentToolUseId ? { parentToolUseId } : {}),
+    },
+  ]
 }
 
 function collectToolUseBlocks(payload: Record<string, unknown>): Record<string, unknown>[] {
@@ -394,7 +430,11 @@ function collectToolUseBlocks(payload: Record<string, unknown>): Record<string, 
     .filter((block): block is Record<string, unknown> => !!block && block.type === 'tool_use')
 }
 
-function toolCallFromBlock(block: Record<string, unknown>, fallbackId: string): ToolCallEntry {
+function toolCallFromBlock(
+  block: Record<string, unknown>,
+  fallbackId: string,
+  parentToolUseId?: string,
+): ToolCallEntry {
   const input = asRecord(block.input)
   return {
     type: 'tool_call',
@@ -404,6 +444,7 @@ function toolCallFromBlock(block: Record<string, unknown>, fallbackId: string): 
       status: 'running',
       rawInput: input ?? {},
     },
+    ...(parentToolUseId ? { parentToolUseId } : {}),
   }
 }
 
@@ -411,6 +452,7 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
   const payload = asRecord(event.payload) ?? {}
   const seqNum = numericSeqNum(event)
   const nextId = event.id || `assistant-${seqNum ?? state.entries.length}`
+  const parentToolUseId = parentToolUseIdOf(payload)
 
   // A replayed assistant message carries the uuid it was first rendered under.
   const messageUuid = asText(payload.uuid) || nextId
@@ -418,18 +460,19 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
   const seenAssistantUuids = new Set(state.seenAssistantUuids)
   seenAssistantUuids.add(messageUuid)
 
-  // The durable message supersedes the streamed prefix.
-  const base = dropStreaming(state)
+  // The durable main-thread message supersedes the streamed prefix. A subagent
+  // message says nothing about the main thread's stream, so it leaves it alone.
+  const base = parentToolUseId ? state : dropStreaming(state)
   let entries = base.entries
   const text = typeof payload.content === 'string' ? payload.content : extractEventText(payload)
-  if (text) entries = appendAssistantText(entries, text, nextId)
+  if (text) entries = appendAssistantText(entries, text, nextId, parentToolUseId)
 
   const blocks = collectToolUseBlocks(payload)
   let tasks = base.tasks
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
     if (!block) continue
-    const entry = toolCallFromBlock(block, `call-${seqNum ?? entries.length}-${i}`)
+    const entry = toolCallFromBlock(block, `call-${seqNum ?? entries.length}-${i}`, parentToolUseId)
     entries = [...entries, entry]
     if (entry.toolCall.title === 'TodoWrite') {
       const parsed = tasksFromTodoWrite(entry.toolCall.rawInput)
@@ -453,6 +496,7 @@ function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
   const id = asText(payload.tool_call_id) || `call-${seqNum ?? state.entries.length}`
   const input = asRecord(payload.tool_input)
   const title = asText(payload.tool_name) || ''
+  const parentToolUseId = parentToolUseIdOf(payload)
   const entry: ToolCallEntry = {
     type: 'tool_call',
     toolCall: {
@@ -461,15 +505,23 @@ function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
       status: 'running',
       rawInput: input ?? {},
     },
+    ...(parentToolUseId ? { parentToolUseId } : {}),
   }
   const parsedTasks = title === 'TodoWrite' ? tasksFromTodoWrite(input) : null
   return { ...state, entries: [...state.entries, entry], ...(parsedTasks ? { tasks: parsedTasks } : {}) }
 }
 
-function mostRecentRunningIndex(entries: ThreadEntry[]): number {
+function mostRecentRunningIndex(entries: ThreadEntry[], parentToolUseId?: string): number {
   for (let i = entries.length - 1; i >= 0; i--) {
     const entry = entries[i]
-    if (entry && entry.type === 'tool_call' && entry.toolCall.status === 'running') return i
+    if (
+      entry &&
+      entry.type === 'tool_call' &&
+      entry.toolCall.status === 'running' &&
+      entry.parentToolUseId === parentToolUseId
+    ) {
+      return i
+    }
   }
   return -1
 }
@@ -518,7 +570,7 @@ function settleToolResult(entries: ThreadEntry[], result: ToolResultBlock): Thre
   const entry = entries[index]
   if (!entry || entry.type !== 'tool_call') return entries
   return replaceEntry(entries, index, {
-    type: 'tool_call',
+    ...entry,
     toolCall: {
       ...entry.toolCall,
       status: result.isError ? 'error' : 'complete',
@@ -531,9 +583,10 @@ function handleToolResult(state: ChatState, event: SessionEventInput): ChatState
   const payload = asRecord(event.payload) ?? {}
   const toolCallId = asText(payload.tool_call_id)
   // An explicitly named call that does not match stays a no-op. A missing/empty
-  // id is positional, so fall back to the most recent running call.
+  // id is positional, so fall back to the most recent running call in the same
+  // thread — subagent calls interleave in the flat transcript.
   let index = toolCallId ? findToolCallIndex(state.entries, toolCallId) : -1
-  if (!toolCallId) index = mostRecentRunningIndex(state.entries)
+  if (!toolCallId) index = mostRecentRunningIndex(state.entries, parentToolUseIdOf(payload))
   if (index < 0) return state
 
   const entry = state.entries[index]
@@ -541,7 +594,7 @@ function handleToolResult(state: ChatState, event: SessionEventInput): ChatState
 
   const output = payload.content ?? payload.output ?? ''
   const next: ToolCallEntry = {
-    type: 'tool_call',
+    ...entry,
     toolCall: {
       ...entry.toolCall,
       status: payload.is_error === true ? 'error' : 'complete',
@@ -684,8 +737,10 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
   if (alreadyBound) return { ...state, pendingPermissions }
 
   // Prefer the most recent running call for the same tool; fall back to the
-  // most recent running call of any kind. Calls already awaiting confirmation
-  // are never rebound to a different request.
+  // most recent running call in the same thread (subagent calls interleave in
+  // the flat transcript). Calls already awaiting confirmation are never
+  // rebound to a different request.
+  const parentToolUseId = parentToolUseIdOf(payload)
   let target = -1
   for (let i = state.entries.length - 1; i >= 0; i--) {
     const entry = state.entries[i]
@@ -693,18 +748,19 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
       entry &&
       entry.type === 'tool_call' &&
       entry.toolCall.status === 'running' &&
-      entry.toolCall.title === toolName
+      entry.toolCall.title === toolName &&
+      entry.parentToolUseId === parentToolUseId
     ) {
       target = i
       break
     }
   }
-  if (target < 0) target = mostRecentRunningIndex(state.entries)
+  if (target < 0) target = mostRecentRunningIndex(state.entries, parentToolUseId)
 
   if (target >= 0) {
     const entry = state.entries[target] as ToolCallEntry
     const updated: ToolCallEntry = {
-      type: 'tool_call',
+      ...entry,
       toolCall: {
         ...entry.toolCall,
         status: 'waiting_for_confirmation',
@@ -728,6 +784,7 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
       permissionRequest: { requestId, options: [] },
       isStandalonePermission: true,
     },
+    ...(parentToolUseId ? { parentToolUseId } : {}),
   }
   return {
     ...state,
@@ -805,7 +862,7 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
         ? 'running'
         : 'rejected'
     return {
-      type: 'tool_call' as const,
+      ...entry,
       toolCall: {
         ...entry.toolCall,
         status,
@@ -865,7 +922,7 @@ function handleControlCancel(state: ChatState, event: SessionEventInput): ChatSt
       if (entry.toolCall.isStandalonePermission) return []
       return [
         {
-          type: 'tool_call' as const,
+          ...entry,
           toolCall: { ...entry.toolCall, status: 'running' as const, permissionRequest: undefined },
         },
       ]
@@ -908,6 +965,9 @@ function streamEventOf(payload: Record<string, unknown>): Record<string, unknown
 /** `stream_event` payloads wrap the raw SDK event under `event`. */
 function handleStreamEvent(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
+  // Subagent deltas are a separate stream; the transient bubble models the
+  // main thread only, so they are ignored until the overlay is parent-keyed.
+  if (parentToolUseIdOf(payload)) return state
   const stream = streamEventOf(payload)
   const type = asText(stream.type)
 
@@ -993,6 +1053,9 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       for (const result of collectUserToolResults(payload)) {
         entries = settleToolResult(entries, result)
       }
+      // A subagent's user turn carries its tool results (and sometimes meta
+      // text); it is not a prompt the user typed, so it gets no bubble.
+      if (parentToolUseIdOf(payload)) return entries === state.entries ? state : { ...state, entries }
       const text = extractEventText(event.payload)
       // Image-only prompts have no text projection but still render.
       const attachments = extractUserAttachments(event.payload)

@@ -47,6 +47,7 @@ import {
   type CursorItem,
   type CursorKind,
 } from '../../lib/message-cursor'
+import { buildThreadTree } from '../../lib/message-tree'
 import { earlierStartIndex, windowStartIndex } from '../../lib/message-window'
 import { buildSetModelRequest, normalizeModelOptions, type ModelOption } from '../../lib/model-settings'
 import {
@@ -374,9 +375,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [entries, verbose],
   )
 
+  // Subagent traffic points at its Agent tool call; the transcript stays flat
+  // and is nested here at render time.
+  const tree = useMemo(() => buildThreadTree(displayEntries), [displayEntries])
+
   // Only a bounded window of grouped items is mounted; older ones are revealed
   // a chunk at a time before the server page behind them is fetched.
-  const keyed = useMemo<KeyedItem[]>(() => uniqueKeys(groupToolCalls(displayEntries), itemKey), [displayEntries])
+  const keyed = useMemo<KeyedItem[]>(() => uniqueKeys(groupToolCalls(tree.top), itemKey), [tree.top])
   const windowKeys = useMemo(() => keyed.map((item) => item.key), [keyed])
   const windowStart = windowStartIndex(windowKeys, pinnedKey)
   const visibleItems = useMemo(() => keyed.slice(windowStart), [keyed, windowStart])
@@ -1051,6 +1056,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 selectedKey={cursorKey}
                 isToolExpanded={isToolExpanded}
                 onToggleTools={toggleToolExpanded}
+                childrenByParent={tree.childrenByParent}
               />
             )}
             {failedSend ? (
@@ -1129,6 +1135,7 @@ function MessageThread({
   selectedKey,
   isToolExpanded,
   onToggleTools,
+  childrenByParent,
 }: {
   items: KeyedItem[]
   onEdit?: (text: string) => Promise<void> | void
@@ -1143,6 +1150,8 @@ function MessageThread({
   selectedKey: string | null
   isToolExpanded: (key: string) => boolean
   onToggleTools: (key: string) => void
+  /** Subagent transcript keyed by its parent Agent tool id. */
+  childrenByParent: Map<string, ThreadEntry[]>
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -1156,6 +1165,7 @@ function MessageThread({
               expandAll={expandAll}
               expanded={isToolExpanded(key)}
               onToggleExpanded={() => onToggleTools(key)}
+              childrenByParent={childrenByParent}
             />
           </div>
         ) : (

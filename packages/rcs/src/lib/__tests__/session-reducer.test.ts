@@ -1462,6 +1462,138 @@ describe('queued prompts', () => {
   })
 })
 
+// The CLI emits subagent traffic as ordinary assistant/user messages that carry
+// the parent Agent tool call id at the top level (`parent_tool_use_id`); the
+// gateway keeps the original message under `raw`. The reducer keeps one flat
+// transcript and records a parent pointer on each derived entry; the render
+// layer builds the tree from it.
+const AGENT_CALL = 'toolu_agent'
+
+function subagentAssistant(text: string, parent: string = AGENT_CALL): SessionEventInput {
+  return event('assistant', { content: text, parent_tool_use_id: parent })
+}
+
+describe('subagent messages', () => {
+  test('subagent assistant text does not merge into the main assistant message', () => {
+    let state = reduceSessionEvent(initialChatState, event('assistant', { content: 'main' }))
+    state = reduceSessionEvent(state, subagentAssistant('sub'))
+
+    const messages = assistants(state)
+    expect(messages).toHaveLength(2)
+    expect(messages[0]?.chunks).toEqual([{ type: 'message', text: 'main' }])
+    expect(messages[0]?.parentToolUseId).toBeUndefined()
+    expect(messages[1]?.chunks).toEqual([{ type: 'message', text: 'sub' }])
+    expect(messages[1]?.parentToolUseId).toBe(AGENT_CALL)
+  })
+
+  test('consecutive subagent messages under the same agent merge together', () => {
+    let state = reduceSessionEvent(initialChatState, subagentAssistant('part one '))
+    state = reduceSessionEvent(state, subagentAssistant('part two'))
+
+    expect(assistants(state)).toHaveLength(1)
+    expect(assistants(state)[0]?.chunks).toEqual([{ type: 'message', text: 'part one part two' }])
+  })
+
+  test('reads the parent pointer from the gateway-normalized raw payload', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        content: 'sub',
+        raw: {
+          type: 'assistant',
+          parent_tool_use_id: AGENT_CALL,
+          message: { content: [{ type: 'text', text: 'sub' }] },
+        },
+      }),
+    )
+
+    expect(assistants(state)[0]?.parentToolUseId).toBe(AGENT_CALL)
+  })
+
+  test('a subagent message does not drop the main thread streaming bubble', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('main')))
+    state = reduceSessionEvent(state, subagentAssistant('sub'))
+
+    const streaming = assistants(state).find((entry) => entry.streaming)
+    expect(streaming?.chunks).toEqual([{ type: 'message', text: 'main' }])
+    const sub = assistants(state).find((entry) => entry.parentToolUseId === AGENT_CALL)
+    expect(sub?.chunks).toEqual([{ type: 'message', text: 'sub' }])
+  })
+
+  test('subagent tool calls carry the parent pointer', () => {
+    const state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        parent_tool_use_id: AGENT_CALL,
+        message: { content: [{ type: 'tool_use', id: 'toolu_sub', name: 'Read', input: {} }] },
+      }),
+    )
+
+    const [call] = tools(state)
+    expect(call?.parentToolUseId).toBe(AGENT_CALL)
+  })
+
+  test('a positional tool_result settles a call in its own thread only', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('tool_use', { tool_call_id: 'call-main', tool_name: 'Read' }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('tool_use', { tool_call_id: 'toolu_sub', tool_name: 'Bash', parent_tool_use_id: AGENT_CALL }),
+    )
+    // No id, no parent: a main-thread result must skip the interleaved subagent call.
+    state = reduceSessionEvent(state, event('tool_result', { content: 'done' }))
+
+    let calls = tools(state)
+    expect(calls.find((call) => call.toolCall.id === 'call-main')?.toolCall.status).toBe('complete')
+    expect(calls.find((call) => call.toolCall.id === 'toolu_sub')?.toolCall.status).toBe('running')
+
+    state = reduceSessionEvent(state, event('tool_result', { content: 'sub done', parent_tool_use_id: AGENT_CALL }))
+    calls = tools(state)
+    expect(calls.find((call) => call.toolCall.id === 'toolu_sub')?.toolCall.status).toBe('complete')
+  })
+
+  test('a subagent user turn settles tool results without rendering a prompt bubble', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('tool_use', { tool_call_id: 'toolu_sub', tool_name: 'Bash', parent_tool_use_id: AGENT_CALL }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('user', {
+        parent_tool_use_id: AGENT_CALL,
+        content: 'internal note',
+        message: {
+          role: 'user',
+          content: [
+            { type: 'tool_result', tool_use_id: 'toolu_sub', content: 'ok' },
+            { type: 'text', text: 'internal note' },
+          ],
+        },
+      }),
+    )
+
+    expect(state.entries.filter((entry) => entry.type === 'user_message')).toHaveLength(0)
+    expect(tools(state)[0]?.toolCall.status).toBe('complete')
+  })
+
+  test('a subagent stream delta does not pollute the main streaming bubble', () => {
+    let state = reduceSessionEvent(initialChatState, streamEvent(textDelta('main')))
+    state = reduceSessionEvent(
+      state,
+      event(
+        'stream_event',
+        { type: 'stream_event', parent_tool_use_id: AGENT_CALL, event: textDelta('sub') },
+        { ephemeral: true },
+      ),
+    )
+
+    expect(assistants(state)).toHaveLength(1)
+    expect(assistants(state)[0]?.chunks).toEqual([{ type: 'message', text: 'main' }])
+  })
+})
+
 describe('token usage', () => {
   test('an assistant message records its usage', () => {
     const state = reduceSessionEvent(

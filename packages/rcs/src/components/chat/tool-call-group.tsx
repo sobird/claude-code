@@ -9,9 +9,16 @@ import { Check, ChevronRight, Loader2, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 
-import type { ToolCallData, ToolCallEntry, ToolCallStatus } from '../../lib/session-reducer'
+import type {
+  AssistantMessageEntry,
+  ThreadEntry,
+  ToolCallData,
+  ToolCallEntry,
+  ToolCallStatus,
+} from '../../lib/session-reducer'
 import { canonicalToolName, summarizeToolCall } from '../../lib/tool-summary'
 import { cn, uniqueKeys } from '../../lib/utils'
+import { AssistantBubble } from './message-bubble'
 
 type ChatTranslator = ReturnType<typeof useTranslations<'chat'>>
 
@@ -26,6 +33,11 @@ interface ToolCallGroupProps {
    */
   expanded?: boolean
   onToggleExpanded?: () => void
+  /**
+   * Subagent traffic keyed by its parent Agent tool id. Nested here rather than
+   * surfaced as separate transcript rows, so an agent's work reads as one card.
+   */
+  childrenByParent?: Map<string, ThreadEntry[]>
 }
 
 /** Renders a single tool card, or a collapsible group when calls are adjacent. */
@@ -34,6 +46,7 @@ export function ToolCallGroup({
   expandAll = false,
   expanded: controlled,
   onToggleExpanded,
+  childrenByParent,
 }: ToolCallGroupProps) {
   const t = useTranslations('chat')
   // `null` follows the global toggle; clicking a card pins its own state until
@@ -63,6 +76,8 @@ export function ToolCallGroup({
             expandAll={expandAll}
             expanded={controlled}
             onToggle={controlled !== undefined ? onToggleExpanded : undefined}
+            subagentEntries={childrenByParent?.get(only.toolCall.id)}
+            childrenByParent={childrenByParent}
           />
         ) : null}
       </div>
@@ -86,7 +101,14 @@ export function ToolCallGroup({
         {expanded ? (
           <div className="divide-y divide-border border-t border-border">
             {uniqueKeys(entries, (entry) => entry.toolCall.id).map(({ item, key }) => (
-              <SingleToolCard key={key} tool={item.toolCall} compact expandAll={expandAll} />
+              <SingleToolCard
+                key={key}
+                tool={item.toolCall}
+                compact
+                expandAll={expandAll}
+                subagentEntries={childrenByParent?.get(item.toolCall.id)}
+                childrenByParent={childrenByParent}
+              />
             ))}
           </div>
         ) : null}
@@ -102,9 +124,20 @@ interface SingleToolCardProps {
   /** Parent-controlled expansion for a single-card group (keyboard cursor). */
   expanded?: boolean
   onToggle?: () => void
+  /** Subagent transcript this call produced (keyed by its id). */
+  subagentEntries?: ThreadEntry[]
+  childrenByParent?: Map<string, ThreadEntry[]>
 }
 
-function SingleToolCard({ tool, compact, expandAll = false, expanded: controlled, onToggle }: SingleToolCardProps) {
+function SingleToolCard({
+  tool,
+  compact,
+  expandAll = false,
+  expanded: controlled,
+  onToggle,
+  subagentEntries,
+  childrenByParent,
+}: SingleToolCardProps) {
   const t = useTranslations('chat')
   const [override, setOverride] = useState<boolean | null>(null)
   // Compact cards start collapsed; standalone (non-compact) cards start open.
@@ -142,6 +175,11 @@ function SingleToolCard({ tool, compact, expandAll = false, expanded: controlled
         {tool.status === 'waiting_for_confirmation' ? (
           <span className="text-[10px] text-brand">{t('waiting')}</span>
         ) : null}
+        {subagentEntries && subagentEntries.length > 0 ? (
+          <span className="ml-auto flex-shrink-0 text-[10px] text-text-muted">
+            {t('agentSteps', { count: subagentEntries.length })}
+          </span>
+        ) : null}
       </button>
 
       {expanded ? (
@@ -176,9 +214,47 @@ function SingleToolCard({ tool, compact, expandAll = false, expanded: controlled
               {formatOutput(tool)}
             </pre>
           ) : null}
+          {subagentEntries && subagentEntries.length > 0 ? (
+            <div className="space-y-2 border-l border-border pl-3">
+              <SubagentTranscript entries={subagentEntries} expandAll={expandAll} childrenByParent={childrenByParent} />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
+  )
+}
+
+/**
+ * The visible trace of an Agent call: its assistant text and nested tool
+ * cards. Subagent user turns are tool-result carriers (no bubble), and
+ * plan/system rows belong to the main thread, so both are skipped.
+ */
+function SubagentTranscript({
+  entries,
+  expandAll,
+  childrenByParent,
+}: {
+  entries: ThreadEntry[]
+  expandAll: boolean
+  childrenByParent?: Map<string, ThreadEntry[]>
+}) {
+  const visible = entries.filter(
+    (entry): entry is AssistantMessageEntry | ToolCallEntry =>
+      entry.type === 'assistant_message' || entry.type === 'tool_call',
+  )
+  if (visible.length === 0) return null
+  return (
+    <>
+      {uniqueKeys(visible, (entry) => (entry.type === 'tool_call' ? entry.toolCall.id : entry.id)).map(
+        ({ item, key }) =>
+          item.type === 'assistant_message' ? (
+            <AssistantBubble key={key} entry={item} />
+          ) : (
+            <ToolCallGroup key={key} entries={[item]} expandAll={expandAll} childrenByParent={childrenByParent} />
+          ),
+      )}
+    </>
   )
 }
 

@@ -147,6 +147,7 @@
     "toolRawInput": "原始输入",
     "running": "运行中",
     "waiting": "等待中",
+    "agentSteps": "{count} 步",
     "planTitle": "执行计划",
     "turnDuration": "用时 {seconds} 秒",
     "queued": "排队中",
