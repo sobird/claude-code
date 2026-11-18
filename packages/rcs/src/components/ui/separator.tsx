@@ -3,7 +3,9 @@
 import { Separator as SeparatorPrimitive } from '@base-ui/react/separator'
 import type * as React from 'react'
 
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
+
+import styles from './separator.module.css'
 
 function Separator({
   className,
@@ -14,10 +16,7 @@ function Separator({
     <SeparatorPrimitive
       data-slot="separator"
       orientation={orientation}
-      className={cn(
-        'bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px',
-        className,
-      )}
+      className={cx(styles.root, className)}
       {...props}
     />
   )

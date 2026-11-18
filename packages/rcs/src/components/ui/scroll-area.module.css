@@ -1,0 +1,50 @@
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  .root {
+    position: relative;
+  }
+
+  .viewport {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    outline-style: none;
+    transition-property: color, box-shadow;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 0.15s;
+  }
+
+  .viewport:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ring) 50%, transparent);
+  }
+
+  .scrollbar {
+    display: flex;
+    padding: 1px;
+    user-select: none;
+    touch-action: none;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 0.15s;
+  }
+
+  .scrollbarVertical {
+    width: 0.625rem;
+    height: 100%;
+    border-left: 1px solid transparent;
+  }
+
+  .scrollbarHorizontal {
+    height: 0.625rem;
+    flex-direction: column;
+    border-top: 1px solid transparent;
+  }
+
+  .thumb {
+    position: relative;
+    flex: 1;
+    border-radius: calc(infinity * 1px);
+    background-color: var(--color-border);
+  }
+}

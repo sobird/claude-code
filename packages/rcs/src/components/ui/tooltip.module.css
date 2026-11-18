@@ -1,0 +1,30 @@
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  .positioner {
+    z-index: 50;
+  }
+
+  .content {
+    z-index: 50;
+    width: fit-content;
+    transform-origin: var(--transform-origin);
+    border-radius: 0.375rem;
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    text-wrap: balance;
+  }
+
+  .arrow {
+    z-index: 50;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 2px;
+    background-color: var(--color-foreground);
+    fill: var(--color-foreground);
+    transform: translateY(calc(-50% - 2px)) rotate(45deg);
+  }
+}

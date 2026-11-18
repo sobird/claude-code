@@ -3,7 +3,9 @@
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip'
 import type * as React from 'react'
 
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
+
+import styles from './tooltip.module.css'
 
 function TooltipProvider({ delay = 0, ...props }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delay} {...props} />
@@ -31,17 +33,10 @@ function TooltipContent({
 }) {
   return (
     <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Positioner sideOffset={sideOffset} className="z-50">
-        <TooltipPrimitive.Popup
-          data-slot="tooltip-content"
-          className={cn(
-            'bg-foreground text-background z-50 w-fit origin-(--transform-origin) rounded-md px-3 py-1.5 text-xs text-balance',
-            className,
-          )}
-          {...props}
-        >
+      <TooltipPrimitive.Positioner sideOffset={sideOffset} className={styles.positioner}>
+        <TooltipPrimitive.Popup data-slot="tooltip-content" className={cx(styles.content, className)} {...props}>
           {children}
-          <TooltipPrimitive.Arrow className="bg-foreground fill-foreground z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
+          <TooltipPrimitive.Arrow className={styles.arrow} />
         </TooltipPrimitive.Popup>
       </TooltipPrimitive.Positioner>
     </TooltipPrimitive.Portal>

@@ -1,0 +1,18 @@
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  .root {
+    flex-shrink: 0;
+    background-color: var(--color-border);
+  }
+
+  .root[data-orientation='horizontal'] {
+    height: 1px;
+    width: 100%;
+  }
+
+  .root[data-orientation='vertical'] {
+    height: 100%;
+    width: 1px;
+  }
+}
