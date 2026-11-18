@@ -342,6 +342,10 @@ export async function compactConversation(
   customInstructions?: string,
   isAutoCompact: boolean = false,
   recompactionInfo?: RecompactionInfo,
+  // Reactive compact runs PreCompact itself (it needs the hook's display
+  // message merged with compactConversation's PostCompact one) — pass true
+  // to avoid running them twice.
+  skipPreCompactHooks: boolean = false,
 ): Promise<CompactionResult> {
   try {
     if (messages.length === 0) {
@@ -353,22 +357,25 @@ export async function compactConversation(
     const appState = context.getAppState()
     void logPermissionContextForAnts(appState.toolPermissionContext, 'summary')
 
-    context.onCompactProgress?.({
-      type: 'hooks_start',
-      hookType: 'pre_compact',
-    })
+    let userDisplayMessage: string | undefined
+    if (!skipPreCompactHooks) {
+      context.onCompactProgress?.({
+        type: 'hooks_start',
+        hookType: 'pre_compact',
+      })
 
-    // Execute PreCompact hooks
-    context.setSDKStatus?.('compacting')
-    const hookResult = await executePreCompactHooks(
-      {
-        trigger: isAutoCompact ? 'auto' : 'manual',
-        customInstructions: customInstructions ?? null,
-      },
-      context.abortController.signal,
-    )
-    customInstructions = mergeHookInstructions(customInstructions, hookResult.newCustomInstructions)
-    const userDisplayMessage = hookResult.userDisplayMessage
+      // Execute PreCompact hooks
+      context.setSDKStatus?.('compacting')
+      const hookResult = await executePreCompactHooks(
+        {
+          trigger: isAutoCompact ? 'auto' : 'manual',
+          customInstructions: customInstructions ?? null,
+        },
+        context.abortController.signal,
+      )
+      customInstructions = mergeHookInstructions(customInstructions, hookResult.newCustomInstructions)
+      userDisplayMessage = hookResult.userDisplayMessage
+    }
 
     // Show requesting mode with up arrow and custom message
     context.setStreamMode?.('requesting')

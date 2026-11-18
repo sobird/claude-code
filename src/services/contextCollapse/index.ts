@@ -1,65 +1,31 @@
-import type { QuerySource } from '../../constants/querySource.js'
-import type { ToolUseContext } from '../../Tool.js'
-// Auto-generated stub — replace with real implementation
-import type { Message } from '../../types/message.js'
+/**
+ * Public surface of the context-collapse experiment.
+ *
+ * The store and projection live in operations.ts; this module re-exports
+ * them and owns the enable gate. `CLAUDE_CONTEXT_COLLAPSE` overrides the
+ * GrowthBook flag so the experiment can be exercised locally without waiting
+ * for an exposure (the flag key is an approximation — its name is not
+ * recoverable from the bundle).
+ */
 
-export interface ContextCollapseHealth {
-  totalSpawns: number
-  totalErrors: number
-  lastError: string | null
-  emptySpawnWarningEmitted: boolean
-  totalEmptySpawns: number
+import { isEnvTruthy } from '../../utils/envUtils.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
+
+export type { CollapseResult, ContextCollapseHealth, ContextCollapseStats, DrainResult } from './operations.js'
+
+export {
+  applyCollapsesIfNeeded,
+  getStats,
+  initContextCollapse,
+  isWithheldPromptTooLong,
+  recoverFromOverflow,
+  resetContextCollapse,
+  subscribe,
+} from './operations.js'
+
+export function isContextCollapseEnabled(): boolean {
+  if (isEnvTruthy(process.env.CLAUDE_CONTEXT_COLLAPSE)) {
+    return true
+  }
+  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_marble_origami', false)
 }
-
-export interface ContextCollapseStats {
-  collapsedSpans: number
-  collapsedMessages: number
-  stagedSpans: number
-  health: ContextCollapseHealth
-}
-
-export interface CollapseResult {
-  messages: Message[]
-}
-
-export interface DrainResult {
-  committed: number
-  messages: Message[]
-}
-
-export const getStats: () => ContextCollapseStats = () => ({
-  collapsedSpans: 0,
-  collapsedMessages: 0,
-  stagedSpans: 0,
-  health: {
-    totalSpawns: 0,
-    totalErrors: 0,
-    lastError: null,
-    emptySpawnWarningEmitted: false,
-    totalEmptySpawns: 0,
-  },
-})
-
-export const isContextCollapseEnabled: () => boolean = () => false
-
-export const subscribe: (callback: () => void) => () => void = (_callback: () => void) => () => {}
-
-export const applyCollapsesIfNeeded: (
-  messages: Message[],
-  toolUseContext: ToolUseContext,
-  querySource: QuerySource,
-) => Promise<CollapseResult> = async (messages: Message[]) => ({ messages })
-
-export const isWithheldPromptTooLong: (
-  message: Message,
-  isPromptTooLongMessage: (msg: Message) => boolean,
-  querySource: QuerySource,
-) => boolean = () => false
-
-export const recoverFromOverflow: (messages: Message[], querySource: QuerySource) => DrainResult = (
-  messages: Message[],
-) => ({ committed: 0, messages })
-
-export const resetContextCollapse: () => void = () => {}
-
-export const initContextCollapse: () => void = () => {}
