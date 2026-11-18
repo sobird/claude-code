@@ -74,10 +74,14 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
             <StatusIndicator state={connection} />
           </div>
 
-          <Button asChild variant="ghost" size="icon-sm" className={styles.dashboardButton} aria-label={t('dashboard')}>
-            <Link href="/">
-              <LayoutGrid className={styles.icon} />
-            </Link>
+          <Button
+            render={<Link href="/" />}
+            variant="ghost"
+            size="icon-sm"
+            className={styles.dashboardButton}
+            aria-label={t('dashboard')}
+          >
+            <LayoutGrid className={styles.icon} />
           </Button>
 
           <ThemeToggle />
