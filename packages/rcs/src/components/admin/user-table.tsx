@@ -70,7 +70,7 @@ function RoleSelect({
       }}
     >
       <SelectTrigger size="sm" className={styles.roleTrigger} aria-label={t('role')} title={title}>
-        <SelectValue />
+        <SelectValue items={{ admin: tCommon('role.admin'), member: tCommon('role.member') }} />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="admin">{tCommon('role.admin')}</SelectItem>
@@ -246,7 +246,7 @@ function CreateUserDialog({
               disabled={pending}
             >
               <SelectTrigger id="new-user-role" className={styles.fullTrigger}>
-                <SelectValue />
+                <SelectValue items={{ admin: tCommon('role.admin'), member: tCommon('role.member') }} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="member">{tCommon('role.member')}</SelectItem>

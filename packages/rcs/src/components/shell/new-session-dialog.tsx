@@ -59,6 +59,16 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
     }
   }
 
+  const environmentItems: Record<string, string> = {
+    [NO_ENVIRONMENT]: t('newSession.noEnvironment'),
+    ...Object.fromEntries(
+      environments.map((environment) => [
+        environment.id,
+        `${environment.machine_name || environment.id}${environment.branch ? ` (${environment.branch})` : ''}`,
+      ]),
+    ),
+  }
+
   return (
     <Dialog
       open={open}
@@ -91,9 +101,15 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
             <Label htmlFor="session-environment" className={styles.label}>
               {t('newSession.environmentLabel')}
             </Label>
-            <Select value={environmentId} onValueChange={setEnvironmentId} disabled={pending}>
+            <Select
+              value={environmentId}
+              onValueChange={(value) => {
+                if (value !== null) setEnvironmentId(value)
+              }}
+              disabled={pending}
+            >
               <SelectTrigger id="session-environment" className={styles.selectTrigger}>
-                <SelectValue placeholder={t('newSession.noEnvironment')} />
+                <SelectValue items={environmentItems} placeholder={t('newSession.noEnvironment')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={NO_ENVIRONMENT}>{t('newSession.noEnvironment')}</SelectItem>

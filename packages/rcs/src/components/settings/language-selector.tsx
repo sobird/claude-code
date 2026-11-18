@@ -67,11 +67,13 @@ export function LanguageSelector() {
           </Label>
           <Select
             value={isLocale(activeLocale) ? activeLocale : undefined}
-            onValueChange={(value) => void handleChange(value)}
+            onValueChange={(value) => {
+              if (value !== null) void handleChange(value)
+            }}
             disabled={saving}
           >
             <SelectTrigger id="language-select" className={styles.selectTrigger}>
-              <SelectValue />
+              <SelectValue items={labels} />
             </SelectTrigger>
             <SelectContent>
               {SUPPORTED_LOCALES.map((locale) => (
