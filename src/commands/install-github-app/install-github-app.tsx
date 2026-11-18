@@ -54,7 +54,7 @@ function InstallGitHubApp(props: { onDone: (message: string) => void }): React.R
     ...INITIAL_STATE,
     useExistingKey: !!existingApiKey,
     selectedApiKeyOption: existingApiKey ? 'existing' : isAnthropicAuthEnabled() ? 'oauth' : 'new',
-  })
+  } satisfies State)
   useExitOnCtrlCDWithKeybindings()
 
   React.useEffect(() => {

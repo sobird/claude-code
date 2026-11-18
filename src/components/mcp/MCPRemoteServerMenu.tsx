@@ -40,7 +40,7 @@ import type { ClaudeAIServerInfo, HTTPServerInfo, SSEServerInfo } from './types.
 import { handleReconnectError, handleReconnectResult } from './utils/reconnectHelpers.js'
 
 type Props = {
-  server: SSEServerInfo
+  server: SSEServerInfo | HTTPServerInfo | ClaudeAIServerInfo
   serverToolsCount: number
   onViewTools: () => void
   onCancel: () => void
@@ -237,7 +237,7 @@ export function MCPRemoteServerMenu({
     }
   })
 
-  const capitalizedServerName = capitalize(String(server.name))
+  const capitalizedServerName = capitalize(server.name)
 
   // Count MCP prompts for this server (skills are shown in /skills, not here)
   const serverCommandsCount = filterMcpPromptsByServer(mcp.commands, server.name).length

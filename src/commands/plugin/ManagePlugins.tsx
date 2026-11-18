@@ -12,7 +12,13 @@ import { MCPRemoteServerMenu } from '../../components/mcp/MCPRemoteServerMenu.js
 import { MCPStdioServerMenu } from '../../components/mcp/MCPStdioServerMenu.js'
 import { MCPToolDetailView } from '../../components/mcp/MCPToolDetailView.js'
 import { MCPToolListView } from '../../components/mcp/MCPToolListView.js'
-import type { ClaudeAIServerInfo, HTTPServerInfo, SSEServerInfo, StdioServerInfo } from '../../components/mcp/types.js'
+import type {
+  ClaudeAIServerInfo,
+  HTTPServerInfo,
+  SSEServerInfo,
+  ServerInfo,
+  StdioServerInfo,
+} from '../../components/mcp/types.js'
 import { SearchBox } from '../../components/SearchBox.js'
 import { useSearchInput } from '../../hooks/useSearchInput.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
@@ -2291,7 +2297,7 @@ export function ManagePlugins({
     const configType = client.config.type
 
     // Build ServerInfo for MCPToolListView
-    let server: StdioServerInfo
+    let server: ServerInfo
     if (configType === 'stdio') {
       server = {
         name: client.name,
@@ -2347,7 +2353,7 @@ export function ManagePlugins({
     const configType = client.config.type
 
     // Build ServerInfo for MCPToolDetailView
-    let server: StdioServerInfo
+    let server: ServerInfo
     if (configType === 'stdio') {
       server = {
         name: client.name,

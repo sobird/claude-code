@@ -15,7 +15,7 @@ import {
 import { jsonParse } from '../../utils/slowOperations.js'
 import { asSystemPrompt } from '../../utils/systemPromptType.js'
 
-type GeneratedAgent = {
+export type GeneratedAgent = {
   identifier: string
   whenToUse: string
   systemPrompt: string
