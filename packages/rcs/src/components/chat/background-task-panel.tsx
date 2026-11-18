@@ -19,6 +19,8 @@ import { useEffect, useState } from 'react'
 import { elapsedMs, type BackgroundTask } from '../../lib/background-tasks'
 import { formatTokenCount } from '../../lib/token-usage'
 
+import styles from './background-task-panel.module.css'
+
 function formatElapsed(ms: number): string {
   const seconds = Math.floor(ms / 1000)
   const minutes = Math.floor(seconds / 60)
@@ -61,20 +63,17 @@ export function BackgroundTaskPanel({
   if (tasks.length === 0) return null
 
   return (
-    <details
-      data-testid="background-task-panel"
-      className="group rounded-xl border border-border bg-surface-1 px-3 py-2"
-    >
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-text-secondary [&::-webkit-details-marker]:hidden">
-        <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-brand" aria-hidden="true" />
-        <span className="font-display font-medium text-text-primary" data-testid="background-task-panel-title">
+    <details data-testid="background-task-panel" className={styles.panel}>
+      <summary className={styles.summary}>
+        <Loader2 className={styles.spinner} aria-hidden="true" />
+        <span className={styles.title} data-testid="background-task-panel-title">
           {t('title', { count: tasks.length })}
         </span>
-        <span className="min-w-0 flex-1" />
-        <ChevronDown className="h-3.5 w-3.5 flex-shrink-0 transition-transform group-open:rotate-180" />
+        <span className={styles.spacer} />
+        <ChevronDown className={styles.chevron} />
       </summary>
 
-      <ul className="mt-2 space-y-1.5">
+      <ul className={styles.list}>
         {tasks.map((task) => {
           const elapsed = elapsedMs(task, now) ?? task.usage?.durationMs ?? null
           const meta = [
@@ -87,18 +86,16 @@ export function BackgroundTaskPanel({
           const isStopping = stopping.has(task.taskId)
 
           return (
-            <li key={task.taskId} className="flex items-start gap-2 text-xs leading-relaxed">
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium text-text-primary">{task.description || t('fallback')}</div>
-                {meta.length > 0 ? (
-                  <div className="truncate text-[11px] text-text-muted">{meta.join(' · ')}</div>
-                ) : null}
-                {task.summary ? <div className="truncate text-[11px] text-text-secondary">{task.summary}</div> : null}
+            <li key={task.taskId} className={styles.item}>
+              <div className={styles.itemBody}>
+                <div className={styles.description}>{task.description || t('fallback')}</div>
+                {meta.length > 0 ? <div className={styles.meta}>{meta.join(' · ')}</div> : null}
+                {task.summary ? <div className={styles.summaryText}>{task.summary}</div> : null}
               </div>
               {onStop ? (
                 <button
                   type="button"
-                  className="mt-0.5 flex flex-shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-text-muted transition-colors hover:bg-surface-2 hover:text-status-error disabled:cursor-default disabled:opacity-60"
+                  className={styles.stop}
                   aria-label={isStopping ? t('stopping') : t('stop')}
                   disabled={isStopping}
                   onClick={() => {
@@ -107,9 +104,9 @@ export function BackgroundTaskPanel({
                   }}
                 >
                   {isStopping ? (
-                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                    <Loader2 className={styles.stopSpinner} aria-hidden="true" />
                   ) : (
-                    <Square className="h-2.5 w-2.5" aria-hidden="true" />
+                    <Square className={styles.squareIcon} aria-hidden="true" />
                   )}
                   <span>{isStopping ? t('stopping') : t('stop')}</span>
                 </button>

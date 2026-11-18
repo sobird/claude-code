@@ -17,6 +17,8 @@ import { useEffect } from 'react'
 
 import { MarkdownText } from './markdown'
 
+import styles from './side-question-card.module.css'
+
 export interface SideQuestionState {
   question: string
   status: 'pending' | 'done' | 'error'
@@ -53,21 +55,15 @@ export function SideQuestionCard({
   if (!state) return null
 
   return (
-    <section
-      data-testid="side-question-card"
-      aria-live="polite"
-      className="rounded-xl border border-border bg-surface-1 px-3 py-2"
-    >
-      <header className="flex items-start gap-2">
-        <MessageCircleQuestion className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 font-display text-xs font-medium text-text-primary">
+    <section data-testid="side-question-card" aria-live="polite" className={styles.card}>
+      <header className={styles.header}>
+        <MessageCircleQuestion className={styles.questionIcon} aria-hidden="true" />
+        <div className={styles.headerBody}>
+          <div className={styles.titleRow}>
             <span>{t('title')}</span>
-            {state.status === 'pending' ? (
-              <Loader2 className="h-3 w-3 animate-spin text-brand" aria-hidden="true" />
-            ) : null}
+            {state.status === 'pending' ? <Loader2 className={styles.spinner} aria-hidden="true" /> : null}
           </div>
-          <div className="truncate text-[11px] text-text-muted" title={state.question}>
+          <div className={styles.question} title={state.question}>
             {state.question}
           </div>
         </div>
@@ -77,26 +73,22 @@ export function SideQuestionCard({
           aria-label={t('close')}
           title={t('close')}
           data-testid="side-question-close"
-          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
+          className={styles.close}
         >
-          <X className="h-3.5 w-3.5" />
+          <X className={styles.closeIcon} />
         </button>
       </header>
 
-      <div className="mt-2 text-xs leading-relaxed text-text-secondary">
+      <div className={styles.body}>
         {state.status === 'pending' ? (
-          <span className="text-text-muted" data-testid="side-question-answering">
+          <span className={styles.muted} data-testid="side-question-answering">
             {t('answering')}
           </span>
         ) : state.status === 'error' ? (
-          <div className="flex flex-wrap items-center gap-2" data-testid="side-question-error">
-            <span className="text-status-error">{state.error || t('error')}</span>
-            <button
-              type="button"
-              onClick={onRetry}
-              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-text-muted transition-colors hover:bg-surface-2 hover:text-brand"
-            >
-              <RotateCcw className="h-3 w-3" aria-hidden="true" />
+          <div className={styles.errorRow} data-testid="side-question-error">
+            <span className={styles.errorText}>{state.error || t('error')}</span>
+            <button type="button" onClick={onRetry} className={styles.retry}>
+              <RotateCcw className={styles.retryIcon} aria-hidden="true" />
               {t('retry')}
             </button>
           </div>
@@ -105,13 +97,13 @@ export function SideQuestionCard({
             <MarkdownText text={state.answer} />
           </div>
         ) : (
-          <span className="text-text-muted" data-testid="side-question-empty">
+          <span className={styles.muted} data-testid="side-question-empty">
             {t('empty')}
           </span>
         )}
       </div>
 
-      <p className="mt-1.5 text-[11px] text-text-muted">{t('hint')}</p>
+      <p className={styles.hint}>{t('hint')}</p>
     </section>
   )
 }

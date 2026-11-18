@@ -10,7 +10,9 @@ import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import type { PlanDisplayEntry, PlanEntry, PlanEntryPriority, PlanEntryStatus } from '../../lib/session-reducer'
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
+
+import styles from './plan-view.module.css'
 
 export function PlanView({ entry }: { entry: PlanDisplayEntry }) {
   const t = useTranslations('chat')
@@ -24,35 +26,27 @@ export function PlanView({ entry }: { entry: PlanDisplayEntry }) {
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
 
   return (
-    <div className="pl-0 sm:pl-11">
-      <div className="overflow-hidden rounded-xl border border-border bg-brand/5">
+    <div className={styles.root}>
+      <div className={styles.box}>
         <button
           type="button"
-          className="flex w-full items-center gap-2 px-3 py-2.5 text-sm transition-colors hover:bg-surface-1/50"
+          className={styles.toggle}
           onClick={() => setCollapsed(!collapsed)}
           aria-expanded={!collapsed}
         >
-          <ChevronRight
-            className={cn('h-3 w-3 flex-shrink-0 text-text-muted transition-transform', !collapsed && 'rotate-90')}
-            aria-hidden="true"
-          />
-          <span className="font-display text-xs font-medium text-text-secondary">{t('planTitle')}</span>
-          <span className="font-mono text-[10px] text-text-muted">
+          <ChevronRight className={cx(styles.chevron, !collapsed && styles.chevronOpen)} aria-hidden="true" />
+          <span className={styles.heading}>{t('planTitle')}</span>
+          <span className={styles.count}>
             {completed}/{total}
           </span>
-          <div className="ml-1 mr-2 h-1 flex-1 overflow-hidden rounded-full bg-surface-1">
-            <div
-              className="h-full rounded-full bg-brand/70 transition-all duration-500"
-              style={{ width: `${percentage}%` }}
-            />
+          <div className={styles.track}>
+            <div className={styles.bar} style={{ width: `${percentage}%` }} />
           </div>
-          <span className="font-mono text-[10px] text-text-muted">{percentage}%</span>
+          <span className={styles.percentage}>{percentage}%</span>
         </button>
 
         {!collapsed ? (
-          <div
-            className={cn('space-y-0.5 border-t border-border px-3 py-1.5', total > 5 && 'max-h-64 overflow-y-auto')}
-          >
+          <div className={cx(styles.entries, total > 5 && styles.entriesScroll)}>
             {entries.map((planEntry) => (
               <PlanEntryRow key={`${planEntry.priority}-${planEntry.content}`} entry={planEntry} />
             ))}
@@ -65,15 +59,15 @@ export function PlanView({ entry }: { entry: PlanDisplayEntry }) {
 
 function PlanEntryRow({ entry }: { entry: PlanEntry }) {
   return (
-    <div className="flex items-start gap-2 px-1 py-1.5">
-      <span className="mt-0.5 flex-shrink-0">
+    <div className={styles.row}>
+      <span className={styles.rowIconWrap}>
         <StatusIcon status={entry.status} />
       </span>
       <span
-        className={cn(
-          'flex-1 text-xs leading-relaxed',
-          entry.status === 'completed' ? 'text-text-muted line-through' : 'text-text-secondary',
-          entry.status === 'in_progress' && 'font-medium text-text-primary',
+        className={cx(
+          styles.entryContent,
+          entry.status === 'completed' ? styles.done : styles.pendingText,
+          entry.status === 'in_progress' && styles.active,
         )}
       >
         {entry.content}
@@ -86,37 +80,22 @@ function PlanEntryRow({ entry }: { entry: PlanEntry }) {
 function StatusIcon({ status }: { status: PlanEntryStatus }) {
   switch (status) {
     case 'completed':
-      return <CheckCircle2 className="h-3.5 w-3.5 text-status-active" aria-hidden="true" />
+      return <CheckCircle2 className={cx(styles.statusIcon, styles.statusActive)} aria-hidden="true" />
     case 'in_progress':
-      return (
-        <Loader2
-          className="h-3.5 w-3.5 animate-spin text-brand"
-          style={{ animationDuration: '2s' }}
-          aria-hidden="true"
-        />
-      )
+      return <Loader2 className={styles.spinner} style={{ animationDuration: '2s' }} aria-hidden="true" />
     case 'pending':
     default:
-      return <Circle className="h-3.5 w-3.5 text-text-muted" aria-hidden="true" />
+      return <Circle className={cx(styles.statusIcon, styles.statusMuted)} aria-hidden="true" />
   }
 }
 
 const PRIORITY_STYLES: Record<PlanEntryPriority, string> = {
-  high: 'bg-status-error/10 text-status-error dark:bg-status-error/20',
-  medium: 'bg-brand/10 text-brand dark:bg-brand/20',
-  low: 'bg-surface-1 text-text-muted',
+  high: styles.priorityHigh,
+  medium: styles.priorityMedium,
+  low: styles.priorityLow,
 }
 
 function PriorityBadge({ priority }: { priority: PlanEntryPriority }) {
   const t = useTranslations('chat.priority')
-  return (
-    <span
-      className={cn(
-        'flex-shrink-0 rounded-full px-1.5 py-0.5 font-display text-[9px] leading-none',
-        PRIORITY_STYLES[priority],
-      )}
-    >
-      {t(priority)}
-    </span>
-  )
+  return <span className={cx(styles.priority, PRIORITY_STYLES[priority])}>{t(priority)}</span>
 }

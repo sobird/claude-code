@@ -12,12 +12,14 @@ import { CheckCircle2, ChevronDown, Circle, CircleDot, ListChecks } from 'lucide
 import { useTranslations } from 'next-intl'
 
 import { shouldShowTaskPanel, taskProgress, type TaskItem } from '../../lib/tasks'
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
+
+import styles from './task-panel.module.css'
 
 function TaskIcon({ status }: { status: TaskItem['status'] }) {
-  if (status === 'completed') return <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-brand" />
-  if (status === 'in_progress') return <CircleDot className="h-3.5 w-3.5 flex-shrink-0 text-brand" />
-  return <Circle className="h-3.5 w-3.5 flex-shrink-0 text-text-muted" />
+  if (status === 'completed') return <CheckCircle2 className={cx(styles.taskIcon, styles.brand)} />
+  if (status === 'in_progress') return <CircleDot className={cx(styles.taskIcon, styles.brand)} />
+  return <Circle className={cx(styles.taskIcon, styles.muted)} />
 }
 
 export function TaskPanel({ tasks }: { tasks: TaskItem[] }) {
@@ -30,40 +32,37 @@ export function TaskPanel({ tasks }: { tasks: TaskItem[] }) {
   const percent = total > 0 ? Math.round((done / total) * 100) : 0
 
   return (
-    <details data-testid="task-panel" className="group rounded-xl border border-border bg-surface-1 px-3 py-2">
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-text-secondary [&::-webkit-details-marker]:hidden">
-        <ListChecks className="h-4 w-4 flex-shrink-0 text-brand" aria-hidden="true" />
-        <span className="font-display font-medium text-text-primary">{t('title')}</span>
-        <span className="font-mono text-[11px] text-text-muted" data-testid="task-panel-progress">
+    <details data-testid="task-panel" className={styles.panel}>
+      <summary className={styles.summary}>
+        <ListChecks className={styles.panelIcon} aria-hidden="true" />
+        <span className={styles.title}>{t('title')}</span>
+        <span className={styles.progress} data-testid="task-panel-progress">
           {t('progress', { done, total })}
         </span>
-        <span className="min-w-0 flex-1 truncate text-text-muted">{activeLabel}</span>
-        <ChevronDown className="h-3.5 w-3.5 flex-shrink-0 transition-transform group-open:rotate-180" />
+        <span className={styles.activeLabel}>{activeLabel}</span>
+        <ChevronDown className={styles.chevron} />
       </summary>
 
-      <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-2">
-        <div
-          className="h-full rounded-full bg-brand transition-[width] duration-300"
-          style={{ width: `${percent}%` }}
-        />
+      <div className={styles.track}>
+        <div className={styles.bar} style={{ width: `${percent}%` }} />
       </div>
 
-      <ul className="mt-2 space-y-1">
+      <ul className={styles.list}>
         {tasks.map((task) => (
-          <li key={task.id} className="flex items-start gap-2 text-xs leading-relaxed">
-            <span className="mt-0.5">
+          <li key={task.id} className={styles.item}>
+            <span className={styles.itemIconWrap}>
               <TaskIcon status={task.status} />
             </span>
             <span
-              className={cn(
-                'min-w-0 flex-1',
-                task.status === 'completed' ? 'text-text-muted line-through' : 'text-text-secondary',
-                task.status === 'in_progress' && 'font-medium text-text-primary',
+              className={cx(
+                styles.itemContent,
+                task.status === 'completed' ? styles.done : styles.pendingText,
+                task.status === 'in_progress' && styles.active,
               )}
             >
               {task.content}
               {task.status === 'in_progress' && task.activeForm ? (
-                <span className="ml-1.5 text-[11px] font-normal text-text-muted">· {task.activeForm}</span>
+                <span className={styles.activeForm}>· {task.activeForm}</span>
               ) : null}
             </span>
           </li>
