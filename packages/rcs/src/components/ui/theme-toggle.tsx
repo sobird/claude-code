@@ -20,11 +20,9 @@ export function ThemeToggle() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" className="h-8 w-8">
-          {resolvedTheme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-          <span className="sr-only">{t('toggleTheme')}</span>
-        </Button>
+      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" className="h-8 w-8" />}>
+        {resolvedTheme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+        <span className="sr-only">{t('toggleTheme')}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {themeOptions.map((option) => (

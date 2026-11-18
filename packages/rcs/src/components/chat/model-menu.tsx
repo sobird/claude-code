@@ -98,16 +98,19 @@ export function ModelMenu({
         }
       }}
     >
-      <DropdownMenuTrigger asChild disabled={disabled || pending}>
-        <button
-          type="button"
-          data-testid="model-menu-trigger"
-          aria-label={t('label')}
-          className={cx(styles.trigger, className)}
-        >
-          <span className={styles.label}>{currentLabel}</span>
-          <ChevronDown className={styles.icon} aria-hidden="true" />
-        </button>
+      <DropdownMenuTrigger
+        disabled={disabled || pending}
+        render={
+          <button
+            type="button"
+            data-testid="model-menu-trigger"
+            aria-label={t('label')}
+            className={cx(styles.trigger, className)}
+          />
+        }
+      >
+        <span className={styles.label}>{currentLabel}</span>
+        <ChevronDown className={styles.icon} aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={styles.menu}>
         <DropdownMenuLabel>{t('label')}</DropdownMenuLabel>
@@ -118,7 +121,7 @@ export function ModelMenu({
             key={option.value}
             data-testid={`model-option-${option.value}`}
             disabled={pending}
-            onSelect={() => onSelect(option.value)}
+            onClick={() => onSelect(option.value)}
           >
             <span className={styles.optionBody}>
               <span className={styles.optionName}>{option.displayName}</span>
@@ -128,7 +131,7 @@ export function ModelMenu({
           </DropdownMenuItem>
         ))}
         {listState === 'ready' && listed.length === 0 ? <div className={styles.state}>{t('empty')}</div> : null}
-        <DropdownMenuItem data-testid="model-default" disabled={pending} onSelect={() => onSelect(null)}>
+        <DropdownMenuItem data-testid="model-default" disabled={pending} onClick={() => onSelect(null)}>
           <span className={styles.optionLabel}>{t('default')}</span>
           {model === null ? <Check className={styles.check} aria-hidden="true" /> : null}
         </DropdownMenuItem>
@@ -136,8 +139,8 @@ export function ModelMenu({
         <DropdownMenuItem
           data-testid="model-custom"
           disabled={pending}
-          onSelect={(event) => {
-            event.preventDefault()
+          closeOnClick={false}
+          onClick={() => {
             setCustomOpen(true)
             requestAnimationFrame(() => inputRef.current?.focus())
           }}

@@ -49,16 +49,19 @@ export function PermissionModeMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={disabled || pending}>
-        <button
-          type="button"
-          data-testid="permission-mode-trigger"
-          aria-label={t('label')}
-          className={cx(styles.trigger, className)}
-        >
-          <span className={styles.label}>{currentLabel}</span>
-          <ChevronDown className={styles.icon} aria-hidden="true" />
-        </button>
+      <DropdownMenuTrigger
+        disabled={disabled || pending}
+        render={
+          <button
+            type="button"
+            data-testid="permission-mode-trigger"
+            aria-label={t('label')}
+            className={cx(styles.trigger, className)}
+          />
+        }
+      >
+        <span className={styles.label}>{currentLabel}</span>
+        <ChevronDown className={styles.icon} aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={styles.menu}>
         <DropdownMenuLabel>{t('label')}</DropdownMenuLabel>
@@ -68,7 +71,7 @@ export function PermissionModeMenu({
             key={option}
             data-testid={`permission-mode-${option}`}
             disabled={pending}
-            onSelect={() => onSelect(option)}
+            onClick={() => onSelect(option)}
           >
             <span className={styles.optionLabel}>{t.has(option) ? t(option) : option}</span>
             {option === mode ? <Check className={styles.check} aria-hidden="true" /> : null}

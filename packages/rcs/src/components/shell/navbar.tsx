@@ -87,11 +87,9 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
           <ThemeToggle />
 
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className={styles.accountTrigger}>
-                <span className={styles.avatar}>{initial}</span>
-                <span className={styles.accountName}>{user.name || t('account')}</span>
-              </Button>
+            <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className={styles.accountTrigger} />}>
+              <span className={styles.avatar}>{initial}</span>
+              <span className={styles.accountName}>{user.name || t('account')}</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className={styles.menuContent}>
               <DropdownMenuLabel>
@@ -99,27 +97,21 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
                 <div className={styles.menuRole}>{roleLabel}</div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/settings" className={styles.menuLink}>
-                  <Settings className={styles.icon} />
-                  {t('settings')}
-                </Link>
+              <DropdownMenuItem render={<Link href="/settings" className={styles.menuLink} />}>
+                <Settings className={styles.icon} />
+                {t('settings')}
               </DropdownMenuItem>
               {user.role === 'admin' ? (
-                <DropdownMenuItem asChild>
-                  <Link href="/admin" className={styles.menuLink}>
-                    <Shield className={styles.icon} />
-                    {t('admin')}
-                  </Link>
+                <DropdownMenuItem render={<Link href="/admin" className={styles.menuLink} />}>
+                  <Shield className={styles.icon} />
+                  {t('admin')}
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuSeparator />
               <form action={signOutAction}>
-                <DropdownMenuItem asChild>
-                  <button type="submit" className={styles.signOutButton}>
-                    <LogOut className={styles.icon} />
-                    {t('signOut')}
-                  </button>
+                <DropdownMenuItem render={<button type="submit" className={styles.signOutButton} />}>
+                  <LogOut className={styles.icon} />
+                  {t('signOut')}
                 </DropdownMenuItem>
               </form>
             </DropdownMenuContent>

@@ -43,17 +43,20 @@ export function ThinkingMenu({ value, pending = false, disabled = false, onSelec
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={disabled || pending}>
-        <button
-          type="button"
-          data-testid="thinking-menu-trigger"
-          aria-label={t('label')}
-          className={cx(styles.trigger, className)}
-        >
-          <Brain className={styles.icon} aria-hidden="true" />
-          <span className={styles.label}>{currentLabel}</span>
-          <ChevronDown className={styles.icon} aria-hidden="true" />
-        </button>
+      <DropdownMenuTrigger
+        disabled={disabled || pending}
+        render={
+          <button
+            type="button"
+            data-testid="thinking-menu-trigger"
+            aria-label={t('label')}
+            className={cx(styles.trigger, className)}
+          />
+        }
+      >
+        <Brain className={styles.icon} aria-hidden="true" />
+        <span className={styles.label}>{currentLabel}</span>
+        <ChevronDown className={styles.icon} aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={styles.menu}>
         <DropdownMenuLabel>{t('label')}</DropdownMenuLabel>
@@ -65,7 +68,7 @@ export function ThinkingMenu({ value, pending = false, disabled = false, onSelec
               key={choice}
               data-testid={`thinking-option-${choice}`}
               disabled={pending}
-              onSelect={() => onSelect(choice)}
+              onClick={() => onSelect(choice)}
             >
               <span className={styles.optionLabel}>{t(choice)}</span>
               {selected ? <Check className={styles.check} aria-hidden="true" /> : null}
