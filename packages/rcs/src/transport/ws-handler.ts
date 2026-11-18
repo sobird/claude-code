@@ -296,12 +296,20 @@ export async function ingestBridgeMessage(
         .map((block: Record<string, unknown>) => (typeof block.text === 'string' ? block.text : ''))
         .join('')
     }
-    payload = { message: msg.message, uuid: msg.uuid, content: text }
+    payload = {
+      message: msg.message,
+      uuid: msg.uuid,
+      content: text,
+      // Subagent traffic is tagged with its Agent tool_use id; the web reducer
+      // nests by that pointer, so it must survive this whitelist.
+      ...(typeof msg.parent_tool_use_id === 'string' ? { parent_tool_use_id: msg.parent_tool_use_id } : {}),
+    }
   } else if (eventType === 'user') {
     payload = {
       message: msg.message,
       uuid: msg.uuid,
       ...(typeof msg.isSynthetic === 'boolean' ? { isSynthetic: msg.isSynthetic } : {}),
+      ...(typeof msg.parent_tool_use_id === 'string' ? { parent_tool_use_id: msg.parent_tool_use_id } : {}),
     }
   } else if (eventType === 'system') {
     // `system/init` carries the flat fields the web UI needs (slash commands,

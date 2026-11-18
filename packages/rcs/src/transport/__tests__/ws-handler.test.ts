@@ -141,6 +141,28 @@ describe('ingestBridgeMessage', () => {
     expect(payload?.isSynthetic).toBe(true)
   })
 
+  test('preserves parent_tool_use_id so subagent traffic can nest', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      message: { role: 'assistant', content: [{ type: 'tool_use', id: 'sub', name: 'Glob', input: {} }] },
+      uuid: 'u_sub_assistant',
+      parent_tool_use_id: 'toolu_agent',
+    })
+    await ingestBridgeMessage(repos, 's1', {
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'sub', content: 'ok' }] },
+      uuid: 'u_sub_user',
+      parent_tool_use_id: 'toolu_agent',
+    })
+
+    expect(events).toHaveLength(2)
+    for (const event of events) {
+      const payload = event.payload as Record<string, unknown> | undefined
+      expect(payload?.parent_tool_use_id).toBe('toolu_agent')
+    }
+  })
+
   test('derives type from message.role for assistant messages', async () => {
     const events: SessionEvent[] = []
     getEventBus('s1').subscribe((event) => events.push(event))

@@ -234,6 +234,8 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
 
   if (typeof p.uuid === 'string' && p.uuid) normalized.uuid = p.uuid
   if (typeof p.isSynthetic === 'boolean') normalized.isSynthetic = p.isSynthetic
+  // subagent traffic points at its Agent tool call; the web reducer nests by it.
+  if (typeof p.parent_tool_use_id === 'string') normalized.parent_tool_use_id = p.parent_tool_use_id
   if (typeof p.status === 'string') normalized.status = p.status
   if (typeof p.subtype === 'string') normalized.subtype = p.subtype
 
