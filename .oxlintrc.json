@@ -47,7 +47,7 @@
     "promise/no-promise-in-callback": "warn",
     "react/jsx-no-constructed-context-values": "warn",
     "react/no-array-index-key": "warn",
-    "react/react-in-jsx-scope": "warn",
+    "react/react-in-jsx-scope": "off",
     "react/style-prop-object": "warn",
     "react-hooks/exhaustive-deps": "warn",
     "typescript/await-thenable": "warn",
