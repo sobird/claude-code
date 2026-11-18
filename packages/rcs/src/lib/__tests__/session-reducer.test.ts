@@ -1877,6 +1877,84 @@ describe('background tasks', () => {
     expect(state.backgroundTasks).toEqual([])
   })
 
+  test('an error response to stop_task clears the row (stale task on the CLI)', () => {
+    // The child answers `not_running` when the row survived a restart: its
+    // task state is gone, so no task_notification will ever close the row.
+    let state = reduceSessionEvent(initialChatState, {
+      ...started('shell-1', { task_type: 'local_bash' }),
+      createdAt: 1_000,
+    })
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'stop-1', request: { subtype: 'stop_task', task_id: 'shell-1' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', {
+        response: { subtype: 'error', request_id: 'stop-1', error: 'Task shell-1 is not running (status: killed)' },
+      }),
+    )
+
+    expect(state.backgroundTasks).toEqual([])
+  })
+
+  test('a successful stop clears the row without waiting for a notification', () => {
+    // The stop reply is authoritative: the CLI killed the task. Some CLI
+    // versions suppress the closing task_notification for killed shells, so
+    // waiting for it would leave "stopping…" on screen forever. A late
+    // notification (if any) must not resurrect the row.
+    let state = reduceSessionEvent(initialChatState, {
+      ...started('shell-1', { task_type: 'local_bash' }),
+      createdAt: 1_000,
+    })
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'stop-1', request: { subtype: 'stop_task', task_id: 'shell-1' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { subtype: 'success', request_id: 'stop-1' } }),
+    )
+
+    expect(state.backgroundTasks).toEqual([])
+
+    state = reduceSessionEvent(
+      state,
+      event('system', { subtype: 'task_notification', task_id: 'shell-1', status: 'stopped', summary: 'stopped' }),
+    )
+    expect(state.backgroundTasks).toEqual([])
+  })
+
+  test('replaying a stop that errored leaves no stale row', () => {
+    const history = [
+      started('shell-1', { task_type: 'local_bash' }),
+      event('control_request', { request_id: 'stop-1', request: { subtype: 'stop_task', task_id: 'shell-1' } }),
+      event('control_response', {
+        response: { subtype: 'error', request_id: 'stop-1', error: 'Task shell-1 is not running (status: killed)' },
+      }),
+    ]
+    const state = applyHistory(initialChatState, history)
+
+    expect(state.backgroundTasks).toEqual([])
+  })
+
+  test('an error response to another control request leaves rows alone', () => {
+    let state = reduceSessionEvent(initialChatState, {
+      ...started('shell-1', { task_type: 'local_bash' }),
+      createdAt: 1_000,
+    })
+    state = reduceSessionEvent(
+      state,
+      event('control_request', { request_id: 'model-1', request: { subtype: 'set_model', model: 'x' } }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('control_response', { response: { subtype: 'error', request_id: 'model-1', error: 'nope' } }),
+    )
+
+    expect(state.backgroundTasks).toEqual([expect.objectContaining({ taskId: 'shell-1' })])
+  })
+
   test('a replayed task_notification row dedupes by seqNum', () => {
     let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
     const sequence = nextSeqNum

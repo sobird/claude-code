@@ -189,6 +189,13 @@ export interface ChatState {
   pendingThinking: { requestId: string; choice: ThinkingChoice } | null
   /** CLI rejection of the last thinking switch. */
   thinkingError: string | null
+  /**
+   * `stop_task` requests awaiting a control_response, keyed by request id to
+   * task id. The reply itself closes the row: a killed task may not send a
+   * `task_notification` (the CLI suppresses it for shells), and an error
+   * reply means no live task exists under that id anyway.
+   */
+  pendingStops: Record<string, string>
   /** Wall-clock start of the running turn, from the newest user message. */
   turnStartedAt: number | null
   /** True between a turn's first event and its `result`; gates the queued hint. */
@@ -238,6 +245,7 @@ export const initialChatState: ChatState = {
   thinking: null,
   pendingThinking: null,
   thinkingError: null,
+  pendingStops: {},
   turnStartedAt: null,
   turnOpen: false,
   tasks: [],
@@ -784,6 +792,14 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
     if (subtype === 'set_model') {
       return { ...state, pendingModel: { requestId, model: normalizeModel(request.model) }, modelError: null }
     }
+    if (subtype === 'stop_task') {
+      // Remember which row the web asked to stop: the CLI answers with a
+      // control_response instead of a task_notification here (the child only
+      // bookends tasks it kills; an already-finished task is an error reply).
+      const taskId = asText(request.task_id)
+      if (!taskId) return state
+      return { ...state, pendingStops: { ...state.pendingStops, [requestId]: taskId } }
+    }
     if (subtype === 'set_max_thinking_tokens') {
       // The echoed request carries the budget the web sent: null = default,
       // 0 = off, >0 = on.
@@ -899,6 +915,21 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
   const payload = asRecord(event.payload) ?? {}
   const requestId = requestIdOf(payload)
   if (!requestId) return state
+
+  // A stop_task reply is authoritative either way: success means the CLI
+  // killed the task (and some CLI versions suppress the closing
+  // task_notification for killed shells, so waiting for it would keep the
+  // row up forever), error means it never had a live task. Drop the row now;
+  // a late notification is a no-op and still appends its transcript row.
+  const stoppedTaskId = state.pendingStops[requestId]
+  if (stoppedTaskId !== undefined) {
+    const { [requestId]: _, ...pendingStops } = state.pendingStops
+    return {
+      ...state,
+      pendingStops,
+      backgroundTasks: completeBackgroundTask(state.backgroundTasks, stoppedTaskId),
+    }
+  }
 
   // A mode switch resolves against pendingMode, not against a permission card.
   const pendingMode = state.pendingMode
