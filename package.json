@@ -1,6 +1,6 @@
 {
   "name": "@sobird/claude-code",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Use Claude, Anthropic's AI assistant, right from your terminal. Claude can understand your codebase, edit files, run terminal commands, and handle entire workflows for you.",
   "keywords": [
     "typescript"
