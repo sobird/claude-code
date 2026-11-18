@@ -275,12 +275,9 @@ export function ExitPlanModeCard({ request, onRespond, autoOpen = false }: ExitP
             ref={dialogRef}
             data-testid="exit-plan-mode-dialog"
             tabIndex={-1}
-            onOpenAutoFocus={(event) => {
-              // Focus the container instead of the first button so A/D/Enter
-              // stay shortcuts rather than button activations.
-              event.preventDefault()
-              dialogRef.current?.focus()
-            }}
+            // Focus the container instead of the first button so A/D/Enter stay
+            // shortcuts rather than button activations.
+            initialFocus={() => dialogRef.current}
             onKeyDown={handleDialogKeyDown}
             className={styles.dialog}
           >
