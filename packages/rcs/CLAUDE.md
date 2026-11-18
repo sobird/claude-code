@@ -26,6 +26,19 @@ hex string), and on first boot `ADMIN_USERNAME` / `ADMIN_PASSWORD`. Put them in
 the CLI. `RCS_WEB_CORS_ORIGINS` is auto-seeded in dev. See `.env.example` for the
 rest and `README.md` for the full environment table.
 
+## Styling
+
+- `src/components/ui/*` and the `streamdown` markdown renderer keep Tailwind.
+- Business components (`shell/`, `chat/`, `settings/`, `admin/`) use co-located
+  `Component.module.css`. Compose conditionals with `cx` from `src/lib/utils.ts`;
+  `cn` (tailwind-merge) is only for `ui/` primitives.
+- Reference tokens as `var(--color-*)` / `var(--font-*)` from
+  `src/app/globals.css`. Dark mode is a token swap, so modules normally need no
+  `:global(.dark)`.
+- Never mix a Tailwind utility and a module class for the same property: module
+  CSS is unlayered and wins over `@layer utilities`.
+- `chat/markdown.tsx` is the one business file that stays on Tailwind.
+
 ## Boundaries
 
 - This package has no build-time dependency on the CLI's `src/`; keep it that

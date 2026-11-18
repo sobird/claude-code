@@ -15,7 +15,7 @@
    Theme — refined stone palette (warm gray, not beige)
    Ported from the legacy Vite UI so the rewrite keeps one look.
    ============================================================ */
-@theme {
+@theme static {
   /* Fonts — Lora (serif body) + Poppins (sans-serif UI) + JetBrains Mono */
   --font-sans: 'Lora', Georgia, serif;
   --font-display: 'Poppins', sans-serif;
