@@ -8,6 +8,7 @@
 
 import type { SessionEventRecord } from '../contracts.js'
 import type { Repositories } from '../db/repositories/types.js'
+import { sanitizeTaskUsage } from '../lib/background-tasks.js'
 import { notifyInboundEvent } from '../services/push-notifier.js'
 
 export interface SessionEvent {
@@ -272,6 +273,17 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
     if (Array.isArray(p.writtenPaths)) {
       normalized.writtenPaths = p.writtenPaths.filter((item) => typeof item === 'string')
     }
+    // Background-task lifecycle fields. `status` is already lifted above for every
+    // type; these are the task-specific ones the reducer folds into ChatState.
+    if (typeof p.task_id === 'string') normalized.task_id = p.task_id
+    if (typeof p.tool_use_id === 'string') normalized.tool_use_id = p.tool_use_id
+    if (typeof p.description === 'string') normalized.description = p.description
+    if (typeof p.task_type === 'string') normalized.task_type = p.task_type
+    if (typeof p.summary === 'string') normalized.summary = p.summary
+    if (typeof p.last_tool_name === 'string') normalized.last_tool_name = p.last_tool_name
+    if (typeof p.state === 'string') normalized.state = p.state
+    const usage = sanitizeTaskUsage(p.usage)
+    if (usage) normalized.usage = usage
   }
 
   if (type === 'task_state') {

@@ -1708,3 +1708,139 @@ describe('token usage', () => {
     expect(state.lastUsage).toEqual({ input: 10, cached: 0, output: 3 })
   })
 })
+
+describe('background tasks', () => {
+  function started(taskId = 't1', extra: Record<string, unknown> = {}): SessionEventInput {
+    return event('system', {
+      subtype: 'task_started',
+      task_id: taskId,
+      description: 'Review auth',
+      task_type: 'local_agent',
+      tool_use_id: 'call-1',
+      ...extra,
+    })
+  }
+
+  test('task_started records the task with the event time as its start', () => {
+    const state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
+
+    expect(state.backgroundTasks).toEqual([
+      {
+        taskId: 't1',
+        description: 'Review auth',
+        taskType: 'local_agent',
+        toolUseId: 'call-1',
+        startedAt: 1_000,
+      },
+    ])
+    expect(state.turnOpen).toBe(true)
+  })
+
+  test('a replayed task_started keeps the first start time and does not duplicate', () => {
+    let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
+    state = reduceSessionEvent(state, { ...started('t1'), createdAt: 2_000 })
+
+    expect(state.backgroundTasks).toHaveLength(1)
+    expect(state.backgroundTasks[0]?.startedAt).toBe(1_000)
+  })
+
+  test('task_progress merges usage and keeps the recorded start', () => {
+    let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
+    state = reduceSessionEvent(
+      state,
+      event('system', {
+        subtype: 'task_progress',
+        task_id: 't1',
+        usage: { totalTokens: 900, toolUses: 3, durationMs: 12_000 },
+        last_tool_name: 'Read',
+        summary: 'halfway',
+      }),
+    )
+
+    expect(state.backgroundTasks[0]).toMatchObject({
+      taskId: 't1',
+      startedAt: 1_000,
+      lastToolName: 'Read',
+      summary: 'halfway',
+      usage: { totalTokens: 900, toolUses: 3, durationMs: 12_000 },
+    })
+  })
+
+  test('task_notification removes the task and appends a transcript row', () => {
+    let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
+    state = reduceSessionEvent(
+      state,
+      event('system', { subtype: 'task_notification', task_id: 't1', status: 'completed', summary: 'done' }),
+    )
+
+    expect(state.backgroundTasks).toEqual([])
+    const rows = state.entries.filter((entry) => entry.type === 'system')
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      type: 'system',
+      subtype: 'task_notification',
+      content: 'done',
+      taskStatus: 'completed',
+    })
+  })
+
+  test('a result clears every running task', () => {
+    let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
+    state = reduceSessionEvent(state, { ...started('t2'), createdAt: 1_000 })
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }))
+
+    expect(state.backgroundTasks).toEqual([])
+  })
+
+  test('session_state_changed idle clears the list without touching the turn clock', () => {
+    let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
+    state = reduceSessionEvent(state, event('system', { subtype: 'session_state_changed', state: 'idle' }))
+
+    expect(state.backgroundTasks).toEqual([])
+    expect(state.turnOpen).toBe(true)
+  })
+
+  test('session_state_changed running keeps the list', () => {
+    let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
+    state = reduceSessionEvent(state, event('system', { subtype: 'session_state_changed', state: 'running' }))
+
+    expect(state.backgroundTasks).toHaveLength(1)
+  })
+
+  test('an archived session status clears the list', () => {
+    let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
+    state = reduceSessionEvent(state, event('session_status', { status: 'archived' }))
+
+    expect(state.backgroundTasks).toEqual([])
+  })
+
+  test('replaying a start → progress → notification sequence leaves no running tasks', () => {
+    const history = [
+      started('t1'),
+      event('system', {
+        subtype: 'task_progress',
+        task_id: 't1',
+        usage: { totalTokens: 10, toolUses: 1, durationMs: 5 },
+      }),
+      event('system', { subtype: 'task_notification', task_id: 't1', status: 'completed', summary: 'done' }),
+    ]
+    const state = applyHistory(initialChatState, history)
+
+    expect(state.backgroundTasks).toEqual([])
+  })
+
+  test('a replayed task_notification row dedupes by seqNum', () => {
+    let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
+    const sequence = nextSeqNum
+    state = reduceSessionEvent(
+      state,
+      event('system', { subtype: 'task_notification', task_id: 't1', status: 'completed' }, { seqNum: sequence }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('system', { subtype: 'task_notification', task_id: 't1', status: 'completed' }, { seqNum: sequence }),
+    )
+
+    expect(state.entries.filter((entry) => entry.type === 'system')).toHaveLength(1)
+  })
+})

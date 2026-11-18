@@ -171,3 +171,54 @@ describe('normalizePayload — task_state type', () => {
     expect(result.tasks).toBeUndefined()
   })
 })
+
+// =============================================================================
+// normalizePayload — system task lifecycle fields
+// =============================================================================
+
+describe('normalizePayload — system task fields', () => {
+  test('lifts the task lifecycle fields out of raw', () => {
+    const result = normalizePayload('system', {
+      subtype: 'task_progress',
+      task_id: 't1',
+      tool_use_id: 'call-1',
+      description: 'Reviewing',
+      task_type: 'local_agent',
+      status: 'running',
+      summary: 'halfway',
+      last_tool_name: 'Read',
+      usage: { total_tokens: 1200, tool_uses: 4, duration_ms: 90_000 },
+    })
+
+    expect(result).toMatchObject({
+      task_id: 't1',
+      tool_use_id: 'call-1',
+      description: 'Reviewing',
+      task_type: 'local_agent',
+      status: 'running',
+      summary: 'halfway',
+      last_tool_name: 'Read',
+      usage: { totalTokens: 1200, toolUses: 4, durationMs: 90_000 },
+    })
+  })
+
+  test('sanitizes the usage counters', () => {
+    expect(normalizePayload('system', { usage: { total_tokens: -1, tool_uses: 3, duration_ms: 5 } }).usage).toEqual({
+      totalTokens: 0,
+      toolUses: 3,
+      durationMs: 5,
+    })
+    expect(normalizePayload('system', { usage: 'junk' }).usage).toBeUndefined()
+  })
+
+  test('lifts session_state_changed state', () => {
+    expect(normalizePayload('system', { subtype: 'session_state_changed', state: 'idle' }).state).toBe('idle')
+  })
+
+  test('does not lift system task fields for other event types', () => {
+    const result = normalizePayload('assistant', { task_id: 't1', state: 'idle', last_tool_name: 'Read' })
+    expect(result.task_id).toBeUndefined()
+    expect(result.state).toBeUndefined()
+    expect(result.last_tool_name).toBeUndefined()
+  })
+})

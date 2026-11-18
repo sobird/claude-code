@@ -75,6 +75,7 @@ import { formatTurnSeconds } from '../../lib/turn-duration'
 import { cn, uniqueKeys } from '../../lib/utils'
 import { StatusBadge } from '../shell/status-badge'
 import { Button } from '../ui/button'
+import { BackgroundTaskPanel } from './background-task-panel'
 import { ChatInput } from './chat-input'
 import { AssistantBubble, UserBubble } from './message-bubble'
 import { ModelMenu } from './model-menu'
@@ -1083,6 +1084,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       <TaskPanel tasks={chat.tasks} />
 
+      <BackgroundTaskPanel tasks={chat.backgroundTasks} />
+
       <PermissionPanel requests={chat.pendingPermissions} onRespond={handlePermissionRespond} />
 
       {cursorItem ? (
@@ -1263,6 +1266,15 @@ function systemText(entry: SystemEntry, t: ReturnType<typeof useTranslations<'ch
       return entry.content ?? t('system.hookSummary')
     case 'local_command':
       return entry.content ?? t('system.localCommand')
+    case 'task_notification': {
+      const status =
+        entry.taskStatus === 'failed'
+          ? t('backgroundTasks.status.failed')
+          : entry.taskStatus === 'stopped'
+            ? t('backgroundTasks.status.stopped')
+            : t('backgroundTasks.status.completed')
+      return t('system.taskNotification', { status, summary: entry.content ?? '' })
+    }
     default:
       return entry.content ?? entry.subtype
   }

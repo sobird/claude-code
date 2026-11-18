@@ -13,6 +13,12 @@
 
 import { isSessionClosedStatus } from '../contracts'
 import { extractUserAttachments, type AttachmentRef } from './attachments'
+import {
+  completeBackgroundTask,
+  progressBackgroundTask,
+  startBackgroundTask,
+  type BackgroundTask,
+} from './background-tasks'
 import { normalizeModel } from './model-settings'
 import { isWebPermissionMode, type WebPermissionMode } from './permission-modes'
 import type { PermissionSuggestion } from './permission-suggestions'
@@ -117,6 +123,8 @@ export interface SystemEntry {
   level?: string
   commands?: string[]
   writtenPaths?: string[]
+  /** Final status on a `task_notification` row. */
+  taskStatus?: string
 }
 
 export type ThreadEntry =
@@ -187,6 +195,8 @@ export interface ChatState {
   turnOpen: boolean
   /** Latest task list from `TodoWrite` (or an upstream `task_state` payload). */
   tasks: TaskItem[]
+  /** Background tasks (agents, workflows) the CLI is still running. */
+  backgroundTasks: BackgroundTask[]
   /** Usage of the most recent assistant message; `null` until one reports it. */
   lastUsage: TokenUsage | null
 }
@@ -231,6 +241,7 @@ export const initialChatState: ChatState = {
   turnStartedAt: null,
   turnOpen: false,
   tasks: [],
+  backgroundTasks: [],
   lastUsage: null,
 }
 
@@ -649,6 +660,7 @@ const SYSTEM_ROW_SUBTYPES = new Set([
   'memory_saved',
   'stop_hook_summary',
   'permission_retry',
+  'task_notification',
 ])
 
 /**
@@ -694,14 +706,45 @@ function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatStat
     }
   }
 
+  // Background-task lifecycle. `task_started` opens the turn window the queue
+  // hint keys off: the CLI holds `result` back while these tasks run.
+  if (subtype === 'task_started') {
+    return {
+      ...state,
+      backgroundTasks: startBackgroundTask(state.backgroundTasks, payload, eventTimeOf(event)),
+      turnOpen: true,
+    }
+  }
+
+  if (subtype === 'task_progress') {
+    const backgroundTasks = progressBackgroundTask(state.backgroundTasks, payload, eventTimeOf(event))
+    return backgroundTasks === state.backgroundTasks ? state : { ...state, backgroundTasks }
+  }
+
+  let backgroundTasks = state.backgroundTasks
+  if (subtype === 'task_notification') {
+    backgroundTasks = completeBackgroundTask(backgroundTasks, asText(payload.task_id))
+  }
+
+  // `session_state_changed` is the CLI's own liveness claim. Going idle means
+  // nothing is left running; the turn state stays owned by result/session_status.
+  if (subtype === 'session_state_changed') {
+    if (payload.state !== 'idle' || state.backgroundTasks.length === 0) return state
+    return { ...state, backgroundTasks: [] }
+  }
+
   if (!SYSTEM_ROW_SUBTYPES.has(subtype)) return state
 
   const seqNum = numericSeqNum(event)
+  const content =
+    subtype === 'task_notification'
+      ? asText(payload.summary) || asText(payload.description) || asText(payload.content)
+      : asText(payload.content)
   const entry: SystemEntry = {
     type: 'system',
     id: event.id || (seqNum !== null ? `system-${seqNum}` : `system-${state.entries.length}`),
     subtype,
-    ...(typeof payload.content === 'string' ? { content: payload.content } : {}),
+    ...(content ? { content } : {}),
     ...(typeof payload.level === 'string' ? { level: payload.level } : {}),
     ...(Array.isArray(payload.commands)
       ? { commands: payload.commands.filter((item): item is string => typeof item === 'string') }
@@ -709,8 +752,9 @@ function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatStat
     ...(Array.isArray(payload.writtenPaths)
       ? { writtenPaths: payload.writtenPaths.filter((item): item is string => typeof item === 'string') }
       : {}),
+    ...(subtype === 'task_notification' && typeof payload.status === 'string' ? { taskStatus: payload.status } : {}),
   }
-  return { ...state, entries: [...state.entries, entry] }
+  return { ...state, backgroundTasks, entries: [...state.entries, entry] }
 }
 
 function handlePermissionRequest(state: ChatState, event: SessionEventInput): ChatState {
@@ -980,7 +1024,8 @@ function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatSt
   // A reported non-running state ends the queue window even if no result event
   // arrived (crashed or interrupted turns).
   const turnOpen = status === 'running' || status === 'requires_action'
-  return { ...base, status, closed: isSessionClosedStatus(status), turnOpen }
+  const closed = isSessionClosedStatus(status)
+  return { ...base, status, closed, turnOpen, backgroundTasks: closed ? [] : state.backgroundTasks }
 }
 
 /**
@@ -1041,7 +1086,8 @@ function handleResult(state: ChatState, event: SessionEventInput): ChatState {
       entries = [...entries, { type: 'turn_end', id, durationMs: Math.max(0, endedAt - base.turnStartedAt) }]
     }
   }
-  const closed = { ...base, entries, turnStartedAt: null, turnOpen: false }
+  // A result means the CLI finished the turn, background tasks included.
+  const closed = { ...base, entries, turnStartedAt: null, turnOpen: false, backgroundTasks: [] }
 
   const subtype = asText(payload.subtype)
   if (!subtype || subtype === 'success') return { ...closed, error: null }
@@ -1159,8 +1205,8 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
     case 'interrupt':
       return dropAllStreaming(state)
     default:
-      // partial_assistant, task_state, automation_state, status, … are
-      // intentionally ignored.
+      // partial_assistant, automation_state, status, … are intentionally
+      // ignored. Background-task lifecycle rides on `system` subtypes.
       return state
   }
 }

@@ -296,6 +296,101 @@ describe('ingestBridgeMessage', () => {
     expect(memory).toMatchObject({ subtype: 'memory_saved', writtenPaths: ['/repo/CLAUDE.md'] })
   })
 
+  test('keeps the task fields the web background-task panel reads', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'task_started',
+      session_id: 's1',
+      task_id: 't1',
+      tool_use_id: 'call-1',
+      description: 'Review auth',
+      task_type: 'local_agent',
+      prompt: 'secret prompt',
+      uuid: 'task-1',
+    })
+
+    const payload = events[0]?.payload as Record<string, unknown> | undefined
+    expect(payload).toMatchObject({
+      subtype: 'task_started',
+      task_id: 't1',
+      tool_use_id: 'call-1',
+      description: 'Review auth',
+      task_type: 'local_agent',
+      uuid: 'task-1',
+    })
+    expect(payload?.prompt).toBeUndefined()
+  })
+
+  test('sanitizes task usage and never forwards the CLI-host output file', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'task_progress',
+      session_id: 's1',
+      task_id: 't1',
+      description: 'Reviewing',
+      usage: { total_tokens: 1200, tool_uses: 4, duration_ms: 90_000, secret: 'x' },
+      last_tool_name: 'Read',
+      summary: 'halfway',
+      output_file: '/home/me/.claude/tasks/t1.txt',
+      uuid: 'task-2',
+    })
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'task_notification',
+      session_id: 's1',
+      task_id: 't1',
+      status: 'completed',
+      summary: 'done',
+      output_file: '/home/me/.claude/tasks/t1.txt',
+      uuid: 'task-3',
+    })
+
+    const [progress, notification] = events.map((event) => event.payload as Record<string, unknown> | undefined)
+    expect(progress).toMatchObject({
+      subtype: 'task_progress',
+      task_id: 't1',
+      last_tool_name: 'Read',
+      summary: 'halfway',
+      usage: { totalTokens: 1200, toolUses: 4, durationMs: 90_000 },
+    })
+    expect(progress?.output_file).toBeUndefined()
+    expect(notification).toMatchObject({ subtype: 'task_notification', status: 'completed', summary: 'done' })
+    expect(notification?.output_file).toBeUndefined()
+  })
+
+  test('keeps session_state_changed state but no task fields on other system subtypes', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'session_state_changed',
+      session_id: 's1',
+      state: 'idle',
+      uuid: 'state-1',
+    })
+    await ingestBridgeMessage(repos, 's1', {
+      type: 'system',
+      subtype: 'compact_boundary',
+      session_id: 's1',
+      task_id: 't1',
+      state: 'idle',
+      uuid: 'sys-9',
+    })
+
+    const [stateChanged, compact] = events.map((event) => event.payload as Record<string, unknown> | undefined)
+    expect(stateChanged?.state).toBe('idle')
+    // Task/state fields leak only through their own subtypes.
+    expect(compact?.task_id).toBeUndefined()
+    expect(compact?.state).toBeUndefined()
+  })
+
   test('handles control_response type', async () => {
     const events: SessionEvent[] = []
     getEventBus('s1').subscribe((event) => events.push(event))

@@ -164,7 +164,21 @@
       "memorySaved": "Memory saved: {paths}",
       "apiError": "API error",
       "hookSummary": "Stop hooks ran",
-      "localCommand": "Local command"
+      "localCommand": "Local command",
+      "taskNotification": "Background task {status}: {summary}"
+    },
+    "backgroundTasks": {
+      "title": "{count, plural, one {# background task running} other {# background tasks running}}",
+      "elapsed": "{duration} elapsed",
+      "tokens": "{count} tokens",
+      "toolUses": "{count} tool uses",
+      "lastTool": "last: {tool}",
+      "fallback": "Background task",
+      "status": {
+        "completed": "completed",
+        "failed": "failed",
+        "stopped": "stopped"
+      }
     },
     "messageActions": {
       "edit": "Edit",

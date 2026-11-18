@@ -164,7 +164,21 @@
       "memorySaved": "已保存记忆：{paths}",
       "apiError": "API 错误",
       "hookSummary": "停止钩子已执行",
-      "localCommand": "本地命令"
+      "localCommand": "本地命令",
+      "taskNotification": "后台任务{status}：{summary}"
+    },
+    "backgroundTasks": {
+      "title": "{count, plural, other {# 个后台任务运行中}}",
+      "elapsed": "已运行 {duration}",
+      "tokens": "{count} tokens",
+      "toolUses": "{count} 次工具调用",
+      "lastTool": "最近：{tool}",
+      "fallback": "后台任务",
+      "status": {
+        "completed": "已完成",
+        "failed": "失败",
+        "stopped": "已停止"
+      }
     },
     "messageActions": {
       "edit": "编辑",

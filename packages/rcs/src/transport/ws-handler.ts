@@ -18,6 +18,7 @@ import type { WSContext } from 'hono/ws'
 
 import type { GatewayConfig } from '../config.js'
 import type { Repositories } from '../db/repositories/types.js'
+import { sanitizeTaskUsage } from '../lib/background-tasks.js'
 import { clearBridgeResponses, settleBridgeResponse } from './bridge-requests.js'
 import { createAttachmentLoader, hasAttachmentRefs, hydrateClientPayload, toClientPayload } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'
@@ -265,6 +266,37 @@ function deriveEventType(msg: Record<string, unknown>): string {
   return 'unknown'
 }
 
+/** System subtypes that describe a background task's lifecycle. */
+const TASK_SUBTYPES = new Set(['task_started', 'task_progress', 'task_notification'])
+const TASK_FIELD_KEYS = [
+  'task_id',
+  'tool_use_id',
+  'description',
+  'task_type',
+  'status',
+  'summary',
+  'last_tool_name',
+] as const
+
+/**
+ * Whitelist the fields the web background-task panel reads. `output_file` is a
+ * path on the CLI host, and `prompt` can hold conversation content, so neither
+ * is forwarded. Usage counters are sanitized to three finite numbers.
+ */
+function taskFieldsOf(msg: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const key of TASK_FIELD_KEYS) {
+    if (typeof msg[key] === 'string') out[key] = msg[key]
+  }
+  // Re-emit the sanitized counters in the SDK's snake_case shape: `normalizePayload`
+  // lifts them again on the way to the durable event, so strip everything else here.
+  const usage = sanitizeTaskUsage(msg.usage)
+  if (usage) {
+    out.usage = { total_tokens: usage.totalTokens, tool_uses: usage.toolUses, duration_ms: usage.durationMs }
+  }
+  return out
+}
+
 /** Parse one SDK message from the bridge → persist and publish it as an inbound event. */
 export async function ingestBridgeMessage(
   repos: Repositories,
@@ -329,6 +361,9 @@ export async function ingestBridgeMessage(
       ...(Array.isArray(msg.writtenPaths)
         ? { writtenPaths: msg.writtenPaths.filter((item) => typeof item === 'string') }
         : {}),
+      // Background-task lifecycle: only the three task subtypes carry these fields.
+      ...(TASK_SUBTYPES.has(String(msg.subtype)) ? taskFieldsOf(msg) : {}),
+      ...(msg.subtype === 'session_state_changed' && typeof msg.state === 'string' ? { state: msg.state } : {}),
       ...(msg.message ? { message: msg.message } : {}),
       uuid: msg.uuid,
     }
