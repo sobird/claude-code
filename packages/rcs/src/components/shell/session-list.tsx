@@ -7,6 +7,8 @@ import { formatEpochSeconds } from '../../lib/format'
 import { StatusBadge } from './status-badge'
 import type { SessionSummary } from './types'
 
+import styles from './session-list.module.css'
+
 interface SessionListProps {
   sessions: SessionSummary[]
 }
@@ -17,32 +19,22 @@ export function SessionList({ sessions }: SessionListProps) {
   const locale = useLocale()
 
   if (sessions.length === 0) {
-    return (
-      <div className="rounded-xl border border-border bg-surface-1 p-8 text-center text-sm text-text-muted">
-        {t('list.empty')}
-      </div>
-    )
+    return <div className={styles.empty}>{t('list.empty')}</div>
   }
 
   const sorted = sessions.toSorted((a, b) => (b.updated_at || 0) - (a.updated_at || 0))
 
   return (
-    <div className="space-y-2">
+    <div className={styles.list}>
       {sorted.map((session) => (
-        <Link
-          key={session.id}
-          href={`/${session.id}`}
-          className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-1 px-4 py-3 no-underline transition-colors hover:border-border-light hover:bg-surface-2"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-medium text-text-primary">{session.title || session.id}</div>
-            <div className="truncate font-mono text-xs text-text-muted">{session.id}</div>
+        <Link key={session.id} href={`/${session.id}`} className={styles.row}>
+          <div className={styles.rowBody}>
+            <div className={styles.title}>{session.title || session.id}</div>
+            <div className={styles.id}>{session.id}</div>
           </div>
-          <div className="flex flex-shrink-0 items-center gap-3">
+          <div className={styles.meta}>
             <StatusBadge status={session.status} />
-            <span className="hidden text-xs text-text-muted sm:inline">
-              {formatEpochSeconds(session.updated_at, locale)}
-            </span>
+            <span className={styles.date}>{formatEpochSeconds(session.updated_at, locale)}</span>
           </div>
         </Link>
       ))}

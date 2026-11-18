@@ -3,8 +3,11 @@
 import { useLocale, useTranslations } from 'next-intl'
 
 import { formatEpochSeconds } from '../../lib/format'
+import { cx } from '../../lib/utils'
 import { StatusBadge } from './status-badge'
 import type { EnvironmentSummary } from './types'
+
+import styles from './environment-list.module.css'
 
 interface EnvironmentListProps {
   environments: EnvironmentSummary[]
@@ -17,45 +20,32 @@ export function EnvironmentList({ environments }: EnvironmentListProps) {
 
   if (environments.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-surface-1 p-8 text-center text-sm text-text-muted">
+      <div className={styles.empty}>
         {t.rich('environments.empty', {
-          code: (chunks) => (
-            <code className="rounded bg-surface-3 px-1.5 py-0.5 font-mono text-xs text-text-primary">{chunks}</code>
-          ),
+          code: (chunks) => <code className={styles.code}>{chunks}</code>,
         })}
       </div>
     )
   }
 
   return (
-    <div className="space-y-2">
+    <div className={styles.list}>
       {environments.map((environment) => {
         const isAcp = environment.worker_type === 'acp'
         return (
-          <div
-            key={environment.id}
-            className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-1 px-4 py-3"
-          >
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="truncate font-medium text-text-primary">
-                  {environment.machine_name || environment.id}
-                </span>
-                <span
-                  className={
-                    isAcp
-                      ? 'rounded-full bg-brand/15 px-2 py-0.5 text-xs font-medium text-brand'
-                      : 'rounded-full bg-status-running/15 px-2 py-0.5 text-xs font-medium text-status-running'
-                  }
-                >
+          <div key={environment.id} className={styles.row}>
+            <div className={styles.rowBody}>
+              <div className={styles.nameRow}>
+                <span className={styles.name}>{environment.machine_name || environment.id}</span>
+                <span className={cx(styles.typeBadge, isAcp ? styles.typeAcp : styles.typeClaude)}>
                   {isAcp ? t('environments.acpAgent') : t('environments.claudeCode')}
                 </span>
               </div>
-              <div className="truncate text-sm text-text-muted">{environment.directory || ''}</div>
+              <div className={styles.directory}>{environment.directory || ''}</div>
             </div>
-            <div className="flex-shrink-0 text-right">
+            <div className={styles.meta}>
               <StatusBadge status={environment.status} />
-              <div className="mt-1 text-xs text-text-muted">
+              <div className={styles.metaLine}>
                 {environment.branch || ''}
                 {environment.branch && environment.last_poll_at ? ' · ' : ''}
                 {environment.last_poll_at ? formatEpochSeconds(environment.last_poll_at, locale) : ''}

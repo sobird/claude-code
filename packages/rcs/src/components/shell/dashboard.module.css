@@ -1,0 +1,124 @@
+/* Breakpoints follow Tailwind defaults: sm = 40rem (640px). */
+
+.root > * + * {
+  margin-top: 2.5rem;
+}
+
+.header > * + * {
+  margin-top: 0.25rem;
+}
+
+.pageTitle {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: calc(2 / 1.5);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--color-text-primary);
+}
+
+.description {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-secondary);
+}
+
+.errorBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--color-status-error) 30%, transparent);
+  background-color: color-mix(in oklab, var(--color-status-error) 10%, transparent);
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-status-error);
+}
+
+@media (min-width: 40rem) {
+  .errorBanner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.section > * + * {
+  margin-top: 1rem;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: calc(1.75 / 1.125);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.intro > * + * {
+  margin-top: 0.25rem;
+}
+
+.muted {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-muted);
+}
+
+.skeletonList > * + * {
+  margin-top: 0.5rem;
+}
+
+.skeleton {
+  height: 68px;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+}
+
+.hint {
+  padding: 2rem;
+  border-radius: 0.75rem;
+  border: 1px dashed var(--color-border);
+  background-color: var(--color-surface-1);
+  text-align: center;
+}
+
+.hint > * + * {
+  margin-top: 0.5rem;
+}
+
+.hintTitle {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.hintDescription {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-muted);
+}
+
+.hintCommand {
+  margin-inline: auto;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-0);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: calc(1 / 0.75);
+  color: var(--color-text-secondary);
+  text-align: left;
+}

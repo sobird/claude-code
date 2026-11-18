@@ -23,6 +23,8 @@ import { selectVisibleSessions } from './selectors'
 import { SessionList } from './session-list'
 import { toOwnedSessions, type DashboardUser } from './types'
 
+import styles from './navbar.module.css'
+
 interface NavbarProps {
   user: DashboardUser
   signOutAction: () => Promise<void>
@@ -30,7 +32,7 @@ interface NavbarProps {
 
 function BrandMark() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="flex-shrink-0">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" className={styles.brandIcon}>
       <path d="M10 1L12.2 7.8L19 10L12.2 12.2L10 19L7.8 12.2L1 10L7.8 7.8L10 1Z" fill="var(--color-brand)" />
     </svg>
   )
@@ -47,37 +49,34 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
   const roleLabel = t.has('role.' + user.role) ? t('role.' + user.role) : user.role
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface-1">
-      <div className="mx-auto flex h-12 max-w-5xl items-center justify-between gap-2 px-3 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2">
+    <header className={styles.header}>
+      <div className={styles.bar}>
+        <div className={styles.brandRow}>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="md:hidden"
+            className={styles.menuButton}
             onClick={() => setDrawerOpen(true)}
             aria-label={t('openSessions')}
           >
-            <Menu className="h-4 w-4" />
+            <Menu className={styles.icon} />
           </Button>
 
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-display text-base font-semibold text-text-primary no-underline sm:text-lg"
-          >
+          <Link href="/" className={styles.brand}>
             <BrandMark />
-            <span className="truncate">{t('appName')}</span>
+            <span className={styles.truncate}>{t('appName')}</span>
           </Link>
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-1">
-          <div className="hidden items-center rounded-md px-2 py-1 sm:flex">
+        <div className={styles.actions}>
+          <div className={styles.statusWrap}>
             <StatusIndicator state={connection} />
           </div>
 
-          <Button asChild variant="ghost" size="icon-sm" className="hidden md:inline-flex" aria-label={t('dashboard')}>
+          <Button asChild variant="ghost" size="icon-sm" className={styles.dashboardButton} aria-label={t('dashboard')}>
             <Link href="/">
-              <LayoutGrid className="h-4 w-4" />
+              <LayoutGrid className={styles.icon} />
             </Link>
           </Button>
 
@@ -85,29 +84,27 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2 px-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/15 text-xs font-semibold text-brand">
-                  {initial}
-                </span>
-                <span className="hidden max-w-28 truncate sm:inline">{user.name || t('account')}</span>
+              <Button variant="ghost" size="sm" className={styles.accountTrigger}>
+                <span className={styles.avatar}>{initial}</span>
+                <span className={styles.accountName}>{user.name || t('account')}</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuContent align="end" className={styles.menuContent}>
               <DropdownMenuLabel>
-                <div className="truncate text-sm font-medium text-text-primary">{user.name || t('account')}</div>
-                <div className="text-xs font-normal capitalize text-text-muted">{roleLabel}</div>
+                <div className={styles.menuName}>{user.name || t('account')}</div>
+                <div className={styles.menuRole}>{roleLabel}</div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/settings" className="w-full no-underline">
-                  <Settings className="h-4 w-4" />
+                <Link href="/settings" className={styles.menuLink}>
+                  <Settings className={styles.icon} />
                   {t('settings')}
                 </Link>
               </DropdownMenuItem>
               {user.role === 'admin' ? (
                 <DropdownMenuItem asChild>
-                  <Link href="/admin" className="w-full no-underline">
-                    <Shield className="h-4 w-4" />
+                  <Link href="/admin" className={styles.menuLink}>
+                    <Shield className={styles.icon} />
                     {t('admin')}
                   </Link>
                 </DropdownMenuItem>
@@ -115,8 +112,8 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
               <DropdownMenuSeparator />
               <form action={signOutAction}>
                 <DropdownMenuItem asChild>
-                  <button type="submit" className="w-full">
-                    <LogOut className="h-4 w-4" />
+                  <button type="submit" className={styles.signOutButton}>
+                    <LogOut className={styles.icon} />
                     {t('signOut')}
                   </button>
                 </DropdownMenuItem>
@@ -127,12 +124,12 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
       </div>
 
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DialogContent className="max-h-[80vh] overflow-hidden bg-surface-1 sm:max-w-md">
+        <DialogContent className={styles.drawer}>
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold text-text-primary">{t('sessions')}</DialogTitle>
-            <DialogDescription className="text-sm text-text-muted">{t('sessionsDescription')}</DialogDescription>
+            <DialogTitle className={styles.drawerTitle}>{t('sessions')}</DialogTitle>
+            <DialogDescription className={styles.drawerDescription}>{t('sessionsDescription')}</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
+          <ScrollArea className={styles.drawerBody}>
             <SessionList sessions={visibleSessions} />
           </ScrollArea>
         </DialogContent>
