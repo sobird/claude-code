@@ -15,14 +15,13 @@ import type { AttachmentRef } from '../../lib/attachments'
 import { resolveEditKey } from '../../lib/composer-keys'
 import { assistantCopyText } from '../../lib/copy-text'
 import type { AssistantMessageEntry, UserMessageEntry } from '../../lib/session-reducer'
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
 import { MarkdownText, usePacedText } from './markdown'
+
+import styles from './message-bubble.module.css'
 
 // Collapsed user-message height (px) before the "expand" affordance appears.
 const COLLAPSED_MAX_HEIGHT = 200
-
-const ACTION_BUTTON_CLASS =
-  'flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60'
 
 /** Right-aligned user message with brand-tinted bubble and collapse-on-overflow. */
 export function UserBubble({
@@ -100,11 +99,11 @@ export function UserBubble({
   // While editing, the bubble becomes a composer-shaped field that spans the
   // chat column, so long prompts are easy to revise on a phone.
   return (
-    <div className={editing ? 'flex w-full' : 'flex justify-end'}>
-      <div className={cn('group/bubble', editing ? 'w-full' : 'max-w-[85%] sm:max-w-[70%]')}>
+    <div className={cx(styles.root, editing ? styles.rootEditing : styles.rootDefault)}>
+      <div className={editing ? styles.bubbleEditing : styles.bubbleDefault}>
         {editing ? (
-          <div className="overflow-hidden rounded-xl border border-user-bubble transition-colors focus-within:border-brand">
-            <div className="flex items-end gap-2 px-3 py-2.5">
+          <div className={styles.editBox}>
+            <div className={styles.editRow}>
               <textarea
                 ref={editorRef}
                 data-testid="edit-message-input"
@@ -129,7 +128,7 @@ export function UserBubble({
                     onCancelEdit?.()
                   }
                 }}
-                className="max-h-[200px] min-h-[24px] flex-1 resize-none bg-transparent text-left font-display text-sm leading-normal text-text-primary outline-none"
+                className={styles.editTextarea}
               />
               <button
                 type="button"
@@ -137,9 +136,9 @@ export function UserBubble({
                 aria-label={tCommon('cancel')}
                 title={tCommon('cancel')}
                 data-testid="edit-message-cancel"
-                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary"
+                className={styles.editCancel}
               >
-                <X className="h-4 w-4" />
+                <X className={styles.editCancelIcon} />
               </button>
               <button
                 type="button"
@@ -148,45 +147,35 @@ export function UserBubble({
                 disabled={!canSend}
                 aria-label={t('send')}
                 title={t('send')}
-                className={cn(
-                  'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-all',
-                  canSend ? 'bg-brand text-white hover:bg-brand-light' : 'bg-surface-1 text-text-muted',
-                )}
+                className={cx(styles.editSend, canSend ? styles.editSendReady : styles.editSendIdle)}
               >
-                <Send className="h-4 w-4" />
+                <Send className={styles.editSendIcon} />
               </button>
             </div>
           </div>
         ) : entry.attachments?.length || entry.content ? (
-          <div className="flex flex-col items-end gap-2">
+          <div className={styles.messageColumn}>
             {entry.attachments?.length ? (
-              <div className="flex max-w-full flex-wrap justify-end gap-2">
+              <div className={styles.attachments}>
                 {entry.attachments.map((attachment) => (
                   <AttachmentThumb key={attachment.id} attachment={attachment} />
                 ))}
               </div>
             ) : null}
             {entry.content ? (
-              <div className="relative overflow-hidden rounded-2xl rounded-br-md border border-user-bubble-border bg-user-bubble">
+              <div className={styles.bubbleBox}>
                 <div
                   ref={contentRef}
-                  className={cn(
-                    'whitespace-pre-wrap px-4 py-3 font-display text-sm leading-relaxed text-white',
-                    !expanded && overflowing && 'overflow-hidden',
-                  )}
+                  className={cx(styles.bubbleContent, !expanded && overflowing && styles.clipped)}
                   style={!expanded && overflowing ? { maxHeight: `${COLLAPSED_MAX_HEIGHT}px` } : undefined}
                 >
                   {entry.content}
                 </div>
                 {!expanded && overflowing ? (
-                  <div className="absolute inset-x-0 bottom-0 flex flex-col items-center bg-gradient-to-t from-user-bubble via-user-bubble/80 to-transparent pt-8">
-                    <button
-                      type="button"
-                      onClick={() => setExpanded(true)}
-                      className="flex items-center gap-1 rounded-full px-3 py-1 font-display text-xs font-medium text-white/90 transition-colors hover:bg-white/15"
-                    >
+                  <div className={styles.fadeOverlay}>
+                    <button type="button" onClick={() => setExpanded(true)} className={styles.expandButton}>
                       <span>{t('expand')}</span>
-                      <ChevronDown className="h-3 w-3" />
+                      <ChevronDown className={styles.expandIcon} />
                     </button>
                   </div>
                 ) : null}
@@ -195,13 +184,10 @@ export function UserBubble({
           </div>
         ) : null}
         {!editing && (entry.queued || entry.content || entry.attachments?.length) ? (
-          <div className="mt-1 flex items-center justify-end gap-2">
+          <div className={styles.metaRow}>
             {entry.queued ? (
-              <span
-                data-testid="queued-message"
-                className="flex items-center gap-1 font-display text-[11px] text-text-muted"
-              >
-                <Clock className="h-3 w-3" aria-hidden="true" />
+              <span data-testid="queued-message" className={styles.queued}>
+                <Clock className={styles.queuedIcon} aria-hidden="true" />
                 {t('queued')}
               </span>
             ) : null}
@@ -212,9 +198,9 @@ export function UserBubble({
                 title={t('edit')}
                 aria-label={t('edit')}
                 onClick={onStartEdit}
-                className={ACTION_BUTTON_CLASS}
+                className={styles.actionButton}
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil className={styles.actionIcon} />
               </button>
             ) : null}
             {entry.content ? <CopyButton text={entry.content} /> : null}
@@ -246,12 +232,7 @@ function AttachmentThumb({ attachment }: { attachment: AttachmentRef }) {
   }, [open])
 
   if (!url) {
-    return (
-      <div
-        className="h-28 w-28 animate-pulse rounded-xl border border-user-bubble-border bg-surface-1 sm:h-32 sm:w-32"
-        aria-hidden="true"
-      />
-    )
+    return <div className={styles.thumbSkeleton} aria-hidden="true" />
   }
   return (
     <>
@@ -260,9 +241,9 @@ function AttachmentThumb({ attachment }: { attachment: AttachmentRef }) {
         onClick={() => setOpen(true)}
         data-testid="message-attachment"
         aria-label={t('imageAlt')}
-        className="block h-28 w-28 cursor-zoom-in overflow-hidden rounded-xl border border-user-bubble-border bg-surface-1 sm:h-32 sm:w-32"
+        className={styles.thumbButton}
       >
-        <img src={url} alt={t('imageAlt')} loading="lazy" className="h-full w-full object-cover" />
+        <img src={url} alt={t('imageAlt')} loading="lazy" className={styles.thumbImg} />
       </button>
       {open ? (
         <div
@@ -274,18 +255,18 @@ function AttachmentThumb({ attachment }: { attachment: AttachmentRef }) {
           onKeyDown={(event) => {
             if (event.key === 'Escape') setOpen(false)
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          className={styles.lightbox}
         >
-          <img src={url} alt={t('imageAlt')} className="max-h-full max-w-full rounded-lg object-contain shadow-2xl" />
+          <img src={url} alt={t('imageAlt')} className={styles.lightboxImg} />
           <button
             type="button"
             onClick={() => setOpen(false)}
             aria-label={t('closeImage')}
             title={t('closeImage')}
             data-testid="attachment-lightbox-close"
-            className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+            className={styles.lightboxClose}
           >
-            <X className="h-4 w-4" />
+            <X className={styles.lightboxCloseIcon} />
           </button>
         </div>
       ) : null}
@@ -324,10 +305,10 @@ function CopyButton({ text }: { text: string }) {
       title={t('copy')}
       aria-label={t('copy')}
       onClick={() => void copy()}
-      className={ACTION_BUTTON_CLASS}
+      className={styles.actionButton}
     >
-      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      <span className="sr-only">{copied ? t('copied') : t('copy')}</span>
+      {copied ? <Check className={styles.actionIcon} /> : <Copy className={styles.actionIcon} />}
+      <span className={styles.srOnly}>{copied ? t('copied') : t('copy')}</span>
     </button>
   )
 }
@@ -346,12 +327,12 @@ export function AssistantBubble({
   const tCommon = useTranslations('common')
   const copyText = entry.streaming ? '' : assistantCopyText(entry.chunks)
   return (
-    <div className="flex items-start gap-3 sm:gap-4">
-      <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand/10">
+    <div className={styles.assistantRow}>
+      <div className={styles.assistantAvatar}>
         <ClaudeMark />
       </div>
-      <div className="min-w-0 flex-1 space-y-3">
-        <span className="font-display text-sm font-semibold text-text-primary">{tCommon('claude')}</span>
+      <div className={styles.assistantBody}>
+        <span className={styles.assistantName}>{tCommon('claude')}</span>
         {entry.chunks.map((chunk, index) => {
           // Stable keys: the active chunk's text grows on every delta, and a
           // text-derived key would remount the node (and restart the reveal) each
@@ -367,7 +348,7 @@ export function AssistantBubble({
           )
         })}
         {copyText || (canRegenerate && onRegenerate) ? (
-          <div className="flex items-center gap-1">
+          <div className={styles.assistantActions}>
             {copyText ? <CopyButton text={copyText} /> : null}
             {canRegenerate && onRegenerate ? <RegenerateButton onRegenerate={onRegenerate} /> : null}
           </div>
@@ -400,9 +381,9 @@ function RegenerateButton({ onRegenerate }: { onRegenerate: () => Promise<void> 
       aria-label={t('regenerate')}
       disabled={pending}
       onClick={() => void run()}
-      className={ACTION_BUTTON_CLASS}
+      className={styles.actionButton}
     >
-      <RotateCcw className={cn('h-3.5 w-3.5', pending && 'animate-spin')} />
+      <RotateCcw className={cx(styles.actionIcon, pending && styles.spinning)} />
     </button>
   )
 }
@@ -410,14 +391,14 @@ function RegenerateButton({ onRegenerate }: { onRegenerate: () => Promise<void> 
 function ThoughtBlock({ content }: { content: ReactNode }) {
   const t = useTranslations('chat')
   return (
-    <details className="group rounded-lg border border-border bg-surface-1/60 px-3 py-2">
-      <summary className="cursor-pointer list-none font-display text-xs font-medium text-text-muted transition-colors hover:text-text-secondary">
-        <span className="inline-flex items-center gap-1.5">
-          <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+    <details className={styles.thought}>
+      <summary className={styles.thoughtSummary}>
+        <span className={styles.thoughtLabel}>
+          <ChevronDown className={styles.thoughtChevron} />
           {t('thought')}
         </span>
       </summary>
-      <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary">{content}</div>
+      <div className={styles.thoughtContent}>{content}</div>
     </details>
   )
 }
