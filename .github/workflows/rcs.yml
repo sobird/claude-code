@@ -9,6 +9,7 @@ on:
       - 'bun.lock'
       - 'package.json'
       - 'tsconfig.json'
+      - '.bun-version'
       - '.github/workflows/rcs.yml'
   pull_request:
     branches:
@@ -18,6 +19,7 @@ on:
       - 'bun.lock'
       - 'package.json'
       - 'tsconfig.json'
+      - '.bun-version'
       - '.github/workflows/rcs.yml'
 
 jobs:
