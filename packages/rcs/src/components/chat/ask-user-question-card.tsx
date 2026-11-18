@@ -21,8 +21,10 @@ import {
 } from '../../lib/ask-user-question'
 import type { PermissionDecision } from '../../lib/permission-suggestions'
 import type { PendingPermission } from '../../lib/session-reducer'
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
 import { Button } from '../ui/button'
+
+import styles from './ask-user-question-card.module.css'
 
 interface AskUserQuestionCardProps {
   request: PendingPermission
@@ -136,32 +138,26 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setKeyboardActive(false)
       }}
-      className="max-h-[50vh] overflow-y-auto rounded-xl border border-brand/30 bg-brand/5 px-3 py-3 outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:px-4"
+      className={styles.card}
     >
-      <div className="flex items-center gap-2 text-text-primary">
-        <HelpCircle className="h-4 w-4 flex-shrink-0 text-brand" aria-hidden="true" />
-        <span className="font-display text-sm font-medium">{t('title')}</span>
+      <div className={styles.header}>
+        <HelpCircle className={styles.headerIcon} aria-hidden="true" />
+        <span className={styles.cardTitle}>{t('title')}</span>
       </div>
 
-      <div className="mt-3 space-y-4">
+      <div className={styles.questions}>
         {questions.map((question, questionIndex) => {
           const draft = drafts[questionIndex] ?? { selected: [], other: '' }
           const groupName = `ask-question-${questionIndex}`
           return (
-            <fieldset key={`${groupName}-${question.question}`} className="min-w-0">
-              <legend className="w-full">
-                {question.header ? (
-                  <span className="block font-mono text-[10px] uppercase tracking-wide text-text-muted">
-                    {question.header}
-                  </span>
-                ) : null}
-                <span className="block text-sm font-medium text-text-primary">{question.question}</span>
-                <span className="block text-[11px] text-text-muted">
-                  {question.multiSelect ? t('selectMany') : t('selectOne')}
-                </span>
+            <fieldset key={`${groupName}-${question.question}`} className={styles.fieldset}>
+              <legend className={styles.legend}>
+                {question.header ? <span className={styles.questionHeader}>{question.header}</span> : null}
+                <span className={styles.questionText}>{question.question}</span>
+                <span className={styles.questionHint}>{question.multiSelect ? t('selectMany') : t('selectOne')}</span>
               </legend>
 
-              <div className="mt-2 space-y-1.5">
+              <div className={styles.options}>
                 {question.options.map((option, optionIndex) => {
                   const checked = draft.selected.includes(option.label)
                   const highlighted =
@@ -169,39 +165,35 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
                   return (
                     <label
                       key={`${groupName}-${option.label}`}
-                      className={cn(
-                        'flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 transition-colors',
-                        checked ? 'border-brand bg-brand/10' : 'border-border bg-surface-1 hover:bg-surface-2',
-                        highlighted && 'ring-1 ring-brand/50',
+                      className={cx(
+                        styles.option,
+                        checked ? styles.optionChecked : styles.optionUnchecked,
+                        highlighted && styles.optionHighlighted,
                       )}
                     >
                       <input
                         type={question.multiSelect ? 'checkbox' : 'radio'}
                         name={groupName}
-                        className="mt-0.5 h-4 w-4 flex-shrink-0 accent-brand"
+                        className={styles.optionInput}
                         checked={checked}
                         onChange={() => selectOption(questionIndex, option.label)}
                       />
-                      <span className="min-w-0">
-                        <span className="block text-sm text-text-primary">{option.label}</span>
+                      <span className={styles.optionBody}>
+                        <span className={styles.optionText}>{option.label}</span>
                         {option.description ? (
-                          <span className="mt-0.5 block text-xs text-text-muted">{option.description}</span>
+                          <span className={styles.optionDescription}>{option.description}</span>
                         ) : null}
-                        {option.preview ? (
-                          <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap rounded-md bg-surface-2/70 p-2 font-mono text-[11px] text-text-secondary">
-                            {option.preview}
-                          </pre>
-                        ) : null}
+                        {option.preview ? <pre className={styles.optionPreview}>{option.preview}</pre> : null}
                       </span>
                     </label>
                   )
                 })}
 
-                <label className="flex cursor-text flex-col gap-1 rounded-lg border border-border bg-surface-1 px-3 py-2">
-                  <span className="text-xs font-medium text-text-secondary">{t('other')}</span>
+                <label className={styles.otherLabel}>
+                  <span className={styles.otherTitle}>{t('other')}</span>
                   <input
                     type="text"
-                    className="w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    className={styles.otherInput}
                     placeholder={t('otherPlaceholder')}
                     value={draft.other}
                     onChange={(event) => changeOther(questionIndex, event.target.value)}
@@ -213,27 +205,21 @@ export function AskUserQuestionCard({ request, onRespond }: AskUserQuestionCardP
         })}
       </div>
 
-      <div className="mt-3 space-y-1.5">
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="brand"
-            className="h-11 flex-1 sm:h-9 sm:flex-none sm:px-4"
-            disabled={!answered}
-            onClick={submit}
-          >
+      <div className={styles.footer}>
+        <div className={styles.footerButtons}>
+          <Button type="button" variant="brand" className={styles.actionButton} disabled={!answered} onClick={submit}>
             {t('submit')}
           </Button>
           <Button
             type="button"
             variant="outline"
-            className="h-11 flex-1 sm:h-9 sm:flex-none sm:px-4"
+            className={styles.actionButton}
             onClick={() => onRespond?.(request.requestId, { approved: false })}
           >
             {t('decline')}
           </Button>
         </div>
-        {!complete ? <p className="text-[11px] text-text-muted">{t('incomplete')}</p> : null}
+        {!complete ? <p className={styles.incomplete}>{t('incomplete')}</p> : null}
       </div>
     </div>
   )

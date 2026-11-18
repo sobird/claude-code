@@ -26,11 +26,13 @@ import {
 } from '../../lib/permission-suggestions'
 import type { PendingPermission } from '../../lib/session-reducer'
 import { diffLines, toolEditPreview } from '../../lib/text-diff'
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { AskUserQuestionCard } from './ask-user-question-card'
 import { ExitPlanModeCard, isExitPlanModeRequest } from './exit-plan-mode-card'
 import { optionDetail, optionLabel } from './permission-option-labels'
+
+import styles from './permission-panel.module.css'
 
 interface PermissionPanelProps {
   requests: PendingPermission[]
@@ -110,8 +112,8 @@ export function PermissionPanel({ requests, onRespond, className }: PermissionPa
   const autoOpenExitPlanId = exitPlanRequests[exitPlanRequests.length - 1]?.requestId
 
   return (
-    <div className={cn('mx-auto w-full max-w-3xl px-1 sm:px-0', className)}>
-      <div className="space-y-2">
+    <div className={cx(styles.panel, className)}>
+      <div className={styles.list}>
         {requests.map((request) =>
           isAskUserQuestionRequest(request.toolName, request.toolInput) ? (
             <AskUserQuestionCard key={request.requestId} request={request} onRespond={onRespond} />
@@ -186,48 +188,34 @@ function PermissionCard({
   }
 
   return (
-    <div
-      aria-current={selected ? 'true' : undefined}
-      className={cn(
-        'rounded-xl border border-warning-border/30 bg-warning-bg/60 px-3 py-3 sm:px-4',
-        selected && 'ring-2 ring-brand',
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning-text" aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <div className="font-display text-sm font-medium text-warning-text">
-            {request.toolName || t('toolFallback')}
-          </div>
-          {request.description ? (
-            <div className="mt-0.5 text-xs text-warning-text/80">{request.description}</div>
-          ) : null}
+    <div aria-current={selected ? 'true' : undefined} className={cx(styles.card, selected && styles.cardSelected)}>
+      <div className={styles.topRow}>
+        <ShieldAlert className={styles.shield} aria-hidden="true" />
+        <div className={styles.body}>
+          <div className={styles.toolName}>{request.toolName || t('toolFallback')}</div>
+          {request.description ? <div className={styles.description}>{request.description}</div> : null}
           {request.blockedPath ? (
-            <div className="mt-0.5 font-mono text-[11px] text-warning-text/80">
-              {t('permission.blockedPath', { path: request.blockedPath })}
-            </div>
+            <div className={styles.blockedPath}>{t('permission.blockedPath', { path: request.blockedPath })}</div>
           ) : null}
           {request.decisionReason ? (
-            <div className="mt-0.5 text-xs text-warning-text/80">
+            <div className={styles.reason}>
               {t('permission.reason')}: {request.decisionReason}
             </div>
           ) : null}
           {hunks ? (
-            <div className="mt-1.5 space-y-2">
+            <div className={styles.hunks}>
               {hunks.map((hunk, index) => (
-                <div key={index} className="overflow-hidden rounded-md border border-border/60 bg-surface-2/70">
-                  {hunk.isNewFile ? (
-                    <div className="border-b border-border/60 px-2 py-1 text-[10px] text-text-muted">+</div>
-                  ) : null}
-                  <pre className="max-h-56 overflow-auto px-0 py-1 font-mono text-[11px] leading-4">
+                <div key={index} className={styles.hunk}>
+                  {hunk.isNewFile ? <div className={styles.newFile}>+</div> : null}
+                  <pre className={styles.diff}>
                     {diffLines(hunk.before, hunk.after).map((line, lineIndex) => (
                       <div
                         key={lineIndex}
-                        className={cn(
-                          'px-2',
-                          line.type === 'add' && 'bg-diff-add-bg text-diff-add-text',
-                          line.type === 'remove' && 'bg-diff-remove-bg text-diff-remove-text',
-                          line.type === 'context' && 'text-text-secondary',
+                        className={cx(
+                          styles.diffLine,
+                          line.type === 'add' && styles.diffAdd,
+                          line.type === 'remove' && styles.diffRemove,
+                          line.type === 'context' && styles.diffContext,
                         )}
                       >
                         {line.type === 'add' ? '+ ' : line.type === 'remove' ? '- ' : '  '}
@@ -240,36 +228,32 @@ function PermissionCard({
             </div>
           ) : null}
           {inputPreview ? (
-            <details className="mt-1.5" {...(hunks ? {} : { open: true })}>
-              <summary className="cursor-pointer list-none font-display text-[11px] text-text-muted transition-colors hover:text-text-secondary">
-                {t('toolRawInput')}
-              </summary>
-              <pre className="mt-1 max-h-28 overflow-x-auto rounded-md bg-surface-2/70 p-2 font-mono text-[11px] text-text-secondary">
-                {inputPreview}
-              </pre>
+            <details className={styles.rawDetails} {...(hunks ? {} : { open: true })}>
+              <summary className={styles.rawSummary}>{t('toolRawInput')}</summary>
+              <pre className={styles.rawPre}>{inputPreview}</pre>
             </details>
           ) : null}
         </div>
       </div>
 
       {extraOptions.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className={styles.options}>
           {extraOptions.map((option) => {
             const detail = optionDetail(option)
             const suggestion = suggestionFor(option)
             const rule = suggestion ? editableRule(suggestion) : null
             const editing = rule !== null && editingOptionId === option.id
             return (
-              <div key={option.id} className="flex flex-col gap-1.5">
-                <div className="flex flex-wrap items-center gap-1.5">
+              <div key={option.id} className={styles.optionGroup}>
+                <div className={styles.optionRow}>
                   <Button
                     type="button"
                     variant="surface"
-                    className="h-9 gap-1.5 px-3 text-xs"
+                    className={styles.optionButton}
                     onClick={() => applyOption(option)}
                   >
                     <span>{optionLabel(option, t)}</span>
-                    {detail ? <span className="font-mono text-[10px] text-text-muted">{detail}</span> : null}
+                    {detail ? <span className={styles.detail}>{detail}</span> : null}
                   </Button>
                   {rule ? (
                     <Button
@@ -278,19 +262,19 @@ function PermissionCard({
                       aria-label={t('permission.editRule')}
                       title={t('permission.editRule')}
                       data-testid="permission-edit-rule"
-                      className="h-9 w-9 px-0"
+                      className={styles.editButton}
                       onClick={() => {
                         setRuleDraft(rule.ruleContent)
                         setEditingOptionId((prev) => (prev === option.id ? null : option.id))
                       }}
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil className={styles.icon} />
                     </Button>
                   ) : null}
                 </div>
                 {editing && rule ? (
-                  <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 font-mono text-[11px] text-text-secondary">
-                    <span className="flex-shrink-0">{rule.toolName}(</span>
+                  <div className={styles.ruleEditor}>
+                    <span className={styles.ruleAffix}>{rule.toolName}(</span>
                     <input
                       data-testid="permission-rule-input"
                       aria-label={t('permission.editRule')}
@@ -306,13 +290,13 @@ function PermissionCard({
                           setEditingOptionId(null)
                         }
                       }}
-                      className="min-w-0 flex-1 rounded border border-border bg-surface-1 px-1.5 py-0.5 font-mono text-[11px] text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
+                      className={styles.ruleInput}
                     />
-                    <span className="flex-shrink-0">)</span>
+                    <span className={styles.ruleAffix}>)</span>
                     <Button
                       type="button"
                       variant="brand"
-                      className="h-7 px-2 text-[11px]"
+                      className={styles.applyRuleButton}
                       onClick={() => applyEditedRule(option)}
                     >
                       {t('permission.applyRule')}
@@ -320,7 +304,7 @@ function PermissionCard({
                     <Button
                       type="button"
                       variant="surface"
-                      className="h-7 border-transparent bg-transparent px-2 text-[11px] shadow-none hover:bg-surface-2"
+                      className={styles.cancelRuleButton}
                       onClick={() => setEditingOptionId(null)}
                     >
                       {tc('cancel')}
@@ -334,29 +318,24 @@ function PermissionCard({
       ) : null}
 
       {denyOpen ? (
-        <div className="mt-2 space-y-1.5">
+        <div className={styles.denyForm}>
           <textarea
-            className="w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className={styles.denyInput}
             rows={2}
             placeholder={t('permission.denyPlaceholder')}
             aria-label={t('permission.denyReason')}
             value={feedback}
             onChange={(event) => setFeedback(event.target.value)}
           />
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="surface"
-              className="h-9 border-warning-border/40 px-3 text-warning-text hover:bg-warning-bg hover:text-warning-text"
-              onClick={submitDeny}
-            >
-              <X className="h-4 w-4" />
+          <div className={styles.denyButtons}>
+            <Button type="button" variant="surface" className={styles.denySendButton} onClick={submitDeny}>
+              <X className={styles.icon} />
               {t('permission.sendDeny')}
             </Button>
             <Button
               type="button"
               variant="surface"
-              className="h-9 border-transparent bg-transparent px-3 shadow-none hover:bg-surface-2"
+              className={styles.cancelButton}
               onClick={() => {
                 setDenyOpen(false)
                 setFeedback('')
@@ -367,15 +346,15 @@ function PermissionCard({
           </div>
         </div>
       ) : (
-        <div className="mt-3 flex gap-2">
+        <div className={styles.actions}>
           <Button
             type="button"
             variant="brand"
             aria-keyshortcuts="a"
-            className="h-11 flex-1 sm:h-9 sm:flex-none sm:px-4"
+            className={styles.actionButton}
             onClick={() => applyOption(allowOnce)}
           >
-            <Check className="h-4 w-4" />
+            <Check className={styles.icon} />
             {t('allow')}
             <ShortcutHint label="A" />
           </Button>
@@ -383,10 +362,10 @@ function PermissionCard({
             type="button"
             variant="surface"
             aria-keyshortcuts="d"
-            className="h-11 flex-1 border-warning-border/40 bg-warning-bg/40 text-warning-text hover:bg-warning-bg hover:text-warning-text sm:h-9 sm:flex-none sm:px-4"
+            className={styles.denyActionButton}
             onClick={() => setDenyOpen(true)}
           >
-            <X className="h-4 w-4" />
+            <X className={styles.icon} />
             {t('deny')}
             <ShortcutHint label="D" />
           </Button>
@@ -397,11 +376,7 @@ function PermissionCard({
 }
 
 function ShortcutHint({ label }: { label: string }) {
-  return (
-    <kbd className="ml-1 hidden rounded border border-current/30 px-1 font-mono text-[10px] leading-4 opacity-70 sm:inline">
-      {label}
-    </kbd>
-  )
+  return <kbd className={styles.shortcutHint}>{label}</kbd>
 }
 
 function formatInput(input: Record<string, unknown>): string {
