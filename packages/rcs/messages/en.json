@@ -183,6 +183,16 @@
         "killed": "stopped"
       }
     },
+    "sideQuestion": {
+      "title": "Side question",
+      "badge": "Aside",
+      "hint": "Answers from the current conversation without interrupting the running task",
+      "answering": "Answering…",
+      "empty": "No answer received",
+      "error": "The side question failed",
+      "retry": "Retry",
+      "close": "Close"
+    },
     "messageActions": {
       "edit": "Edit",
       "expand": "Expand",
@@ -479,7 +489,10 @@
       "username_taken": "That username is already taken.",
       "invalid_role": "That role is not valid.",
       "last_admin": "The last enabled admin cannot be demoted or disabled.",
-      "session_id_required": "A session ID is required."
+      "session_id_required": "A session ID is required.",
+      "bridge_unavailable": "No live agent is connected to this session.",
+      "side_question_timeout": "The side question timed out.",
+      "side_question_failed": "The side question failed."
     }
   }
 }

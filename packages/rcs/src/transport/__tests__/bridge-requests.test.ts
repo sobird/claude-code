@@ -7,6 +7,8 @@ import {
   modelOptionsFromResponse,
   requestBridgeControl,
   settleBridgeResponse,
+  sideQuestionAnswerFromResponse,
+  sideQuestionErrorFromResponse,
   suggestionPathsFromResponse,
 } from '../bridge-requests.js'
 
@@ -93,6 +95,44 @@ describe('modelOptionsFromResponse', () => {
     expect(modelOptionsFromResponse({ subtype: 'success', response: { models: [{}, { value: 'sonnet' }] } })).toEqual([
       { value: 'sonnet', displayName: 'sonnet' },
     ])
+  })
+})
+
+describe('sideQuestionAnswerFromResponse', () => {
+  it('extracts the answer from the success payload', () => {
+    expect(
+      sideQuestionAnswerFromResponse({
+        subtype: 'success',
+        request_id: 'sq',
+        // print.ts wraps runSideQuestion's `response` one level deeper.
+        response: { response: 'The answer.' },
+      }),
+    ).toBe('The answer.')
+  })
+
+  it('returns null for empty answers and malformed payloads', () => {
+    expect(sideQuestionAnswerFromResponse({ subtype: 'success', response: { response: '   ' } })).toBeNull()
+    expect(sideQuestionAnswerFromResponse({ subtype: 'success', response: { response: null } })).toBeNull()
+    expect(sideQuestionAnswerFromResponse({ subtype: 'success', response: { response: 42 } })).toBeNull()
+    expect(sideQuestionAnswerFromResponse({ subtype: 'success', response: null })).toBeNull()
+    expect(sideQuestionAnswerFromResponse({ subtype: 'error', error: 'boom' })).toBeNull()
+    expect(sideQuestionAnswerFromResponse(null)).toBeNull()
+    expect(sideQuestionAnswerFromResponse('nope')).toBeNull()
+  })
+})
+
+describe('sideQuestionErrorFromResponse', () => {
+  it('extracts the error message', () => {
+    expect(sideQuestionErrorFromResponse({ subtype: 'error', request_id: 'sq', error: 'overloaded' })).toBe(
+      'overloaded',
+    )
+  })
+
+  it('returns null for success and malformed payloads', () => {
+    expect(sideQuestionErrorFromResponse({ subtype: 'success', response: { response: 'ok' } })).toBeNull()
+    expect(sideQuestionErrorFromResponse({ subtype: 'error', error: '' })).toBeNull()
+    expect(sideQuestionErrorFromResponse({ subtype: 'error', error: 500 })).toBeNull()
+    expect(sideQuestionErrorFromResponse(null)).toBeNull()
   })
 })
 

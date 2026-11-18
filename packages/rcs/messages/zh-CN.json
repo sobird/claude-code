@@ -183,6 +183,16 @@
         "killed": "已停止"
       }
     },
+    "sideQuestion": {
+      "title": "旁问",
+      "badge": "旁问",
+      "hint": "基于当前对话上下文回答，不打断正在进行的任务",
+      "answering": "回答中…",
+      "empty": "没有收到回答",
+      "error": "旁问失败",
+      "retry": "重试",
+      "close": "关闭"
+    },
     "messageActions": {
       "edit": "编辑",
       "expand": "展开",
@@ -479,7 +489,10 @@
       "username_taken": "该用户名已被占用。",
       "invalid_role": "该角色无效。",
       "last_admin": "无法降级或停用最后一个启用的管理员。",
-      "session_id_required": "需要提供会话 ID。"
+      "session_id_required": "需要提供会话 ID。",
+      "bridge_unavailable": "该会话没有在线连接的 agent。",
+      "side_question_timeout": "旁问超时。",
+      "side_question_failed": "旁问失败。"
     }
   }
 }

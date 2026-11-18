@@ -128,6 +128,37 @@ export function suggestionPathsFromResponse(response: unknown): string[] {
   return paths
 }
 
+/**
+ * Pull the answer out of a `side_question` control response, defensively.
+ *
+ * `print.ts` wraps `runSideQuestion`'s `response` one level deeper than the
+ * other handlers: `{ subtype: 'success', response: { response: '<text>' } }`.
+ * A null inner string means the forked agent produced no text (API error or a
+ * tool attempt), which callers surface as an empty answer.
+ */
+export function sideQuestionAnswerFromResponse(response: unknown): string | null {
+  if (!response || typeof response !== 'object' || Array.isArray(response)) return null
+  const record = response as Record<string, unknown>
+  if (record.subtype !== 'success') return null
+  const payload = record.response
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null
+  const answer = (payload as Record<string, unknown>).response
+  if (typeof answer !== 'string') return null
+  const trimmed = answer.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+/** Pull the error message out of a `side_question` error response, defensively. */
+export function sideQuestionErrorFromResponse(response: unknown): string | null {
+  if (!response || typeof response !== 'object' || Array.isArray(response)) return null
+  const record = response as Record<string, unknown>
+  if (record.subtype !== 'error') return null
+  const error = record.error
+  if (typeof error !== 'string') return null
+  const trimmed = error.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
 /** Pull the model list out of an `initialize` control response, defensively. */
 export function modelOptionsFromResponse(response: unknown): ModelOption[] {
   if (!response || typeof response !== 'object' || Array.isArray(response)) return []

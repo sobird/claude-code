@@ -58,7 +58,7 @@ export function jsonError(
   c: AppContext,
   type: string,
   message: string,
-  status: 400 | 403 | 404 | 409 | 413 | 415,
+  status: 400 | 403 | 404 | 409 | 413 | 415 | 502 | 504,
   code?: string,
 ) {
   return c.json(code === undefined ? { error: { type, message } } : { error: { type, message, code } }, status)

@@ -84,6 +84,7 @@ import { PermissionModeMenu } from './permission-mode-menu'
 import { PermissionPanel } from './permission-panel'
 import { PlanView } from './plan-view'
 import { ShortcutsDialog } from './shortcuts-dialog'
+import { SideQuestionCard, type SideQuestionState } from './side-question-card'
 import { TaskPanel } from './task-panel'
 import { ThinkingMenu } from './thinking-menu'
 import { ToolCallGroup } from './tool-call-group'
@@ -216,6 +217,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // Events folded in from a send response so the message shows immediately even
   // if the live stream hiccups; the SSE echo dedupes by seqNum/uuid.
   const [extraEvents, setExtraEvents] = useState<SessionEventInput[]>([])
+  // `/btw` aside: transient by design — never folded into the transcript and
+  // gone on refresh. The sequence ref drops answers from closed/retried asks.
+  const [sideQuestion, setSideQuestion] = useState<SideQuestionState | null>(null)
+  const sideQuestionSeq = useRef(0)
   const [failedSend, setFailedSend] = useState<{
     text: string
     attachments: AttachmentRef[]
@@ -757,6 +762,47 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [api, sessionId],
   )
 
+  // `/btw`: ask the CLI's forked agent without touching the transcript. The
+  // broker route answers inline; a stale response after close/retry is dropped
+  // by the sequence check. The answer never enters the event stream, so a
+  // refresh naturally forgets it. Returns immediately so the composer clears
+  // the draft while the card shows progress.
+  const handleSideQuestion = useCallback(
+    (question: string) => {
+      const seq = ++sideQuestionSeq.current
+      setSideQuestion({ question, status: 'pending', answer: null, error: null })
+      void (async () => {
+        try {
+          const result = await api.post<{ answer?: unknown }>(
+            `/web/sessions/${encodeURIComponent(sessionId)}/side-question`,
+            { question },
+          )
+          if (sideQuestionSeq.current !== seq) return
+          const answer = typeof result?.answer === 'string' ? result.answer : null
+          setSideQuestion({ question, status: 'done', answer, error: null })
+        } catch (error) {
+          if (sideQuestionSeq.current !== seq) return
+          setSideQuestion({
+            question,
+            status: 'error',
+            answer: null,
+            error: describeError(error, 'chat.sideQuestion.error'),
+          })
+        }
+      })()
+    },
+    [api, sessionId, describeError],
+  )
+
+  const closeSideQuestion = useCallback(() => {
+    sideQuestionSeq.current += 1
+    setSideQuestion(null)
+  }, [])
+
+  const retrySideQuestion = useCallback(() => {
+    if (sideQuestion) handleSideQuestion(sideQuestion.question)
+  }, [handleSideQuestion, sideQuestion])
+
   const handleInterrupt = useCallback(async () => {
     setActionError(null)
     try {
@@ -1127,8 +1173,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         </div>
       ) : null}
 
+      <SideQuestionCard state={sideQuestion} onClose={closeSideQuestion} onRetry={retrySideQuestion} />
+
       <ChatInput
         onSubmit={handleSend}
+        onSideQuestion={closed || !hasToken ? undefined : handleSideQuestion}
         uploadImage={handleUploadImage}
         onInterrupt={handleInterrupt}
         isLoading={busy}

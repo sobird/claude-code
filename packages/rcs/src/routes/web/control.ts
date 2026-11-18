@@ -14,6 +14,7 @@ import { Hono } from 'hono'
 
 import type { AppContext, AppEnv } from '../../auth/context.js'
 import { isSessionClosedStatus } from '../../contracts.js'
+import { MAX_SIDE_QUESTION_LENGTH } from '../../lib/side-question.js'
 import {
   getSession,
   reactivateInactiveSession,
@@ -25,12 +26,14 @@ import {
   cancelBridgeRequest,
   modelOptionsFromResponse,
   requestBridgeControl,
+  sideQuestionAnswerFromResponse,
+  sideQuestionErrorFromResponse,
   suggestionPathsFromResponse,
 } from '../../transport/bridge-requests.js'
 import { getEventBus, publishSessionEvent } from '../../transport/event-bus.js'
 import { loadModelCatalog } from '../../transport/model-catalog.js'
 import { sendToBridge } from '../../transport/ws-handler.js'
-import { legacyUserAuth, sessionClosed, webForbidden } from '../common.js'
+import { jsonError, legacyUserAuth, sessionClosed, webForbidden } from '../common.js'
 
 const app = new Hono<AppEnv>()
 
@@ -125,6 +128,55 @@ app.get('/sessions/:id/file-suggestions', legacyUserAuth, async (c) => {
 
   const response = await pending
   return c.json({ suggestions: suggestionPathsFromResponse(response) }, 200)
+})
+
+/** A forked agent answers `/btw` against the cached context; give it room. */
+const SIDE_QUESTION_TIMEOUT_MS = 180_000
+
+/**
+ * POST /web/sessions/:id/side-question — `/btw` aside.
+ *
+ * Like file completion, the request is written straight to the live bridge and
+ * awaited through the in-memory broker, so the exchange never touches
+ * `session_events`: the answer shows in a transient card and is gone on
+ * refresh. Unlike completion, a missing bridge is an explicit error — the user
+ * asked a question and expects an answer, not a silent empty result.
+ */
+app.post('/sessions/:id/side-question', legacyUserAuth, async (c) => {
+  const ownership = await checkOwnership(c, c.req.param('id'))
+  if (!ownership.ok) return ownership.response
+
+  const body: unknown = await c.req.json().catch(() => ({}))
+  const record = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : {}
+  const question = typeof record.question === 'string' ? record.question.trim().slice(0, MAX_SIDE_QUESTION_LENGTH) : ''
+  if (!question) {
+    return jsonError(c, 'invalid_request', 'A question is required', 400, 'invalid_question')
+  }
+
+  const requestId = `sq_${randomUUID()}`
+  const pending = requestBridgeControl(
+    ownership.sessionId,
+    requestId,
+    { subtype: 'side_question', question },
+    SIDE_QUESTION_TIMEOUT_MS,
+  )
+  const sent = sendToBridge(ownership.sessionId, {
+    type: 'control_request',
+    request_id: requestId,
+    request: { subtype: 'side_question', question },
+  })
+  if (!sent) {
+    cancelBridgeRequest(ownership.sessionId, requestId)
+    return jsonError(c, 'bridge_unavailable', 'No live bridge for this session', 409, 'bridge_unavailable')
+  }
+
+  const response = await pending
+  if (!response) {
+    return jsonError(c, 'side_question_timeout', 'The side question timed out', 504, 'side_question_timeout')
+  }
+  const error = sideQuestionErrorFromResponse(response)
+  if (error) return jsonError(c, 'side_question_failed', error, 502, 'side_question_failed')
+  return c.json({ answer: sideQuestionAnswerFromResponse(response) }, 200)
 })
 
 /**

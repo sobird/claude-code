@@ -22,6 +22,9 @@ export const KNOWN_ERROR_CODES = [
   'invalid_role',
   'last_admin',
   'session_id_required',
+  'bridge_unavailable',
+  'side_question_timeout',
+  'side_question_failed',
 ] as const
 
 export type KnownErrorCode = (typeof KNOWN_ERROR_CODES)[number]

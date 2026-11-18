@@ -5,10 +5,13 @@ import { Hono } from 'hono'
 import type { AppEnv } from '../../auth/context.js'
 import { hashPassword, verifyPassword } from '../../auth/password.js'
 import { signAccessToken } from '../../auth/tokens.js'
+import { loadConfig } from '../../config.js'
 import type { UserRecord } from '../../contracts.js'
 import { createMemoryRepositories } from '../../db/repositories/index.js'
 import type { Repositories } from '../../db/repositories/types.js'
+import { settleBridgeResponse } from '../../transport/bridge-requests.js'
 import { getAllEventBuses, getEventBus, publishSessionEvent, removeEventBus } from '../../transport/event-bus.js'
+import { closeAllConnections, handleWebSocketClose, handleWebSocketOpen } from '../../transport/ws-handler.js'
 import v1Environments from '../v1/environments.js'
 import v1EnvironmentsWork from '../v1/environments.work.js'
 import v1Sessions from '../v1/sessions.js'
@@ -46,6 +49,35 @@ function bearer(token: string): Record<string, string> {
 function toWebSessionId(sessionId: string): string {
   if (!sessionId.startsWith('cse_')) return sessionId
   return `session_${sessionId.slice('cse_'.length)}`
+}
+
+/** Minimal bridge socket for `sendToBridge`/`handleWebSocketOpen`. */
+interface MockBridgeWs {
+  readyState: number
+  sent: string[]
+  send(data: string): void
+  close(code?: number, reason?: string): void
+}
+
+function createBridgeWs(): MockBridgeWs {
+  return {
+    readyState: 1,
+    sent: [],
+    send(data) {
+      this.sent.push(data)
+    },
+    close() {
+      this.readyState = 3
+    },
+  }
+}
+
+async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promise<void> {
+  const started = Date.now()
+  while (!predicate()) {
+    if (Date.now() - started > timeoutMs) throw new Error('timed out waiting for condition')
+    await new Promise((resolve) => setTimeout(resolve, 5))
+  }
 }
 
 interface Seed {
@@ -1529,6 +1561,101 @@ describe('Web Control Routes', () => {
       headers: bearer(s.otherToken),
     })
     expect(res.status).toBe(403)
+  })
+
+  test('POST /web/sessions/:id/side-question 403 for another member', async () => {
+    const res = await app.request(`/web/sessions/${sessionId}/side-question`, {
+      method: 'POST',
+      headers: bearer(s.otherToken),
+      body: JSON.stringify({ question: 'what changed?' }),
+    })
+    expect(res.status).toBe(403)
+  })
+
+  test('POST /web/sessions/:id/side-question requires a non-empty question', async () => {
+    for (const body of [{}, { question: '' }, { question: '   ' }, { question: 42 }]) {
+      const res = await app.request(`/web/sessions/${sessionId}/side-question`, {
+        method: 'POST',
+        headers: bearer(s.memberToken),
+        body: JSON.stringify(body),
+      })
+      expect(res.status).toBe(400)
+      const payload = (await resJson(res)) as { error?: { code?: string } }
+      expect(payload.error?.code).toBe('invalid_question')
+    }
+  })
+
+  test('POST /web/sessions/:id/side-question fails without a live bridge', async () => {
+    const res = await app.request(`/web/sessions/${sessionId}/side-question`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ question: 'what changed?' }),
+    })
+    expect(res.status).toBe(409)
+    const payload = (await resJson(res)) as { error?: { code?: string } }
+    expect(payload.error?.code).toBe('bridge_unavailable')
+  })
+
+  test('POST /web/sessions/:id/side-question forwards the ask and returns the answer', async () => {
+    const recordId = sessionId.replace(/^session_/, 'cse_')
+    const ws = createBridgeWs()
+    await handleWebSocketOpen(s.repos, loadConfig(), ws as never, recordId)
+    try {
+      const pending = app.request(`/web/sessions/${sessionId}/side-question`, {
+        method: 'POST',
+        headers: bearer(s.memberToken),
+        body: JSON.stringify({ question: 'why is the sky blue?' }),
+      })
+      await waitFor(() => ws.sent.length > 0)
+      const request = JSON.parse(ws.sent.at(-1) ?? '{}') as {
+        type?: string
+        request_id?: string
+        request?: { subtype?: string; question?: string }
+      }
+      expect(request.type).toBe('control_request')
+      expect(request.request?.subtype).toBe('side_question')
+      expect(request.request?.question).toBe('why is the sky blue?')
+
+      settleBridgeResponse(recordId, {
+        subtype: 'success',
+        request_id: request.request_id,
+        response: { response: 'Rayleigh scattering.' },
+      })
+      const res = await pending
+      expect(res.status).toBe(200)
+      expect((await resJson(res)).answer).toBe('Rayleigh scattering.')
+    } finally {
+      handleWebSocketClose(ws as never, recordId)
+      closeAllConnections()
+    }
+  })
+
+  test('POST /web/sessions/:id/side-question surfaces a bridge error', async () => {
+    const recordId = sessionId.replace(/^session_/, 'cse_')
+    const ws = createBridgeWs()
+    await handleWebSocketOpen(s.repos, loadConfig(), ws as never, recordId)
+    try {
+      const pending = app.request(`/web/sessions/${sessionId}/side-question`, {
+        method: 'POST',
+        headers: bearer(s.memberToken),
+        body: JSON.stringify({ question: 'why?' }),
+      })
+      await waitFor(() => ws.sent.length > 0)
+      const request = JSON.parse(ws.sent.at(-1) ?? '{}') as { request_id?: string }
+      settleBridgeResponse(recordId, {
+        subtype: 'error',
+        request_id: request.request_id,
+        error: 'overloaded',
+      })
+      const res = await pending
+      expect(res.status).toBe(502)
+      const payload = (await resJson(res)) as { error?: { code?: string; message?: string } }
+      expect(payload.error?.code).toBe('side_question_failed')
+      expect(payload.error?.message).toBe('overloaded')
+    } finally {
+      handleWebSocketClose(ws as never, recordId)
+      closeAllConnections()
+    }
   })
 
   test('GET /web/sessions/:id/models returns an empty list without a bridge', async () => {

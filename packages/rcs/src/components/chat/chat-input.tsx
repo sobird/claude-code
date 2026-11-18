@@ -5,7 +5,7 @@
  * inserts a newline, and Escape/Stop interrupt while the agent is running.
  */
 
-import { ImagePlus, Loader2, Send, Square, X } from 'lucide-react'
+import { ImagePlus, Loader2, MessageCircleQuestion, Send, Square, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { type DragEvent as ReactDragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -17,6 +17,7 @@ import { applyFileSuggestion, fileQuery, type FileQueryToken } from '../../lib/f
 import { type HistoryMatch, searchHistory } from '../../lib/history-search'
 import { appendHistory, moveHistory } from '../../lib/input-history'
 import { randomUuid } from '../../lib/random-uuid'
+import { isBtwCommand, parseBtwCommand } from '../../lib/side-question'
 import { cn } from '../../lib/utils'
 
 const HISTORY_STORAGE_KEY = 'rcs:input-history'
@@ -47,6 +48,11 @@ function loadHistory(): string[] {
 interface ChatInputProps {
   /** May reject; on rejection the draft is kept so the user can retry. */
   onSubmit: (text: string, attachments: AttachmentRef[]) => Promise<void> | void
+  /**
+   * Sends a `/btw <question>` aside instead of a normal turn. Absent leaves the
+   * command to go out as plain text (the CLI swallows it in headless mode).
+   */
+  onSideQuestion?: (question: string) => Promise<void> | void
   /** Uploads one prepared image and resolves its stored reference. */
   uploadImage?: (file: Blob) => Promise<AttachmentRef>
   onInterrupt?: () => void
@@ -64,6 +70,7 @@ interface ChatInputProps {
 
 export function ChatInput({
   onSubmit,
+  onSideQuestion,
   uploadImage,
   onInterrupt,
   isLoading = false,
@@ -282,14 +289,26 @@ export function ChatInput({
     [fileToken, text],
   )
 
+  // `/btw` asides bypass the transcript: the question goes to the side-question
+  // route and the answer lands in a transient card.
+  const btwMode = onSideQuestion !== undefined && isBtwCommand(text)
+
   const handleSubmit = useCallback(async () => {
     const trimmed = text.trim()
     const attachments = imagesRef.current.flatMap((image) => (image.status === 'ready' && image.ref ? [image.ref] : []))
     const uploading = imagesRef.current.some((image) => image.status === 'uploading')
-    if ((!trimmed && attachments.length === 0) || disabled || sending || uploading) return
+    if (disabled || sending || uploading) return
+    // A bare `/btw` has no question yet; keep the draft so the user can finish it.
+    if (onSideQuestion !== undefined && isBtwCommand(trimmed) && parseBtwCommand(trimmed) === null) return
+    if (!trimmed && attachments.length === 0) return
+    const aside = onSideQuestion !== undefined ? parseBtwCommand(trimmed) : null
     setSending(true)
     try {
-      await onSubmit(trimmed, attachments)
+      if (aside !== null && onSideQuestion !== undefined) {
+        await onSideQuestion(aside)
+      } else {
+        await onSubmit(trimmed, attachments)
+      }
       // Only clear once the send resolved; a failure keeps the draft so the
       // user can retry (the parent surfaces the error).
       setText('')
@@ -312,7 +331,7 @@ export function ChatInput({
     } finally {
       setSending(false)
     }
-  }, [text, disabled, sending, onSubmit, commitImages])
+  }, [text, disabled, sending, onSubmit, onSideQuestion, commitImages])
 
   const handleInput = useCallback(
     (target: HTMLTextAreaElement) => {
@@ -585,6 +604,16 @@ export function ChatInput({
                 </button>
               </div>
             ))}
+          </div>
+        ) : null}
+        {btwMode ? (
+          <div
+            data-testid="btw-badge"
+            className="flex items-center gap-1.5 border-b border-border/60 px-3 py-1.5 text-[11px] text-brand"
+          >
+            <MessageCircleQuestion className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+            <span className="font-display font-medium">{t('sideQuestion.badge')}</span>
+            <span className="truncate text-text-muted">{t('sideQuestion.hint')}</span>
           </div>
         ) : null}
         <div className="flex items-end gap-2 px-3 py-2.5">
