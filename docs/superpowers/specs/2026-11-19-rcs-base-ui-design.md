@@ -34,7 +34,7 @@ Direct Radix imports in `src/` exist in exactly nine files:
 | `dropdown-menu.tsx` | `@radix-ui/react-dropdown-menu` | 5 (`thinking-menu`, `permission-mode-menu`, `model-menu`, `navbar`, `theme-toggle`)                     |
 | `select.tsx`        | `@radix-ui/react-select`        | 3 (`language-selector`, `new-session-dialog`, `user-table`)                                             |
 | `label.tsx`         | `@radix-ui/react-label`         | 5 (`password-form`, `language-selector`, `api-keys`, `new-session-dialog`, `user-table`)                |
-| `separator.tsx`     | `@radix-ui/react-separator`     | 4 (`thinking-menu`, `permission-mode-menu`, `model-menu`, `navbar`)                                     |
+| `separator.tsx`     | `@radix-ui/react-separator`     | 0 (menus use `DropdownMenuSeparator`; this wrapper is converted for completeness)                       |
 | `scroll-area.tsx`   | `@radix-ui/react-scroll-area`   | 1 (`navbar` drawer)                                                                                     |
 | `button.tsx`        | `@radix-ui/react-slot`          | 15 (one `asChild` site: navbar)                                                                         |
 | `badge.tsx`         | `@radix-ui/react-slot`          | 9 (no `asChild` sites)                                                                                  |
