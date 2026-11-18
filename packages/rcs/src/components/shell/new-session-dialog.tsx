@@ -11,6 +11,8 @@ import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import type { CreatedSession, EnvironmentSummary } from './types'
 
+import styles from './new-session-dialog.module.css'
+
 const NO_ENVIRONMENT = 'none'
 
 interface NewSessionDialogProps {
@@ -64,17 +66,15 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
         if (!next) onClose()
       }}
     >
-      <DialogContent className="rounded-2xl border-border bg-surface-1 shadow-2xl sm:max-w-md">
+      <DialogContent className={styles.dialog}>
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-semibold text-text-primary">
-            {t('newSession.title')}
-          </DialogTitle>
-          <DialogDescription className="text-sm text-text-muted">{t('newSession.description')}</DialogDescription>
+          <DialogTitle className={styles.title}>{t('newSession.title')}</DialogTitle>
+          <DialogDescription className={styles.description}>{t('newSession.description')}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="session-title" className="text-text-secondary">
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <Label htmlFor="session-title" className={styles.label}>
               {t('newSession.titleLabel')}
             </Label>
             <Input
@@ -83,16 +83,16 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
               onChange={(event) => setTitle(event.target.value)}
               placeholder={t('newSession.titlePlaceholder')}
               disabled={pending}
-              className="bg-surface-2"
+              className={styles.input}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="session-environment" className="text-text-secondary">
+          <div className={styles.field}>
+            <Label htmlFor="session-environment" className={styles.label}>
               {t('newSession.environmentLabel')}
             </Label>
             <Select value={environmentId} onValueChange={setEnvironmentId} disabled={pending}>
-              <SelectTrigger id="session-environment" className="w-full bg-surface-2">
+              <SelectTrigger id="session-environment" className={styles.selectTrigger}>
                 <SelectValue placeholder={t('newSession.noEnvironment')} />
               </SelectTrigger>
               <SelectContent>
@@ -108,7 +108,7 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
           </div>
 
           {error ? (
-            <p role="alert" className="text-sm text-status-error">
+            <p role="alert" className={styles.error}>
               {describeError(error, 'errors.generic')}
             </p>
           ) : null}

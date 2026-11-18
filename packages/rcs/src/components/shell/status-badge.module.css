@@ -1,0 +1,45 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: calc(1 / 0.75);
+  font-weight: 500;
+}
+
+.active {
+  background-color: color-mix(in oklab, var(--color-status-active) 15%, transparent);
+  color: var(--color-status-active);
+}
+
+.running {
+  background-color: color-mix(in oklab, var(--color-status-running) 15%, transparent);
+  color: var(--color-status-running);
+}
+
+.idle {
+  background-color: color-mix(in oklab, var(--color-status-idle) 15%, transparent);
+  color: var(--color-status-idle);
+}
+
+.inactive,
+.archived {
+  background-color: color-mix(in oklab, var(--color-text-muted) 15%, transparent);
+  color: var(--color-text-muted);
+}
+
+.requiresAction {
+  background-color: color-mix(in oklab, var(--color-status-warning) 20%, transparent);
+  color: var(--color-status-warning);
+}
+
+.error {
+  background-color: color-mix(in oklab, var(--color-status-error) 15%, transparent);
+  color: var(--color-status-error);
+}
+
+.fallback {
+  background-color: var(--color-surface-3);
+  color: var(--color-text-primary);
+}
