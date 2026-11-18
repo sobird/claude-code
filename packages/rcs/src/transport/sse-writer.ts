@@ -40,6 +40,8 @@ interface EventStreamOptions {
   direction?: SessionEvent['direction']
   /** Extra filter applied to both the durable replay and live events. */
   include?: (event: SessionEvent) => boolean
+  /** Runs once when the stream closes, for per-connection bookkeeping. */
+  onClose?: () => void
 }
 
 async function loadReplay(repos: Repositories, options: EventStreamOptions): Promise<SessionEvent[]> {
@@ -68,6 +70,7 @@ function createEventStream(c: Context, repos: Repositories, options: EventStream
         closed = true
         unsub()
         if (keepalive) clearInterval(keepalive)
+        options.onClose?.()
       }
       dispose = cleanup
 
@@ -133,11 +136,18 @@ function createEventStream(c: Context, repos: Repositories, options: EventStream
  * Live SSE stream for the web UI: `message` frames containing every direction.
  * `fromSeqNum` is the `Last-Event-ID` cursor (0 = no replay).
  */
-export function createSSEStream(c: Context, repos: Repositories, sessionId: string, fromSeqNum = 0): Response {
+export function createSSEStream(
+  c: Context,
+  repos: Repositories,
+  sessionId: string,
+  fromSeqNum = 0,
+  onClose?: () => void,
+): Response {
   return createEventStream(c, repos, {
     sessionId,
     fromSeqNum,
     frame: toSessionEventFrame,
+    ...(onClose ? { onClose } : {}),
   })
 }
 

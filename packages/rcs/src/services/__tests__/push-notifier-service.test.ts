@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { loadConfig } from '../../config.js'
 import { toWebSessionId } from '../../contracts.js'
 import { createMemoryRepositories } from '../../db/repositories/index.js'
+import { connectPresence, resetPresenceForTests, setPresenceVisible } from '../presence.js'
 import {
   getPushPublicConfig,
   initPushNotifier,
@@ -51,7 +52,10 @@ const REAL_VAPID_PRIVATE_KEY = '-Gavixvdemehu1VOZ5SonwhgpJ9g7TkvUxlWHbM3MCE'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-beforeEach(() => resetPushNotifierForTests())
+beforeEach(() => {
+  resetPushNotifierForTests()
+  resetPresenceForTests()
+})
 
 describe('push notifier service', () => {
   test('does nothing before initialization', async () => {
@@ -125,6 +129,51 @@ describe('push notifier service', () => {
     await flush()
 
     expect(sent).toHaveLength(0)
+  })
+
+  test('skips the push while a client is visibly on the session, then sends once it leaves', async () => {
+    const repos = createMemoryRepositories()
+    const { provider, sent } = fakeProvider()
+    const { user, session } = await seedSession(repos)
+    await repos.pushSubscriptions.upsertForUser(user.id, {
+      endpoint: 'https://push.example/a',
+      p256dh: 'p1',
+      auth: 'a1',
+    })
+
+    await initPushNotifier({ config: config(), repos, provider })
+    const release = connectPresence(session.id, 'c1')
+    setPresenceVisible(session.id, 'c1', true)
+    notifyInboundEvent(session.id, 'control_request', confirmation)
+    await flush()
+
+    expect(sent).toHaveLength(0)
+
+    release()
+    notifyInboundEvent(session.id, 'control_request', confirmation)
+    await flush()
+
+    expect(sent).toHaveLength(1)
+  })
+
+  test('still sends while the connected client is hidden', async () => {
+    const repos = createMemoryRepositories()
+    const { provider, sent } = fakeProvider()
+    const { user, session } = await seedSession(repos)
+    await repos.pushSubscriptions.upsertForUser(user.id, {
+      endpoint: 'https://push.example/a',
+      p256dh: 'p1',
+      auth: 'a1',
+    })
+
+    await initPushNotifier({ config: config(), repos, provider })
+    const release = connectPresence(session.id, 'c1')
+    setPresenceVisible(session.id, 'c1', false)
+    notifyInboundEvent(session.id, 'control_request', confirmation)
+    await flush()
+
+    expect(sent).toHaveLength(1)
+    release()
   })
 
   test('drops a 410 subscription and keeps sending to the rest', async () => {

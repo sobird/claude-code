@@ -14,6 +14,7 @@ import { isSessionClosedStatus, toWebSessionId } from '../../contracts.js'
 import type { SessionRecord } from '../../contracts.js'
 import { defaultSessionTitle, requestLocale } from '../../i18n/default-titles.js'
 import { getAutomationStateSnapshot } from '../../services/automationState.js'
+import { connectPresence, setPresenceVisible } from '../../services/presence.js'
 import {
   createSession,
   getSession,
@@ -194,7 +195,28 @@ app.get('/sessions/:id/events', legacyUserAuth, async (c) => {
   const lastEventId = c.req.header('Last-Event-ID')
   const parsed = lastEventId ? Number.parseInt(lastEventId, 10) : 0
   const fromSeqNum = Number.isFinite(parsed) && parsed > 0 ? parsed : 0
-  return createSSEStream(c, repos, owned, fromSeqNum)
+
+  // Presence lives as long as this stream: the page reports visibility on top
+  // of it, and closing the connection drops the entry (no heartbeat needed).
+  const clientId = (c.req.query('client_id') ?? '').trim().slice(0, 128)
+  const release = clientId ? connectPresence(owned, clientId) : undefined
+  return createSSEStream(c, repos, owned, fromSeqNum, release)
+})
+
+/** POST /web/sessions/:id/presence — Report whether this client can see the session. */
+app.post('/sessions/:id/presence', legacyUserAuth, async (c) => {
+  const repos = c.get('repos')
+  const requested = c.req.param('id')
+  if (!(await getSession(repos, requested))) return webNotFound(c)
+  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
+  if (!owned) return webForbidden(c)
+
+  const body = await readJson(c)
+  const clientId = typeof body.client_id === 'string' ? body.client_id.trim().slice(0, 128) : ''
+  if (!clientId) return c.json({ error: 'client_id is required', code: 'client_id_required' }, 400)
+
+  setPresenceVisible(owned, clientId, body.visible === true)
+  return c.body(null, 204)
 })
 
 export default app

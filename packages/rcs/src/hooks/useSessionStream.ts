@@ -12,8 +12,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { getApiBaseUrl } from '../lib/api-client'
+import { createApiClient, getApiBaseUrl } from '../lib/api-client'
+import { randomUuid } from '../lib/random-uuid'
 import { defaultSleep, runStreamWithRefresh, type StreamStatus } from '../lib/reconnect'
+import { buildSessionEventsUrl, createPresenceReporter } from '../lib/session-presence'
 import { useAccessToken } from './useAccessToken'
 
 export interface SessionStreamEvent {
@@ -91,7 +93,17 @@ export function useSessionStream(sessionId: string | null): UseSessionStreamResu
     setError(null)
     setStatus('connecting')
 
-    const url = `${getApiBaseUrl()}/web/sessions/${encodeURIComponent(sessionId)}/events`
+    const clientId = randomUuid()
+    const api = createApiClient({
+      getToken: () => tokenRef.current,
+      refreshToken: async () => {
+        const next = await refreshRef.current()
+        if (next) tokenRef.current = next
+        return next
+      },
+    })
+    const reportPresence = createPresenceReporter(api, sessionId, clientId)
+    const url = buildSessionEventsUrl(getApiBaseUrl(), sessionId, clientId)
 
     runStreamWithRefresh({
       url,
@@ -114,6 +126,9 @@ export function useSessionStream(sessionId: string | null): UseSessionStreamResu
       onStatus: (next) => {
         if (isStale()) return
         setStatus(next)
+        // The stream may have reconnected after a visibility change we could
+        // not report, so opening it re-announces the current state.
+        if (next === 'open') reportPresence(document.visibilityState === 'visible')
       },
       signal: controller.signal,
     }).catch((err: unknown) => {
@@ -122,8 +137,12 @@ export function useSessionStream(sessionId: string | null): UseSessionStreamResu
       setStatus('error')
     })
 
+    const onVisibilityChange = () => reportPresence(document.visibilityState === 'visible')
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
     return () => {
       cancelled = true
+      document.removeEventListener('visibilitychange', onVisibilityChange)
       controller.abort()
     }
   }, [sessionId, started])

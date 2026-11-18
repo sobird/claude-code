@@ -17,6 +17,7 @@ import type { PushVapidKeys } from '../contracts.js'
 import type { Repositories } from '../db/repositories/types.js'
 import { buildNotificationPayload, isConfirmationRequest, shouldNotifyOnce } from '../lib/push-payload.js'
 import { log } from '../logger.js'
+import { isSessionVisible } from './presence.js'
 
 export interface PushNotifierProvider {
   setVapidDetails(subject: string, publicKey: string, privateKey: string): void
@@ -166,6 +167,9 @@ async function run(current: PushNotifierState, sessionId: string, type: string, 
 
   const session = await current.repos.sessions.getById(sessionId)
   if (!session || !session.ownerUserId) return
+  // iOS requires every push to be shown, so a visible client cannot swallow it
+  // in the service worker; the only place to stay quiet is here.
+  if (isSessionVisible(sessionId)) return
 
   const notification = buildNotificationPayload(session, type, payload)
   if (!notification) return
