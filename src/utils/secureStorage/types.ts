@@ -1,3 +1,5 @@
+import type { RateLimitTier, SubscriptionType } from '../../services/oauth/types.js'
+
 export type SecureStorageUpdateResult = {
   success: boolean
   warning?: string
@@ -39,13 +41,18 @@ export type McpXaaIdpConfigEntry = {
   [key: string]: unknown
 }
 
+/**
+ * The only writer is `saveOAuthTokensIfNeeded`, which always persists all six
+ * fields, so they are required here; `null` (not absence) marks unknown values
+ * such as the subscription type of an externally-injected token.
+ */
 export type ClaudeAiOAuthStorageEntry = {
   accessToken: string
-  refreshToken?: string | null
-  expiresAt?: number | null
-  scopes?: string[]
-  subscriptionType?: string | null
-  rateLimitTier?: string | null
+  refreshToken: string | null
+  expiresAt: number | null
+  scopes: string[]
+  subscriptionType: SubscriptionType | null
+  rateLimitTier: RateLimitTier | null
   [key: string]: unknown
 }
 

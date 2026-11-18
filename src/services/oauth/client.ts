@@ -261,7 +261,7 @@ export async function fetchAndStoreUserRoles(accessToken: string): Promise<void>
   if (response.status !== 200) {
     throw new Error(`Failed to fetch user roles: ${response.statusText}`)
   }
-  const data = response.data
+  const data: UserRolesResponse = response.data
   const config = getGlobalConfig()
 
   if (!config.oauthAccount) {
