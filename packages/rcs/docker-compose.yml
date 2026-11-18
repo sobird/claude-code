@@ -15,7 +15,7 @@ x-common-env: &common-env
   ADMIN_PASSWORD: ${ADMIN_PASSWORD:-insecure-dev-admin-password}
 
 x-rcs-service: &rcs-service
-  image: rcs:local
+  image: ${RCS_IMAGE:-rcs:local}
   build:
     context: ../..
     dockerfile: packages/rcs/Dockerfile

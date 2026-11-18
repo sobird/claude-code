@@ -193,6 +193,21 @@ The `postgres`, `app`, `gateway` and `caddy` services share one image built from
 > is a Bun workspace member and `bun install --frozen-lockfile` needs the root
 > lockfile and workspace manifests. Build rules live in `Dockerfile.dockerignore`.
 
+### Deploying a published image
+
+Releases publish an image to `ghcr.io/<owner>/rcs` tagged with the release
+version and `latest` (linux/amd64). On a server, pin the version and pull:
+
+```bash
+export RCS_IMAGE=ghcr.io/sobird/rcs:0.2.0
+docker compose pull
+docker compose up -d --no-build
+```
+
+The package is private by default; `docker login ghcr.io` with a PAT that can
+read packages, or change the package visibility on GitHub. `RCS_IMAGE` unset
+falls back to building `rcs:local` locally.
+
 ### Without Docker (development)
 
 If you do not already have a Postgres 16 reachable, start one:

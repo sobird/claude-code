@@ -36,6 +36,9 @@ rest and `README.md` for the full environment table.
   120 columns.
 - Docker still builds from the repository root because this package is a Bun
   workspace member; `Dockerfile.dockerignore` patterns are root-relative.
-- CI: `.github/workflows/rcs.yml`. Releases are manual (`0.1.0`);
-  release-please excludes `packages/rcs` from the CLI's versioning.
+- CI: `.github/workflows/rcs.yml` (gates only). Releases use release-please
+  manifest mode: `feat(rcs):`/`fix(rcs):` commits bump `packages/rcs` to its
+  own `rcs-vX.Y.Z` tag/CHANGELOG and do not affect the CLI's version. A
+  release pushes `ghcr.io/<owner>/rcs:<version>` and `:latest` (linux/amd64);
+  rcs is not published to npm.
 - `next dev` writes a managed `AGENTS.md` here; it is gitignored.
