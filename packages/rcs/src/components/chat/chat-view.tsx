@@ -33,6 +33,7 @@ import { useSessionStream } from '../../hooks/useSessionStream'
 import { createApiClient } from '../../lib/api-client'
 import { withPendingApprovalCount } from '../../lib/approval-alert'
 import { buildUserContent, type AttachmentRef } from '../../lib/attachments'
+import { buildStopTaskRequest } from '../../lib/background-tasks'
 import {
   copyTextForEntry,
   cursorEnterAction,
@@ -739,6 +740,23 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [api, sessionId],
   )
 
+  // SDK `stop_task`: the child kills the task and answers with its own
+  // `task_notification`, which removes the row (no local pending state).
+  const handleStopBackgroundTask = useCallback(
+    async (taskId: string) => {
+      setActionError(null)
+      try {
+        await api.post(
+          `/web/sessions/${encodeURIComponent(sessionId)}/control`,
+          buildStopTaskRequest(randomUuid(), taskId),
+        )
+      } catch (error) {
+        setActionError(error)
+      }
+    },
+    [api, sessionId],
+  )
+
   const handleInterrupt = useCallback(async () => {
     setActionError(null)
     try {
@@ -1084,7 +1102,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       <TaskPanel tasks={chat.tasks} />
 
-      <BackgroundTaskPanel tasks={chat.backgroundTasks} />
+      <BackgroundTaskPanel tasks={chat.backgroundTasks} onStop={handleStopBackgroundTask} />
 
       <PermissionPanel requests={chat.pendingPermissions} onRespond={handlePermissionRespond} />
 
@@ -1270,7 +1288,7 @@ function systemText(entry: SystemEntry, t: ReturnType<typeof useTranslations<'ch
       const status =
         entry.taskStatus === 'failed'
           ? t('backgroundTasks.status.failed')
-          : entry.taskStatus === 'stopped'
+          : entry.taskStatus === 'stopped' || entry.taskStatus === 'killed'
             ? t('backgroundTasks.status.stopped')
             : t('backgroundTasks.status.completed')
       return t('system.taskNotification', { status, summary: entry.content ?? '' })

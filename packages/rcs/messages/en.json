@@ -174,10 +174,13 @@
       "toolUses": "{count} tool uses",
       "lastTool": "last: {tool}",
       "fallback": "Background task",
+      "stop": "Stop",
+      "stopping": "Stopping…",
       "status": {
         "completed": "completed",
         "failed": "failed",
-        "stopped": "stopped"
+        "stopped": "stopped",
+        "killed": "stopped"
       }
     },
     "messageActions": {

@@ -174,10 +174,13 @@
       "toolUses": "{count} 次工具调用",
       "lastTool": "最近：{tool}",
       "fallback": "后台任务",
+      "stop": "停止",
+      "stopping": "停止中…",
       "status": {
         "completed": "已完成",
         "failed": "失败",
-        "stopped": "已停止"
+        "stopped": "已停止",
+        "killed": "已停止"
       }
     },
     "messageActions": {

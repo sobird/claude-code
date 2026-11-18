@@ -1784,12 +1784,26 @@ describe('background tasks', () => {
     })
   })
 
-  test('a result clears every running task', () => {
+  test('a result clears every turn-scoped task', () => {
     let state = reduceSessionEvent(initialChatState, { ...started('t1'), createdAt: 1_000 })
     state = reduceSessionEvent(state, { ...started('t2'), createdAt: 1_000 })
     state = reduceSessionEvent(state, event('result', { subtype: 'success' }))
 
     expect(state.backgroundTasks).toEqual([])
+  })
+
+  test('a result keeps background shells alive across turns', () => {
+    // The CLI only holds `result` back for agents/workflows; a background bash
+    // task keeps running after the turn ends and reports via task_notification.
+    let state = reduceSessionEvent(initialChatState, {
+      ...started('shell-1', { task_type: 'local_bash', description: 'dev server' }),
+      createdAt: 1_000,
+    })
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }))
+
+    expect(state.backgroundTasks).toEqual([
+      expect.objectContaining({ taskId: 'shell-1', taskType: 'local_bash', description: 'dev server' }),
+    ])
   })
 
   test('session_state_changed idle clears the list without touching the turn clock', () => {
@@ -1798,6 +1812,40 @@ describe('background tasks', () => {
 
     expect(state.backgroundTasks).toEqual([])
     expect(state.turnOpen).toBe(true)
+  })
+
+  test('session_state_changed idle keeps background shells', () => {
+    let state = reduceSessionEvent(initialChatState, {
+      ...started('shell-1', { task_type: 'local_bash' }),
+      createdAt: 1_000,
+    })
+    state = reduceSessionEvent(state, event('system', { subtype: 'session_state_changed', state: 'idle' }))
+
+    expect(state.backgroundTasks).toEqual([expect.objectContaining({ taskId: 'shell-1', taskType: 'local_bash' })])
+  })
+
+  test('a shell task disappears when its task_notification arrives', () => {
+    let state = reduceSessionEvent(initialChatState, {
+      ...started('shell-1', { task_type: 'local_bash' }),
+      createdAt: 1_000,
+    })
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }))
+    state = reduceSessionEvent(
+      state,
+      event('system', { subtype: 'task_notification', task_id: 'shell-1', status: 'completed', summary: 'exit 0' }),
+    )
+
+    expect(state.backgroundTasks).toEqual([])
+  })
+
+  test('an archived session still clears background shells', () => {
+    let state = reduceSessionEvent(initialChatState, {
+      ...started('shell-1', { task_type: 'local_bash' }),
+      createdAt: 1_000,
+    })
+    state = reduceSessionEvent(state, event('session_status', { status: 'archived' }))
+
+    expect(state.backgroundTasks).toEqual([])
   })
 
   test('session_state_changed running keeps the list', () => {

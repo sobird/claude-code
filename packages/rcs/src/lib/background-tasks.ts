@@ -51,6 +51,18 @@ export function sanitizeTaskUsage(value: unknown): BackgroundTaskUsage | null {
   return { totalTokens: totalTokens ?? 0, toolUses: toolUses ?? 0, durationMs: durationMs ?? 0 }
 }
 
+/**
+ * Envelope the CLI expects on the control channel to stop a running task
+ * (SDK `stop_task`; the child answers with a `task_notification`).
+ */
+export function buildStopTaskRequest(requestId: string, taskId: string): Record<string, unknown> {
+  return {
+    type: 'control_request',
+    request_id: requestId,
+    request: { subtype: 'stop_task', task_id: taskId },
+  }
+}
+
 /** Insert or refresh a task from `task_started`, keeping its first start time. */
 export function startBackgroundTask(
   prev: readonly BackgroundTask[],

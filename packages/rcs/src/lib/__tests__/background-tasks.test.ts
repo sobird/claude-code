@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
+  buildStopTaskRequest,
   completeBackgroundTask,
   elapsedMs,
   progressBackgroundTask,
@@ -126,6 +127,16 @@ describe('completeBackgroundTask', () => {
     const tasks = startBackgroundTask([], startPayload('t1'), 1)
     expect(completeBackgroundTask(tasks, 'nope')).toBe(tasks)
     expect(completeBackgroundTask(tasks, '')).toBe(tasks)
+  })
+})
+
+describe('buildStopTaskRequest', () => {
+  test('wraps the task id in the stop_task control envelope', () => {
+    expect(buildStopTaskRequest('req-1', 'task-9')).toEqual({
+      type: 'control_request',
+      request_id: 'req-1',
+      request: { subtype: 'stop_task', task_id: 'task-9' },
+    })
   })
 })
 

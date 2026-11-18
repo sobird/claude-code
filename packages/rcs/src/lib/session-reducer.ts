@@ -651,6 +651,16 @@ function handleToolResult(state: ChatState, event: SessionEventInput): ChatState
   return { ...state, entries: replaceEntry(state.entries, index, next) }
 }
 
+/**
+ * Background shells (`local_bash`) outlive the turn that started them: the CLI
+ * only holds `result` back for agents/workflows, so clearing on a turn end must
+ * keep them until their own `task_notification`.
+ */
+function retainPersistentTasks(tasks: BackgroundTask[]): BackgroundTask[] {
+  const kept = tasks.filter((task) => task.taskType === 'local_bash')
+  return kept.length === tasks.length ? tasks : kept
+}
+
 /** Informational system subtypes the detailed transcript renders as rows. */
 const SYSTEM_ROW_SUBTYPES = new Set([
   'compact_boundary',
@@ -726,11 +736,14 @@ function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatStat
     backgroundTasks = completeBackgroundTask(backgroundTasks, asText(payload.task_id))
   }
 
-  // `session_state_changed` is the CLI's own liveness claim. Going idle means
-  // nothing is left running; the turn state stays owned by result/session_status.
+  // `session_state_changed` is the CLI's own liveness claim. Going idle ends the
+  // turn-scoped tasks (agents/workflows hold `result` back, so they are already
+  // gone); background shells keep running. The turn state stays owned by
+  // result/session_status.
   if (subtype === 'session_state_changed') {
     if (payload.state !== 'idle' || state.backgroundTasks.length === 0) return state
-    return { ...state, backgroundTasks: [] }
+    const backgroundTasks = retainPersistentTasks(state.backgroundTasks)
+    return backgroundTasks === state.backgroundTasks ? state : { ...state, backgroundTasks }
   }
 
   if (!SYSTEM_ROW_SUBTYPES.has(subtype)) return state
@@ -1086,8 +1099,15 @@ function handleResult(state: ChatState, event: SessionEventInput): ChatState {
       entries = [...entries, { type: 'turn_end', id, durationMs: Math.max(0, endedAt - base.turnStartedAt) }]
     }
   }
-  // A result means the CLI finished the turn, background tasks included.
-  const closed = { ...base, entries, turnStartedAt: null, turnOpen: false, backgroundTasks: [] }
+  // A result ends the turn; agents/workflows finished (they hold `result` back),
+  // but background shells may still be serving.
+  const closed = {
+    ...base,
+    entries,
+    turnStartedAt: null,
+    turnOpen: false,
+    backgroundTasks: retainPersistentTasks(state.backgroundTasks),
+  }
 
   const subtype = asText(payload.subtype)
   if (!subtype || subtype === 'success') return { ...closed, error: null }
