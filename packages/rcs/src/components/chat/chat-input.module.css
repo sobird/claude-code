@@ -1,0 +1,407 @@
+/* Breakpoints follow Tailwind defaults: sm = 40rem (640px). */
+
+.root {
+  position: relative;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 48rem;
+}
+
+/* ---- pop-up menus (history search, slash commands, file completion) ---- */
+
+.searchMenu {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  z-index: 30;
+  margin-bottom: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background-color: var(--color-surface-1);
+  padding: 0.5rem;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.searchInput {
+  margin-bottom: 0.25rem;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  background-color: var(--color-surface-2);
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-primary);
+  outline-style: none;
+}
+
+.searchInput:focus {
+  border-color: color-mix(in oklab, var(--color-brand) 50%, transparent);
+}
+
+.menuEmpty {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: calc(1 / 0.75);
+  color: var(--color-text-muted);
+}
+
+.searchList {
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.completionMenu {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  z-index: 20;
+  margin-bottom: 0.25rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background-color: var(--color-surface-1);
+  padding: 0.25rem;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  line-height: calc(1 / 0.75);
+  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.optionActive {
+  background-color: color-mix(in oklab, var(--color-brand) 10%, transparent);
+  color: var(--color-brand);
+}
+
+.optionIdle {
+  color: var(--color-text-secondary);
+}
+
+.optionIdle:hover {
+  background-color: var(--color-surface-2);
+}
+
+.optionTruncated {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionMono {
+  font-family: var(--font-mono);
+}
+
+/* ---- composer box ---- */
+
+.composer {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background-color: var(--color-surface-2);
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.composerDragging {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-brand) 40%, transparent);
+}
+
+.composer:focus-within {
+  border-color: color-mix(in oklab, var(--color-brand) 50%, transparent);
+  box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.15);
+}
+
+/* ---- attachment strip ---- */
+
+.attachmentStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  padding: 0.625rem 0.75rem 0.375rem;
+}
+
+.attachment {
+  position: relative;
+  height: 4rem;
+  width: 4rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background-color: var(--color-surface-1);
+}
+
+.attachmentImg {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.attachOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.45);
+}
+
+.attachError {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgb(0 0 0 / 0.6);
+  padding-inline: 0.25rem;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.attachSpinner {
+  height: 1rem;
+  width: 1rem;
+  animation: spin 1s linear infinite;
+  color: #fff;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.attachRemove {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.125rem;
+  display: flex;
+  height: 1.25rem;
+  width: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: rgb(0 0 0 / 0.6);
+  color: #fff;
+  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.attachRemove:hover {
+  background-color: rgb(0 0 0 / 0.8);
+}
+
+.attachRemoveIcon {
+  height: 0.75rem;
+  width: 0.75rem;
+}
+
+/* ---- /btw badge ---- */
+
+.btwBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  padding: 0.375rem 0.75rem;
+  font-size: 11px;
+  color: var(--color-brand);
+}
+
+.btwIcon {
+  height: 0.875rem;
+  width: 0.875rem;
+  flex-shrink: 0;
+}
+
+.btwLabel {
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+.btwHint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+/* ---- input row ---- */
+
+.inputRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.textarea {
+  max-height: 200px;
+  min-height: 24px;
+  flex: 1 1 0%;
+  resize: none;
+  border: none;
+  background-color: transparent;
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  outline-style: none;
+}
+
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.stopButton {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background-color: var(--color-text-primary);
+  color: var(--color-surface-2);
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.stopButton:hover {
+  background-color: var(--color-text-secondary);
+}
+
+@media (min-width: 40rem) {
+  .stopButton {
+    height: 2rem;
+    width: 2rem;
+  }
+}
+
+.stopIcon {
+  height: 0.875rem;
+  width: 0.875rem;
+}
+
+.fileInput {
+  display: none;
+}
+
+.attachButton {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  color: var(--color-text-muted);
+  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.attachButton:hover {
+  background-color: var(--color-surface-1);
+  color: var(--color-text-primary);
+}
+
+.attachButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+@media (min-width: 40rem) {
+  .attachButton {
+    height: 2rem;
+    width: 2rem;
+  }
+}
+
+.attachIcon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.sendButton {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+@media (min-width: 40rem) {
+  .sendButton {
+    height: 2rem;
+    width: 2rem;
+  }
+}
+
+.sendReady {
+  background-color: var(--color-brand);
+  color: #fff;
+}
+
+.sendReady:hover {
+  background-color: var(--color-brand-light);
+  scale: 1.05;
+}
+
+.sendReady:active {
+  scale: 0.97;
+}
+
+.sendIdle {
+  background-color: var(--color-surface-1);
+  color: var(--color-text-muted);
+}
+
+.sendIcon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.hintRow {
+  margin-top: 0.375rem;
+  text-align: center;
+}
+
+.hint {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}

@@ -18,7 +18,9 @@ import { type HistoryMatch, searchHistory } from '../../lib/history-search'
 import { appendHistory, moveHistory } from '../../lib/input-history'
 import { randomUuid } from '../../lib/random-uuid'
 import { isBtwCommand, parseBtwCommand } from '../../lib/side-question'
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
+
+import styles from './chat-input.module.css'
 
 const HISTORY_STORAGE_KEY = 'rcs:input-history'
 const ACCEPTED_IMAGE_TYPES = 'image/png,image/jpeg,image/gif,image/webp'
@@ -416,17 +418,13 @@ export function ChatInput({
   const resolvedPlaceholder = placeholder ?? t('placeholder', { product: tCommon('claude') })
 
   return (
-    <div
-      className={cn('relative mx-auto w-full max-w-3xl', className)}
-      data-testid="composer-drop-target"
-      {...dragHandlers}
-    >
+    <div className={cx(styles.root, className)} data-testid="composer-drop-target" {...dragHandlers}>
       {searchOpen ? (
         <div
           data-testid="history-search-menu"
           role="dialog"
           aria-label={t('historyMenu.label')}
-          className="absolute right-0 bottom-full left-0 z-30 mb-1 rounded-lg border border-border bg-surface-1 p-2 shadow-md"
+          className={styles.searchMenu}
         >
           <input
             ref={searchInputRef}
@@ -461,12 +459,12 @@ export function ChatInput({
             placeholder={t('historyMenu.placeholder')}
             aria-label={t('historyMenu.label')}
             data-testid="history-search-input"
-            className="mb-1 w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-text-primary outline-none focus:border-brand/50"
+            className={styles.searchInput}
           />
           {searchMatches.length === 0 ? (
-            <div className="px-2 py-1.5 text-xs text-text-muted">{t('historyMenu.empty')}</div>
+            <div className={styles.menuEmpty}>{t('historyMenu.empty')}</div>
           ) : (
-            <div role="listbox" aria-label={t('historyMenu.label')} className="max-h-56 overflow-y-auto">
+            <div role="listbox" aria-label={t('historyMenu.label')} className={styles.searchList}>
               {searchMatches.map((match, index) => (
                 <button
                   key={`${match.index}-${match.text}`}
@@ -480,9 +478,10 @@ export function ChatInput({
                     event.preventDefault()
                     acceptSearchMatch(match)
                   }}
-                  className={cn(
-                    'flex w-full items-center truncate rounded-md px-2 py-1.5 text-left text-xs transition-colors',
-                    index === activeSearchIndex ? 'bg-brand/10 text-brand' : 'text-text-secondary hover:bg-surface-2',
+                  className={cx(
+                    styles.option,
+                    styles.optionTruncated,
+                    index === activeSearchIndex ? styles.optionActive : styles.optionIdle,
                   )}
                 >
                   {match.text}
@@ -498,10 +497,10 @@ export function ChatInput({
           data-testid="slash-command-menu"
           role="listbox"
           aria-label={t('commandMenu.label')}
-          className="absolute right-0 bottom-full left-0 z-20 mb-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-1 p-1 shadow-md"
+          className={styles.completionMenu}
         >
           {items.length === 0 ? (
-            <div className="px-2 py-1.5 text-xs text-text-muted">{t('commandMenu.empty')}</div>
+            <div className={styles.menuEmpty}>{t('commandMenu.empty')}</div>
           ) : (
             items.map((item, index) => (
               <button
@@ -516,9 +515,10 @@ export function ChatInput({
                   event.preventDefault()
                   accept(item)
                 }}
-                className={cn(
-                  'flex w-full items-center rounded-md px-2 py-1.5 text-left font-mono text-xs transition-colors',
-                  index === activeIndex ? 'bg-brand/10 text-brand' : 'text-text-secondary hover:bg-surface-2',
+                className={cx(
+                  styles.option,
+                  styles.optionMono,
+                  index === activeIndex ? styles.optionActive : styles.optionIdle,
                 )}
               >
                 /{item.replace(/^\//, '')}
@@ -533,12 +533,10 @@ export function ChatInput({
           data-testid="file-completion-menu"
           role="listbox"
           aria-label={t('fileMenu.label')}
-          className="absolute right-0 bottom-full left-0 z-20 mb-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-surface-1 p-1 shadow-md"
+          className={styles.completionMenu}
         >
           {fileItems.length === 0 ? (
-            <div className="px-2 py-1.5 text-xs text-text-muted">
-              {fileLoading ? t('fileMenu.loading') : t('fileMenu.empty')}
-            </div>
+            <div className={styles.menuEmpty}>{fileLoading ? t('fileMenu.loading') : t('fileMenu.empty')}</div>
           ) : (
             fileItems.map((path, index) => (
               <button
@@ -554,9 +552,11 @@ export function ChatInput({
                   event.preventDefault()
                   acceptFile(path)
                 }}
-                className={cn(
-                  'flex w-full items-center truncate rounded-md px-2 py-1.5 text-left font-mono text-xs transition-colors',
-                  index === activeFileIndex ? 'bg-brand/10 text-brand' : 'text-text-secondary hover:bg-surface-2',
+                className={cx(
+                  styles.option,
+                  styles.optionTruncated,
+                  styles.optionMono,
+                  index === activeFileIndex ? styles.optionActive : styles.optionIdle,
                 )}
               >
                 {path}
@@ -565,58 +565,40 @@ export function ChatInput({
           )}
         </div>
       ) : null}
-      <div
-        className={cn(
-          'overflow-hidden rounded-xl border border-border bg-surface-2 transition-all focus-within:border-brand/50 focus-within:shadow-[0_0_0_3px_rgba(201,100,66,0.15)]',
-          dragging && 'ring-2 ring-brand/40',
-        )}
-      >
+      <div className={cx(styles.composer, dragging && styles.composerDragging)}>
         {images.length > 0 ? (
-          <div
-            data-testid="attachment-strip"
-            className="flex flex-wrap gap-2 border-b border-border/60 px-3 pt-2.5 pb-1.5"
-          >
+          <div data-testid="attachment-strip" className={styles.attachmentStrip}>
             {images.map((image) => (
-              <div
-                key={image.key}
-                className="relative h-16 w-16 overflow-hidden rounded-lg border border-border bg-surface-1"
-              >
-                <img src={image.previewUrl} alt={t('imageAlt')} className="h-full w-full object-cover" />
+              <div key={image.key} className={styles.attachment}>
+                <img src={image.previewUrl} alt={t('imageAlt')} className={styles.attachmentImg} />
                 {image.status === 'uploading' ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/45">
-                    <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden="true" />
+                  <div className={styles.attachOverlay}>
+                    <Loader2 className={styles.attachSpinner} aria-hidden="true" />
                   </div>
                 ) : null}
-                {image.status === 'error' ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 px-1 text-center text-[10px] leading-tight text-white">
-                    {t('uploadFailed')}
-                  </div>
-                ) : null}
+                {image.status === 'error' ? <div className={styles.attachError}>{t('uploadFailed')}</div> : null}
                 <button
                   type="button"
                   onClick={() => removeImage(image.key)}
                   aria-label={t('removeImage')}
                   title={t('removeImage')}
                   data-testid="attachment-remove"
-                  className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+                  className={styles.attachRemove}
                 >
-                  <X className="h-3 w-3" />
+                  <X className={styles.attachRemoveIcon} />
                 </button>
               </div>
             ))}
           </div>
         ) : null}
         {btwMode ? (
-          <div
-            data-testid="btw-badge"
-            className="flex items-center gap-1.5 border-b border-border/60 px-3 py-1.5 text-[11px] text-brand"
-          >
-            <MessageCircleQuestion className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
-            <span className="font-display font-medium">{t('sideQuestion.badge')}</span>
-            <span className="truncate text-text-muted">{t('sideQuestion.hint')}</span>
+          <div data-testid="btw-badge" className={styles.btwBadge}>
+            <MessageCircleQuestion className={styles.btwIcon} aria-hidden="true" />
+            <span className={styles.btwLabel}>{t('sideQuestion.badge')}</span>
+            <span className={styles.btwHint}>{t('sideQuestion.hint')}</span>
           </div>
         ) : null}
-        <div className="flex items-end gap-2 px-3 py-2.5">
+        <div className={styles.inputRow}>
           <textarea
             ref={textareaRef}
             value={text}
@@ -756,16 +738,11 @@ export function ChatInput({
             placeholder={resolvedPlaceholder}
             disabled={disabled}
             rows={1}
-            className="max-h-[200px] min-h-[24px] flex-1 resize-none border-none bg-transparent font-display text-sm leading-normal text-text-primary outline-none placeholder:text-text-muted disabled:cursor-not-allowed disabled:opacity-60"
+            className={styles.textarea}
           />
           {isLoading && onInterrupt ? (
-            <button
-              type="button"
-              onClick={onInterrupt}
-              aria-label={t('interrupt')}
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-text-primary text-surface-2 transition-all hover:bg-text-secondary sm:h-8 sm:w-8"
-            >
-              <Square className="h-3.5 w-3.5" fill="currentColor" />
+            <button type="button" onClick={onInterrupt} aria-label={t('interrupt')} className={styles.stopButton}>
+              <Square className={styles.stopIcon} fill="currentColor" />
             </button>
           ) : null}
           {uploadImage && !disabled ? (
@@ -776,7 +753,7 @@ export function ChatInput({
                 accept={ACCEPTED_IMAGE_TYPES}
                 multiple
                 data-testid="attachment-input"
-                className="hidden"
+                className={styles.fileInput}
                 onChange={(event) => {
                   const files = [...(event.target.files ?? [])]
                   // Reset so picking the same file twice still fires onChange.
@@ -791,9 +768,9 @@ export function ChatInput({
                 aria-label={t('addImages')}
                 title={t('addImages')}
                 data-testid="attach-image"
-                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8"
+                className={styles.attachButton}
               >
-                <ImagePlus className="h-4 w-4" />
+                <ImagePlus className={styles.attachIcon} />
               </button>
             </>
           ) : null}
@@ -802,19 +779,14 @@ export function ChatInput({
             onClick={() => void handleSubmit()}
             disabled={!canSend}
             aria-label={t('send')}
-            className={cn(
-              'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-all sm:h-8 sm:w-8',
-              canSend
-                ? 'bg-brand text-white hover:bg-brand-light hover:scale-[1.05] active:scale-[0.97]'
-                : 'bg-surface-1 text-text-muted',
-            )}
+            className={cx(styles.sendButton, canSend ? styles.sendReady : styles.sendIdle)}
           >
-            <Send className="h-4 w-4" />
+            <Send className={styles.sendIcon} />
           </button>
         </div>
       </div>
-      <div className="mt-1.5 text-center">
-        <span className="font-display text-[11px] text-text-muted">{isLoading ? t('busyHint') : t('enterHint')}</span>
+      <div className={styles.hintRow}>
+        <span className={styles.hint}>{isLoading ? t('busyHint') : t('enterHint')}</span>
       </div>
     </div>
   )

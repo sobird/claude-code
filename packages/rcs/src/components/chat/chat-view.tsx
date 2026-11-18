@@ -73,7 +73,7 @@ import { isHelpShortcut } from '../../lib/shortcut-help'
 import { buildSetThinkingRequest, type ThinkingChoice } from '../../lib/thinking'
 import { formatTokenCount, promptTokens } from '../../lib/token-usage'
 import { formatTurnSeconds } from '../../lib/turn-duration'
-import { cn, uniqueKeys } from '../../lib/utils'
+import { cx, uniqueKeys } from '../../lib/utils'
 import { StatusBadge } from '../shell/status-badge'
 import { Button } from '../ui/button'
 import { BackgroundTaskPanel } from './background-task-panel'
@@ -88,6 +88,8 @@ import { SideQuestionCard, type SideQuestionState } from './side-question-card'
 import { TaskPanel } from './task-panel'
 import { ThinkingMenu } from './thinking-menu'
 import { ToolCallGroup } from './tool-call-group'
+
+import styles from './chat-view.module.css'
 
 interface SessionDetail {
   id: string
@@ -926,24 +928,18 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, [cursorKey])
 
   return (
-    <div className="flex h-[calc(100dvh-9rem)] min-h-[28rem] flex-col gap-3">
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <Link
-            href="/"
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary"
-            aria-label={t('back')}
-          >
-            <ArrowLeft className="h-4 w-4" />
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <Link href="/" className={styles.backLink} aria-label={t('back')}>
+            <ArrowLeft className={styles.backIcon} />
           </Link>
-          <div className="min-w-0">
-            <h1 className="truncate font-display text-lg font-semibold text-text-primary">
-              {session?.title || sessionId}
-            </h1>
-            <p className="truncate font-mono text-xs text-text-muted">{sessionId}</p>
+          <div className={styles.titleGroup}>
+            <h1 className={styles.title}>{session?.title || sessionId}</h1>
+            <p className={styles.sessionId}>{sessionId}</p>
           </div>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className={styles.headerRight}>
           {chat.lastUsage ? (
             <span
               data-testid="token-usage"
@@ -952,9 +948,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 cached: String(chat.lastUsage.cached),
                 output: String(chat.lastUsage.output),
               })}
-              className="hidden items-center gap-1 rounded-md border border-border bg-surface-1 px-2 py-1 font-mono text-[11px] text-text-muted sm:flex"
+              className={styles.usage}
             >
-              <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
+              <Gauge className={styles.usageIcon} aria-hidden="true" />
               {t('usage.compact', { count: formatTokenCount(promptTokens(chat.lastUsage)) })}
             </span>
           ) : null}
@@ -990,9 +986,13 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             title={expandAll ? tChat('collapseAll') : tChat('expandAll')}
             aria-pressed={expandAll}
             data-testid="toggle-expand-all"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary"
+            className={styles.iconButton}
           >
-            {expandAll ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            {expandAll ? (
+              <Minimize2 className={styles.iconButtonIcon} />
+            ) : (
+              <Maximize2 className={styles.iconButtonIcon} />
+            )}
           </button>
           <button
             type="button"
@@ -1001,9 +1001,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             title={verbose ? tChat('verbose.hide') : tChat('verbose.show')}
             aria-pressed={verbose}
             data-testid="toggle-verbose"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary aria-pressed:bg-surface-1 aria-pressed:text-text-primary"
+            className={styles.iconButton}
           >
-            <ScrollText className="h-4 w-4" />
+            <ScrollText className={styles.iconButtonIcon} />
           </button>
           <button
             type="button"
@@ -1011,19 +1011,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             aria-label={tShortcuts('open')}
             title={tShortcuts('open')}
             data-testid="shortcuts-button"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary"
+            className={styles.iconButton}
           >
-            <Keyboard className="h-4 w-4" />
+            <Keyboard className={styles.iconButtonIcon} />
           </button>
         </div>
       </header>
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       {failedToLoad ? (
-        <div
-          role="alert"
-          className="flex flex-col gap-2 rounded-xl border border-status-error/30 bg-status-error/10 px-4 py-3 text-sm text-status-error sm:flex-row sm:items-center sm:justify-between"
-        >
+        <div role="alert" className={styles.errorBanner}>
           <span>{failedToLoadText}</span>
           <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
             {tCommon('retry')}
@@ -1032,60 +1029,42 @@ export function SessionView({ sessionId }: { sessionId: string }) {
       ) : null}
 
       {reconnectMessage ? (
-        <div
-          role="status"
-          className="rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-xs text-status-warning"
-        >
+        <div role="status" className={styles.noticeBanner}>
           {reconnectMessage}
         </div>
       ) : null}
 
       {actionError ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
-        >
+        <div role="alert" className={styles.errorNotice}>
           {describeError(actionError, 'errors.generic')}
         </div>
       ) : null}
 
       {chat.error ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
-        >
+        <div role="alert" className={styles.errorNotice}>
           {chat.error}
         </div>
       ) : null}
 
       {chat.modeError ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
-        >
+        <div role="alert" className={styles.errorNotice}>
           {chat.modeError}
         </div>
       ) : null}
 
       {chat.modelError ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
-        >
+        <div role="alert" className={styles.errorNotice}>
           {chat.modelError}
         </div>
       ) : null}
 
       {chat.thinkingError ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs text-status-error"
-        >
+        <div role="alert" className={styles.errorNotice}>
           {chat.thinkingError}
         </div>
       ) : null}
 
-      <div className="relative min-h-0 flex-1">
+      <div className={styles.threadPane}>
         <div
           ref={scrollRef}
           onScroll={handleScroll}
@@ -1093,12 +1072,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           // own scroll anchoring would pick a different node and add a second
           // correction on top.
           style={{ overflowAnchor: 'none' }}
-          className="absolute inset-0 overflow-y-auto rounded-xl border border-border bg-surface-2 px-3 py-5 sm:px-6"
+          className={styles.scroll}
         >
-          <div ref={contentRef} className="mx-auto flex max-w-3xl flex-col gap-3">
+          <div ref={contentRef} className={styles.content}>
             {loadingEarlier ? (
-              <div className="flex justify-center py-2" role="status" aria-label={t('loadingEarlier')}>
-                <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
+              <div className={styles.earlierRow} role="status" aria-label={t('loadingEarlier')}>
+                <Loader2 className={styles.earlierSpinner} />
               </div>
             ) : null}
             {loading && entries.length === 0 ? (
@@ -1133,14 +1112,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           </div>
         </div>
         {!atBottom ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={scrollToBottom}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 gap-1.5 rounded-full shadow-md"
-          >
-            <ArrowDown className="h-3.5 w-3.5" />
+          <Button type="button" variant="outline" size="sm" onClick={scrollToBottom} className={styles.jumpButton}>
+            <ArrowDown className={styles.jumpIcon} />
             {t('jumpToLatest')}
           </Button>
         ) : null}
@@ -1167,11 +1140,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         />
       ) : null}
 
-      {closed ? (
-        <div className="rounded-lg border border-border bg-surface-1 px-3 py-2 text-center text-xs text-text-muted">
-          {t('archived')}
-        </div>
-      ) : null}
+      {closed ? <div className={styles.archivedNotice}>{t('archived')}</div> : null}
 
       <SideQuestionCard state={sideQuestion} onClose={closeSideQuestion} onRetry={retrySideQuestion} />
 
@@ -1224,10 +1193,10 @@ function MessageThread({
   childrenByParent: Map<string, ThreadEntry[]>
 }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className={styles.thread}>
       {items.map(({ item, key }) => {
         const selected = selectedKey === key
-        const selection = cn('rounded-lg transition-shadow', selected && 'bg-brand/5 ring-1 ring-brand/40')
+        const selection = cx(styles.item, selected && styles.itemSelected)
         return item.kind === 'tools' ? (
           <div key={key} data-message-key={key} data-selected={selected ? '' : undefined} className={selection}>
             <ToolCallGroup
@@ -1243,7 +1212,7 @@ function MessageThread({
             key={key}
             data-message-key={key}
             data-selected={selected ? '' : undefined}
-            className={cn(spacingFor(item.entry), selection)}
+            className={cx(spacingFor(item.entry), selection)}
           >
             <EntryRenderer
               entry={item.entry}
@@ -1305,14 +1274,9 @@ function EntryRenderer({
 function SystemRow({ entry }: { entry: SystemEntry }) {
   const t = useTranslations('chat')
   return (
-    <div
-      className={cn(
-        'flex items-center justify-center gap-1.5 font-display text-[11px]',
-        entry.level === 'error' ? 'text-status-error' : 'text-text-muted',
-      )}
-    >
-      <Info className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
-      <span className="truncate">{systemText(entry, t)}</span>
+    <div className={cx(styles.systemRow, entry.level === 'error' ? styles.systemError : styles.systemMuted)}>
+      <Info className={styles.systemIcon} aria-hidden="true" />
+      <span className={styles.systemText}>{systemText(entry, t)}</span>
     </div>
   )
 }
@@ -1350,18 +1314,13 @@ function systemText(entry: SystemEntry, t: ReturnType<typeof useTranslations<'ch
 function MessageActionsBar({ enterLabel, showPrimary }: { enterLabel: string | null; showPrimary: boolean }) {
   const t = useTranslations('chat')
   const hint = (keys: string, label: string) => (
-    <span key={keys} className="flex items-center gap-1">
-      <kbd className="rounded border border-border bg-surface-2 px-1 font-mono text-[10px] text-text-secondary">
-        {keys}
-      </kbd>
+    <span key={keys} className={styles.hint}>
+      <kbd className={styles.kbd}>{keys}</kbd>
       <span>{label}</span>
     </span>
   )
   return (
-    <div
-      data-testid="message-actions-bar"
-      className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg border border-border bg-surface-1 px-3 py-1.5 font-display text-[11px] text-text-muted"
-    >
+    <div data-testid="message-actions-bar" className={styles.actionsBar}>
       {hint('↑/↓', t('messageActions.navigate'))}
       {enterLabel ? hint('Enter', enterLabel) : null}
       {hint('c', t('messageActions.copy'))}
@@ -1374,24 +1333,24 @@ function MessageActionsBar({ enterLabel, showPrimary }: { enterLabel: string | n
 function TurnEndLine({ entry }: { entry: TurnEndEntry }) {
   const t = useTranslations('chat')
   return (
-    <div className="flex items-center justify-center gap-1.5 font-display text-[11px] text-text-muted">
-      <Timer className="h-3 w-3" aria-hidden="true" />
+    <div className={styles.turnEnd}>
+      <Timer className={styles.turnEndIcon} aria-hidden="true" />
       {t('turnDuration', { seconds: formatTurnSeconds(entry.durationMs) })}
     </div>
   )
 }
 
 function spacingFor(entry: Exclude<ThreadEntry, ToolCallEntry>): string {
-  if (entry.type === 'user_message') return 'pt-6 pb-1'
-  if (entry.type === 'assistant_message') return 'pt-1 pb-2'
-  return 'py-1'
+  if (entry.type === 'user_message') return styles.spacingUser
+  if (entry.type === 'assistant_message') return styles.spacingAssistant
+  return styles.spacingDefault
 }
 
 function EmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex min-h-[16rem] flex-col items-center justify-center gap-2 p-8 text-center">
-      <h2 className="font-display text-base font-semibold text-text-primary">{title}</h2>
-      <p className="max-w-xs text-sm leading-relaxed text-text-muted">{description}</p>
+    <div className={styles.emptyState}>
+      <h2 className={styles.emptyTitle}>{title}</h2>
+      <p className={styles.emptyDescription}>{description}</p>
     </div>
   )
 }
@@ -1400,12 +1359,9 @@ function FailedSendCard({ text, error, onRetry }: { text: string; error: unknown
   const t = useTranslations('session.view')
   const describeError = useApiErrorMessage()
   return (
-    <div
-      role="alert"
-      className="ml-auto flex max-w-[85%] flex-col items-end gap-1.5 rounded-xl border border-status-error/30 bg-status-error/10 px-4 py-3 text-sm text-status-error sm:max-w-[70%]"
-    >
-      <p className="max-w-full truncate font-display">{text}</p>
-      <p className="text-xs">
+    <div role="alert" className={styles.failedCard}>
+      <p className={styles.failedText}>{text}</p>
+      <p className={styles.failedDetail}>
         {t('sendFailed')} {describeError(error, 'errors.generic')}
       </p>
       <Button type="button" variant="outline" size="sm" onClick={onRetry}>
@@ -1417,19 +1373,19 @@ function FailedSendCard({ text, error, onRetry }: { text: string; error: unknown
 
 function ThinkingIndicator({ label }: { label: string }) {
   return (
-    <div className="flex items-start gap-3 sm:gap-4">
-      <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-brand/10">
-        <span className="flex gap-1" aria-hidden="true">
+    <div className={styles.thinking}>
+      <div className={styles.thinkingAvatar}>
+        <span className={styles.dots} aria-hidden="true">
           <Dot delay="0ms" />
           <Dot delay="150ms" />
           <Dot delay="300ms" />
         </span>
       </div>
-      <span className="pt-2 font-display text-xs text-text-muted">{label}</span>
+      <span className={styles.thinkingLabel}>{label}</span>
     </div>
   )
 }
 
 function Dot({ delay }: { delay: string }) {
-  return <span className={cn('h-1.5 w-1.5 animate-pulse rounded-full bg-brand')} style={{ animationDelay: delay }} />
+  return <span className={styles.dot} style={{ animationDelay: delay }} />
 }
