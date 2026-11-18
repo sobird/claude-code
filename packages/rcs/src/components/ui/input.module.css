@@ -1,0 +1,82 @@
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  .input {
+    --ring-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
+    height: 2.25rem;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--color-input);
+    border-radius: 0.375rem;
+    background-color: transparent;
+    padding: 0.25rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    outline-style: none;
+    box-shadow:
+      0 0 #0000,
+      0 0 #0000,
+      0 0 #0000,
+      0 0 #0000,
+      0 1px 2px 0 rgb(0 0 0 / 0.05);
+    transition-property: color, box-shadow;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 0.15s;
+  }
+
+  .input::file-selector-button {
+    display: inline-flex;
+    height: 1.75rem;
+    border: 0;
+    background-color: transparent;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    color: var(--color-foreground);
+  }
+
+  .input::placeholder {
+    color: var(--color-muted-foreground);
+  }
+
+  .input::selection {
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+
+  :global(.dark) .input {
+    background-color: color-mix(in oklab, var(--color-input) 30%, transparent);
+  }
+
+  .input:focus-visible {
+    border-color: var(--color-ring);
+    box-shadow:
+      0 0 #0000,
+      0 0 #0000,
+      0 0 #0000,
+      0 0 0 3px var(--ring-color),
+      0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+
+  .input[aria-invalid='true'] {
+    --ring-color: color-mix(in oklab, var(--color-destructive) 20%, transparent);
+    border-color: var(--color-destructive);
+  }
+
+  :global(.dark) .input[aria-invalid='true'] {
+    --ring-color: color-mix(in oklab, var(--color-destructive) 40%, transparent);
+  }
+
+  .input:disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  @media (min-width: 48rem) {
+    .input {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+  }
+}
