@@ -12,6 +12,8 @@ import { Label } from '../ui/label'
 import { MIN_PASSWORD_LENGTH, validatePasswordChange, type PasswordChangeError } from './settings-utils'
 import { useSettingsApi } from './use-settings-api'
 
+import styles from './password-form.module.css'
+
 /** Change the signed-in user's password with inline validation and feedback. */
 export function PasswordForm() {
   const t = useTranslations('settings.password')
@@ -65,17 +67,17 @@ export function PasswordForm() {
   }
 
   return (
-    <Card className="border-border bg-surface-1">
+    <Card className={styles.card}>
       <CardHeader>
-        <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</CardTitle>
-        <CardDescription className="text-sm text-text-muted">
+        <CardTitle className={styles.title}>{t('title')}</CardTitle>
+        <CardDescription className={styles.description}>
           {t('description', { min: MIN_PASSWORD_LENGTH })}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="current-password" className="text-text-secondary">
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <Label htmlFor="current-password" className={styles.label}>
               {t('current')}
             </Label>
             <Input
@@ -85,12 +87,12 @@ export function PasswordForm() {
               value={current}
               onChange={(event) => setCurrent(event.target.value)}
               disabled={pending}
-              className="bg-surface-2"
+              className={styles.input}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="new-password" className="text-text-secondary">
+          <div className={styles.field}>
+            <Label htmlFor="new-password" className={styles.label}>
               {t('next')}
             </Label>
             <Input
@@ -100,12 +102,12 @@ export function PasswordForm() {
               value={next}
               onChange={(event) => setNext(event.target.value)}
               disabled={pending}
-              className="bg-surface-2"
+              className={styles.input}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-password" className="text-text-secondary">
+          <div className={styles.field}>
+            <Label htmlFor="confirm-password" className={styles.label}>
               {t('confirm')}
             </Label>
             <Input
@@ -115,24 +117,18 @@ export function PasswordForm() {
               value={confirm}
               onChange={(event) => setConfirm(event.target.value)}
               disabled={pending}
-              className="bg-surface-2"
+              className={styles.input}
             />
           </div>
 
           {error ? (
-            <p
-              role="alert"
-              className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error"
-            >
+            <p role="alert" className={styles.error}>
               {error}
             </p>
           ) : null}
 
           {success ? (
-            <p
-              role="status"
-              className="rounded-lg border border-status-active/30 bg-status-active/10 px-3 py-2 text-sm text-status-active"
-            >
+            <p role="status" className={styles.success}>
               {success}
             </p>
           ) : null}

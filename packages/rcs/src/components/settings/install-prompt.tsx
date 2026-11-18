@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 
+import styles from './install-prompt.module.css'
+
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
   userChoice?: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
@@ -72,20 +74,20 @@ export function InstallPrompt() {
   }
 
   return (
-    <Card className="border-border bg-surface-1">
+    <Card className={styles.card}>
       <CardHeader>
-        <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</CardTitle>
-        <CardDescription className="text-sm text-text-muted">{t('description')}</CardDescription>
+        <CardTitle className={styles.title}>{t('title')}</CardTitle>
+        <CardDescription className={styles.description}>{t('description')}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className={styles.content}>
         {promptEvent ? (
           <Button type="button" variant="brand" onClick={() => void handleInstall()}>
-            <Download className="h-4 w-4" />
+            <Download className={styles.icon} />
             {t('button')}
           </Button>
         ) : (
-          <p className="text-sm text-text-secondary">
-            {t.rich('iosHint', { b: (chunks) => <span className="font-medium">{chunks}</span> })}
+          <p className={styles.status}>
+            {t.rich('iosHint', { b: (chunks) => <span className={styles.strong}>{chunks}</span> })}
           </p>
         )}
         <div>

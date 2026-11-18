@@ -18,6 +18,8 @@ import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { useSettingsApi } from './use-settings-api'
 
+import styles from './notifications.module.css'
+
 interface PushConfig {
   enabled: boolean
   publicKey: string | null
@@ -188,14 +190,14 @@ export function Notifications() {
   const errorMessage = error !== null ? describeError(error, 'settings.notifications.error') : null
 
   return (
-    <Card className="border-border bg-surface-1">
+    <Card className={styles.card}>
       <CardHeader>
-        <div className="space-y-1.5">
-          <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</CardTitle>
-          <CardDescription className="text-sm text-text-muted">{t('description')}</CardDescription>
+        <div className={styles.heading}>
+          <CardTitle className={styles.title}>{t('title')}</CardTitle>
+          <CardDescription className={styles.description}>{t('description')}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={styles.content}>
         {subscribed ? (
           <Button
             type="button"
@@ -204,7 +206,7 @@ export function Notifications() {
             disabled={busy || token === null}
             onClick={() => void handleDisable()}
           >
-            <Bell className="h-4 w-4" />
+            <Bell className={styles.icon} />
             {t('disable')}
           </Button>
         ) : (
@@ -215,22 +217,19 @@ export function Notifications() {
             disabled={busy || !canToggle}
             onClick={() => void handleEnable()}
           >
-            <Bell className="h-4 w-4" />
+            <Bell className={styles.icon} />
             {busy ? t('enabling') : t('enable')}
           </Button>
         )}
 
         {statusLines.map((line) => (
-          <p key={line} className="text-sm text-text-secondary">
+          <p key={line} className={styles.status}>
             {line}
           </p>
         ))}
 
         {errorMessage !== null ? (
-          <p
-            role="alert"
-            className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error"
-          >
+          <p role="alert" className={styles.error}>
             {errorMessage}
           </p>
         ) : null}

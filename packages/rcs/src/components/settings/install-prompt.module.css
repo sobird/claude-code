@@ -1,0 +1,37 @@
+.card {
+  border-color: var(--color-border);
+  background-color: var(--color-surface-1);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.description {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-muted);
+}
+
+.content > * + * {
+  margin-top: 0.75rem;
+}
+
+.icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.status {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-secondary);
+}
+
+.strong {
+  font-weight: 500;
+}

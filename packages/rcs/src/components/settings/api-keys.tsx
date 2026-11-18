@@ -16,6 +16,8 @@ import { Label } from '../ui/label'
 import { maskApiKey } from './settings-utils'
 import { useSettingsApi } from './use-settings-api'
 
+import styles from './api-keys.module.css'
+
 interface ApiKeyView {
   id: string
   name: string
@@ -143,40 +145,38 @@ export function ApiKeys() {
   }
 
   return (
-    <Card className="border-border bg-surface-1">
+    <Card className={styles.card}>
       <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1.5">
-            <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('title')}</CardTitle>
-            <CardDescription className="text-sm text-text-muted">{t('description')}</CardDescription>
+        <div className={styles.header}>
+          <div className={styles.heading}>
+            <CardTitle className={styles.title}>{t('title')}</CardTitle>
+            <CardDescription className={styles.description}>{t('description')}</CardDescription>
           </div>
           <Button type="button" variant="brand" size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4" />
+            <Plus className={styles.icon} />
             {t('newKey')}
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={styles.content}>
         {created ? (
-          <div className="space-y-3 rounded-lg border-2 border-brand/50 bg-brand-subtle p-4">
-            <div className="flex items-start gap-2">
-              <KeyRound className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />
-              <div className="space-y-1">
-                <p className="font-display text-sm font-semibold text-text-primary">{t('createdPanel.title')}</p>
-                <p className="text-sm text-text-secondary">{t('createdPanel.description')}</p>
+          <div className={styles.created}>
+            <div className={styles.createdRow}>
+              <KeyRound className={styles.keyIcon} />
+              <div className={styles.createdText}>
+                <p className={styles.createdTitle}>{t('createdPanel.title')}</p>
+                <p className={styles.secondary}>{t('createdPanel.description')}</p>
               </div>
             </div>
-            <pre className="overflow-x-auto rounded-md border border-border bg-surface-2 p-3 font-mono text-xs break-all whitespace-pre-wrap text-text-primary">
-              {created.key}
-            </pre>
+            <pre className={styles.keyValue}>{created.key}</pre>
             {copyError ? (
-              <p role="alert" className="text-sm text-status-error">
+              <p role="alert" className={styles.copyError}>
                 {copyError}
               </p>
             ) : null}
-            <div className="flex flex-wrap gap-2">
+            <div className={styles.createdActions}>
               <Button type="button" variant="brand" size="sm" onClick={() => void copyCreatedKey()}>
-                <Copy className="h-4 w-4" />
+                <Copy className={styles.icon} />
                 {copied ? t('createdPanel.copied') : t('createdPanel.copy')}
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={() => setCreated(null)}>
@@ -187,19 +187,13 @@ export function ApiKeys() {
         ) : null}
 
         {actionError !== null ? (
-          <p
-            role="alert"
-            className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error"
-          >
+          <p role="alert" className={styles.error}>
             {describeError(actionError, 'errors.generic')}
           </p>
         ) : null}
 
         {errorMessage !== null ? (
-          <div
-            role="alert"
-            className="flex flex-col gap-2 rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error sm:flex-row sm:items-center sm:justify-between"
-          >
+          <div role="alert" className={styles.errorBanner}>
             <span>{errorMessage}</span>
             <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
               {tCommon('retry')}
@@ -208,31 +202,24 @@ export function ApiKeys() {
         ) : null}
 
         {loading && keys.length === 0 ? (
-          <p className="text-sm text-text-muted">{t('loading')}</p>
+          <p className={styles.muted}>{t('loading')}</p>
         ) : keys.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border bg-surface-2 p-6 text-center text-sm text-text-muted">
-            {t('empty')}
-          </div>
+          <div className={styles.empty}>{t('empty')}</div>
         ) : (
-          <ul className="space-y-2">
+          <ul className={styles.list}>
             {keys.map((key) => {
               const revoked = key.revoked_at !== null
               return (
-                <li
-                  key={key.id}
-                  className="flex flex-col gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate font-medium text-text-primary">
-                        {key.name || tCommon('defaultApiKeyName')}
-                      </span>
-                      <Badge variant={revoked ? 'destructive' : 'secondary'} className="text-[11px]">
+                <li key={key.id} className={styles.item}>
+                  <div className={styles.itemBody}>
+                    <div className={styles.itemTitleRow}>
+                      <span className={styles.itemName}>{key.name || tCommon('defaultApiKeyName')}</span>
+                      <Badge variant={revoked ? 'destructive' : 'secondary'} className={styles.badge}>
                         {revoked ? t('revoked') : t('active')}
                       </Badge>
                     </div>
-                    <div className="font-mono text-xs text-text-secondary">{maskApiKey(key.prefix)}</div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
+                    <div className={styles.masked}>{maskApiKey(key.prefix)}</div>
+                    <div className={styles.dates}>
                       <span>{t('created', { date: formatIsoDate(key.created_at, locale) })}</span>
                       <span>
                         {t('lastUsed', {
@@ -245,14 +232,14 @@ export function ApiKeys() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="self-start text-status-error sm:self-auto"
+                    className={styles.revoke}
                     disabled={revoked || revoking}
                     onClick={() => {
                       setActionError(null)
                       setRevokeTarget(key)
                     }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className={styles.icon} />
                     {t('revoke')}
                   </Button>
                 </li>
@@ -263,16 +250,14 @@ export function ApiKeys() {
       </CardContent>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="rounded-2xl border-border bg-surface-1 sm:max-w-md">
+        <DialogContent className={styles.dialog}>
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold text-text-primary">
-              {t('create.title')}
-            </DialogTitle>
-            <DialogDescription className="text-sm text-text-muted">{t('create.description')}</DialogDescription>
+            <DialogTitle className={styles.title}>{t('create.title')}</DialogTitle>
+            <DialogDescription className={styles.description}>{t('create.description')}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="api-key-name" className="text-text-secondary">
+          <form onSubmit={handleCreate} className={styles.form}>
+            <div className={styles.field}>
+              <Label htmlFor="api-key-name" className={styles.label}>
                 {t('create.name')}
               </Label>
               <Input
@@ -281,7 +266,7 @@ export function ApiKeys() {
                 onChange={(event) => setName(event.target.value)}
                 placeholder={t('create.namePlaceholder')}
                 disabled={creating}
-                className="bg-surface-2"
+                className={styles.input}
               />
             </div>
             <DialogFooter>
@@ -302,12 +287,10 @@ export function ApiKeys() {
           if (!open) setRevokeTarget(null)
         }}
       >
-        <DialogContent className="rounded-2xl border-border bg-surface-1 sm:max-w-md">
+        <DialogContent className={styles.dialog}>
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-semibold text-text-primary">
-              {t('revokeDialog.title')}
-            </DialogTitle>
-            <DialogDescription className="text-sm text-text-muted">
+            <DialogTitle className={styles.title}>{t('revokeDialog.title')}</DialogTitle>
+            <DialogDescription className={styles.description}>
               {t('revokeDialog.description', { name: revokeTarget?.name || tCommon('defaultApiKeyName') })}
             </DialogDescription>
           </DialogHeader>
