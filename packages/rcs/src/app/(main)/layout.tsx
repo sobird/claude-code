@@ -13,6 +13,7 @@ import { auth } from '../../lib/auth'
 import { baseViewport, localizedAppMetadata } from '../../lib/metadata'
 import { signOutAction } from './actions'
 
+import styles from './layout.module.css'
 // oxlint-disable-next-line import/no-unassigned-import -- global stylesheet side effect
 import '../globals.css'
 
@@ -54,7 +55,7 @@ export default async function MainLayout({ children }: { children: ReactNode }) 
         <DashboardDataProvider>
           <Navbar user={user} signOutAction={signOutAction} />
           <NotificationNavigation />
-          <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8">{children}</main>
+          <main className={styles.main}>{children}</main>
         </DashboardDataProvider>
       </NextIntlClientProvider>
     </RootShell>

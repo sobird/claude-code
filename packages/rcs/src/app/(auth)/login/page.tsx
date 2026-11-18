@@ -9,6 +9,8 @@ import { signIn } from '../../../lib/auth'
 import { signInUrlHasError } from '../../../lib/auth-redirect'
 import { getRepositories } from '../../../lib/repos'
 
+import styles from './page.module.css'
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth')
   return { title: t('pageTitle') }
@@ -74,53 +76,41 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const t = await getTranslations('auth')
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface-0 px-6 py-12 text-text-primary">
-      <div className="w-full max-w-sm space-y-8 rounded-2xl border border-border bg-surface-1 p-8 shadow-sm">
-        <header className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-brand">{t('brand')}</p>
-          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
-          <p className="text-sm text-text-muted">{t('subtitle')}</p>
+    <main className={styles.page}>
+      <div className={styles.card}>
+        <header className={styles.header}>
+          <p className={styles.brand}>{t('brand')}</p>
+          <h1 className={styles.title}>{t('title')}</h1>
+          <p className={styles.subtitle}>{t('subtitle')}</p>
         </header>
 
         {failed ? (
-          <p
-            role="alert"
-            className="rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm text-status-error"
-          >
+          <p role="alert" className={styles.error}>
             {t('invalidCredentials')}
           </p>
         ) : null}
 
-        <form action={authenticate} className="space-y-5">
+        <form action={authenticate} className={styles.form}>
           <input type="hidden" name="next" value={next} />
 
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-text-secondary">{t('username')}</span>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>{t('username')}</span>
             <input
               name="username"
               type="text"
               autoComplete="username"
               autoCapitalize="none"
               required
-              className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className={styles.input}
             />
           </label>
 
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-text-secondary">{t('password')}</span>
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-brand focus:ring-2 focus:ring-brand/30"
-            />
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>{t('password')}</span>
+            <input name="password" type="password" autoComplete="current-password" required className={styles.input} />
           </label>
 
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand/40"
-          >
+          <button type="submit" className={styles.submit}>
             {t('title')}
           </button>
         </form>

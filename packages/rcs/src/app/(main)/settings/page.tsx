@@ -10,6 +10,8 @@ import { Badge } from '../../../components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { auth } from '../../../lib/auth'
 
+import styles from './page.module.css'
+
 interface SessionUser {
   id?: string
   name?: string | null
@@ -27,26 +29,26 @@ export default async function SettingsPage() {
   const roleLabel = tCommon.has(`role.${role}`) ? tCommon(`role.${role}`) : role
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-text-primary">{t('title')}</h1>
-        <p className="text-sm text-text-secondary">{t('description')}</p>
+    <div className={styles.root}>
+      <header className={styles.header}>
+        <h1 className={styles.title}>{t('title')}</h1>
+        <p className={styles.description}>{t('description')}</p>
       </header>
 
-      <Card className="border-border bg-surface-1">
+      <Card className={styles.card}>
         <CardHeader>
-          <CardTitle className="font-display text-lg font-semibold text-text-primary">{t('account.title')}</CardTitle>
+          <CardTitle className={styles.cardTitle}>{t('account.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
-            <div className="space-y-1">
-              <dt className="text-xs uppercase tracking-wide text-text-muted">{t('account.username')}</dt>
-              <dd className="font-medium text-text-primary">{username}</dd>
+          <dl className={styles.details}>
+            <div className={styles.detail}>
+              <dt className={styles.term}>{t('account.username')}</dt>
+              <dd className={styles.value}>{username}</dd>
             </div>
-            <div className="space-y-1">
-              <dt className="text-xs uppercase tracking-wide text-text-muted">{t('account.role')}</dt>
+            <div className={styles.detail}>
+              <dt className={styles.term}>{t('account.role')}</dt>
               <dd>
-                <Badge variant={role === 'admin' ? 'default' : 'secondary'} className="capitalize">
+                <Badge variant={role === 'admin' ? 'default' : 'secondary'} className={styles.roleBadge}>
                   {roleLabel}
                 </Badge>
               </dd>

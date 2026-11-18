@@ -1,0 +1,14 @@
+/* Breakpoints follow Tailwind defaults: sm = 40rem (640px). */
+
+.main {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 64rem;
+  padding: 1.5rem 1rem;
+}
+
+@media (min-width: 40rem) {
+  .main {
+    padding-block: 2rem;
+  }
+}
