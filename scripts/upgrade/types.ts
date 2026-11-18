@@ -8,6 +8,13 @@ export type Status =
 
 export type CommandEntry = { type: 'local' | 'local-jsx' | 'prompt'; name: string }
 
+export type CarveResult = {
+  version: string
+  chunks: number
+  bytes: number
+  binarySha256: string
+}
+
 export type Inventory = {
   version: string | null
   sha256: string

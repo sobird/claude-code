@@ -60,9 +60,12 @@ npm link
 
 ### 如何用流水线升级版本
 
-升级到新的上游版本时，按 `inventory → align → extract → probe → verify` 的顺序运行 `scripts/upgrade/cli.ts` 的五个子命令，前一步的产物作为后一步的输入：
+升级到新的上游版本时，按 `carve → inventory → align → extract → probe → verify` 的顺序运行 `scripts/upgrade/cli.ts` 的子命令，前一步的产物作为后一步的输入：
 
 ```bash
+# 0. （仅 2.1.113+ 原生发布）从 Bun 单文件可执行中抽出内嵌 JS 模块图
+bun scripts/upgrade/cli.ts carve --binary <native/claude> --out <carved.js>
+
 # 1. 盘点 bundle：命令、环境变量、CLI 参数与字符串
 bun scripts/upgrade/cli.ts inventory --bundle <upstream/cli.js> --out <inventory.json>
 
@@ -79,7 +82,9 @@ bun scripts/upgrade/cli.ts probe --target <2.1.89/cli.js> --scenario <scenario.j
 bun scripts/upgrade/cli.ts verify --target <2.1.89/cli.js> --reference ./cli.js --src src --status docs/upgrade/2.1.89/status.json --out <report-dir>
 ```
 
-五个步骤里，`inventory` 与 `align` 建立差异基线，`extract` 与 `probe` 收集待移植的静态字符串和运行时证据，`verify` 最终核对所有台账条目是否处于终态并生成 `report.md` / `report.json`。
+自 2.1.113 起 npm 包不再发布 `cli.js`：包是一个安装桩，真正的产物是平台原生二进制（Bun 单文件可执行）。`carve` 把所有带 `// @bun @bytecode` + release banner 的内嵌模块源码按图顺序拼成伪 bundle，后续步骤都接受它作为 target；但它的命令/字符串盘点会受属性顺序影响，只能当近似基线。
+
+其余五个步骤里，`inventory` 与 `align` 建立差异基线，`extract` 与 `probe` 收集待移植的静态字符串和运行时证据，`verify` 最终核对所有台账条目是否处于终态并生成 `report.md` / `report.json`。
 
 ## 🐛 调试
 

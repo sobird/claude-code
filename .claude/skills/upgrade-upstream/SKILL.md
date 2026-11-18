@@ -14,12 +14,24 @@ description: Port a new upstream Claude Code release into this repo's hand-writt
 
 ## 0. 准备
 
-- 目标版本 bundle（如 `package/cli.js`）、上一版本 bundle（对照基线）、可选 source map。
+- 目标版本 bundle（如 `package/cli.js`）、上一版本 bundle（对照基线）、可选 source map。目标版本 ≥ 2.1.113 时没有 JS bundle，先按 0.5 从原生二进制 carve。
 - 目标版本官方 release 说明：`https://github.com/anthropics/claude-code/releases/tag/v<版本>`，流水线跑完后逐条对拍（见 1.5）。
 - 新建 `docs/upgrade/<新版本>/`，所有产物放这里（参考 `docs/upgrade/2.1.89/`）。
 - 先读上一版本的 `status.json` 和 `notes.md`：沿用台账格式、id 前缀和 R# 编号习惯。
 - 开工前先和用户确认范围：哪些能力要移植，哪些允许 `ignored-dependency`。
 - 探查场景参考 `scripts/upgrade/scenarios/`。最小形态是 `{"args":["--version"],"breakpoints":[],"capture":[]}`；断点需要 `script`（bundle 的 basename）、`line`、`column`、`label`，`capture` 可取 `args` / `return` / `fn.toString`。
+
+## 0.5 原生发布（2.1.113+）：先 carve
+
+从 2.1.113 起 npm 包是安装桩，产物是平台原生二进制（Bun 单文件可执行，如 `@anthropic-ai/claude-code-darwin-x64` 包里的 `claude`）；GitHub release 也只发原生 tar 包，没有 JS bundle。
+
+```bash
+bun scripts/upgrade/cli.ts carve --binary <native/claude> --out <work/claude-<版本>.carved.js>
+```
+
+- 原理：每个内嵌模块源码前都有 `// @bun @bytecode`（少数 `@bun-cjs`）标记行 + release banner + `// Version: X`；carve 校验标记行与 banner 后按图顺序拼接。banner 是去伪关键——裸标记字符串也出现在 Bun 字符串表里，不跟 banner 的都不算。
+- 自检：产物应能用 `align` 跑通（TypeScript 解析器宽容），chunk 数和字节数在不同执行间一致；输出带 `binarySha256` 便于记录版本证据。
+- 限制：拼接后的 bundle 没有原始属性顺序，`inventory` 的 commands/strings 会漏报或误报（env / flag 仍可靠）；`verify` 的账本语义要求目标版新增的 `cmd:` / `env:` 必须 `ported` / `approximated`，env 没有「不移植」状态，所以跨大版本的账本无法闭合——要么真移植，要么先和用户确认调整验收口径，不要硬凑状态。
 
 ## 1. 五步流水线
 
