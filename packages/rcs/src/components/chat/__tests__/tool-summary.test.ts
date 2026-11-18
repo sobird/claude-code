@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import type { ToolCallEntry } from '../../../lib/session-reducer'
-import { summarizeTools } from '../tool-call-group'
+import { summarizeTools } from '../ToolCallGroup'
 
 function entry(id: string, title: string): ToolCallEntry {
   return { type: 'tool_call', toolCall: { id, title, status: 'running', rawInput: {} } }

@@ -1,4 +1,4 @@
-import { Dashboard } from '../../components/shell/dashboard'
+import { Dashboard } from '../../components/shell/Dashboard'
 import type { DashboardUser } from '../../components/shell/types'
 import { auth } from '../../lib/auth'
 

@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 
-import { UserTable } from '../../../components/admin/user-table'
+import { UserTable } from '../../../components/admin/UserTable'
 import { SettingsApiProvider } from '../../../components/settings/use-settings-api'
 import { auth } from '../../../lib/auth'
 
