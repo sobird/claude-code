@@ -338,7 +338,6 @@
   .actionButton {
     height: 2.25rem;
     flex: none;
-    padding-inline: 1rem;
   }
 }
 
@@ -359,7 +358,6 @@
   .denyActionButton {
     height: 2.25rem;
     flex: none;
-    padding-inline: 1rem;
   }
 }
 

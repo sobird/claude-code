@@ -9,9 +9,11 @@
   font-size: 11px;
 }
 
+/* Icon inside `Button`: the base `[&_svg:not([class*='size-'])]:size-4` rule
+   renders 1rem in the original even though the source said `h-3.5 w-3.5`. */
 .smallIcon {
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 1rem;
+  height: 1rem;
 }
 
 .dialog {

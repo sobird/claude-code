@@ -189,7 +189,6 @@
 @media (min-width: 40rem) {
   .actionButton {
     height: 2.25rem;
-    padding-inline: 1rem;
   }
 }
 
@@ -208,14 +207,13 @@
 @media (min-width: 40rem) {
   .denyActionButton {
     height: 2.25rem;
-    padding-inline: 1rem;
   }
 }
 
 .viewButton {
   height: 2rem;
   gap: 0.25rem;
-  padding-inline: 0.5rem;
+  padding-inline: 0.75rem;
   font-size: 0.75rem;
   line-height: calc(1 / 0.75);
 }
