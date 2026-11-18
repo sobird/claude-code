@@ -113,6 +113,7 @@ import perfIssue from './commands/perf-issue/index.js'
 import permissions from './commands/permissions/index.js'
 import plan from './commands/plan/index.js'
 import plugin from './commands/plugin/index.js'
+import powerup from './commands/powerup/index.js'
 import privacySettings from './commands/privacy-settings/index.js'
 import rateLimitOptions from './commands/rate-limit-options/index.js'
 import reloadPlugins from './commands/reload-plugins/index.js'
@@ -128,6 +129,7 @@ import tag from './commands/tag/index.js'
 import thinkbackPlay from './commands/thinkback-play/index.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import thinkback from './commands/thinkback/index.js'
+import toggleMemory from './commands/toggle-memory/index.js'
 import upgrade from './commands/upgrade/index.js'
 import version from './commands/version.js'
 import { getBuiltinPluginSkillCommands } from './plugins/builtinPlugins.js'
@@ -291,6 +293,8 @@ const COMMANDS = memoize((): Command[] => [
   hooks,
   exportCommand,
   sandboxToggle,
+  toggleMemory,
+  powerup,
   ...(!isUsing3PServices() ? [logout, login()] : []),
   passes,
   ...(peersCmd ? [peersCmd] : []),

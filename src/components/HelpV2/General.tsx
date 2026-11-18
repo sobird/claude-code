@@ -1,9 +1,15 @@
 import * as React from 'react'
 
+import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { Box, Text } from '../../ink.js'
 import { PromptInputHelpMenu } from '../PromptInput/PromptInputHelpMenu.js'
 
+// Only nudge toward /powerup when the help panel has room, so the hint never
+// pushes the shortcuts off-screen.
+const POWERUP_HINT_MIN_ROWS = 44
+
 export function General(): React.ReactNode {
+  const { rows } = useTerminalSize()
   return (
     <Box flexDirection="column" paddingY={1} gap={1}>
       <Box>
@@ -12,6 +18,13 @@ export function General(): React.ReactNode {
           terminal.
         </Text>
       </Box>
+      {rows >= POWERUP_HINT_MIN_ROWS && (
+        <Box>
+          <Text dimColor>
+            New here? Run <Text color="suggestion">/powerup</Text> to learn the features most people miss.
+          </Text>
+        </Box>
+      )}
       <Box flexDirection="column">
         <Box>
           <Text bold>Shortcuts</Text>

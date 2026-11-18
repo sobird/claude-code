@@ -5,7 +5,7 @@ import { sideQuery } from '../sideQuery.js'
 import { MODEL_ALIASES } from './aliases.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import { getModelStrings } from './modelStrings.js'
-import { getAPIProvider } from './providers.js'
+import { isFirstPartyLikeProvider } from './providers.js'
 
 // Cache valid models to avoid repeated API calls
 const validModelCache = new Map<string, boolean>()
@@ -132,7 +132,7 @@ function handleValidationError(error: unknown, modelName: string): { valid: bool
  * Suggest a fallback model for 3P users when the selected model is unavailable.
  */
 function get3PFallbackSuggestion(model: string): string | undefined {
-  if (getAPIProvider() === 'firstParty') {
+  if (isFirstPartyLikeProvider()) {
     return undefined
   }
   const lowerModel = model.toLowerCase()

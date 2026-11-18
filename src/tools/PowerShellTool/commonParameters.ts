@@ -22,6 +22,13 @@ export const COMMON_VALUE_PARAMS = [
   '-outvariable',
   '-outbuffer',
   '-pipelinevariable',
+  // Short aliases for the four action parameters (2.1.90). Upstream appends
+  // these to the common-parameter set so `Get-Content x -ea Continue` passes
+  // the safeFlags skip; value safety is checked separately.
+  '-ea',
+  '-wa',
+  '-infa',
+  '-proga',
 ]
 
 export const COMMON_PARAMETERS: ReadonlySet<string> = new Set([...COMMON_SWITCHES, ...COMMON_VALUE_PARAMS])

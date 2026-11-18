@@ -14,6 +14,7 @@ import {
   deriveSecurityFlags,
   getPipelineSegments,
   isNullRedirectionTarget,
+  PS_TOKENIZER_DASH_CHARS,
   isPowerShellParameter,
 } from '../../utils/powershell/parser.js'
 import type { ExternalCommandConfig } from '../../utils/shell/readOnlyCommandValidation.js'
@@ -503,11 +504,11 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
     'get-netroute': {
       safeFlags: ['-InterfaceIndex', '-InterfaceAlias', '-AddressFamily', '-DestinationPrefix'],
     },
-    'get-dnsclientcache': {
-      // SECURITY: -CimSession/-ThrottleLimit excluded. -CimSession connects to
-      // a remote host (network request). Previously empty config = all flags OK.
-      safeFlags: ['-Entry', '-Name', '-Type', '-Status', '-Section', '-Data'],
-    },
+    // SECURITY: Get-DnsClientCache removed in 2.1.90. `Get-DnsClientCache`
+    // performs DNS cache lookups that can be weaponized for DNS exfiltration
+    // (entry names encode data; `-Name`/`-Entry` accept arbitrary values), and
+    // the cmdlet surface is too broad to validate statically. Removal forces a
+    // prompt. get-dnsclient stays — it only lists adapter metadata.
     'get-dnsclient': {
       safeFlags: ['-InterfaceIndex', '-InterfaceAlias'],
     },
@@ -591,7 +592,9 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       // are SKIPPED. Reject any positional argument — only bare `ipconfig` or
       // `ipconfig /all` (read-only display) allowed. Windows ipconfig only uses
       // /flags (display), macOS ipconfig uses subcommands (get/set/waitall).
-      safeFlags: ['/all', '/displaydns', '/allcompartments'],
+      // SECURITY: /displaydns removed in 2.1.90 — dumping the DNS cache
+      // exposes resolved hostnames (recon) the user did not ask for.
+      safeFlags: ['/all', '/allcompartments'],
       additionalCommandIsDangerousCallback: (_cmd: string, element?: ParsedCommandElement) => {
         return (element?.args ?? []).some((a) => !a.startsWith('/') && !a.startsWith('-'))
       },
@@ -629,7 +632,12 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       allowAllFlags: true,
     },
     arp: {
-      safeFlags: ['-a', '-g', '-v', '-N'],
+      // SECURITY (2.1.90): `arp <host>` / `arp -s <ip> <mac>` pass positional
+      // arguments; only display flags are read-only. Reject any non-flag arg.
+      safeFlags: ['-a', '-g', '-v', '-n'],
+      additionalCommandIsDangerousCallback: (_cmd: string, element?: ParsedCommandElement) => {
+        return (element?.args ?? []).some((a) => !a.startsWith('-'))
+      },
     },
     route: {
       safeFlags: ['print', 'PRINT', '-4', '-6'],
@@ -1149,6 +1157,47 @@ export function isReadOnlyCommand(command: string, parsed?: ParsedPowerShellComm
 /**
  * Checks if a single command element is in the allowlist and passes flag validation.
  */
+// Common action parameters whose *value* selects an error/warning action.
+// Long names and their short aliases, lowercase with leading dash.
+const ACTION_PARAM_LONG = ['-erroraction', '-warningaction', '-informationaction', '-progressaction']
+const ACTION_PARAM_SHORT = new Set(['-ea', '-wa', '-infa', '-proga'])
+// Upper-cased action values map to the ActionPreference enum members. Anything
+// outside this set is either invalid or — for `Break` — enters the debugger and
+// hangs the shell. Numeric forms are the enum's numeric equivalents.
+const SAFE_ACTION_VALUES = new Set(['silentlycontinue', '0', 'stop', '1', 'continue', '2', 'ignore', '4'])
+
+function isActionParamName(name: string): boolean {
+  if (name.length < 2) return false
+  return ACTION_PARAM_SHORT.has(name) || ACTION_PARAM_LONG.some((param) => param.startsWith(name))
+}
+
+/**
+ * Returns true when a cmdlet invocation passes a common action parameter a
+ * value outside the safe ActionPreference set. PowerShell accepts `-Param Value`
+ * and `-Param:Value`; the value is the next arg otherwise. Only cmdlets have
+ * these parameters ([CmdletBinding()]); native exes are left alone.
+ */
+function hasDangerousActionParamValue(args: string[]): boolean {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] ?? ''
+    if (arg.length === 0 || !PS_TOKENIZER_DASH_CHARS.has(arg[0])) continue
+    // Normalize Unicode dashes to ASCII so `–ErrorAction` matches too.
+    const normalized = arg[0] === '-' ? arg : `-${arg.slice(1)}`
+    const colonIndex = normalized.indexOf(':')
+    const name = (colonIndex > 0 ? normalized.slice(0, colonIndex) : normalized).toLowerCase()
+    if (!isActionParamName(name)) continue
+    const rawValue = colonIndex > 0 ? normalized.slice(colonIndex + 1) : (args[i + 1] ?? '')
+    const value = rawValue
+      .toLowerCase()
+      .replace(/^['"]|['"]$/g, '')
+      .trim()
+    if (value.length > 0 && !SAFE_ACTION_VALUES.has(value)) {
+      return true
+    }
+  }
+  return false
+}
+
 export function isAllowlistedCommand(cmd: ParsedCommandElement, originalCommand: string): boolean {
   // SECURITY: nameType is computed from the raw (pre-stripModulePrefix) name.
   // 'application' means the raw name contains path chars (. \\ /) — e.g.
@@ -1277,6 +1326,14 @@ export function isAllowlistedCommand(cmd: ParsedCommandElement, originalCommand:
   // not a flag. We detect cmdlets by checking if the command resolves to a
   // Verb-Noun canonical name (either directly or via alias).
   const isCmdlet = canonical.includes('-')
+
+  // SECURITY (2.1.90): validate the *value* of common action parameters.
+  // `Get-Content file -ErrorAction Break` enters the debugger and hangs the
+  // session; the safeFlags loop below skips all common parameters without
+  // looking at their values.
+  if (isCmdlet && hasDangerousActionParamValue(cmd.args)) {
+    return false
+  }
 
   // SECURITY: if allowAllFlags is set, skip flag validation (command's entire
   // flag surface is read-only). Otherwise, missing/empty safeFlags means

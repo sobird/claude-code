@@ -1,0 +1,373 @@
+{
+  "source": { "reference": "2.1.89", "target": "2.1.90" },
+  "entries": [
+    {
+      "id": "cmd:powerup",
+      "kind": "command",
+      "status": "ported",
+      "evidence": [
+        "bundle:10482754",
+        "bundle:10482782",
+        "bundle:10478615",
+        "bundle:10478879",
+        "str:Discover Claude Code features through quick interactive lessons",
+        "str:tengu_powerup_lesson_opened",
+        "str:tengu_powerup_lesson_completed",
+        "test:src/commands/powerup/__tests__",
+        "test:tests/help-powerup-render.test.tsx"
+      ],
+      "notes": "新增 local-jsx 命令 /powerup 与交互式 lessons（powerupsUnlocked 持久化到 global config）。遥测按仓库约定用 lesson_index 代替字符串 lesson_id（R2）；完成态庆祝动画未移植（R3）。"
+    },
+    {
+      "id": "cmd:toggle-memory",
+      "kind": "command",
+      "status": "ported",
+      "evidence": [
+        "bundle:10094714",
+        "bundle:10094748",
+        "bundle:10094281",
+        "bundle:10094342",
+        "str:Toggle automemory off/on for this session",
+        "str:Automemory disabled for this session",
+        "test:src/commands/toggle-memory/__tests__",
+        "test:src/services/extractMemories/__tests__/autoMemoryToggle.test.ts",
+        "test:src/utils/permissions/__tests__/autoMemoryToggle.test.ts"
+      ],
+      "notes": "新增 /toggle-memory 会话级 automemory 开关。上游随功能灰度默认 isEnabled:()=>false；本仓库按用户确认启用（R1），状态存 bootstrap STATE 而非持久化，读写路径与提取子代理同时拒绝（R4）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:9633277", "bundle:9633370"],
+      "notes": "新增环境变量：git pull 失败时保留现有 marketplace 克隆而非清空后重克隆；幂等读取，默认关闭。cacheMarketplaceFromGit 需真实 git 仓库，未加单测，静态偏移为验收证据（R7）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_USE_ANTHROPIC_AWS",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:3434722", "bundle:869773", "test:src/services/api/__tests__/anthropicAws.test.ts"],
+      "notes": "新增 provider：Claude Platform on AWS。client.ts 在 Foundry 之后、Vertex 之前建客户端；provider 探测顺序 bedrock→foundry→anthropicAws→vertex→firstParty。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:3434848", "bundle:7019345", "bundle:7019226", "bundle:7019055"],
+      "notes": "为真时跳过硬性 workspace/baseURL 校验并禁用 SigV4 与 workspace 头，供代理/测试网关使用（与上游一致）。"
+    },
+    {
+      "id": "env:ANTHROPIC_AWS_API_KEY",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:2981547", "bundle:3434941", "bundle:7019226"],
+      "notes": "非 CLAUDE_CODE_ 前缀变量：显式 API key 时走 x-api-key 而不启用 SigV4；显式 key 对或 profile 优先于该变量。"
+    },
+    {
+      "id": "env:ANTHROPIC_AWS_BASE_URL",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:2981026", "bundle:2981064", "bundle:2981133"],
+      "notes": "baseURL 覆盖；未设置时用 https://aws-external-anthropic.<region>.api.aws，region 读 AWS_REGION / AWS_DEFAULT_REGION。"
+    },
+    {
+      "id": "env:ANTHROPIC_AWS_WORKSPACE_ID",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:2981593", "bundle:2981819", "bundle:2981646"],
+      "notes": "workspace id，作为 anthropic-workspace-id 默认头发送；未设置且未 skipAuth 时抛 No workspace ID found。"
+    },
+    {
+      "id": "behavior:anthropic-aws-provider",
+      "kind": "behavior",
+      "status": "approximated",
+      "evidence": [
+        "bundle:2980667",
+        "bundle:2981064",
+        "bundle:2981133",
+        "bundle:2981646",
+        "bundle:2981819",
+        "bundle:2468334",
+        "test:src/services/api/__tests__/anthropicAws.test.ts"
+      ],
+      "notes": "上游用 SDK 的 AnthropicAws 类 + smithy 签名器；本仓库 @anthropic-ai/sdk 0.81.0 无此类、@smithy/signature-v4 亦非直接依赖，故在 src/services/api/anthropicAws.ts 手写 SigV4 fetch 包装（R5）。"
+    },
+    {
+      "id": "behavior:extract-memories-prose-skip",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": [
+        "bundle:9425792",
+        "bundle:9425902",
+        "bundle:9422558",
+        "str:tengu_extract_memories_skipped_no_prose",
+        "str:If nothing is worth saving, output only 'Nothing to save.' Do not explain why.",
+        "test:src/services/extractMemories/__tests__"
+      ],
+      "notes": "自动记忆提取：自上次提取后若用户没有任何实质 prose（非 meta、文本 ≥3 词）则跳过并上报 tengu_extract_memories_skipped_no_prose；提示词追加 “Nothing to save.” 指令。"
+    },
+    {
+      "id": "behavior:powerup-help-hint",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": [
+        "bundle:10101923",
+        "bundle:10102006",
+        "bundle:10102425",
+        "str:New here? Run ",
+        "test:tests/help-powerup-render.test.tsx"
+      ],
+      "notes": "/help 面板新增提示：终端行数 ≥44 时显示 “New here? Run /powerup to learn the features most people miss.”。"
+    },
+    {
+      "id": "str:aws-external-anthropic",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:2980667"],
+      "notes": "SigV4 service 名与默认 baseURL 主机前缀。"
+    },
+    {
+      "id": "str:anthropic-workspace-id",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:2981819"],
+      "notes": "Claude Platform on AWS 的 workspace 默认头。"
+    },
+    {
+      "id": "str:Discover Claude Code features through quick interactive lessons",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:10482782"],
+      "notes": "/powerup 命令描述。"
+    },
+    {
+      "id": "str:Toggle automemory off/on for this session",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:10094748"],
+      "notes": "/toggle-memory 命令描述。"
+    },
+    {
+      "id": "str:tengu_powerup_lesson_opened",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:10478615"],
+      "notes": "打开 lesson 事件；本仓库以 lesson_index 发送（R2）。"
+    },
+    {
+      "id": "str:tengu_powerup_lesson_completed",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:10478879"],
+      "notes": "完成 lesson 事件；本仓库以 lesson_index 发送（R2）。"
+    },
+    {
+      "id": "str:tengu_extract_memories_skipped_no_prose",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:9425902"],
+      "notes": "无用户 prose 时跳过提取的事件名。"
+    },
+    {
+      "id": "str:If nothing is worth saving, output only 'Nothing to save.' Do not explain why.",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:9422558"],
+      "notes": "提取提示词新增的收尾指令。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_HTTP_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:5395760"],
+      "notes": "2.1.88/2.1.89 bundle 中由打包依赖 @anthropic-ai/sandbox-runtime 的 Linux 沙箱启动代码（[Sandbox Linux] --setenv）注入子进程；本仓库该能力由同名依赖提供，src/ 不直接读取，故近似为依赖实现（沿用 2.1.89 台账，R6 依赖噪声）"
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:5395838"],
+      "notes": "同 HOST_HTTP_PROXY_PORT：由打包依赖 @anthropic-ai/sandbox-runtime 注入沙箱子进程，本仓库由同名依赖提供，src/ 不直接读取（沿用 2.1.89 台账，R6 依赖噪声）"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_THRESHOLD_MINUTES",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:12342363"],
+      "notes": "resume-return 提示阈值（默认 70）。该提示由 GrowthBook tengu_gleaming_fair + resumeReturnDismissed 门控，本仓库无此功能，仅文档化（沿用 2.1.89 台账）"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_TOKEN_THRESHOLD",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:12342427"],
+      "notes": "resume-return 提示阈值（默认 100000）。该提示由 GrowthBook tengu_gleaming_fair + resumeReturnDismissed 门控，本仓库无此功能，仅文档化（沿用 2.1.89 台账）"
+    },
+    {
+      "id": "env:CLAUDE_CODE_SM_COMPACT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:11312248", "bundle:11312307"],
+      "notes": "扫描器 ENV_RE 从 ENABLE_/DISABLE_CLAUDE_CODE_SM_COMPACT 截取到的子串名；真实读取点为 src/services/compact/sessionMemoryCompact.ts（带前缀的两个变量），以近似记录消化扫描噪声（沿用 2.1.89 台账）"
+    },
+    {
+      "id": "behavior:posttooluse-readfile-resync",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": [
+        "bundle:9364565",
+        "bundle:9364609",
+        "bundle:9364726",
+        "test:src/services/tools/__tests__/postToolUseFileResync.test.ts"
+      ],
+      "notes": "PostToolUse hook（常见是 formatter）改写文件后，Edit/Write 的 readFileState 会过期，下一次 Edit 报 stale-file。移植 2.1.90 的 re-sync：仅对全量读取过的文件、且 mtime 前进时重读并刷新缓存；内容有变化时追加 hook_additional_context 提醒模型 old_string 可能已不匹配。"
+    },
+    {
+      "id": "behavior:powershell-remove-recurse-working-dir",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": [
+        "bundle:8612433",
+        "test:src/tools/PowerShellTool/__tests__/pathValidation.test.ts",
+        "test:src/tools/PowerShellTool/__tests__/powershellRealParseE2E.test.ts"
+      ],
+      "notes": "Remove-Item -Recurse 命中工作目录或其祖先（如 . 或 ..）时强制 ask：该命令会连同 .git 与 .claude 一起删除。参数前缀匹配（-Rec 等）与 case-insensitive 路径比较均按上游实现；守卫仅位于主命令循环，与上游一致。"
+    },
+    {
+      "id": "behavior:powershell-background-job",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": [
+        "bundle:8646976",
+        "bundle:8567904",
+        "bundle:8575697",
+        "test:src/utils/powershell/__tests__/parser.test.ts",
+        "test:src/tools/PowerShellTool/__tests__/powershellRealParseE2E.test.ts"
+      ],
+      "notes": "PowerShell 后台作业运算符（&）会 spawn 子 PowerShell 进程并在工作完成前返回控制权。解析脚本新增 PipelineBaseAst.Background 探测，hasBackgroundJob 透传到权限层并强制 ask。"
+    },
+    {
+      "id": "behavior:upgrade-unavailable-gate",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10960766", "bundle:8201980"],
+      "notes": "GrowthBook tengu_slate_harbor 为真时 /upgrade 不再打开浏览器，改为提示 “Upgrade not currently available. For additional usage, run /extra-usage.”；Max 20x 提示优先。"
+    },
+    {
+      "id": "behavior:auto-mode-policy-consent",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:1076103"],
+      "notes": "policySettings.permissions.defaultMode === 'auto' 视为管理员已代组织同意 auto mode，hasAutoModeOptIn 直接返回 true 并跳过逐用户 opt-in 弹窗。"
+    },
+    {
+      "id": "behavior:buddy-unavailable-message",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:11268057", "bundle:11267662"],
+      "notes": "/buddy 在命令隐藏的配置下仍可能被别名或保存的提示触达；call 时检查可用性并返回 “buddy is unavailable on this configuration”。off/on 子命令先于可用性检查（与上游一致），同时补上 argumentHint [pet|off]。"
+    },
+    {
+      "id": "behavior:remote-session-retry-exhausted",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10638117"],
+      "notes": "CCR 远程会话轮询连续瞬时网络错误达到上限时抛出友好文案 “Lost connection to the remote session after repeated retries — the session may still be running”；非瞬时错误仍保留原始错误信息。"
+    },
+    {
+      "id": "behavior:extract-memories-prompt-deferral",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:9422824", "bundle:9422852", "test:src/services/extractMemories/__tests__/prompts.test.ts"],
+      "notes": "2.1.90 把提取提示词重构为单一 opener：类型清单、what-not-to-save、frontmatter 格式改为引用系统提示词 Memory 段（“Apply the memory types, [scope guidance, ]what-not-to-save criteria, and frontmatter format from the Memory section of your system prompt”），删除提示词内重复段落与 tengu_moth_copse/skipIndex 分支。"
+    },
+    {
+      "id": "str:tengu_slate_harbor",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:8201980"],
+      "notes": "/upgrade 不可用开关的 GrowthBook 名称。"
+    },
+    {
+      "id": "str:[pet|off]",
+      "kind": "string",
+      "status": "ported",
+      "evidence": ["bundle:11267662"],
+      "notes": "/buddy 命令的 argumentHint。"
+    },
+    {
+      "id": "behavior:dangerous-dir-husky",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:11426036", "test:src/utils/permissions/__tests__/dangerousDirectories.test.ts"],
+      "notes": "2.1.90 的 changelog「Fixed .husky files not showing in permission prompts」：.husky 加入 DANGEROUS_DIRECTORIES，读写该目录下的文件强制走权限提示。测试覆盖 .husky/.HUSKY 受保护、普通文件放行。"
+    },
+    {
+      "id": "behavior:resume-hide-sdk-and-loop-sessions",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:11398167", "bundle:11394680", "test:src/utils/__tests__/resumeSessionFilters.test.ts"],
+      "notes": "changelog「SDK sessions with entrypoint sdk-cli/sdk-ts/sdk-py and sessions started by /loop no longer clutter /resume」：LiteMetadata/LogOption 增加 entrypoint 与 isLoopSession；readLiteMetadata 从头部提取 entrypoint、扫描 <command-name>/loop</command-name>；enrichLog 过滤这两类会话。对拍 bundle 时同时补齐上游的 sessionKind 过滤（仅 bg/daemon/daemon-worker 视为非交互）。测试用临时 UUID JSONL 覆盖 keep/filter 分支。"
+    },
+    {
+      "id": "behavior:resume-all-projects-parallel",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:11386475"],
+      "notes": "changelog「/resume 在跨多个项目时更快」：all-projects 加载器改为 Promise.all 并发读取各 projectDir 的 lite session 列表后再合并。"
+    },
+    {
+      "id": "behavior:rate-limit-dialog-once",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:12406124"],
+      "notes": "changelog「rate-limit options 对话框不再重复弹出」：REPL 增加 hasAutoOpenedRateLimitOptionsRef，handleOpenRateLimitOptions 仅首次自动打开，之后由用户显式触发。"
+    },
+    {
+      "id": "behavior:hook-json-exit2-blocking",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:11474283"],
+      "notes": "changelog「JSON 输出 hook 退出码 2 时正确当作 blocking error」：hooks.ts 的 JSON 分支在 status===2 且尚无 blockingError 时，用 stderr（或 'No stderr output'）填充 blockingError，并把 outcome 判为 blocking。"
+    },
+    {
+      "id": "behavior:powershell-erroraction-values",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": [
+        "bundle:8587021",
+        "bundle:8586996",
+        "test:src/tools/PowerShellTool/__tests__/readOnlyValidation.test.ts",
+        "test:src/tools/PowerShellTool/__tests__/powershellRealParseE2E.test.ts"
+      ],
+      "notes": "changelog「PowerShell 只读命令对 -ErrorAction/-WarningAction 等的值做白名单校验」：-ea/-wa/-infa/-proga 与其长形式的取值仅允许 silent/continue/stop 系列，Break 与数字 3 等一律拒绝（长形式含值、也支持 -ErrorAction:Value）。2.1.90 同时把 4 个短别名并入公共参数集 x$K，故 safeFlags 跳过也接受短形式（交叉验证时补齐）。Get-DnsClientCache 移出白名单，ipconfig 仅保留 /all 与 /allcompartments。"
+    },
+    {
+      "id": "behavior:powershell-archive-toctou-nongit",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:8649622", "test:src/tools/PowerShellTool/__tests__/powershellRealParseE2E.test.ts"],
+      "notes": "changelog「归档解压后的 TOCTOU」：归档解压守卫从「存在 git 子命令」分支移出，任何复合命令只要包含 tar/unzip 等解压器就强制 ask（git 分支文案保持，非 git 分支给出独立文案）。"
+    },
+    {
+      "id": "behavior:powershell-parsefail-every-token",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:8645984", "test:src/tools/PowerShellTool/__tests__/powershellPermissions.test.ts"],
+      "notes": "changelog「PowerShell 解析失败时的 deny 规则匹配」：解析失败的兜底改为去注释、去续行后按分隔符切段、逐 token 重建候选命令再做 prefix 匹配，并对每段运行 Remove-Item 危险路径检查（与上游 every-token 扫描一致）。无 pwsh 环境下该路径恒生效，测试覆盖赋值内 invoke、调用运算符形式与危险删除硬拒绝。"
+    },
+    {
+      "id": "behavior:powershell-arp-positional",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": [
+        "bundle:8599833",
+        "bundle:8628143",
+        "test:src/tools/PowerShellTool/__tests__/readOnlyValidation.test.ts",
+        "test:src/utils/powershell/__tests__/dangerousCmdlets.test.ts",
+        "test:src/tools/PowerShellTool/__tests__/powershellRealParseE2E.test.ts"
+      ],
+      "notes": "交叉验证（全表对拍上游 B$K）发现的 2.1.90 遗漏：arp 的 safeFlags 从 [\"-a\",\"-g\",\"-v\",\"-N\"] 改为小写 -n，并新增 additionalCommandIsDangerousCallback —— 任意不以 - 开头的参数（如 `arp <host>`、`arp -s <ip> <mac>`）均视为危险。上游把 arp 加入回调门控集合（Laz），本项目同步加入 ARG_GATED_CMDLETS，避免权限对话框建议 `arp:*` 通配。2.1.89 无该回调，纯表项变更未进 inventory。"
+    }
+  ]
+}

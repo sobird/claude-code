@@ -143,6 +143,9 @@ export const ARG_GATED_CMDLETS = new Set([
   'ipconfig',
   'hostname',
   'route',
+  // 2.1.90: arp gained a callback rejecting positional args (`arp <host>`),
+  // so a suggested `arp:*` wildcard would auto-allow the write form too.
+  'arp',
 ])
 
 /**

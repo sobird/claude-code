@@ -649,6 +649,31 @@ function expandTilde(filePath: string): string {
 }
 
 /**
+ * PowerShell accepts any unambiguous parameter prefix (e.g. `-Rec`, `-Recu`),
+ * and the value may be attached with colon syntax (`-Recurse:$false`). Strip
+ * both before the prefix match. Mirrors upstream 2.1.90.
+ */
+function hasRecurseArgument(args: string[]): boolean {
+  return args.some((arg) => {
+    const flag = (arg.length > 0 ? '-' + arg.slice(1) : arg).toLowerCase()
+    const colon = flag.indexOf(':')
+    const name = colon > 0 ? flag.slice(0, colon) : flag
+    return name.length >= 2 && '-recurse'.startsWith(name)
+  })
+}
+
+/**
+ * Case-insensitive check that `target` is the working directory or one of its
+ * ancestors. `Remove-Item -Recurse .` (or `..`) would delete the working
+ * directory — including .git and .claude.
+ */
+function isWorkingDirectoryOrAncestor(cwd: string, target: string): boolean {
+  const workingDir = cwd.toLowerCase()
+  const resolved = target.toLowerCase()
+  return resolved === workingDir || workingDir.startsWith(resolved + '/') || workingDir.startsWith(resolved + '\\')
+}
+
+/**
  * Checks the raw user-provided path (pre-realpath) for dangerous removal
  * targets. safeResolvePath/realpathSync canonicalizes in ways that defeat
  * isDangerousRemovalPath: on Windows '/' → 'C:\' (fails the === '/' check);
@@ -1454,6 +1479,24 @@ function checkPathConstraintsForStatement(
     // Port: remove-item (and aliases rm/del/ri/rd/rmdir/erase → resolveToCanonical)
     // on a dangerous path → deny (not ask). User cannot approve system32 deletion.
     const isRemoval = resolveToCanonical(cmd.name) === 'remove-item'
+
+    // SECURITY: `Remove-Item -Recurse .` (or an ancestor like `..`) deletes the
+    // working directory including .git and .claude in one command. Upstream
+    // 2.1.90 requires manual approval for this shape even when the path is
+    // otherwise allowed. The guard runs before the path loop so its ask wins
+    // via firstAsk ??=.
+    if (isRemoval && hasRecurseArgument(cmd.args)) {
+      for (const filePath of paths) {
+        const target = isAbsolute(filePath) ? resolve(filePath) : resolve(cwd, filePath)
+        if (isWorkingDirectoryOrAncestor(cwd, target)) {
+          firstAsk ??= {
+            behavior: 'ask',
+            message: `Remove-Item -Recurse targeting '${filePath}' would delete the working directory including .git and .claude — requires manual approval`,
+          }
+          break
+        }
+      }
+    }
 
     for (const filePath of paths) {
       // Hard-deny removal of dangerous system paths (/, ~, /etc, etc.).

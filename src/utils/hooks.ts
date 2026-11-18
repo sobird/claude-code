@@ -2405,6 +2405,15 @@ async function* executeHooks({
           return
         }
 
+        // Exit code 2 is blocking even when the hook emitted JSON to stdout —
+        // processHookJSONOutput only derives blockingError from the JSON body,
+        // so a JSON-emitting hook that exits 2 would otherwise be ignored.
+        if (result.status === 2 && !processed.blockingError) {
+          processed.blockingError = {
+            blockingError: `[${hookCommand}]: ${result.stderr || 'No stderr output'}`,
+            command: hookCommand,
+          }
+        }
         emitHookResponse({
           hookId,
           hookName,
@@ -2417,7 +2426,7 @@ async function* executeHooks({
         })
         yield {
           ...processed,
-          outcome: 'success' as const,
+          outcome: processed.blockingError ? ('blocking' as const) : ('success' as const),
           hook,
         }
         return

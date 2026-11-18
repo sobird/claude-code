@@ -9,6 +9,7 @@ import { Box, Text, useInput } from '../../ink.js'
 import type { LocalJSXCommandContext, LocalJSXCommandOnDone } from '../../types/command.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { getRainbowColor } from '../../utils/thinking.js'
+import { isBuddyCommandVisible } from './index.js'
 
 function CompanionPanel({
   companion,
@@ -186,20 +187,6 @@ export async function call(
   const config = getGlobalConfig()
   const trimmed = args?.trim()
 
-  if (trimmed === 'pet') {
-    const companion = getCompanion()
-    if (!companion) {
-      onDone('no companion yet · run /buddy first', { display: 'system' })
-      return null
-    }
-    if (config.companionMuted === true) {
-      saveGlobalConfig((c) => ({ ...c, companionMuted: false }))
-    }
-    context.setAppState((s) => ({ ...s, companionPetAt: Date.now() }))
-    onDone(`petted ${companion.name}`, { display: 'system' })
-    return null
-  }
-
   if (trimmed === 'off') {
     if (!config.companionMuted) {
       saveGlobalConfig((c) => ({ ...c, companionMuted: true }))
@@ -213,6 +200,28 @@ export async function call(
       saveGlobalConfig((c) => ({ ...c, companionMuted: false }))
     }
     onDone('companion unmuted', { display: 'system' })
+    return null
+  }
+
+  // The command is hidden when unavailable, but /buddy can still be reached
+  // through a saved prompt or an alias — fail with a clear message instead of
+  // hatching a companion for a configuration that does not support it.
+  if (!isBuddyCommandVisible()) {
+    onDone('buddy is unavailable on this configuration', { display: 'system' })
+    return null
+  }
+
+  if (trimmed === 'pet') {
+    const companion = getCompanion()
+    if (!companion) {
+      onDone('no companion yet · run /buddy first', { display: 'system' })
+      return null
+    }
+    if (config.companionMuted === true) {
+      saveGlobalConfig((c) => ({ ...c, companionMuted: false }))
+    }
+    context.setAppState((s) => ({ ...s, companionPetAt: Date.now() }))
+    onDone(`petted ${companion.name}`, { display: 'system' })
     return null
   }
 

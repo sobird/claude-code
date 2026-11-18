@@ -387,6 +387,28 @@ CLAUDE_CODE_RESUME_TOKEN_THRESHOLD=100000
 MCP_CONNECTION_NONBLOCKING=1
 ```
 
+## 2.1.90 新增变量
+
+```bash
+# 启用 Claude Platform on AWS provider；region 读 AWS_REGION / AWS_DEFAULT_REGION
+CLAUDE_CODE_USE_ANTHROPIC_AWS=1
+
+# 跳过 Claude Platform on AWS 的 workspace/baseURL 校验，并禁用 SigV4 与 workspace 头（代理/测试网关）
+CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH=1
+
+# Claude Platform on AWS：显式 API key；设置后不再使用 SigV4（改为 x-api-key）
+ANTHROPIC_AWS_API_KEY=...
+
+# Claude Platform on AWS：base URL 覆盖；默认 https://aws-external-anthropic.<region>.api.aws
+ANTHROPIC_AWS_BASE_URL=https://aws-external-anthropic.us-east-1.api.aws
+
+# Claude Platform on AWS：workspace id，作为 anthropic-workspace-id 头发送
+ANTHROPIC_AWS_WORKSPACE_ID=...
+
+# git pull 插件 marketplace 失败时保留现有克隆，而不是清空后重新克隆（离线/远端不稳定时有用）
+CLAUDE_CODE_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE=1
+```
+
 ## 注意事项
 
 1. **安全性**：永远不要在代码仓库中提交包含真实值的 `.env` 文件，确保 `.env` 在 `.gitignore` 中

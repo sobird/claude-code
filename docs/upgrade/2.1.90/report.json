@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "counts": {
+    "already-present": 0,
+    "ported": 37,
+    "approximated": 6,
+    "ignored-dependency": 0,
+    "retained-internal": 0,
+    "unresolved": 0
+  },
+  "missingInSrc": [],
+  "unexpectedInSrc": [],
+  "unregistered": [],
+  "unresolved": []
+}

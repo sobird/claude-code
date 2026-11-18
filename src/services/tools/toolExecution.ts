@@ -87,6 +87,7 @@ import { normalizeNameForMCP } from '../mcp/normalization.js'
 import type { MCPServerConnection } from '../mcp/types.js'
 import { getLoggingSafeMcpBaseUrl, getMcpServerScopeFromToolName, isMcpTool } from '../mcp/utils.js'
 import { shouldDeferPermission } from './permissionDefer.js'
+import { resyncReadFileStateAfterPostToolUseHooks } from './postToolUseFileResync.js'
 import {
   resolveHookPermissionDecision,
   runPostToolUseFailureHooks,
@@ -1300,6 +1301,7 @@ async function checkPermissionsAndCallTool(
 
     const postToolHookInfos: StopHookInfo[] = []
     const postToolHookStart = Date.now()
+    let hooksRan = false
     for await (const hookResult of runPostToolUseHooks(
       toolUseContext,
       tool,
@@ -1311,6 +1313,7 @@ async function checkPermissionsAndCallTool(
       mcpServerType,
       mcpServerBaseUrl,
     )) {
+      hooksRan = true
       if ('updatedMCPToolOutput' in hookResult) {
         if (isMcpTool(tool)) {
           toolOutput = hookResult.updatedMCPToolOutput
@@ -1340,6 +1343,19 @@ async function checkPermissionsAndCallTool(
       }
     }
     const postToolHookDurationMs = Date.now() - postToolHookStart
+    // A formatter hook may have rewritten the file we just edited. Re-sync the
+    // read state so the next Edit doesn't fail with a stale-file error.
+    if (hooksRan) {
+      const resyncMessage = resyncReadFileStateAfterPostToolUseHooks(
+        tool.name,
+        toolUseID,
+        processedInput,
+        toolUseContext.readFileState,
+      )
+      if (resyncMessage) {
+        resultingMessages.push({ message: resyncMessage })
+      }
+    }
     if (postToolHookDurationMs >= SLOW_PHASE_LOG_THRESHOLD_MS) {
       logForDebugging(
         `Slow PostToolUse hooks: ${postToolHookDurationMs}ms for ${tool.name} (${postToolHookInfos.length} hooks)`,

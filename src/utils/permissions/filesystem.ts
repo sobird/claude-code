@@ -14,7 +14,7 @@ import {
 } from 'src/tools/FileEditTool/constants.js'
 import type { z } from 'zod/v4'
 
-import { getOriginalCwd, getSessionId } from '../../bootstrap/state.js'
+import { getMemoryToggledOff, getOriginalCwd, getSessionId } from '../../bootstrap/state.js'
 import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import type { AnyObject, Tool, ToolPermissionContext } from '../../Tool.js'
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
@@ -59,7 +59,7 @@ export const DANGEROUS_FILES = [
  * Dangerous directories that should be protected from auto-editing.
  * These directories contain sensitive configuration or executable files.
  */
-export const DANGEROUS_DIRECTORIES = ['.git', '.vscode', '.idea', '.claude'] as const
+export const DANGEROUS_DIRECTORIES = ['.git', '.vscode', '.idea', '.claude', '.husky'] as const
 
 /**
  * Normalizes a path for case-insensitive comparison.
@@ -1397,6 +1397,20 @@ export function checkEditableInternalPath(absolutePath: string, input: { [key: s
     }
   }
 
+  // /toggle-memory: while auto-memory is off for the session, deny writes
+  // outright rather than letting them fall through to the normal permission
+  // flow (an allowed rule must not silently re-enable memory writes).
+  if (getMemoryToggledOff() && isAutoMemPath(normalizedPath)) {
+    return {
+      behavior: 'deny',
+      message: 'Cannot write to memory while it is toggled off. Run /toggle-memory to re-enable automemory.',
+      decisionReason: {
+        type: 'other',
+        reason: 'memory access blocked by /toggle-memory',
+      },
+    }
+  }
+
   // Memdir directory (persistent memory for cross-session learning)
   // This pre-safety-check carve-out exists because the default path is under
   // ~/.claude/, which is in DANGEROUS_DIRECTORIES. The CLAUDE_COWORK_MEMORY_PATH_OVERRIDE
@@ -1456,6 +1470,20 @@ export function checkReadableInternalPath(absolutePath: string, input: { [key: s
       decisionReason: {
         type: 'other',
         reason: 'Session memory files are allowed for reading',
+      },
+    }
+  }
+
+  // /toggle-memory: session-scoped opt-out also hides memory content. This
+  // must precede the project-directory allow below, which also covers the
+  // default memory dir (projects/{cwd}/memory/).
+  if (getMemoryToggledOff() && isAutoMemPath(normalizedPath)) {
+    return {
+      behavior: 'deny',
+      message: 'Cannot read memory while it is toggled off. Run /toggle-memory to re-enable automemory.',
+      decisionReason: {
+        type: 'other',
+        reason: 'memory access blocked by /toggle-memory',
       },
     }
   }

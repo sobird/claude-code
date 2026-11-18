@@ -29,7 +29,7 @@ import { has1mContext } from './context.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from './envUtils.js'
 import { getCanonicalName } from './model/model.js'
 import { get3PModelCapabilityOverride } from './model/modelSupportOverrides.js'
-import { getAPIProvider } from './model/providers.js'
+import { getAPIProvider, isFirstPartyLikeProvider } from './model/providers.js'
 import { getInitialSettings } from './settings/settings.js'
 
 /**
@@ -98,7 +98,7 @@ export function modelSupportsISP(model: string): boolean {
   if (provider === 'foundry') {
     return true
   }
-  if (provider === 'firstParty') {
+  if (isFirstPartyLikeProvider(provider)) {
     return !canonical.includes('claude-3-')
   }
   return canonical.includes('claude-opus-4') || canonical.includes('claude-sonnet-4')
@@ -119,7 +119,7 @@ export function modelSupportsContextManagement(model: string): boolean {
   if (provider === 'foundry') {
     return true
   }
-  if (provider === 'firstParty') {
+  if (isFirstPartyLikeProvider(provider)) {
     return !canonical.includes('claude-3-')
   }
   return (
@@ -131,8 +131,9 @@ export function modelSupportsContextManagement(model: string): boolean {
 export function modelSupportsStructuredOutputs(model: string): boolean {
   const canonical = getCanonicalName(model)
   const provider = getAPIProvider()
-  // Structured outputs only supported on firstParty and Foundry (not Bedrock/Vertex yet)
-  if (provider !== 'firstParty' && provider !== 'foundry') {
+  // Structured outputs only supported on firstParty, Claude Platform on AWS,
+  // and Foundry (not Bedrock/Vertex yet)
+  if (!isFirstPartyLikeProvider(provider) && provider !== 'foundry') {
     return false
   }
   return (
@@ -152,7 +153,7 @@ export function modelSupportsAutoMode(model: string): boolean {
     // External: firstParty-only at launch (PI probes not wired for
     // Bedrock/Vertex/Foundry yet). Checked before allowModels so the GB
     // override can't enable auto mode on unsupported providers.
-    if (process.env.USER_TYPE !== 'ant' && getAPIProvider() !== 'firstParty') {
+    if (process.env.USER_TYPE !== 'ant' && !isFirstPartyLikeProvider()) {
       return false
     }
     // GrowthBook override: tengu_auto_mode_config.allowModels force-enables
@@ -199,7 +200,7 @@ export function getToolSearchBetaHeader(): string {
  */
 export function shouldIncludeFirstPartyOnlyBetas(): boolean {
   return (
-    (getAPIProvider() === 'firstParty' || getAPIProvider() === 'foundry') &&
+    (isFirstPartyLikeProvider() || getAPIProvider() === 'foundry') &&
     !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS)
   )
 }
@@ -210,7 +211,7 @@ export function shouldIncludeFirstPartyOnlyBetas(): boolean {
  * treatment data is firstParty-only.
  */
 export function shouldUseGlobalCacheScope(): boolean {
-  return getAPIProvider() === 'firstParty' && !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS)
+  return isFirstPartyLikeProvider() && !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS)
 }
 
 export const getAllModelBetas = memoize((model: string): string[] => {

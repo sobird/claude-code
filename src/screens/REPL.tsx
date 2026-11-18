@@ -4238,7 +4238,14 @@ export function REPL({
   // old REPL scopes can be GC'd — saves ~35MB over a 1000-turn session.
   const onSubmitRef = useRef(onSubmit)
   onSubmitRef.current = onSubmit
+  // The rate-limit trigger fires from many places (stream events, metric
+  // observers, repeated renders). Only auto-open the dialog once per session;
+  // without this guard it re-opens every time the condition is observed,
+  // trapping the user in the dialog.
+  const hasAutoOpenedRateLimitOptionsRef = useRef(false)
   const handleOpenRateLimitOptions = useCallback(() => {
+    if (hasAutoOpenedRateLimitOptionsRef.current) return
+    hasAutoOpenedRateLimitOptionsRef.current = true
     void onSubmitRef.current('/rate-limit-options', {
       setCursorOffset: () => {},
       clearBuffer: () => {},

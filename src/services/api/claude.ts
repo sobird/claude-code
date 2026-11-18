@@ -21,7 +21,7 @@ import type {
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
-import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from 'src/utils/model/providers.js'
+import { getAPIProvider, shouldAttachClientRequestId } from 'src/utils/model/providers.js'
 
 import { getAttributionHeader, getCLISyspromptPrefix } from '../../constants/system.js'
 import {
@@ -1595,7 +1595,7 @@ async function* queryModel(
         // Generate and track client request ID so timeouts (which return no
         // server request ID) can still be correlated with server logs.
         // First-party only — 3P providers don't log it (inc-4029 class).
-        clientRequestId = getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl() ? randomUUID() : undefined
+        clientRequestId = shouldAttachClientRequestId() ? randomUUID() : undefined
 
         // Use raw stream instead of BetaMessageStream to avoid O(n²) partial JSON parsing
         // BetaMessageStream calls partialParse() on every input_json_delta, which we don't need

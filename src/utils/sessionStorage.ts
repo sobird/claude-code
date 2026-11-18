@@ -3742,9 +3742,11 @@ export async function loadAllProjectsMessageLogsProgressive(
 
   const projectDirs = dirents.filter((dirent) => dirent.isDirectory()).map((dirent) => join(projectsDir, dirent.name))
 
+  // Stat each project directory in parallel — the all-projects view can span
+  // dozens of dirs and each `getSessionFilesLite` is a readdir + batched stats.
   const rawLogs: LogOption[] = []
-  for (const projectDir of projectDirs) {
-    rawLogs.push(...(await getSessionFilesLite(projectDir, limit)))
+  for (const logs of await Promise.all(projectDirs.map((projectDir) => getSessionFilesLite(projectDir, limit)))) {
+    rawLogs.push(...logs)
   }
   // Deduplicate — same session can appear in multiple project dirs
   const sorted = deduplicateLogsBySessionId(rawLogs)
@@ -4217,6 +4219,10 @@ type LiteMetadata = {
   firstPrompt: string
   gitBranch?: string
   isSidechain: boolean
+  isLoopSession: boolean
+  entrypoint?: string
+  /** Only the background/daemon kinds — others are interactive sessions. */
+  sessionKind?: string
   projectPath?: string
   teamName?: string
   customTitle?: string
@@ -4362,7 +4368,7 @@ async function getLogsWithoutIndex(projectDir: string, limit?: number): Promise<
  */
 async function readLiteMetadata(filePath: string, fileSize: number, buf: Buffer): Promise<LiteMetadata> {
   const { head, tail } = await readHeadAndTail(filePath, fileSize, buf)
-  if (!head) return { firstPrompt: '', isSidechain: false }
+  if (!head) return { firstPrompt: '', isSidechain: false, isLoopSession: false }
 
   // Extract stable metadata from the first line via string search.
   // Works even when the first line is truncated (>64KB message).
@@ -4370,6 +4376,17 @@ async function readLiteMetadata(filePath: string, fileSize: number, buf: Buffer)
   const projectPath = extractJsonStringField(head, 'cwd')
   const teamName = extractJsonStringField(head, 'teamName')
   const agentSetting = extractJsonStringField(head, 'agentSetting')
+  const entrypoint = extractJsonStringField(head, 'entrypoint')
+  // Background/daemon sessions are not interactive; keep only those three
+  // kinds (upstream treats any other value as interactive).
+  const rawSessionKind = extractJsonStringField(head, 'sessionKind')
+  const sessionKind =
+    rawSessionKind === 'bg' || rawSessionKind === 'daemon' || rawSessionKind === 'daemon-worker'
+      ? rawSessionKind
+      : undefined
+  // /loop sessions start with a synthetic `<command-name>/loop</command-name>`
+  // first message; they're not useful to resume interactively.
+  const isLoopSession = head.includes('<command-name>/loop</command-name>')
 
   // Prefer the last-prompt tail entry — captured by extractFirstPrompt at
   // write time (filtered, authoritative) and shows what the user was most
@@ -4417,6 +4434,9 @@ async function readLiteMetadata(filePath: string, fileSize: number, buf: Buffer)
     firstPrompt,
     gitBranch,
     isSidechain,
+    isLoopSession,
+    entrypoint,
+    sessionKind,
     projectPath,
     teamName,
     customTitle,
@@ -4633,6 +4653,8 @@ async function enrichLog(log: LogOption, readBuf: Buffer): Promise<LogOption | n
     firstPrompt: meta.firstPrompt,
     gitBranch: meta.gitBranch,
     isSidechain: meta.isSidechain,
+    entrypoint: meta.entrypoint,
+    isLoopSession: meta.isLoopSession,
     teamName: meta.teamName,
     customTitle: meta.customTitle,
     summary: meta.summary,
@@ -4658,6 +4680,20 @@ async function enrichLog(log: LogOption, readBuf: Buffer): Promise<LogOption | n
   }
   if (enriched.teamName) {
     logForDebugging(`Session ${log.sessionId} filtered from /resume: teamName=${enriched.teamName}`)
+    return null
+  }
+  if (meta.sessionKind) {
+    logForDebugging(`Session ${log.sessionId} filtered from /resume: sessionKind=${meta.sessionKind}`)
+    return null
+  }
+  // SDK-created sessions (Agent SDK, `claude -p`) aren't interactive
+  // conversations — hide them from the picker.
+  if (enriched.entrypoint === 'sdk-cli' || enriched.entrypoint === 'sdk-ts' || enriched.entrypoint === 'sdk-py') {
+    logForDebugging(`Session ${log.sessionId} filtered from /resume: entrypoint=${enriched.entrypoint}`)
+    return null
+  }
+  if (enriched.isLoopSession) {
+    logForDebugging(`Session ${log.sessionId} filtered from /resume: /loop session`)
     return null
   }
 

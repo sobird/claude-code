@@ -73,8 +73,12 @@ export function getAttributionHeader(fingerprint: string): string {
   const version = `${MACRO.VERSION}.${fingerprint}`
   const entrypoint = process.env.CLAUDE_CODE_ENTRYPOINT ?? 'unknown'
 
-  // cch=00000 placeholder is overwritten by Bun's HTTP stack with attestation token
-  const cch = feature('NATIVE_CLIENT_ATTESTATION') ? ' cch=00000;' : ''
+  // cch=00000 placeholder is overwritten by Bun's HTTP stack with attestation
+  // token. Bedrock and Claude Platform on AWS requests are signed by their own
+  // transports, so the placeholder is omitted there.
+  const provider = getAPIProvider()
+  const attestable = provider !== 'bedrock' && provider !== 'anthropicAws'
+  const cch = feature('NATIVE_CLIENT_ATTESTATION') && attestable ? ' cch=00000;' : ''
   // cc_workload: turn-scoped hint so the API can route e.g. cron-initiated
   // requests to a lower QoS pool. Absent = interactive default. Safe re:
   // fingerprint (computed from msg chars + version only, line 78 above) and

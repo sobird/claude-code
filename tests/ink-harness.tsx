@@ -114,7 +114,9 @@ class FakeStdin extends Readable {
  * harness reads them back out (`Readable` alone would be write-only here).
  *
  * `isTTY: false` makes Ink emit whole frames instead of cursor diffs; `columns`
- * is what Ink reads for layout width (ink.tsx:238, else it falls back to 80).
+ * and `rows` are what Ink reads for layout dimensions (ink.tsx:238-239, else it
+ * falls back to 80×24). `rows` matters for components that gate on height, like
+ * the /help panel's `/powerup` hint (>= 44 rows).
  *
  * Ink's `render` types this as `NodeJS.WriteStream` (= `tty.WriteStream`, a
  * net.Socket subclass), so the call site still narrows with a cast. This class
@@ -123,10 +125,12 @@ class FakeStdin extends Readable {
 class FakeStdout extends PassThrough {
   isTTY = false
   columns: number
+  rows: number
 
-  constructor(columns: number) {
+  constructor(columns: number, rows: number) {
     super()
     this.columns = columns
+    this.rows = rows
   }
 }
 
@@ -175,11 +179,14 @@ class FrameReader {
   }
 }
 
-export async function renderForTest(node: ReactNode, { columns = 100 }: { columns?: number } = {}): Promise<Harness> {
+export async function renderForTest(
+  node: ReactNode,
+  { columns = 100, rows = 24 }: { columns?: number; rows?: number } = {},
+): Promise<Harness> {
   // Drives reconciler.ts's synchronous onImmediateRender path.
   process.env.NODE_ENV = 'test'
 
-  const stdout = new FakeStdout(columns) // non-TTY -> Ink emits whole frames, not diffs
+  const stdout = new FakeStdout(columns, rows) // non-TTY -> Ink emits whole frames, not diffs
   const stderr = new FakeStderr()
   const stdin = new FakeStdin()
 

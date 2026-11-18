@@ -16,7 +16,7 @@
 import { feature } from 'bun:bundle'
 import { basename } from 'node:path'
 
-import { getIsRemoteMode } from '../../bootstrap/state.js'
+import { getIsRemoteMode, getMemoryToggledOff } from '../../bootstrap/state.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import { ENTRYPOINT_NAME } from '../../memdir/memdir.js'
 import { formatMemoryManifest, scanMemoryFiles } from '../../memdir/memoryScan.js'
@@ -39,7 +39,7 @@ import { createMemorySavedMessage, createUserMessage } from '../../utils/message
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 import { logEvent } from '../analytics/index.js'
 import { sanitizeToolNameForAnalytics } from '../analytics/metadata.js'
-import { buildExtractAutoOnlyPrompt, buildExtractCombinedPrompt } from './prompts.js'
+import { buildExtractMemoriesPrompt } from './prompts.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const teamMemPaths = feature('TEAMMEM')
@@ -121,6 +121,44 @@ function hasMemoryWritesSince(messages: Message[], sinceUuid: string | undefined
   return false
 }
 
+/** Minimum non-meta words for a user message to count as "prose". */
+const MIN_USER_PROSE_WORDS = 3
+
+function isUserProse(message: Message): boolean {
+  if (message.type !== 'user' || message.isMeta) {
+    return false
+  }
+  const content = message.message.content
+  const wordCount = (text: string): number => text.split(/\s+/).filter(Boolean).length
+  if (typeof content === 'string') {
+    return wordCount(content) >= MIN_USER_PROSE_WORDS
+  }
+  if (!Array.isArray(content)) {
+    return false
+  }
+  return content.some((block) => block.type === 'text' && wordCount(block.text) >= MIN_USER_PROSE_WORDS)
+}
+
+/**
+ * Returns true if any non-meta user message after the cursor looks like real
+ * prose. Never returns false due to a missing cursor (compaction can drop it).
+ */
+export function hasUserProseSince(messages: Message[], sinceUuid: string | undefined): boolean {
+  let foundStart = sinceUuid === undefined
+  for (const message of messages) {
+    if (!foundStart) {
+      if (message.uuid === sinceUuid) {
+        foundStart = true
+      }
+      continue
+    }
+    if (isUserProse(message)) {
+      return true
+    }
+  }
+  return foundStart ? false : messages.some(isUserProse)
+}
+
 // ============================================================================
 // Tool Permissions
 // ============================================================================
@@ -144,6 +182,12 @@ function denyAutoMemTool(tool: Tool, reason: string) {
  */
 export function createAutoMemCanUseTool(memoryDir: string): CanUseToolFn {
   return async (tool: Tool, input: Record<string, unknown>) => {
+    // /toggle-memory: the session opted out, so the fork must not read or
+    // write anything, even with read-only tools.
+    if (getMemoryToggledOff()) {
+      return denyAutoMemTool(tool, 'Memory is toggled off. Run /toggle-memory to re-enable automemory.')
+    }
+
     // Allow REPL — when REPL mode is enabled (ant-default), primitive tools
     // are hidden from the tool list so the forked agent calls REPL instead.
     // REPL's VM context re-invokes this canUseTool for each inner primitive
@@ -306,9 +350,21 @@ export function initExtractMemories(): void {
       return
     }
 
-    const teamMemoryEnabled = feature('TEAMMEM') ? teamMemPaths!.isTeamMemoryEnabled() : false
+    // Nothing new was said by the user — tool results and assistant turns
+    // alone are not worth a forked extraction pass.
+    if (!hasUserProseSince(messages, lastMemoryMessageUuid)) {
+      logForDebugging('[extractMemories] skipping — no user prose since last extraction')
+      const lastMessage = messages.at(-1)
+      if (lastMessage?.uuid) {
+        lastMemoryMessageUuid = lastMessage.uuid
+      }
+      logEvent('tengu_extract_memories_skipped_no_prose', {
+        message_count: newMessageCount,
+      })
+      return
+    }
 
-    const skipIndex = getFeatureValue_CACHED_MAY_BE_STALE('tengu_moth_copse', false)
+    const teamMemoryEnabled = feature('TEAMMEM') ? teamMemPaths!.isTeamMemoryEnabled() : false
 
     const canUseTool = createAutoMemCanUseTool(memoryDir)
     const cacheSafeParams = createCacheSafeParams(context)
@@ -334,10 +390,7 @@ export function initExtractMemories(): void {
       // Placed after the throttle gate so skipped turns don't pay the scan cost.
       const existingMemories = formatMemoryManifest(await scanMemoryFiles(memoryDir, createAbortController().signal))
 
-      const userPrompt =
-        feature('TEAMMEM') && teamMemoryEnabled
-          ? buildExtractCombinedPrompt(newMessageCount, existingMemories, skipIndex)
-          : buildExtractAutoOnlyPrompt(newMessageCount, existingMemories, skipIndex)
+      const userPrompt = buildExtractMemoriesPrompt(newMessageCount, existingMemories, teamMemoryEnabled)
 
       const result = await runForkedAgent({
         promptMessages: [createUserMessage({ content: userPrompt })],

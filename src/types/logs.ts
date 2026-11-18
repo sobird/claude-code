@@ -45,6 +45,8 @@ export type LogOption = {
   contextCollapseCommits?: ContextCollapseCommitEntry[] // Ordered — commit B may reference commit A's summary
   contextCollapseSnapshot?: ContextCollapseSnapshotEntry // Last-wins — staged queue + spawn state
   gitBranch?: string // Git branch at the end of the session
+  entrypoint?: string // CLAUDE_CODE_ENTRYPOINT — used to hide SDK sessions from /resume
+  isLoopSession?: boolean // Started by /loop — hidden from /resume
   projectPath?: string // Original project directory path
   prNumber?: number // GitHub PR number linked to this session
   prUrl?: string // Full URL to the linked PR

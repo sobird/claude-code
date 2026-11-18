@@ -13,13 +13,14 @@ import {
 } from 'src/utils/auth.js'
 import { getUserAgent } from 'src/utils/http.js'
 import { getSmallFastModel } from 'src/utils/model/model.js'
-import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from 'src/utils/model/providers.js'
+import { shouldAttachClientRequestId } from 'src/utils/model/providers.js'
 import { getProxyFetchOptions } from 'src/utils/proxy.js'
 
 import { getIsNonInteractiveSession, getSessionId } from '../../bootstrap/state.js'
 import { getOauthConfig } from '../../constants/oauth.js'
 import { isDebugToStdErr, logForDebugging } from '../../utils/debug.js'
 import { getAWSRegion, getVertexRegionForModel, isEnvTruthy } from '../../utils/envUtils.js'
+import { createAnthropicAwsClient, type AnthropicAwsClientOptions } from './anthropicAws.js'
 import { getProviderConfig } from './providerAdapters/config.js'
 import { createProviderFetch } from './providerAdapters/index.js'
 
@@ -45,6 +46,14 @@ import { createProviderFetch } from './providerAdapters/index.js'
  * - Azure AD authentication: If no API key is provided, uses DefaultAzureCredential
  *   which supports multiple auth methods (environment variables, managed identity,
  *   Azure CLI, etc.). See: https://docs.microsoft.com/en-us/javascript/api/@azure/identity
+ *
+ * Claude Platform on AWS:
+ * - CLAUDE_CODE_USE_ANTHROPIC_AWS: Enables the provider
+ * - AWS_REGION / AWS_DEFAULT_REGION: Selects the regional endpoint
+ * - ANTHROPIC_AWS_BASE_URL: Optional. Overrides the regional endpoint
+ * - ANTHROPIC_AWS_WORKSPACE_ID: Required unless auth is skipped
+ * - ANTHROPIC_AWS_API_KEY: Optional. Use an API key instead of SigV4 signing
+ * - CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH: Optional. Skip auth for proxies/tests
  *
  * Vertex AI:
  * - Model-specific region variables (highest priority):
@@ -217,6 +226,25 @@ export async function getAnthropicClient({
     // we have always been lying about the return type - this doesn't support batching or models
     return new AnthropicFoundry(foundryArgs) as unknown as Anthropic
   }
+  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_ANTHROPIC_AWS)) {
+    const awsArgs: AnthropicAwsClientOptions = {
+      ...ARGS,
+      ...(isEnvTruthy(process.env.CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH) && {
+        skipAuth: true,
+      }),
+      ...(isDebugToStdErr() && { logger: createStderrLogger() }),
+    }
+    if (!process.env.ANTHROPIC_AWS_API_KEY && !isEnvTruthy(process.env.CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH)) {
+      // Refresh auth and get credentials with cache clearing
+      const cachedCredentials = await refreshAndGetAwsCredentials()
+      if (cachedCredentials) {
+        awsArgs.awsAccessKey = cachedCredentials.accessKeyId
+        awsArgs.awsSecretAccessKey = cachedCredentials.secretAccessKey
+        awsArgs.awsSessionToken = cachedCredentials.sessionToken
+      }
+    }
+    return createAnthropicAwsClient(awsArgs)
+  }
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX)) {
     // Refresh GCP credentials if gcpAuthRefresh is configured and credentials are expired
     // This is similar to how we handle AWS credential refresh for Bedrock
@@ -350,9 +378,10 @@ export const CLIENT_REQUEST_ID_HEADER = 'x-client-request-id'
 function buildFetch(fetchOverride: ClientOptions['fetch'], source: string | undefined): ClientOptions['fetch'] {
   // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
   const inner = fetchOverride ?? globalThis.fetch
-  // Only send to the first-party API — Bedrock/Vertex/Foundry don't log it
-  // and unknown headers risk rejection by strict proxies (inc-4029 class).
-  const injectClientRequestId = getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl()
+  // Only send to the first-party API / Claude Platform on AWS — Bedrock/Vertex/
+  // Foundry don't log it and unknown headers risk rejection by strict proxies
+  // (inc-4029 class).
+  const injectClientRequestId = shouldAttachClientRequestId()
   return (input, init) => {
     // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
     const headers = new Headers(init?.headers)

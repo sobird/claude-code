@@ -24,7 +24,7 @@ import { type ModelAlias, isModelAlias } from './aliases.js'
 import { resolveAntModel, getAntModelOverrideConfig } from './antModels.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import { getModelStrings, resolveOverriddenModel } from './modelStrings.js'
-import { getAPIProvider } from './providers.js'
+import { getAPIProvider, isFirstPartyLikeProvider } from './providers.js'
 
 export type ModelShortName = string
 export type ModelName = string
@@ -105,8 +105,9 @@ export function getDefaultOpusModel(): ModelName {
   }
   // 3P providers (Bedrock, Vertex, Foundry) — kept as a separate branch
   // even when values match, since 3P availability lags firstParty and
-  // these will diverge again at the next model launch.
-  if (getAPIProvider() !== 'firstParty') {
+  // these will diverge again at the next model launch. Claude Platform on
+  // AWS tracks firstParty availability.
+  if (!isFirstPartyLikeProvider()) {
     return getModelStrings().opus46
   }
   return getModelStrings().opus46
@@ -117,8 +118,9 @@ export function getDefaultSonnetModel(): ModelName {
   if (process.env.ANTHROPIC_DEFAULT_SONNET_MODEL) {
     return process.env.ANTHROPIC_DEFAULT_SONNET_MODEL
   }
-  // Default to Sonnet 4.5 for 3P since they may not have 4.6 yet
-  if (getAPIProvider() !== 'firstParty') {
+  // Default to Sonnet 4.5 for 3P since they may not have 4.6 yet.
+  // Claude Platform on AWS tracks firstParty availability.
+  if (!isFirstPartyLikeProvider()) {
     return getModelStrings().sonnet45
   }
   return getModelStrings().sonnet46
@@ -451,7 +453,7 @@ export function parseUserSpecifiedModel(modelInput: ModelName | ModelAlias): Mod
   // alias already resolves to 4.6, so the only users on these explicit
   // strings pinned them in settings/env/--model/SDK before 4.5 launched.
   // 3P providers may not yet have 4.6 capacity, so pass through unchanged.
-  if (getAPIProvider() === 'firstParty' && isLegacyOpusFirstParty(modelString) && isLegacyModelRemapEnabled()) {
+  if (isFirstPartyLikeProvider() && isLegacyOpusFirstParty(modelString) && isLegacyModelRemapEnabled()) {
     return getDefaultOpusModel() + (has1mTag ? '[1m]' : '')
   }
 

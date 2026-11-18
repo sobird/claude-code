@@ -22,7 +22,6 @@ cli.js
 # Testing
 coverage
 .vitest
-package
 
 # Environment
 .env

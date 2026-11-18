@@ -1,7 +1,7 @@
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/index.js'
 import { isEnvTruthy } from '../envUtils.js'
 
-export type APIProvider = 'firstParty' | 'bedrock' | 'vertex' | 'foundry'
+export type APIProvider = 'firstParty' | 'bedrock' | 'vertex' | 'foundry' | 'anthropicAws'
 
 export type CustomProviderKind = 'anthropic' | 'openai' | 'gemini'
 
@@ -22,11 +22,34 @@ export function getCustomProviderKind(): CustomProviderKind {
 export function getAPIProvider(): APIProvider {
   return isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK)
     ? 'bedrock'
-    : isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX)
-      ? 'vertex'
-      : isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
-        ? 'foundry'
-        : 'firstParty'
+    : isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
+      ? 'foundry'
+      : isEnvTruthy(process.env.CLAUDE_CODE_USE_ANTHROPIC_AWS)
+        ? 'anthropicAws'
+        : isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX)
+          ? 'vertex'
+          : 'firstParty'
+}
+
+/**
+ * Claude Platform on AWS serves the same models and betas as the first-party
+ * API, so most feature gating treats the two identically.
+ */
+export function isFirstPartyLikeProvider(provider: APIProvider = getAPIProvider()): boolean {
+  return provider === 'firstParty' || provider === 'anthropicAws'
+}
+
+/**
+ * Whether the request goes to Anthropic-operated infrastructure that logs the
+ * x-client-request-id header: the first-party API, or Claude Platform on AWS
+ * unless a custom base URL (likely a proxy) is configured.
+ */
+export function shouldAttachClientRequestId(): boolean {
+  const provider = getAPIProvider()
+  if (provider === 'firstParty') {
+    return isFirstPartyAnthropicBaseUrl()
+  }
+  return provider === 'anthropicAws' && !process.env.ANTHROPIC_AWS_BASE_URL
 }
 
 export function getAPIProviderForStatsig(): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {

@@ -795,6 +795,12 @@ export function hasSkipDangerousModePermissionPrompt(): boolean {
  */
 export function hasAutoModeOptIn(): boolean {
   if (feature('TRANSCRIPT_CLASSIFIER')) {
+    // A policy-forced auto default mode implies consent: the admin already
+    // opted the org into auto mode, so each user need not accept the dialog.
+    if (getSettingsForSource('policySettings')?.permissions?.defaultMode === 'auto') {
+      logForDebugging('[auto-mode] hasAutoModeOptIn=true policy defaultMode=auto implies consent')
+      return true
+    }
     const user = getSettingsForSource('userSettings')?.skipAutoPermissionPrompt
     const local = getSettingsForSource('localSettings')?.skipAutoPermissionPrompt
     const flag = getSettingsForSource('flagSettings')?.skipAutoPermissionPrompt
