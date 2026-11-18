@@ -1,0 +1,228 @@
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  .positioner {
+    z-index: 50;
+  }
+
+  .content {
+    max-height: var(--available-height);
+    min-width: 8rem;
+    transform-origin: var(--transform-origin);
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    background-color: var(--color-popover);
+    color: var(--color-popover-foreground);
+    padding: 0.25rem;
+    box-shadow:
+      0 0 #0000,
+      0 0 #0000,
+      0 0 #0000,
+      0 0 #0000,
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  .item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: default;
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline-style: none;
+    user-select: none;
+  }
+
+  .item[data-inset] {
+    padding-left: 2rem;
+  }
+
+  .item[data-disabled] {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .item[data-highlighted] {
+    background-color: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+
+  .item[data-variant='destructive'] {
+    color: var(--color-destructive);
+  }
+
+  .item[data-variant='destructive'][data-highlighted] {
+    background-color: color-mix(in oklab, var(--color-destructive) 10%, transparent);
+    color: var(--color-destructive);
+  }
+
+  :global(.dark) .item[data-variant='destructive'][data-highlighted] {
+    background-color: color-mix(in oklab, var(--color-destructive) 20%, transparent);
+  }
+
+  .item svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  .item svg:not([class*='size-']) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .item svg:not([class*='text-']) {
+    color: var(--color-muted-foreground);
+  }
+
+  .item[data-variant='destructive'] svg {
+    color: var(--color-destructive);
+  }
+
+  /* Checkbox / radio rows */
+
+  .checkItem {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: default;
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.5rem 0.375rem 2rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline-style: none;
+    user-select: none;
+  }
+
+  .checkItem[data-disabled] {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .checkItem[data-highlighted] {
+    background-color: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+
+  .checkItem svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  .checkItem svg:not([class*='size-']) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .indicatorSpan {
+    pointer-events: none;
+    position: absolute;
+    left: 0.5rem;
+    display: flex;
+    width: 0.875rem;
+    height: 0.875rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .radioIcon {
+    width: 0.5rem;
+    height: 0.5rem;
+    fill: currentColor;
+  }
+
+  .label {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+  }
+
+  .label[data-inset] {
+    padding-left: 2rem;
+  }
+
+  .separator {
+    height: 1px;
+    margin: 0.25rem -0.25rem;
+    background-color: var(--color-border);
+  }
+
+  .shortcut {
+    margin-left: auto;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.1em;
+    color: var(--color-muted-foreground);
+  }
+
+  /* Submenu */
+
+  .subTrigger {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: default;
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline-style: none;
+    user-select: none;
+  }
+
+  .subTrigger[data-inset] {
+    padding-left: 2rem;
+  }
+
+  .subTrigger[data-highlighted],
+  .subTrigger[data-popup-open] {
+    background-color: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+
+  .subTrigger svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  .subTrigger svg:not([class*='size-']) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .subTrigger svg:not([class*='text-']) {
+    color: var(--color-muted-foreground);
+  }
+
+  .subTriggerChevron {
+    width: 1rem;
+    height: 1rem;
+    margin-left: auto;
+  }
+
+  .subContent {
+    min-width: 8rem;
+    transform-origin: var(--transform-origin);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    background-color: var(--color-popover);
+    color: var(--color-popover-foreground);
+    padding: 0.25rem;
+    box-shadow:
+      0 0 #0000,
+      0 0 #0000,
+      0 0 #0000,
+      0 0 #0000,
+      0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+}

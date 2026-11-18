@@ -1,0 +1,125 @@
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background-color: color-mix(in oklab, #000 50%, transparent);
+  }
+
+  .content {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 50;
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+    max-width: calc(100% - 2rem);
+    transform: translate(-50%, -50%);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background-color: var(--color-background);
+    padding: 1.5rem;
+    box-shadow:
+      0 0 #0000,
+      0 0 #0000,
+      0 0 #0000,
+      0 0 #0000,
+      0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  @media (min-width: 40rem) {
+    .content {
+      max-width: 32rem;
+    }
+  }
+
+  .close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    border-radius: 0.125rem;
+    opacity: 0.7;
+    transition-property: opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 0.15s;
+  }
+
+  .close:hover {
+    opacity: 1;
+  }
+
+  .close:focus {
+    outline-style: none;
+    box-shadow:
+      0 0 0 2px var(--color-background),
+      0 0 0 4px var(--color-ring);
+  }
+
+  .close:disabled {
+    pointer-events: none;
+  }
+
+  .close svg {
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  .close svg:not([class*='size-']) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+
+  @media (min-width: 40rem) {
+    .header {
+      text-align: left;
+    }
+  }
+
+  .footer {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 40rem) {
+    .footer {
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+  }
+
+  .title {
+    font-size: 1.125rem;
+    line-height: 1;
+    font-weight: 600;
+  }
+
+  .description {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--color-muted-foreground);
+  }
+
+  .srOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
