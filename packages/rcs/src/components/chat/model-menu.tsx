@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl'
 import { useRef, useState } from 'react'
 
 import type { ModelOption } from '../../lib/model-settings'
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
+
+import styles from './model-menu.module.css'
 
 interface ModelMenuProps {
   /** Current model id from `system/init`; `null` renders the default label. */
@@ -101,19 +103,16 @@ export function ModelMenu({
           type="button"
           data-testid="model-menu-trigger"
           aria-label={t('label')}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-1 px-2.5 py-1 font-mono text-xs text-text-secondary transition-colors hover:border-brand/40 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60',
-            className,
-          )}
+          className={cx(styles.trigger, className)}
         >
-          <span className="max-w-[10rem] truncate">{currentLabel}</span>
-          <ChevronDown className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+          <span className={styles.label}>{currentLabel}</span>
+          <ChevronDown className={styles.icon} aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent align="end" className={styles.menu}>
         <DropdownMenuLabel>{t('label')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {listState === 'loading' ? <div className="px-2 py-1.5 text-xs text-text-muted">{t('loading')}</div> : null}
+        {listState === 'loading' ? <div className={styles.state}>{t('loading')}</div> : null}
         {listed.map((option) => (
           <DropdownMenuItem
             key={option.value}
@@ -121,21 +120,17 @@ export function ModelMenu({
             disabled={pending}
             onSelect={() => onSelect(option.value)}
           >
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate">{option.displayName}</span>
-              {option.description ? (
-                <span className="truncate text-xs text-text-muted">{option.description}</span>
-              ) : null}
+            <span className={styles.optionBody}>
+              <span className={styles.optionName}>{option.displayName}</span>
+              {option.description ? <span className={styles.optionDescription}>{option.description}</span> : null}
             </span>
-            {option.value === model ? <Check className="h-4 w-4 text-brand" aria-hidden="true" /> : null}
+            {option.value === model ? <Check className={styles.check} aria-hidden="true" /> : null}
           </DropdownMenuItem>
         ))}
-        {listState === 'ready' && listed.length === 0 ? (
-          <div className="px-2 py-1.5 text-xs text-text-muted">{t('empty')}</div>
-        ) : null}
+        {listState === 'ready' && listed.length === 0 ? <div className={styles.state}>{t('empty')}</div> : null}
         <DropdownMenuItem data-testid="model-default" disabled={pending} onSelect={() => onSelect(null)}>
-          <span className="flex-1">{t('default')}</span>
-          {model === null ? <Check className="h-4 w-4 text-brand" aria-hidden="true" /> : null}
+          <span className={styles.optionLabel}>{t('default')}</span>
+          {model === null ? <Check className={styles.check} aria-hidden="true" /> : null}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -150,7 +145,7 @@ export function ModelMenu({
           {t('custom')}
         </DropdownMenuItem>
         {customOpen ? (
-          <div className="flex items-center gap-1.5 px-2 py-1.5">
+          <div className={styles.customRow}>
             <input
               ref={inputRef}
               data-testid="model-custom-input"
@@ -168,14 +163,9 @@ export function ModelMenu({
                 }
               }}
               placeholder={t('customPlaceholder')}
-              className="min-w-0 flex-1 rounded-md border border-border bg-surface-1 px-2 py-1 font-mono text-xs text-text-primary outline-none focus:border-brand/50"
+              className={styles.customInput}
             />
-            <button
-              type="button"
-              data-testid="model-custom-apply"
-              onClick={applyCustom}
-              className="rounded-md border border-border px-2 py-1 text-xs text-text-secondary transition-colors hover:border-brand/40 hover:text-text-primary"
-            >
+            <button type="button" data-testid="model-custom-apply" onClick={applyCustom} className={styles.apply}>
               {t('apply')}
             </button>
           </div>

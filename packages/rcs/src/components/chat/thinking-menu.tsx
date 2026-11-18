@@ -13,7 +13,7 @@ import { Brain, Check, ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 import type { ThinkingChoice, ThinkingState } from '../../lib/thinking'
-import { cn } from '../../lib/utils'
+import { cx } from '../../lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
+
+import styles from './thinking-menu.module.css'
 
 interface ThinkingMenuProps {
   /** Last confirmed web request; `null` renders the default label. */
@@ -46,17 +48,14 @@ export function ThinkingMenu({ value, pending = false, disabled = false, onSelec
           type="button"
           data-testid="thinking-menu-trigger"
           aria-label={t('label')}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-1 px-2.5 py-1 font-display text-xs text-text-secondary transition-colors hover:border-brand/40 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-60',
-            className,
-          )}
+          className={cx(styles.trigger, className)}
         >
-          <Brain className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
-          <span className="truncate">{currentLabel}</span>
-          <ChevronDown className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+          <Brain className={styles.icon} aria-hidden="true" />
+          <span className={styles.label}>{currentLabel}</span>
+          <ChevronDown className={styles.icon} aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
+      <DropdownMenuContent align="end" className={styles.menu}>
         <DropdownMenuLabel>{t('label')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {CHOICES.map((choice) => {
@@ -68,8 +67,8 @@ export function ThinkingMenu({ value, pending = false, disabled = false, onSelec
               disabled={pending}
               onSelect={() => onSelect(choice)}
             >
-              <span className="flex-1">{t(choice)}</span>
-              {selected ? <Check className="h-4 w-4 text-brand" aria-hidden="true" /> : null}
+              <span className={styles.optionLabel}>{t(choice)}</span>
+              {selected ? <Check className={styles.check} aria-hidden="true" /> : null}
             </DropdownMenuItem>
           )
         })}
