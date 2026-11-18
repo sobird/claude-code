@@ -9,6 +9,8 @@ import { useTranslations } from 'next-intl'
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog'
 
+import styles from './shortcuts-dialog.module.css'
+
 const SECTIONS = [
   {
     title: 'composer',
@@ -54,27 +56,20 @@ export function ShortcutsDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent data-testid="shortcuts-dialog" className="sm:max-w-lg">
+      <DialogContent data-testid="shortcuts-dialog">
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
           <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className={styles.body}>
           {SECTIONS.map((section) => (
             <section key={section.title}>
-              <h3 className="mb-1.5 font-display text-xs font-semibold tracking-wide text-text-muted uppercase">
-                {t(section.title)}
-              </h3>
-              <ul className="space-y-1">
+              <h3 className={styles.sectionTitle}>{t(section.title)}</h3>
+              <ul className={styles.list}>
                 {section.items.map((item) => (
-                  <li
-                    key={`${section.title}-${item.label}`}
-                    className="flex items-center justify-between gap-4 text-sm text-text-secondary"
-                  >
+                  <li key={`${section.title}-${item.label}`} className={styles.item}>
                     <span>{t(item.label)}</span>
-                    <kbd className="flex-shrink-0 rounded-md border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-text-primary">
-                      {item.keys}
-                    </kbd>
+                    <kbd className={styles.kbd}>{item.keys}</kbd>
                   </li>
                 ))}
               </ul>

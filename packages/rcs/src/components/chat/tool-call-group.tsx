@@ -17,8 +17,10 @@ import type {
   ToolCallStatus,
 } from '../../lib/session-reducer'
 import { canonicalToolName, summarizeToolCall } from '../../lib/tool-summary'
-import { cn, uniqueKeys } from '../../lib/utils'
+import { cx, uniqueKeys } from '../../lib/utils'
 import { AssistantBubble } from './message-bubble'
+
+import styles from './tool-call-group.module.css'
 
 type ChatTranslator = ReturnType<typeof useTranslations<'chat'>>
 
@@ -68,7 +70,7 @@ export function ToolCallGroup({
   if (entries.length === 1) {
     const only = entries[0]
     return (
-      <div className="pl-0 sm:pl-11">
+      <div className={styles.root}>
         {only ? (
           <SingleToolCard
             tool={only.toolCall}
@@ -85,21 +87,14 @@ export function ToolCallGroup({
   }
 
   return (
-    <div className="pl-0 sm:pl-11">
-      <div className="overflow-hidden rounded-lg border border-border bg-surface-2/60">
-        <button
-          type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-1/60"
-          onClick={toggle}
-        >
-          <ChevronRight
-            className={cn('h-3 w-3 text-text-muted transition-transform', expanded && 'rotate-90')}
-            aria-hidden="true"
-          />
-          <span className="font-display text-xs text-text-muted">{buildSummary(entries, t)}</span>
+    <div className={styles.root}>
+      <div className={styles.groupBox}>
+        <button type="button" className={styles.groupHeader} onClick={toggle}>
+          <ChevronRight className={cx(styles.groupChevron, expanded && styles.groupChevronOpen)} aria-hidden="true" />
+          <span className={styles.groupSummary}>{buildSummary(entries, t)}</span>
         </button>
         {expanded ? (
-          <div className="divide-y divide-border border-t border-border">
+          <div className={styles.groupBody}>
             {uniqueKeys(entries, (entry) => entry.toolCall.id).map(({ item, key }) => (
               <SingleToolCard
                 key={key}
@@ -157,65 +152,49 @@ function SingleToolCard({
     (tool.rawOutput !== undefined || tool.status === 'error')
 
   return (
-    <div className={cn('px-3', compact ? 'py-1.5' : 'py-2')}>
-      <button
-        type="button"
-        className="group flex w-full items-center gap-2 text-left"
-        onClick={toggle}
-        aria-expanded={expanded}
-      >
+    <div className={cx(styles.card, compact ? styles.cardCompact : styles.cardRoomy)}>
+      <button type="button" className={styles.cardHeaderButton} onClick={toggle} aria-expanded={expanded}>
         <StatusIcon status={tool.status} />
-        <span className="truncate font-display text-xs font-medium text-text-secondary transition-colors group-hover:text-text-primary">
+        <span className={styles.cardTitle}>
           {summary.name || t('toolFallback')}
-          {summary.summary ? <span className="ml-1.5 font-normal text-text-muted">{summary.summary}</span> : null}
+          {summary.summary ? <span className={styles.cardTitleSuffix}>{summary.summary}</span> : null}
         </span>
-        {tool.status === 'running' ? (
-          <span className="animate-pulse text-[10px] text-status-running">{t('running')}</span>
-        ) : null}
+        {tool.status === 'running' ? <span className={styles.runningLabel}>{t('running')}</span> : null}
         {tool.status === 'waiting_for_confirmation' ? (
-          <span className="text-[10px] text-brand">{t('waiting')}</span>
+          <span className={styles.waitingLabel}>{t('waiting')}</span>
         ) : null}
         {subagentEntries && subagentEntries.length > 0 ? (
-          <span className="ml-auto flex-shrink-0 text-[10px] text-text-muted">
-            {t('agentSteps', { count: subagentEntries.length })}
-          </span>
+          <span className={styles.agentSteps}>{t('agentSteps', { count: subagentEntries.length })}</span>
         ) : null}
       </button>
 
       {expanded ? (
-        <div className="mt-2 space-y-2 sm:ml-5">
+        <div className={styles.cardBody}>
           {summary.fields.length > 0 ? (
-            <div className="space-y-1 rounded-md bg-surface-1 p-2 font-mono text-[11px] text-text-secondary">
+            <div className={styles.fields}>
               {summary.fields.map((field) => (
-                <div key={field.key} className="flex gap-2 whitespace-pre-wrap break-words">
-                  <span className="flex-shrink-0 text-text-muted">{field.key}</span>
-                  <span className="min-w-0">{field.value}</span>
+                <div key={field.key} className={styles.fieldRow}>
+                  <span className={styles.fieldKey}>{field.key}</span>
+                  <span className={styles.fieldValue}>{field.value}</span>
                 </div>
               ))}
             </div>
           ) : null}
           {tool.rawInput && Object.keys(tool.rawInput).length > 0 ? (
             <details>
-              <summary className="cursor-pointer list-none font-display text-[11px] text-text-muted transition-colors hover:text-text-secondary">
-                {t('toolRawInput')}
-              </summary>
-              <pre className="mt-1 max-h-36 overflow-x-auto rounded-md bg-surface-1 p-2 font-mono text-[11px] text-text-secondary">
+              <summary className={styles.rawSummary}>{t('toolRawInput')}</summary>
+              <pre className={cx(styles.pre, styles.preInput)}>
                 {truncate(JSON.stringify(tool.rawInput, null, 2), 2000)}
               </pre>
             </details>
           ) : null}
           {hasOutput ? (
-            <pre
-              className={cn(
-                'max-h-36 overflow-x-auto rounded-md p-2 font-mono text-[11px]',
-                tool.status === 'error' ? 'bg-status-error/10 text-status-error' : 'bg-surface-1 text-text-secondary',
-              )}
-            >
+            <pre className={cx(styles.pre, tool.status === 'error' ? styles.preError : styles.preOutput)}>
               {formatOutput(tool)}
             </pre>
           ) : null}
           {subagentEntries && subagentEntries.length > 0 ? (
-            <div className="space-y-2 border-l border-border pl-3">
+            <div className={styles.subagent}>
               <SubagentTranscript entries={subagentEntries} expandAll={expandAll} childrenByParent={childrenByParent} />
             </div>
           ) : null}
@@ -261,16 +240,16 @@ function SubagentTranscript({
 function StatusIcon({ status }: { status: ToolCallStatus }) {
   switch (status) {
     case 'running':
-      return <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin text-status-running" aria-hidden="true" />
+      return <Loader2 className={cx(styles.statusIcon, styles.runningIcon)} aria-hidden="true" />
     case 'complete':
-      return <Check className="h-3.5 w-3.5 flex-shrink-0 text-status-active" aria-hidden="true" />
+      return <Check className={cx(styles.statusIcon, styles.activeIcon)} aria-hidden="true" />
     case 'error':
     case 'rejected':
-      return <X className="h-3.5 w-3.5 flex-shrink-0 text-status-error" aria-hidden="true" />
+      return <X className={cx(styles.statusIcon, styles.errorIcon)} aria-hidden="true" />
     case 'waiting_for_confirmation':
-      return <span className="flex-shrink-0 text-[11px] leading-none text-brand">?</span>
+      return <span className={cx(styles.statusGlyph, styles.brand)}>?</span>
     case 'canceled':
-      return <span className="flex-shrink-0 text-[11px] leading-none text-text-muted">—</span>
+      return <span className={cx(styles.statusGlyph, styles.muted)}>—</span>
     default:
       return null
   }
