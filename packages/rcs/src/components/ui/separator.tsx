@@ -1,6 +1,6 @@
 'use client'
 
-import { Separator as SeparatorPrimitive } from '@base-ui-components/react/separator'
+import { Separator as SeparatorPrimitive } from '@base-ui/react/separator'
 import type * as React from 'react'
 
 import { cn } from '../../lib/utils'
