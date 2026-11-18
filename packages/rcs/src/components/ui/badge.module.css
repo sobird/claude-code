@@ -1,0 +1,73 @@
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  .root {
+    --ring-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    width: fit-content;
+    overflow: hidden;
+    white-space: nowrap;
+    border: 1px solid var(--color-border);
+    border-radius: calc(infinity * 1px);
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    outline-style: none;
+    transition-property: color, box-shadow;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 0.15s;
+  }
+
+  .root > svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    pointer-events: none;
+  }
+
+  .root:focus-visible {
+    border-color: var(--color-ring);
+    box-shadow: 0 0 0 3px var(--ring-color);
+  }
+
+  .root[aria-invalid='true'] {
+    --ring-color: color-mix(in oklab, var(--color-destructive) 20%, transparent);
+    border-color: var(--color-destructive);
+  }
+
+  :global(.dark) .root[aria-invalid='true'] {
+    --ring-color: color-mix(in oklab, var(--color-destructive) 40%, transparent);
+  }
+
+  .variantDefault {
+    border-color: transparent;
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+
+  .variantSecondary {
+    border-color: transparent;
+    background-color: var(--color-secondary);
+    color: var(--color-secondary-foreground);
+  }
+
+  .variantDestructive {
+    --ring-color: color-mix(in oklab, var(--color-destructive) 20%, transparent);
+    border-color: transparent;
+    background-color: var(--color-destructive);
+    color: #fff;
+  }
+
+  :global(.dark) .variantDestructive {
+    --ring-color: color-mix(in oklab, var(--color-destructive) 40%, transparent);
+    background-color: color-mix(in oklab, var(--color-destructive) 60%, transparent);
+  }
+
+  .variantOutline {
+    color: var(--color-foreground);
+  }
+}

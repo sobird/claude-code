@@ -1,0 +1,28 @@
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  .trigger {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .selected {
+    background-color: var(--color-accent);
+  }
+
+  .itemLabel {
+    margin-left: 0.5rem;
+  }
+
+  .srOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}

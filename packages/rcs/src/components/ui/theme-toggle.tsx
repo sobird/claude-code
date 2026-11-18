@@ -8,10 +8,12 @@ import { useTheme, type Theme } from '../../lib/theme'
 import { Button } from './button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './dropdown-menu'
 
+import styles from './theme-toggle.module.css'
+
 const themeOptions: { value: Theme; icon: ReactNode }[] = [
-  { value: 'light', icon: <Sun className="h-4 w-4" /> },
-  { value: 'dark', icon: <Moon className="h-4 w-4" /> },
-  { value: 'system', icon: <Monitor className="h-4 w-4" /> },
+  { value: 'light', icon: <Sun /> },
+  { value: 'dark', icon: <Moon /> },
+  { value: 'system', icon: <Monitor /> },
 ]
 
 export function ThemeToggle() {
@@ -20,19 +22,19 @@ export function ThemeToggle() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" className="h-8 w-8" />}>
-        {resolvedTheme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-        <span className="sr-only">{t('toggleTheme')}</span>
+      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" className={styles.trigger} />}>
+        {resolvedTheme === 'dark' ? <Moon /> : <Sun />}
+        <span className={styles.srOnly}>{t('toggleTheme')}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {themeOptions.map((option) => (
           <DropdownMenuItem
             key={option.value}
             onClick={() => setTheme(option.value)}
-            className={theme === option.value ? 'bg-accent' : undefined}
+            className={theme === option.value ? styles.selected : undefined}
           >
             {option.icon}
-            <span className="ml-2">{t(`theme.${option.value}`)}</span>
+            <span className={styles.itemLabel}>{t(`theme.${option.value}`)}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
