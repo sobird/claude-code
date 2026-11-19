@@ -282,10 +282,8 @@ export const SYNTHETIC_MESSAGES = new Set([
 ])
 
 export function isSyntheticMessage(message: Message): boolean {
+  if (message.type !== 'assistant' && message.type !== 'user') return false
   return (
-    message.type !== 'progress' &&
-    message.type !== 'attachment' &&
-    message.type !== 'system' &&
     Array.isArray(message.message.content) &&
     message.message.content[0]?.type === 'text' &&
     SYNTHETIC_MESSAGES.has(message.message.content[0].text)
@@ -639,7 +637,7 @@ export function extractTag(html: string, tagName: string): string | null {
 }
 
 export function isNotEmptyMessage(message: Message): boolean {
-  if (message.type === 'progress' || message.type === 'attachment' || message.type === 'system') {
+  if (message.type !== 'assistant' && message.type !== 'user') {
     return true
   }
 
@@ -757,6 +755,8 @@ export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
           } as NormalizedMessage
         })
       }
+      default:
+        return []
     }
   })
 }
