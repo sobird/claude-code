@@ -7,7 +7,6 @@ import {
   logEvent,
 } from '../services/analytics/index.js'
 import type { ToolUseContext } from '../Tool.js'
-import type { HookProgress } from '../types/hooks.js'
 import type {
   AssistantMessage,
   Message,
@@ -185,7 +184,7 @@ export async function* handleStopHooks(
           stopHookToolUseID = result.message.toolUseID
           hookCount++
           // Extract hook command and prompt text from progress data
-          const progressData = result.message.data as HookProgress
+          const progressData = result.message.data
           if (progressData.command) {
             hookInfos.push({
               command: progressData.command,

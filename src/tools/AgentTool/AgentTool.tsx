@@ -2,12 +2,7 @@ import { feature } from 'bun:bundle'
 
 import * as React from 'react'
 import { buildTool, type ToolDef, toolMatchesName } from 'src/Tool.js'
-import type {
-  AssistantMessage,
-  Message as MessageType,
-  NormalizedUserMessage,
-  ProgressMessage,
-} from 'src/types/message.js'
+import type { Message as MessageType, NormalizedUserMessage, ProgressMessage } from 'src/types/message.js'
 import { getQuerySourceForAgent } from 'src/utils/promptCategory.js'
 import { z } from 'zod/v4'
 
@@ -1288,7 +1283,7 @@ export const AgentTool = buildTool({
               // Subagent streaming events are filtered out in runAgent.ts, so we
               // need to count tokens from completed messages here
               if (message.type === 'assistant') {
-                const contentLength = getAssistantMessageContentLength(message as AssistantMessage)
+                const contentLength = getAssistantMessageContentLength(message)
                 if (contentLength > 0) {
                   toolUseContext.setResponseLength((len) => len + contentLength)
                 }

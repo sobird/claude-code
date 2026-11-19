@@ -34,7 +34,7 @@
 
 import type { QuerySource } from '../../constants/querySource.js'
 import { getUserContext } from '../../context.js'
-import type { AssistantMessage, Message, SystemCompactBoundaryMessage } from '../../types/message.js'
+import type { Message, SystemCompactBoundaryMessage } from '../../types/message.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage, hasExactErrorMessage } from '../../utils/errors.js'
 import type { CacheSafeParams } from '../../utils/forkedAgent.js'
@@ -88,7 +88,7 @@ export function isReactiveOnlyMode(): boolean {
  * is compiled in.
  */
 export function isWithheldPromptTooLong(message: Message): boolean {
-  return message.type === 'assistant' && isPromptTooLongMessage(message as AssistantMessage)
+  return message.type === 'assistant' && isPromptTooLongMessage(message)
 }
 
 /**
@@ -96,7 +96,7 @@ export function isWithheldPromptTooLong(message: Message): boolean {
  * the withholding decision and the recovery decision agree within a turn.
  */
 export function isWithheldMediaSizeError(message: Message | undefined): boolean {
-  return message?.type === 'assistant' && isMediaSizeErrorMessage(message as AssistantMessage)
+  return message?.type === 'assistant' && isMediaSizeErrorMessage(message)
 }
 
 type RecoveryErrorClass = ReactiveCompactFailure | 'media'

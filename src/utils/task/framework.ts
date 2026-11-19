@@ -104,7 +104,7 @@ export function registerTask(task: TaskState, setAppState: SetAppState): void {
     tool_use_id: task.toolUseId,
     description: task.description,
     task_type: task.type,
-    workflow_name: 'workflowName' in task ? (task.workflowName as string | undefined) : undefined,
+    workflow_name: 'workflowName' in task ? task.workflowName : undefined,
     prompt: 'prompt' in task ? task.prompt : undefined,
   })
 }

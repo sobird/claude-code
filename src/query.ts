@@ -668,7 +668,7 @@ async function* queryLoop(
             if (message.type === 'assistant') {
               let clonedContent: typeof message.message.content | undefined
               for (let i = 0; i < message.message.content.length; i++) {
-                const block = message.message.content[i]!
+                const block = message.message.content[i]
                 if (block.type === 'tool_use' && typeof block.input === 'object' && block.input !== null) {
                   const tool = findToolByName(toolUseContext.options.tools, block.name)
                   if (tool?.backfillObservableInput) {

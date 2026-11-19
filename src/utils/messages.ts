@@ -306,7 +306,7 @@ export function hasToolCallsInLastAssistantTurn(messages: Message[]): boolean {
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i]
     if (message && message.type === 'assistant') {
-      const assistantMessage = message as AssistantMessage
+      const assistantMessage = message
       const content = assistantMessage.message.content
       if (Array.isArray(content)) {
         return content.some((block) => block.type === 'tool_use')
@@ -1506,7 +1506,7 @@ function appendMessageTagToUserMessage(message: UserMessage): UserMessage {
     ...message,
     message: {
       ...message.message,
-      content: newContent as typeof content,
+      content: newContent,
     },
   }
 }

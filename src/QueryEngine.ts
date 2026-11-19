@@ -176,7 +176,7 @@ async function* resumeDeferredTool(
       )
       if (block) {
         // The runtime guard above proves this is an assistant message.
-        assistantMessage = message as AssistantMessage
+        assistantMessage = message
         toolUseBlock = block
         break
       }

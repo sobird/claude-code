@@ -17,7 +17,7 @@ import { stringWidth } from '../../ink/stringWidth.js'
 import { setClipboard } from '../../ink/termio/osc.js'
 import { logEvent } from '../../services/analytics/index.js'
 import type { LocalJSXCommandCall } from '../../types/command.js'
-import type { AssistantMessage, Message } from '../../types/message.js'
+import type { Message } from '../../types/message.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { extractTextContent, stripPromptXMLTags } from '../../utils/messages.js'
 import { countCharInString } from '../../utils/stringUtils.js'
@@ -53,7 +53,7 @@ export function collectRecentAssistantTexts(messages: Message[]): string[] {
   for (let i = messages.length - 1; i >= 0 && texts.length < MAX_LOOKBACK; i--) {
     const msg = messages[i]
     if (msg?.type !== 'assistant' || msg.isApiErrorMessage) continue
-    const content = (msg as AssistantMessage).message.content
+    const content = msg.message.content
     if (!Array.isArray(content)) continue
     const text = extractTextContent(content, '\n\n')
     if (text) texts.push(text)

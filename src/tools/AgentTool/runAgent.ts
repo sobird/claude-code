@@ -780,7 +780,7 @@ export function filterIncompleteToolCalls(messages: Message[]): Message[] {
 
   for (const message of messages) {
     if (message?.type === 'user') {
-      const userMessage = message as UserMessage
+      const userMessage = message
       const content = userMessage.message.content
       if (Array.isArray(content)) {
         for (const block of content) {
@@ -795,7 +795,7 @@ export function filterIncompleteToolCalls(messages: Message[]): Message[] {
   // Filter out assistant messages that contain tool calls without results
   return messages.filter((message) => {
     if (message?.type === 'assistant') {
-      const assistantMessage = message as AssistantMessage
+      const assistantMessage = message
       const content = assistantMessage.message.content
       if (Array.isArray(content)) {
         // Check if this assistant message has any tool uses without results

@@ -29,7 +29,7 @@ import { FILE_WRITE_TOOL_NAME } from '../../tools/FileWriteTool/prompt.js'
 import { GLOB_TOOL_NAME } from '../../tools/GlobTool/prompt.js'
 import { GREP_TOOL_NAME } from '../../tools/GrepTool/prompt.js'
 import { REPL_TOOL_NAME } from '../../tools/REPLTool/constants.js'
-import type { AssistantMessage, Message, SystemLocalCommandMessage, SystemMessage } from '../../types/message.js'
+import type { Message, SystemLocalCommandMessage, SystemMessage } from '../../types/message.js'
 import { createAbortController } from '../../utils/abortController.js'
 import { count, uniq } from '../../utils/array.js'
 import { logForDebugging } from '../../utils/debug.js'
@@ -107,7 +107,7 @@ function hasMemoryWritesSince(messages: Message[], sinceUuid: string | undefined
     if (message.type !== 'assistant') {
       continue
     }
-    const content = (message as AssistantMessage).message.content
+    const content = message.message.content
     if (!Array.isArray(content)) {
       continue
     }
@@ -257,7 +257,7 @@ function extractWrittenPaths(agentMessages: Message[]): string[] {
     if (message.type !== 'assistant') {
       continue
     }
-    const content = (message as AssistantMessage).message.content
+    const content = message.message.content
     if (!Array.isArray(content)) {
       continue
     }

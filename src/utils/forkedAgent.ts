@@ -517,11 +517,11 @@ export async function runForkedAgent({
 
       logForDebugging(`Forked agent [${forkLabel}] received message: type=${message.type}`)
 
-      outputMessages.push(message as Message)
-      onMessage?.(message as Message)
+      outputMessages.push(message)
+      onMessage?.(message)
 
       // Record transcript for recordable message types (same pattern as runAgent.ts)
-      const msg = message as Message
+      const msg = message
       if (agentId && (msg.type === 'assistant' || msg.type === 'user' || msg.type === 'progress')) {
         await recordSidechainTranscript([msg], agentId, lastRecordedUuid).catch((err) =>
           logForDebugging(`Forked agent [${forkLabel}] failed to record transcript: ${err}`),
