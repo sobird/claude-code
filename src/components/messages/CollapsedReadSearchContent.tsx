@@ -7,7 +7,7 @@ import { useMinDisplayTime } from '../../hooks/useMinDisplayTime.js'
 import { Ansi, Box, Text, useTheme } from '../../ink.js'
 import { findToolByName, type Tools } from '../../Tool.js'
 import { getReplPrimitiveTools } from '../../tools/REPLTool/primitiveTools.js'
-import type { CollapsedReadSearchGroup, NormalizedAssistantMessage } from '../../types/message.js'
+import type { AssistantMessage, CollapsedReadSearchGroup } from '../../types/message.js'
 import { uniq } from '../../utils/array.js'
 import { getToolUseIdsFromCollapsedGroup } from '../../utils/collapseReadSearch.js'
 import { getDisplayPath } from '../../utils/file.js'
@@ -193,7 +193,7 @@ export function CollapsedReadSearchContent({
 
   // In verbose mode, render each tool use with its 1-line result summary
   if (verbose) {
-    const toolUses: NormalizedAssistantMessage[] = []
+    const toolUses: AssistantMessage[] = []
     for (const msg of groupMessages) {
       if (msg.type === 'assistant') {
         toolUses.push(msg)

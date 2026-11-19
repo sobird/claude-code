@@ -88,7 +88,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function getToolName(input: HookInput): string {
-  return typeof input.tool_name === 'string' ? input.tool_name : ''
+  const { tool_name } = input as { tool_name?: unknown }
+  return typeof tool_name === 'string' ? tool_name : ''
+}
+
+function getToolInput(input: HookInput): unknown {
+  return (input as { tool_input?: unknown }).tool_input
 }
 
 function getFilePath(toolInput: unknown): string | null {
@@ -121,7 +126,7 @@ async function gitShowHead(repoRoot: string, path: string): Promise<string | nul
 async function handlePre(input: HookInput, toolUseID: string | null): Promise<void> {
   const toolName = getToolName(input)
   if (toolName === FILE_EDIT_TOOL_NAME || toolName === FILE_WRITE_TOOL_NAME) {
-    const filePath = getFilePath(input.tool_input)
+    const filePath = getFilePath(getToolInput(input))
     if (filePath === null) return
     const absolute = expandFilePath(filePath)
     cacheFileContent(absolute, await readTextFile(absolute))
@@ -141,7 +146,7 @@ async function updateForFileWrite(
   context: HookCallbackContext,
   update: (updater: (prev: AttributionState) => AttributionState) => void,
 ): Promise<void> {
-  const filePath = getFilePath(input.tool_input)
+  const filePath = getFilePath(getToolInput(input))
   if (filePath === null) return
   const absolute = expandFilePath(filePath)
   const cached = fileContentCache.get(absolute)

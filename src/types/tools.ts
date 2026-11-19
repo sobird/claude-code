@@ -1,7 +1,7 @@
 // Progress data types for tool execution monitoring and UI feedback
 
 import type { HookProgress as CanonicalHookProgress } from './hooks.js'
-import type { NormalizedAssistantMessage, NormalizedMessage, NormalizedUserMessage } from './message.js'
+import type { AssistantMessage, NormalizedAssistantMessage, NormalizedUserMessage } from './message.js'
 
 export type { HookEvent } from '../entrypoints/agentSdkTypes.js'
 
@@ -71,7 +71,7 @@ export interface SkillToolProgress extends BaseProgress {
  */
 export interface AgentToolProgress extends BaseProgress {
   type: 'agent_progress'
-  message: NormalizedMessage
+  message: AssistantMessage | NormalizedUserMessage
   prompt: string
   agentId?: string
 }

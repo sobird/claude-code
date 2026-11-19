@@ -16,7 +16,7 @@ import { dirname } from 'node:path'
 
 import { isAssistantMode } from '../../assistant/index.js'
 import { getAutoMemDailyLogPath } from '../../memdir/paths.js'
-import type { Message } from '../../types/message.js'
+import type { AssistantMessage, Message, UserMessage } from '../../types/message.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
 
@@ -35,7 +35,7 @@ function getTimestamp(message: Message): number | null {
   return Number.isNaN(parsed) ? null : parsed
 }
 
-function extractText(message: Message): string | null {
+function extractText(message: AssistantMessage | UserMessage): string | null {
   const content = message.message.content
   if (typeof content === 'string') {
     const trimmed = content.trim()

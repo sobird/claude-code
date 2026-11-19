@@ -16,7 +16,7 @@ export function MessageTimestamp({ message, isTranscriptMode }: Props): React.Re
     message.type === 'assistant' &&
     message.message.content.some((c) => c.type === 'text')
 
-  if (!shouldShowTimestamp) {
+  if (!shouldShowTimestamp || !message.timestamp) {
     return null
   }
 

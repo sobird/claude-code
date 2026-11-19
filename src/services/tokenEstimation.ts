@@ -6,6 +6,7 @@ import type { CountTokensCommandInput } from '@aws-sdk/client-bedrock-runtime'
 import { getAPIProvider } from 'src/utils/model/providers.js'
 
 import { VERTEX_COUNT_TOKENS_ALLOWED_BETAS } from '../constants/betas.js'
+import type { Message } from '../types/message.js'
 import type { Attachment } from '../utils/attachments.js'
 import { getModelBetas } from '../utils/betas.js'
 import { getVertexRegionForModel, isEnvTruthy } from '../utils/envUtils.js'
@@ -301,13 +302,7 @@ export async function countTokensViaHaikuFallback(
   return inputTokens + cacheCreationTokens + cacheReadTokens
 }
 
-export function roughTokenCountEstimationForMessages(
-  messages: readonly {
-    type: string
-    message?: { content?: unknown }
-    attachment?: Attachment
-  }[],
-): number {
+export function roughTokenCountEstimationForMessages(messages: readonly Message[]): number {
   let totalTokens = 0
   for (const message of messages) {
     totalTokens += roughTokenCountEstimationForMessage(message)
@@ -315,11 +310,7 @@ export function roughTokenCountEstimationForMessages(
   return totalTokens
 }
 
-export function roughTokenCountEstimationForMessage(message: {
-  type: string
-  message?: { content?: unknown }
-  attachment?: Attachment
-}): number {
+export function roughTokenCountEstimationForMessage(message: Message): number {
   if ((message.type === 'assistant' || message.type === 'user') && message.message?.content) {
     return roughTokenCountEstimationForContent(
       message.message?.content as

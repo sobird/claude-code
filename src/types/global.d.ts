@@ -20,7 +20,7 @@ declare namespace MACRO {
 declare function MACRO<T>(fn: () => T): T
 
 // Companion/buddy observer (internal)
-declare function fireCompanionObserver(messages: unknown[], callback: (reaction: unknown) => void): void
+declare function fireCompanionObserver(messages: unknown[], callback: (reaction: string | undefined) => void): void
 
 // Ultraplan (internal)
 // declare function UltraplanChoiceDialog(props: Record<string, unknown>): JSX.Element | null

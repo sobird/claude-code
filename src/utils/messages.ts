@@ -281,12 +281,24 @@ export const SYNTHETIC_MESSAGES = new Set([
   NO_RESPONSE_REQUESTED,
 ])
 
+/**
+ * Type-level view of a message's content for the wide `Message` union: lets the
+ * original `message.message.content` reads typecheck without narrowing the
+ * input's discriminant. Erased at build time — no runtime behavior change.
+ */
+type MessageContentBlob = {
+  message: { content: string | { type: string; text: string }[] }
+}
+
 export function isSyntheticMessage(message: Message): boolean {
-  if (message.type !== 'assistant' && message.type !== 'user') return false
+  const msg = message as unknown as MessageContentBlob
   return (
-    Array.isArray(message.message.content) &&
-    message.message.content[0]?.type === 'text' &&
-    SYNTHETIC_MESSAGES.has(message.message.content[0].text)
+    message.type !== 'progress' &&
+    message.type !== 'attachment' &&
+    message.type !== 'system' &&
+    Array.isArray(msg.message.content) &&
+    msg.message.content[0]?.type === 'text' &&
+    SYNTHETIC_MESSAGES.has(msg.message.content[0].text)
   )
 }
 
@@ -637,31 +649,33 @@ export function extractTag(html: string, tagName: string): string | null {
 }
 
 export function isNotEmptyMessage(message: Message): boolean {
-  if (message.type !== 'assistant' && message.type !== 'user') {
+  if (message.type === 'progress' || message.type === 'attachment' || message.type === 'system') {
     return true
   }
 
-  if (typeof message.message.content === 'string') {
-    return message.message.content.trim().length > 0
+  const msg = message as unknown as MessageContentBlob
+
+  if (typeof msg.message.content === 'string') {
+    return msg.message.content.trim().length > 0
   }
 
-  if (message.message.content.length === 0) {
+  if (msg.message.content.length === 0) {
     return false
   }
 
   // Skip multi-block messages for now
-  if (message.message.content.length > 1) {
+  if (msg.message.content.length > 1) {
     return true
   }
 
-  if (message.message.content[0].type !== 'text') {
+  if (msg.message.content[0].type !== 'text') {
     return true
   }
 
   return (
-    message.message.content[0].text.trim().length > 0 &&
-    message.message.content[0].text !== NO_CONTENT_MESSAGE &&
-    message.message.content[0].text !== INTERRUPT_MESSAGE_FOR_TOOL_USE
+    msg.message.content[0].text.trim().length > 0 &&
+    msg.message.content[0].text !== NO_CONTENT_MESSAGE &&
+    msg.message.content[0].text !== INTERRUPT_MESSAGE_FOR_TOOL_USE
   )
 }
 
@@ -688,7 +702,7 @@ export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
   // This flag is set to true once we encounter a message with multiple content blocks,
   // and remains true for all subsequent messages in the normalization process.
   let isNewChain = false
-  return messages.flatMap((message) => {
+  return messages.flatMap((message): NormalizedMessage | NormalizedMessage[] | undefined => {
     switch (message.type) {
       case 'assistant': {
         isNewChain = isNewChain || message.message.content.length > 1
@@ -755,10 +769,8 @@ export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
           } as NormalizedMessage
         })
       }
-      default:
-        return []
     }
-  })
+  }) as NormalizedMessage[]
 }
 
 type ToolUseRequestMessage = NormalizedAssistantMessage & {

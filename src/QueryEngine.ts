@@ -34,7 +34,7 @@ import type { AppState } from './state/AppState.js'
 import { findToolByName, type Tools, type ToolUseContext, toolMatchesName } from './Tool.js'
 import type { AgentDefinition } from './tools/AgentTool/loadAgentsDir.js'
 import { SYNTHETIC_OUTPUT_TOOL_NAME } from './tools/SyntheticOutputTool/SyntheticOutputTool.js'
-import type { AssistantMessage, Message, SystemAPIErrorMessage } from './types/message.js'
+import type { AssistantMessage, Message, SystemAPIErrorMessage, SystemCompactBoundaryMessage } from './types/message.js'
 import type { OrphanedPermission } from './types/textInputTypes.js'
 import { createAbortController } from './utils/abortController.js'
 import type { HookDeferredToolAttachment } from './utils/attachments.js'
@@ -681,13 +681,14 @@ export class QueryEngine {
           yield localCommandOutputToSDKAssistantMessage(msg.content, msg.uuid)
         }
 
-        if (msg.type === 'system' && msg.subtype === 'compact_boundary' && msg.compactMetadata) {
+        if (msg.type === 'system' && msg.subtype === 'compact_boundary') {
+          const compactMsg = msg as SystemCompactBoundaryMessage
           yield {
             type: 'system',
             subtype: 'compact_boundary' as const,
             session_id: getSessionId(),
             uuid: msg.uuid,
-            compact_metadata: toSDKCompactMetadata(msg.compactMetadata),
+            compact_metadata: toSDKCompactMetadata(compactMsg.compactMetadata),
           } as SDKCompactBoundaryMessage
         }
       }

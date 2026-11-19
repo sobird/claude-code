@@ -1626,7 +1626,7 @@ export function REPL({
     [setLocalCommands],
   )
 
-  const [inProgressToolUseIDs, setInProgressToolUseIDs] = useState(new Set())
+  const [inProgressToolUseIDs, setInProgressToolUseIDs] = useState(new Set<string>())
   const hasInterruptibleToolInProgressRef = useRef(false)
 
   // Remote session hook - manages WebSocket connection and message handling for --remote mode
@@ -4335,7 +4335,7 @@ export function REPL({
           message.permissionMode && prev.toolPermissionContext.mode !== message.permissionMode
             ? {
                 ...prev.toolPermissionContext,
-                mode: message.permissionMode,
+                mode: message.permissionMode as typeof prev.toolPermissionContext.mode,
               }
             : prev.toolPermissionContext,
         // Clear stale prompt suggestion from previous conversation state
@@ -5435,7 +5435,9 @@ export function REPL({
                 toolJSX={toolJSX}
                 toolUseConfirmQueue={toolUseConfirmQueue}
                 inProgressToolUseIDs={
-                  viewedTeammateTask ? (viewedTeammateTask.inProgressToolUseIDs ?? new Set()) : inProgressToolUseIDs
+                  viewedTeammateTask
+                    ? (viewedTeammateTask.inProgressToolUseIDs ?? new Set<string>())
+                    : inProgressToolUseIDs
                 }
                 isMessageSelectorVisible={isMessageSelectorVisible}
                 conversationId={conversationId}
@@ -5548,7 +5550,7 @@ export function REPL({
                               ruleContent: `domain:${approvedHost}`,
                             },
                           ],
-                          behavior: allow ? 'allow' : 'deny',
+                          behavior: (allow ? 'allow' : 'deny'),
                           destination: 'localSettings' as const,
                         }
 

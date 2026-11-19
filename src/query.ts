@@ -1,6 +1,4 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import type { UUID } from 'node:crypto'
-
 import type { ToolResultBlockParam, ToolUseBlock } from '@anthropic-ai/sdk/resources/index.mjs'
 
 import type { CanUseToolFn } from './hooks/useCanUseTool.js'
@@ -636,7 +634,7 @@ async function* queryLoop(
               // These partial messages (especially thinking blocks) have invalid signatures
               // that would cause "thinking blocks cannot be modified" API errors.
               for (const msg of assistantMessages) {
-                yield { type: 'tombstone' as const, uuid: deps.uuid() as UUID, message: msg }
+                yield { type: 'tombstone' as const, message: msg } as TombstoneMessage
               }
               logEvent('tengu_orphaned_messages_tombstoned', {
                 orphanedMessageCount: assistantMessages.length,
@@ -710,18 +708,22 @@ async function* queryLoop(
             // tree-shaking constraint), so the collapse check is nested
             // rather than composed.
             let withheld = false
-            if (message.type === 'assistant') {
-              if (feature('CONTEXT_COLLAPSE')) {
-                if (contextCollapse?.isWithheldPromptTooLong(message, isPromptTooLongMessage, querySource)) {
-                  withheld = true
-                }
-              }
-              if (reactiveCompact?.isWithheldPromptTooLong(message)) {
+            if (feature('CONTEXT_COLLAPSE')) {
+              if (
+                contextCollapse?.isWithheldPromptTooLong(
+                  message as Message,
+                  isPromptTooLongMessage as (msg: AssistantMessage) => boolean,
+                  querySource,
+                )
+              ) {
                 withheld = true
               }
-              if (mediaRecoveryEnabled && reactiveCompact?.isWithheldMediaSizeError(message)) {
-                withheld = true
-              }
+            }
+            if (reactiveCompact?.isWithheldPromptTooLong(message as Message)) {
+              withheld = true
+            }
+            if (mediaRecoveryEnabled && reactiveCompact?.isWithheldMediaSizeError(message as Message)) {
+              withheld = true
             }
             if (isWithheldMaxOutputTokens(message)) {
               withheld = true
@@ -1033,10 +1035,8 @@ async function* queryLoop(
         // so hooks have nothing meaningful to evaluate. Running stop hooks
         // on prompt-too-long creates a death spiral: error → hook blocking
         // → retry → error → … (the hook injects more tokens each cycle).
-        if (lastMessage) {
-          yield lastMessage
-          void executeStopFailureHooks(lastMessage, toolUseContext)
-        }
+        yield lastMessage!
+        void executeStopFailureHooks(lastMessage!, toolUseContext)
         return { reason: isWithheldMedia ? 'image_error' : 'prompt_too_long' }
       } else if (feature('CONTEXT_COLLAPSE') && isWithheld413) {
         // reactiveCompact compiled out but contextCollapse withheld and

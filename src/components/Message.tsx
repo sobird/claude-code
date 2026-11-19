@@ -2,6 +2,7 @@ import { feature } from 'bun:bundle'
 
 import type { BetaContentBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type {
+  ContentBlockParam,
   ImageBlockParam,
   TextBlockParam,
   ThinkingBlockParam,
@@ -219,7 +220,7 @@ function MessageImpl({
         return (
           <UserTextMessage
             addMargin={addMargin}
-            param={{ type: 'text', text: message.content }}
+            param={{ type: 'text', text: message.content ?? '' }}
             verbose={verbose}
             isTranscriptMode={isTranscriptMode}
           />
@@ -288,7 +289,7 @@ function UserMessage({
   addMargin: boolean
   tools: Tools
   progressMessagesForMessage: ProgressMessage[]
-  param: TextBlockParam | ImageBlockParam | ToolUseBlockParam | ToolResultBlockParam
+  param: ContentBlockParam
   style?: 'condensed'
   verbose: boolean
   imageIndex?: number
@@ -379,25 +380,26 @@ function AssistantMessageBlock({
   lastThinkingBlockId?: string | null
   advisorModel?: string
 }): React.ReactNode {
-  if (feature('CONNECTOR_TEXT')) {
-    if (isConnectorTextBlock(param)) {
-      return (
-        <AssistantTextMessage
-          param={{ type: 'text', text: param.connector_text }}
-          addMargin={addMargin}
-          shouldShowDot={shouldShowDot}
-          verbose={verbose}
-          width={width}
-          onOpenRateLimitOptions={onOpenRateLimitOptions}
-        />
-      )
+  if (isConnectorTextBlock(param)) {
+    if (!feature('CONNECTOR_TEXT')) {
+      return null
     }
+    return (
+      <AssistantTextMessage
+        param={{ type: 'text', text: param.connector_text }}
+        addMargin={addMargin}
+        shouldShowDot={shouldShowDot}
+        verbose={verbose}
+        width={width}
+        onOpenRateLimitOptions={onOpenRateLimitOptions}
+      />
+    )
   }
   switch (param.type) {
     case 'tool_use':
       return (
         <AssistantToolUseMessage
-          param={param}
+          param={param as ToolUseBlockParam}
           addMargin={addMargin}
           tools={tools}
           commands={commands}
@@ -414,7 +416,7 @@ function AssistantMessageBlock({
     case 'text':
       return (
         <AssistantTextMessage
-          param={param}
+          param={param as TextBlockParam}
           addMargin={addMargin}
           shouldShowDot={shouldShowDot}
           verbose={verbose}
@@ -436,7 +438,7 @@ function AssistantMessageBlock({
       return (
         <AssistantThinkingMessage
           addMargin={addMargin}
-          param={param}
+          param={param as ThinkingBlockParam}
           isTranscriptMode={isTranscriptMode}
           verbose={verbose}
           hideInTranscript={isTranscriptMode && !isLastThinking}

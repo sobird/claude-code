@@ -214,7 +214,7 @@ export const NotebookEditTool = buildTool({
       }
       throw e
     }
-    const notebook = safeParseJSON(content)
+    const notebook = safeParseJSON(content) as NotebookContent | null
     if (!notebook) {
       return {
         result: false,

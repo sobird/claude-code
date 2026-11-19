@@ -410,8 +410,8 @@ const externalTips: Tip[] = [
   },
   {
     id: 'desktop-shortcut',
-    content: async (ctx: TipContext): Promise<string> => {
-      const blue = color('suggestion', ctx.theme)
+    content: async (ctx?: TipContext): Promise<string> => {
+      const blue = color('suggestion', ctx?.theme ?? 'dark')
       return `Continue your session in Claude Code Desktop with ${blue('/desktop')}`
     },
     cooldownSessions: 15,
@@ -451,20 +451,20 @@ const externalTips: Tip[] = [
   },
   {
     id: 'frontend-design-plugin',
-    content: async (ctx: TipContext): Promise<string> => {
-      const blue = color('suggestion', ctx.theme)
+    content: async (ctx?: TipContext): Promise<string> => {
+      const blue = color('suggestion', ctx?.theme ?? 'dark')
       return `Working with HTML/CSS? Install the frontend-design plugin:\n${blue(`/plugin install frontend-design@${OFFICIAL_MARKETPLACE_NAME}`)}`
     },
     cooldownSessions: 3,
-    isRelevant: async (context: TipContext): Promise<boolean> =>
+    isRelevant: async (context?: TipContext): Promise<boolean> =>
       isMarketplacePluginRelevant('frontend-design', context, {
         filePath: /\.(html|css|htm)$/i,
       }),
   },
   {
     id: 'vercel-plugin',
-    content: async (ctx: TipContext): Promise<string> => {
-      const blue = color('suggestion', ctx.theme)
+    content: async (ctx?: TipContext): Promise<string> => {
+      const blue = color('suggestion', ctx?.theme ?? 'dark')
       return `Working with Vercel? Install the vercel plugin:\n${blue(`/plugin install vercel@${OFFICIAL_MARKETPLACE_NAME}`)}`
     },
     cooldownSessions: 3,
@@ -476,8 +476,8 @@ const externalTips: Tip[] = [
   },
   {
     id: 'effort-high-nudge',
-    content: async (ctx: TipContext): Promise<string> => {
-      const blue = color('suggestion', ctx.theme)
+    content: async (ctx?: TipContext): Promise<string> => {
+      const blue = color('suggestion', ctx?.theme ?? 'dark')
       const cmd = blue('/effort high')
       const variant = getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>('tengu_tide_elm', 'off')
       return variant === 'copy_b'
@@ -499,8 +499,8 @@ const externalTips: Tip[] = [
   },
   {
     id: 'subagent-fanout-nudge',
-    content: async (ctx: TipContext) => {
-      const blue = color('suggestion', ctx.theme)
+    content: async (ctx?: TipContext) => {
+      const blue = color('suggestion', ctx?.theme ?? 'dark')
       const variant = getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>('tengu_tern_alloy', 'off')
       return variant === 'copy_b'
         ? `For big tasks, tell Claude to ${blue('use subagents')}. They work in parallel and keep your main thread clean.`
@@ -514,8 +514,8 @@ const externalTips: Tip[] = [
   },
   {
     id: 'loop-command-nudge',
-    content: async (ctx: TipContext) => {
-      const blue = color('suggestion', ctx.theme)
+    content: async (ctx?: TipContext) => {
+      const blue = color('suggestion', ctx?.theme ?? 'dark')
       const variant = getFeatureValue_CACHED_MAY_BE_STALE<'off' | 'copy_a' | 'copy_b'>('tengu_timber_lark', 'off')
       return variant === 'copy_b'
         ? `Use ${blue('/loop 5m check the deploy')} to run any prompt on a schedule. Set it and forget it.`
@@ -530,8 +530,8 @@ const externalTips: Tip[] = [
   },
   {
     id: 'guest-passes',
-    content: async (ctx: TipContext) => {
-      const claude = color('claude', ctx.theme)
+    content: async (ctx?: TipContext) => {
+      const claude = color('claude', ctx?.theme ?? 'dark')
       const reward = getCachedReferrerReward()
       return reward
         ? `Share Claude Code and earn ${claude(formatCreditAmount(reward))} of extra usage · ${claude('/passes')}`
@@ -550,7 +550,7 @@ const externalTips: Tip[] = [
   {
     id: 'overage-credit',
     content: async (ctx) => {
-      const claude = color('claude', ctx.theme)
+      const claude = color('claude', ctx?.theme ?? 'dark')
       const info = getCachedOverageCreditGrant()
       const amount = info ? formatGrantAmount(info) : null
       if (!amount) return ''

@@ -327,9 +327,9 @@ export function copyTextOf(msg: NavigableMessage): string {
         .filter(Boolean)
         .join('\n\n')
     case 'system':
-      if ('content' in msg) return msg.content
+      if ('content' in msg) return msg.content ?? ''
       if ('error' in msg) return String(msg.error)
-      return msg.subtype
+      return msg.subtype ?? ''
     case 'attachment': {
       const a = msg.attachment
       if (a.type === 'queued_command') {

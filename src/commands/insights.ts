@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { constants as fsConstants } from 'node:fs'
+import { constants as fsConstants, type Dirent } from 'node:fs'
 import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { extname, join } from 'node:path'
@@ -98,7 +98,7 @@ const collectFromRemoteHost: (hs: string, destDir: string) => Promise<{ copied: 
           }
 
           const projectsDir = join(tempDir, 'projects')
-          let projectDirents: Awaited<ReturnType<typeof readdir>>
+          let projectDirents: Dirent[]
           try {
             projectDirents = await readdir(projectsDir, { withFileTypes: true })
           } catch {
@@ -124,7 +124,7 @@ const collectFromRemoteHost: (hs: string, destDir: string) => Promise<{ copied: 
               }
 
               // Copy session files (skip existing)
-              let files: Awaited<ReturnType<typeof readdir>>
+              let files: Dirent[]
               try {
                 files = await readdir(projectPath, { withFileTypes: true })
               } catch {
@@ -2646,7 +2646,7 @@ type LiteSessionInfo = {
 async function scanAllSessions(): Promise<LiteSessionInfo[]> {
   const projectsDir = getProjectsDir()
 
-  let dirents: Awaited<ReturnType<typeof readdir>>
+  let dirents: Dirent[]
   try {
     dirents = await readdir(projectsDir, { withFileTypes: true })
   } catch {

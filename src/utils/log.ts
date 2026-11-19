@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+import type { Dirent } from 'node:fs'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -214,7 +215,7 @@ export async function getErrorLogByIndex(index: number): Promise<LogOption | nul
  * @private
  */
 async function loadLogList(path: string): Promise<LogOption[]> {
-  let files: Awaited<ReturnType<typeof readdir>>
+  let files: Dirent[]
   try {
     files = await readdir(path, { withFileTypes: true })
   } catch {

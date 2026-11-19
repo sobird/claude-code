@@ -21,6 +21,10 @@ export interface DisplayGeometry {
   height: number
   scaleFactor: number
   displayId: number
+  originX: number
+  originY: number
+  label?: string
+  isPrimary?: boolean
 }
 
 export interface PrepareDisplayResult {
@@ -49,12 +53,19 @@ export interface ScreenshotResult {
   base64: string
   width: number
   height: number
+  displayWidth: number
+  displayHeight: number
+  originX: number
+  originY: number
+  displayId: number
+  /** Accessibility snapshot — structured GUI element tree as model-friendly text. Windows only. */
+  accessibilityText?: string
 }
 
-export interface ResolvePrepareCaptureResult {
-  base64: string
-  width: number
-  height: number
+export interface ResolvePrepareCaptureResult extends ScreenshotResult {
+  hidden: string[]
+  activated?: string
+  captureError?: string
 }
 
 export interface WindowDisplayInfo {
@@ -128,6 +139,8 @@ const displayAPI: DisplayAPI = {
         height: 1080,
         scaleFactor: 2,
         displayId: 1,
+        originX: 0,
+        originY: 0,
       }
     )
   },
@@ -160,6 +173,8 @@ const displayAPI: DisplayAPI = {
         height: d.height,
         scaleFactor: d.scaleFactor,
         displayId: d.displayId,
+        originX: 0,
+        originY: 0,
       }))
     } catch {
       // Fallback: use NSScreen via JXA
@@ -188,6 +203,8 @@ const displayAPI: DisplayAPI = {
           height: d.height,
           scaleFactor: d.scaleFactor,
           displayId: d.displayId,
+          originX: 0,
+          originY: 0,
         }))
       } catch {
         return [
@@ -196,6 +213,8 @@ const displayAPI: DisplayAPI = {
             height: 1080,
             scaleFactor: 2,
             displayId: 1,
+            originX: 0,
+            originY: 0,
           },
         ]
       }
@@ -352,7 +371,12 @@ interface ScreenshotAPI {
   ) => Promise<ScreenshotResult>
 }
 
-async function captureScreenToBase64(args: string[]): Promise<{ base64: string; width: number; height: number }> {
+async function captureScreenToBase64(
+  args: string[],
+  displayId = 0,
+  originX = 0,
+  originY = 0,
+): Promise<ScreenshotResult> {
   const tmpFile = join(tmpdir(), `cu-screenshot-${Date.now()}.png`)
   const proc = Bun.spawn(['screencapture', ...args, tmpFile], {
     stdout: 'pipe',
@@ -366,7 +390,16 @@ async function captureScreenToBase64(args: string[]): Promise<{ base64: string; 
     // Parse PNG header for dimensions (bytes 16-23)
     const width = buf.readUInt32BE(16)
     const height = buf.readUInt32BE(20)
-    return { base64, width, height }
+    return {
+      base64,
+      width,
+      height,
+      displayWidth: width,
+      displayHeight: height,
+      originX,
+      originY,
+      displayId,
+    }
   } finally {
     try {
       unlinkSync(tmpFile)
@@ -386,7 +419,7 @@ const screenshotAPI: ScreenshotAPI = {
     if (displayId !== undefined) {
       args.push('-D', String(displayId))
     }
-    return captureScreenToBase64(args)
+    return captureScreenToBase64(args, displayId ?? 0)
   },
 
   async captureRegion(
@@ -404,7 +437,7 @@ const screenshotAPI: ScreenshotAPI = {
     if (displayId !== undefined) {
       args.push('-D', String(displayId))
     }
-    return captureScreenToBase64(args)
+    return captureScreenToBase64(args, displayId ?? 0, x, y)
   },
 }
 
@@ -412,10 +445,45 @@ const screenshotAPI: ScreenshotAPI = {
 // ComputerUseAPI — Main export
 // ---------------------------------------------------------------------------
 
+interface HotkeyAPI {
+  registerEscape: (onEscape: () => void) => boolean
+  unregister: () => void
+  notifyExpectedEscape: () => void
+}
+
+interface TccAPI {
+  checkAccessibility: () => boolean
+  checkScreenRecording: () => boolean
+}
+
+const hotkeyAPI: HotkeyAPI = {
+  registerEscape(_onEscape: () => void): boolean {
+    // CGEvent tap unavailable without a real Swift host; report failure so
+    // callers fall back to non-ESC-abort behavior.
+    return false
+  },
+  unregister(): void {},
+  notifyExpectedEscape(): void {},
+}
+
+const tccAPI: TccAPI = {
+  checkAccessibility(): boolean {
+    return false
+  },
+  checkScreenRecording(): boolean {
+    return false
+  },
+}
+
 export class ComputerUseAPI {
   apps: AppsAPI = appsAPI
   display: DisplayAPI = displayAPI
   screenshot: ScreenshotAPI = screenshotAPI
+  hotkey: HotkeyAPI = hotkeyAPI
+  tcc: TccAPI = tccAPI
+
+  /** Pump CFRunLoop.main once — a no-op in the AppleScript-backed stub. */
+  _drainMainRunLoop(): void {}
 
   async resolvePrepareCapture(
     allowedBundleIds: string[],
@@ -427,6 +495,7 @@ export class ComputerUseAPI {
     _autoResolve?: boolean,
     _doHide?: boolean,
   ): Promise<ResolvePrepareCaptureResult> {
-    return this.screenshot.captureExcluding(allowedBundleIds, quality, targetW, targetH, displayId)
+    const capture = await this.screenshot.captureExcluding(allowedBundleIds, quality, targetW, targetH, displayId)
+    return { ...capture, hidden: [] }
   }
 }

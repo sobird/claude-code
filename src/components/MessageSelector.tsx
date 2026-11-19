@@ -422,7 +422,7 @@ export function MessageSelector({
               borderLeftDimColor
             >
               <UserMessageOption userMessage={messageToRestore} color="text" isCurrent={false} />
-              <Text dimColor>({formatRelativeTimeAgo(new Date(messageToRestore.timestamp))})</Text>
+              <Text dimColor>({formatRelativeTimeAgo(new Date(messageToRestore.timestamp ?? Date.now()))})</Text>
             </Box>
             <RestoreOptionDescription
               selectedRestoreOption={selectedRestoreOption}

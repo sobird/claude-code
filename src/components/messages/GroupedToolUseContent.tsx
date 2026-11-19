@@ -39,14 +39,14 @@ export function GroupedToolUseContent({
   }
 
   const toolUsesData = message.messages.map((msg) => {
-    const content = msg.message.content[0]
-    const result = resultsByToolUseId.get(content.id)
+    const param = msg.message.content[0] as ToolUseBlockParam
+    const result = resultsByToolUseId.get(param.id)
     return {
-      param: content as ToolUseBlockParam,
-      isResolved: lookups.resolvedToolUseIDs.has(content.id),
-      isError: lookups.erroredToolUseIDs.has(content.id),
-      isInProgress: inProgressToolUseIDs.has(content.id),
-      progressMessages: filterToolProgressMessages(lookups.progressMessagesByToolUseID.get(content.id) ?? []),
+      param,
+      isResolved: lookups.resolvedToolUseIDs.has(param.id),
+      isError: lookups.erroredToolUseIDs.has(param.id),
+      isInProgress: inProgressToolUseIDs.has(param.id),
+      progressMessages: filterToolProgressMessages(lookups.progressMessagesByToolUseID.get(param.id) ?? []),
       result,
     }
   })

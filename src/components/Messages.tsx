@@ -541,7 +541,7 @@ const MessagesImpl = ({
         // BEFORE counting/slicing so they don't inflate the "N messages"
         // count in ctrl-o or consume slots in the 200-message render cap.
         .filter((msg) => !isNullRenderingAttachment(msg))
-        .filter((_) => shouldShowUserMessage(_, isTranscriptMode)),
+        .filter((_) => shouldShowUserMessage(_, isTranscriptMode)) as Parameters<typeof reorderMessagesInUI>[0],
       syntheticStreamingToolUseMessages,
     )
     // Three-tier filtering. Transcript mode (ctrl+o screen) is truly unfiltered.
