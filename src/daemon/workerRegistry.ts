@@ -72,6 +72,10 @@ async function runRemoteControlWorker(): Promise<number> {
   process.on('SIGINT', onSignal)
 
   try {
+    const gateError = await checkBridgeEntitlements()
+    if (gateError !== null) {
+      throw new BridgeHeadlessPermanentError(gateError)
+    }
     await runBridgeHeadless(readWorkerConfig(), controller.signal)
     return 0
   } catch (error) {
@@ -85,4 +89,48 @@ async function runRemoteControlWorker(): Promise<number> {
     process.off('SIGTERM', onSignal)
     process.off('SIGINT', onSignal)
   }
+}
+
+/**
+ * Entitlement gates the interactive bridge enforces (the `remote-control` fast
+ * path in entrypoints/cli.tsx and the /remote-control command): GrowthBook
+ * availability, minimum version, and the org policy toggle. Checked by the
+ * worker rather than runBridgeHeadless so the upstream bridge source stays
+ * unmodified. Returns null when allowed, else a message the caller maps to a
+ * permanent (park) failure.
+ *
+ * Skips the gates without a bridge token: runBridgeHeadless then throws its
+ * transient BRIDGE_LOGIN_ERROR so the supervisor keeps retrying after login.
+ */
+async function checkBridgeEntitlements(): Promise<string | null> {
+  // GrowthBook and policy limits read the global config; the --daemon-worker
+  // fast path skips init.ts. runBridgeHeadless re-enables configs (idempotent).
+  const { enableConfigs } = await import('../utils/config.js')
+  enableConfigs()
+
+  if (!getBridgeAccessToken()) return null
+
+  // getBridgeDisabledReason short-circuits to null for self-hosted servers,
+  // so a custom bridge skips GrowthBook.
+  const { getBridgeDisabledReason, checkBridgeMinVersion } = await import('../bridge/bridgeEnabled.js')
+  const disabledReason = await getBridgeDisabledReason()
+  if (disabledReason) return disabledReason
+
+  const versionError = checkBridgeMinVersion()
+  if (versionError) return versionError
+
+  const { initializePolicyLimitsLoadingPromise, loadPolicyLimits, waitForPolicyLimitsToLoad, isPolicyAllowed } =
+    await import('../services/policyLimits/index.js')
+  // Initialize first so the promise carries its 30s timeout guard;
+  // loadPolicyLimits() reuses it and resolves it when the fetch lands.
+  initializePolicyLimitsLoadingPromise()
+  void loadPolicyLimits().catch((error: unknown) => {
+    console.error(`[remoteControl] policy limits load failed: ${errorMessage(error)}`)
+  })
+  await waitForPolicyLimitsToLoad()
+  if (!isPolicyAllowed('allow_remote_control')) {
+    return "Remote Control is disabled by your organization's policy."
+  }
+
+  return null
 }

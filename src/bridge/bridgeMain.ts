@@ -2458,23 +2458,6 @@ export async function runBridgeHeadless(opts: HeadlessBridgeOpts, signal: AbortS
     throw new Error(BRIDGE_LOGIN_ERROR)
   }
 
-  // Same entitlement gates as the interactive bridge (the `remote-control`
-  // fast path in entrypoints/cli.tsx). getBridgeDisabledReason short-circuits
-  // to null for self-hosted servers, so a custom bridge skips GrowthBook.
-  // Permanent: backoff cannot change the account's eligibility.
-  const { getBridgeDisabledReason, checkBridgeMinVersion } = await import('./bridgeEnabled.js')
-  const disabledReason = await getBridgeDisabledReason()
-  if (disabledReason) throw new BridgeHeadlessPermanentError(disabledReason)
-
-  const versionError = checkBridgeMinVersion()
-  if (versionError) throw new BridgeHeadlessPermanentError(versionError)
-
-  const { waitForPolicyLimitsToLoad, isPolicyAllowed } = await import('../services/policyLimits/index.js')
-  await waitForPolicyLimitsToLoad()
-  if (!isPolicyAllowed('allow_remote_control')) {
-    throw new BridgeHeadlessPermanentError("Remote Control is disabled by your organization's policy.")
-  }
-
   const { getBridgeBaseUrl } = await import('./bridgeConfig.js')
   const baseUrl = getBridgeBaseUrl()
   if (baseUrl.startsWith('http://') && !baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1')) {
