@@ -1,9 +1,10 @@
 import { mkdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 import React, { type ReactNode, useState } from 'react'
 
 import { readDaemonConfig, writeDaemonConfig } from '../../assistant/sessionDiscovery.js'
+import { getOriginalCwd } from '../../bootstrap/state.js'
 import type { LocalJSXCommandContext } from '../../commands.js'
 import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint.js'
 import { Select } from '../../components/CustomSelect/index.js'
@@ -13,10 +14,14 @@ import TextInput from '../../components/TextInput.js'
 import { useWizard } from '../../components/wizard/index.js'
 import { WizardProvider } from '../../components/wizard/index.js'
 import { WizardDialogLayout } from '../../components/wizard/WizardDialogLayout.js'
+import { queryDaemonStatus } from '../../daemon/state.js'
 import { Box, Text } from '../../ink.js'
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command.js'
+import { buildCliLaunch, spawnCli } from '../../utils/cliLaunch.js'
+import { logForDebugging } from '../../utils/debug.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { errorMessage } from '../../utils/errors.js'
+import { findCanonicalGitRoot } from '../../utils/git.js'
 
 type InstallWizardData = {
   dir: string
@@ -41,6 +46,38 @@ async function installAssistant(dir: string): Promise<void> {
     installedDir: dir,
     installedAt: new Date().toISOString(),
     sessions: existing?.sessions ?? [],
+  })
+  await startDaemon()
+}
+
+/**
+ * Starts the daemon supervisor detached in the trusted workspace (canonical git
+ * root, else the launching cwd) so its worker can register a bridge
+ * environment. The worker itself needs longer to create a session, so the
+ * wizard only reports "starting up"; `claude assistant` discovers it later.
+ */
+async function startDaemon(): Promise<void> {
+  const originalCwd = getOriginalCwd()
+  const workDir = findCanonicalGitRoot(originalCwd) ?? resolve(originalCwd)
+
+  const status = await queryDaemonStatus()
+  if (status.status === 'running') {
+    logForDebugging(`[assistant] daemon already running (pid ${status.state?.pid ?? 'unknown'})`)
+    return
+  }
+
+  const child = spawnCli(buildCliLaunch(['daemon', 'start', `--dir=${workDir}`]), {
+    cwd: workDir,
+    stdio: 'ignore',
+    detached: true,
+  })
+  child.unref()
+
+  // Wait briefly so a spawn failure surfaces through onError; the worker still
+  // needs several more seconds to register its bridge session.
+  await new Promise<void>((resolveWait, rejectWait) => {
+    child.once('error', (error) => rejectWait(new Error(`Failed to start daemon: ${error.message}`)))
+    setTimeout(resolveWait, 1500)
   })
 }
 

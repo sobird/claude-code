@@ -42,7 +42,7 @@ export const features = [
   // 'CONTEXT_COLLAPSE',  // 默认：未开启
   // 'COORDINATOR_MODE', // default: false
   // 'COWORKER_TYPE_TELEMETRY',
-  // 'DAEMON', // 默认：未开启
+  'DAEMON',
   // 'DIRECT_CONNECT',
   // 'DOWNLOAD_USER_SETTINGS',
   // 'DUMP_SYSTEM_PROMPT',
