@@ -304,10 +304,6 @@ export function isSyntheticMessage(message: Message): boolean {
   return first?.type === 'text' && SYNTHETIC_MESSAGES.has(first.text)
 }
 
-export function isLocalCommandMessage(message: Message): message is SystemLocalCommandMessage {
-  return message.type === 'system' && message.subtype === 'local_command' && typeof message.content === 'string'
-}
-
 function isSyntheticApiErrorMessage(message: Message): message is AssistantMessage & { isApiErrorMessage: true } {
   return message.type === 'assistant' && message.isApiErrorMessage === true && message.message.model === SYNTHETIC_MODEL
 }

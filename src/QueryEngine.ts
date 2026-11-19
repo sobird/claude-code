@@ -48,12 +48,7 @@ import { cloneFileStateCache, type FileStateCache } from './utils/fileStateCache
 import { headlessProfilerCheckpoint } from './utils/headlessProfiler.js'
 import { registerStructuredOutputEnforcement } from './utils/hooks/hookHelpers.js'
 import { getInMemoryErrors } from './utils/log.js'
-import {
-  countToolCalls,
-  isCompactBoundaryMessage,
-  isLocalCommandMessage,
-  SYNTHETIC_MESSAGES,
-} from './utils/messages.js'
+import { countToolCalls, isCompactBoundaryMessage, SYNTHETIC_MESSAGES } from './utils/messages.js'
 import { getMainLoopModel, parseUserSpecifiedModel } from './utils/model/model.js'
 import { loadAllPluginsCacheOnly } from './utils/plugins/pluginLoader.js'
 import { type ProcessUserInputContext, processUserInput } from './utils/processUserInput/processUserInput.js'
@@ -676,7 +671,9 @@ export class QueryEngine {
         // Emitted as assistant (not the dedicated SDKLocalCommandOutputMessage
         // system subtype) so mobile clients + session-ingress can parse it.
         if (
-          isLocalCommandMessage(msg) &&
+          msg.type === 'system' &&
+          msg.subtype === 'local_command' &&
+          typeof msg.content === 'string' &&
           (msg.content.includes(`<${LOCAL_COMMAND_STDOUT_TAG}>`) ||
             msg.content.includes(`<${LOCAL_COMMAND_STDERR_TAG}>`))
         ) {

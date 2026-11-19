@@ -15,7 +15,7 @@ import type { AssistantMessage, CompactMetadata, Message } from 'src/types/messa
 import type { DeepImmutable } from 'src/types/utils.js'
 import { stripAnsi } from 'src/utils/stripAnsi.js'
 
-import { createAssistantMessage, isCompactBoundaryMessage, isLocalCommandMessage } from '../messages.js'
+import { createAssistantMessage, isCompactBoundaryMessage } from '../messages.js'
 import { getPlan } from '../plans.js'
 
 export function toInternalMessages(messages: readonly DeepImmutable<SDKMessage>[]): Message[] {
@@ -147,7 +147,9 @@ export function toSDKMessages(messages: Message[]): SDKMessage[] {
         // input metadata (e.g. <command-name>...</command-name>) which must
         // not leak to the RC web UI.
         if (
-          isLocalCommandMessage(message) &&
+          message.type === 'system' &&
+          message.subtype === 'local_command' &&
+          typeof message.content === 'string' &&
           (message.content.includes(`<${LOCAL_COMMAND_STDOUT_TAG}>`) ||
             message.content.includes(`<${LOCAL_COMMAND_STDERR_TAG}>`))
         ) {
