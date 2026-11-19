@@ -3716,7 +3716,7 @@ async function run(): Promise<CommanderCommand> {
           renderAndRun,
         )
         return
-      } else if (feature('SSH_REMOTE') && _pendingSSH?.host) {
+      } else if (feature('SSH_REMOTE') && _pendingSSH && (_pendingSSH.host || _pendingSSH.local)) {
         // `claude ssh <host> [dir]` — probe remote, deploy binary if needed,
         // spawn ssh with unix-socket -R forward to a local auth proxy, hand
         // the REPL an SSHSession. Tools run remotely, UI renders locally.
@@ -3733,7 +3733,9 @@ async function run(): Promise<CommanderCommand> {
               dangerouslySkipPermissions: _pendingSSH.dangerouslySkipPermissions,
             })
           } else {
-            process.stderr.write(`Connecting to ${_pendingSSH.host}…\n`)
+            const sshHost = _pendingSSH.host
+            if (!sshHost) throw new SSHSessionError('SSH host is required')
+            process.stderr.write(`Connecting to ${sshHost}…\n`)
             // In-place progress: \r + EL0 (erase to end of line). Final \n on
             // success so the next message lands on a fresh line. No-op when
             // stderr isn't a TTY (piped/redirected) — \r would just emit noise.
@@ -3741,7 +3743,7 @@ async function run(): Promise<CommanderCommand> {
             let hadProgress = false
             sshSession = await createSSHSession(
               {
-                host: _pendingSSH.host,
+                host: sshHost,
                 cwd: _pendingSSH.cwd,
                 localVersion: MACRO.VERSION,
                 permissionMode: _pendingSSH.permissionMode,
@@ -3761,7 +3763,7 @@ async function run(): Promise<CommanderCommand> {
           }
           setOriginalCwd(sshSession.remoteCwd)
           setCwdState(sshSession.remoteCwd)
-          setDirectConnectServerUrl(_pendingSSH.local ? 'local' : _pendingSSH.host)
+          setDirectConnectServerUrl(_pendingSSH.local ? 'local' : (_pendingSSH.host ?? ''))
         } catch (err) {
           return await exitWithError(root, err instanceof SSHSessionError ? err.message : String(err), () =>
             gracefulShutdown(1),

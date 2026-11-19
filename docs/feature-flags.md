@@ -636,11 +636,11 @@ _总计：90 个 feature flags_
 
 #### `SSH_REMOTE`
 
-- **功能**: SSH 远程
-- **用途**: 通过 SSH 连接到远程系统进行编程
-- **代码位置**: src/main.tsx:1004
-- **启用条件**: SSH 环境
-- **影响**: 远程开发支持
+- **功能**: SSH 远程会话（`claude ssh`）
+- **用途**: 在远端主机上运行 Claude Code，工具在远端执行，UI/权限/中断/鉴权在本地；远端 API 请求经 `ssh -R` 反隧道回到本地 unix-socket 代理注入真实凭据，凭据不出本地
+- **代码位置**: `src/ssh/`（`createSSHSession.ts`、`sshAuthProxy.ts`、`protocol.ts`、`SSHSessionManager.ts`）、`src/main.tsx`（argv 解析、会话启动分支）、`src/hooks/useSSHSession.ts`
+- **启用条件**: 已在 `scripts/config.ts` 中启用；CLI 必须以 Bun 运行，远端也需能跑 Bun
+- **影响**: 远程开发支持；详见 [docs/features/SSH_REMOTE.md](features/SSH_REMOTE.md)
 
 #### `STREAMLINED_OUTPUT`
 
