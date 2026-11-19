@@ -110,6 +110,8 @@ interface Harness {
   stdout: string[]
   stderr: string[]
   exitCodes: number[]
+  /** Codes passed to the injected process-termination callback. */
+  processExits: number[]
   callbacks: () => DirectConnectCallbacks
   disconnectCalls: () => number
 }
@@ -122,6 +124,7 @@ function makeHarness(sendResult = true): Harness {
   const stdout: string[] = []
   const stderr: string[] = []
   const exitCodes: number[] = []
+  const processExits: number[] = []
 
   const manager: HeadlessManager = {
     connect() {
@@ -152,6 +155,8 @@ function makeHarness(sendResult = true): Harness {
     writeStdout: (data) => stdout.push(data),
     writeStderr: (data) => stderr.push(data),
     setExitCode: (code) => exitCodes.push(code),
+    // A real run calls process.exit; tests capture the code instead.
+    exit: (code) => processExits.push(code),
   }
 
   return {
@@ -162,6 +167,7 @@ function makeHarness(sendResult = true): Harness {
     stdout,
     stderr,
     exitCodes,
+    processExits,
     callbacks: () => {
       if (!callbacks) throw new Error('callbacks not captured yet')
       return callbacks
@@ -294,5 +300,27 @@ describe('runConnectHeadless', () => {
     h.callbacks().onMessage(successResult('ok'))
     await p
     expect(h.disconnectCalls()).toBe(1)
+  })
+
+  test('terminates the process with code 0 after a successful result', async () => {
+    const h = makeHarness()
+    const p = runConnectHeadless(CONFIG, 'hi', 'text', false, h.overrides)
+    h.callbacks().onMessage(successResult('ok'))
+    await p
+    expect(h.processExits).toEqual([0])
+  })
+
+  test('terminates the process with code 1 after an error result', async () => {
+    const h = makeHarness()
+    const p = runConnectHeadless(CONFIG, 'hi', 'text', false, h.overrides)
+    h.callbacks().onMessage(errorResult('error_during_execution'))
+    await p
+    expect(h.processExits).toEqual([1])
+  })
+
+  test('terminates the process with code 1 when the prompt cannot be sent', async () => {
+    const h = makeHarness(false)
+    await runConnectHeadless(CONFIG, 'hi', 'text', false, h.overrides)
+    expect(h.processExits).toEqual([1])
   })
 })

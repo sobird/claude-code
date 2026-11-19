@@ -44,6 +44,14 @@ export interface ConnectHeadlessOverrides {
   writeStdout?: (data: string) => void
   writeStderr?: (data: string) => void
   setExitCode?: (code: number) => void
+  /**
+   * Terminate the process once the run ends. Defaults to `process.exit` — a
+   * one-shot command can't rely on the event loop draining, because inherited
+   * handles (stdin socket, telemetry flush) keep it alive after the result is
+   * printed. Tests inject a no-op so they can `await` the run without aborting
+   * the test process.
+   */
+  exit?: (code: number) => void
 }
 
 /** Map the `--output-format` value to a supported format, or `null`. */
@@ -130,12 +138,13 @@ export async function runConnectHeadless(
   const writeStdout = overrides.writeStdout ?? writeToStdout
   const writeStderr = overrides.writeStderr ?? writeToStderr
   const setExitCode = overrides.setExitCode ?? ((code: number) => void (process.exitCode = code))
+  const exit = overrides.exit ?? ((code: number) => process.exit(code))
 
   const format = parseOutputFormat(outputFormat)
   if (!format) {
     writeStderr(`Error: unsupported --output-format: ${outputFormat} (expected text, json, or stream-json)\n`)
     setExitCode(1)
-    return
+    return exit(1)
   }
 
   // `-p` with no prompt value means "read the prompt from stdin".
@@ -147,9 +156,10 @@ export async function runConnectHeadless(
   if (!effectivePrompt.trim()) {
     writeStderr('Error: Input must be provided either through stdin or as a prompt argument when using --print\n')
     setExitCode(1)
-    return
+    return exit(1)
   }
 
+  let finalCode = 0
   await new Promise<void>((resolve) => {
     let settled = false
     let connected = false
@@ -158,6 +168,7 @@ export async function runConnectHeadless(
     const finish = (code: number): void => {
       if (settled) return
       settled = true
+      finalCode = code
       setExitCode(code)
       managerRef?.disconnect()
       resolve()
@@ -208,4 +219,8 @@ export async function runConnectHeadless(
     managerRef = manager
     manager.connect()
   })
+
+  // Disconnect has already run inside `finish`; now terminate the process so a
+  // one-shot command returns instead of waiting on lingering runtime handles.
+  exit(finalCode)
 }
