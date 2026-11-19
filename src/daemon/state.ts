@@ -33,8 +33,22 @@ const DEFAULT_STOP_TIMEOUT_MS = 10_000
 const STOP_POLL_INTERVAL_MS = 200
 const KILL_GRACE_MS = 500
 
+/** Flat filename component: no path separators or leading dot. */
+const DAEMON_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+
+/**
+ * Rejects names that would escape `~/.claude/daemon/` or collide with other
+ * files. Names come from `--name`, so this is the trust boundary.
+ */
+export function assertValidDaemonName(name: string): string {
+  if (!DAEMON_NAME_PATTERN.test(name)) {
+    throw new Error(`Invalid daemon name '${name}': use letters, digits, '.', '_' or '-'.`)
+  }
+  return name
+}
+
 export function getDaemonStateFilePath(name = DEFAULT_DAEMON_NAME): string {
-  return join(getClaudeConfigHomeDir(), 'daemon', `${name}.json`)
+  return join(getClaudeConfigHomeDir(), 'daemon', `${assertValidDaemonName(name)}.json`)
 }
 
 /** `kill(pid, 0)` probes liveness without signalling; EPERM still means alive. */

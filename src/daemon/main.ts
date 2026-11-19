@@ -11,7 +11,9 @@ import { type ChildProcess } from 'node:child_process'
 import { resolve } from 'node:path'
 
 import { buildCliLaunch, spawnCli } from '../utils/cliLaunch.js'
+import { errorMessage } from '../utils/errors.js'
 import {
+  assertValidDaemonName,
   EXIT_CODE_PERMANENT,
   queryDaemonStatus,
   removeDaemonState,
@@ -56,17 +58,27 @@ interface SupervisorConfig {
  */
 export async function daemonMain(args: string[]): Promise<void> {
   const subcommand = args[0] || 'status'
+  const rest = args.slice(1)
+
+  let stateName: string | undefined
+  try {
+    stateName = parseStateName(rest)
+  } catch (error) {
+    console.error(errorMessage(error))
+    process.exitCode = 1
+    return
+  }
 
   switch (subcommand) {
     case 'start':
-      await runSupervisor(args.slice(1))
+      await runSupervisor(rest, stateName)
       break
     case 'stop':
-      await handleDaemonStop()
+      await handleDaemonStop(stateName)
       break
     case 'status':
     case 'ps':
-      await showStatus()
+      await showStatus(stateName)
       break
     case '--help':
     case '-h':
@@ -78,6 +90,20 @@ export async function daemonMain(args: string[]): Promise<void> {
       printHelp()
       process.exitCode = 1
   }
+}
+
+/** `--name` selects the state file, so must be valid for every subcommand. */
+function parseStateName(args: string[]): string | undefined {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (arg === '--name' && i + 1 < args.length) {
+      return assertValidDaemonName(args[++i])
+    }
+    if (arg.startsWith('--name=')) {
+      return assertValidDaemonName(arg.slice('--name='.length))
+    }
+  }
+  return undefined
 }
 
 function printHelp(): void {
@@ -95,7 +121,9 @@ SUBCOMMANDS
 
 OPTIONS (for start)
   --dir <path>              Working directory (default: current)
-  --name <name>             Session name
+  --name <name>             Session name; also selects the daemon state file
+                            (default: remote-control). Manage it later with
+                            status/stop --name <name>.
   --spawn-mode <mode>       Worker spawn mode: same-dir | worktree (default: same-dir)
   --capacity <N>            Max concurrent sessions per worker (default: 4)
   --permission-mode <mode>  Permission mode for spawned sessions
@@ -103,8 +131,8 @@ OPTIONS (for start)
 `)
 }
 
-async function showStatus(): Promise<void> {
-  const result = await queryDaemonStatus()
+async function showStatus(stateName?: string): Promise<void> {
+  const result = await queryDaemonStatus(stateName)
   switch (result.status) {
     case 'running': {
       const state = result.state
@@ -124,8 +152,8 @@ async function showStatus(): Promise<void> {
   }
 }
 
-async function handleDaemonStop(): Promise<void> {
-  const result = await queryDaemonStatus()
+async function handleDaemonStop(stateName?: string): Promise<void> {
+  const result = await queryDaemonStatus(stateName)
   if (result.status === 'stopped') {
     console.log('daemon is not running')
     return
@@ -137,7 +165,7 @@ async function handleDaemonStop(): Promise<void> {
 
   const pid = result.state?.pid
   console.log(`stopping daemon${pid === undefined ? '' : ` (PID: ${pid})`}...`)
-  const stopped = await stopDaemonByPid()
+  const stopped = await stopDaemonByPid(stateName)
   console.log(stopped ? 'daemon stopped' : 'daemon could not be stopped (may have already exited)')
 }
 
@@ -177,11 +205,11 @@ function parseSupervisorArgs(args: string[]): SupervisorConfig {
  * daemon is already recorded — two supervisors would register duplicate bridge
  * environments under the same state name.
  */
-async function runSupervisor(args: string[]): Promise<void> {
+async function runSupervisor(args: string[], stateName?: string): Promise<void> {
   const config = parseSupervisorArgs(args)
   const dir = config.dir || resolve('.')
 
-  const existing = await queryDaemonStatus()
+  const existing = await queryDaemonStatus(stateName)
   if (existing.status === 'running') {
     console.log(`daemon already running (PID: ${existing.state?.pid ?? 'unknown'})`)
     return
@@ -201,13 +229,16 @@ async function runSupervisor(args: string[]): Promise<void> {
     },
   ]
 
-  await writeDaemonState({
-    pid: process.pid,
-    cwd: dir,
-    startedAt: new Date().toISOString(),
-    workerKinds: workers.map((worker) => worker.kind),
-    lastStatus: 'running',
-  })
+  await writeDaemonState(
+    {
+      pid: process.pid,
+      cwd: dir,
+      startedAt: new Date().toISOString(),
+      workerKinds: workers.map((worker) => worker.kind),
+      lastStatus: 'running',
+    },
+    stateName,
+  )
 
   const controller = new AbortController()
 
@@ -249,7 +280,7 @@ async function runSupervisor(args: string[]): Promise<void> {
 
   await Promise.all(workers.map((worker) => waitForWorkerExit(worker)))
   clearInterval(keepAlive)
-  await removeDaemonState()
+  await removeDaemonState(stateName)
 
   process.off('SIGTERM', shutdown)
   process.off('SIGINT', shutdown)

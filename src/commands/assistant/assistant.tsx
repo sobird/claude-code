@@ -1,4 +1,5 @@
 import { mkdir } from 'node:fs/promises'
+import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 import React, { type ReactNode, useState } from 'react'
@@ -59,6 +60,15 @@ async function installAssistant(dir: string): Promise<void> {
 async function startDaemon(): Promise<void> {
   const originalCwd = getOriginalCwd()
   const workDir = findCanonicalGitRoot(originalCwd) ?? resolve(originalCwd)
+
+  // Home-dir trust is intentionally session-only (TrustDialog), so a fresh
+  // worker there fails the trust check and parks. Fail here with guidance
+  // instead of launching a daemon the user cannot see failing.
+  if (resolve(workDir) === resolve(homedir())) {
+    throw new Error(
+      'Run `claude` from a project directory (not your home folder) so the daemon workspace can stay trusted.',
+    )
+  }
 
   const status = await queryDaemonStatus()
   if (status.status === 'running') {
