@@ -14,6 +14,7 @@ import { buildCliLaunch, spawnCli } from '../utils/cliLaunch.js'
 import { errorMessage } from '../utils/errors.js'
 import {
   assertValidDaemonName,
+  claimDaemonState,
   EXIT_CODE_PERMANENT,
   queryDaemonStatus,
   readDaemonState,
@@ -28,8 +29,12 @@ const BACKOFF_MULTIPLIER = 2
 const MAX_RAPID_FAILURES = 5
 /** A worker that dies within this window counts as a rapid failure. */
 const RAPID_FAILURE_WINDOW_MS = 10_000
-/** How long to wait for a worker to exit before SIGKILL on shutdown. */
-const KILL_GRACE_MS = 30_000
+/**
+ * How long to wait for a worker to exit before SIGKILL on shutdown. Must stay
+ * below the stop timeout in state.ts, otherwise `daemon stop` SIGKILLs the
+ * supervisor while its worker is still alive and the worker becomes orphaned.
+ */
+const KILL_GRACE_MS = 8_000
 
 interface WorkerState {
   kind: string
@@ -39,6 +44,8 @@ interface WorkerState {
   parked: boolean
   lastStartTime: number
   restartTimer: ReturnType<typeof setTimeout> | null
+  /** Last stderr line, persisted as the park reason for `status`. */
+  lastStderr?: string
 }
 
 interface SupervisorConfig {
@@ -145,6 +152,10 @@ async function showStatus(stateName?: string): Promise<void> {
       const parked = state.parkedWorkers ?? []
       const workers = state.workerKinds.map((kind) => (parked.includes(kind) ? `${kind} (parked)` : kind))
       console.log(`  Workers: ${workers.join(', ')}`)
+      if (parked.length > 0) {
+        console.log('  Status:  error')
+        if (state.lastError) console.log(`  Error:   ${state.lastError}`)
+      }
       return
     }
     case 'stopped':
@@ -212,14 +223,6 @@ async function runSupervisor(args: string[], stateName?: string): Promise<void> 
   const config = parseSupervisorArgs(args)
   const dir = config.dir || resolve('.')
 
-  const existing = await queryDaemonStatus(stateName)
-  if (existing.status === 'running') {
-    console.log(`daemon already running (PID: ${existing.state?.pid ?? 'unknown'})`)
-    return
-  }
-
-  console.log(`[daemon] supervisor starting in ${dir}`)
-
   const workers: WorkerState[] = [
     {
       kind: 'remoteControl',
@@ -232,7 +235,10 @@ async function runSupervisor(args: string[], stateName?: string): Promise<void> 
     },
   ]
 
-  await writeDaemonState(
+  // Claim the state slot atomically. A plain status check would let two
+  // supervisors starting at once both pass and register duplicate bridge
+  // environments under the same state name.
+  const claim = await claimDaemonState(
     {
       pid: process.pid,
       cwd: dir,
@@ -242,6 +248,12 @@ async function runSupervisor(args: string[], stateName?: string): Promise<void> 
     },
     stateName,
   )
+  if (!claim.claimed) {
+    console.log(`daemon already running (PID: ${claim.state?.pid ?? 'unknown'})`)
+    return
+  }
+
+  console.log(`[daemon] supervisor starting in ${dir}`)
 
   const controller = new AbortController()
 
@@ -353,6 +365,7 @@ function spawnWorker(
   })
   child.stderr?.on('data', (data: Buffer) => {
     for (const line of data.toString().trimEnd().split('\n')) {
+      worker.lastStderr = line
       console.error(`  ${line}`)
     }
   })
@@ -399,7 +412,9 @@ function spawnWorker(
 function parkWorker(worker: WorkerState, reason: string, stateName: string | undefined): void {
   console.error(`[daemon] worker '${worker.kind}' ${reason} — parking`)
   worker.parked = true
-  void markWorkerParked(worker.kind, stateName)
+  // The worker's own stderr line (e.g. the trust or entitlement error) is more
+  // actionable than the supervisor's generic reason.
+  void markWorkerParked(worker.kind, worker.lastStderr ?? reason, stateName)
 }
 
 /** Counts a rapid failure; parks after MAX_RAPID_FAILURES, else backs off. */
@@ -442,11 +457,11 @@ function scheduleRestart(
  * Persists the parked worker in the state file so `status` stops presenting a
  * supervisor whose only worker gave up as healthy.
  */
-async function markWorkerParked(kind: string, stateName?: string): Promise<void> {
+async function markWorkerParked(kind: string, lastError: string, stateName?: string): Promise<void> {
   const state = await readDaemonState(stateName)
   if (!state) return
   const parkedWorkers = state.parkedWorkers?.includes(kind)
     ? state.parkedWorkers
     : [...(state.parkedWorkers ?? []), kind]
-  await writeDaemonState({ ...state, lastStatus: 'error', parkedWorkers }, stateName)
+  await writeDaemonState({ ...state, lastStatus: 'error', parkedWorkers, lastError }, stateName)
 }

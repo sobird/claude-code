@@ -7,7 +7,7 @@
  * `assistant/sessionDiscovery.ts` and `/assistant`.
  */
 
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { link, mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
 import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
@@ -26,9 +26,13 @@ export interface DaemonStateData {
   lastStatus: 'running' | 'stopped' | 'error'
   /** Worker kinds the supervisor gave up restarting (see `status` output). */
   parkedWorkers?: string[]
+  /** Why the worker gave up — its last stderr line, for `status` and the command. */
+  lastError?: string
 }
 
 export type DaemonStatus = 'running' | 'stopped' | 'stale'
+
+export type DaemonClaim = { claimed: true } | { claimed: false; state?: DaemonStateData }
 
 const DEFAULT_DAEMON_NAME = 'remote-control'
 const DEFAULT_STOP_TIMEOUT_MS = 10_000
@@ -68,6 +72,42 @@ export async function writeDaemonState(state: DaemonStateData, name = DEFAULT_DA
   const path = getDaemonStateFilePath(name)
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, `${JSON.stringify(state, null, 2)}\n`, 'utf8')
+}
+
+/**
+ * Atomically claims the state slot by hard-linking a fully written temp file
+ * into place. `link` fails with EEXIST instead of overwriting, so of two
+ * supervisors racing to start exactly one wins — a plain status check would
+ * let both pass and register duplicate bridge environments. A stale file
+ * (dead PID) is cleared and the claim retried; a live one is returned.
+ */
+export async function claimDaemonState(state: DaemonStateData, name = DEFAULT_DAEMON_NAME): Promise<DaemonClaim> {
+  const path = getDaemonStateFilePath(name)
+  await mkdir(dirname(path), { recursive: true })
+  // Write the full contents first so another racing supervisor never reads a
+  // partially written claim after the link lands.
+  const tmpPath = `${path}.${process.pid}.claim`
+  await writeFile(tmpPath, `${JSON.stringify(state, null, 2)}\n`, 'utf8')
+
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await link(tmpPath, path)
+        return { claimed: true }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+        const existing = await readDaemonState(name)
+        if (existing && isProcessAlive(existing.pid)) {
+          return { claimed: false, state: existing }
+        }
+        // Stale file from a supervisor that died without cleanup.
+        await removeDaemonState(name)
+      }
+    }
+    return { claimed: false }
+  } finally {
+    await unlink(tmpPath).catch(() => {})
+  }
 }
 
 /** Reads the state file; missing or malformed files yield null. */

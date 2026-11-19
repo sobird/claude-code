@@ -1,8 +1,10 @@
+import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
 import * as React from 'react'
 import { useEffect, useState } from 'react'
 
+import { getOriginalCwd } from '../../bootstrap/state.js'
 import { getBridgeAccessToken } from '../../bridge/bridgeConfig.js'
 import { getBridgeDisabledReason } from '../../bridge/bridgeEnabled.js'
 import { BRIDGE_LOGIN_INSTRUCTION } from '../../bridge/types.js'
@@ -16,6 +18,7 @@ import type { ToolUseContext } from '../../Tool.js'
 import type { LocalJSXCommandContext, LocalJSXCommandOnDone } from '../../types/command.js'
 import { buildCliLaunch, spawnCli } from '../../utils/cliLaunch.js'
 import { errorMessage } from '../../utils/errors.js'
+import { findCanonicalGitRoot } from '../../utils/git.js'
 
 type ServerStatus = 'checking' | 'starting' | 'running'
 
@@ -28,6 +31,8 @@ const SPAWN_ERROR_GRACE_MS = 500
 /** How long the detached supervisor may take to record itself as running. */
 const STARTUP_TIMEOUT_MS = 15_000
 const STARTUP_POLL_INTERVAL_MS = 200
+/** Extra time to let a spawned worker hit a permanent error before reporting success. */
+const WORKER_SETTLE_GRACE_MS = 2_000
 
 /**
  * `/remote-control-server` — manage the daemon-backed bridge server.
@@ -72,12 +77,22 @@ function RemoteControlServer({ onDone }: Props): React.ReactNode {
 
       const started = await waitForDaemonRunning(STARTUP_TIMEOUT_MS)
       if (cancelled) return
-      if (started) {
-        onDone(`Remote Control Server started (PID: ${started.pid}). Run /remote-control-server again to manage it.`, {
+      if (!started) {
+        onDone('Remote Control Server did not start. Run `claude daemon status` for details.', {
           display: 'system',
         })
+        return
+      }
+
+      const settled = await waitForWorkerSettled(started, WORKER_SETTLE_GRACE_MS)
+      if (cancelled) return
+      if (settled.parkedWorkers?.length) {
+        onDone(
+          `Remote Control Server started but its worker is parked: ${settled.lastError ?? 'unknown error'}. Run \`claude daemon status\` for details.`,
+          { display: 'system' },
+        )
       } else {
-        onDone('Remote Control Server did not start. Run `claude daemon status` for details.', {
+        onDone(`Remote Control Server started (PID: ${settled.pid}). Run /remote-control-server again to manage it.`, {
           display: 'system',
         })
       }
@@ -119,10 +134,15 @@ function ServerManagementDialog({ pid, onDone }: Props & { pid: number | undefin
       await stopDaemonByPid()
       await startDaemon()
       const started = await waitForDaemonRunning(STARTUP_TIMEOUT_MS)
-      if (started) {
-        finish(`Remote Control Server restarted (PID: ${started.pid}).`)
-      } else {
+      if (!started) {
         finish('Remote Control Server did not restart. Run `claude daemon status` for details.')
+        return
+      }
+      const settled = await waitForWorkerSettled(started, WORKER_SETTLE_GRACE_MS)
+      if (settled.parkedWorkers?.length) {
+        finish(`Remote Control Server restarted, but its worker is parked: ${settled.lastError ?? 'unknown error'}.`)
+      } else {
+        finish(`Remote Control Server restarted (PID: ${settled.pid}).`)
       }
     } catch (error) {
       finish(`Failed to restart: ${errorMessage(error)}`)
@@ -186,7 +206,19 @@ async function checkPrerequisites(): Promise<string | null> {
  * a spawn error; resolves after a short grace period otherwise.
  */
 async function startDaemon(): Promise<void> {
-  const dir = resolve('.')
+  // Same workspace the assistant installer uses: the canonical git root (or the
+  // launching cwd) so the worker's trust check matches the session's trust key.
+  const originalCwd = getOriginalCwd()
+  const dir = findCanonicalGitRoot(originalCwd) ?? resolve(originalCwd)
+
+  // Home-dir trust is session-only (TrustDialog), so a fresh worker there fails
+  // the trust check and parks. Fail here instead of launching a dead daemon.
+  if (resolve(dir) === resolve(homedir())) {
+    throw new Error(
+      'Run `claude` from a project directory (not your home folder) so the daemon workspace can stay trusted.',
+    )
+  }
+
   const child = spawnCli(buildCliLaunch(['daemon', 'start', `--dir=${dir}`]), {
     cwd: dir,
     stdio: 'ignore',
@@ -212,6 +244,24 @@ async function waitForDaemonRunning(timeoutMs: number): Promise<DaemonStateData 
     if (result.status === 'running') return result.state
     if (Date.now() >= deadline) return undefined
     await new Promise<void>((resolveWait) => setTimeout(resolveWait, STARTUP_POLL_INTERVAL_MS))
+  }
+}
+
+/**
+ * The supervisor records itself as running before its worker boots, so a worker
+ * that parks immediately (trust, entitlements) would otherwise be reported as a
+ * healthy server. Re-read the state file for a short grace period and let the
+ * caller surface `parkedWorkers` / `lastError` instead.
+ */
+async function waitForWorkerSettled(state: DaemonStateData, timeoutMs: number): Promise<DaemonStateData> {
+  const deadline = Date.now() + timeoutMs
+  let current = state
+  for (;;) {
+    if (current.parkedWorkers?.length || Date.now() >= deadline) return current
+    await new Promise<void>((resolveWait) => setTimeout(resolveWait, STARTUP_POLL_INTERVAL_MS))
+    const next = await queryDaemonStatus()
+    if (next.status !== 'running' || !next.state) return current
+    current = next.state
   }
 }
 
