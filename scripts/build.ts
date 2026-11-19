@@ -1,4 +1,4 @@
-import { rm } from 'node:fs/promises'
+import { cp, rm } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 
 import pkg from '../package.json'
@@ -66,4 +66,10 @@ await Bun.write(
 await Promise.all([
   Bun.write(`${outdir}/README.md`, Bun.file('README.md')),
   Bun.write(`${outdir}/LICENSE`, Bun.file('LICENSE')),
+  // Native modules resolve relative to cli.js at publish time, so the
+  // prebuilt binaries must sit next to it in the published package.
+  cp('vendor', `${outdir}/vendor`, {
+    recursive: true,
+    filter: (src) => !src.endsWith('.DS_Store'),
+  }),
 ])
