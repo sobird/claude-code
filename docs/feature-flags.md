@@ -292,11 +292,11 @@ _总计：90 个 feature flags_
 
 #### `DIRECT_CONNECT`
 
-- **功能**: 直接连接
-- **用途**: 直接网络连接功能
-- **代码位置**: src/utils/apiPreconnect.ts
-- **启用条件**: 需要预连接优化
-- **影响**: 提高连接速度
+- **功能**: 直接连接 Claude Code 服务器（`cc://host[:port]` / `cc+unix://<socket>` URL）
+- **用途**: 客户端（CLI）通过 WebSocket 连接到一个 Claude Code “server”：server 端 `POST /sessions` 创建会话并运行 agent，客户端只驱动 UI/输出。交互式 `claude open <cc-url>` 进入完整 TUI；`claude open <cc-url> -p [prompt]` 走无头路径 `runConnectHeadless`——发送单轮 prompt，按 `--output-format`（`text`/`json`/`stream-json`）流式输出，收到终端 `result` 后映射退出码（success=0，其余=1）。无头模式无人可问，权限请求一律拒绝（会话建立时用 `--dangerously-skip-permissions` 预放行）。服务端 `claude server` 拥有每个会话的子进程（`--print --input-format stream-json --output-format stream-json --permission-prompt-tool stdio`），把 NDJSON 双向桥接到 `/sessions/:id/ws`
+- **代码位置**: 无头客户端 `src/server/connectHeadless.ts`、WS 客户端 `src/server/directConnectManager.ts`、建会话 `src/server/createDirectConnectSession.ts`、URL 解析 `src/server/parseConnectUrl.ts`、REPL 集成 `src/hooks/useDirectConnect.ts`、服务端 `src/server/server.ts`（HTTP+WS）/`src/server/sessionManager.ts`（生命周期/空闲回收）/`src/server/backends/dangerousBackend.ts`（spawn 子 CLI）、锁文件 `src/server/lockfile.ts`、入口 `src/main.tsx`（argv 重写 + `open`/`server` 子命令）
+- **启用条件**: 已在 `scripts/config.ts` 中启用；客户端与服务端均完整。会话仅驻留内存（不跨 server 重启恢复）；客户端首个连接前子进程输出会缓冲后回放
+- **影响**: 支持 `claude server` 提供服务、`claude open` 连接（无头或交互式）
 
 #### `DOWNLOAD_USER_SETTINGS`
 

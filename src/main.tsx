@@ -4708,6 +4708,7 @@ async function run(): Promise<CommanderCommand> {
           const sessionManager = new SessionManager(backend, {
             idleTimeoutMs: config.idleTimeoutMs,
             maxSessions: config.maxSessions,
+            workspace: config.workspace,
           })
           const logger = createServerLogger()
 
