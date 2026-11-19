@@ -31,7 +31,11 @@ jobs:
         uses: googleapis/release-please-action@v4
         id: release
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # A PAT is preferred. Branch updates made with GITHUB_TOKEN do not
+          # start downstream workflow runs, so CI lands on the release PR as
+          # `action_required` and never executes; a PAT-authored update runs CI
+          # automatically. Falls back to GITHUB_TOKEN when the secret is unset.
+          token: ${{ secrets.MY_RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           # No release-type input: its presence switches the action to simple
           # mode and makes it ignore release-please-config.json.
           # create a release from a path other than the repository's root
