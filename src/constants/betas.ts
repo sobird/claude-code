@@ -45,5 +45,4 @@ export const VERTEX_COUNT_TOKENS_ALLOWED_BETAS = new Set([
   CONTEXT_MANAGEMENT_BETA_HEADER,
 ])
 
-// Auto-generated stub — replace with real implementation
-export const CACHE_EDITING_BETA_HEADER = ''
+export const CACHE_EDITING_BETA_HEADER = 'cache-editing-2026-03-01'

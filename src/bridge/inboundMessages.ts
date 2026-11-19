@@ -24,7 +24,7 @@ export function extractInboundMessageFields(
   if (!content) return undefined
   if (Array.isArray(content) && content.length === 0) return undefined
 
-  const uuid = 'uuid' in msg && typeof msg.uuid === 'string' ? (msg.uuid) : undefined
+  const uuid = 'uuid' in msg && typeof msg.uuid === 'string' ? msg.uuid : undefined
 
   return {
     content: Array.isArray(content) ? normalizeImageBlocks(content) : content,

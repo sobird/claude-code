@@ -1,4 +1,3 @@
-// Auto-generated stub — replace with real implementation
 import type { UUID } from 'node:crypto'
 
 import type { APIError } from '@anthropic-ai/sdk'
