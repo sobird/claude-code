@@ -45,7 +45,7 @@ function loadModule(): AudioCaptureNapi | null {
   // Candidates 2/3: npm-install and dev/source layouts. Dynamic require is
   // fine here — in bundled output (node --target build) require() resolves at
   // runtime relative to cli.js at the package root; in dev it resolves
-  // relative to this file (vendor/audio-capture-src/index.ts).
+  // relative to this file (packages/audio-capture-napi/src/index.ts).
   const platformDir = `${process.arch}-${platform}`
   const candidates = [
     // 预编译
