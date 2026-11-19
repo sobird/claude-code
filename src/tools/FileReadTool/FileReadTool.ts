@@ -59,6 +59,7 @@ import { isPDFExtension, isPDFSupported, parsePDFPageRange } from '../../utils/p
 import { checkReadPermissionForTool, matchingRuleForInput } from '../../utils/permissions/filesystem.js'
 import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
 import { matchWildcardPattern } from '../../utils/permissions/shellRuleMatching.js'
+import { getFileUnchangedStub } from '../../utils/promptExperiments.js'
 import { readFileInRange } from '../../utils/readFileInRange.js'
 import { semanticNumber } from '../../utils/semanticNumber.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
@@ -202,10 +203,14 @@ const inputSchema = lazySchema(() =>
   z.strictObject({
     file_path: z.string().describe('The absolute path to the file to read'),
     offset: semanticNumber(z.number().int().nonnegative().optional()).describe(
-      'The line number to start reading from. Only provide if the file is too large to read at once',
+      getFeatureValue_CACHED_MAY_BE_STALE('tengu_slate_reef', false)
+        ? 'The line number to start reading from. Provide with `limit` to read a specific line range, or alone when the file is too large to read at once.'
+        : 'The line number to start reading from. Only provide if the file is too large to read at once',
     ),
     limit: semanticNumber(z.number().int().positive().optional()).describe(
-      'The number of lines to read. Only provide if the file is too large to read at once.',
+      getFeatureValue_CACHED_MAY_BE_STALE('tengu_slate_reef', false)
+        ? 'ONLY include with offset to read a specific slice. OMIT to read the whole file (harness truncates oversized files automatically).'
+        : 'The number of lines to read. Only provide if the file is too large to read at once.',
     ),
     pages: z
       .string()
@@ -457,8 +462,16 @@ export const FileReadTool = buildTool({
     // the model externally.
     // 3P default: killswitch off = dedup enabled. Client-side only — no
     // server support needed, safe for Bedrock/Vertex/Foundry.
+    const priorReadState = readFileState.get(fullFilePath)
+    if (priorReadState) {
+      logEvent('tengu_file_read_reread', {
+        priorOp: (priorReadState.offset === undefined
+          ? 'edit_write'
+          : 'read') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      })
+    }
     const dedupKillswitch = getFeatureValue_CACHED_MAY_BE_STALE('tengu_read_dedup_killswitch', false)
-    const existingState = dedupKillswitch ? undefined : readFileState.get(fullFilePath)
+    const existingState = dedupKillswitch ? undefined : priorReadState
     // Only dedup entries that came from a prior Read (offset is always set
     // by Read). Edit/Write store offset=undefined — their readFileState
     // entry reflects post-edit mtime, so deduping against it would wrongly
@@ -601,7 +614,7 @@ export const FileReadTool = buildTool({
         return {
           tool_use_id: toolUseID,
           type: 'tool_result',
-          content: FILE_UNCHANGED_STUB,
+          content: getFileUnchangedStub(FILE_UNCHANGED_STUB),
         }
       case 'text': {
         let content: string

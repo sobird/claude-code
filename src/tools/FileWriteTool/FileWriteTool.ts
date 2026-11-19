@@ -1,4 +1,4 @@
-import { dirname, sep } from 'node:path'
+import { basename, dirname, sep } from 'node:path'
 
 import { logEvent } from 'src/services/analytics/index.js'
 import { z } from 'zod/v4'
@@ -33,6 +33,7 @@ import { expandPath } from '../../utils/path.js'
 import { checkWritePermissionForTool, matchingRuleForInput } from '../../utils/permissions/filesystem.js'
 import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
 import { matchWildcardPattern } from '../../utils/permissions/shellRuleMatching.js'
+import { FILE_STATE_CURRENT_SUFFIX, isNoRereadGuidanceEnabled } from '../../utils/promptExperiments.js'
 import { FILE_UNEXPECTEDLY_MODIFIED_ERROR } from '../FileEditTool/constants.js'
 import { gitDiffSchema, hunkSchema } from '../FileEditTool/types.js'
 import { FILE_WRITE_TOOL_NAME, getWriteToolDescription } from './prompt.js'
@@ -50,6 +51,12 @@ const inputSchema = lazySchema(() =>
   z.strictObject({
     file_path: z.string().describe('The absolute path to the file to write (must be absolute, not relative)'),
     content: z.string().describe('The content to write to the file'),
+    mode: z
+      .enum(['overwrite', 'append'])
+      .optional()
+      .describe(
+        "Write mode. 'overwrite' (default) replaces the file. Use 'append' to add content to the end of an existing file instead of rewriting the full content — e.g. for logs, accumulating output, or adding entries to a list.",
+      ),
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -89,7 +96,13 @@ export const FileWriteTool = buildTool({
   renderToolUseMessage,
   isResultTruncated,
   get inputSchema(): InputSchema {
-    return inputSchema()
+    // mode is optional, so the omitted schema accepts the same inputs; the
+    // cast narrows the Zod generic back to the full shape.
+    return (
+      getFeatureValue_CACHED_MAY_BE_STALE('tengu_maple_forge_w8k', false)
+        ? inputSchema()
+        : inputSchema().omit({ mode: true })
+    ) as InputSchema
   },
   get outputSchema(): OutputSchema {
     return outputSchema()
@@ -126,6 +139,22 @@ export const FileWriteTool = buildTool({
   },
   async validateInput({ file_path, content }, toolUseContext: ToolUseContext) {
     const fullFilePath = expandPath(file_path)
+
+    // Subagents should report findings as text, not write report files the
+    // parent can't reliably read.
+    if (
+      getFeatureValue_CACHED_MAY_BE_STALE('tengu_sub_nomdrep_q7k', false) &&
+      toolUseContext.agentId &&
+      /^(REPORT|SUMMARY|FINDINGS|ANALYSIS).*\.md$/i.test(basename(fullFilePath))
+    ) {
+      logEvent('tengu_subagent_md_report_blocked', { contentBytes: Buffer.byteLength(content) })
+      return {
+        result: false,
+        message:
+          'Subagents should return findings as text, not write report files. Include this content in your final response instead.',
+        errorCode: 5,
+      }
+    }
 
     // Reject writes to team memory files that contain secrets
     const secretError = checkTeamMemSecrets(fullFilePath, content)
@@ -188,7 +217,7 @@ export const FileWriteTool = buildTool({
     return { result: true }
   },
   async call(
-    { file_path, content },
+    { file_path, content, mode },
     { readFileState, updateFileHistoryState, dynamicSkillDirTriggers },
     _,
     parentMessage,
@@ -256,13 +285,20 @@ export const FileWriteTool = buildTool({
 
     const enc = meta?.encoding ?? 'utf8'
     const oldContent = meta?.content ?? null
+    const isAppend = mode === 'append'
+    const newContent = isAppend ? (oldContent ?? '') + content : content
+    logEvent('tengu_write_append_used', {
+      isAppend,
+      contentBytes: Buffer.byteLength(content, 'utf8'),
+      oldFileBytes: oldContent ? Buffer.byteLength(oldContent, 'utf8') : 0,
+    })
 
     // Write is a full content replacement — the model sent explicit line endings
     // in `content` and meant them. Do not rewrite them. Previously we preserved
     // the old file's line endings (or sampled the repo via ripgrep for new
     // files), which silently corrupted e.g. bash scripts with \r on Linux when
     // overwriting a CRLF file or when binaries in cwd poisoned the repo sample.
-    writeTextContent(fullFilePath, content, enc, 'LF')
+    writeTextContent(fullFilePath, newContent, enc, 'LF')
 
     // Notify LSP servers about file modification (didChange) and save (didSave)
     const lspManager = getLspServerManager()
@@ -270,7 +306,7 @@ export const FileWriteTool = buildTool({
       // Clear previously delivered diagnostics so new ones will be shown
       clearDeliveredDiagnosticsForFile(`file://${fullFilePath}`)
       // didChange: Content has been modified
-      lspManager.changeFile(fullFilePath, content).catch((err: Error) => {
+      lspManager.changeFile(fullFilePath, newContent).catch((err: Error) => {
         logForDebugging(`LSP: Failed to notify server of file change for ${fullFilePath}: ${err.message}`)
         logError(err)
       })
@@ -282,11 +318,11 @@ export const FileWriteTool = buildTool({
     }
 
     // Notify VSCode about the file change for diff view
-    notifyVscodeFileUpdated(fullFilePath, oldContent, content)
+    notifyVscodeFileUpdated(fullFilePath, oldContent, newContent)
 
     // Update read timestamp, to invalidate stale writes
     readFileState.set(fullFilePath, {
-      content,
+      content: newContent,
       timestamp: getFileModificationTime(fullFilePath),
       offset: undefined,
       limit: undefined,
@@ -319,7 +355,7 @@ export const FileWriteTool = buildTool({
         edits: [
           {
             old_string: oldContent,
-            new_string: content,
+            new_string: newContent,
             replace_all: false,
           },
         ],
@@ -328,7 +364,7 @@ export const FileWriteTool = buildTool({
       const data = {
         type: 'update' as const,
         filePath: file_path,
-        content,
+        content: newContent,
         structuredPatch: patch,
         originalFile: oldContent,
         ...(gitDiff && { gitDiff }),
@@ -351,14 +387,14 @@ export const FileWriteTool = buildTool({
     const data = {
       type: 'create' as const,
       filePath: file_path,
-      content,
+      content: newContent,
       structuredPatch: [],
       originalFile: null,
       ...(gitDiff && { gitDiff }),
     }
 
     // For creation of new files, count all lines as additions, right before yielding the result
-    countLinesChanged([], content)
+    countLinesChanged([], newContent)
 
     logFileOperation({
       operation: 'write',
@@ -372,18 +408,24 @@ export const FileWriteTool = buildTool({
     }
   },
   mapToolResultToToolResultBlockParam({ filePath, type }, toolUseID) {
+    const stateNote = isNoRereadGuidanceEnabled() ? FILE_STATE_CURRENT_SUFFIX : ''
     switch (type) {
-      case 'create':
+      case 'create': {
+        let content = `File created successfully at: ${filePath}${stateNote}`
+        if (getFeatureValue_CACHED_MAY_BE_STALE('tengu_editafterwrite_qpl', false)) {
+          content += ' You can Edit this file directly without Reading it first.'
+        }
         return {
           tool_use_id: toolUseID,
           type: 'tool_result',
-          content: `File created successfully at: ${filePath}`,
+          content,
         }
+      }
       case 'update':
         return {
           tool_use_id: toolUseID,
           type: 'tool_result',
-          content: `The file ${filePath} has been updated successfully.`,
+          content: `The file ${filePath} has been updated successfully.${stateNote}`,
         }
     }
   },

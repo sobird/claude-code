@@ -54,7 +54,11 @@ const PERSIST_THRESHOLD_OVERRIDE_FLAG = 'tengu_satin_quoll'
  * typeof check so any non-object flag value (null, string, number) falls through
  * to the hardcoded default instead of throwing on index or returning 0.
  */
-export function getPersistenceThreshold(toolName: string, declaredMaxResultSizeChars: number): number {
+export function getPersistenceThreshold(
+  toolName: string,
+  declaredMaxResultSizeChars: number,
+  ceiling: number = DEFAULT_MAX_RESULT_SIZE_CHARS,
+): number {
   // Infinity = hard opt-out. Read self-bounds via maxTokens; persisting its
   // output to a file the model reads back with Read is circular. Checked
   // before the GB override so tengu_satin_quoll can't force it back on.
@@ -69,7 +73,7 @@ export function getPersistenceThreshold(toolName: string, declaredMaxResultSizeC
   if (typeof override === 'number' && Number.isFinite(override) && override > 0) {
     return override
   }
-  return Math.min(declaredMaxResultSizeChars, DEFAULT_MAX_RESULT_SIZE_CHARS)
+  return Math.min(declaredMaxResultSizeChars, ceiling)
 }
 
 // Result of persisting a tool result to disk
@@ -197,6 +201,7 @@ export async function processToolResultBlock<T>(
   tool: {
     name: string
     maxResultSizeChars: number
+    persistenceThresholdCeiling?: number
     mapToolResultToToolResultBlockParam: (result: T, toolUseID: string) => ToolResultBlockParam
   },
   toolUseResult: T,
@@ -206,7 +211,7 @@ export async function processToolResultBlock<T>(
   return maybePersistLargeToolResult(
     toolResultBlock,
     tool.name,
-    getPersistenceThreshold(tool.name, tool.maxResultSizeChars),
+    getPersistenceThreshold(tool.name, tool.maxResultSizeChars, tool.persistenceThresholdCeiling),
   )
 }
 
@@ -218,8 +223,13 @@ export async function processPreMappedToolResultBlock(
   toolResultBlock: ToolResultBlockParam,
   toolName: string,
   maxResultSizeChars: number,
+  persistenceThresholdCeiling?: number,
 ): Promise<ToolResultBlockParam> {
-  return maybePersistLargeToolResult(toolResultBlock, toolName, getPersistenceThreshold(toolName, maxResultSizeChars))
+  return maybePersistLargeToolResult(
+    toolResultBlock,
+    toolName,
+    getPersistenceThreshold(toolName, maxResultSizeChars, persistenceThresholdCeiling),
+  )
 }
 
 /**

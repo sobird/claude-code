@@ -13,10 +13,14 @@ const FIXTURE: VerifyReport = {
     'retained-internal': 0,
     unresolved: 0,
   },
+  ledgerErrors: [],
   missingInSrc: ['cmd:missing'],
   unexpectedInSrc: [],
   unregistered: ['env:OLD'],
   unresolved: [],
+  evidenceErrors: [],
+  srcEvidenceErrors: [],
+  uncoveredReleaseItems: [],
 }
 
 const EXPECTED = `# Upgrade verification report

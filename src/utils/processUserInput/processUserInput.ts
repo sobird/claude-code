@@ -30,6 +30,7 @@ import { storeImages } from '../imageStore.js'
 import { createCommandInputMessage, createSystemMessage, createUserMessage } from '../messages.js'
 import { queryCheckpoint } from '../queryProfiler.js'
 import { parseSlashCommand } from '../slashCommandParsing.js'
+import { isUltraplanEnabled } from '../ultraplan/enabled.js'
 import { hasUltraplanKeyword, replaceUltraplanKeyword } from '../ultraplan/keyword.js'
 import { processTextPrompt } from './processTextPrompt.js'
 export type ProcessUserInputContext = ToolUseContext & LocalJSXCommandContext
@@ -405,6 +406,7 @@ async function processUserInputBase(
   // React batches both into one render, no flash).
   if (
     feature('ULTRAPLAN') &&
+    isUltraplanEnabled() &&
     mode === 'prompt' &&
     !context.options.isNonInteractiveSession &&
     inputString !== null &&

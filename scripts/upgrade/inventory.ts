@@ -4,7 +4,9 @@ import { readFile } from 'node:fs/promises'
 import { extractStringLiterals } from './stringScanner'
 import type { CommandEntry, Inventory } from './types'
 
-const COMMAND_RE = /type:\s*["'](local|local-jsx|prompt)["']\s*,\s*name:\s*["']([^"']+)["']/g
+// The closing-quote lookahead rejects dynamically composed names such as
+// `name:"mcp__"+...`, which are not commands and have no static name to check.
+const COMMAND_RE = /type:\s*["'](local|local-jsx|prompt)["']\s*,\s*name:\s*["']([^"']+)["'](?=\s*[,}])/g
 const ENV_RE = /CLAUDE_CODE_[A-Z0-9_]+/g
 const FLAG_RE = /\.option\(\s*["'](--[a-z0-9-]+)["']/g
 const VERSION_RE = /["'](2\.\d+\.\d+)["']/

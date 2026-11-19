@@ -79,14 +79,10 @@ const PERMISSION_MODE_CONFIG: Partial<Record<PermissionMode, PermissionModeConfi
 
 /**
  * Type guard to check if a PermissionMode is an ExternalPermissionMode.
- * auto is ant-only and excluded from external modes.
+ * `auto` is part of the external set now; only `bubble` is internal-only.
  */
 export function isExternalPermissionMode(mode: PermissionMode): mode is ExternalPermissionMode {
-  // External users can't have auto, so always true for them
-  if (process.env.USER_TYPE !== 'ant') {
-    return true
-  }
-  return mode !== 'auto' && mode !== 'bubble'
+  return mode !== 'bubble'
 }
 
 function getModeConfig(mode: PermissionMode): PermissionModeConfig {

@@ -816,7 +816,6 @@ export async function runInProcessTeammate(config: InProcessRunnerConfig): Promi
       toolUseContext.options.tools,
       toolUseContext.options.mainLoopModel,
       undefined,
-      toolUseContext.options.mcpClients,
     )
 
     const systemPromptParts = [...fullSystemPromptParts, TEAMMATE_SYSTEM_PROMPT_ADDENDUM]

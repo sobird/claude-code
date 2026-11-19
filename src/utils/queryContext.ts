@@ -42,13 +42,11 @@ export async function fetchSystemPromptParts({
   tools,
   mainLoopModel,
   additionalWorkingDirectories,
-  mcpClients,
   customSystemPrompt,
 }: {
   tools: Tools
   mainLoopModel: string
   additionalWorkingDirectories: string[]
-  mcpClients: MCPServerConnection[]
   customSystemPrompt: string | undefined
 }): Promise<{
   defaultSystemPrompt: string[]
@@ -58,7 +56,7 @@ export async function fetchSystemPromptParts({
   const [defaultSystemPrompt, userContext, systemContext] = await Promise.all([
     customSystemPrompt !== undefined
       ? Promise.resolve([])
-      : getSystemPrompt(tools, mainLoopModel, additionalWorkingDirectories, mcpClients),
+      : getSystemPrompt(tools, mainLoopModel, additionalWorkingDirectories),
     getUserContext(),
     customSystemPrompt !== undefined ? Promise.resolve({}) : getSystemContext(),
   ])
@@ -109,7 +107,6 @@ export async function buildSideQuestionFallbackParams({
     tools,
     mainLoopModel,
     additionalWorkingDirectories: Array.from(appState.toolPermissionContext.additionalWorkingDirectories.keys()),
-    mcpClients,
     customSystemPrompt,
   })
 

@@ -1940,10 +1940,58 @@ export function buildConversationChain(
     }
     seen.add(currentMsg.uuid)
     transcript.push(currentMsg)
-    currentMsg = currentMsg.parentUuid ? messages.get(currentMsg.parentUuid) : undefined
+    if (!currentMsg.parentUuid) {
+      break
+    }
+    let parent = messages.get(currentMsg.parentUuid)
+    if (!parent) {
+      // The parentUuid points at a message that never made it to disk (e.g. an
+      // async transcript write failed silently). Fall back to the closest
+      // earlier message by timestamp so resume doesn't drop the rest of the
+      // history.
+      parent = findClosestPreviousMessage(messages, currentMsg, seen)
+      if (parent) {
+        logEvent('tengu_chain_timestamp_fallback', {})
+      }
+    }
+    currentMsg = parent
   }
   transcript.reverse()
   return recoverOrphanedParallelToolResults(messages, transcript, seen)
+}
+
+/**
+ * Max gap between a message and its timestamp-fallback parent. Wide enough for
+ * normal turn latency, narrow enough to avoid linking unrelated conversations
+ * in the same project.
+ */
+const CHAIN_TIMESTAMP_FALLBACK_WINDOW_MS = 5000
+
+/**
+ * Find the closest message published just before `current` that isn't already
+ * part of the chain. Used when `parentUuid` references a message missing from
+ * the transcript map (broken chain from a failed async write).
+ */
+function findClosestPreviousMessage(
+  messages: Map<UUID, TranscriptMessage>,
+  current: TranscriptMessage,
+  seen: Set<UUID>,
+): TranscriptMessage | undefined {
+  const currentTime = new Date(current.timestamp).getTime()
+  if (Number.isNaN(currentTime)) return undefined
+  let best: TranscriptMessage | undefined
+  let bestDelta = Infinity
+  for (const candidate of messages.values()) {
+    if (seen.has(candidate.uuid)) continue
+    const t = new Date(candidate.timestamp).getTime()
+    if (Number.isNaN(t)) continue
+    const delta = currentTime - t
+    if (delta >= 0 && delta <= CHAIN_TIMESTAMP_FALLBACK_WINDOW_MS && delta < bestDelta) {
+      bestDelta = delta
+      best = candidate
+    }
+  }
+  return best
 }
 
 /**

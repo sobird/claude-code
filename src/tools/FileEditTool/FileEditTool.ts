@@ -38,6 +38,7 @@ import { expandPath } from '../../utils/path.js'
 import { checkWritePermissionForTool, matchingRuleForInput } from '../../utils/permissions/filesystem.js'
 import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
 import { matchWildcardPattern } from '../../utils/permissions/shellRuleMatching.js'
+import { FILE_STATE_CURRENT_SUFFIX, isNoRereadGuidanceEnabled } from '../../utils/promptExperiments.js'
 import { validateInputForSettingsFileEdit } from '../../utils/settings/validateEditTool.js'
 import { NOTEBOOK_EDIT_TOOL_NAME } from '../NotebookEditTool/constants.js'
 import { FILE_EDIT_TOOL_NAME, FILE_UNEXPECTEDLY_MODIFIED_ERROR } from './constants.js'
@@ -501,19 +502,20 @@ export const FileEditTool = buildTool({
   mapToolResultToToolResultBlockParam(data: FileEditOutput, toolUseID) {
     const { filePath, userModified, replaceAll } = data
     const modifiedNote = userModified ? '.  The user modified your proposed changes before accepting them. ' : ''
+    const stateNote = isNoRereadGuidanceEnabled() && !userModified ? FILE_STATE_CURRENT_SUFFIX : ''
 
     if (replaceAll) {
       return {
         tool_use_id: toolUseID,
         type: 'tool_result',
-        content: `The file ${filePath} has been updated${modifiedNote}. All occurrences were successfully replaced.`,
+        content: `The file ${filePath} has been updated${modifiedNote}. All occurrences were successfully replaced.${stateNote}`,
       }
     }
 
     return {
       tool_use_id: toolUseID,
       type: 'tool_result',
-      content: `The file ${filePath} has been updated successfully${modifiedNote}.`,
+      content: `The file ${filePath} has been updated successfully${modifiedNote}.${stateNote}`,
     }
   },
 } satisfies ToolDef<ReturnType<typeof inputSchema>, FileEditOutput>)

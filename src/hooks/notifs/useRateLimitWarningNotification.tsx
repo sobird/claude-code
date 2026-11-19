@@ -2,8 +2,12 @@ import * as React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNotifications } from 'src/context/notifications.js'
 import { Text } from 'src/ink.js'
+import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/index.js'
+import { logEvent } from 'src/services/analytics/index.js'
 import { getRateLimitWarning, getUsingOverageText } from 'src/services/claudeAiLimits.js'
 import { useClaudeAiLimits } from 'src/services/claudeAiLimitsHook.js'
+import { getRateLimitLeverHint } from 'src/services/rateLimitMessages.js'
+import { useAppState } from 'src/state/AppState.js'
 import { getSubscriptionType } from 'src/utils/auth.js'
 import { hasClaudeAiBillingAccess } from 'src/utils/billing.js'
 
@@ -16,6 +20,11 @@ export function useRateLimitWarningNotification(model: string): void {
   // response), so these skip the Intl formatting work on most REPL renders.
   const rateLimitWarning = useMemo(() => getRateLimitWarning(claudeAiLimits, model), [claudeAiLimits, model])
   const usingOverageText = useMemo(() => getUsingOverageText(claudeAiLimits), [claudeAiLimits])
+  const effortValue = useAppState((s) => s.effortValue)
+  const leverHint = useMemo(
+    () => (rateLimitWarning ? getRateLimitLeverHint(claudeAiLimits, model, effortValue) : null),
+    [rateLimitWarning, claudeAiLimits, model, effortValue],
+  )
   const shownWarningRef = useRef<string | null>(null)
   const subscriptionType = getSubscriptionType()
   const hasBillingAccess = hasClaudeAiBillingAccess()
@@ -57,10 +66,16 @@ export function useRateLimitWarningNotification(model: string): void {
         jsx: (
           <Text>
             <Text color="warning">{rateLimitWarning}</Text>
+            {leverHint && <Text dimColor> · {leverHint.text}</Text>}
           </Text>
         ),
         priority: 'high',
       })
+      if (leverHint) {
+        logEvent('tengu_rate_limit_lever_hint', {
+          lever: leverHint.lever as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        })
+      }
     }
-  }, [rateLimitWarning, addNotification])
+  }, [rateLimitWarning, leverHint, addNotification])
 }

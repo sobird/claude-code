@@ -1,6 +1,7 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { getInitialMainLoopModel } from '../../bootstrap/state.js'
-import { isClaudeAISubscriber, isMaxSubscriber, isTeamPremiumSubscriber } from '../auth.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import { getSubscriptionType, isClaudeAISubscriber, isMaxSubscriber, isTeamPremiumSubscriber } from '../auth.js'
 import { getGlobalConfig } from '../config.js'
 import { has1mContext } from '../context.js'
 import { COST_TIER_3_15, COST_HAIKU_35, COST_HAIKU_45, formatModelPricing } from '../modelCost.js'
@@ -186,11 +187,18 @@ function getHaikuOption(): ModelOption {
   return haikuModel === getModelStrings().haiku45 ? getHaiku45Option() : getHaiku35Option()
 }
 
+/** Pro-plan hint shown next to Opus: Opus burns quota faster than Sonnet. */
+function getProUsageSuffix(): string {
+  return getSubscriptionType() === 'pro' && getFeatureValue_CACHED_MAY_BE_STALE('tengu_gypsum_kite', false)
+    ? ' · ~2× usage vs Sonnet'
+    : ''
+}
+
 function getMaxOpusOption(fastMode = false): ModelOption {
   return {
     value: 'opus',
     label: 'Opus',
-    description: `Opus 4.6 · Most capable for complex work${fastMode ? getOpus46PricingSuffix(true) : ''}`,
+    description: `Opus 4.6 · Most capable for complex work${getProUsageSuffix()}${fastMode ? getOpus46PricingSuffix(true) : ''}`,
   }
 }
 
@@ -209,7 +217,7 @@ export function getMaxOpus46_1MOption(fastMode = false): ModelOption {
   return {
     value: 'opus[1m]',
     label: 'Opus (1M context)',
-    description: `Opus 4.6 with 1M context${billingInfo}${getOpus46PricingSuffix(fastMode)}`,
+    description: `Opus 4.6 with 1M context${getProUsageSuffix()}${billingInfo}${getOpus46PricingSuffix(fastMode)}`,
   }
 }
 
@@ -218,7 +226,7 @@ function getMergedOpus1MOption(fastMode = false): ModelOption {
   return {
     value: is3P ? getModelStrings().opus46 + '[1m]' : 'opus[1m]',
     label: 'Opus (1M context)',
-    description: `Opus 4.6 with 1M context · Most capable for complex work${!is3P && fastMode ? getOpus46PricingSuffix(fastMode) : ''}`,
+    description: `Opus 4.6 with 1M context · Most capable for complex work${getProUsageSuffix()}${!is3P && fastMode ? getOpus46PricingSuffix(fastMode) : ''}`,
     descriptionForModel: 'Opus 4.6 with 1M context - most capable for complex work',
   }
 }

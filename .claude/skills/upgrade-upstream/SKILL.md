@@ -43,17 +43,31 @@ bun scripts/upgrade/cli.ts carve --binary <native/claude> --out <work/claude-<�
 | `probe --target --scenario --out`                          | `trace.json`       | 用 `scenarios/*.json` 断点采集运行时证据                                      |
 | `verify --target --reference --src --status --out`         | `report.{md,json}` | 对拍 bundle 与 `src/`，校验台账闭合                                           |
 
-`align.json` 的节点有 `classification`（`matched` / `changed` / `new`，另有 `ignored-dependency` / `unattributed`）和 `confidence`；移植对象主要从 `changed` 和 `new` 里挑。
+辅助子命令（§1.5 交叉验证与收尾用）：
+
+| 子命令                                                                                 | 用途                                                                              |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `releasenotes --version --out [--repo]`                                                | 用 `gh release view` 拉官方说明并解析顶层条目；默认仓库 `anthropics/claude-code`  |
+| `table --bundle --anchor [--whole] [--baseline <json> \| --src <path>#<export>] --out` | 从 bundle 锚点抽字面量表（`--whole` 取包含锚点的整张表），与参考版或 src 导出对拍 |
+| `strings --target-inventory --reference-inventory --src [--release-notes] --out`       | 新增字符串分诊：inSrc / releaseNotes / noise / unclassified                       |
+| `refresh-evidence --target --status [--in-place] [--fail-on-skipped]`                  | 校验台账里的 `bundle:` 偏移，失效的按字符串重定位                                 |
+| `gates --ref --repo-root [--gates] [--fail-on-new] --out`                              | 在 `--ref` 的临时 worktree 跑 typecheck/lint/test，与工作区做归一化多集差分       |
+
+`align.json` 的节点有 `classification`（`matched` / `changed` / `new`，另有 `ignored-dependency` / `unattributed`）和 `confidence`；移植对象主要从 `changed` 和 `new` 里挑。`changed` 配对现在按字符串字面量重叠（Jaccard）+ 相对位置打分，选最像的候选，不再是同 kind 的第一个。
 
 `verify` 退出码 0 才代表完成。`ok=false` 时逐项处理 `missingInSrc` / `unexpectedInSrc` / `unregistered` / `unresolved`。
 
 ## 1.5 交叉验证（release 说明 + 结构化常量表）
 
-`inventory` / `align` / `extract` 只覆盖命令、env、flag 与字符串的增删。两处盲区必须手工补，`verify` 绿了也不代表没有漏项。
+`inventory` / `align` / `extract` 只覆盖命令、env、flag 与字符串的增删。三处盲区必须补，`verify` 绿了也不代表没有漏项。
 
 ### 官方 release 说明
 
-取 `https://github.com/anthropics/claude-code/releases/tag/v<目标版本>` 的更新说明，逐条当作待移植候选：
+```bash
+bun scripts/upgrade/cli.ts releasenotes --version v<目标版本> --out <work/release-notes-<版本>.json>
+```
+
+`releasenotes` 默认从 `anthropics/claude-code` 拉（fork 仓库没有上游 release，必须用 `--repo` 默认值或显式传）；输出 `{version, items}`，条目 1-based 编号对应台账的 `releaseItems`，`verify --release-notes` 也消费这份 JSON。拉不到时从 `https://github.com/anthropics/claude-code/releases/tag/v<版本>` 手工取正文，再用 `--body-file` 解析。逐条当作待移植候选：
 
 - 每条都回目标 bundle 定位实现（`bundle:<偏移>` 写进 evidence），并和参考版逐行对照语义，不要只命中字符串。
 - 说明里的「行为类」条目（过滤条件、重试、退出码、表格数据）通常不在 inventory 里，是漏项高发区。
@@ -61,17 +75,39 @@ bun scripts/upgrade/cli.ts carve --binary <native/claude> --out <work/claude-<�
 
 ### 结构化常量表
 
-对象字面量里的表项改动（如 PowerShell 只读允许表的 `safeFlags` / 回调）和常量数组追加（如公共参数集）不会进 inventory——值本身不是新增字符串，`verify` 也看不到。收尾必做两步：
+对象字面量里的表项改动（如 PowerShell 只读允许表的 `safeFlags` / 回调）和常量数组追加（如公共参数集）不会进 inventory——值本身不是新增字符串，`verify` 也看不到。用 `table` 两步对拍：
 
-1. 参考版 vs 目标版：抽出同一张表做 diff，得到本版的真实变更集合（别只看 release 说明）。
-2. 目标版 vs `src`：用 `bun -e` 导入对应导出（如 `CMDLET_ALLOWLIST`）dump 成 JSON，与从 bundle 抽出的表逐项对拍 keys / flags / 回调存在性。
+```bash
+# 参考版 vs 目标版：先 dump 参考版，再以 --baseline 对拍目标版
+bun scripts/upgrade/cli.ts table --bundle <ref/cli.js> --anchor get-date --whole --out <work/table-ref.json>
+bun scripts/upgrade/cli.ts table --bundle <target/cli.js> --baseline <work/table-ref.json> \
+  --anchor get-date --whole --out <work/table-2.1.91.json>
+
+# 目标版 vs src：导入对应导出，逐项对拍 keys / flags / 回调存在性
+bun scripts/upgrade/cli.ts table --bundle <target/cli.js> --anchor get-date --whole \
+  --src src/tools/PowerShellTool/readOnlyValidation.ts#CMDLET_ALLOWLIST --out <work/table-src.json>
+```
+
+`--anchor` 是**属性名**（如允许表里的 `get-date`，不带引号和值），不是用来定位的字符串片段；`--whole` 取包含该属性的整张表，默认只取该键的值。diff 为空时三个数组全空，非空时按 added / removed / changed 列出路径。函数/标识符按 `{ $ident: true }` 记录存在性，因此压缩后改名不会误报；`--src` 接受 `<path>#<export>`（`#` 后可带点路径）。
 
 定位与判定：
 
 - minified 变量名每版都变（如 `FYK`→`B$K`、`nX`→`YP`），用锚点字面量（如 `"get-date":{safeFlags`）或访问函数（如 `$az`→`B$K`）反查，别按变量名找。
-- 用字符串感知的括号配对截出对象，再按顶层条目解析。
 - 缺失 = 漏移植；多出 = 有意保留或上游未同步（写进 notes）。
 - 疑似改名先比函数体/返回值：逐字符相同即纯改名，不登记为行为变更。
+
+### 字符串分诊
+
+`inventory` 的字符串差集常把压缩器噪声、打包依赖文案和真正待移植项混在一起。收尾用 `strings` 分诊（输入是两份 `inventory.json`，`--release-notes` 传 `releasenotes` 产出的 JSON 或其正文）：
+
+```bash
+bun scripts/upgrade/cli.ts strings \
+  --target-inventory <work/inventory-<目标版本>.json> \
+  --reference-inventory <work/inventory-<参考版本>.json> --src src \
+  --release-notes <work/release-notes-<版本>.json> --out <work/strings-<版本>>
+```
+
+四类桶：`inSrc`（源码已有，可能是改名/移动）、`releaseNotes`（命中 release 说明）、`noise`（依赖/压缩产物）、`unclassified`（需人工判断）。`unclassified` 逐条回 bundle 看上下文；上游 UI 文案、打包依赖内部等写进 `notes.md` 即可，不伪造移植。扫描器是字符级 JS 字面量扫描（处理引号/转义/模板插值/正则启发式），压缩 bundle 安全；长字符串偶尔会因正则识别误吞，用 `unclassified` 桶兜底。
 
 ## 2. 台账约定
 
@@ -121,6 +157,7 @@ id 前缀：`cmd:` / `env:` / `flag:` / `str:`；非 inventory 类问题用 `bun
 
 1. **开工前**：范围与预计状态清单经用户确认；拿不准的条目记 `unresolved`，不要猜状态让它变绿。
 2. **每批改动后**：对改动文件运行 `verify` skill 的四项检查（typecheck / fmt:check / lint / test）。
-3. **收尾**：`verify` 退出码 0、`report.json` 的 `ok=true`、`notes.md` 已补齐所有 `approximated` 差异。
+3. **收尾**：`verify` 退出码 0、`report.json` 的 `ok=true`、`notes.md` 已补齐所有 `approximated` 差异；`refresh-evidence` 确认 `bundle:` 偏移仍有效（`skipped` 为 0 或已说明）。
 4. 不要为了通过而改 `status.json`——先修 `src`，或如实保留 `unresolved` 并说明。
-5. **收尾交叉验证**：即使 `verify` 已绿，也要按 1.5 走一遍——release 说明逐条确认、本轮接触的安全/白名单表全表对拍；差异分类后写进 `notes.md` 的 R 条目（无论移植与否）。
+5. **收尾交叉验证**：即使 `verify` 已绿，也要按 1.5 走一遍——release 说明逐条确认（`releasenotes` + `releaseItems` 覆盖率）、本轮接触的安全/白名单表全表对拍（`table --whole`）、新增字符串分诊（`strings`）；差异分类后写进 `notes.md` 的 R 条目（无论移植与否）。
+6. **基线门禁**：`gates --ref <上一版本或 HEAD> --fail-on-new` 只报本轮新增的 typecheck/lint/test 发现；仓库自带存量报错，不要用绝对退出码判断。非 0 时读 `gates.md` 的 Added 段，确认是本次改动引入还是基线已有。

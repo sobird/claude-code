@@ -29,8 +29,8 @@ function writeLedger(dir: string, entries: StatusEntry[]): string {
 const DEFAULT_TARGET = 'var a={type:"local",name:"new"};x.option("--newflag");'
 const DEFAULT_REFERENCE = 'var a={type:"local",name:"old"};process.env.CLAUDE_CODE_OLD;x.option("--oldflag");'
 const DEFAULT_SRC = [
-  "export const cmd = { name: 'new' }",
-  "export const cmd2 = { name: 'old' }",
+  "export const cmd = { type: 'local', name: 'new' }",
+  "export const cmd2 = { type: 'local', name: 'old' }",
   "export const env = 'CLAUDE_CODE_OLD MCP_CONNECTION_NONBLOCKING'",
 ].join('\n')
 
@@ -164,7 +164,10 @@ test('double-quoted command name in src is recognized', async () => {
   const paths = await setup([entry('cmd:new', 'already-present'), entry('cmd:old', 'retained-internal')], {
     target: 'var a={type:"local",name:"new"};',
     reference: 'var a={type:"local",name:"old"};',
-    src: ['export const cmd = { name: "new" }', 'export const cmd2 = { name: "old" }'].join('\n'),
+    src: [
+      'export const cmd = { type: "local", name: "new" }',
+      'export const cmd2 = { type: "local", name: "old" }',
+    ].join('\n'),
   })
   const r = await verifyUpgrade(paths)
   expect(r.ok).toBe(true)
@@ -184,7 +187,7 @@ test('env substring does not satisfy a shorter env name', async () => {
   const paths = await setup([entry('cmd:new', 'ported')], {
     target: 'process.env.CLAUDE_CODE_FOO;var a={type:"local",name:"new"}',
     reference: 'var a={type:"local",name:"old"}',
-    src: ["export const cmd = { name: 'new' }", "export const env = 'CLAUDE_CODE_FOOBAR'"].join('\n'),
+    src: ["export const cmd = { type: 'local', name: 'new' }", "export const env = 'CLAUDE_CODE_FOOBAR'"].join('\n'),
   })
   const r = await verifyUpgrade(paths)
   expect(r.ok).toBe(false)
@@ -206,6 +209,105 @@ test('counts every status from the ledger', async () => {
     'retained-internal': 2,
     unresolved: 0,
   })
+})
+
+test('duplicate and malformed ledger entries fail verify', async () => {
+  const paths = await setup([
+    entry('cmd:new', 'ported'),
+    entry('cmd:new', 'ported'),
+    { id: 'flag:old', kind: 'flag', status: 'ported', evidence: ['nonsense'] },
+  ])
+  const r = await verifyUpgrade(paths)
+  expect(r.ok).toBe(false)
+  expect(r.ledgerErrors).toContain('cmd:new: duplicate id')
+  expect(r.ledgerErrors.some((error) => error.includes('flag:old: flag ids must start with'))).toBe(true)
+  expect(r.ledgerErrors.some((error) => error.includes('malformed evidence'))).toBe(true)
+})
+
+test('strict evidence accepts a valid env offset and string evidence', async () => {
+  const target = 'var a={type:"local",name:"new"};process.env.CLAUDE_CODE_NEW;'
+  const offset = target.indexOf('CLAUDE_CODE_NEW')
+  const paths = await setup(
+    [
+      entry('cmd:new', 'ported'),
+      {
+        id: 'env:CLAUDE_CODE_NEW',
+        kind: 'env',
+        status: 'ported',
+        evidence: [`bundle:${offset}`, 'bundle:process.env'],
+      },
+    ],
+    { target, reference: target, src: `${DEFAULT_SRC}\nexport const e = 'CLAUDE_CODE_NEW'` },
+  )
+  const r = await verifyUpgrade({ ...paths, strictEvidence: true })
+  expect(r.evidenceErrors).toEqual([])
+  expect(r.ok).toBe(true)
+})
+
+test('strict evidence rejects broken offsets and absent violations', async () => {
+  const target = 'var a={type:"local",name:"new"};process.env.CLAUDE_CODE_NEW;'
+  const paths = await setup(
+    [
+      entry('cmd:new', 'ported'),
+      {
+        id: 'env:CLAUDE_CODE_NEW',
+        kind: 'env',
+        status: 'ported',
+        evidence: ['bundle:999999', 'bundle:absent:CLAUDE_CODE_NEW', 'bundle:no-name:"name:"'],
+      },
+    ],
+    { target, src: `${DEFAULT_SRC}\nexport const e = 'CLAUDE_CODE_NEW'` },
+  )
+  const r = await verifyUpgrade({ ...paths, strictEvidence: true })
+  expect(r.ok).toBe(false)
+  expect(r.evidenceErrors).toHaveLength(3)
+  expect(r.evidenceErrors.some((error) => error.includes('outside the target bundle'))).toBe(true)
+  expect(r.evidenceErrors.some((error) => error.includes('bundle:absent'))).toBe(true)
+})
+
+test('evidence errors are advisory without --strict-evidence', async () => {
+  const target = 'var a={type:"local",name:"new"};process.env.CLAUDE_CODE_NEW;'
+  const paths = await setup(
+    [
+      entry('cmd:new', 'ported'),
+      { id: 'env:CLAUDE_CODE_NEW', kind: 'env', status: 'ported', evidence: ['bundle:999999'] },
+    ],
+    { target, reference: target, src: `${DEFAULT_SRC}\nexport const e = 'CLAUDE_CODE_NEW'` },
+  )
+  const r = await verifyUpgrade(paths)
+  expect(r.evidenceErrors).toHaveLength(1)
+  expect(r.ok).toBe(true)
+})
+
+test('missing srcEvidence file or symbol fails verify', async () => {
+  const paths = await setup([
+    entry('cmd:new', 'ported'),
+    {
+      id: 'behavior:demo',
+      kind: 'behavior',
+      status: 'ported',
+      evidence: [],
+      srcEvidence: { files: ['src/nope.ts'], symbols: ['missingSymbol'] },
+    },
+  ])
+  const r = await verifyUpgrade(paths)
+  expect(r.ok).toBe(false)
+  expect(r.srcEvidenceErrors).toContain('behavior:demo: src file src/nope.ts not found')
+  expect(r.srcEvidenceErrors).toContain('behavior:demo: symbol missingSymbol not found in src')
+})
+
+test('release notes coverage reports uncovered and unknown items', async () => {
+  const paths = await setup([
+    { ...entry('cmd:new', 'ported'), releaseItems: [1, 3] },
+    entry('cmd:old', 'retained-internal'),
+  ])
+  const notesPath = join(paths.dir, 'release-notes.json')
+  writeFileSync(notesPath, JSON.stringify({ version: 'v', items: ['first', 'second'] }))
+
+  const r = await verifyUpgrade({ ...paths, releaseNotesPath: notesPath })
+  expect(r.ok).toBe(false)
+  expect(r.uncoveredReleaseItems).toEqual(['#2: second'])
+  expect(r.ledgerErrors).toContain('cmd:new: releaseItem 3 > 2 notes')
 })
 
 test('writeReport writes report.json and report.md', async () => {

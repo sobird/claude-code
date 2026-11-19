@@ -7,6 +7,7 @@ import { errorMessage, MalformedCommandError, ShellError } from './errors.js'
 import type { FrontmatterShell } from './frontmatterParser.js'
 import { createAssistantMessage } from './messages.js'
 import { hasPermissionsToUseTool } from './permissions/permissions.js'
+import { getSettings_DEPRECATED, getSettingsForSource } from './settings/settings.js'
 import { processToolResultBlock } from './toolResultStorage.js'
 
 // Narrow structural slice both BashTool and PowerShellTool satisfy. We can't
@@ -53,6 +54,33 @@ const BLOCK_PATTERN = /```!\s*\n?([\s\S]*?)\n?```/g
 // eslint-disable-next-line custom-rules/no-lookbehind-regex -- gated by text.includes('!`') below (PR#22986)
 const INLINE_PATTERN = /(?<=^|\s)!`([^`]+)`/gm
 
+// Placeholder substituted for shell commands when execution is disabled by policy.
+const DISABLED_PLACEHOLDER = '[shell command execution disabled by policy]'
+
+// Whole-match variants used to strip commands when execution is disabled.
+const BLOCK_REPLACE_PATTERN = /```!\s*\n?[\s\S]*?\n?```/g
+// eslint-disable-next-line custom-rules/no-lookbehind-regex -- gated by text.includes('!`') below
+const INLINE_REPLACE_PATTERN = /(?<=^|\s)!`[^`]+`/gm
+
+/**
+ * Whether inline shell execution in skills / custom slash commands is disabled.
+ * Managed policy settings win over user/project settings so a policy can lock it on.
+ */
+function isSkillShellExecutionDisabled(): boolean {
+  if (getSettingsForSource('policySettings')?.disableSkillShellExecution === true) {
+    return true
+  }
+  return getSettings_DEPRECATED()?.disableSkillShellExecution === true
+}
+
+function replaceShellCommandsWithPlaceholder(text: string): string {
+  let result = text.replace(BLOCK_REPLACE_PATTERN, DISABLED_PLACEHOLDER)
+  if (result.includes('!`')) {
+    result = result.replace(INLINE_REPLACE_PATTERN, DISABLED_PLACEHOLDER)
+  }
+  return result
+}
+
 /**
  * Parses prompt text and executes any embedded shell commands.
  * Supports two syntaxes:
@@ -70,6 +98,12 @@ export async function executeShellCommandsInPrompt(
   slashCommandName: string,
   shell?: FrontmatterShell,
 ): Promise<string> {
+  // Policy may forbid running inline shell commands entirely. Replace them with
+  // a placeholder so the prompt still reads coherently but nothing executes.
+  if (isSkillShellExecutionDisabled()) {
+    return replaceShellCommandsWithPlaceholder(text)
+  }
+
   let result = text
 
   // Resolve the tool once. `shell === undefined` and `shell === 'bash'` both

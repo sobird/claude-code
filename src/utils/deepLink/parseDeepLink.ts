@@ -32,11 +32,20 @@ export type DeepLinkAction = {
  * Check if a string contains ASCII control characters (0x00-0x1F, 0x7F).
  * These can act as command separators in shells (newlines, carriage returns, etc.).
  * Allows printable ASCII and Unicode (CJK, emoji, accented chars, etc.).
+ *
+ * `allowNewlineAndTab` permits \n (0x0A) and \t (0x09) — used for the prompt
+ * query, where an embedded newline (e.g. from `%0A`) is legitimate multi-line
+ * input and the value is shell-escaped at the launch boundary. Returns (0x0D)
+ * stays disallowed so a CRLF can't smuggle in a bare CR.
  */
-function containsControlChars(s: string): boolean {
+function containsControlChars(s: string, options?: { allowNewlineAndTab?: boolean }): boolean {
+  const allowNewlineAndTab = options?.allowNewlineAndTab === true
   for (let i = 0; i < s.length; i++) {
     const code = s.charCodeAt(i)
     if (code <= 0x1f || code === 0x7f) {
+      if (allowNewlineAndTab && (code === 0x0a || code === 0x09)) {
+        continue
+      }
       return true
     }
   }
@@ -129,9 +138,11 @@ export function parseDeepLink(uri: string): DeepLinkAction {
 
   let query: string | undefined
   if (rawQuery && rawQuery.trim().length > 0) {
-    // Strip hidden Unicode characters (ASCII smuggling / hidden prompt injection)
-    query = partiallySanitizeUnicode(rawQuery.trim())
-    if (containsControlChars(query)) {
+    // Strip hidden Unicode characters (ASCII smuggling / hidden prompt injection).
+    // Normalize CRLF/CR to LF so `%0D%0A` becomes a single newline, then allow
+    // newlines and tabs (multi-line prompts) while still rejecting other controls.
+    query = partiallySanitizeUnicode(rawQuery.trim()).replace(/\r\n?/g, '\n')
+    if (containsControlChars(query, { allowNewlineAndTab: true })) {
       throw new Error('Deep link query contains disallowed control characters')
     }
     if (query.length > MAX_QUERY_LENGTH) {

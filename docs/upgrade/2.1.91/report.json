@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "counts": {
+    "already-present": 1,
+    "ported": 19,
+    "approximated": 5,
+    "ignored-dependency": 0,
+    "retained-internal": 0,
+    "unresolved": 0
+  },
+  "ledgerErrors": [],
+  "missingInSrc": [],
+  "unexpectedInSrc": [],
+  "unregistered": [],
+  "unresolved": [],
+  "evidenceErrors": [],
+  "srcEvidenceErrors": [],
+  "uncoveredReleaseItems": []
+}

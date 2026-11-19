@@ -418,6 +418,12 @@ export type Tool<
    */
   maxResultSizeChars: number
   /**
+   * Upper bound applied when deriving the persistence threshold from
+   * maxResultSizeChars. Defaults to the 50k global limit; MCP tools whose
+   * server opted into a larger result cap (via _meta) raise it to 500k.
+   */
+  persistenceThresholdCeiling?: number
+  /**
    * When true, enables strict mode for this tool, which causes the API to
    * more strictly adhere to tool instructions and parameter schemas.
    * Only applied when the tengu_tool_pear is enabled.

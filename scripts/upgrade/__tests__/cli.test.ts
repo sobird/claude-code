@@ -84,7 +84,7 @@ test('verify writes report files and returns 0 when the ledger is clean', () => 
   writeFileSync(bundle, 'var a={type:"local",name:"demo"};\n')
   const srcDir = join(dir, 'src')
   mkdirSync(srcDir, { recursive: true })
-  writeFileSync(join(srcDir, 'commands.ts'), "export const cmd = { name: 'demo' }\n")
+  writeFileSync(join(srcDir, 'commands.ts'), "export const cmd = { type: 'local', name: 'demo' }\n")
 
   const ledger: StatusLedger = { source: { reference: 'demo', target: 'demo' }, entries: [] }
   const statusPath = join(dir, 'status.json')
@@ -107,6 +107,50 @@ test('verify writes report files and returns 0 when the ledger is clean', () => 
   expect(result.exitCode).toBe(0)
   const report = JSON.parse(readFileSync(join(out, 'report.json'), 'utf8')) as VerifyReport
   expect(report.ok).toBe(true)
+})
+
+test('releasenotes parses a body file into items', () => {
+  const dir = tempDir()
+  const body = join(dir, 'body.md')
+  writeFileSync(body, '- first change\n- second change\n  continued\n')
+  const out = join(dir, 'notes.json')
+  const result = run(['releasenotes', '--version', 'v0.0.0', '--body-file', body, '--out', out])
+  expect(result.exitCode).toBe(0)
+  expect(JSON.parse(readFileSync(out, 'utf8'))).toEqual({
+    version: 'v0.0.0',
+    items: ['first change', 'second change continued'],
+  })
+})
+
+test('refresh-evidence rewrites a rotted offset in place', () => {
+  const dir = tempDir()
+  const bundle = join(dir, 'bundle.js')
+  writeFileSync(bundle, 'var x=1;process.env.CLAUDE_CODE_X;\n')
+  const statusPath = join(dir, 'status.json')
+  const ledger: StatusLedger = {
+    source: { reference: 'demo', target: 'demo' },
+    entries: [{ id: 'env:CLAUDE_CODE_X', kind: 'env', status: 'ported', evidence: ['bundle:0'] }],
+  }
+  writeFileSync(statusPath, JSON.stringify(ledger))
+
+  const out = join(dir, 'refresh.json')
+  const result = run([
+    'refresh-evidence',
+    '--target',
+    bundle,
+    '--status',
+    statusPath,
+    '--src',
+    dir,
+    '--out',
+    out,
+    '--in-place',
+  ])
+  expect(result.exitCode).toBe(0)
+  const offset = 'var x=1;process.env.'.length
+  const refreshed = JSON.parse(readFileSync(statusPath, 'utf8')) as StatusLedger
+  expect(refreshed.entries[0].evidence).toEqual([`bundle:${offset}`])
+  expect(JSON.parse(readFileSync(out, 'utf8')).updated).toHaveLength(1)
 })
 
 test('--help prints usage and exits 0', () => {

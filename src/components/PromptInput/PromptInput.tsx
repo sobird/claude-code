@@ -15,7 +15,7 @@ import { type AppState, useAppState, useAppStateStore, useSetAppState } from 'sr
 import type { FooterItem } from 'src/state/AppStateStore.js'
 import { getCwd } from 'src/utils/cwd.js'
 import { isQueuedCommandEditable, popAllEditable } from 'src/utils/messageQueueManager.js'
-import stripAnsi from 'strip-ansi'
+import { stripAnsi } from 'src/utils/stripAnsi.js'
 
 import { companionReservedColumns } from '../../buddy/CompanionSprite.js'
 import { findBuddyTriggerPositions, useBuddyNotification } from '../../buddy/useBuddyNotification.js'
@@ -112,6 +112,7 @@ import type { TextHighlight } from '../../utils/textHighlighting.js'
 import type { Theme } from '../../utils/theme.js'
 import { findThinkingTriggerPositions, getRainbowColor, isUltrathinkEnabled } from '../../utils/thinking.js'
 import { findTokenBudgetPositions } from '../../utils/tokenBudget.js'
+import { isUltraplanEnabled } from '../../utils/ultraplan/enabled.js'
 import { findUltraplanTriggerPositions, findUltrareviewTriggerPositions } from '../../utils/ultraplan/keyword.js'
 import { AutoModeOptInDialog } from '../AutoModeOptInDialog.js'
 import { BridgeDialog } from '../BridgeDialog.js'
@@ -607,7 +608,7 @@ function PromptInput({
   const ultraplanLaunching = useAppState((s) => s.ultraplanLaunching)
   const ultraplanTriggers = useMemo(
     () =>
-      feature('ULTRAPLAN') && !ultraplanSessionUrl && !ultraplanLaunching
+      feature('ULTRAPLAN') && isUltraplanEnabled() && !ultraplanSessionUrl && !ultraplanLaunching
         ? findUltraplanTriggerPositions(displayedValue)
         : [],
     [displayedValue, ultraplanSessionUrl, ultraplanLaunching],
@@ -890,7 +891,7 @@ function PromptInput({
   }, [addNotification, removeNotification, thinkTriggers.length])
 
   useEffect(() => {
-    if (feature('ULTRAPLAN') && ultraplanTriggers.length) {
+    if (feature('ULTRAPLAN') && isUltraplanEnabled() && ultraplanTriggers.length) {
       addNotification({
         key: 'ultraplan-active',
         text: 'This prompt will launch an ultraplan session in Claude Code on the web',

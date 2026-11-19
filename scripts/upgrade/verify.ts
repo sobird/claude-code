@@ -1,24 +1,26 @@
+import { existsSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
+import { checkEvidence } from './evidence'
 import { scanBundle } from './inventory'
-import type { Inventory, Status, StatusLedger, VerifyReport } from './types'
+import { STATUSES, validateLedger } from './ledger'
+import { type ReleaseNotes, releaseCoverage } from './releaseNotes'
+import { extractSrcCommandNames } from './srcCommands'
+import type { Inventory, Status, StatusEntry, StatusLedger, VerifyReport } from './types'
 
 export type VerifyOptions = {
   targetPath: string
   referencePath: string
   srcDir: string
   statusPath: string
+  /** Fail `ok` on stale/malformed evidence pointers (opt-in for old ledgers). */
+  strictEvidence?: boolean
+  /** Directory `scenario:<file>` evidence resolves against. */
+  scenariosDir?: string
+  /** Parsed release-notes JSON; when set, every item must be covered. */
+  releaseNotesPath?: string
 }
-
-const STATUSES: Status[] = [
-  'already-present',
-  'ported',
-  'approximated',
-  'ignored-dependency',
-  'retained-internal',
-  'unresolved',
-]
 
 const GROUP1_OK = new Set<Status>(['ported', 'approximated'])
 const GROUP2_OK = new Set<Status>(['already-present', 'retained-internal'])
@@ -32,7 +34,7 @@ const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\
 const hasToken = (text: string, value: string): boolean =>
   new RegExp(`(?<![A-Za-z0-9_])${escapeRegExp(value)}(?![A-Za-z0-9_])`).test(text)
 
-async function readSources(dir: string): Promise<string> {
+export async function readSources(dir: string): Promise<string> {
   const parts: string[] = []
   async function walk(current: string): Promise<void> {
     const entries = await readdir(current, { withFileTypes: true })
@@ -53,18 +55,40 @@ function commandNames(inv: Inventory): Set<string> {
   return new Set(inv.commands.map((command) => command.name))
 }
 
+// `behavior:` entries carry their own local anchors. They are not a behavior
+// check, but they catch ledger rot: a renamed/removed helper turns a stale
+// note into a failing verify instead of silently staying green.
+function checkSrcEvidence(entries: StatusEntry[], srcText: string, repoRoot: string): string[] {
+  const errors: string[] = []
+  for (const entry of entries) {
+    const evidence = entry.srcEvidence
+    if (!evidence) continue
+    for (const file of evidence.files ?? []) {
+      if (!existsSync(resolve(repoRoot, file))) errors.push(`${entry.id}: src file ${file} not found`)
+    }
+    for (const symbol of evidence.symbols ?? []) {
+      if (!hasToken(srcText, symbol)) errors.push(`${entry.id}: symbol ${symbol} not found in src`)
+    }
+  }
+  return errors
+}
+
 export async function verifyUpgrade(opts: VerifyOptions): Promise<VerifyReport> {
-  const [target, reference, srcText, ledgerText] = await Promise.all([
+  const repoRoot = resolve(opts.srcDir, '..')
+  const [target, reference, srcText, ledgerText, srcCommandNames, targetText] = await Promise.all([
     scanBundle(opts.targetPath),
     scanBundle(opts.referencePath),
     readSources(opts.srcDir),
     readFile(opts.statusPath, 'utf8'),
+    extractSrcCommandNames(opts.srcDir),
+    readFile(opts.targetPath, 'utf8'),
   ])
   const ledger = JSON.parse(ledgerText) as StatusLedger
   const byId = new Map(ledger.entries.map((entry) => [entry.id, entry]))
 
-  const srcCommands = new Set([...srcText.matchAll(/name:\s*['"]([^'"]+)['"]/g)].map((match) => match[1]))
+  const srcCommands = new Set(srcCommandNames)
 
+  const ledgerErrors = validateLedger(ledger)
   const missingInSrc: string[] = []
   const unexpectedInSrc: string[] = []
   const unregistered: string[] = []
@@ -122,22 +146,45 @@ export async function verifyUpgrade(opts: VerifyOptions): Promise<VerifyReport> 
     }
   }
 
+  const evidenceErrors = checkEvidence(ledger.entries, {
+    targetText,
+    scenariosDir: opts.scenariosDir ?? resolve(repoRoot, 'scripts/upgrade/scenarios'),
+    repoRoot,
+  })
+  const srcEvidenceErrors = checkSrcEvidence(ledger.entries, srcText, repoRoot)
+
+  let uncoveredReleaseItems: string[] = []
+  if (opts.releaseNotesPath) {
+    const notes = JSON.parse(await readFile(opts.releaseNotesPath, 'utf8')) as ReleaseNotes
+    const coverage = releaseCoverage(ledger, notes.items.length)
+    uncoveredReleaseItems = coverage.uncovered.map((item) => `#${item}: ${notes.items[item - 1]}`)
+    ledgerErrors.push(...coverage.unknown)
+  }
+
   const counts = Object.fromEntries(STATUSES.map((status) => [status, 0])) as Record<Status, number>
   for (const entry of ledger.entries) counts[entry.status] += 1
 
   const report: VerifyReport = {
     ok: false,
     counts,
+    ledgerErrors: uniqSorted(ledgerErrors),
     missingInSrc: uniqSorted(missingInSrc),
     unexpectedInSrc: uniqSorted(unexpectedInSrc),
     unregistered: uniqSorted(unregistered),
     unresolved: uniqSorted(unresolved),
+    evidenceErrors: uniqSorted(evidenceErrors),
+    srcEvidenceErrors: uniqSorted(srcEvidenceErrors),
+    uncoveredReleaseItems: uniqSorted(uncoveredReleaseItems),
   }
   report.ok =
-    report.missingInSrc.length +
+    report.ledgerErrors.length +
+      report.missingInSrc.length +
       report.unexpectedInSrc.length +
       report.unregistered.length +
-      report.unresolved.length ===
+      report.unresolved.length +
+      (opts.strictEvidence ? report.evidenceErrors.length : 0) +
+      report.srcEvidenceErrors.length +
+      report.uncoveredReleaseItems.length ===
     0
   return report
 }

@@ -5,7 +5,7 @@ import { z } from 'zod/v4'
 import { SandboxSettingsSchema } from '../../entrypoints/sandboxTypes.js'
 import { isEnvTruthy } from '../envUtils.js'
 import { lazySchema } from '../lazySchema.js'
-import { EXTERNAL_PERMISSION_MODES, PERMISSION_MODES } from '../permissions/PermissionMode.js'
+import { PERMISSION_MODES } from '../permissions/PermissionMode.js'
 import { MarketplaceSourceSchema } from '../plugins/schemas.js'
 import { CLAUDE_CODE_SETTINGS_SCHEMA_URL } from './constants.js'
 import { PermissionRuleSchema } from './permissionValidation.js'
@@ -46,7 +46,7 @@ export const PermissionsSchema = lazySchema(() =>
         .optional()
         .describe('List of permission rules that should always prompt for confirmation'),
       defaultMode: z
-        .enum(feature('TRANSCRIPT_CLASSIFIER') ? PERMISSION_MODES : EXTERNAL_PERMISSION_MODES)
+        .enum(PERMISSION_MODES)
         .optional()
         .describe('Default permission mode when Claude Code needs access'),
       disableBypassPermissionsMode: z
@@ -369,6 +369,14 @@ export const SettingsSchema = lazySchema(() =>
         .describe('Git worktree configuration for --worktree flag.'),
       // Whether to disable all hooks and statusLine
       disableAllHooks: z.boolean().optional().describe('Disable all hooks and statusLine execution'),
+      // Whether to disable inline shell execution in skills / custom slash commands
+      disableSkillShellExecution: z
+        .boolean()
+        .optional()
+        .describe(
+          'Disable inline shell execution in skills and custom slash commands from user, project, or plugin sources. ' +
+            'Commands are replaced with a placeholder instead of being run.',
+        ),
       // Which shell backs input-box `!` (see docs/design/ps-shell-selection.md §4.2)
       defaultShell: z
         .enum(['bash', 'powershell'])

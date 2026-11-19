@@ -1,5 +1,4 @@
 import React, { useRef } from 'react'
-import stripAnsi from 'strip-ansi'
 
 import { Messages } from '../components/Messages.js'
 import { KeybindingProvider } from '../keybindings/KeybindingContext.js'
@@ -9,6 +8,7 @@ import { AppStateProvider } from '../state/AppState.js'
 import type { Tools } from '../Tool.js'
 import type { Message } from '../types/message.js'
 import { renderToAnsiString } from './staticRender.js'
+import { stripAnsi } from './stripAnsi.js'
 
 /**
  * Minimal keybinding provider for static/headless renders.

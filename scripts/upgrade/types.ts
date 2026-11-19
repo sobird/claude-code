@@ -38,17 +38,31 @@ export type AlignResult = {
   nodes: AlignNode[]
 }
 
-export type StatusEntry = { id: string; kind: string; status: Status; evidence: string[]; notes?: string }
+export type StatusEntry = {
+  id: string
+  kind: string
+  status: Status
+  evidence: string[]
+  notes?: string
+  /** 1-based indexes into the upstream release notes covered by this entry. */
+  releaseItems?: number[]
+  /** Local source anchors that must keep existing for `behavior:` entries. */
+  srcEvidence?: { files?: string[]; symbols?: string[] }
+}
 
 export type StatusLedger = { source: { reference: string; target: string }; entries: StatusEntry[] }
 
 export type VerifyReport = {
   ok: boolean
   counts: Record<Status, number>
+  ledgerErrors: string[]
   missingInSrc: string[]
   unexpectedInSrc: string[]
   unregistered: string[]
   unresolved: string[]
+  evidenceErrors: string[]
+  srcEvidenceErrors: string[]
+  uncoveredReleaseItems: string[]
 }
 
 export type ProbeScenario = {

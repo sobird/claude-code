@@ -233,7 +233,11 @@ export function getEffortValueDescription(value: EffortValue): string {
   }
 
   if (typeof value === 'string') {
-    return getEffortLevelDescription(value)
+    const description = getEffortLevelDescription(value)
+    if (value === 'high' && isProSubscriber() && getFeatureValue_CACHED_MAY_BE_STALE('tengu_slate_finch', false)) {
+      return `${description} · burns fastest — medium handles most tasks`
+    }
+    return description
   }
   return 'Balanced approach with standard implementation and testing'
 }

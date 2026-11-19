@@ -17,6 +17,7 @@ import { logError } from '../log.js'
 import { getPlatform } from '../platform.js'
 import { ripgrepCommand } from '../ripgrep.js'
 import { subprocessEnv } from '../subprocessEnv.js'
+import { windowsPathToPosixPath } from '../windowsPaths.js'
 import { quote } from './shellQuote.js'
 
 const LITERAL_BACKSLASH = '\\'
@@ -240,6 +241,17 @@ function getUserSnapshotContent(configFile: string): string {
 }
 
 /**
+ * Collect the `bin/` directories of enabled (non-builtin) plugins so their
+ * executables can be invoked as bare commands from the Bash tool. Lazily
+ * imported to avoid pulling the plugin loader into the startup graph.
+ */
+async function getPluginBinPaths(): Promise<string[]> {
+  const { loadAllPluginsCacheOnly } = await import('../plugins/pluginLoader.js')
+  const { enabled } = await loadAllPluginsCacheOnly()
+  return enabled.filter((plugin) => !plugin.isBuiltin && plugin.path).map((plugin) => join(plugin.path, 'bin'))
+}
+
+/**
  * Generates Claude Code specific snapshot content
  * This content is always included regardless of user configuration
  */
@@ -256,6 +268,14 @@ async function getClaudeCodeSnapshotContent(): Promise<string> {
       pathValue = cygwinResult.stdout.trim()
     }
     // Fall back to process.env.PATH if we can't get Cygwin PATH
+  }
+
+  // Append plugin bin/ dirs so plugins can expose bare commands to the Bash
+  // tool. Appended (not prepended) so a plugin can't shadow a system binary.
+  const pluginBinDirs = await getPluginBinPaths()
+  if (pluginBinDirs.length > 0) {
+    const dirs = getPlatform() === 'windows' ? pluginBinDirs.map((dir) => windowsPathToPosixPath(dir)) : pluginBinDirs
+    pathValue = [pathValue, ...dirs].filter(Boolean).join(':')
   }
 
   const rgIntegration = createRipgrepShellIntegration()

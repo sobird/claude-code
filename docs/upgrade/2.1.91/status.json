@@ -1,0 +1,286 @@
+{
+  "source": {
+    "reference": "2.1.90",
+    "target": "2.1.91"
+  },
+  "entries": [
+    {
+      "id": "env:CLAUDE_CODE_HOST_HTTP_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:4362458"],
+      "notes": "由打包依赖 @anthropic-ai/sandbox-runtime 的 Linux 沙箱启动代码注入子进程；本仓库该能力由同名依赖提供，src/ 不直接读取，沿用 2.1.90 台账的近似状态（依赖噪声）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:4362536"],
+      "notes": "同 HOST_HTTP_PROXY_PORT：由打包依赖 @anthropic-ai/sandbox-runtime 注入沙箱子进程，本仓库由同名依赖提供，src/ 不直接读取（依赖噪声）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_THRESHOLD_MINUTES",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:12407389"],
+      "notes": "resume-return 提示阈值（默认 70），由 GrowthBook tengu_gleaming_fair + resumeReturnDismissed 门控；本仓库无此提示，仅记录（沿用 2.1.90 台账，2.1.91 无变化）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_TOKEN_THRESHOLD",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:12407453"],
+      "notes": "resume-return 提示阈值（默认 100000），同 RESUME_THRESHOLD_MINUTES；本仓库无此提示，仅记录。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_SM_COMPACT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:9518882"],
+      "notes": "扫描器 ENV_RE 从 ENABLE_/DISABLE_CLAUDE_CODE_SM_COMPACT 截取到的子串名；真实读取点为 src/services/compact/sessionMemoryCompact.ts（带前缀的两个变量），以近似记录消化扫描噪声（2.1.91 无变化）。"
+    },
+    {
+      "id": "behavior:mcp-tool-result-size-override",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:6914190", "bundle:5057197"],
+      "notes": "changelog「MCP 结果可通过 _meta[\"anthropic/maxResultSizeChars\"] 提高持久化上限（至 500K）」：src/services/mcp/client.ts 读取注解并把 MCP_RESULT_SIZE_CEILING 传给工具；src/Tool.ts 新增 persistenceThresholdCeiling；src/utils/toolResultStorage.ts 的 getPersistenceThreshold 增加 ceiling 参数；src/services/tools/toolExecution.ts 透传。",
+      "releaseItems": [1],
+      "srcEvidence": {
+        "files": [
+          "src/services/mcp/client.ts",
+          "src/Tool.ts",
+          "src/utils/toolResultStorage.ts",
+          "src/services/tools/toolExecution.ts"
+        ],
+        "symbols": ["MCP_RESULT_SIZE_CEILING", "persistenceThresholdCeiling", "getPersistenceThreshold"]
+      }
+    },
+    {
+      "id": "behavior:disable-skill-shell-execution",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:1047152", "bundle:8686406"],
+      "notes": "changelog「新增 disableSkillShellExecution 设置，禁用 skills/自定义斜杠命令/插件命令里的内联 shell 执行」：src/utils/settings/types.ts 增加布尔设置；src/utils/promptShellExecution.ts 增加策略读取（policySettings 优先）与 DISABLED_PLACEHOLDER 占位替换。",
+      "releaseItems": [2],
+      "srcEvidence": {
+        "files": ["src/utils/settings/types.ts", "src/utils/promptShellExecution.ts"],
+        "symbols": ["disableSkillShellExecution", "DISABLED_PLACEHOLDER"]
+      }
+    },
+    {
+      "id": "behavior:deep-link-multiline-prompts",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:1055897", "bundle:9941131"],
+      "notes": "changelog「claude-cli://open?q= 深链接支持多行提示」：src/utils/deepLink/parseDeepLink.ts 的 containsControlChars 增加 allowNewlineAndTab 选项，CRLF 归一为 LF，允许 %0A/%09。",
+      "releaseItems": [3],
+      "srcEvidence": {
+        "files": ["src/utils/deepLink/parseDeepLink.ts"],
+        "symbols": ["allowNewlineAndTab"]
+      }
+    },
+    {
+      "id": "behavior:plugin-bin-executables",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:9701789", "bundle:8548421"],
+      "notes": "changelog「插件可在 bin/ 下附带可执行文件，并从 Bash 工具以裸命令调用」：src/utils/bash/ShellSnapshot.ts 懒加载 loadAllPluginsCacheOnly，收集启用插件（非 builtin）的 bin/ 目录追加到快照 PATH（追加而非前置，避免遮蔽系统命令；Windows 走 windowsPathToPosixPath）。",
+      "releaseItems": [4],
+      "srcEvidence": {
+        "files": ["src/utils/bash/ShellSnapshot.ts"],
+        "symbols": ["loadAllPluginsCacheOnly"]
+      }
+    },
+    {
+      "id": "behavior:transcript-chain-timestamp-fallback",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:11379591"],
+      "notes": "changelog「修复 --resume 时异步写失败导致的会话链断裂」：src/utils/sessionStorage.ts 的 buildConversationChain 在 parentUuid 指向磁盘上不存在的消息时，用 findClosestPreviousMessage 按 5 秒时间窗兜底，并上报 tengu_chain_timestamp_fallback。",
+      "releaseItems": [5],
+      "srcEvidence": {
+        "files": ["src/utils/sessionStorage.ts"],
+        "symbols": ["findClosestPreviousMessage", "tengu_chain_timestamp_fallback"]
+      }
+    },
+    {
+      "id": "behavior:cmd-super-delete-line",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:9873953", "bundle:9874052"],
+      "notes": "changelog「cmd+delete 在 iTerm2/kitty/WezTerm/Ghostty/Windows Terminal 上删除到行首」：src/hooks/useTextInput.ts 在 backspace 处理里新增 key.super → killToLineStart，在 delete 处理里新增 key.super → killToLineEnd。",
+      "releaseItems": [6],
+      "srcEvidence": {
+        "files": ["src/hooks/useTextInput.ts"],
+        "symbols": ["killToLineStart", "killToLineEnd"]
+      }
+    },
+    {
+      "id": "bundle-only:plan-file-remote-restart",
+      "kind": "behavior",
+      "status": "already-present",
+      "evidence": ["bundle:8391256", "bundle:9087508"],
+      "notes": "changelog「修复远端会话容器重启后丢失 plan 文件路径」：对比 2.1.90/2.1.91 bundle，CLI 侧相关机制（copyPlanForResume 的 resume 恢复、persistFileSnapshotIfRemote 的 file_snapshot 落盘、normalizeToolInput 为 ExitPlanMode 注入 plan/planFilePath）逐字符一致，差异仅来自压缩变量名；该修复落在容器/CCR 侧，CLI 无需改动，src 中机制已具备。",
+      "releaseItems": [7],
+      "srcEvidence": {
+        "files": ["src/utils/plans.ts", "src/tools/ExitPlanModeTool/ExitPlanModeV2Tool.ts"],
+        "symbols": ["copyPlanForResume", "persistFileSnapshotIfRemote", "normalizeToolInput"]
+      }
+    },
+    {
+      "id": "behavior:settings-default-mode-auto-schema",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:997069", "bundle:1039753"],
+      "notes": "changelog「修复 permissions.defaultMode: \"auto\" 的 JSON schema 校验」：src/types/permissions.ts 的 EXTERNAL_PERMISSION_MODES 纳入 'auto'（与上游 qw8 一致），INTERNAL_PERMISSION_MODES 改为其复制，并移除仅此处使用的 feature('TRANSCRIPT_CLASSIFIER') 导入；src/utils/settings/types.ts 的 defaultMode 改为无条件 z.enum(PERMISSION_MODES)；src/utils/permissions/PermissionMode.ts 的 isExternalPermissionMode 改为 mode !== 'bubble'；src/entrypoints/sdk/coreSchemas.ts 的 PermissionModeSchema 枚举与 describe 同步加入 'auto'，否则 mailbox 的权限模式类型无法覆盖 auto（typecheck 复现）。",
+      "releaseItems": [8],
+      "srcEvidence": {
+        "files": [
+          "src/types/permissions.ts",
+          "src/utils/settings/types.ts",
+          "src/utils/permissions/PermissionMode.ts",
+          "src/entrypoints/sdk/coreSchemas.ts"
+        ],
+        "symbols": ["EXTERNAL_PERMISSION_MODES", "PermissionModeSchema"]
+      }
+    },
+    {
+      "id": "behavior:windows-cleanup-protect-active",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10335182"],
+      "notes": "changelog「Windows 版本清理不再删除运行中版本的回滚副本」：src/utils/nativeInstaller/installer.ts 的 VersionInfo 增加 size；当 readlink 探测不到当前版本（Windows 上是拷贝而非符号链接）时，按活动可执行文件大小匹配并加入 protectedVersions。",
+      "releaseItems": [9],
+      "srcEvidence": {
+        "files": ["src/utils/nativeInstaller/installer.ts"],
+        "symbols": ["protectedVersions"]
+      }
+    },
+    {
+      "id": "behavior:feedback-unavailable-reason",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:9916271", "bundle:7020595"],
+      "notes": "changelog「/feedback 改为解释为何不可用，而不是从菜单中消失」：src/commands/feedback/feedback.tsx 增加 getFeedbackUnavailableReason（Bedrock/Vertex/Foundry、DISABLE_FEEDBACK_COMMAND、DISABLE_BUG_COMMAND、essential-traffic 与 allow_product_feedback 策略）；src/commands/feedback/index.ts 改为 isEnabled: () => true，始终可见。",
+      "releaseItems": [10],
+      "srcEvidence": {
+        "files": ["src/commands/feedback/feedback.tsx", "src/commands/feedback/index.ts"],
+        "symbols": ["getFeedbackUnavailableReason"]
+      }
+    },
+    {
+      "id": "behavior:claude-api-agent-design-guidance",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:12754405", "bundle:12748194", "bundle:12744762"],
+      "notes": "changelog「改进 /claude-api skill 的 agent 设计指导（工具面、上下文管理、缓存策略）」：新增 src/skills/bundled/claude-api/shared/agent-design.md；SKILL.md 的 Reading Guide 增加 Agent design 快捷项与文件清单条目（tool-use-concepts 之后顺延编号）；effort 参数说明更新为 medium/max/low 的取舍；src/skills/bundled/claudeApiContent.ts 注册新文件，claudeApi.ts 的内联阅读指南同步新增条目。",
+      "releaseItems": [11],
+      "srcEvidence": {
+        "files": ["src/skills/bundled/claudeApiContent.ts", "src/skills/bundled/claude-api/shared/agent-design.md"],
+        "symbols": ["INLINE_READING_GUIDE"]
+      }
+    },
+    {
+      "id": "behavior:strip-ansi-bun",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:162419"],
+      "notes": "changelog「Bun 上 stripAnsi 性能改进（走 Bun.stripANSI）」：新增 src/utils/stripAnsi.ts，优先 Bun.stripANSI，否则回退 strip-ansi 包；QueryEngine.ts、mappers.ts、useTextInput.ts 等调用点改用该封装。",
+      "releaseItems": [12],
+      "srcEvidence": {
+        "files": ["src/utils/stripAnsi.ts"],
+        "symbols": ["stripANSI", "nativeStripAnsi"]
+      }
+    },
+    {
+      "id": "behavior:edit-minimal-anchor",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:8706541"],
+      "notes": "changelog「Edit 工具使用更短的 old_string 锚点，减少输出 token」：src/tools/FileEditTool/prompt.ts 由 GrowthBook tengu_edit_minimalanchor_jrn 切换提示文案（1-3 行、只需唯一即可），属灰度实验项。",
+      "releaseItems": [13],
+      "srcEvidence": {
+        "files": ["src/tools/FileEditTool/prompt.ts"],
+        "symbols": ["tengu_edit_minimalanchor_jrn"]
+      }
+    },
+    {
+      "id": "behavior:ultraplan-runtime-config-gate",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10892745"],
+      "notes": "2.1.91 新增运行时门控 tengu_ultraplan_config（enabled 默认 false）。本仓库新增 src/utils/ultraplan/enabled.ts 作为叶子模块，默认 {enabled:true} 以保持离线可用，并与编译期 feature('ULTRAPLAN') 组合使用（R1，见 notes.md）。调用点：processUserInput.ts、PromptInput.tsx、ExitPlanModePermissionRequest.tsx、commands/ultraplan.tsx。",
+      "srcEvidence": {
+        "files": ["src/utils/ultraplan/enabled.ts"],
+        "symbols": ["tengu_ultraplan_config"]
+      }
+    },
+    {
+      "id": "behavior:ultraplan-stopped-telemetry",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10903413"],
+      "notes": "停止 ultraplan 时上报 tengu_ultraplan_stopped：src/commands/ultraplan.tsx 的 stopUltraplan 在 RemoteAgentTask.kill 之后记录事件。",
+      "srcEvidence": {
+        "files": ["src/commands/ultraplan.tsx"],
+        "symbols": ["tengu_ultraplan_stopped"]
+      }
+    },
+    {
+      "id": "behavior:ultraplan-terminated-notification",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10902493", "bundle:10902578"],
+      "notes": "失败文案改为 'Ultraplan terminated: ...'，并额外入队 isMeta 的 task-notification（'Remote Ultraplan session failed...'）：src/commands/ultraplan.tsx 失败路径。",
+      "srcEvidence": {
+        "files": ["src/commands/ultraplan.tsx"],
+        "symbols": ["Ultraplan terminated"]
+      }
+    },
+    {
+      "id": "behavior:ultraplan-timeout-minutes",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10891705"],
+      "notes": "轮询超时文案按分钟生成（1 minute / N minutes），区分 timeout_pending 与 timeout_no_plan：src/utils/ultraplan/ccrSession.ts。",
+      "srcEvidence": {
+        "files": ["src/utils/ultraplan/ccrSession.ts"],
+        "symbols": ["timeout_pending"]
+      }
+    },
+    {
+      "id": "behavior:ultraplan-keyword-article",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10893852"],
+      "notes": "关键字替换修正冠词：'an ultraplan' → 'a plan'（src/utils/ultraplan/keyword.ts 的 replaceUltraplanKeyword 用 /\\b(a)n(\\s+)$/ 去掉 n），并保留用户大小写。",
+      "srcEvidence": {
+        "files": ["src/utils/ultraplan/keyword.ts"],
+        "symbols": ["replaceUltraplanKeyword"]
+      }
+    },
+    {
+      "id": "behavior:ultraplan-remote-meta-cleanup",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:12263925"],
+      "notes": "远端批准的 ultraplan 完成后删除持久化的 remote-agent 元数据，避免重启后重新出现在后台任务列表：src/commands/ultraplan.tsx 在标记 completed 前调用 deleteRemoteAgentMetadata。",
+      "srcEvidence": {
+        "files": ["src/commands/ultraplan.tsx"],
+        "symbols": ["deleteRemoteAgentMetadata"]
+      }
+    },
+    {
+      "id": "behavior:ultraplan-command-description",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10908122"],
+      "notes": "命令描述改为 getter，动态读取 getDialogConfig().timeEstimate：src/commands/ultraplan.tsx。",
+      "srcEvidence": {
+        "files": ["src/commands/ultraplan.tsx"],
+        "symbols": ["getDialogConfig"]
+      }
+    }
+  ]
+}

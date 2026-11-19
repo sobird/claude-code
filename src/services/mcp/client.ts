@@ -175,6 +175,13 @@ const DEFAULT_MCP_TOOL_TIMEOUT_MS = 100_000_000
 const MAX_MCP_DESCRIPTION_LENGTH = 2048
 
 /**
+ * Upper bound for a server-declared result persistence cap. Servers may raise
+ * their per-tool threshold via `_meta["anthropic/maxResultSizeChars"]`, but
+ * never beyond this ceiling (matches the 500K global tool-result cap).
+ */
+const MCP_RESULT_SIZE_CEILING = 500_000
+
+/**
  * Gets the timeout for MCP tool calls in milliseconds.
  * Uses MCP_TOOL_TIMEOUT environment variable if set, otherwise defaults to ~27.8 hours.
  */
@@ -1548,6 +1555,10 @@ export const fetchToolsForClient = memoizeWithLRU(
       return toolsToProcess
         .map((tool): Tool => {
           const fullyQualifiedName = buildMcpToolName(client.name, tool.name)
+          // Servers can opt into a larger result persistence cap via the
+          // `_meta["anthropic/maxResultSizeChars"]` annotation (up to 500K).
+          const metaMax = tool._meta?.['anthropic/maxResultSizeChars']
+          const hasMetaMax = typeof metaMax === 'number' && Number.isFinite(metaMax) && metaMax > 0
           return {
             ...MCPTool,
             // In skip-prefix mode, use the original name for model invocation so MCP tools
@@ -1563,6 +1574,8 @@ export const fetchToolsForClient = memoizeWithLRU(
                 ? tool._meta['anthropic/searchHint'].replace(/\s+/g, ' ').trim() || undefined
                 : undefined,
             alwaysLoad: tool._meta?.['anthropic/alwaysLoad'] === true,
+            maxResultSizeChars: hasMetaMax ? Math.min(metaMax, MCP_RESULT_SIZE_CEILING) : MCPTool.maxResultSizeChars,
+            persistenceThresholdCeiling: hasMetaMax ? MCP_RESULT_SIZE_CEILING : undefined,
             async description() {
               return tool.description ?? ''
             },

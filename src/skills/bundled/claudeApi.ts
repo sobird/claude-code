@@ -93,6 +93,9 @@ The relevant documentation for your detected language is included below in \`<do
 **Function calling / tool use / agents:**
 → Refer to \`{lang}/claude-api/README.md\` + \`shared/tool-use-concepts.md\` + \`{lang}/claude-api/tool-use.md\`
 
+**Agent design (tool surface, context management, caching strategy):**
+→ Refer to \`shared/agent-design.md\`
+
 **Batch processing (non-latency-sensitive):**
 → Refer to \`{lang}/claude-api/README.md\` + \`{lang}/claude-api/batches.md\`
 

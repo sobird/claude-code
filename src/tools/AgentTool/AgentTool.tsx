@@ -640,7 +640,6 @@ export const AgentTool = buildTool({
           toolUseContext.options.tools,
           toolUseContext.options.mainLoopModel,
           additionalWorkingDirectories,
-          toolUseContext.options.mcpClients,
         )
         forkParentSystemPrompt = buildEffectiveSystemPrompt({
           mainThreadAgentDefinition,

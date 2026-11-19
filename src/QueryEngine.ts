@@ -16,7 +16,7 @@ import type {
 import { accumulateUsage, updateUsage } from 'src/services/api/claude.js'
 import type { NonNullableUsage } from 'src/services/api/logging.js'
 import { EMPTY_USAGE } from 'src/services/api/logging.js'
-import stripAnsi from 'strip-ansi'
+import { stripAnsi } from 'src/utils/stripAnsi.js'
 
 import type { Command } from './commands.js'
 import { getSlashCommandToolSkills } from './commands.js'
@@ -309,7 +309,6 @@ export class QueryEngine {
       additionalWorkingDirectories: Array.from(
         initialAppState.toolPermissionContext.additionalWorkingDirectories.keys(),
       ),
-      mcpClients,
       customSystemPrompt: customPrompt,
     })
     headlessProfilerCheckpoint('after_getSystemPrompt')

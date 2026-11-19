@@ -34,7 +34,6 @@ import mcp from './commands/mcp/index.js'
 import memory from './commands/memory/index.js'
 import mobile from './commands/mobile/index.js'
 import onboarding from './commands/onboarding/index.js'
-import pr_comments from './commands/pr_comments/index.js'
 import releaseNotes from './commands/release-notes/index.js'
 import rename from './commands/rename/index.js'
 import resume from './commands/resume/index.js'
@@ -107,7 +106,6 @@ import heapDump from './commands/heapdump/index.js'
 import hooks from './commands/hooks/index.js'
 import mockLimits from './commands/mock-limits/index.js'
 import model from './commands/model/index.js'
-import outputStyle from './commands/output-style/index.js'
 import passes from './commands/passes/index.js'
 import perfIssue from './commands/perf-issue/index.js'
 import permissions from './commands/permissions/index.js'
@@ -247,10 +245,8 @@ const COMMANDS = memoize((): Command[] => [
   memory,
   mobile,
   model,
-  outputStyle,
   remoteEnv,
   plugin,
-  pr_comments,
   releaseNotes,
   reloadPlugins,
   rename,

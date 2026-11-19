@@ -2935,7 +2935,6 @@ export function REPL({
           toolUseContext.options.tools,
           mainLoopModel,
           Array.from(toolPermissionContext.additionalWorkingDirectories.keys()),
-          toolUseContext.options.mcpClients,
         ),
         getUserContext(),
         getSystemContext(),
@@ -3252,7 +3251,6 @@ export function REPL({
           freshTools,
           mainLoopModelParam,
           Array.from(toolPermissionContext.additionalWorkingDirectories.keys()),
-          freshMcpClients,
         ),
         getUserContext(),
         getSystemContext(),
@@ -6097,7 +6095,6 @@ export function REPL({
                         context.options.tools,
                         context.options.mainLoopModel,
                         Array.from(appState.toolPermissionContext.additionalWorkingDirectories.keys()),
-                        context.options.mcpClients,
                       )
                       const systemPrompt = buildEffectiveSystemPrompt({
                         mainThreadAgentDefinition: undefined,

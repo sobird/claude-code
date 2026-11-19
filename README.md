@@ -84,7 +84,33 @@ bun scripts/upgrade/cli.ts verify --target <2.1.89/cli.js> --reference ./cli.js 
 
 自 2.1.113 起 npm 包不再发布 `cli.js`：包是一个安装桩，真正的产物是平台原生二进制（Bun 单文件可执行）。`carve` 把所有带 `// @bun @bytecode` + release banner 的内嵌模块源码按图顺序拼成伪 bundle，后续步骤都接受它作为 target；但它的命令/字符串盘点会受属性顺序影响，只能当近似基线。
 
-其余五个步骤里，`inventory` 与 `align` 建立差异基线，`extract` 与 `probe` 收集待移植的静态字符串和运行时证据，`verify` 最终核对所有台账条目是否处于终态并生成 `report.md` / `report.json`。
+其余五个步骤里，`inventory` 与 `align` 建立差异基线（`align` 对 `changed` 候选按字符串字面量重叠 + 相对位置打分配对），`extract` 与 `probe` 收集待移植的静态字符串和运行时证据，`verify` 最终核对所有台账条目是否处于终态并生成 `report.md` / `report.json`。
+
+交叉验证与收尾有五组辅助子命令，补齐 inventory/align 看不到的盲区：
+
+```bash
+# 官方 release 说明：下载并解析顶层条目（releaseItems 覆盖率用）
+bun scripts/upgrade/cli.ts releasenotes --version v2.1.91 --out <work/release-notes-2.1.91.json>
+
+# 结构化常量表：从 bundle 锚点抽字面量表，与参考版或 src 导出对拍
+# --anchor 是属性名（如允许表里的 "get-date"），--whole 取包含该属性的整张表
+bun scripts/upgrade/cli.ts table --bundle <target/cli.js> --anchor get-date --whole --out <work/table-target.json>
+bun scripts/upgrade/cli.ts table --bundle <target/cli.js> --baseline <work/table-ref.json> --anchor get-date --whole --out <work/table-diff.json>
+bun scripts/upgrade/cli.ts table --bundle <target/cli.js> --anchor get-date --whole \
+  --src src/tools/PowerShellTool/readOnlyValidation.ts#CMDLET_ALLOWLIST --out <work/table-src.json>
+
+# 字符串分诊：输入是两份 inventory.json，把新增字符串切成 inSrc / releaseNotes / noise / unclassified
+bun scripts/upgrade/cli.ts strings --target-inventory <target-inventory.json> --reference-inventory <ref-inventory.json> \
+  --src src --release-notes <work/release-notes-2.1.91.json> --out <work/strings-2.1.91>
+
+# 证据刷新：校验 status.json 的 bundle 偏移，失效的按字符串重定位
+bun scripts/upgrade/cli.ts refresh-evidence --target <target/cli.js> --status docs/upgrade/2.1.91/status.json --in-place
+
+# 基线门禁：在 --ref 的临时 worktree 跑同一个门禁，与工作区做多集差分
+bun scripts/upgrade/cli.ts gates --ref HEAD --repo-root . --out <work/gates> --fail-on-new
+```
+
+`gates` 会归一化行/列、根路径、耗时、依赖顺序与 lint 代码框，只报告真正新增的发现；`verify` 只证明台账闭合，不证明行为等价。
 
 ## 🐛 调试
 

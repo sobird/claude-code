@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { SourceMapConsumer } from 'source-map'
 import ts from 'typescript'
 
-import { fingerprintFunction } from './fingerprint'
+import { functionSignature } from './fingerprint'
 import type { AlignNode, AlignResult } from './types'
 
 type AlignOptions = {
@@ -15,12 +15,16 @@ type AlignOptions = {
 
 type FnNode = {
   fingerprint: string
+  literals: string[]
   kind: string
   name?: string
   start: number
   end: number
   line: number
   column: number
+  // Position among all functions of the parsed file, used as the pairing
+  // tie-breaker when two candidates share the same literal overlap.
+  index: number
 }
 
 type Pair = {
@@ -55,14 +59,17 @@ function collectFunctions(sourceFile: ts.SourceFile): FnNode[] {
     if (isFunctionLike(node)) {
       const start = node.getStart(sourceFile)
       const { line, character } = sourceFile.getLineAndCharacterOfPosition(start)
+      const signature = functionSignature(node)
       out.push({
-        fingerprint: fingerprintFunction(node),
+        fingerprint: signature.fingerprint,
+        literals: signature.literals,
         kind: ts.SyntaxKind[node.kind],
         name: functionName(node),
         start,
         end: node.getEnd(),
         line: line + 1,
         column: character,
+        index: out.length,
       })
     }
     node.forEachChild(visit)
@@ -83,8 +90,25 @@ async function parseFunctions(filePath: string): Promise<FnNode[]> {
   return collectFunctions(sourceFile)
 }
 
+function jaccard(left: string[], right: string[]): number {
+  if (left.length === 0 && right.length === 0) return 0
+  const rightSet = new Set(right)
+  let shared = 0
+  for (const value of left) if (rightSet.has(value)) shared++
+  return shared / (left.length + right.length - shared)
+}
+
+// String-literal overlap says what a function still talks about after an edit;
+// relative file position breaks ties when the overlap is equal (or empty).
+function pairScore(target: FnNode, reference: FnNode, targetCount: number, referenceCount: number): number {
+  const targetPos = targetCount > 1 ? target.index / (targetCount - 1) : 0
+  const referencePos = referenceCount > 1 ? reference.index / (referenceCount - 1) : 0
+  return jaccard(target.literals, reference.literals) + 0.25 * (1 - Math.abs(targetPos - referencePos))
+}
+
 // Pair target functions with reference functions. Identical fingerprints are
-// `matched`; leftover nodes of the same syntax kind are `changed`; target-only
+// `matched`; leftover nodes of the same syntax kind are `changed`, choosing the
+// best-scoring candidate rather than the first same-kind leftover; target-only
 // nodes are `new`. Target order is preserved by the caller via a final sort.
 function pairFunctions(reference: FnNode[], target: FnNode[]): Pair[] {
   const byFingerprint = new Map<string, FnNode[]>()
@@ -111,9 +135,19 @@ function pairFunctions(reference: FnNode[], target: FnNode[]): Pair[] {
 
   const remaining = reference.filter((fn) => !used.has(fn))
   for (const fn of pending) {
-    const index = remaining.findIndex((candidate) => candidate.kind === fn.kind)
-    if (index >= 0) {
-      const [match] = remaining.splice(index, 1)
+    let bestIndex = -1
+    let bestScore = -Infinity
+    for (let i = 0; i < remaining.length; i++) {
+      const candidate = remaining[i]
+      if (candidate.kind !== fn.kind) continue
+      const score = pairScore(fn, candidate, target.length, reference.length)
+      if (score > bestScore) {
+        bestScore = score
+        bestIndex = i
+      }
+    }
+    if (bestIndex >= 0) {
+      const [match] = remaining.splice(bestIndex, 1)
       pairs.push({ target: fn, reference: match, kind: 'changed' })
     } else {
       pairs.push({ target: fn, kind: 'new' })

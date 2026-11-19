@@ -58,6 +58,7 @@ import {
   saveCustomTitle,
 } from '../../../utils/sessionStorage.js'
 import { getSettings_DEPRECATED } from '../../../utils/settings/settings.js'
+import { isUltraplanEnabled } from '../../../utils/ultraplan/enabled.js'
 import { type OptionWithDescription, Select } from '../../CustomSelect/index.js'
 import { Markdown } from '../../Markdown.js'
 import { PermissionDialog } from '../PermissionDialog.js'
@@ -185,7 +186,9 @@ export function ExitPlanModePermissionRequest({
   // selecting it would dismiss the dialog and reject locally before
   // launchUltraplan can notice the session exists and return "already polling".
   // feature() must sit directly in an if/ternary (bun:bundle DCE constraint).
-  const showUltraplan = feature('ULTRAPLAN') ? !ultraplanSessionUrl && !ultraplanLaunching : false
+  // The runtime gate mirrors upstream's `wc()` (tengu_ultraplan_config).
+  const showUltraplan =
+    feature('ULTRAPLAN') && isUltraplanEnabled() ? !ultraplanSessionUrl && !ultraplanLaunching : false
   const usage = toolUseConfirm.assistantMessage.message.usage
   const { mode, isAutoModeAvailable, isBypassPermissionsModeAvailable } = toolPermissionContext
   const options = useMemo(

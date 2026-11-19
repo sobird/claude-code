@@ -12,14 +12,6 @@
 import type { UUID } from 'node:crypto'
 import { randomBytes } from 'node:crypto'
 
-import {
-  OUTPUT_FILE_TAG,
-  STATUS_TAG,
-  SUMMARY_TAG,
-  TASK_ID_TAG,
-  TASK_NOTIFICATION_TAG,
-  TOOL_USE_ID_TAG,
-} from '../constants/xml.js'
 import { type QueryParams, query } from '../query.js'
 import { roughTokenCountEstimation } from '../services/tokenEstimation.js'
 import type { SetAppState } from '../Task.js'
@@ -32,10 +24,9 @@ import { runWithAgentContext, type SubagentContext } from '../utils/agentContext
 import { registerCleanup } from '../utils/cleanupRegistry.js'
 import { logForDebugging } from '../utils/debug.js'
 import { logError } from '../utils/log.js'
-import { enqueuePendingNotification } from '../utils/messageQueueManager.js'
 import { emitTaskTerminatedSdk } from '../utils/sdkEventQueue.js'
 import { getAgentTranscriptPath, recordSidechainTranscript } from '../utils/sessionStorage.js'
-import { evictTaskOutput, getTaskOutputPath, initTaskOutputAsSymlink } from '../utils/task/diskOutput.js'
+import { evictTaskOutput, initTaskOutputAsSymlink } from '../utils/task/diskOutput.js'
 import { registerTask, updateTaskState } from '../utils/task/framework.js'
 import type { LocalAgentTaskState } from './LocalAgentTask/LocalAgentTask.js'
 
@@ -147,17 +138,16 @@ export function registerMainSessionTask(
  * Called when the backgrounded query finishes.
  */
 export function completeMainSessionTask(taskId: string, success: boolean, setAppState: SetAppState): void {
-  let wasBackgrounded = true
   let toolUseId: string | undefined
+  let description: string | undefined
 
   updateTaskState<LocalMainSessionTaskState>(taskId, setAppState, (task) => {
     if (task.status !== 'running') {
       return task
     }
 
-    // Track if task was backgrounded (for notification decision)
-    wasBackgrounded = task.isBackgrounded ?? true
     toolUseId = task.toolUseId
+    description = task.description
 
     task.unregisterCleanup?.()
 
@@ -165,76 +155,20 @@ export function completeMainSessionTask(taskId: string, success: boolean, setApp
       ...task,
       status: success ? 'completed' : 'failed',
       endTime: Date.now(),
+      notified: true,
       messages: task.messages?.length ? [task.messages.at(-1)!] : undefined,
     }
   })
 
   void evictTaskOutput(taskId)
 
-  // Only send notification if task is still backgrounded (not foregrounded)
-  // If foregrounded, user is watching it directly - no notification needed
-  if (wasBackgrounded) {
-    enqueueMainSessionNotification(
-      taskId,
-      'Background session',
-      success ? 'completed' : 'failed',
-      setAppState,
-      toolUseId,
-    )
-  } else {
-    // Foregrounded: no XML notification (TUI user is watching), but SDK
-    // consumers still need to see the task_started bookend close.
-    // Set notified so evictTerminalTask/generateTaskAttachments eviction
-    // guards pass; the backgrounded path sets this inside
-    // enqueueMainSessionNotification's check-and-set.
-    updateTaskState(taskId, setAppState, (task) => ({ ...task, notified: true }))
-    emitTaskTerminatedSdk(taskId, success ? 'completed' : 'failed', {
-      toolUseId,
-      summary: 'Background session',
-    })
-  }
-}
-
-/**
- * Enqueue a notification about the backgrounded session completing.
- */
-function enqueueMainSessionNotification(
-  taskId: string,
-  description: string,
-  status: 'completed' | 'failed',
-  setAppState: SetAppState,
-  toolUseId?: string,
-): void {
-  // Atomically check and set notified flag to prevent duplicate notifications.
-  let shouldEnqueue = false
-  updateTaskState(taskId, setAppState, (task) => {
-    if (task.notified) {
-      return task
-    }
-    shouldEnqueue = true
-    return { ...task, notified: true }
-  })
-
-  if (!shouldEnqueue) {
+  if (description === undefined) {
     return
   }
-
-  const summary =
-    status === 'completed'
-      ? `Background session "${description}" completed`
-      : `Background session "${description}" failed`
-
-  const toolUseIdLine = toolUseId ? `\n<${TOOL_USE_ID_TAG}>${toolUseId}</${TOOL_USE_ID_TAG}>` : ''
-
-  const outputPath = getTaskOutputPath(taskId)
-  const message = `<${TASK_NOTIFICATION_TAG}>
-<${TASK_ID_TAG}>${taskId}</${TASK_ID_TAG}>${toolUseIdLine}
-<${OUTPUT_FILE_TAG}>${outputPath}</${OUTPUT_FILE_TAG}>
-<${STATUS_TAG}>${status}</${STATUS_TAG}>
-<${SUMMARY_TAG}>${summary}</${SUMMARY_TAG}>
-</${TASK_NOTIFICATION_TAG}>`
-
-  enqueuePendingNotification({ value: message, mode: 'task-notification' })
+  emitTaskTerminatedSdk(taskId, success ? 'completed' : 'failed', {
+    toolUseId,
+    summary: description,
+  })
 }
 
 /**

@@ -22,10 +22,12 @@ import { logForDebugging } from '../utils/debug.js'
 import { errorMessage } from '../utils/errors.js'
 import { logError } from '../utils/log.js'
 import { enqueuePendingNotification } from '../utils/messageQueueManager.js'
+import { deleteRemoteAgentMetadata } from '../utils/sessionStorage.js'
 // import { ALL_MODEL_CONFIGS } from '../utils/model/configs.js'
 import { updateTaskState } from '../utils/task/framework.js'
 import { archiveRemoteSession, teleportToRemote } from '../utils/teleport.js'
 import { pollForApprovedExitPlanMode, UltraplanPollError } from '../utils/ultraplan/ccrSession.js'
+import { isUltraplanEnabled } from '../utils/ultraplan/enabled.js'
 import {
   getPromptText,
   getDialogConfig,
@@ -45,18 +47,6 @@ import {
 
 export function getUltraplanTimeoutMs(): number {
   return getFeatureValue_CACHED_MAY_BE_STALE('tengu_ultraplan_timeout_seconds', 1800) * 1000
-}
-
-/**
- * 是否启用 ultraplan, 默认启用
- *
- * @returns
- */
-export function isUltraplanEnabled(): boolean {
-  return (
-    getFeatureValue_CACHED_MAY_BE_STALE<{ enabled: boolean } | null>('tengu_ultraplan_config', { enabled: true })
-      ?.enabled === true
-  )
 }
 
 export const CCR_TERMS_URL = 'https://code.claude.com/docs/en/claude-code-on-the-web'
@@ -150,6 +140,11 @@ function startDetachedPoll(
         // doesn't notify for a killed session.
         const task = getAppState().tasks?.[taskId]
         if (task?.status !== 'running') return
+        // Drop the persisted meta so this finished ultraplan doesn't reappear
+        // in the background-task list after a restart.
+        void deleteRemoteAgentMetadata(taskId).catch((e) =>
+          logForDebugging(`ultraplan meta delete failed: ${String(e)}`),
+        )
         updateTaskState<RemoteAgentTaskState>(taskId, setAppState, (t) =>
           t.status !== 'running' ? t : { ...t, status: 'completed', endTime: Date.now() },
         )
@@ -191,8 +186,13 @@ function startDetachedPoll(
         reject_count: e instanceof UltraplanPollError ? e.rejectCount : undefined,
       })
       enqueuePendingNotification({
-        value: `Ultraplan failed: ${errorMessage(e)}\n\nSession: ${url}`,
+        value: `Ultraplan terminated: ${errorMessage(e)}\n\nSession: ${url}`,
         mode: 'task-notification',
+      })
+      enqueuePendingNotification({
+        value: "Remote Ultraplan session failed. Wait for the user's next instructions.",
+        mode: 'task-notification',
+        isMeta: true,
       })
       // Error path owns cleanup; teleport path defers to the dialog; remote
       // path handled its own cleanup above.
@@ -250,6 +250,7 @@ export async function stopUltraplan(
   // RemoteAgentTask.kill archives the session (with .catch) — no separate
   // archive call needed here.
   await RemoteAgentTask.kill(taskId, setAppState)
+  logEvent('tengu_ultraplan_stopped', {})
   setAppState((prev) =>
     prev.ultraplanSessionUrl || prev.ultraplanPendingChoice || prev.ultraplanLaunching
       ? {
@@ -527,7 +528,11 @@ const call: LocalJSXCommandCall = async (onDone, context, args) => {
 export default {
   type: 'local-jsx',
   name: 'ultraplan',
-  description: `~10–30 min · Claude Code on the web drafts an advanced plan you can edit and approve. See ${CCR_TERMS_URL}`,
+  // Getter: the prompt identifier (and therefore the time estimate) is read
+  // at command-list time, after the GrowthBook cache has populated.
+  get description() {
+    return `${getDialogConfig().timeEstimate} · Claude Code on the web drafts a plan you can edit and approve. See ${CCR_TERMS_URL}`
+  },
   argumentHint: '<prompt>',
   // isEnabled: () => process.env.USER_TYPE === 'ant',
   isEnabled: () => isUltraplanEnabled(),

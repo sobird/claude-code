@@ -12,7 +12,6 @@ import { hasEmbeddedSearchTools } from 'src/utils/embeddedTools.js'
 
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
 import { loadMemoryPrompt } from '../memdir/memdir.js'
-import type { MCPServerConnection, ConnectedMCPServer } from '../services/mcp/types.js'
 import type { Tools } from '../Tool.js'
 import { AGENT_TOOL_NAME, VERIFICATION_AGENT_TYPE } from '../tools/AgentTool/constants.js'
 import { isForkSubagentEnabled } from '../tools/AgentTool/forkSubagent.js'
@@ -33,19 +32,15 @@ import { logForDebugging } from '../utils/debug.js'
 import { env } from '../utils/env.js'
 import { isEnvTruthy } from '../utils/envUtils.js'
 import { getIsGit } from '../utils/git.js'
-import { isMcpInstructionsDeltaEnabled } from '../utils/mcpInstructionsDelta.js'
 import { getCanonicalName, getMarketingNameForModel } from '../utils/model/model.js'
 import { isScratchpadEnabled, getScratchpadDir } from '../utils/permissions/filesystem.js'
+import { isRelativeFilePathGuidanceEnabled } from '../utils/promptExperiments.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
 import { isUndercover } from '../utils/undercover.js'
 import { getCurrentWorktreeSession } from '../utils/worktree.js'
 import { getSessionStartDate } from './common.js'
 import { getOutputStyleConfig } from './outputStyles.js'
-import {
-  systemPromptSection,
-  DANGEROUS_uncachedSystemPromptSection,
-  resolveSystemPromptSections,
-} from './systemPromptSections.js'
+import { systemPromptSection, resolveSystemPromptSections } from './systemPromptSections.js'
 import { TICK_TAG } from './xml.js'
 
 // Dead code elimination: conditional imports for feature-gated modules
@@ -127,11 +122,6 @@ function getOutputStyleSection(outputStyleConfig: OutputStyleConfig | null): str
 
   return `# Output Style: ${outputStyleConfig.name}
 ${outputStyleConfig.prompt}`
-}
-
-function getMcpInstructionsSection(mcpClients: MCPServerConnection[] | undefined): string | null {
-  if (!mcpClients || mcpClients.length === 0) return null
-  return getMcpInstructions(mcpClients)
 }
 
 export function prependBullets(items: Array<string | string[]>): string[] {
@@ -394,7 +384,6 @@ export async function getSystemPrompt(
   tools: Tools,
   model: string,
   additionalWorkingDirectories?: string[],
-  mcpClients?: MCPServerConnection[],
 ): Promise<string[]> {
   if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
     return [
@@ -422,9 +411,6 @@ ${CYBER_RISK_INSTRUCTION}`,
       await loadMemoryPrompt(),
       envInfo,
       getLanguageSection(settings.language),
-      // When delta enabled, instructions are announced via persisted
-      // mcp_instructions_delta attachments (attachments.ts) instead.
-      isMcpInstructionsDeltaEnabled() ? null : getMcpInstructionsSection(mcpClients),
       getScratchpadInstructions(),
       getFunctionResultClearingSection(model),
       SUMMARIZE_TOOL_RESULTS_SECTION,
@@ -439,16 +425,6 @@ ${CYBER_RISK_INSTRUCTION}`,
     systemPromptSection('env_info_simple', () => computeSimpleEnvInfo(model, additionalWorkingDirectories)),
     systemPromptSection('language', () => getLanguageSection(settings.language)),
     systemPromptSection('output_style', () => getOutputStyleSection(outputStyleConfig)),
-    // When delta enabled, instructions are announced via persisted
-    // mcp_instructions_delta attachments (attachments.ts) instead of this
-    // per-turn recompute, which busts the prompt cache on late MCP connect.
-    // Gate check inside compute (not selecting between section variants)
-    // so a mid-session gate flip doesn't read a stale cached value.
-    DANGEROUS_uncachedSystemPromptSection(
-      'mcp_instructions',
-      () => (isMcpInstructionsDeltaEnabled() ? null : getMcpInstructionsSection(mcpClients)),
-      'MCP servers connect/disconnect between turns',
-    ),
     systemPromptSection('scratchpad', () => getScratchpadInstructions()),
     systemPromptSection('frc', () => getFunctionResultClearingSection(model)),
     systemPromptSection('summarize_tool_results', () => SUMMARIZE_TOOL_RESULTS_SECTION),
@@ -498,29 +474,6 @@ ${CYBER_RISK_INSTRUCTION}`,
     // --- Dynamic content (registry-managed) ---
     ...resolvedDynamicSections,
   ].filter((s) => s !== null)
-}
-
-function getMcpInstructions(mcpClients: MCPServerConnection[]): string | null {
-  const connectedClients = mcpClients.filter((client): client is ConnectedMCPServer => client.type === 'connected')
-
-  const clientsWithInstructions = connectedClients.filter((client) => client.instructions)
-
-  if (clientsWithInstructions.length === 0) {
-    return null
-  }
-
-  const instructionBlocks = clientsWithInstructions
-    .map((client) => {
-      return `## ${client.name}
-${client.instructions}`
-    })
-    .join('\n\n')
-
-  return `# MCP Server Instructions
-
-The following MCP servers have provided instructions for how to use their tools and resources:
-
-${instructionBlocks}`
 }
 
 export async function computeEnvInfo(modelId: string, additionalWorkingDirectories?: string[]): Promise<string> {
@@ -660,11 +613,17 @@ export async function enhanceSystemPromptWithEnvDetails(
   additionalWorkingDirectories?: string[],
   enabledToolNames?: ReadonlySet<string>,
 ): Promise<string[]> {
+  const cwdNote = isRelativeFilePathGuidanceEnabled()
+    ? '- The Bash tool resets to cwd between calls; do not rely on `cd` persisting. File-tool paths can be relative to cwd.'
+    : '- Agent threads always have their cwd reset between bash calls, as a result please only use absolute file paths.'
+  const noMdReportNote = getFeatureValue_CACHED_MAY_BE_STALE('tengu_sub_nomdrep_q7k', false)
+    ? '\n- Do NOT Write report/summary/findings/analysis .md files. Return findings directly as your final assistant message — the parent agent reads your text output, not files you create.'
+    : ''
   const notes = `Notes:
-- Agent threads always have their cwd reset between bash calls, as a result please only use absolute file paths.
+${cwdNote}
 - In your final response, share file paths (always absolute, never relative) that are relevant to the task. Include code snippets only when the exact text is load-bearing (e.g., a bug you found, a function signature the caller asked for) — do not recap code you merely read.
 - For clear communication with the user the assistant MUST avoid using emojis.
-- Do not use a colon before tool calls. Text like "Let me read the file:" followed by a read tool call should just be "Let me read the file." with a period.`
+- Do not use a colon before tool calls. Text like "Let me read the file:" followed by a read tool call should just be "Let me read the file." with a period.${noMdReportNote}`
   // Subagents get skill_discovery attachments (prefetch.ts runs in query(),
   // no agentId guard since #22830) but don't go through getSystemPrompt —
   // surface the same DiscoverSkills framing the main session gets. Gated on

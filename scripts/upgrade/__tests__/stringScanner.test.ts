@@ -11,4 +11,14 @@ describe('extractStringLiterals', () => {
   test('ignores comments and regex literals', () => {
     expect(extractStringLiterals('// "no"\n/* "no2" */ const r=/ab"/g; const s="yes"')).toEqual(['yes'])
   })
+
+  test('recognizes a regex after => so quotes inside it do not desync', () => {
+    const src = 'var f=(q,K)=>/[^!"$&\'()*+,\\-.;=_`a-z{}~]/u.test(q);var s="after"'
+    expect(extractStringLiterals(src)).toContain('after')
+  })
+
+  test('recognizes a regex inside a template interpolation', () => {
+    const src = 'var t=`x${q.replace(/[}"]/g,"")}tail`;var s="after"'
+    expect(extractStringLiterals(src)).toContain('after')
+  })
 })

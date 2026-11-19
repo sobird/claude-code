@@ -1,8 +1,8 @@
 import React from 'react'
-import stripAnsi from 'strip-ansi'
 
 import { Box, Text } from '../../ink.js'
 import { formatFileSize } from '../../utils/format.js'
+import { stripAnsi } from '../../utils/stripAnsi.js'
 import { MessageResponse } from '../MessageResponse.js'
 import { OffscreenFreeze } from '../OffscreenFreeze.js'
 import { ShellTimeDisplay } from './ShellTimeDisplay.js'

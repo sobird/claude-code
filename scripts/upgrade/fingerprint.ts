@@ -4,7 +4,15 @@ import ts from 'typescript'
 
 const IDENT_LIKE = new Set([ts.SyntaxKind.Identifier, ts.SyntaxKind.PrivateIdentifier])
 
-export function fingerprintFunction(node: ts.Node): string {
+export type FunctionSignature = {
+  fingerprint: string
+  // Sorted string literals emitted by the function. Fingerprints cover the
+  // node skeleton; the literal set is exposed separately so pairing can score
+  // how much two changed functions still talk about the same things.
+  literals: string[]
+}
+
+export function functionSignature(node: ts.Node): FunctionSignature {
   const strings = new Set<string>()
 
   const emit = (n: ts.Node): string => {
@@ -24,10 +32,13 @@ export function fingerprintFunction(node: ts.Node): string {
   }
 
   const body = emit(node)
-  const literals = [...strings]
-    .toSorted()
-    .map((value) => JSON.stringify(value))
-    .join(' ')
-  const source = literals ? `${body} strings[${literals}]` : body
-  return createHash('sha256').update(source).digest('hex').slice(0, 16)
+  const literals = [...strings].toSorted()
+  const serialized = literals.map((value) => JSON.stringify(value)).join(' ')
+  const source = serialized ? `${body} strings[${serialized}]` : body
+  const fingerprint = createHash('sha256').update(source).digest('hex').slice(0, 16)
+  return { fingerprint, literals }
+}
+
+export function fingerprintFunction(node: ts.Node): string {
+  return functionSignature(node).fingerprint
 }

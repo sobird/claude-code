@@ -39,6 +39,14 @@ test('does not fabricate extra env names absent from the bundle', async () => {
   expect(inv.envVars).not.toContain('MCP_CONNECTION_NONBLOCKING')
 })
 
+test('ignores dynamically composed command names', async () => {
+  const dir = tempDir()
+  const path = join(dir, 'bundle.js')
+  writeFileSync(path, 'var a={type:"prompt",name:"mcp__"+server};\n')
+  const inv = await scanBundle(path)
+  expect(inv.commands).toEqual([])
+})
+
 test('detects an extra env name when present in the bundle', async () => {
   const dir = tempDir()
   const path = join(dir, 'bundle.js')

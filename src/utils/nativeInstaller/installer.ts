@@ -1166,6 +1166,7 @@ export async function cleanupOldVersions(): Promise<void> {
     path: string
     resolvedPath: string
     mtime: Date
+    size: number
   }
   const versionFiles: VersionInfo[] = []
   let tempFilesCleanedCount = 0
@@ -1204,6 +1205,7 @@ export async function cleanupOldVersions(): Promise<void> {
         path: entryPath,
         resolvedPath: resolve(entryPath),
         mtime: stats.mtime,
+        size: stats.size,
       })
     } catch {
       // Skip files we can't stat
@@ -1232,6 +1234,20 @@ export async function cleanupOldVersions(): Promise<void> {
     const currentSymlinkVersion = await getVersionFromSymlink(dirs.executable)
     if (currentSymlinkVersion) {
       protectedVersions.add(currentSymlinkVersion)
+    } else if (process.platform === 'win32') {
+      // On Windows `dirs.executable` is a copy, not a symlink, so the readlink
+      // probe can fail. Fall back to matching the active executable's size so
+      // we never delete the rollback copy for the running version.
+      try {
+        const currentExecutable = await stat(dirs.executable)
+        for (const v of versionFiles) {
+          if (v.size === currentExecutable.size) {
+            protectedVersions.add(v.resolvedPath)
+          }
+        }
+      } catch {
+        // Active executable missing — nothing to protect by size
+      }
     }
 
     // Protect versions with active locks (running in other processes)

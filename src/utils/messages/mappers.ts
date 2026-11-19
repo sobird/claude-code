@@ -13,7 +13,7 @@ import type { ClaudeAILimits } from 'src/services/claudeAiLimits.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from 'src/tools/ExitPlanModeTool/constants.js'
 import type { AssistantMessage, CompactMetadata, Message } from 'src/types/message.js'
 import type { DeepImmutable } from 'src/types/utils.js'
-import stripAnsi from 'strip-ansi'
+import { stripAnsi } from 'src/utils/stripAnsi.js'
 
 import { createAssistantMessage } from '../messages.js'
 import { getPlan } from '../plans.js'

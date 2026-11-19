@@ -14,6 +14,7 @@ import pythonClaudeApiReadme from './claude-api/python/claude-api/README.md'
 import pythonClaudeApiStreaming from './claude-api/python/claude-api/streaming.md'
 import pythonClaudeApiToolUse from './claude-api/python/claude-api/tool-use.md'
 import rubyClaudeApi from './claude-api/ruby/claude-api.md'
+import sharedAgentDesign from './claude-api/shared/agent-design.md'
 import sharedErrorCodes from './claude-api/shared/error-codes.md'
 import sharedLiveSources from './claude-api/shared/live-sources.md'
 import sharedModels from './claude-api/shared/models.md'
@@ -60,6 +61,7 @@ export const SKILL_FILES: Record<string, string> = {
   'python/claude-api/streaming.md': pythonClaudeApiStreaming,
   'python/claude-api/tool-use.md': pythonClaudeApiToolUse,
   'ruby/claude-api.md': rubyClaudeApi,
+  'shared/agent-design.md': sharedAgentDesign,
   'shared/error-codes.md': sharedErrorCodes,
   'shared/live-sources.md': sharedLiveSources,
   'shared/models.md': sharedModels,

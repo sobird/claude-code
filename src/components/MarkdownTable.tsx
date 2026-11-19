@@ -1,6 +1,5 @@
 import type { Token, Tokens } from 'marked'
 import React from 'react'
-import stripAnsi from 'strip-ansi'
 
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { Ansi, useTheme } from '../ink.js'
@@ -8,6 +7,7 @@ import { stringWidth } from '../ink/stringWidth.js'
 import { wrapAnsi } from '../ink/wrapAnsi.js'
 import type { CliHighlight } from '../utils/cliHighlight.js'
 import { formatToken, padAligned } from '../utils/markdown.js'
+import { stripAnsi } from '../utils/stripAnsi.js'
 
 /** Accounts for parent indentation (e.g. message dot prefix) and terminal
  *  resize races. Without enough margin the table overflows its layout box

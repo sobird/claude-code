@@ -4,10 +4,14 @@ import { join } from 'node:path'
 import type { VerifyReport } from './types'
 
 const SECTIONS: Array<{ key: keyof VerifyReport; title: string }> = [
+  { key: 'ledgerErrors', title: 'Ledger errors' },
   { key: 'missingInSrc', title: 'Missing in src' },
   { key: 'unexpectedInSrc', title: 'Unexpected in src' },
   { key: 'unregistered', title: 'Unregistered' },
   { key: 'unresolved', title: 'Unresolved' },
+  { key: 'evidenceErrors', title: 'Evidence errors' },
+  { key: 'srcEvidenceErrors', title: 'Src evidence errors' },
+  { key: 'uncoveredReleaseItems', title: 'Uncovered release items' },
 ]
 
 function pad(value: string, width: number): string {

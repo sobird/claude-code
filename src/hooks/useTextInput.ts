@@ -1,6 +1,5 @@
 import { isInputModeCharacter } from 'src/components/PromptInput/inputModes.js'
 import { useNotifications } from 'src/context/notifications.js'
-import stripAnsi from 'strip-ansi'
 
 import { markBackslashReturnUsed } from '../commands/terminalSetup/terminalSetup.js'
 import { addToHistory } from '../history.js'
@@ -20,6 +19,7 @@ import { env } from '../utils/env.js'
 import { isFullscreenEnvEnabled } from '../utils/fullscreen.js'
 import type { ImageDimensions } from '../utils/imageResizer.js'
 import { isModifierPressed, prewarmModifiers } from '../utils/modifiers.js'
+import { stripAnsi } from '../utils/stripAnsi.js'
 import { useDoublePress } from './useDoublePress.js'
 
 type MaybeCursor = void | Cursor
@@ -328,8 +328,12 @@ export function useTextInput({
       case key.rightArrow && (key.ctrl || key.meta || key.fn):
         return () => cursor.nextWord()
       case key.backspace:
+        // cmd+delete arrives as super+backspace on iTerm2 / kitty / WezTerm /
+        // Ghostty / Windows Terminal. Treat it as delete-to-line-start.
+        if (key.super) return killToLineStart
         return key.meta || key.ctrl ? killWordBefore : () => cursor.deleteTokenBefore() ?? cursor.backspace()
       case key.delete:
+        if (key.super) return killToLineEnd
         return key.meta ? killToLineEnd : () => cursor.del()
       case key.ctrl:
         return handleCtrl
