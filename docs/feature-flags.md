@@ -188,11 +188,11 @@ _总计：90 个 feature flags_
 
 #### `BYOC_ENVIRONMENT_RUNNER`
 
-- **功能**: Bring Your Own Container 环境运行器
-- **用途**: 支持自定义容器环境执行任务
-- **代码位置**: src/tools/BashTool/
-- **启用条件**: 容器化部署环境
-- **影响**: 提高环境兼容性
+- **功能**: Bring Your Own Container（BYOC）会话运行器（`claude environment-runner`）
+- **用途**: Go `environment-manager` 在客户自管容器内起这个无头进程，执行单个 Claude Code 会话：解 base64url work secret + session id，装配 `byoc`/远程标记、注入 Session Ingress token 与 runner 版本，按 secret 选 v1 Session-Ingress（WebSocket）或 CCR v2（register worker 取 epoch）传输，再以 `--sdk-url` print 模式拉起子 CLI 直至退出
+- **代码位置**: `src/environment-runner/`（`main.ts`、`config.ts`、`sessionExecutor.ts`）、入口 `src/entrypoints/cli.tsx`、work secret/URL 与 worker 注册 `src/bridge/workSecret.ts`、凭据 bootstrap `src/utils/authFileDescriptor.ts`
+- **启用条件**: 已在 `scripts/config.ts` 中启用；在容器内由 `environment-manager` 调用
+- **影响**: 支持 BYOC 部署；详见 [docs/features/BYOC_ENVIRONMENT_RUNNER.md](features/BYOC_ENVIRONMENT_RUNNER.md)
 
 #### `CACHED_MICROCOMPACT`
 
