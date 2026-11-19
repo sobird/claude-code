@@ -24,6 +24,14 @@
 - **CLAUDE_CODE_COORDINATOR_MODE**: 环境变量控制模式开关
 - **动态切换**: 支持运行时模式切换而不重启应用
 
+### 4. Worker 代理定义 (workerAgent.ts)
+
+`getCoordinatorAgents()` 返回协调器可委派的内置 `worker` 代理：
+
+- **工具集**: 取 `ASYNC_AGENT_ALLOWED_TOOLS` 并剔除 `COORDINATOR_ONLY_TOOLS`（当前仅 SyntheticOutput），即从 worker 池中移除协调器自留的工具。
+- **whenToUse**: 把自包含的研究/实现/验证任务放到后台委派给 worker，worker 自主运行后把结果回报给协调器。
+- **系统提示**: 要求 worker 直接自主执行、不再派生子代理；修改文件后运行相关测试并提交，最后一次性简洁回报（做了什么、改了哪些文件、需协调器知晓的事项）。
+
 ## 🔧 工作原理
 
 ### 协调器 vs 正常模式对比

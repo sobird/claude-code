@@ -139,11 +139,11 @@ _总计：90 个 feature flags_
 
 #### `BG_SESSIONS`
 
-- **功能**: 后台会话
-- **用途**: 支持多个并行会话的管理
-- **代码位置**: src/entrypoints/cli.tsx:196
-- **启用条件**: 多会话需求
-- **影响**: 提高多任务处理能力
+- **功能**: 后台会话（tmux 分离运行）
+- **用途**: 提供 `claude ps|logs|attach|kill` 快速路径与 `--bg` / `--background` 启动的后台会话。后台会话运行在 detached tmux 中，子 CLI 注册到 `~/.claude/sessions/<pid>.json`（`kind: 'bg'`，含 name/logPath）；REPL 在 `CLAUDE_CODE_SESSION_KIND=bg` 时退出改为 detach 客户端而非杀进程，故可 `claude attach` 重新接入
+- **代码位置**: src/cli/bg.ts（`ps`/`logs`/`attach`/`kill` 与 `--bg` 处理）、src/entrypoints/cli.tsx（子命令分派）、src/utils/concurrentSessions.ts（PID 注册表）
+- **启用条件**: 已在 `scripts/config.ts` 启用；运行环境需有 tmux
+- **影响**: 支持后台多任务与分离/重连
 
 #### `BREAK_CACHE_COMMAND`
 
@@ -269,10 +269,10 @@ _总计：90 个 feature flags_
 #### `COORDINATOR_MODE`
 
 - **功能**: 协调器模式
-- **用途**: 启用多代理协调工作
-- **代码位置**: src/tools.ts:120, src/utils/swarm/
-- **启用条件**: 需要多代理系统
-- **影响**: 支持复杂任务分解
+- **用途**: 设置 `CLAUDE_CODE_COORDINATOR_MODE` 后，主线程作为协调者编排 worker 子代理而非直接解决问题。`getCoordinatorAgents()`（src/coordinator/workerAgent.ts）提供内置 `worker` 代理：工具集为 async-agent 工具池去掉协调器专用工具（`COORDINATOR_ONLY_TOOLS`，如 SyntheticOutput），并附带“自主执行、不再派生子代理、完成后运行测试并提交”的 worker 系统提示；工具权限经 `applyCoordinatorToolFilter()` 限制
+- **代码位置**: src/coordinator/coordinatorMode.ts、src/coordinator/workerAgent.ts、src/tools.ts
+- **启用条件**: 已在 `scripts/config.ts` 启用；运行时需设置 `CLAUDE_CODE_COORDINATOR_MODE`
+- **影响**: 支持多 worker 并行编排与结果合成
 
 #### `COWORKER_TYPE_TELEMETRY`
 
@@ -293,9 +293,9 @@ _总计：90 个 feature flags_
 #### `DIRECT_CONNECT`
 
 - **功能**: 直接连接 Claude Code 服务器（`cc://host[:port]` / `cc+unix://<socket>` URL）
-- **用途**: 客户端（CLI）通过 WebSocket 连接到一个 Claude Code “server”：server 端 `POST /sessions` 创建会话并运行 agent，客户端只驱动 UI/输出。交互式 `claude open <cc-url>` 进入完整 TUI；`claude open <cc-url> -p [prompt]` 走无头路径 `runConnectHeadless`——发送单轮 prompt，按 `--output-format`（`text`/`json`/`stream-json`）流式输出，收到终端 `result` 后映射退出码（success=0，其余=1）。无头模式无人可问，权限请求一律拒绝（会话建立时用 `--dangerously-skip-permissions` 预放行）。服务端 `claude server` 拥有每个会话的子进程（`--print --input-format stream-json --output-format stream-json --permission-prompt-tool stdio`），把 NDJSON 双向桥接到 `/sessions/:id/ws`
+- **用途**: 客户端（CLI）通过 WebSocket 连接到一个 Claude Code “server”：server 端 `POST /sessions` 创建会话并运行 agent，客户端只驱动 UI/输出。交互式 `claude open <cc-url>` 进入完整 TUI；`claude open <cc-url> -p [prompt]` 走无头路径 `runConnectHeadless`——发送单轮 prompt，按 `--output-format`（`text`/`json`/`stream-json`）流式输出，收到终端 `result` 后映射退出码（success=0，其余=1）并显式 `process.exit` 终止进程——只设 `process.exitCode` 会因残留句柄（stdin socket、telemetry flush）让命令打印结果后挂起不退出。无头模式无人可问，权限请求一律拒绝（会话建立时用 `--dangerously-skip-permissions` 预放行）。服务端 `claude server` 拥有每个会话的子进程（`--print --input-format stream-json --output-format stream-json --permission-prompt-tool stdio`），把 NDJSON 双向桥接到 `/sessions/:id/ws`
 - **代码位置**: 无头客户端 `src/server/connectHeadless.ts`、WS 客户端 `src/server/directConnectManager.ts`、建会话 `src/server/createDirectConnectSession.ts`、URL 解析 `src/server/parseConnectUrl.ts`、REPL 集成 `src/hooks/useDirectConnect.ts`、服务端 `src/server/server.ts`（HTTP+WS）/`src/server/sessionManager.ts`（生命周期/空闲回收）/`src/server/backends/dangerousBackend.ts`（spawn 子 CLI）、锁文件 `src/server/lockfile.ts`、入口 `src/main.tsx`（argv 重写 + `open`/`server` 子命令）
-- **启用条件**: 已在 `scripts/config.ts` 中启用；客户端与服务端均完整。会话仅驻留内存（不跨 server 重启恢复）；客户端首个连接前子进程输出会缓冲后回放
+- **启用条件**: 已在 `scripts/config.ts` 中启用；客户端与服务端均完整。会话仅驻留内存（不跨 server 重启恢复）；客户端首个连接前子进程输出会缓冲后回放（最多 1000 行）。`claude server` 选项：`--host` 默认 `0.0.0.0`、`--port` 默认 `0`（随机端口）、`--unix` 可改为 unix socket、`--workspace` 为未指定 cwd 的会话提供默认目录、`--idle-timeout` 默认 `600000`ms（`0`=永不回收，回收已 detach 的空闲会话）、`--max-sessions` 默认 `32`（`0`=不限，超限 `POST /sessions` 返回 429）、`--auth-token` 缺省随机生成（`sk-ant-cc-…`）。通过 `~/.claude/server.lock` 保证单实例——已有存活的 server 时拒绝启动；SIGINT/SIGTERM 先停止接入再销毁全部会话并清理锁文件
 - **影响**: 支持 `claude server` 提供服务、`claude open` 连接（无头或交互式）
 
 #### `DOWNLOAD_USER_SETTINGS`
@@ -348,11 +348,11 @@ _总计：90 个 feature flags_
 
 #### `FORK_SUBAGENT`
 
-- **功能**: 分叉子代理
-- **用途**: 创建子代理执行特定任务
-- **代码位置**: src/utils/swarm/
-- **启用条件**: 需要代理分叉功能
-- **影响**: 提高任务并行度
+- **功能**: 分叉子代理 / `/fork`
+- **用途**: `/fork <directive>` 把当前对话交给后台 worker 执行：worker 继承本对话消息（`forkContextMessages`）及父级完全一致的系统提示与工具池（`useExactTools`），使 API 请求前缀缓存一致；随后自主运行并通过任务通知回报。命令仅当 `isForkSubagentEnabled()` 为真时注册（受本 flag 或对应实验开关控制，默认构建关闭）
+- **代码位置**: src/commands/fork/、src/tools/AgentTool/forkSubagent.ts、src/tools/AgentTool/runAgent.ts
+- **启用条件**: 默认未开启（`scripts/config.ts` 中 `FORK_SUBAGENT` 仍注释）
+- **影响**: 后台并行委派当前对话
 
 #### `HARD_FAIL`
 
@@ -372,11 +372,11 @@ _总计：90 个 feature flags_
 
 #### `HISTORY_SNIP`
 
-- **功能**: 历史片段
-- **用途**: 提取和重用历史片段
-- **代码位置**: src/tools.ts:123
-- **启用条件**: 需要片段管理
-- **影响**: 提高重复任务的效率
+- **功能**: 历史片段裁剪
+- **用途**: 提供 `/force-snip` 命令——立即把挂起的 snip marker 折叠进新的 snip_boundary（`snipCompactIfNeeded(messages, { force: true })`），即使运行时 Snip 工具关闭也生效；重建后的消息数组经 `setMessages` 写回以在下一轮保留
+- **代码位置**: src/commands/force-snip/、src/services/compact/snipCompact.ts、src/tools.ts
+- **启用条件**: 已在 `scripts/config.ts` 启用
+- **影响**: 按需释放上下文 token
 
 #### `HOOK_PROMPTS`
 
@@ -716,11 +716,11 @@ _总计：90 个 feature flags_
 
 #### `UDS_INBOX`
 
-- **功能**: UDS 收件箱
-- **用途**: Unix Domain Socket 收件箱功能
-- **代码位置**: src/utils/swarm/
-- **启用条件**: 需要进程间通信
-- **影响**: 提高进程通信效率
+- **功能**: UDS 收件箱 / 跨会话发现
+- **用途**: 提供 `/peers` 命令——读取 `~/.claude/sessions/<pid>.json` PID 注册表（经 `listAllLiveSessions()`），列出本机其他存活的 Claude Code 会话（NAME/ID/KIND/PID/CWD，自动过滤本会话与死 PID）；`udsClient` 亦支持经 Unix domain socket 向目标会话发送消息
+- **代码位置**: src/commands/peers/、src/utils/udsClient.ts、src/utils/concurrentSessions.ts
+- **启用条件**: 已在 `scripts/config.ts` 启用
+- **影响**: 支持本机会话感知与进程间消息
 
 #### `ULTRAPLAN`
 
@@ -780,11 +780,11 @@ _总计：90 个 feature flags_
 
 #### `WORKFLOW_SCRIPTS`
 
-- **功能**: 工作流脚本
-- **用途**: 定义和执行自动化工作流
-- **代码位置**: src/tools.ts:129
-- **启用条件**: 需要工作流功能
-- **影响**: 自动化任务执行
+- **功能**: 声明式工作流脚本
+- **用途**: 从 `<cwd>/.claude/workflows/*.{yaml,yml,json}` 加载工作流定义（有序步骤，动作 `shell`/`write_file`/`agent`）；`/workflows` 列出定义表格；每个定义自动生成 `/workflow-<slug>` 命令，经 Workflow 工具执行并按 `{{args}}`/`{{step_N.result}}` 模板展开。详细见 `docs/features/WORKFLOW_SCRIPTS.md`
+- **代码位置**: src/tools/WorkflowTool/（definitions.ts 加载/模板、createWorkflowCommand.ts 生成 `/workflow-<slug>`、WorkflowTool.ts 执行）、src/commands/workflows/
+- **启用条件**: 已在 `scripts/config.ts` 启用
+- **影响**: 可复用的细粒度自动化流程
 
 ## 总结
 
