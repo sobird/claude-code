@@ -101,6 +101,7 @@ class HighlightSegmenter {
     // Consume leading ANSI codes before first visible char
     while (this.tokenIdx < this.tokens.length) {
       const token = this.tokens[this.tokenIdx]
+      if (!token) break
       if (token.type === 'char') break
       if (token.type === 'ansi') this.codes.push(token)
       this.stringPos += token.code.length
@@ -113,6 +114,7 @@ class HighlightSegmenter {
     // Advance through tokens until we reach target
     while (this.visiblePos < targetVisiblePos && this.tokenIdx < this.tokens.length) {
       const token = this.tokens[this.tokenIdx]
+      if (!token) break
 
       if (token.type === 'char') {
         const charsNeeded = targetVisiblePos - this.visiblePos

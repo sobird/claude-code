@@ -4,7 +4,7 @@ import { logError } from 'src/utils/log.js'
 import { z } from 'zod/v4'
 
 import { callIdeRpc } from '../services/mcp/client.js'
-import type { ConnectedMCPServer, MCPServerConnection } from '../services/mcp/types.js'
+import type { ConnectedMCPServer, MCPServerConnection, McpNotificationSchema } from '../services/mcp/types.js'
 import type { PermissionMode } from '../types/permissions.js'
 import { CLAUDE_IN_CHROME_MCP_SERVER_NAME, isTrackedClaudeInChromeTabId } from '../utils/claudeInChrome/common.js'
 import { lazySchema } from '../utils/lazySchema.js'
@@ -49,42 +49,45 @@ export function usePromptsFromClaudeInChrome(
     }
 
     if (mcpClient) {
-      mcpClient.client.setNotificationHandler(ClaudeInChromePromptNotificationSchema(), (notification) => {
-        if (mcpClientRef.current !== mcpClient) {
-          return
-        }
-        const { tabId, prompt, image } = notification.params
-
-        // Process notifications from tabs we're tracking since notifications are broadcasted
-        if (typeof tabId !== 'number' || !isTrackedClaudeInChromeTabId(tabId)) {
-          return
-        }
-
-        try {
-          // Build content blocks if there's an image, otherwise just use the prompt string
-          if (image) {
-            const contentBlocks: ContentBlockParam[] = [
-              { type: 'text', text: prompt },
-              {
-                type: 'image',
-                source: {
-                  type: image.type,
-                  media_type: image.media_type,
-                  data: image.data,
-                },
-              },
-            ]
-            enqueuePendingNotification({
-              value: contentBlocks,
-              mode: 'prompt',
-            })
-          } else {
-            enqueuePendingNotification({ value: prompt, mode: 'prompt' })
+      mcpClient.client.setNotificationHandler(
+        ClaudeInChromePromptNotificationSchema() as unknown as McpNotificationSchema,
+        (notification) => {
+          if (mcpClientRef.current !== mcpClient) {
+            return
           }
-        } catch (error) {
-          logError(error as Error)
-        }
-      })
+          const { tabId, prompt, image } = notification.params
+
+          // Process notifications from tabs we're tracking since notifications are broadcasted
+          if (typeof tabId !== 'number' || !isTrackedClaudeInChromeTabId(tabId)) {
+            return
+          }
+
+          try {
+            // Build content blocks if there's an image, otherwise just use the prompt string
+            if (image) {
+              const contentBlocks: ContentBlockParam[] = [
+                { type: 'text', text: prompt },
+                {
+                  type: 'image',
+                  source: {
+                    type: image.type,
+                    media_type: image.media_type,
+                    data: image.data,
+                  },
+                },
+              ]
+              enqueuePendingNotification({
+                value: contentBlocks,
+                mode: 'prompt',
+              })
+            } else {
+              enqueuePendingNotification({ value: prompt, mode: 'prompt' })
+            }
+          } catch (error) {
+            logError(error as Error)
+          }
+        },
+      )
     }
   }, [mcpClients])
 

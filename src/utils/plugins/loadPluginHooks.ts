@@ -4,6 +4,7 @@ import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
 import { clearRegisteredPluginHooks, getRegisteredHooks, registerHookCallbacks } from '../../bootstrap/state.js'
 import type { LoadedPlugin } from '../../types/plugin.js'
 import { logForDebugging } from '../debug.js'
+import { definedEntries } from '../objectEntries.js'
 import { settingsChangeDetector } from '../settings/changeDetector.js'
 import { getSettings_DEPRECATED, getSettingsForSource } from '../settings/settings.js'
 import type { PluginHookMatcher } from '../settings/types.js'
@@ -55,8 +56,7 @@ function convertPluginHooksToMatchers(plugin: LoadedPlugin): Record<HookEvent, P
   }
 
   // Process each hook event - pass through all hook types with plugin context
-  for (const [event, matchers] of Object.entries(plugin.hooksConfig)) {
-    const hookEvent = event
+  for (const [hookEvent, matchers] of definedEntries(plugin.hooksConfig)) {
     if (!pluginMatchers[hookEvent]) {
       continue
     }
@@ -184,7 +184,7 @@ export async function pruneRemovedPluginHooks(): Promise<void> {
   // loadPluginHooks above). Callback hooks are preserved by
   // clearRegisteredPluginHooks; we only need to re-register survivors.
   const survivors: Partial<Record<HookEvent, PluginHookMatcher[]>> = {}
-  for (const [event, matchers] of Object.entries(current)) {
+  for (const [event, matchers] of definedEntries(current)) {
     const kept = matchers.filter((m): m is PluginHookMatcher => 'pluginRoot' in m && enabledRoots.has(m.pluginRoot))
     if (kept.length > 0) survivors[event] = kept
   }

@@ -282,24 +282,30 @@ export const SYNTHETIC_MESSAGES = new Set([
 ])
 
 /**
- * Type-level view of a message's content for the wide `Message` union: lets the
- * original `message.message.content` reads typecheck without narrowing the
- * input's discriminant. Erased at build time — no runtime behavior change.
+ * Messages that carry an inner API payload (`message.content`). The other union
+ * members — system, attachment, progress, UI-only groups, tombstones — have no
+ * `message` field to inspect.
  */
-type MessageContentBlob = {
-  message: { content: string | { type: string; text: string }[] }
+type WithMessagePayload = AssistantMessage | UserMessage
+
+function hasMessagePayload(message: Message): message is WithMessagePayload {
+  return message.type === 'assistant' || message.type === 'user'
 }
 
 export function isSyntheticMessage(message: Message): boolean {
-  const msg = message as unknown as MessageContentBlob
-  return (
-    message.type !== 'progress' &&
-    message.type !== 'attachment' &&
-    message.type !== 'system' &&
-    Array.isArray(msg.message.content) &&
-    msg.message.content[0]?.type === 'text' &&
-    SYNTHETIC_MESSAGES.has(msg.message.content[0].text)
-  )
+  if (!hasMessagePayload(message)) {
+    return false
+  }
+  const content = message.message.content
+  if (!Array.isArray(content)) {
+    return false
+  }
+  const first = content[0]
+  return first?.type === 'text' && SYNTHETIC_MESSAGES.has(first.text)
+}
+
+export function isLocalCommandMessage(message: Message): message is SystemLocalCommandMessage {
+  return message.type === 'system' && message.subtype === 'local_command' && typeof message.content === 'string'
 }
 
 function isSyntheticApiErrorMessage(message: Message): message is AssistantMessage & { isApiErrorMessage: true } {
@@ -649,33 +655,32 @@ export function extractTag(html: string, tagName: string): string | null {
 }
 
 export function isNotEmptyMessage(message: Message): boolean {
-  if (message.type === 'progress' || message.type === 'attachment' || message.type === 'system') {
+  if (!hasMessagePayload(message)) {
     return true
   }
 
-  const msg = message as unknown as MessageContentBlob
+  const content = message.message.content
 
-  if (typeof msg.message.content === 'string') {
-    return msg.message.content.trim().length > 0
+  if (typeof content === 'string') {
+    return content.trim().length > 0
   }
 
-  if (msg.message.content.length === 0) {
+  if (content.length === 0) {
     return false
   }
 
   // Skip multi-block messages for now
-  if (msg.message.content.length > 1) {
+  if (content.length > 1) {
     return true
   }
 
-  if (msg.message.content[0].type !== 'text') {
+  const first = content[0]
+  if (first?.type !== 'text') {
     return true
   }
 
   return (
-    msg.message.content[0].text.trim().length > 0 &&
-    msg.message.content[0].text !== NO_CONTENT_MESSAGE &&
-    msg.message.content[0].text !== INTERRUPT_MESSAGE_FOR_TOOL_USE
+    first.text.trim().length > 0 && first.text !== NO_CONTENT_MESSAGE && first.text !== INTERRUPT_MESSAGE_FOR_TOOL_USE
   )
 }
 

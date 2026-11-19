@@ -173,7 +173,7 @@ export function deserializeMessagesWithInterruptDetection(serializedMessages: Me
 
     // Filter out assistant messages with only whitespace text content.
     // This can happen when model outputs "\n\n" before thinking, user cancels mid-stream.
-    const filteredMessages = filterWhitespaceOnlyAssistantMessages(filteredThinking)
+    const filteredMessages = filterWhitespaceOnlyAssistantMessages(filteredThinking) as NormalizedMessage[]
 
     const internalState = detectTurnInterruption(filteredMessages)
 

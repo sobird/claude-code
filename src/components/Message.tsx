@@ -380,20 +380,19 @@ function AssistantMessageBlock({
   lastThinkingBlockId?: string | null
   advisorModel?: string
 }): React.ReactNode {
-  if (isConnectorTextBlock(param)) {
-    if (!feature('CONNECTOR_TEXT')) {
-      return null
+  if (feature('CONNECTOR_TEXT')) {
+    if (isConnectorTextBlock(param)) {
+      return (
+        <AssistantTextMessage
+          param={{ type: 'text', text: param.connector_text }}
+          addMargin={addMargin}
+          shouldShowDot={shouldShowDot}
+          verbose={verbose}
+          width={width}
+          onOpenRateLimitOptions={onOpenRateLimitOptions}
+        />
+      )
     }
-    return (
-      <AssistantTextMessage
-        param={{ type: 'text', text: param.connector_text }}
-        addMargin={addMargin}
-        shouldShowDot={shouldShowDot}
-        verbose={verbose}
-        width={width}
-        onOpenRateLimitOptions={onOpenRateLimitOptions}
-      />
-    )
   }
   switch (param.type) {
     case 'tool_use':

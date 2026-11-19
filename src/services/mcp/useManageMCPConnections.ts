@@ -14,7 +14,7 @@ import {
   getMcpToolsCommandsAndResources,
   reconnectMcpServerImpl,
 } from './client.js'
-import type { MCPServerConnection, ScopedMcpServerConfig, ServerResource } from './types.js'
+import type { MCPServerConnection, McpNotificationSchema, ScopedMcpServerConfig, ServerResource } from './types.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const fetchMcpSkillsForClient = feature('MCP_SKILLS')
@@ -427,25 +427,28 @@ export function useManageMCPConnections(
             switch (gate.action) {
               case 'register':
                 logMCPDebug(client.name, 'Channel notifications registered')
-                client.client.setNotificationHandler(ChannelMessageNotificationSchema(), async (notification) => {
-                  const { content, meta } = notification.params
-                  logMCPDebug(client.name, `notifications/claude/channel: ${content.slice(0, 80)}`)
-                  logEvent('tengu_mcp_channel_message', {
-                    content_length: content.length,
-                    meta_key_count: Object.keys(meta ?? {}).length,
-                    entry_kind: entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                    is_dev: entry?.dev ?? false,
-                    plugin: pluginId,
-                  })
-                  enqueue({
-                    mode: 'prompt',
-                    value: wrapChannelMessage(client.name, content, meta),
-                    priority: 'next',
-                    isMeta: true,
-                    origin: { kind: 'channel', server: client.name },
-                    skipSlashCommands: true,
-                  })
-                })
+                client.client.setNotificationHandler(
+                  ChannelMessageNotificationSchema() as unknown as McpNotificationSchema,
+                  async (notification) => {
+                    const { content, meta } = notification.params
+                    logMCPDebug(client.name, `notifications/claude/channel: ${content.slice(0, 80)}`)
+                    logEvent('tengu_mcp_channel_message', {
+                      content_length: content.length,
+                      meta_key_count: Object.keys(meta ?? {}).length,
+                      entry_kind: entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                      is_dev: entry?.dev ?? false,
+                      plugin: pluginId,
+                    })
+                    enqueue({
+                      mode: 'prompt',
+                      value: wrapChannelMessage(client.name, content, meta),
+                      priority: 'next',
+                      isMeta: true,
+                      origin: { kind: 'channel', server: client.name },
+                      skipSlashCommands: true,
+                    })
+                  },
+                )
                 // Permission-reply handler — separate event, separate
                 // capability. Only registers if the server declares
                 // claude/channel/permission (same opt-in check as the send
@@ -453,15 +456,18 @@ export function useManageMCPConnections(
                 // reply and emits {request_id, behavior}; no regex on our
                 // side, text in the general channel can't accidentally match.
                 if (client.capabilities?.experimental?.['claude/channel/permission'] !== undefined) {
-                  client.client.setNotificationHandler(ChannelPermissionNotificationSchema(), async (notification) => {
-                    const { request_id, behavior } = notification.params
-                    const resolved =
-                      channelPermCallbacksRef.current?.resolve(request_id, behavior, client.name) ?? false
-                    logMCPDebug(
-                      client.name,
-                      `notifications/claude/channel/permission: ${request_id} → ${behavior} (${resolved ? 'matched pending' : 'no pending entry — stale or unknown ID'})`,
-                    )
-                  })
+                  client.client.setNotificationHandler(
+                    ChannelPermissionNotificationSchema() as unknown as McpNotificationSchema,
+                    async (notification) => {
+                      const { request_id, behavior } = notification.params
+                      const resolved =
+                        channelPermCallbacksRef.current?.resolve(request_id, behavior, client.name) ?? false
+                      logMCPDebug(
+                        client.name,
+                        `notifications/claude/channel/permission: ${request_id} → ${behavior} (${resolved ? 'matched pending' : 'no pending entry — stale or unknown ID'})`,
+                      )
+                    },
+                  )
                 }
                 break
               case 'skip':

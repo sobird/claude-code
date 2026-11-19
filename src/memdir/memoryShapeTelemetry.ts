@@ -25,13 +25,14 @@ export function logMemoryRecallShape(memories: MemoryHeader[], selected: MemoryH
  * The Write tool carries the full file body in `content`; Edit carries only
  * `old_string`/`new_string`, so `content_length` is omitted there.
  */
-export function logMemoryWriteShape(
-  toolName: string,
-  toolInput: Record<string, unknown>,
-  _filePath: string,
-  scope: MemoryScope,
-): void {
-  const content = typeof toolInput.content === 'string' ? toolInput.content : undefined
+export function logMemoryWriteShape(toolName: string, toolInput: unknown, _filePath: string, scope: MemoryScope): void {
+  const content =
+    typeof toolInput === 'object' &&
+    toolInput !== null &&
+    'content' in toolInput &&
+    typeof toolInput.content === 'string'
+      ? toolInput.content
+      : undefined
   logEvent('tengu_memory_shape_write', {
     tool: toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

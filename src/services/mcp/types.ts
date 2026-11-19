@@ -4,6 +4,16 @@ import { z } from 'zod/v4'
 
 import { lazySchema } from '../../utils/lazySchema.js'
 
+/**
+ * Boundary type for `Client.setNotificationHandler` schemas.
+ *
+ * The MCP SDK resolves its zod peer to a different install (4.3.x) than the
+ * repo's own `zod/v4` (4.6.x), so the two declaration types are incompatible
+ * even though the runtime schemas are interchangeable. Cast a repo-built
+ * schema to this type at the call site (type-only, erased at build time).
+ */
+export type McpNotificationSchema = Parameters<Client['setNotificationHandler']>[0]
+
 // Configuration schemas and types
 export const ConfigScopeSchema = lazySchema(() =>
   z.enum(['local', 'user', 'project', 'dynamic', 'enterprise', 'claudeai', 'managed']),

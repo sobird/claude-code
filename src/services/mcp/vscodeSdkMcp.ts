@@ -7,7 +7,7 @@ import {
   getFeatureValue_CACHED_MAY_BE_STALE,
 } from '../analytics/growthbook.js'
 import { logEvent } from '../analytics/index.js'
-import type { ConnectedMCPServer, MCPServerConnection } from './types.js'
+import type { ConnectedMCPServer, MCPServerConnection, McpNotificationSchema } from './types.js'
 
 // Mirror of AutoModeEnabledState in permissionSetup.ts — inlined because that
 // file pulls in too many deps for this thin IPC module.
@@ -60,10 +60,13 @@ export function setupVscodeSdkMcp(sdkClients: MCPServerConnection[]): void {
     // Store the client reference for later use
     vscodeMcpClient = client
 
-    client.client.setNotificationHandler(LogEventNotificationSchema(), async (notification) => {
-      const { eventName, eventData } = notification.params
-      logEvent(`tengu_vscode_${eventName}`, eventData as { [key: string]: boolean | number | undefined })
-    })
+    client.client.setNotificationHandler(
+      LogEventNotificationSchema() as unknown as McpNotificationSchema,
+      async (notification) => {
+        const { eventName, eventData } = notification.params
+        logEvent(`tengu_vscode_${eventName}`, eventData as { [key: string]: boolean | number | undefined })
+      },
+    )
 
     // Send necessary experiment gates to VSCode immediately.
     const gates: Record<string, boolean | string> = {

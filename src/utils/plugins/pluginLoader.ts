@@ -55,6 +55,7 @@ import { getFsImplementation } from '../fsOperations.js'
 import { gitExe } from '../git.js'
 import { lazySchema } from '../lazySchema.js'
 import { logError } from '../log.js'
+import { definedEntries } from '../objectEntries.js'
 import { getSettings_DEPRECATED } from '../settings/settings.js'
 import {
   clearPluginSettingsBase,
@@ -1604,7 +1605,7 @@ function mergeHooksSettings(base: HooksSettings | undefined, additional: HooksSe
 
   const merged = { ...base }
 
-  for (const [event, matchers] of Object.entries(additional)) {
+  for (const [event, matchers] of definedEntries(additional)) {
     if (!merged[event]) {
       merged[event] = matchers
     } else {

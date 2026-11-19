@@ -42,7 +42,6 @@ const NULL_RENDERING_TYPES = [
   'auto_mode_exit',
   'output_token_usage',
   'verify_plan_reminder',
-  'bagel_console',
   'current_session_memory',
   'compaction_reminder',
   'date_change',

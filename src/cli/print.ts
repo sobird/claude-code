@@ -102,7 +102,12 @@ import {
 import { getAllMcpConfigs } from 'src/services/mcp/config.js'
 import { runElicitationHooks, runElicitationResultHooks } from 'src/services/mcp/elicitationHandler.js'
 import { getMcpPrefix } from 'src/services/mcp/mcpStringUtils.js'
-import type { MCPServerConnection, McpSdkServerConfig, ScopedMcpServerConfig } from 'src/services/mcp/types.js'
+import type {
+  MCPServerConnection,
+  McpNotificationSchema,
+  McpSdkServerConfig,
+  ScopedMcpServerConfig,
+} from 'src/services/mcp/types.js'
 import { commandBelongsToServer, filterToolsByServer } from 'src/services/mcp/utils.js'
 import { setupVscodeSdkMcp } from 'src/services/mcp/vscodeSdkMcp.js'
 import { OAuthService } from 'src/services/oauth/index.js'
@@ -4142,25 +4147,28 @@ function handleChannelEnable(
   // useManageMCPConnections. drainCommandQueue processes it between turns —
   // channel messages queue at priority 'next' and are seen by the model on
   // the turn after they arrive.
-  connection.client.setNotificationHandler(ChannelMessageNotificationSchema(), async (notification) => {
-    const { content, meta } = notification.params
-    logMCPDebug(serverName, `notifications/claude/channel: ${content.slice(0, 80)}`)
-    logEvent('tengu_mcp_channel_message', {
-      content_length: content.length,
-      meta_key_count: Object.keys(meta ?? {}).length,
-      entry_kind: 'plugin' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      is_dev: false,
-      plugin: pluginId,
-    })
-    enqueue({
-      mode: 'prompt',
-      value: wrapChannelMessage(serverName, content, meta),
-      priority: 'next',
-      isMeta: true,
-      origin: { kind: 'channel', server: serverName },
-      skipSlashCommands: true,
-    })
-  })
+  connection.client.setNotificationHandler(
+    ChannelMessageNotificationSchema() as unknown as McpNotificationSchema,
+    async (notification) => {
+      const { content, meta } = notification.params
+      logMCPDebug(serverName, `notifications/claude/channel: ${content.slice(0, 80)}`)
+      logEvent('tengu_mcp_channel_message', {
+        content_length: content.length,
+        meta_key_count: Object.keys(meta ?? {}).length,
+        entry_kind: 'plugin' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        is_dev: false,
+        plugin: pluginId,
+      })
+      enqueue({
+        mode: 'prompt',
+        value: wrapChannelMessage(serverName, content, meta),
+        priority: 'next',
+        isMeta: true,
+        origin: { kind: 'channel', server: serverName },
+        skipSlashCommands: true,
+      })
+    },
+  )
 
   output.enqueue({
     type: 'control_response',
@@ -4202,25 +4210,28 @@ function reregisterChannelHandlerAfterReconnect(connection: MCPServerConnection)
       : undefined
 
   logMCPDebug(connection.name, 'Channel notifications re-registered after reconnect')
-  connection.client.setNotificationHandler(ChannelMessageNotificationSchema(), async (notification) => {
-    const { content, meta } = notification.params
-    logMCPDebug(connection.name, `notifications/claude/channel: ${content.slice(0, 80)}`)
-    logEvent('tengu_mcp_channel_message', {
-      content_length: content.length,
-      meta_key_count: Object.keys(meta ?? {}).length,
-      entry_kind: entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      is_dev: entry?.dev ?? false,
-      plugin: pluginId,
-    })
-    enqueue({
-      mode: 'prompt',
-      value: wrapChannelMessage(connection.name, content, meta),
-      priority: 'next',
-      isMeta: true,
-      origin: { kind: 'channel', server: connection.name },
-      skipSlashCommands: true,
-    })
-  })
+  connection.client.setNotificationHandler(
+    ChannelMessageNotificationSchema() as unknown as McpNotificationSchema,
+    async (notification) => {
+      const { content, meta } = notification.params
+      logMCPDebug(connection.name, `notifications/claude/channel: ${content.slice(0, 80)}`)
+      logEvent('tengu_mcp_channel_message', {
+        content_length: content.length,
+        meta_key_count: Object.keys(meta ?? {}).length,
+        entry_kind: entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        is_dev: entry?.dev ?? false,
+        plugin: pluginId,
+      })
+      enqueue({
+        mode: 'prompt',
+        value: wrapChannelMessage(connection.name, content, meta),
+        priority: 'next',
+        isMeta: true,
+        origin: { kind: 'channel', server: connection.name },
+        skipSlashCommands: true,
+      })
+    },
+  )
 }
 
 /**

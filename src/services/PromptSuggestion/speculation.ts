@@ -156,6 +156,12 @@ function isUserMessageWithArrayContent(m: Message): m is Message & { message: { 
   return m.type === 'user' && 'message' in m && Array.isArray(m.message.content)
 }
 
+type ContentBlockLike = { type: string; id?: string; tool_use_id?: string; text?: string }
+
+function hasArrayMessageContent(m: Message): m is Message & { message: { content: ContentBlockLike[] } } {
+  return (m.type === 'assistant' || m.type === 'user') && Array.isArray(m.message.content)
+}
+
 export function prepareMessagesForInjection(messages: Message[]): Message[] {
   // Find tool_use IDs that have SUCCESSFUL results (not errors/interruptions)
   // Pending tool_use blocks (no result) and interrupted ones will be stripped
@@ -194,8 +200,7 @@ export function prepareMessagesForInjection(messages: Message[]): Message[] {
 
   return messages
     .map((msg) => {
-      if (msg.type !== 'assistant' && msg.type !== 'user') return msg
-      if (!Array.isArray(msg.message.content)) return msg
+      if (!hasArrayMessageContent(msg)) return msg
       const content = msg.message.content.filter(keep)
       if (content.length === msg.message.content.length) return msg
       if (content.length === 0) return null

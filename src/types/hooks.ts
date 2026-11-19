@@ -11,7 +11,7 @@ import type { AttributionState } from '../utils/commitAttribution.js'
 import { lazySchema } from '../utils/lazySchema.js'
 
 export function isHookEvent(value: string): value is HookEvent {
-  return HOOK_EVENTS.includes(value)
+  return HOOK_EVENTS.some((event) => event === value)
 }
 
 // Prompt elicitation protocol types. The `prompt` key acts as discriminator

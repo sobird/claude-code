@@ -3,6 +3,7 @@ import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
 
 import { getRegisteredHooks } from '../../bootstrap/state.js'
 import type { AppState } from '../../state/AppState.js'
+import { definedEntries } from '../objectEntries.js'
 import { getAllHooks, type IndividualHookConfig, sortMatchersByPriority } from './hooksSettings.js'
 
 export type MatcherMetadata = {
@@ -303,8 +304,7 @@ export function groupHooksByEventAndMatcher(
   // Include registered hooks (e.g., plugin hooks)
   const registeredHooks = getRegisteredHooks()
   if (registeredHooks) {
-    for (const [event, matchers] of Object.entries(registeredHooks)) {
-      const hookEvent = event
+    for (const [hookEvent, matchers] of definedEntries(registeredHooks)) {
       const eventGroup = grouped[hookEvent]
       if (!eventGroup) continue
 

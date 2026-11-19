@@ -19,6 +19,7 @@ import type { HookCallbackMatcher } from 'src/types/hooks.js'
 import { randomUUID } from 'src/utils/crypto.js'
 import type { ModelSetting } from 'src/utils/model/model.js'
 import type { ModelStrings } from 'src/utils/model/modelStrings.js'
+import { definedEntries } from 'src/utils/objectEntries.js'
 import type { SettingSource } from 'src/utils/settings/constants.js'
 import { resetSettingsCache } from 'src/utils/settings/settingsCache.js'
 import type { PluginHookMatcher } from 'src/utils/settings/types.js'
@@ -1381,8 +1382,7 @@ export function registerHookCallbacks(hooks: Partial<Record<HookEvent, Registere
   }
 
   // `registerHookCallbacks` may be called multiple times, so we need to merge (not overwrite)
-  for (const [event, matchers] of Object.entries(hooks)) {
-    const eventKey = event
+  for (const [eventKey, matchers] of definedEntries(hooks)) {
     if (!STATE.registeredHooks[eventKey]) {
       STATE.registeredHooks[eventKey] = []
     }
@@ -1404,7 +1404,7 @@ export function clearRegisteredPluginHooks(): void {
   }
 
   const filtered: Partial<Record<HookEvent, RegisteredHookMatcher[]>> = {}
-  for (const [event, matchers] of Object.entries(STATE.registeredHooks)) {
+  for (const [event, matchers] of definedEntries(STATE.registeredHooks)) {
     // Keep only callback hooks (those without pluginRoot)
     const callbackHooks = matchers.filter((m) => !('pluginRoot' in m))
     if (callbackHooks.length > 0) {

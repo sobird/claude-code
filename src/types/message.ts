@@ -105,7 +105,7 @@ export type APIMessage = APIAssistantMessage | APIUserMessage
  */
 type MessageBase = {
   uuid: UUID
-  timestamp?: string
+  timestamp: string
   origin?: MessageOrigin
   toolUseResult?: unknown
   [key: string]: unknown

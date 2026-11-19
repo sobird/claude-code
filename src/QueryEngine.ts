@@ -7,7 +7,6 @@ import last from 'lodash-es/last.js'
 import { getSessionId, isSessionPersistenceDisabled } from 'src/bootstrap/state.js'
 import type {
   PermissionMode,
-  SDKCompactBoundaryMessage,
   SDKMessage,
   SDKPermissionDenial,
   SDKStatus,
@@ -34,7 +33,7 @@ import type { AppState } from './state/AppState.js'
 import { findToolByName, type Tools, type ToolUseContext, toolMatchesName } from './Tool.js'
 import type { AgentDefinition } from './tools/AgentTool/loadAgentsDir.js'
 import { SYNTHETIC_OUTPUT_TOOL_NAME } from './tools/SyntheticOutputTool/SyntheticOutputTool.js'
-import type { AssistantMessage, Message, SystemAPIErrorMessage, SystemCompactBoundaryMessage } from './types/message.js'
+import type { AssistantMessage, Message, SystemAPIErrorMessage } from './types/message.js'
 import type { OrphanedPermission } from './types/textInputTypes.js'
 import { createAbortController } from './utils/abortController.js'
 import type { HookDeferredToolAttachment } from './utils/attachments.js'
@@ -49,7 +48,12 @@ import { cloneFileStateCache, type FileStateCache } from './utils/fileStateCache
 import { headlessProfilerCheckpoint } from './utils/headlessProfiler.js'
 import { registerStructuredOutputEnforcement } from './utils/hooks/hookHelpers.js'
 import { getInMemoryErrors } from './utils/log.js'
-import { countToolCalls, SYNTHETIC_MESSAGES } from './utils/messages.js'
+import {
+  countToolCalls,
+  isCompactBoundaryMessage,
+  isLocalCommandMessage,
+  SYNTHETIC_MESSAGES,
+} from './utils/messages.js'
 import { getMainLoopModel, parseUserSpecifiedModel } from './utils/model/model.js'
 import { loadAllPluginsCacheOnly } from './utils/plugins/pluginLoader.js'
 import { type ProcessUserInputContext, processUserInput } from './utils/processUserInput/processUserInput.js'
@@ -672,24 +676,21 @@ export class QueryEngine {
         // Emitted as assistant (not the dedicated SDKLocalCommandOutputMessage
         // system subtype) so mobile clients + session-ingress can parse it.
         if (
-          msg.type === 'system' &&
-          msg.subtype === 'local_command' &&
-          typeof msg.content === 'string' &&
+          isLocalCommandMessage(msg) &&
           (msg.content.includes(`<${LOCAL_COMMAND_STDOUT_TAG}>`) ||
             msg.content.includes(`<${LOCAL_COMMAND_STDERR_TAG}>`))
         ) {
           yield localCommandOutputToSDKAssistantMessage(msg.content, msg.uuid)
         }
 
-        if (msg.type === 'system' && msg.subtype === 'compact_boundary') {
-          const compactMsg = msg as SystemCompactBoundaryMessage
+        if (isCompactBoundaryMessage(msg)) {
           yield {
             type: 'system',
             subtype: 'compact_boundary' as const,
             session_id: getSessionId(),
             uuid: msg.uuid,
-            compact_metadata: toSDKCompactMetadata(compactMsg.compactMetadata),
-          } as SDKCompactBoundaryMessage
+            compact_metadata: toSDKCompactMetadata(msg.compactMetadata),
+          }
         }
       }
 
