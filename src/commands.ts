@@ -64,7 +64,7 @@ const bridge = feature('BRIDGE_MODE') ? require('./commands/bridge/index.js').de
 const remoteControlServerCommand =
   feature('DAEMON') && feature('BRIDGE_MODE') ? require('./commands/remoteControlServer/index.js').default : null
 const voiceCommand = feature('VOICE_MODE') ? require('./commands/voice/index.js').default : null
-const forceSnip = feature('HISTORY_SNIP') ? require('./commands/force-snip.js').default : null
+const forceSnip = feature('HISTORY_SNIP') ? require('./commands/force-snip/index.js').default : null
 const workflowsCmd = feature('WORKFLOW_SCRIPTS')
   ? (require('./commands/workflows/index.js') as typeof import('./commands/workflows/index.js')).default
   : null

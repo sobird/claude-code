@@ -44,9 +44,13 @@ export async function sendToUdsSocket(target: string, message: string): Promise<
   })
 }
 
-type LiveSession = {
+export type LiveSession = {
+  pid: number
   kind?: string
   sessionId?: string
+  name?: string
+  cwd?: string
+  startedAt?: number
 }
 
 /**
@@ -76,8 +80,12 @@ export async function listAllLiveSessions(): Promise<LiveSession[]> {
     try {
       const data = jsonParse(await readFile(join(dir, file), 'utf8')) as Record<string, unknown>
       sessions.push({
+        pid,
         kind: typeof data.kind === 'string' ? data.kind : undefined,
         sessionId: typeof data.sessionId === 'string' ? data.sessionId : undefined,
+        name: typeof data.name === 'string' ? data.name : undefined,
+        cwd: typeof data.cwd === 'string' ? data.cwd : undefined,
+        startedAt: typeof data.startedAt === 'number' ? data.startedAt : undefined,
       })
     } catch {
       // Raced with cleanup or partially written — skip this entry.

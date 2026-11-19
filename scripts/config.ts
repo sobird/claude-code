@@ -40,7 +40,7 @@ export const features = [
   // 'COMPACTION_REMINDERS',
   // 'CONNECTOR_TEXT',
   // 'CONTEXT_COLLAPSE',  // 默认：未开启
-  // 'COORDINATOR_MODE', // default: false
+  'COORDINATOR_MODE',
   // 'COWORKER_TYPE_TELEMETRY',
   'DAEMON',
   // 'DIRECT_CONNECT',
@@ -53,7 +53,7 @@ export const features = [
   // 'FORK_SUBAGENT', // 默认 未开启
   // 'HARD_FAIL',
   // 'HISTORY_PICKER',
-  // 'HISTORY_SNIP', // 默认 未开启
+  'HISTORY_SNIP',
   // 'HOOK_PROMPTS',
   // 'IS_LIBC_GLIBC',
   // 'IS_LIBC_MUSL',
@@ -96,14 +96,14 @@ export const features = [
   'TRANSCRIPT_CLASSIFIER',
   // 'TREE_SITTER_BASH',
   // 'TREE_SITTER_BASH_SHADOW',
-  // 'UDS_INBOX',
+  'UDS_INBOX',
   'ULTRATHINK',
   // 'UNATTENDED_RETRY',
   // 'UPLOAD_USER_SETTINGS',
   // 'VERIFICATION_AGENT', // 默认：未开启
   'VOICE_MODE',
   // 'WEB_BROWSER_TOOL',
-  // 'WORKFLOW_SCRIPTS',
+  'WORKFLOW_SCRIPTS',
 ]
 
 export function define(buildTraget: BuildTarget = 'external', _buildEnv: BuildEnv = 'production') {
