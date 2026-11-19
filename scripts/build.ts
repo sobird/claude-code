@@ -47,7 +47,7 @@ console.info('Build success!', result.outputs)
 
 // package.json
 // oxlint-disable-next-line no-unused-vars
-const { workspaces, scripts, devDependencies, files, 'lint-staged': _, trustedDependencies, ...cleanPkg } = pkg
+const { workspaces, scripts, devDependencies, 'lint-staged': _, trustedDependencies, ...cleanPkg } = pkg
 
 await Bun.write(
   `${outdir}/package.json`,

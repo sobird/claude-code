@@ -364,7 +364,7 @@ export const NotebookEditTool = buildTool({
         notebook.cells.splice(cellIndex, 0, new_cell)
       } else {
         // Find the specified cell
-        const targetCell = notebook.cells[cellIndex]! // validateInput ensures cell_number is in bounds
+        const targetCell = notebook.cells[cellIndex] // validateInput ensures cell_number is in bounds
         targetCell.source = new_source
         if (targetCell.cell_type === 'code') {
           // Reset execution count and clear outputs since cell was modified

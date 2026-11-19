@@ -22,11 +22,6 @@
     "packages/*",
     "packages/@ant/*"
   ],
-  "files": [
-    "vendor/audio-capture",
-    "vendor/modifiers",
-    "vendor/url-handler"
-  ],
   "type": "module",
   "main": "./dist/cli.js",
   "publishConfig": {

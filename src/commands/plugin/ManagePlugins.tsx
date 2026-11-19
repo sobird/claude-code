@@ -816,7 +816,7 @@ export function ManagePlugins({
 
       let i = 0
       while (i < items.length) {
-        const item = items[i]!
+        const item = items[i]
         if (item.type === 'plugin' || item.type === 'failed-plugin' || item.type === 'flagged-plugin') {
           // Collect the plugin and its child MCPs as a group
           const group: UnifiedInstalledItem[] = [item]
@@ -840,7 +840,7 @@ export function ManagePlugins({
       }
 
       // Sort plugin groups by the plugin name (first item in each group)
-      pluginGroups.sort((a, b) => a[0]!.name.localeCompare(b[0]!.name))
+      pluginGroups.sort((a, b) => a[0].name.localeCompare(b[0].name))
 
       // Sort standalone MCPs by name
       standaloneMcpsInScope.sort((a, b) => a.name.localeCompare(b.name))

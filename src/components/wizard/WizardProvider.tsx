@@ -17,7 +17,7 @@ export function WizardProvider<T extends Record<string, unknown>>({
   showStepCounter = true,
 }: WizardProviderProps<T>): ReactNode {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
-  const [wizardData, setWizardData] = useState<T>(initialData)
+  const [wizardData, setWizardData] = useState(initialData)
   const [isCompleted, setIsCompleted] = useState(false)
   const [navigationHistory, setNavigationHistory] = useState<number[]>([])
 

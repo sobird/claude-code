@@ -437,7 +437,7 @@ function findLastUuid(logs: Entry[] | null): UUID | undefined {
     return undefined
   }
   const entry = logs.findLast((e) => 'uuid' in e && e.uuid)
-  return entry && 'uuid' in entry ? (entry.uuid as UUID) : undefined
+  return entry && 'uuid' in entry ? entry.uuid : undefined
 }
 
 /**
