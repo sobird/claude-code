@@ -596,11 +596,11 @@ _总计：90 个 feature flags_
 
 #### `SELF_HOSTED_RUNNER`
 
-- **功能**: 自托管运行器
-- **用途**: 支持自托管的执行环境
-- **代码位置**: src/tools/BashTool/
-- **启用条件**: 自托管部署
-- **影响**: 提高部署灵活性
+- **功能**: 自托管运行器（`claude self-hosted-runner`）
+- **用途**: 独立、无头的 Remote Control 工作进程（self-hosted 部署用）。等同 daemon 的 `remoteControl` worker，但配置来自 CLI 参数而非 `DAEMON_WORKER_*` 环境变量：`runBridgeHeadless` 向配置的 bridge 服务器注册 environment 并跑 work 轮询循环（poll 即心跳），SIGTERM/SIGINT 干净退出
+- **代码位置**: `src/self-hosted-runner/main.ts`、入口 `src/entrypoints/cli.tsx`、headless 循环 `src/bridge/bridgeMain.ts`（`runBridgeHeadless`）、鉴权 `src/bridge/bridgeConfig.ts`（`getBridgeAccessToken`）/`src/utils/auth.ts`（`handleOAuth401Error`）
+- **启用条件**: 已在 `scripts/config.ts` 中启用；需已登录（bridge access token）
+- **影响**: 支持自托管部署；详见 [docs/features/SELF_HOSTED_RUNNER.md](features/SELF_HOSTED_RUNNER.md)
 
 #### `SHOT_STATS`
 
