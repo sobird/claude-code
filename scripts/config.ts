@@ -24,7 +24,7 @@ export const features = [
   'AUTO_THEME',
   // 'AWAY_SUMMARY', // 默认：未开启
   // 'BASH_CLASSIFIER',
-  // 'BG_SESSIONS',
+  'BG_SESSIONS',
   // 'BREAK_CACHE_COMMAND',
   'BRIDGE_MODE',
   'BUDDY',

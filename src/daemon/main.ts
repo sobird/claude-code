@@ -62,7 +62,8 @@ interface SupervisorConfig {
  *
  * Subcommands: `start` (run the supervisor), `stop`, `status`/`ps` (default),
  * and `help`. Background-session subcommands (`bg`/`attach`/`logs`/`kill`) are
- * intentionally absent — they belong to `BG_SESSIONS`, which is not enabled.
+ * intentionally absent — they are served by the `BG_SESSIONS` fast path in
+ * entrypoints/cli.tsx (cli/bg.ts), not by the daemon.
  */
 export async function daemonMain(args: string[]): Promise<void> {
   const subcommand = args[0] || 'status'
