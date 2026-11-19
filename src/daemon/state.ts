@@ -24,6 +24,8 @@ export interface DaemonStateData {
   startedAt: string
   workerKinds: string[]
   lastStatus: 'running' | 'stopped' | 'error'
+  /** Worker kinds the supervisor gave up restarting (see `status` output). */
+  parkedWorkers?: string[]
 }
 
 export type DaemonStatus = 'running' | 'stopped' | 'stale'

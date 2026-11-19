@@ -16,6 +16,7 @@ import {
   assertValidDaemonName,
   EXIT_CODE_PERMANENT,
   queryDaemonStatus,
+  readDaemonState,
   removeDaemonState,
   stopDaemonByPid,
   writeDaemonState,
@@ -141,7 +142,9 @@ async function showStatus(stateName?: string): Promise<void> {
       console.log(`  PID:     ${state.pid}`)
       console.log(`  CWD:     ${state.cwd}`)
       console.log(`  Started: ${state.startedAt}`)
-      console.log(`  Workers: ${state.workerKinds.join(', ')}`)
+      const parked = state.parkedWorkers ?? []
+      const workers = state.workerKinds.map((kind) => (parked.includes(kind) ? `${kind} (parked)` : kind))
+      console.log(`  Workers: ${workers.join(', ')}`)
       return
     }
     case 'stopped':
@@ -266,7 +269,7 @@ async function runSupervisor(args: string[], stateName?: string): Promise<void> 
 
   for (const worker of workers) {
     if (!controller.signal.aborted) {
-      spawnWorker(worker, dir, config, controller.signal)
+      spawnWorker(worker, dir, config, controller.signal, stateName)
     }
   }
 
@@ -311,7 +314,13 @@ function waitForWorkerExit(worker: WorkerState): Promise<void> {
  * worker kind is a positional arg (`--daemon-worker <kind>`) because the CLI
  * fast-path matches the flag and kind as separate argv entries.
  */
-function spawnWorker(worker: WorkerState, dir: string, config: SupervisorConfig, signal: AbortSignal): void {
+function spawnWorker(
+  worker: WorkerState,
+  dir: string,
+  config: SupervisorConfig,
+  signal: AbortSignal,
+  stateName: string | undefined,
+): void {
   if (signal.aborted || worker.parked) return
 
   worker.lastStartTime = Date.now()
@@ -347,44 +356,97 @@ function spawnWorker(worker: WorkerState, dir: string, config: SupervisorConfig,
       console.error(`  ${line}`)
     }
   })
+  // 'error' and 'exit' can both fire for one child; handle whichever lands
+  // first and ignore the other.
+  let finished = false
+
   child.on('error', (error) => {
+    if (finished) return
+    finished = true
+    // A failed spawn emits 'error' but usually not 'exit', so clear the handle
+    // here — otherwise waitForWorkerExit would wait out its grace period on a
+    // process that never existed.
+    if (worker.process === child) worker.process = null
     console.error(`[daemon] worker '${worker.kind}' failed to spawn: ${error.message}`)
+    if (signal.aborted) return
+    recordRapidFailure(worker, dir, config, signal, stateName)
   })
 
   child.on('exit', (code, signalName) => {
+    if (finished) return
+    finished = true
     worker.process = null
     if (signal.aborted) return
 
     if (code === EXIT_CODE_PERMANENT) {
-      console.error(`[daemon] worker '${worker.kind}' exited with permanent error — parking`)
-      worker.parked = true
+      parkWorker(worker, 'exited with permanent error', stateName)
       return
     }
 
+    console.log(`[daemon] worker '${worker.kind}' exited (code=${code}, signal=${signalName})`)
     const runDuration = Date.now() - worker.lastStartTime
     if (runDuration < RAPID_FAILURE_WINDOW_MS) {
-      worker.failureCount++
-      if (worker.failureCount >= MAX_RAPID_FAILURES) {
-        console.error(`[daemon] worker '${worker.kind}' failed ${worker.failureCount} times rapidly — parking`)
-        worker.parked = true
-        return
-      }
+      recordRapidFailure(worker, dir, config, signal, stateName)
     } else {
       worker.failureCount = 0
       worker.backoffMs = BACKOFF_INITIAL_MS
+      scheduleRestart(worker, dir, config, signal, stateName)
     }
-
-    console.log(
-      `[daemon] worker '${worker.kind}' exited (code=${code}, signal=${signalName}), restarting in ${worker.backoffMs}ms`,
-    )
-    worker.restartTimer = setTimeout(() => {
-      worker.restartTimer = null
-      if (!signal.aborted && !worker.parked) {
-        spawnWorker(worker, dir, config, signal)
-      }
-    }, worker.backoffMs)
-    worker.restartTimer.unref?.()
-
-    worker.backoffMs = Math.min(worker.backoffMs * BACKOFF_MULTIPLIER, BACKOFF_CAP_MS)
   })
+}
+
+/** Marks the worker parked and records it in the state file for `status`. */
+function parkWorker(worker: WorkerState, reason: string, stateName: string | undefined): void {
+  console.error(`[daemon] worker '${worker.kind}' ${reason} — parking`)
+  worker.parked = true
+  void markWorkerParked(worker.kind, stateName)
+}
+
+/** Counts a rapid failure; parks after MAX_RAPID_FAILURES, else backs off. */
+function recordRapidFailure(
+  worker: WorkerState,
+  dir: string,
+  config: SupervisorConfig,
+  signal: AbortSignal,
+  stateName: string | undefined,
+): void {
+  worker.failureCount++
+  if (worker.failureCount >= MAX_RAPID_FAILURES) {
+    parkWorker(worker, `failed ${worker.failureCount} times rapidly`, stateName)
+    return
+  }
+  scheduleRestart(worker, dir, config, signal, stateName)
+}
+
+/** Schedules the next spawn after `worker.backoffMs`, then grows the backoff. */
+function scheduleRestart(
+  worker: WorkerState,
+  dir: string,
+  config: SupervisorConfig,
+  signal: AbortSignal,
+  stateName: string | undefined,
+): void {
+  console.log(`[daemon] worker '${worker.kind}' restarting in ${worker.backoffMs}ms`)
+  worker.restartTimer = setTimeout(() => {
+    worker.restartTimer = null
+    if (!signal.aborted && !worker.parked) {
+      spawnWorker(worker, dir, config, signal, stateName)
+    }
+  }, worker.backoffMs)
+  worker.restartTimer.unref?.()
+
+  worker.backoffMs = Math.min(worker.backoffMs * BACKOFF_MULTIPLIER, BACKOFF_CAP_MS)
+}
+
+/**
+ * Persists the parked worker in the state file so `status` stops presenting a
+ * supervisor whose only worker gave up as healthy.
+ */
+async function markWorkerParked(kind: string, stateName?: string): Promise<void> {
+  const state = await readDaemonState(stateName)
+  if (!state) return
+  const parkedWorkers = state.parkedWorkers?.includes(kind)
+    ? state.parkedWorkers
+    : [...(state.parkedWorkers ?? []), kind]
+  await writeDaemonState({ ...state, lastStatus: 'error', parkedWorkers }, stateName)
 }

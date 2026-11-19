@@ -9,7 +9,7 @@ import { BRIDGE_LOGIN_INSTRUCTION } from '../../bridge/types.js'
 import { Dialog } from '../../components/design-system/Dialog.js'
 import { ListItem } from '../../components/design-system/ListItem.js'
 import { useRegisterOverlay } from '../../context/overlayContext.js'
-import { queryDaemonStatus, stopDaemonByPid } from '../../daemon/state.js'
+import { type DaemonStateData, queryDaemonStatus, stopDaemonByPid } from '../../daemon/state.js'
 import { Box, Text } from '../../ink.js'
 import { useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { ToolUseContext } from '../../Tool.js'
@@ -23,8 +23,11 @@ type Props = {
   onDone: LocalJSXCommandOnDone
 }
 
-/** Time to let the detached supervisor write its state file (or fail). */
-const STARTUP_WAIT_MS = 1500
+/** Time to let a spawn failure surface before we start polling the state file. */
+const SPAWN_ERROR_GRACE_MS = 500
+/** How long the detached supervisor may take to record itself as running. */
+const STARTUP_TIMEOUT_MS = 15_000
+const STARTUP_POLL_INTERVAL_MS = 200
 
 /**
  * `/remote-control-server` — manage the daemon-backed bridge server.
@@ -67,14 +70,12 @@ function RemoteControlServer({ onDone }: Props): React.ReactNode {
       }
       if (cancelled) return
 
-      const after = await queryDaemonStatus()
+      const started = await waitForDaemonRunning(STARTUP_TIMEOUT_MS)
       if (cancelled) return
-      if (after.status === 'running') {
-        const startedPid = after.state?.pid
-        onDone(
-          `Remote Control Server started${startedPid === undefined ? '' : ` (PID: ${startedPid})`}. Run /remote-control-server again to manage it.`,
-          { display: 'system' },
-        )
+      if (started) {
+        onDone(`Remote Control Server started (PID: ${started.pid}). Run /remote-control-server again to manage it.`, {
+          display: 'system',
+        })
       } else {
         onDone('Remote Control Server did not start. Run `claude daemon status` for details.', {
           display: 'system',
@@ -117,9 +118,9 @@ function ServerManagementDialog({ pid, onDone }: Props & { pid: number | undefin
     try {
       await stopDaemonByPid()
       await startDaemon()
-      const after = await queryDaemonStatus()
-      if (after.status === 'running') {
-        finish(`Remote Control Server restarted${after.state ? ` (PID: ${after.state.pid})` : ''}.`)
+      const started = await waitForDaemonRunning(STARTUP_TIMEOUT_MS)
+      if (started) {
+        finish(`Remote Control Server restarted (PID: ${started.pid}).`)
       } else {
         finish('Remote Control Server did not restart. Run `claude daemon status` for details.')
       }
@@ -195,8 +196,23 @@ async function startDaemon(): Promise<void> {
 
   await new Promise<void>((resolveWait, rejectWait) => {
     child.once('error', (error) => rejectWait(new Error(`Failed to start daemon: ${error.message}`)))
-    setTimeout(resolveWait, STARTUP_WAIT_MS)
+    setTimeout(resolveWait, SPAWN_ERROR_GRACE_MS)
   })
+}
+
+/**
+ * Polls the state file until the supervisor records itself as running. A single
+ * check right after spawning would report a false failure on slow machines —
+ * the detached supervisor needs a moment to boot and write the file.
+ */
+async function waitForDaemonRunning(timeoutMs: number): Promise<DaemonStateData | undefined> {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    const result = await queryDaemonStatus()
+    if (result.status === 'running') return result.state
+    if (Date.now() >= deadline) return undefined
+    await new Promise<void>((resolveWait) => setTimeout(resolveWait, STARTUP_POLL_INTERVAL_MS))
+  }
 }
 
 export async function call(
