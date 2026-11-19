@@ -33,7 +33,7 @@ describe('/force-snip', () => {
     const result = forceSnip([userMessage('keep-me'), userMessage('remove-me'), markerMessage('marker', ['remove-me'])])
 
     expect(result.executed).toBe(true)
-    const uuids = result.messages.map((message) => message.uuid)
+    const uuids: string[] = result.messages.map((message) => message.uuid)
     expect(uuids).toContain('keep-me')
     expect(uuids).not.toContain('remove-me')
     expect(uuids).not.toContain('marker')
@@ -67,7 +67,7 @@ describe('/force-snip', () => {
 
     expect(result.type).toBe('text')
     expect(written).toBeDefined()
-    expect(written?.some((message) => message.uuid === 'a')).toBe(false)
+    expect(written?.some((message) => (message.uuid as string) === 'a')).toBe(false)
   })
 
   test('registers as /force-snip', () => {
