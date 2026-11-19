@@ -1,24 +1,16 @@
 // Progress data types for tool execution monitoring and UI feedback
 
+import type { HookProgress as CanonicalHookProgress } from './hooks.js'
+import type { NormalizedAssistantMessage, NormalizedMessage, NormalizedUserMessage } from './message.js'
+
+export type { HookEvent } from '../entrypoints/agentSdkTypes.js'
+
 /**
  * Common base interface for all progress types
  */
 interface BaseProgress {
   type: string
 }
-
-/**
- * Hook event types (common hook events)
- */
-export type HookEvent =
-  | 'pre_command'
-  | 'post_command'
-  | 'pre_tool_use'
-  | 'post_tool_use'
-  | 'pre_file_write'
-  | 'post_file_write'
-  | 'pre_bash'
-  | 'post_bash'
 
 /**
  * Bash command execution progress
@@ -44,6 +36,8 @@ export interface PowerShellProgress extends BaseProgress {
   elapsedTimeSeconds: number
   totalLines: number
   totalBytes: number
+  taskId?: string
+  timeoutMs?: number
 }
 
 /**
@@ -57,6 +51,8 @@ export interface MCPProgress extends BaseProgress {
   elapsedTimeMs?: number
   progress?: number
   total?: number
+  /** Human-readable label for the current `progress` tick, when the server sends one. */
+  progressMessage?: string
 }
 
 /**
@@ -64,6 +60,8 @@ export interface MCPProgress extends BaseProgress {
  */
 export interface SkillToolProgress extends BaseProgress {
   type: 'skill_progress'
+  /** The normalized sub-agent message this tick is reporting. */
+  message: NormalizedAssistantMessage | NormalizedUserMessage
   prompt: string
   agentId?: string
 }
@@ -73,35 +71,44 @@ export interface SkillToolProgress extends BaseProgress {
  */
 export interface AgentToolProgress extends BaseProgress {
   type: 'agent_progress'
-  message?: object
+  message: NormalizedMessage
   prompt: string
   agentId?: string
 }
 
 /**
- * Hook execution progress
+ * Hook execution progress. The canonical shape lives in `types/hooks.ts`
+ * (it is what `runHooks` actually yields), so alias it rather than
+ * redeclaring a divergent copy.
  */
-export interface HookProgress extends BaseProgress {
-  type: 'hook_progress'
-  hookEvent: HookEvent
-  hookName: string
-  command: string
-  promptText?: string
-  statusMessage?: string
-  stdout?: string
-  stderr?: string
-}
+export type HookProgress = CanonicalHookProgress
 
 /**
- * Web search progress
+ * Web search progress. The tool emits a `query_update` tick once it knows the
+ * query, then a `search_results_received` tick per completed search, so the
+ * progress stream is a union rather than a single shape.
  */
-export interface WebSearchProgress extends BaseProgress {
-  type: 'web_search_progress'
+export interface WebSearchQueryUpdateProgress extends BaseProgress {
+  type: 'query_update'
   query: string
-  resultsCount?: number
-  currentPage?: number
-  totalPages?: number
 }
+
+export interface WebSearchResultsReceivedProgress extends BaseProgress {
+  type: 'search_results_received'
+  query: string
+  resultCount: number
+}
+
+export type WebSearchProgress =
+  | (BaseProgress & {
+      type: 'web_search_progress'
+      query: string
+      resultsCount?: number
+      currentPage?: number
+      totalPages?: number
+    })
+  | WebSearchQueryUpdateProgress
+  | WebSearchResultsReceivedProgress
 
 /**
  * REPL tool execution progress
@@ -116,16 +123,38 @@ export interface REPLToolProgress extends BaseProgress {
 }
 
 /**
- * Task output progress
+ * Progress tick for a single inner tool call made from inside the REPL. Emitted
+ * while the REPL driver is about to run (phase `start`) or has finished one of
+ * the sandbox calls, so the collapsed read/search group can show a live hint.
  */
-export interface TaskOutputProgress extends BaseProgress {
-  type: 'task_output_progress'
-  taskId: string
-  description: string
-  usage?: {
-    total_tokens: number
-  }
+export interface REPLToolCallProgress extends BaseProgress {
+  type: 'repl_tool_call'
+  phase: 'start' | 'end'
+  toolName: string
+  toolInput?: unknown
 }
+
+/**
+ * Task output progress. Blocking `task_output` calls emit `waiting_for_task`
+ * while the target task is still running, then report the task itself via the
+ * regular progress shape once output is available.
+ */
+export interface TaskOutputWaitingProgress extends BaseProgress {
+  type: 'waiting_for_task'
+  taskDescription: string
+  taskType: string
+}
+
+export type TaskOutputProgress =
+  | (BaseProgress & {
+      type: 'task_output_progress'
+      taskId: string
+      description: string
+      usage?: {
+        total_tokens: number
+      }
+    })
+  | TaskOutputWaitingProgress
 
 /**
  * SDK workflow progress
@@ -146,6 +175,7 @@ export type ToolProgressData =
   | PowerShellProgress
   | MCPProgress
   | REPLToolProgress
+  | REPLToolCallProgress
   | SkillToolProgress
   | AgentToolProgress
   | HookProgress

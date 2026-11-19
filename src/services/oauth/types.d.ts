@@ -22,6 +22,10 @@ export type OAuthProfileResponse = {
     email: string
     display_name?: string | null
     created_at?: string
+    // Entitlement flags surfaced by the profile endpoint alongside the
+    // organization's `organization_type`; consult them before prompting /login.
+    has_claude_max?: boolean
+    has_claude_pro?: boolean
   }
   organization: {
     uuid: string

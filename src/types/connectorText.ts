@@ -8,6 +8,14 @@ export const CONNECTOR_TEXT_TYPES = {
 export class ConnectorTextBlock {
   type: string
   content: any
+  // Streaming accumulators the Messages API mutates on a connector_text block
+  // (see `ConnectorTextDelta` / the `content_block_delta` handler in
+  // services/api/claude.ts). Type-only — instances may only carry `content`.
+  declare connector_text: string
+  declare text: string
+  declare thinking: string
+  declare signature: string
+  declare input: string
 
   constructor(type: string, content: any) {
     this.type = type
@@ -49,6 +57,7 @@ export type ConnectorTextDelta = {
   connector_text: string
   text?: string
   thinking?: string
-  signature?: string
+  // A `signature_delta` always carries the signature it streams.
+  signature: string
   [key: string]: unknown
 }

@@ -150,12 +150,12 @@ type SchemaHookJSONOutput = z.infer<ReturnType<typeof hookJSONOutputSchema>>
 
 // Type guard function to check if response is sync
 export function isSyncHookJSONOutput(json: HookJSONOutput): json is SyncHookJSONOutput {
-  return !('async' in json && json.async === true)
+  return !('async' in json &&  json.async)
 }
 
 // Type guard function to check if response is async
 export function isAsyncHookJSONOutput(json: HookJSONOutput): json is AsyncHookJSONOutput {
-  return 'async' in json && json.async === true
+  return 'async' in json &&  json.async
 }
 
 // Compile-time assertion that SDK and Zod types match

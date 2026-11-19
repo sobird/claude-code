@@ -7,6 +7,7 @@
  * SDK consumers should use coreSchemas.ts instead.
  */
 
+import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod/v4'
 
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -34,8 +35,10 @@ import {
 // External Type Placeholders
 // ============================================================================
 
-// JSONRPCMessage from @modelcontextprotocol/sdk - treat as unknown
-export const JSONRPCMessagePlaceholder = lazySchema(() => z.unknown())
+// JSONRPCMessage from @modelcontextprotocol/sdk — no runtime validation (any
+// input passes), but the static type is preserved so inferred control types
+// stay assignable to the MCP SDK's handler signatures.
+export const JSONRPCMessagePlaceholder = lazySchema(() => z.custom<JSONRPCMessage>())
 
 // ============================================================================
 // Hook Callback Types
@@ -496,6 +499,131 @@ export const SDKControlElicitationResponseSchema = lazySchema(() =>
 )
 
 // ============================================================================
+// Internal Control Requests
+// ============================================================================
+//
+// Handled by the CLI's stdin loop but not part of the documented SDK surface.
+
+export const SDKControlEndSessionRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('end_session'),
+      reason: z.string().optional(),
+    })
+    .describe('Aborts the current turn and ends the session.'),
+)
+
+export const SDKControlFileSuggestionsRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('file_suggestions'),
+      query: z.string().optional(),
+    })
+    .describe('Requests @-completion suggestions for a path query.'),
+)
+
+export const SDKControlChannelEnableRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('channel_enable'),
+      serverName: z.string(),
+    })
+    .describe('Enables channel handling for an MCP server.'),
+)
+
+export const SDKControlMcpAuthenticateRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('mcp_authenticate'),
+      serverName: z.string(),
+    })
+    .describe('Starts an OAuth flow for an MCP server.'),
+)
+
+export const SDKControlMcpOAuthCallbackUrlRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('mcp_oauth_callback_url'),
+      serverName: z.string(),
+      callbackUrl: z.string(),
+    })
+    .describe('Submits a manual OAuth callback URL for an MCP server.'),
+)
+
+export const SDKControlMcpClearAuthRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('mcp_clear_auth'),
+      serverName: z.string(),
+    })
+    .describe('Clears stored OAuth credentials for an MCP server.'),
+)
+
+export const SDKControlClaudeAuthenticateRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('claude_authenticate'),
+      loginWithClaudeAi: z.boolean().optional(),
+    })
+    .describe('Starts an Anthropic OAuth flow over the control channel.'),
+)
+
+export const SDKControlClaudeOAuthCallbackRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('claude_oauth_callback'),
+      authorizationCode: z.string(),
+      state: z.string(),
+    })
+    .describe('Injects an authorization code into an active Anthropic OAuth flow.'),
+)
+
+export const SDKControlClaudeOAuthWaitForCompletionRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('claude_oauth_wait_for_completion'),
+    })
+    .describe('Waits for an active Anthropic OAuth flow to finish.'),
+)
+
+export const SDKControlGenerateSessionTitleRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('generate_session_title'),
+      description: z.string(),
+      persist: z.boolean().optional(),
+    })
+    .describe('Generates a session title from a description.'),
+)
+
+export const SDKControlSideQuestionRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('side_question'),
+      question: z.string(),
+    })
+    .describe('Asks a side question against the last turn context.'),
+)
+
+export const SDKControlSetProactiveRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('set_proactive'),
+      enabled: z.boolean(),
+    })
+    .describe('Enables or disables proactive mode.'),
+)
+
+export const SDKControlRemoteControlRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('remote_control'),
+      enabled: z.boolean(),
+    })
+    .describe('Enables or disables remote control for the current session.'),
+)
+
+// ============================================================================
 // Control Request/Response Wrappers
 // ============================================================================
 
@@ -522,6 +650,19 @@ export const SDKControlRequestInnerSchema = lazySchema(() =>
     SDKControlApplyFlagSettingsRequestSchema(),
     SDKControlGetSettingsRequestSchema(),
     SDKControlElicitationRequestSchema(),
+    SDKControlEndSessionRequestSchema(),
+    SDKControlFileSuggestionsRequestSchema(),
+    SDKControlChannelEnableRequestSchema(),
+    SDKControlMcpAuthenticateRequestSchema(),
+    SDKControlMcpOAuthCallbackUrlRequestSchema(),
+    SDKControlMcpClearAuthRequestSchema(),
+    SDKControlClaudeAuthenticateRequestSchema(),
+    SDKControlClaudeOAuthCallbackRequestSchema(),
+    SDKControlClaudeOAuthWaitForCompletionRequestSchema(),
+    SDKControlGenerateSessionTitleRequestSchema(),
+    SDKControlSideQuestionRequestSchema(),
+    SDKControlSetProactiveRequestSchema(),
+    SDKControlRemoteControlRequestSchema(),
   ]),
 )
 

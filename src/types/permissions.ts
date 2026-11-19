@@ -163,6 +163,8 @@ export type PermissionMetadata = { command: PermissionCommandMetadata } | undefi
  */
 export type PermissionAllowDecision<Input extends { [key: string]: unknown } = { [key: string]: unknown }> = {
   behavior: 'allow'
+  /** Optional explanation surfaced alongside an allow decision. */
+  message?: string
   updatedInput?: Input
   userModified?: boolean
   decisionReason?: PermissionDecisionReason

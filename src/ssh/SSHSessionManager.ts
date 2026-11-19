@@ -1,6 +1,6 @@
 // Auto-generated stub — replace with real implementation
+import type { SDKControlPermissionRequest } from '../entrypoints/sdk/controlTypes.js'
 import type { SDKMessage } from '../entrypoints/sdk/coreTypes.js'
-import type { PermissionUpdate } from '../types/permissions.js'
 import type { RemoteMessageContent } from '../utils/teleport/api.js'
 
 export interface SSHSessionManagerOptions {
@@ -12,14 +12,8 @@ export interface SSHSessionManagerOptions {
   onError: (error: Error) => void
 }
 
-export interface SSHPermissionRequest {
-  tool_name: string
-  tool_use_id: string
-  description?: string
-  permission_suggestions?: PermissionUpdate[]
-  blocked_path?: string
-  input: { [key: string]: unknown }
-}
+/** Mirrors the SDK `can_use_tool` control request the manager forwards. */
+export type SSHPermissionRequest = SDKControlPermissionRequest
 
 export interface SSHSessionManager {
   connect(): void
