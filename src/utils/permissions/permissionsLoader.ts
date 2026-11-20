@@ -119,7 +119,7 @@ export type PermissionRuleFromEditableSettings = PermissionRule & {
 }
 
 // Editable sources that can be modified (excludes policySettings and flagSettings)
-const EDITABLE_SOURCES: EditableSettingSource[] = new Set(['userSettings', 'projectSettings', 'localSettings'])
+const EDITABLE_SOURCES: Set<EditableSettingSource> = new Set(['userSettings', 'projectSettings', 'localSettings'])
 
 /**
  * Deletes a rule from the project permissions file
@@ -128,7 +128,7 @@ const EDITABLE_SOURCES: EditableSettingSource[] = new Set(['userSettings', 'proj
  */
 export function deletePermissionRuleFromSettings(rule: PermissionRuleFromEditableSettings): boolean {
   // Runtime check to ensure source is actually editable
-  if (!EDITABLE_SOURCES.has(rule.source as EditableSettingSource)) {
+  if (!EDITABLE_SOURCES.has(rule.source)) {
     return false
   }
 

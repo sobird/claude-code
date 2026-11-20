@@ -471,7 +471,7 @@ export async function cleanupOldResolutions(teamName?: string, maxAgeMs = 360000
     }),
   )
 
-  const cleanedCount = cleanupResults.reduce((sum, n) => sum + n, 0)
+  const cleanedCount = cleanupResults.reduce((sum: number, n) => sum + n, 0)
 
   if (cleanedCount > 0) {
     logForDebugging(`[PermissionSync] Cleaned up ${cleanedCount} old resolutions`)

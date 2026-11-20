@@ -1,4 +1,4 @@
-import { type Options as ExecaOptions, execaSync } from 'execa'
+import { execaSync } from 'execa'
 
 import { getCwd } from '../utils/cwd.js'
 import { slowLogging } from './slowOperations.js'
@@ -10,7 +10,7 @@ type ExecSyncOptions = {
   abortSignal?: AbortSignal
   timeout?: number
   input?: string
-  stdio?: ExecaOptions['stdio']
+  stdio?: ['ignore' | 'inherit' | 'pipe', 'pipe' | 'inherit' | 'ignore', 'pipe' | 'inherit' | 'ignore']
 }
 
 /**

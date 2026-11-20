@@ -334,7 +334,10 @@ export function roughTokenCountEstimationForMessage(message: Message): number {
 }
 
 function roughTokenCountEstimationForContent(
-  content: string | Array<Anthropic.ContentBlock> | Array<Anthropic.ContentBlockParam> | undefined,
+  content:
+    | string
+    | Array<Anthropic.ContentBlock | Anthropic.ContentBlockParam | Anthropic.ToolReferenceBlockParam>
+    | undefined,
 ): number {
   if (!content) {
     return 0
@@ -350,7 +353,7 @@ function roughTokenCountEstimationForContent(
 }
 
 function roughTokenCountEstimationForBlock(
-  block: string | Anthropic.ContentBlock | Anthropic.ContentBlockParam,
+  block: string | Anthropic.ContentBlock | Anthropic.ContentBlockParam | Anthropic.ToolReferenceBlockParam,
 ): number {
   if (typeof block === 'string') {
     return roughTokenCountEstimation(block)

@@ -728,9 +728,14 @@ export async function getAttachments(
         // queries on every skill invocation (session 13a9afae).
         ...(feature('EXPERIMENTAL_SKILL_SEARCH') && skillSearchModules && !options?.skipSkillDiscovery
           ? [
-              maybe('skill_discovery', () =>
-                skillSearchModules.prefetch.getTurnZeroSkillDiscovery(input, messages ?? [], context),
-              ),
+              maybe('skill_discovery', async () => {
+                const attachment = await skillSearchModules.prefetch.getTurnZeroSkillDiscovery(
+                  input,
+                  messages ?? [],
+                  context,
+                )
+                return attachment ? [attachment] : []
+              }),
             ]
           : []),
       ]

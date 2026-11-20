@@ -894,14 +894,7 @@ export type SkillHookMatcher = {
 
 export type AllowedMcpServerEntry = z.infer<ReturnType<typeof AllowedMcpServerEntrySchema>>
 export type DeniedMcpServerEntry = z.infer<ReturnType<typeof DeniedMcpServerEntrySchema>>
-// Feature-gated fields declared inside conditional spreads can degrade to
-// `unknown` in the inferred type (the object is large enough that TS stops
-// resolving some spread members). Pin the KAIROS pair explicitly so callers
-// get their real types.
-export type SettingsJson = z.infer<ReturnType<typeof SettingsSchema>> & {
-  assistant?: boolean
-  assistantName?: string
-}
+export type SettingsJson = z.infer<ReturnType<typeof SettingsSchema>>
 
 /**
  * Type guard for MCP server entry with serverName

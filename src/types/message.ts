@@ -6,6 +6,7 @@ import type {
   BetaContentBlockParam,
   BetaMessage,
   BetaRawMessageStreamEvent,
+  BetaToolUseBlock,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { ContentBlock, ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
@@ -251,7 +252,7 @@ export type SystemLocalCommandMessage = SystemMessageBase & { subtype: 'local_co
 export type SystemCompactBoundaryMessage = SystemMessageBase & {
   subtype: 'compact_boundary'
   compactMetadata: CompactMetadata
-  logicalParentUuid?: UUID
+  logicalParentUuid?: UUID | null
 }
 export type SystemMicrocompactBoundaryMessage = SystemMessageBase & {
   subtype: 'microcompact_boundary'
@@ -303,7 +304,7 @@ export type SystemMessage =
 export type GroupedToolUseMessage = MessageBase & {
   type: 'grouped_tool_use'
   toolName: string
-  messages: NormalizedAssistantMessage[]
+  messages: NormalizedAssistantMessage<BetaToolUseBlock>[]
   results: NormalizedUserMessage[]
   displayMessage: NormalizedAssistantMessage | NormalizedUserMessage
 }

@@ -294,6 +294,7 @@ import {
   applyPermissionUpdates,
   persistPermissionUpdate,
 } from '../utils/permissions/PermissionUpdate.js'
+import type { PermissionUpdate } from '../utils/permissions/PermissionUpdateSchema.js'
 import { copyPlanForFork, copyPlanForResume, getPlanSlug, setPlanSlug } from '../utils/plans.js'
 import type { ProcessUserInputContext } from '../utils/processUserInput/processUserInput.js'
 import { getQuerySourceForREPL } from '../utils/promptCategory.js'
@@ -5542,16 +5543,16 @@ export function REPL({
                       const approvedHost = currentRequest.hostPattern.host
 
                       if (persistToSettings) {
-                        const update = {
-                          type: 'addRules' as const,
+                        const update: PermissionUpdate = {
+                          type: 'addRules',
                           rules: [
                             {
                               toolName: WEB_FETCH_TOOL_NAME,
                               ruleContent: `domain:${approvedHost}`,
                             },
                           ],
-                          behavior: (allow ? 'allow' : 'deny'),
-                          destination: 'localSettings' as const,
+                          behavior: allow ? 'allow' : 'deny',
+                          destination: 'localSettings',
                         }
 
                         setAppState((prev) => ({

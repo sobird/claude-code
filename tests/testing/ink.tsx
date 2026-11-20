@@ -18,7 +18,7 @@ enableConfigs()
 const test = await render(
   <AppStateProvider>
     <KeybindingSetup>
-      <ConsoleOAuthFlow />
+      <ConsoleOAuthFlow onDone={() => {}} />
     </KeybindingSetup>
   </AppStateProvider>,
   {},

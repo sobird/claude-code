@@ -19,7 +19,7 @@ import type {
   BetaUsage,
   BetaMessageParam as MessageParam,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import type { ContentBlockParam, TextBlockParam, ToolReferenceBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
 import { getAPIProvider, shouldAttachClientRequestId } from 'src/utils/model/providers.js'
 
@@ -817,11 +817,13 @@ function getPreviousRequestIdFromMessages(messages: Message[]): string | undefin
   return undefined
 }
 
-function isMedia(block: BetaContentBlockParam): block is BetaImageBlockParam | BetaRequestDocumentBlock {
+type MediaCandidate = BetaContentBlockParam | ContentBlockParam | ToolReferenceBlockParam
+
+function isMedia(block: MediaCandidate): block is BetaImageBlockParam | BetaRequestDocumentBlock {
   return block.type === 'image' || block.type === 'document'
 }
 
-function isToolResult(block: BetaContentBlockParam): block is BetaToolResultBlockParam {
+function isToolResult(block: MediaCandidate): block is BetaToolResultBlockParam {
   return block.type === 'tool_result'
 }
 

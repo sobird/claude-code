@@ -80,7 +80,7 @@ function handleFrame(line: string): void {
     priority: 'next',
     uuid: randomUUID(),
     skipSlashCommands: true,
-    origin: 'cross-session',
+    origin: { kind: 'cross-session' },
   })
   onEnqueue?.()
 }
