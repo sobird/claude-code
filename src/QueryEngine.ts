@@ -33,7 +33,7 @@ import type { AppState } from './state/AppState.js'
 import { findToolByName, type Tools, type ToolUseContext, toolMatchesName } from './Tool.js'
 import type { AgentDefinition } from './tools/AgentTool/loadAgentsDir.js'
 import { SYNTHETIC_OUTPUT_TOOL_NAME } from './tools/SyntheticOutputTool/SyntheticOutputTool.js'
-import type { AssistantMessage, Message, SystemAPIErrorMessage } from './types/message.js'
+import type { AssistantMessage, Message } from './types/message.js'
 import type { OrphanedPermission } from './types/textInputTypes.js'
 import { createAbortController } from './utils/abortController.js'
 import type { HookDeferredToolAttachment } from './utils/attachments.js'
@@ -996,15 +996,14 @@ export class QueryEngine {
             }
           }
           if (message.subtype === 'api_error') {
-            const apiErrorMessage = message as SystemAPIErrorMessage
             yield {
               type: 'system',
               subtype: 'api_retry' as const,
-              attempt: apiErrorMessage.retryAttempt,
-              max_retries: apiErrorMessage.maxRetries,
-              retry_delay_ms: apiErrorMessage.retryInMs,
-              error_status: apiErrorMessage.error.status ?? null,
-              error: categorizeRetryableAPIError(apiErrorMessage.error),
+              attempt: message.retryAttempt,
+              max_retries: message.maxRetries,
+              retry_delay_ms: message.retryInMs,
+              error_status: message.error.status ?? null,
+              error: categorizeRetryableAPIError(message.error),
               session_id: getSessionId(),
               uuid: message.uuid,
             }

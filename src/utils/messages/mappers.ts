@@ -15,7 +15,7 @@ import type { AssistantMessage, CompactMetadata, Message } from 'src/types/messa
 import type { DeepImmutable } from 'src/types/utils.js'
 import { stripAnsi } from 'src/utils/stripAnsi.js'
 
-import { createAssistantMessage, isCompactBoundaryMessage } from '../messages.js'
+import { createAssistantMessage } from '../messages.js'
 import { getPlan } from '../plans.js'
 
 export function toInternalMessages(messages: readonly DeepImmutable<SDKMessage>[]): Message[] {
@@ -131,7 +131,7 @@ export function toSDKMessages(messages: Message[]): SDKMessage[] {
           },
         ]
       case 'system':
-        if (isCompactBoundaryMessage(message)) {
+        if (message.subtype === 'compact_boundary' && message.compactMetadata) {
           return [
             {
               type: 'system',

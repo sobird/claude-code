@@ -179,44 +179,126 @@ export type ProgressMessage<T = ToolProgressData> = MessageBase & {
   parentToolUseID: string
 }
 
-export type SystemMessage = MessageBase & {
+/**
+ * Fields shared by every system message regardless of subtype: the text
+ * payload, severity and synthetic flag are read from the un-narrowed union
+ * (e.g. the SystemTextMessage fallback branch). Everything else is declared
+ * on the arm that owns it so narrowing exposes it without casts.
+ */
+type SystemMessageBase = MessageBase & {
   type: 'system'
-  subtype?: string
   content?: string
   level?: SystemMessageLevel
   isMeta?: boolean
-  commands?: string[]
-  url?: string
+}
+
+export type SystemInformationalMessage = SystemMessageBase & {
+  subtype: 'informational'
+  toolUseID?: string
+  preventContinuation?: boolean
+}
+export type SystemPermissionRetryMessage = SystemMessageBase & { subtype: 'permission_retry'; commands: string[] }
+export type SystemBridgeStatusMessage = SystemMessageBase & {
+  subtype: 'bridge_status'
+  url: string
   upgradeNudge?: string
-  durationMs?: number
+}
+export type SystemScheduledTaskFireMessage = SystemMessageBase & { subtype: 'scheduled_task_fire' }
+export type SystemStopHookSummaryMessage = SystemMessageBase & {
+  subtype: 'stop_hook_summary'
+  hookCount: number
+  hookInfos: StopHookInfo[]
+  hookErrors: string[]
+  hookLabel?: string
+  totalDurationMs?: number
+  preventedContinuation?: boolean
+  stopReason?: string
+  hasOutput?: boolean
+  toolUseID?: string
+}
+export type SystemTurnDurationMessage = SystemMessageBase & {
+  subtype: 'turn_duration'
+  durationMs: number
   budgetTokens?: number
   budgetLimit?: number
   budgetNudges?: number
   messageCount?: number
-  writtenPaths?: string[]
+}
+export type SystemAwaySummaryMessage = SystemMessageBase & { subtype: 'away_summary' }
+export type SystemMemorySavedMessage = SystemMessageBase & {
+  subtype: 'memory_saved'
+  writtenPaths: string[]
   /** Number of team memories written, surfaced by the memory-saved UI. */
   teamCount?: number
-  ttftMs?: number
-  otps?: number
+  verb?: string
+}
+export type SystemAgentsKilledMessage = SystemMessageBase & { subtype: 'agents_killed' }
+export type SystemApiMetricsMessage = SystemMessageBase & {
+  subtype: 'api_metrics'
+  ttftMs: number
+  otps: number
   isP50?: boolean
   hookDurationMs?: number
   turnDurationMs?: number
   toolDurationMs?: number
-  compactMetadata?: CompactMetadata
-  microcompactMetadata?: MicrocompactMetadata
-  snapshotFiles?: { key: string; path: string; content: string }[]
-  hookLabel?: string
+  classifierDurationMs?: number
+  toolCount?: number
   hookCount?: number
-  hookInfos?: StopHookInfo[]
-  hookErrors?: string[]
-  totalDurationMs?: number
-  verb?: string
-  preventContinuation?: boolean
-  logicalParentUuid?: UUID
-  toolUseID?: string
-  cause?: Error
-  error?: unknown
+  classifierCount?: number
+  configWriteCount?: number
 }
+export type SystemLocalCommandMessage = SystemMessageBase & { subtype: 'local_command'; content: string }
+export type SystemCompactBoundaryMessage = SystemMessageBase & {
+  subtype: 'compact_boundary'
+  compactMetadata: CompactMetadata
+  logicalParentUuid?: UUID
+}
+export type SystemMicrocompactBoundaryMessage = SystemMessageBase & {
+  subtype: 'microcompact_boundary'
+  microcompactMetadata: MicrocompactMetadata
+}
+export type SystemAPIErrorMessage = SystemMessageBase & {
+  subtype: 'api_error'
+  retryAttempt: number
+  retryInMs: number
+  maxRetries: number
+  error: APIError
+  cause?: Error
+}
+export type SystemFileSnapshotMessage = SystemMessageBase & {
+  subtype: 'file_snapshot'
+  snapshotFiles: { key: string; path: string; content: string }[]
+}
+/** Snip payload lives on the arm; literal kept for narrowing. */
+export type SystemSnipBoundaryMessage = SystemMessageBase & {
+  subtype: 'snip_boundary'
+  snipMetadata?: { removedUuids?: string[]; tokensFreed?: number }
+}
+export type SystemSnipMarkerMessage = SystemMessageBase & {
+  subtype: 'snip_marker'
+  snipMarker?: { removedUuids?: string[] }
+}
+export type SystemThinkingMessage = SystemMessageBase & { subtype: 'thinking' }
+
+export type SystemMessage =
+  | SystemInformationalMessage
+  | SystemPermissionRetryMessage
+  | SystemBridgeStatusMessage
+  | SystemScheduledTaskFireMessage
+  | SystemStopHookSummaryMessage
+  | SystemTurnDurationMessage
+  | SystemAwaySummaryMessage
+  | SystemMemorySavedMessage
+  | SystemAgentsKilledMessage
+  | SystemApiMetricsMessage
+  | SystemLocalCommandMessage
+  | SystemCompactBoundaryMessage
+  | SystemMicrocompactBoundaryMessage
+  | SystemAPIErrorMessage
+  | SystemFileSnapshotMessage
+  | SystemSnipBoundaryMessage
+  | SystemSnipMarkerMessage
+  | SystemThinkingMessage
 
 export type GroupedToolUseMessage = MessageBase & {
   type: 'grouped_tool_use'
@@ -327,52 +409,6 @@ export type StreamEvent = {
   ttftMs?: number
   [key: string]: unknown
 }
-
-// ---- Narrow aliases kept for call sites that name a specific system kind ----
-
-export type SystemLocalCommandMessage = SystemMessage & {
-  subtype: 'local_command'
-  content: string
-}
-export type SystemCompactBoundaryMessage = SystemMessage & { compactMetadata: CompactMetadata }
-export type SystemAPIErrorMessage = SystemMessage & {
-  retryAttempt: number
-  retryInMs: number
-  maxRetries: number
-  error: APIError
-}
-export type SystemFileSnapshotMessage = SystemMessage & {
-  snapshotFiles: { key: string; path: string; content: string }[]
-}
-export type SystemAgentsKilledMessage = SystemMessage
-export type SystemApiMetricsMessage = SystemMessage
-export type SystemAwaySummaryMessage = SystemMessage
-export type SystemBridgeStatusMessage = SystemMessage & {
-  subtype: 'bridge_status'
-  url: string
-  upgradeNudge?: string
-}
-export type SystemInformationalMessage = SystemMessage
-export type SystemMemorySavedMessage = SystemMessage & {
-  subtype: 'memory_saved'
-  writtenPaths: string[]
-}
-export type SystemMicrocompactBoundaryMessage = SystemMessage
-export type SystemPermissionRetryMessage = SystemMessage
-export type SystemScheduledTaskFireMessage = SystemMessage
-export type SystemStopHookSummaryMessage = SystemMessage & {
-  subtype: 'stop_hook_summary'
-  hookLabel?: string
-  hookCount: number
-  hookInfos: StopHookInfo[]
-  hookErrors: string[]
-  totalDurationMs?: number
-  preventedContinuation?: boolean
-  stopReason?: string
-  hasOutput?: boolean
-}
-export type SystemTurnDurationMessage = SystemMessage
-export type SystemThinkingMessage = SystemMessage
 
 /** Message a hook run can surface: an attachment (outcome) or progress ticks. */
 export type HookResultMessage = AttachmentMessage | ProgressMessage<HookProgress>
