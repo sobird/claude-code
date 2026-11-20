@@ -195,7 +195,9 @@ export function cleanupRoots(roots: string[]): void {
 }
 
 export function ptySupported(): boolean {
-  return process.platform !== 'win32' && Bun.which('script') !== null
+  if (process.platform === 'win32') return false
+  if (process.platform === 'darwin') return Bun.which('python3') !== null
+  return Bun.which('script') !== null
 }
 
 // eslint-disable-next-line no-control-regex -- stripping terminal escape codes is the point
@@ -214,6 +216,112 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
+/**
+ * Python relay for the macOS PTY path. `pty.fork()` gives the CLI a real
+ * terminal while our own stdin (the harness pipe) is forwarded in, and the
+ * relay exits with the child's status as soon as it dies — never blocking on
+ * our still-open stdin the way `pty.spawn` would.
+ */
+const PTY_RUNNER = String.raw`
+import fcntl
+import os
+import pty
+import select
+import struct
+import sys
+import termios
+import time
+
+
+def set_winsize(fd, rows, cols):
+    try:
+        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
+    except OSError:
+        pass
+
+
+def drain(master, out_fd):
+    end = time.time() + 0.5
+    while time.time() < end:
+        r, _, _ = select.select([master], [], [], 0.05)
+        if not r:
+            break
+        try:
+            data = os.read(master, 65536)
+        except OSError:
+            break
+        if not data:
+            break
+        os.write(out_fd, data)
+
+
+def main():
+    argv = sys.argv[1:]
+    if not argv:
+        sys.stderr.write("runner.py: missing command\n")
+        return 2
+    pid, master = pty.fork()
+    if pid == 0:
+        try:
+            os.execvp(argv[0], argv)
+        except OSError as exc:
+            os.write(2, ("runner.py: exec failed: %s\n" % exc).encode())
+        os._exit(127)
+    set_winsize(master, 40, 120)
+    stdin_fd, stdout_fd = 0, 1
+    watch_stdin = True
+    status = None
+    try:
+        while True:
+            if status is None:
+                wpid, st = os.waitpid(pid, os.WNOHANG)
+                if wpid == pid:
+                    status = st
+            if status is not None:
+                drain(master, stdout_fd)
+                break
+            rfds = [master] + ([stdin_fd] if watch_stdin else [])
+            try:
+                ready, _, _ = select.select(rfds, [], [], 0.1)
+            except OSError:
+                break
+            for fd in ready:
+                if fd == master:
+                    try:
+                        data = os.read(master, 65536)
+                    except OSError:
+                        data = b""
+                    if data:
+                        os.write(stdout_fd, data)
+                    else:
+                        _, st = os.waitpid(pid, 0)
+                        status = st
+                        break
+                else:
+                    try:
+                        data = os.read(stdin_fd, 65536)
+                    except OSError:
+                        data = b""
+                    if not data:
+                        watch_stdin = False
+                    else:
+                        try:
+                            os.write(master, data)
+                        except OSError:
+                            pass
+    finally:
+        try:
+            os.close(master)
+        except OSError:
+            pass
+    if status is None:
+        _, status = os.waitpid(pid, 0)
+    return os.waitstatus_to_exitcode(status)
+
+
+sys.exit(main())
+`
+
 export type PtySession = {
   write(text: string): void
   waitFor(text: string, timeoutMs?: number): Promise<void>
@@ -231,22 +339,32 @@ export type StartPtyOptions = {
 /**
  * Runs the CLI attached to a PTY so Ink takes its interactive path.
  *
- * macOS `script` takes the command as arguments; util-linux requires -c. A
- * generated wrapper script keeps argument quoting identical on both.
+ * macOS goes through the Python relay (its `script` can't take piped stdin);
+ * util-linux uses `script -e -c` over a generated wrapper script.
  */
 export async function startPty(options: StartPtyOptions): Promise<PtySession> {
   const runnerDir = mkdtempSync(join(tmpdir(), 'claude-pty-'))
-  const runner = join(runnerDir, 'run.sh')
-  const command = ['bun', ...defineArgs, ...featureArgs, ENTRY, ...options.args].map(shellQuote).join(' ')
-  writeFileSync(runner, `#!/bin/sh\nexec ${command}\n`)
-  chmodSync(runner, 0o755)
+  const command = ['bun', ...defineArgs, ...featureArgs, ENTRY, ...options.args]
 
-  const scriptArgs =
-    process.platform === 'darwin'
-      ? ['script', '-q', '/dev/null', runner]
-      : ['script', '-q', '-e', '-c', runner, '/dev/null']
+  let spawnArgs: string[]
+  if (process.platform === 'darwin') {
+    // macOS `script` rejects a piped stdin ("tcgetattr/ioctl: Operation not
+    // supported on socket") — true on the GitHub runner. Drive the CLI on a
+    // pty through a small Python relay instead: it forwards our stdin/stdout
+    // and exits with the child's status, even while our stdin stays open.
+    const runner = join(runnerDir, 'pty_runner.py')
+    writeFileSync(runner, PTY_RUNNER)
+    spawnArgs = ['python3', runner, ...command]
+  } else {
+    // util-linux `script` takes the command via -c; a wrapper script keeps
+    // argument quoting identical.
+    const runner = join(runnerDir, 'run.sh')
+    writeFileSync(runner, `#!/bin/sh\nexec ${command.map(shellQuote).join(' ')}\n`)
+    chmodSync(runner, 0o755)
+    spawnArgs = ['script', '-q', '-e', '-c', runner, '/dev/null']
+  }
 
-  const proc = spawn(scriptArgs, {
+  const proc = spawn(spawnArgs, {
     cwd: options.cwd,
     env: options.env,
     stdin: 'pipe',

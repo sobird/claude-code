@@ -235,7 +235,9 @@
       "version": "1.0.0",
     },
   },
-  "trustedDependencies": [],
+  "trustedDependencies": [
+    "@vscode/ripgrep",
+  ],
   "packages": {
     "@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.237", "https://registry.npmmirror.com/@ai-sdk/gateway/-/gateway-3.0.237.tgz", { "dependencies": { "@ai-sdk/provider": "3.0.19", "@ai-sdk/provider-utils": "4.0.66", "@vercel/oidc": "3.2.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-77ZtS/ne2hoGTEL5r31q4xqqc3J6lKqdjfeDmOowzTmj1QG4jOwnjiqk+6/XUdpTu/nZuCpWvenWqwRo5A0Mmg=="],
 
