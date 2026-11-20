@@ -128,7 +128,12 @@ test(
     const root = project()
     const server = await fake()
 
-    const result = await run(root, server, '/force-snip')
+    // force-snip lives in INTERNAL_ONLY_COMMANDS, which COMMANDS() only
+    // registers under USER_TYPE=ant. The harness strips the repo `.env`'s
+    // USER_TYPE so CI and a dev machine agree, so opt in here explicitly.
+    const env = isolatedEnv({ home: root.home, config: root.config, baseUrl: server.url })
+    env.USER_TYPE = 'ant'
+    const result = await runCli({ cwd: root.work, env, args: ['-p', '/force-snip'] })
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('Nothing to snip')
     expect(server.requests.length).toBe(0)

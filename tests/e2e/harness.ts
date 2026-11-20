@@ -32,6 +32,12 @@ const EXCLUDED_KEYS = new Set([
   'CLAUDE_CODE_REPL',
   'CLAUDE_CODE_SIMPLE',
   'CLAUDE_REPL_MODE',
+  // The repo's `.env` sets USER_TYPE=ant so `bun run dev` exposes internal
+  // commands; Bun auto-loads it whenever the working directory is the repo
+  // root, but CI has no `.env`. Strip it so a run behaves identically on both
+  // — tests that genuinely need an internal command opt in explicitly.
+  'USER_TYPE',
+  'IS_DEMO',
   // bun test sets NODE_ENV=test, which makes the CLI (a) replay API responses
   // from on-disk VCR fixtures instead of calling ANTHROPIC_BASE_URL, and (b)
   // suppress session persistence. Both would invalidate these runs, so the
@@ -77,6 +83,11 @@ export function isolatedEnv(options: IsolatedEnvOptions): Record<string, string>
   env.HOME = options.home
   env.CLAUDE_CONFIG_DIR = options.config
   env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1'
+  // Running from source leaves the installer as "npm-global" (the bun binary
+  // under /usr/local/lib/node_modules matches). That triggers the npm→native
+  // migration banner, which outranks the REPL footer and blocks the PTY test
+  // from ever seeing its prompt hint.
+  env.DISABLE_INSTALLATION_CHECKS = '1'
   // REPL mode hides Read/Bash/Edit behind the REPL tool, so scripted tool
   // calls would fail with "No such tool available".
   env.CLAUDE_CODE_REPL = '0'
@@ -194,6 +205,11 @@ export function stripAnsi(text: string): string {
   return text.replace(ANSI, '')
 }
 
+/** ANSI- and whitespace-insensitive form used for PTY text matching. */
+function normalizeForMatch(text: string): string {
+  return stripAnsi(text).replace(/\s+/g, '')
+}
+
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
@@ -260,9 +276,13 @@ export async function startPty(options: StartPtyOptions): Promise<PtySession> {
       void proc.stdin.flush()
     },
     async waitFor(text: string, timeoutMs = 60_000) {
+      // Ink paints horizontal gaps as cursor-forward escapes (`ESC[nC`), so a
+      // word-gapped phrase like "for shortcuts" never appears verbatim in the
+      // raw stream. Compare with escapes and whitespace removed.
+      const wanted = normalizeForMatch(text)
       const deadline = Date.now() + timeoutMs
       while (Date.now() < deadline) {
-        if (buffer.includes(text)) return
+        if (normalizeForMatch(buffer).includes(wanted)) return
         await Bun.sleep(50)
       }
       throw new Error(
