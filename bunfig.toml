@@ -1,9 +1,9 @@
 [define]
-"MACRO.VERSION" = "'2.1.90'"
+"MACRO.VERSION" = "'1.0.0'" # x-release-please-version
 "MACRO.BUILD_TIME" = "'2026-03-30T21:59:52Z'"
 "MACRO.ISSUES_EXPLAINER" = "'report the issue at https://github.com/anthropics/claude-code/issues'"
 "MACRO.FEEDBACK_CHANNEL" = "'https://github.com/anthropics/claude-code/issues'"
-"MACRO.PACKAGE_URL" = "'@anthropic-ai/claude-code'"
+"MACRO.PACKAGE_URL" = "'@sobird/claude-code'"
 "MACRO.README_URL" = "'https://code.claude.com/docs/en/overview'"
 # [install]
 # linker = "hoisted"

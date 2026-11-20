@@ -6,7 +6,9 @@
   "bootstrap-sha": "8f9661eeca51c3d45821926f65c0d451fa6c6320",
   "exclude-paths": ["packages/rcs"],
   "packages": {
-    ".": {},
+    ".": {
+      "extra-files": ["bunfig.toml"]
+    },
     "packages/rcs": {
       "component": "rcs",
       "include-component-in-tag": true,
