@@ -17,9 +17,9 @@ import { join, resolve } from 'node:path'
 
 import { spawn, type Subprocess } from 'bun'
 
-import { defineArgs, featureArgs } from '../scripts/config'
+import { defineArgs, featureArgs } from '../../scripts/config'
 
-export const ENTRY = resolve(import.meta.dir, '../src/entrypoints/cli.tsx')
+export const ENTRY = resolve(import.meta.dir, '../../src/entrypoints/cli.tsx')
 
 const DEFAULT_API_KEY = 'e2e-test-key'
 

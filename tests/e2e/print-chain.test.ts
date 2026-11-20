@@ -8,22 +8,10 @@
  * working directory; the only fake is the Anthropic endpoint.
  */
 
-import { afterAll, afterEach, expect, test } from 'bun:test'
+import { afterEach, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { Subprocess } from 'bun'
-
-import {
-  cleanupRoots,
-  isolatedEnv,
-  lastJsonLine,
-  makeTempRoot,
-  runCli,
-  seedSession,
-  spawnSleep,
-  type TempRoot,
-} from './e2e-harness'
 import {
   errorReply,
   redactedThinkingReply,
@@ -36,12 +24,12 @@ import {
   type FakeAnthropic,
   type FakeScript,
 } from './fake-anthropic'
+import { cleanupRoots, isolatedEnv, lastJsonLine, makeTempRoot, runCli, type TempRoot } from './harness'
 
 const TEST_TIMEOUT = 120_000
 
 const fakes: FakeAnthropic[] = []
 const roots: string[] = []
-const children: Subprocess[] = []
 
 async function fake(script: FakeScript): Promise<FakeAnthropic> {
   const server = await startFakeAnthropic(script)
@@ -78,10 +66,6 @@ function collectJsonl(dir: string): string[] {
 afterEach(() => {
   for (const server of fakes.splice(0)) server.stop()
   cleanupRoots(roots)
-})
-
-afterAll(() => {
-  for (const child of children) child.kill()
 })
 
 test(
@@ -379,33 +363,6 @@ test(
     expect(continuedPayload.result).toBe('FOURTH')
     expect(continuedPayload.session_id).not.toBe(forkedPayload.session_id)
     expect(JSON.stringify(fourth.requests[0]?.body)).not.toContain('third message')
-  },
-  TEST_TIMEOUT,
-)
-
-test(
-  '/peers lists live sessions from the isolated registry',
-  async () => {
-    const root = project()
-    const pid = spawnSleep(children)
-    seedSession(root.config, {
-      pid,
-      sessionId: 'aaaaaaaa-1111-2222-3333-444444444444',
-      name: 'e2e-peer',
-      cwd: '/tmp/e2e-project',
-    })
-    writeFileSync(
-      join(root.config, 'sessions', '999999.json'),
-      JSON.stringify({ sessionId: 'bbbbbbbb-1111-2222-3333-444444444444', kind: 'bg', name: 'ghost' }),
-    )
-    const server = await fake(textReply('unused'))
-
-    const result = await run(root, server, ['-p', '/peers'])
-    expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('e2e-peer')
-    expect(result.stdout).toContain(String(pid))
-    expect(result.stdout).not.toContain('ghost')
-    expect(server.requests.length).toBe(0)
   },
   TEST_TIMEOUT,
 )

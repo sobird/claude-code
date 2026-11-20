@@ -52,6 +52,7 @@
     "setup": "bun install --ignore-scripts",
     "test": "bun test --path-ignore-patterns \"packages/rcs/**\"",
     "test:all": "bun test",
+    "test:e2e": "bun test tests/e2e",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

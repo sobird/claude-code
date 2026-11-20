@@ -13,6 +13,7 @@ import { afterAll, afterEach, expect, test } from 'bun:test'
 
 import type { Subprocess } from 'bun'
 
+import { startFakeAnthropic, textReply, type FakeAnthropic } from './fake-anthropic'
 import {
   cleanupRoots,
   isolatedEnv,
@@ -24,8 +25,7 @@ import {
   startPty,
   stripAnsi,
   type PtySession,
-} from './e2e-harness'
-import { startFakeAnthropic, textReply, type FakeAnthropic } from './fake-anthropic'
+} from './harness'
 
 const TEST_TIMEOUT = 120_000
 
