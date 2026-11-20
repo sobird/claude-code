@@ -30,7 +30,6 @@ import type {
   SystemTurnDurationMessage,
   SystemThinkingMessage,
   SystemMemorySavedMessage,
-  SystemAPIErrorMessage as SystemAPIErrorMessageData,
 } from '../../types/message.js'
 import { getGlobalConfig } from '../../utils/config.js'
 import { formatDuration, formatNumber, formatSecondsShort } from '../../utils/format.js'
@@ -54,7 +53,7 @@ export function SystemTextMessage({ message, addMargin, verbose, isTranscriptMod
   }
 
   if (message.subtype === 'memory_saved') {
-    return <MemorySavedMessage message={message as SystemMemorySavedMessage} addMargin={addMargin} />
+    return <MemorySavedMessage message={message} addMargin={addMargin} />
   }
 
   if (message.subtype === 'away_summary') {
@@ -89,7 +88,7 @@ export function SystemTextMessage({ message, addMargin, verbose, isTranscriptMod
   }
 
   if (message.subtype === 'bridge_status') {
-    return <BridgeStatusMessage message={message as SystemBridgeStatusMessage} addMargin={addMargin} />
+    return <BridgeStatusMessage message={message} addMargin={addMargin} />
   }
 
   if (message.subtype === 'scheduled_task_fire') {
@@ -107,7 +106,7 @@ export function SystemTextMessage({ message, addMargin, verbose, isTranscriptMod
       <Box marginTop={addMargin ? 1 : 0} backgroundColor={bg} width="100%">
         <Text dimColor>{TEARDROP_ASTERISK} </Text>
         <Text>Allowed </Text>
-        <Text bold>{message.commands?.join(', ')}</Text>
+        <Text bold>{message.commands.join(', ')}</Text>
       </Box>
     )
   }
@@ -120,13 +119,13 @@ export function SystemTextMessage({ message, addMargin, verbose, isTranscriptMod
   }
 
   if (message.subtype === 'api_error') {
-    return <SystemAPIErrorMessage message={message as SystemAPIErrorMessageData} verbose={verbose} />
+    return <SystemAPIErrorMessage message={message} verbose={verbose} />
   }
 
   if (message.subtype === 'stop_hook_summary') {
     return (
       <StopHookSummaryMessage
-        message={message as SystemStopHookSummaryMessage}
+        message={message}
         addMargin={addMargin}
         verbose={verbose}
         isTranscriptMode={isTranscriptMode}
@@ -305,7 +304,7 @@ function TurnDurationMessage({
 
   const showTurnDuration = getGlobalConfig().showTurnDuration ?? true
 
-  const duration = formatDuration(message.durationMs ?? 0)
+  const duration = formatDuration(message.durationMs)
   const hasBudget = message.budgetLimit !== undefined
   const budgetSuffix = (() => {
     if (!hasBudget) return ''

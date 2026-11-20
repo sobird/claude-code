@@ -183,11 +183,7 @@ export async function reactiveCompactOnPromptTooLong(
   // anchor is the last summary message (suffix-preserving layout).
   const lastSummary = result.summaryMessages[result.summaryMessages.length - 1]
   const boundaryMarker = lastSummary
-    ? annotateBoundaryWithPreservedSegment(
-        result.boundaryMarker as SystemCompactBoundaryMessage,
-        lastSummary.uuid,
-        messagesToKeep,
-      )
+    ? annotateBoundaryWithPreservedSegment(result.boundaryMarker, lastSummary.uuid, messagesToKeep)
     : result.boundaryMarker
 
   return { ok: true, result: { ...result, boundaryMarker, messagesToKeep } }

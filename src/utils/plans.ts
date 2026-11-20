@@ -308,12 +308,7 @@ function findFileSnapshotEntry(
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i]
     if (msg?.type === 'system' && 'subtype' in msg && msg.subtype === 'file_snapshot' && 'snapshotFiles' in msg) {
-      const files = msg.snapshotFiles as Array<{
-        key: string
-        path: string
-        content: string
-      }>
-      return files.find((f) => f.key === key)
+      return msg.snapshotFiles.find((f) => f.key === key)
     }
   }
   return undefined

@@ -247,7 +247,7 @@ export const ERROR_MESSAGE_INCOMPLETE_RESPONSE =
   'Compaction interrupted · This may be due to network issues — please try again.'
 
 export interface CompactionResult {
-  boundaryMarker: SystemMessage
+  boundaryMarker: SystemCompactBoundaryMessage
   summaryMessages: UserMessage[]
   attachments: AttachmentMessage[]
   hookResults: HookResultMessage[]
