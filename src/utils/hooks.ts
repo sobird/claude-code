@@ -3378,7 +3378,7 @@ export async function* executeStopHooks(
     ? extractTextContent(lastAssistantMessage.message.content, '\n').trim() || undefined
     : undefined
 
-  const hookInput: StopHookInput = subagentId
+  const hookInput: StopHookInput | SubagentStopHookInput = subagentId
     ? {
         ...createBaseHookInput(permissionMode),
         hook_event_name: 'SubagentStop',

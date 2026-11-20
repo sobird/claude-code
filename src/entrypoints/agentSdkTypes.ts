@@ -28,7 +28,7 @@ export * from './sdk/toolTypes.js'
 // Functions
 // ============================================================================
 
-import type { SDKMessage, SDKResultMessage, SDKSessionInfo, SDKUserMessage } from './sdk/coreTypes.js'
+import type { EXIT_REASONS, SDKMessage, SDKResultMessage, SDKSessionInfo, SDKUserMessage } from './sdk/coreTypes.js'
 // Import types needed for function signatures
 import type {
   AnyZodRawShape,
@@ -402,4 +402,4 @@ export async function connectRemoteControl(_opts: ConnectRemoteControlOptions): 
 }
 
 export type HookEvent = string
-export type ExitReason = string
+export type ExitReason = (typeof EXIT_REASONS)[number]

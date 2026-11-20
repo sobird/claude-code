@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
 
+import type { ClientOptions as BedrockClientOptions } from '@anthropic-ai/bedrock-sdk'
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
+import type { ClientOptions as VertexClientOptions } from '@anthropic-ai/vertex-sdk'
 import type { GoogleAuth } from 'google-auth-library'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
@@ -170,7 +172,7 @@ export async function getAnthropicClient({
         ? process.env.ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION
         : getAWSRegion()
 
-    const bedrockArgs: ConstructorParameters<typeof AnthropicBedrock>[0] = {
+    const bedrockArgs: BedrockClientOptions = {
       ...ARGS,
       awsRegion,
       ...(isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH) && {
@@ -197,7 +199,9 @@ export async function getAnthropicClient({
       }
     }
     // we have always been lying about the return type - this doesn't support batching or models
-    return new AnthropicBedrock(bedrockArgs) as unknown as Anthropic
+    return new AnthropicBedrock(
+      bedrockArgs as unknown as ConstructorParameters<typeof AnthropicBedrock>[0],
+    ) as unknown as Anthropic
   }
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)) {
     const { AnthropicFoundry } = await import('@anthropic-ai/foundry-sdk')
@@ -312,10 +316,13 @@ export async function getAnthropicClient({
               }),
         })
 
-    const vertexArgs: ConstructorParameters<typeof AnthropicVertex>[0] = {
+    const vertexArgs: VertexClientOptions = {
       ...ARGS,
       region: getVertexRegionForModel(model),
-      googleAuth,
+      // Two copies of google-auth-library under Bun's isolated install (root
+      // 10.6.2, vertex-sdk 9.15.1) make their GoogleAuth classes nominally
+      // incompatible; the SDK only duck-types getClient() at runtime.
+      googleAuth: googleAuth as unknown as VertexClientOptions['googleAuth'],
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     }
     // we have always been lying about the return type - this doesn't support batching or models
