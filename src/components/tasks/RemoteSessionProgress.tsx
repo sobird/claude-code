@@ -50,7 +50,7 @@ export function formatReviewStageCounts(
 function RainbowText({ text, phase = 0 }: { text: string; phase?: number }): React.ReactNode {
   return (
     <>
-      {[...text].map((ch, i) => (
+      {Array.from(text).map((ch, i) => (
         <Text key={i} color={getRainbowColor(i + phase)}>
           {ch}
         </Text>

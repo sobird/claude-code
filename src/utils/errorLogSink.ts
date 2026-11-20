@@ -12,7 +12,7 @@
 
 import { dirname, join } from 'node:path'
 
-import axios from 'axios'
+import { isAxiosError } from 'axios'
 
 import { getSessionId } from '../bootstrap/state.js'
 import { createBufferedWriter } from './bufferedWriter.js'
@@ -156,7 +156,7 @@ function logErrorImpl(error: Error): void {
 
   // Enrich axios errors with request URL, status, and server message for debugging
   let context = ''
-  if (axios.isAxiosError(error) && error.config?.url) {
+  if (isAxiosError(error) && error.config?.url) {
     const parts = [`url=${error.config.url}`]
     if (error.response?.status !== undefined) {
       parts.push(`status=${error.response.status}`)

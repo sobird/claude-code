@@ -1,6 +1,6 @@
 import { isAbsolute, join } from 'node:path'
 
-import chokidar, { type FSWatcher } from 'chokidar'
+import { type FSWatcher, watch } from 'chokidar'
 
 import { registerCleanup } from '../cleanupRegistry.js'
 import { logForDebugging } from '../debug.js'
@@ -58,7 +58,7 @@ function resolveWatchPaths(config?: ReturnType<typeof getHooksConfigFromSnapshot
 
 function startWatching(paths: string[]): void {
   logForDebugging(`FileChanged: watching ${paths.length} paths`)
-  watcher = chokidar.watch(paths, {
+  watcher = watch(paths, {
     persistent: true,
     ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 500, pollInterval: 200 },

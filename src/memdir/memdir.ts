@@ -141,10 +141,7 @@ export async function ensureMemoryDirExists(memoryDir: string): Promise<void> {
  * Log memory directory file/subdir counts asynchronously.
  * Fire-and-forget — doesn't block prompt building.
  */
-function logMemoryDirCounts(
-  memoryDir: string,
-  baseMetadata: Record<string, number | boolean | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS>,
-): void {
+function logMemoryDirCounts(memoryDir: string, baseMetadata: Record<string, number | boolean>): void {
   const fs = getFsImplementation()
   void fs.readdir(memoryDir).then(
     (dirents) => {

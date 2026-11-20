@@ -169,7 +169,7 @@ ${DESCRIPTION}`
   async validateInput(input) {
     const { url } = input
     try {
-      new URL(url)
+      void new URL(url)
     } catch {
       return {
         result: false,

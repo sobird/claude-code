@@ -623,7 +623,7 @@ function TranscriptSearchBar({
       return
     }
     setIndexStatus('building')
-    warm().then((ms) => {
+    void warm().then((ms) => {
       if (!alive) return
       // <20ms = imperceptible. No point showing "indexed in 3ms".
       if (ms < 20) {
@@ -786,8 +786,6 @@ export function REPL({
   pendingHookMessages,
   initialFileHistorySnapshots,
   initialContentReplacements,
-  initialAgentName,
-  initialAgentColor,
   mcpClients: initialMcpClients,
   dynamicMcpConfig: initialDynamicMcpConfig,
   autoConnectIdeFlag,

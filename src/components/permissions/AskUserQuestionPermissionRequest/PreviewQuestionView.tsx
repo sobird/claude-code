@@ -127,7 +127,7 @@ export function PreviewQuestionView({
     'chat:externalEditor',
     async () => {
       const currentValue = questionState?.textInputValue || ''
-      const result = await editPromptInEditor(currentValue)
+      const result = editPromptInEditor(currentValue)
       if (result.content !== null && result.content !== currentValue) {
         onUpdateQuestionState(questionText, { textInputValue: result.content }, false)
       }

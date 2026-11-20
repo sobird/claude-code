@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 
 import { Box, Link, Text } from '../ink.js'
-import { type AwsAuthStatus, AwsAuthStatusManager } from '../utils/awsAuthStatusManager.js'
+import { AwsAuthStatusManager } from '../utils/awsAuthStatusManager.js'
 
 const URL_RE = /https?:\/\/\S+/
 

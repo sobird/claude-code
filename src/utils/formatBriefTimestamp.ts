@@ -63,9 +63,10 @@ function getLocale(): string | undefined {
     return undefined
   }
   const tag = base.replaceAll('_', '-')
-  // Validate by trying to construct an Intl locale — invalid tags throw
+  // Validate by trying to construct an Intl locale — invalid tags throw.
+  // `void` marks the discarded instance as intentional (no-new).
   try {
-    new Intl.DateTimeFormat(tag)
+    void new Intl.DateTimeFormat(tag)
     return tag
   } catch {
     return undefined

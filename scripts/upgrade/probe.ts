@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 
-import WebSocket, { type RawData } from 'ws'
+import { type RawData, WebSocket } from 'ws'
 
 import type { ProbeScenario, ProbeTrace } from './types'
 

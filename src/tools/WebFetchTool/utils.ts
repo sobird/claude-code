@@ -1,4 +1,4 @@
-import axios, { type AxiosResponse } from 'axios'
+import axios, { type AxiosResponse, isAxiosError } from 'axios'
 import { LRUCache } from 'lru-cache'
 
 import {
@@ -271,7 +271,7 @@ export async function getWithPermittedRedirects(
       },
     })
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response && [301, 302, 307, 308].includes(error.response.status)) {
+    if (isAxiosError(error) && error.response && [301, 302, 307, 308].includes(error.response.status)) {
       const redirectLocation = error.response.headers.location
       if (!redirectLocation) {
         throw new Error('Redirect missing Location header', { cause: error })
@@ -297,7 +297,7 @@ export async function getWithPermittedRedirects(
     // Detect egress proxy blocks: the proxy returns 403 with
     // X-Proxy-Error: blocked-by-allowlist when egress is restricted
     if (
-      axios.isAxiosError(error) &&
+      isAxiosError(error) &&
       error.response?.status === 403 &&
       error.response.headers['x-proxy-error'] === 'blocked-by-allowlist'
     ) {

@@ -104,7 +104,7 @@ export function reorderBidi(characters: ClusteredChar[]): ClusteredChar[] {
   return reordered
 }
 
-function reverseRange<T>(arr: T[], start: number, end: number): void {
+function reverseRange(arr: unknown[], start: number, end: number): void {
   while (start < end) {
     const temp = arr[start]
     arr[start] = arr[end]!

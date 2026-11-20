@@ -1,5 +1,5 @@
 // src/lib/__tests__/app-paths.test.ts
-import { describe, expect, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 
 import { PREFERENCES_PATH } from '../app-paths'
 

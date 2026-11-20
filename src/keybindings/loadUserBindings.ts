@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
-import chokidar, { type FSWatcher } from 'chokidar'
+import { type FSWatcher, watch } from 'chokidar'
 
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import { logEvent } from '../services/analytics/index.js'
@@ -354,7 +354,7 @@ export async function initializeKeybindingWatcher(): Promise<void> {
 
   logForDebugging(`[keybindings] Watching for changes to ${userPath}`)
 
-  watcher = chokidar.watch(userPath, {
+  watcher = watch(userPath, {
     persistent: true,
     ignoreInitial: true,
     awaitWriteFinish: {

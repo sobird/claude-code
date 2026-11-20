@@ -338,7 +338,7 @@ function PromptInput({
   )
   const tmuxFooterVisible = process.env.USER_TYPE === 'ant' && hasTungstenSession
   // WebBrowser pill — visible when a browser is open
-  const bagelFooterVisible = useAppState((s) => false)
+  const bagelFooterVisible = useAppState(() => false)
   const teamContext = useAppState((s) => s.teamContext)
   const queuedCommands = useCommandQueue()
   const promptSuggestionState = useAppState((s) => s.promptSuggestion)
@@ -555,7 +555,6 @@ function PromptInput({
 
   const tasksSelected = footerItemSelected === 'tasks'
   const tmuxSelected = footerItemSelected === 'tmux'
-  const bagelSelected = footerItemSelected === 'bagel'
   const teamsSelected = footerItemSelected === 'teams'
   const bridgeSelected = footerItemSelected === 'bridge'
 
@@ -1507,7 +1506,7 @@ function PromptInput({
 
     try {
       // Pass pastedContents to expand collapsed text references
-      const result = await editPromptInEditor(input, pastedContents)
+      const result = editPromptInEditor(input, pastedContents)
 
       if (result.error) {
         addNotification({

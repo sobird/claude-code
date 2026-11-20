@@ -36,7 +36,7 @@ function MemoryCommand({
         }
       }
 
-      await editFileInEditor(memoryPath)
+      editFileInEditor(memoryPath)
 
       // Determine which environment variable controls the editor
       let editorSource = 'default'

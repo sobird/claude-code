@@ -31,14 +31,7 @@ import {
 import type { AgentDefinition, AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir.js'
 import { SKILL_TOOL_NAME } from '../tools/SkillTool/constants.js'
 import { getLimitedSkillToolCommands, getSkillToolInfo as getSlashCommandInfo } from '../tools/SkillTool/prompt.js'
-import type {
-  AssistantMessage,
-  AttachmentMessage,
-  Message,
-  NormalizedAssistantMessage,
-  NormalizedUserMessage,
-  UserMessage,
-} from '../types/message.js'
+import type { AssistantMessage, AttachmentMessage, Message, UserMessage } from '../types/message.js'
 import { toolToAPISchema } from './api.js'
 import { filterInjectedMemoryFiles, getMemoryFiles } from './claudemd.js'
 import { getContextWindowForModel } from './context.js'

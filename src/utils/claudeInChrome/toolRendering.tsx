@@ -100,7 +100,7 @@ function renderChromeToolUseMessage(
 
     case 'gif_creator':
       if (typeof input.action === 'string') {
-        secondaryInfo.push(`${input.action}`)
+        secondaryInfo.push(input.action)
       }
       break
 

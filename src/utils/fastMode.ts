@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import { getOauthConfig, OAUTH_BETA_HEADER } from 'src/constants/oauth.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
 
@@ -402,7 +402,7 @@ export async function prefetchFastModeStatus(): Promise<void> {
         status = await fetchWithCurrentAuth()
       } catch (err) {
         const isAuthError =
-          axios.isAxiosError(err) &&
+          isAxiosError(err) &&
           (err.response?.status === 401 ||
             (err.response?.status === 403 &&
               typeof err.response?.data === 'string' &&

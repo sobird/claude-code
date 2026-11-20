@@ -46,7 +46,7 @@ export function AgentEditor({ agent, tools, onSaved, onBack }: Props): React.Rea
 
   const handleOpenInEditor = useCallback(async () => {
     const filePath = getActualAgentFilePath(agent)
-    const result = await editFileInEditor(filePath)
+    const result = editFileInEditor(filePath)
 
     if (result.error) {
       setError(result.error)

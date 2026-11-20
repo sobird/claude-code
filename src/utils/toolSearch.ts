@@ -676,8 +676,7 @@ async function checkAutoThreshold(
     const threshold = getAutoToolSearchTokenThreshold(model)
     return {
       enabled: deferredToolTokens >= threshold,
-      debugDescription:
-        `${deferredToolTokens} tokens (threshold: ${threshold}, ` + `${getAutoToolSearchPercentage()}% of context)`,
+      debugDescription: `${deferredToolTokens} tokens (threshold: ${threshold}, ${getAutoToolSearchPercentage()}% of context)`,
       metrics: { deferredToolTokens, threshold },
     }
   }

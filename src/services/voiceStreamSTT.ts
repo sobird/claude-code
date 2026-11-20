@@ -13,7 +13,7 @@
 
 import type { ClientRequest, IncomingMessage } from 'node:http'
 
-import WebSocket from 'ws'
+import { WebSocket } from 'ws'
 
 import { getOauthConfig } from '../constants/oauth.js'
 import { checkAndRefreshOAuthTokenIfNeeded, getClaudeAIOAuthTokens, isAnthropicAuthEnabled } from '../utils/auth.js'

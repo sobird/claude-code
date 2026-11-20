@@ -125,12 +125,11 @@ function IDEScreen({
             }}
           />
         )}
-        {availableIDEs.length !== 0 &&
-          availableIDEs.some((ide) => ide.name === 'VS Code' || ide.name === 'Visual Studio Code') && (
-            <Box marginTop={1}>
-              <Text color="warning">Note: Only one Claude Code instance can be connected to VS Code at a time.</Text>
-            </Box>
-          )}
+        {availableIDEs.some((ide) => ide.name === 'VS Code' || ide.name === 'Visual Studio Code') && (
+          <Box marginTop={1}>
+            <Text color="warning">Note: Only one Claude Code instance can be connected to VS Code at a time.</Text>
+          </Box>
+        )}
         {availableIDEs.length !== 0 && !isSupportedTerminal() && (
           <Box marginTop={1}>
             <Text dimColor>Tip: You can enable auto-connect to IDE in /config or with the --ide flag</Text>

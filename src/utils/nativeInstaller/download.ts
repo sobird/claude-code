@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto'
 import { chmod, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import axios from 'axios'
+import axios, { isAxiosError, isCancel } from 'axios'
 import { logEvent } from 'src/services/analytics/index.js'
 
 import type { ReleaseChannel } from '../config.js'
@@ -89,7 +89,7 @@ export async function getLatestVersionFromBinaryRepo(
     const latencyMs = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
     let httpStatus: number | undefined
-    if (axios.isAxiosError(error) && error.response) {
+    if (isAxiosError(error) && error.response) {
       httpStatus = error.response.status
     }
 
@@ -317,7 +317,7 @@ async function downloadAndVerifyBinary(
       clearStallTimer()
 
       // Check if this was a stall timeout (axios wraps abort signals in CanceledError)
-      const isStallTimeout = axios.isCancel(error)
+      const isStallTimeout = isCancel(error)
 
       if (isStallTimeout) {
         lastError = new StallTimeoutError()
@@ -376,7 +376,7 @@ export async function downloadVersionFromBinaryRepo(
     const latencyMs = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
     let httpStatus: number | undefined
-    if (axios.isAxiosError(error) && error.response) {
+    if (isAxiosError(error) && error.response) {
       httpStatus = error.response.status
     }
 
@@ -416,7 +416,7 @@ export async function downloadVersionFromBinaryRepo(
     const latencyMs = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
     let httpStatus: number | undefined
-    if (axios.isAxiosError(error) && error.response) {
+    if (isAxiosError(error) && error.response) {
       httpStatus = error.response.status
     }
 

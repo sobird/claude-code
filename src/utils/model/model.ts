@@ -20,7 +20,7 @@ import { formatModelPricing, getOpus46CostTier } from '../modelCost.js'
 import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { getSettings_DEPRECATED } from '../settings/settings.js'
 import { capitalize } from '../stringUtils.js'
-import { type ModelAlias, isModelAlias } from './aliases.js'
+import { isModelAlias } from './aliases.js'
 import { resolveAntModel, getAntModelOverrideConfig } from './antModels.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import { getModelStrings, resolveOverriddenModel } from './modelStrings.js'
@@ -28,7 +28,7 @@ import { getAPIProvider, isFirstPartyLikeProvider } from './providers.js'
 
 export type ModelShortName = string
 export type ModelName = string
-export type ModelSetting = ModelName | ModelAlias | null
+export type ModelSetting = ModelName | null
 
 export function getSmallFastModel(): ModelName {
   return process.env.ANTHROPIC_SMALL_FAST_MODEL || getDefaultHaikuModel()
@@ -170,7 +170,7 @@ export function getRuntimeMainLoopModel(params: {
  *
  * @returns The default model setting to use
  */
-export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
+export function getDefaultMainLoopModelSetting(): ModelName {
   // Ants default to defaultModel from flag config, or Opus 1M if not configured
   if (process.env.USER_TYPE === 'ant') {
     return getAntModelOverrideConfig()?.defaultModel ?? getDefaultOpusModel() + '[1m]'
@@ -285,7 +285,7 @@ export function getClaudeAiUserDefaultModelDescription(fastMode = false): string
   return 'Sonnet 4.6 · Best for everyday tasks'
 }
 
-export function renderDefaultModelSetting(setting: ModelName | ModelAlias): string {
+export function renderDefaultModelSetting(setting: ModelName): string {
   if (setting === 'opusplan') {
     return 'Opus 4.6 in plan mode, else Sonnet 4.6'
   }
@@ -315,7 +315,7 @@ export function isOpus1mMergeEnabled(): boolean {
   return true
 }
 
-export function renderModelSetting(setting: ModelName | ModelAlias): string {
+export function renderModelSetting(setting: ModelName): string {
   if (setting === 'opusplan') {
     return 'Opus Plan'
   }
@@ -425,7 +425,7 @@ export function getPublicModelName(model: ModelName): string {
  *
  * @param modelInput The model alias or name provided by the user.
  */
-export function parseUserSpecifiedModel(modelInput: ModelName | ModelAlias): ModelName {
+export function parseUserSpecifiedModel(modelInput: ModelName): ModelName {
   const modelInputTrimmed = modelInput.trim()
   const normalizedModel = modelInputTrimmed.toLowerCase()
 

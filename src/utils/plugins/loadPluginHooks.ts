@@ -223,8 +223,8 @@ export function getPluginAffectingSettingsSnapshot(): string {
   // Key-sort the two Record fields so insertion order doesn't flap the hash.
   // Array fields (strictKnownMarketplaces, blockedMarketplaces) have
   // schema-stable order.
-  const sortKeys = <T extends Record<string, unknown>>(o: T | undefined) =>
-    o ? Object.fromEntries(Object.entries(o).toSorted()) : {}
+  const sortKeys = (o: Record<string, unknown> | undefined) =>
+    o ? Object.fromEntries(Object.entries(o).toSorted(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : {}
   return jsonStringify({
     enabledPlugins: sortKeys(merged.enabledPlugins),
     extraKnownMarketplaces: sortKeys(merged.extraKnownMarketplaces),

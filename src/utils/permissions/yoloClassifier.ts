@@ -978,7 +978,7 @@ export async function classifyYoloAction(
     )
     logForDebugging(
       `[auto-mode] new action being classified: ` +
-        `${actionCompact.length > 500 ? actionCompact.slice(0, 500) + '…' : actionCompact}`,
+        (actionCompact.length > 500 ? actionCompact.slice(0, 500) + '…' : actionCompact),
     )
   }
 

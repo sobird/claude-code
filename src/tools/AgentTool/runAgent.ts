@@ -29,8 +29,6 @@ import type {
   RequestStartEvent,
   StreamEvent,
   SystemCompactBoundaryMessage,
-  TombstoneMessage,
-  ToolUseSummaryMessage,
   UserMessage,
 } from '../../types/message.js'
 import { createAttachmentMessage } from '../../utils/attachments.js'

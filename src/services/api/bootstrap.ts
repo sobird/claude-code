@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import isEqual from 'lodash-es/isEqual.js'
 import { getAnthropicApiKey, getClaudeAIOAuthTokens, hasProfileScope } from 'src/utils/auth.js'
 import { z } from 'zod'
@@ -96,7 +96,7 @@ async function fetchBootstrapAPI(): Promise<BootstrapResponse | null> {
     })
   } catch (error) {
     logForDebugging(
-      `[Bootstrap] Fetch failed: ${axios.isAxiosError(error) ? (error.response?.status ?? error.code) : 'unknown'}`,
+      `[Bootstrap] Fetch failed: ${isAxiosError(error) ? (error.response?.status ?? error.code) : 'unknown'}`,
     )
     throw error
   }

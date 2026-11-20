@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
+import axios, { type AxiosRequestConfig, type AxiosResponse, isAxiosError } from 'axios'
 import { getOauthConfig } from 'src/constants/oauth.js'
 import { getOrganizationUUID } from 'src/services/oauth/client.js'
 import z from 'zod/v4'
@@ -24,7 +24,7 @@ export const CCR_BYOC_BETA = 'ccr-byoc-2025-07-29'
  * Checks if an axios error is a transient network error that should be retried
  */
 export function isTransientNetworkError(error: unknown): boolean {
-  if (!axios.isAxiosError(error)) {
+  if (!isAxiosError(error)) {
     return false
   }
 

@@ -22,7 +22,7 @@ import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import Link from '../../ink/components/Link.js'
 import { useAppStateStore } from '../../state/AppState.js'
 import { getPillLabel } from '../../tasks/pillLabel.js'
-import { isBackgroundTask, type TaskState } from '../../tasks/types.js'
+import { isBackgroundTask } from '../../tasks/types.js'
 import type {
   SystemMessage,
   SystemStopHookSummaryMessage,

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 
 import { defaultApiKeyName, defaultSessionTitle, requestLocale } from '../default-titles'
 import { DEFAULT_LOCALE } from '../locales'

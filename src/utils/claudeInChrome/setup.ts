@@ -131,7 +131,7 @@ export function setupClaudeInChrome(): {
       [CLAUDE_IN_CHROME_MCP_SERVER_NAME]: {
         type: 'stdio' as const,
         command: process.execPath,
-        args: [`${cliPath}`, '--claude-in-chrome-mcp'],
+        args: [cliPath, '--claude-in-chrome-mcp'],
         scope: 'dynamic' as const,
         ...(hasEnv && { env }),
       },

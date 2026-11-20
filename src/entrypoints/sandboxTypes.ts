@@ -69,7 +69,7 @@ export const SandboxFilesystemConfigSchema = lazySchema(() =>
         .array(z.string())
         .optional()
         .describe(
-          'Paths to re-allow reading within denyRead regions. ' + 'Takes precedence over denyRead for matching paths.',
+          'Paths to re-allow reading within denyRead regions. Takes precedence over denyRead for matching paths.',
         ),
       allowManagedReadPathsOnly: z
         .boolean()

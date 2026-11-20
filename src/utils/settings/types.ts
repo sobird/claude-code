@@ -274,11 +274,11 @@ export const SettingsSchema = lazySchema(() =>
           commit: z
             .string()
             .optional()
-            .describe('Attribution text for git commits, including any trailers. ' + 'Empty string hides attribution.'),
+            .describe('Attribution text for git commits, including any trailers. Empty string hides attribution.'),
           pr: z
             .string()
             .optional()
-            .describe('Attribution text for pull request descriptions. ' + 'Empty string hides attribution.'),
+            .describe('Attribution text for pull request descriptions. Empty string hides attribution.'),
         })
         .optional()
         .describe(
@@ -382,7 +382,7 @@ export const SettingsSchema = lazySchema(() =>
         .enum(['bash', 'powershell'])
         .optional()
         .describe(
-          'Default shell for input-box ! commands. ' + "Defaults to 'bash' on all platforms (no Windows auto-flip).",
+          "Default shell for input-box ! commands. Defaults to 'bash' on all platforms (no Windows auto-flip).",
         ),
       // Only run hooks defined in managed settings (managed-settings.json)
       allowManagedHooksOnly: z
@@ -599,9 +599,7 @@ export const SettingsSchema = lazySchema(() =>
       promptSuggestionEnabled: z
         .boolean()
         .optional()
-        .describe(
-          'When false, prompt suggestions are disabled. When absent or true, ' + 'prompt suggestions are enabled.',
-        ),
+        .describe('When false, prompt suggestions are disabled. When absent or true, prompt suggestions are enabled.'),
       showClearContextOnPlanAccept: z
         .boolean()
         .optional()
@@ -668,7 +666,7 @@ export const SettingsSchema = lazySchema(() =>
         .string()
         .optional()
         .describe(
-          'Custom directory for plan files, relative to project root. ' + 'If not set, defaults to ~/.claude/plans/',
+          'Custom directory for plan files, relative to project root. If not set, defaults to ~/.claude/plans/',
         ),
       ...(process.env.USER_TYPE === 'ant'
         ? {

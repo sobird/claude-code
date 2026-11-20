@@ -99,7 +99,7 @@ export const TaskStopTool = buildTool({
   },
   renderToolUseMessage,
   renderToolResultMessage,
-  async call({ task_id, shell_id }, { getAppState, setAppState, abortController }) {
+  async call({ task_id, shell_id }, { getAppState, setAppState }) {
     // Support both task_id and shell_id (deprecated KillShell compat)
     const id = task_id ?? shell_id
     if (!id) {

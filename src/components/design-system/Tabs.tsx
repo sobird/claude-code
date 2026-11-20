@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { useIsInsideModal, useModalScrollRef } from '../../context/modalContext.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
@@ -181,17 +181,20 @@ export function Tabs({
 
   const contentWidth = useFullWidth ? terminalWidth : undefined
 
+  const tabsContextValue = useMemo(
+    () => ({
+      selectedTab: tabs[selectedTabIndex][0],
+      width: contentWidth,
+      headerFocused,
+      focusHeader,
+      blurHeader,
+      registerOptIn,
+    }),
+    [tabs, selectedTabIndex, contentWidth, headerFocused, focusHeader, blurHeader, registerOptIn],
+  )
+
   return (
-    <TabsContext.Provider
-      value={{
-        selectedTab: tabs[selectedTabIndex][0],
-        width: contentWidth,
-        headerFocused,
-        focusHeader,
-        blurHeader,
-        registerOptIn,
-      }}
-    >
+    <TabsContext.Provider value={tabsContextValue}>
       <Box
         flexDirection="column"
         tabIndex={0}

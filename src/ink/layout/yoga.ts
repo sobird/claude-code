@@ -1,4 +1,4 @@
-import Yoga, {
+import {
   Align,
   Direction,
   Display,
@@ -10,7 +10,7 @@ import Yoga, {
   Overflow,
   PositionType,
   Wrap,
-  type Node as YogaNode,
+  Node as YogaNode,
 } from 'src/native-ts/yoga-layout/index.js'
 
 import {
@@ -301,5 +301,5 @@ export class YogaLayoutNode implements LayoutNode {
 // just a plain JS object available at import time.
 
 export function createYogaLayoutNode(): LayoutNode {
-  return new YogaLayoutNode(Yoga.Node.create())
+  return new YogaLayoutNode(new YogaNode())
 }

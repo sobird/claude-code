@@ -80,7 +80,6 @@ import type {
   SDKRateLimitEventSchema,
   SDKRateLimitInfoSchema,
   SDKResultErrorSchema,
-  SDKResultMessageSchema,
   SDKResultSuccessSchema,
   SDKSessionInfoSchema,
   SDKSessionStateChangedMessageSchema,

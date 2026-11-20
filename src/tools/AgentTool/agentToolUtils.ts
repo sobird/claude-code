@@ -30,7 +30,7 @@ import {
   updateAgentProgress as updateAsyncAgentProgress,
   updateProgressFromMessage,
 } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
-import type { Tool, ToolPermissionContext, Tools, ToolUseContext } from '../../Tool.js'
+import type { Tool, Tools, ToolUseContext } from '../../Tool.js'
 import { toolMatchesName } from '../../Tool.js'
 import { asAgentId } from '../../types/ids.js'
 import type { Message as MessageType } from '../../types/message.js'

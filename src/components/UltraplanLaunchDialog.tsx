@@ -32,7 +32,7 @@ function dispatchPromptIdentifier() {
 export function UltraplanLaunchDialog({ onChoice }: Props): React.ReactNode {
   useRegisterOverlay('ultraplan-launch')
 
-  const [showTermsLink, setHasSeenTerms] = useState(dispatchShowTermsLink)
+  const [showTermsLink] = useState(dispatchShowTermsLink)
   // Stable prompt identifier for this dialog instance
   const [promptIdentifier] = React.useState(dispatchPromptIdentifier)
 

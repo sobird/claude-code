@@ -253,7 +253,7 @@ function parseFrontmatterPaths(rawContent: string): {
 
   // If all patterns are ** (match-all), treat as no globs (undefined)
   // This means the file applies to all paths
-  if (patterns.length === 0 || patterns.every((p: string) => p === '**')) {
+  if (patterns.every((p: string) => p === '**')) {
     return { content }
   }
 

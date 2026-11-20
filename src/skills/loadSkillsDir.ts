@@ -135,7 +135,7 @@ function parseSkillPaths(frontmatter: FrontmatterData): string[] | undefined {
     .filter((p: string) => p.length > 0)
 
   // If all patterns are ** (match-all), treat as no paths (undefined)
-  if (patterns.length === 0 || patterns.every((p: string) => p === '**')) {
+  if (patterns.every((p: string) => p === '**')) {
     return undefined
   }
 

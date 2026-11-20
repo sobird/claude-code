@@ -62,7 +62,7 @@ import { asSystemPrompt, type SystemPrompt } from './utils/systemPromptType.js'
 const skillPrefetch = feature('EXPERIMENTAL_SKILL_SEARCH')
   ? (require('./services/skillSearch/prefetch.js') as typeof import('./services/skillSearch/prefetch.js'))
   : null
-const jobClassifier = feature('TEMPLATES')
+const _jobClassifier = feature('TEMPLATES')
   ? (require('./jobs/classifier.js') as typeof import('./jobs/classifier.js'))
   : null
 import { feature } from 'bun:bundle'
@@ -73,7 +73,7 @@ import { buildQueryConfig } from './query/config.js'
 import { productionDeps, type QueryDeps } from './query/deps.js'
 import { handleStopHooks } from './query/stopHooks.js'
 import { createBudgetTracker, checkTokenBudget } from './query/tokenBudget.js'
-import type { Terminal, Continue } from './query/transitions.js'
+import type { Continue } from './query/transitions.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from './services/analytics/growthbook.js'
 import { createDumpPromptsFetch } from './services/api/dumpPrompts.js'
 import { StreamingToolExecutor } from './services/tools/StreamingToolExecutor.js'

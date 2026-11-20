@@ -21,7 +21,7 @@
 import { writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
 
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import isEqual from 'lodash-es/isEqual.js'
 import memoize from 'lodash-es/memoize.js'
 
@@ -1206,7 +1206,7 @@ async function cacheMarketplaceFromUrl(
     })
   } catch (error) {
     logPluginFetch('marketplace_url', url, 'failure', performance.now() - fetchStarted, classifyFetchError(error))
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
         throw new Error(
           `Could not connect to ${redactedUrl}. Please check your internet connection and verify the URL is correct.\n\nTechnical details: ${error.message}`,

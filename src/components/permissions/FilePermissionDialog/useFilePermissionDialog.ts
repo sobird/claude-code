@@ -2,10 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useAppState } from 'src/state/AppState.js'
 
 import { useKeybindings } from '../../../keybindings/useKeybinding.js'
-import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  logEvent,
-} from '../../../services/analytics/index.js'
+import { logEvent } from '../../../services/analytics/index.js'
 import { sanitizeToolNameForAnalytics } from '../../../services/analytics/metadata.js'
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
 import type { CompletionType } from '../../../utils/unaryLogging.js'

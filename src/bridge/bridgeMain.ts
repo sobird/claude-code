@@ -1433,7 +1433,7 @@ export type ParsedArgs = {
 
 const SPAWN_FLAG_VALUES = ['session', 'same-dir', 'worktree'] as const
 
-function parseSpawnValue(raw: string | undefined): SpawnMode | string {
+function parseSpawnValue(raw: string | undefined): string {
   if (raw === 'session') return 'single-session'
   if (raw === 'same-dir') return 'same-dir'
   if (raw === 'worktree') return 'worktree'

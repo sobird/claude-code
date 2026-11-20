@@ -3,7 +3,7 @@ export class Stream<T> implements AsyncIterator<T> {
   private readResolve?: (value: IteratorResult<T>) => void
   private readReject?: (error: unknown) => void
   private isDone: boolean = false
-  private hasError: unknown | undefined
+  private hasError: unknown
   private started = false
 
   constructor(private readonly returned?: () => void) {}

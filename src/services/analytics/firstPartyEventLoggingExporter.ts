@@ -5,7 +5,7 @@ import * as path from 'node:path'
 import type { HrTime } from '@opentelemetry/api'
 import { type ExportResult, ExportResultCode } from '@opentelemetry/core'
 import type { LogRecordExporter, ReadableLogRecord } from '@opentelemetry/sdk-logs'
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import type { CoreUserData } from 'src/utils/user.js'
 
 import { getIsNonInteractiveSession, getSessionId } from '../../bootstrap/state.js'
@@ -521,7 +521,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       return
     } catch (error) {
       // Handle 401 by retrying without auth
-      if (useAuth && axios.isAxiosError(error) && error.response?.status === 401) {
+      if (useAuth && isAxiosError(error) && error.response?.status === 401) {
         if (process.env.USER_TYPE === 'ant') {
           logForDebugging('1P event logging: 401 auth error, retrying without auth')
         }
@@ -665,7 +665,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
 }
 
 function getAxiosErrorContext(error: unknown): string {
-  if (!axios.isAxiosError(error)) {
+  if (!isAxiosError(error)) {
     return errorMessage(error)
   }
 

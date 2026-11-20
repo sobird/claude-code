@@ -286,7 +286,7 @@ export function ExitPlanModePermissionRequest({
 
       void (async () => {
         if (isV2 && planFilePath) {
-          const result = await editFileInEditor(planFilePath)
+          const result = editFileInEditor(planFilePath)
           if (result.error) {
             addNotification({
               key: 'external-editor-error',
@@ -301,7 +301,7 @@ export function ExitPlanModePermissionRequest({
             setShowSaveMessage(true)
           }
         } else {
-          const result = await editPromptInEditor(currentPlan)
+          const result = editPromptInEditor(currentPlan)
           if (result.error) {
             addNotification({
               key: 'external-editor-error',
@@ -422,6 +422,7 @@ export function ExitPlanModePermissionRequest({
       // Add verification instruction if the feature is enabled
       // Dead code elimination: CLAUDE_CODE_VERIFY_PLAN='false' in external builds, so === 'true' check allows Bun to eliminate the string
       const verificationInstruction =
+        // eslint-disable-next-line no-constant-condition, no-constant-binary-expression -- DCE: Bun folds this at build time
         undefined === 'true'
           ? `\n\nIMPORTANT: When you have finished implementing the plan, you MUST call the "VerifyPlanExecution" tool directly (NOT the ${AGENT_TOOL_NAME} tool or an agent) to trigger background verification.`
           : ''

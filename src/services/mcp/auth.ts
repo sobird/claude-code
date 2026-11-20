@@ -30,7 +30,7 @@ import {
   OAuthTokensSchema,
 } from '@modelcontextprotocol/sdk/shared/auth.js'
 import type { FetchLike } from '@modelcontextprotocol/sdk/shared/transport.js'
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import xss from 'xss'
 
 import { MCP_CLIENT_METADATA_URL } from '../../constants/oauth.js'
@@ -402,7 +402,7 @@ async function revokeToken({
     logMCPDebug(serverName, `Successfully revoked ${tokenTypeHint}`)
   } catch (error: unknown) {
     // Fallback for non-RFC-7009-compliant servers that require Bearer auth
-    if (axios.isAxiosError(error) && error.response?.status === 401 && accessToken) {
+    if (isAxiosError(error) && error.response?.status === 401 && accessToken) {
       logMCPDebug(serverName, `Got 401, retrying ${tokenTypeHint} revocation with Bearer auth`)
       // RFC 6749 §2.3.1: must not send more than one auth method. The retry
       // switches to Bearer — clear any client creds from the body.

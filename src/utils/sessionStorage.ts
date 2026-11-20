@@ -524,8 +524,6 @@ class Project {
   private FLUSH_INTERVAL_MS = 100
   private readonly MAX_CHUNK_BYTES = 100 * 1024 * 1024
 
-  constructor() {}
-
   /** @internal Reset flush/queue state for testing. */
   _resetFlushState(): void {
     this.pendingWriteCount = 0
@@ -1612,7 +1610,7 @@ function extractFirstPrompt(transcript: TranscriptMessage[]): string {
  * Gets the last user message that was processed (i.e., before any non-user message appears).
  * Used to determine if a session has valid user interaction.
  */
-export function getFirstMeaningfulUserMessageTextContent<T extends Message>(transcript: T[]): string | undefined {
+export function getFirstMeaningfulUserMessageTextContent(transcript: Message[]): string | undefined {
   for (const msg of transcript) {
     if (msg.type !== 'user' || msg.isMeta) continue
     // Skip compact summary messages - they should not be treated as the first prompt

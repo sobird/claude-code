@@ -644,7 +644,7 @@ export class Node {
 
   // -- Style setters: dimensions
 
-  setWidth(v: number | 'auto' | string | undefined): void {
+  setWidth(v: number | string | undefined): void {
     this.style.width = parseDimension(v)
     this.markDirty()
   }
@@ -656,7 +656,7 @@ export class Node {
     this.style.width = AUTO_VALUE
     this.markDirty()
   }
-  setHeight(v: number | 'auto' | string | undefined): void {
+  setHeight(v: number | string | undefined): void {
     this.style.height = parseDimension(v)
     this.markDirty()
   }
@@ -732,7 +732,7 @@ export class Node {
     }
     this.markDirty()
   }
-  setFlexBasis(v: number | 'auto' | string | undefined): void {
+  setFlexBasis(v: number | string | undefined): void {
     this.style.flexBasis = parseDimension(v)
     this.markDirty()
   }
@@ -810,7 +810,7 @@ export class Node {
 
   // -- Style setters: spacing
 
-  setMargin(edge: Edge, v: number | 'auto' | string | undefined): void {
+  setMargin(edge: Edge, v: number | string | undefined): void {
     const val = parseDimension(v)
     this.style.margin[edge] = val
     if (val.unit === Unit.Auto) this._hasAutoMargin = true

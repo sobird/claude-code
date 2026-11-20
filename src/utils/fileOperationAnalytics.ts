@@ -38,7 +38,7 @@ export function logFileOperation(params: {
   content?: string
   type?: 'create' | 'update'
 }): void {
-  const metadata: Record<string, AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | number | boolean> = {
+  const metadata: Record<string, number | boolean> = {
     operation: params.operation as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     tool: params.tool as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     filePathHash: hashFilePath(params.filePath),

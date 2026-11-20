@@ -31,7 +31,7 @@ export type LSPClient = {
   sendRequest: <TResult>(method: string, params: unknown) => Promise<TResult>
   sendNotification: (method: string, params: unknown) => Promise<void>
   onNotification: (method: string, handler: (params: unknown) => void) => void
-  onRequest: <TParams, TResult>(method: string, handler: (params: TParams) => TResult | Promise<TResult>) => void
+  onRequest: <TResult>(method: string, handler: (params: unknown) => TResult | Promise<TResult>) => void
   stop: () => Promise<void>
 }
 
@@ -59,7 +59,7 @@ export function createLSPClient(serverName: string, onCrash?: (error: Error) => 
   }> = []
   const pendingRequestHandlers: Array<{
     method: string
-    handler: (params: unknown) => unknown | Promise<unknown>
+    handler: (params: unknown) => unknown
   }> = []
 
   function checkStartFailed(): void {
@@ -301,12 +301,12 @@ export function createLSPClient(serverName: string, onCrash?: (error: Error) => 
       connection.onNotification(method, handler)
     },
 
-    onRequest<TParams, TResult>(method: string, handler: (params: TParams) => TResult | Promise<TResult>): void {
+    onRequest<TResult>(method: string, handler: (params: unknown) => TResult | Promise<TResult>): void {
       if (!connection) {
         // Queue handler for application when connection is ready (lazy initialization)
         pendingRequestHandlers.push({
           method,
-          handler: handler as (params: unknown) => unknown | Promise<unknown>,
+          handler: handler as (params: unknown) => unknown,
         })
         logForDebugging(`Queued request handler for ${serverName}.${method} (connection not ready)`)
         return

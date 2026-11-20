@@ -478,7 +478,8 @@ ${CYBER_RISK_INSTRUCTION}`,
 }
 
 export async function computeEnvInfo(modelId: string, additionalWorkingDirectories?: string[]): Promise<string> {
-  const [isGit, unameSR] = await Promise.all([getIsGit(), getUnameSR()])
+  const isGit = await getIsGit()
+  const unameSR = getUnameSR()
 
   // Undercover: keep ALL model names/IDs out of the system prompt so nothing
   // internal can leak into public commits/PRs. This includes the public
@@ -518,7 +519,8 @@ ${modelDescription}${knowledgeCutoffMessage}`
 }
 
 export async function computeSimpleEnvInfo(modelId: string, additionalWorkingDirectories?: string[]): Promise<string> {
-  const [isGit, unameSR] = await Promise.all([getIsGit(), getUnameSR()])
+  const isGit = await getIsGit()
+  const unameSR = getUnameSR()
 
   // Undercover: strip all model name/ID references. See computeEnvInfo.
   // DCE: inline the USER_TYPE check at each site — do NOT hoist to a const.

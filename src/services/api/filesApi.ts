@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
-import axios from 'axios'
+import axios, { isAxiosError, isCancel } from 'axios'
 
 import { count } from '../../utils/array.js'
 import { getCwd } from '../../utils/cwd.js'
@@ -161,7 +161,7 @@ export async function downloadFile(fileId: string, config: FilesApiConfig): Prom
 
       return { done: false, error: `status ${response.status}` }
     } catch (error) {
-      if (!axios.isAxiosError(error)) {
+      if (!isAxiosError(error)) {
         throw error
       }
       return { done: false, error: error.message }
@@ -407,9 +407,7 @@ export async function uploadFile(
   bodyParts.push(Buffer.from('\r\n'))
 
   // Purpose part
-  bodyParts.push(
-    Buffer.from(`--${boundary}\r\n` + `Content-Disposition: form-data; name="purpose"\r\n\r\n` + `user_data\r\n`),
-  )
+  bodyParts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="purpose"\r\n\r\nuser_data\r\n`))
 
   // End boundary
   bodyParts.push(Buffer.from(`--${boundary}--\r\n`))
@@ -478,11 +476,11 @@ export async function uploadFile(
         if (error instanceof UploadNonRetriableError) {
           throw error
         }
-        if (axios.isCancel(error)) {
+        if (isCancel(error)) {
           throw new UploadNonRetriableError('Upload canceled')
         }
         // Network errors are retriable
-        if (axios.isAxiosError(error)) {
+        if (isAxiosError(error)) {
           return { done: false, error: error.message }
         }
         throw error
@@ -620,7 +618,7 @@ export async function listFilesCreatedAfter(afterCreatedAt: string, config: File
 
         return { done: false, error: `status ${response.status}` }
       } catch (error) {
-        if (!axios.isAxiosError(error)) {
+        if (!isAxiosError(error)) {
           throw error
         }
         logEvent('tengu_file_list_failed', {

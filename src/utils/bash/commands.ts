@@ -224,8 +224,8 @@ export function splitCommandWithOperators(command: string): string[] {
     // 3. Map quotes and escaped parentheses back to their original form
     const quotedParts = stringParts.map((part) => {
       return part
-        .replaceAll(`${placeholders.SINGLE_QUOTE}`, "'")
-        .replaceAll(`${placeholders.DOUBLE_QUOTE}`, '"')
+        .replaceAll(placeholders.SINGLE_QUOTE, "'")
+        .replaceAll(placeholders.DOUBLE_QUOTE, '"')
         .replaceAll(`\n${placeholders.NEW_LINE}\n`, '\n')
         .replaceAll(placeholders.ESCAPED_OPEN_PAREN, '\\(')
         .replaceAll(placeholders.ESCAPED_CLOSE_PAREN, '\\)')

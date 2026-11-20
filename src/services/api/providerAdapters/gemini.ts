@@ -131,7 +131,7 @@ function mergeGeminiTurns(contents: JsonObject[]): JsonObject[] {
   return merged
 }
 
-export function buildGeminiRequest(body: JsonObject, config: ProviderConfig): JsonObject {
+export function buildGeminiRequest(body: JsonObject, _config: ProviderConfig): JsonObject {
   const rawMessages = Array.isArray(body.messages) ? (body.messages as JsonObject[]) : []
   const toolNames = collectToolUseNames(rawMessages)
 

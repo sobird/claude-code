@@ -273,8 +273,7 @@ export function DiscoverPlugins({
 
     // Handle installation results
     if (failureCount === 0) {
-      const message =
-        `✓ Installed ${successCount} ${plural(successCount, 'plugin')}. ` + `Run /reload-plugins to activate.`
+      const message = `✓ Installed ${successCount} ${plural(successCount, 'plugin')}. Run /reload-plugins to activate.`
       setResult(message)
     } else if (successCount === 0) {
       setError(`Failed to install: ${formatFailureDetails(newFailedPlugins, true)}`)

@@ -64,7 +64,7 @@ export function registerMcpAddCommand(mcp: Command): void {
 
       // If no name is provided, error
       if (!name) {
-        cliError('Error: Server name is required.\n' + 'Usage: claude mcp add <name> <command> [args...]')
+        cliError('Error: Server name is required.\nUsage: claude mcp add <name> <command> [args...]')
       } else if (!actualCommand) {
         cliError(
           'Error: Command is required when server name is provided.\n' +

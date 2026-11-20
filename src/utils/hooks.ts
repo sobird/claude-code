@@ -167,7 +167,7 @@ function executeInBackground({
   hookId: string
   shellCommand: ShellCommand
   asyncResponse: AsyncHookJSONOutput
-  hookEvent: HookEvent | 'StatusLine' | 'FileSuggestion'
+  hookEvent: HookEvent
   hookName: string
   command: string
   asyncRewake?: boolean
@@ -688,7 +688,7 @@ function processHookJSONOutput({
  */
 async function execCommandHook(
   hook: HookCommand & { type: 'command' },
-  hookEvent: HookEvent | 'StatusLine' | 'FileSuggestion',
+  hookEvent: HookEvent,
   hookName: string,
   jsonInput: string,
   signal: AbortSignal,
@@ -3106,10 +3106,10 @@ async function executeHooksOutsideREPL({
  * @param toolUseContext Optional ToolUseContext for prompt-based hooks
  * @returns Async generator that yields progress messages and returns blocking errors
  */
-export async function* executePreToolHooks<ToolInput>(
+export async function* executePreToolHooks(
   toolName: string,
   toolUseID: string,
-  toolInput: ToolInput,
+  toolInput: unknown,
   toolUseContext: ToolUseContext,
   permissionMode?: string,
   signal?: AbortSignal,
@@ -3162,10 +3162,10 @@ export async function* executePreToolHooks<ToolInput>(
  * @param timeoutMs Optional timeout in milliseconds for hook execution
  * @returns Async generator that yields progress messages and blocking errors for automated feedback
  */
-export async function* executePostToolHooks<ToolInput, ToolResponse>(
+export async function* executePostToolHooks<ToolResponse>(
   toolName: string,
   toolUseID: string,
-  toolInput: ToolInput,
+  toolInput: unknown,
   toolResponse: ToolResponse,
   toolUseContext: ToolUseContext,
   permissionMode?: string,
@@ -3204,10 +3204,10 @@ export async function* executePostToolHooks<ToolInput, ToolResponse>(
  * @param timeoutMs Optional timeout in milliseconds for hook execution
  * @returns Async generator that yields progress messages and blocking errors
  */
-export async function* executePostToolUseFailureHooks<ToolInput>(
+export async function* executePostToolUseFailureHooks(
   toolName: string,
   toolUseID: string,
-  toolInput: ToolInput,
+  toolInput: unknown,
   error: string,
   toolUseContext: ToolUseContext,
   isInterrupt?: boolean,
@@ -3241,10 +3241,10 @@ export async function* executePostToolUseFailureHooks<ToolInput>(
   })
 }
 
-export async function* executePermissionDeniedHooks<ToolInput>(
+export async function* executePermissionDeniedHooks(
   toolName: string,
   toolUseID: string,
-  toolInput: ToolInput,
+  toolInput: unknown,
   reason: string,
   toolUseContext: ToolUseContext,
   permissionMode?: string,
@@ -3843,10 +3843,10 @@ export async function executeSessionEndHooks(
  * @param timeoutMs Optional timeout in milliseconds for hook execution
  * @returns Async generator that yields progress messages and returns aggregated result
  */
-export async function* executePermissionRequestHooks<ToolInput>(
+export async function* executePermissionRequestHooks(
   toolName: string,
   toolUseID: string,
-  toolInput: ToolInput,
+  toolInput: unknown,
   toolUseContext: ToolUseContext,
   permissionMode?: string,
   permissionSuggestions?: PermissionUpdate[],

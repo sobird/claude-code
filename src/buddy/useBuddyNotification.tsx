@@ -25,7 +25,7 @@ export function isBuddyLive(): boolean {
 function RainbowText({ text }: { text: string }): React.ReactNode {
   return (
     <>
-      {[...text].map((ch, i) => (
+      {Array.from(text).map((ch, i) => (
         <Text key={i} color={getRainbowColor(i)}>
           {ch}
         </Text>

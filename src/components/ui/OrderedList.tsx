@@ -1,4 +1,4 @@
-import React, { createContext, isValidElement, type ReactNode, useContext } from 'react'
+import React, { createContext, isValidElement, type ReactNode, useContext, useMemo } from 'react'
 
 import { Box } from '../../ink.js'
 import { OrderedListItem, OrderedListItemContext } from './OrderedListItem.js'
@@ -7,6 +7,15 @@ const OrderedListContext = createContext({ marker: '' })
 
 type OrderedListProps = {
   children: ReactNode
+}
+
+function OrderedListItemWrapper({ marker, children }: { marker: string; children: ReactNode }): React.ReactNode {
+  const markerValue = useMemo(() => ({ marker }), [marker])
+  return (
+    <OrderedListContext.Provider value={markerValue}>
+      <OrderedListItemContext.Provider value={markerValue}>{children}</OrderedListItemContext.Provider>
+    </OrderedListContext.Provider>
+  )
 }
 
 function OrderedListComponent({ children }: OrderedListProps): React.ReactNode {
@@ -33,9 +42,9 @@ function OrderedListComponent({ children }: OrderedListProps): React.ReactNode {
         const marker = `${parentMarker}${paddedMarker}`
 
         return (
-          <OrderedListContext.Provider value={{ marker }}>
-            <OrderedListItemContext.Provider value={{ marker }}>{child}</OrderedListItemContext.Provider>
-          </OrderedListContext.Provider>
+          <OrderedListItemWrapper key={index} marker={marker}>
+            {child}
+          </OrderedListItemWrapper>
         )
       })}
     </Box>

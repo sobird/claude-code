@@ -2,7 +2,7 @@
  * HTTP utility constants and helpers
  */
 
-import axios from 'axios'
+import { isAxiosError } from 'axios'
 
 import { OAUTH_BETA_HEADER } from '../constants/oauth.js'
 import { getAnthropicApiKey, getClaudeAIOAuthTokens, handleOAuth401Error, isClaudeAISubscriber } from './auth.js'
@@ -112,7 +112,7 @@ export async function withOAuth401Retry<T>(request: () => Promise<T>, opts?: { a
   try {
     return await request()
   } catch (err) {
-    if (!axios.isAxiosError(err)) throw err
+    if (!isAxiosError(err)) throw err
     const status = err.response?.status
     const isAuthError =
       status === 401 ||

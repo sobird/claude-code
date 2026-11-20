@@ -34,27 +34,23 @@ export async function walkPluginMarkdown(
       if (opts.stopAtSkillDir && entries.some((e) => e.isFile() && SKILL_MD_RE.test(e.name))) {
         // Skill directory: collect .md files here, don't recurse.
         await Promise.all(
-          entries.map((entry) =>
-            entry.isFile() && entry.name.toLowerCase().endsWith('.md')
-              ? onFile(join(dirPath, entry.name), namespace)
-              : undefined,
-          ),
+          entries
+            .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.md'))
+            .map((entry) => onFile(join(dirPath, entry.name), namespace)),
         )
         return
       }
 
-      await Promise.all(
-        entries.map((entry) => {
-          const fullPath = join(dirPath, entry.name)
-          if (entry.isDirectory()) {
-            return scan(fullPath, [...namespace, entry.name])
-          }
-          if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
-            return onFile(fullPath, namespace)
-          }
-          return undefined
-        }),
-      )
+      const tasks: Promise<void>[] = []
+      for (const entry of entries) {
+        const fullPath = join(dirPath, entry.name)
+        if (entry.isDirectory()) {
+          tasks.push(scan(fullPath, [...namespace, entry.name]))
+        } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+          tasks.push(onFile(fullPath, namespace))
+        }
+      }
+      await Promise.all(tasks)
     } catch (error) {
       logForDebugging(`Failed to scan ${label} directory ${dirPath}: ${error}`, { level: 'error' })
     }

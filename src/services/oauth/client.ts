@@ -1,5 +1,5 @@
 // OAuth client for handling authentication flows with Claude services
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -241,8 +241,7 @@ export async function refreshOAuthToken(
         : undefined,
     }
   } catch (error) {
-    const responseBody =
-      axios.isAxiosError(error) && error.response?.data ? JSON.stringify(error.response.data) : undefined
+    const responseBody = isAxiosError(error) && error.response?.data ? JSON.stringify(error.response.data) : undefined
     logEvent('tengu_oauth_token_refresh_failure', {
       error: (error as Error).message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       ...(responseBody && {

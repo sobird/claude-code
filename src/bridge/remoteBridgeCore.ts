@@ -30,7 +30,7 @@
 
 import { feature } from 'bun:bundle'
 
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
 import type { SDKControlRequest, SDKControlResponse } from '../entrypoints/sdk/controlTypes.js'
@@ -857,6 +857,6 @@ async function archiveSession(
   } catch (err) {
     const msg = errorMessage(err)
     logForDebugging(`[remote-bridge] Archive failed: ${msg}`)
-    return axios.isAxiosError(err) && err.code === 'ECONNABORTED' ? 'timeout' : 'error'
+    return isAxiosError(err) && err.code === 'ECONNABORTED' ? 'timeout' : 'error'
   }
 }

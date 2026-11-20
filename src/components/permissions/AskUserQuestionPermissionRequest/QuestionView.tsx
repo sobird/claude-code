@@ -157,7 +157,7 @@ export function QuestionView({
 
   const handleOpenEditor = useCallback(
     async (currentValue: string, setValue: (value: string) => void) => {
-      const result = await editPromptInEditor(currentValue)
+      const result = editPromptInEditor(currentValue)
 
       if (result.content !== null && result.content !== currentValue) {
         // Update the Select's internal state for immediate UI update

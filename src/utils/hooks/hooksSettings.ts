@@ -7,7 +7,7 @@ import type { AppState } from '../../state/AppState.js'
 import type { EditableSettingSource } from '../settings/constants.js'
 import { SOURCES } from '../settings/constants.js'
 import { getSettingsFilePathForSource, getSettingsForSource } from '../settings/settings.js'
-import type { HookCommand, HookMatcher } from '../settings/types.js'
+import type { HookCommand } from '../settings/types.js'
 import { DEFAULT_HOOK_SHELL } from '../shell/shellProvider.js'
 import { getSessionHooks } from './sessionHooks.js'
 

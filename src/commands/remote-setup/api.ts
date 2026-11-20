@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 
 import { getOauthConfig } from '../../constants/oauth.js'
 import { logForDebugging } from '../../utils/debug.js'
@@ -86,7 +86,7 @@ export async function importGithubToken(
     })
     return { ok: false, error: { kind: 'server', status: response.status } }
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       // err.config.data would contain the POST body with the raw token.
       // Do not include it in any log. The error code alone is enough.
       logForDebugging(`import-token network error: ${err.code ?? 'unknown'}`, {

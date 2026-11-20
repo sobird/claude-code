@@ -26,7 +26,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/gr
 import { useAppState, useSetAppState, useAppStateStore } from '../../state/AppState.js'
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
 import { normalizeApiKeyForConfig } from '../../utils/authPortable.js'
-import { type GlobalConfig, saveGlobalConfig, getCurrentProjectConfig, type OutputStyle } from '../../utils/config.js'
+import { type GlobalConfig, saveGlobalConfig, getCurrentProjectConfig } from '../../utils/config.js'
 import {
   getGlobalConfig,
   getAutoUpdaterDisabledReason,

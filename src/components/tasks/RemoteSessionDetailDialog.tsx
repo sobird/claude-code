@@ -1,6 +1,5 @@
 import figures from 'figures'
 import React, { useMemo, useState } from 'react'
-import type { SDKMessage } from 'src/entrypoints/agentSdkTypes.js'
 import type { ToolUseContext } from 'src/Tool.js'
 import type { DeepImmutable } from 'src/types/utils.js'
 

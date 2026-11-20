@@ -8,7 +8,7 @@ type Props = {
   contentHeight?: number
 }
 
-export function Gates({ onOwnsEscChange, contentHeight }: Props): React.ReactNode {
+export function Gates(_props: Props): React.ReactNode {
   return (
     <Box flexDirection="column" gap={1} width="100%">
       <Text dimColor>/gates is only available for anthropic staff.</Text>

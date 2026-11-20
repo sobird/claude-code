@@ -70,7 +70,7 @@ export type ProbeScenario = {
   env?: Record<string, string>
   stdin?: string | null
   breakpoints: Array<{ script: string; line: number; column: number; label: string }>
-  capture: Array<'args' | 'return' | 'fn.toString' | string>
+  capture: string[]
 }
 
 export type ProbeTrace = {

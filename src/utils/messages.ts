@@ -69,7 +69,6 @@ import type {
   SystemScheduledTaskFireMessage,
   SystemStopHookSummaryMessage,
   SystemTurnDurationMessage,
-  TombstoneMessage,
   ToolUseSummaryMessage,
   UserMessage,
 } from '../types/message.js'
@@ -124,7 +123,7 @@ import {
 } from '../constants/xml.js'
 import { DiagnosticTrackingService } from '../services/diagnosticTracking.js'
 import { findToolByName, type Tool, type Tools, toolMatchesName } from '../Tool.js'
-import { FileReadTool, type Output as FileReadToolOutput } from '../tools/FileReadTool/FileReadTool.js'
+import { FileReadTool } from '../tools/FileReadTool/FileReadTool.js'
 import { SEND_MESSAGE_TOOL_NAME } from '../tools/SendMessageTool/constants.js'
 import { TASK_CREATE_TOOL_NAME } from '../tools/TaskCreateTool/constants.js'
 import { TASK_OUTPUT_TOOL_NAME } from '../tools/TaskOutputTool/constants.js'
@@ -460,7 +459,7 @@ export function createUserMessage({
     _meta?: Record<string, unknown>
     structuredContent?: Record<string, unknown>
   }
-  uuid?: UUID | string
+  uuid?: string
   timestamp?: string
   imagePasteIds?: number[]
   // For tool_result messages: the UUID of the assistant message containing the matching tool_use
@@ -4211,7 +4210,7 @@ export function isCompactBoundaryMessage(message: Message): message is SystemCom
  * Finds the index of the last compact boundary marker in the messages array
  * @returns The index of the last compact boundary, or -1 if none found
  */
-export function findLastCompactBoundaryIndex<T extends Message>(messages: T[]): number {
+export function findLastCompactBoundaryIndex(messages: Message[]): number {
   // Scan backwards to find the most recent compact boundary
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i]
@@ -4983,7 +4982,6 @@ export function stripAdvisorBlocks(messages: (UserMessage | AssistantMessage)[])
     if (filtered.length === content.length) return msg
     changed = true
     if (
-      filtered.length === 0 ||
       filtered.every(
         (b) =>
           b.type === 'thinking' || b.type === 'redacted_thinking' || (b.type === 'text' && (!b.text || !b.text.trim())),

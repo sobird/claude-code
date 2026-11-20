@@ -88,7 +88,7 @@ export function validatePermissionRule(rule: string): {
       valid: false,
       error: 'Empty parentheses',
       suggestion: `Either specify a pattern or use just "${toolName}" without parentheses`,
-      examples: [`${toolName}`, `${toolName}(some-pattern)`],
+      examples: [toolName, `${toolName}(some-pattern)`],
     }
   }
 

@@ -623,7 +623,7 @@ async function validateHooksJson(filePath: string): Promise<ValidationResult> {
       errors: [
         {
           path: 'json',
-          message: `Invalid JSON syntax: ${errorMessage(e)}. ` + `At runtime this breaks the entire plugin load.`,
+          message: `Invalid JSON syntax: ${errorMessage(e)}. At runtime this breaks the entire plugin load.`,
         },
       ],
       warnings: [],

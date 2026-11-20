@@ -21,7 +21,7 @@ export function DescriptionStep(): ReactNode {
   useKeybinding('confirm:no', goBack, { context: 'Settings' })
 
   const handleExternalEditor = useCallback(async () => {
-    const result = await editPromptInEditor(whenToUse)
+    const result = editPromptInEditor(whenToUse)
     if (result.content !== null) {
       setWhenToUse(result.content)
       setCursorOffset(result.content.length)

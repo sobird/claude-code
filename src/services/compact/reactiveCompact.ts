@@ -34,7 +34,7 @@
 
 import type { QuerySource } from '../../constants/querySource.js'
 import { getUserContext } from '../../context.js'
-import type { Message, SystemCompactBoundaryMessage } from '../../types/message.js'
+import type { Message } from '../../types/message.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage, hasExactErrorMessage } from '../../utils/errors.js'
 import type { CacheSafeParams } from '../../utils/forkedAgent.js'

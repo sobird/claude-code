@@ -458,12 +458,12 @@ export async function logContextMetrics(
   if (isAnalyticsDisabled()) {
     return
   }
-  const [{ tools: mcpTools }, tools, userContext, systemContext] = await Promise.all([
+  const [{ tools: mcpTools }, userContext, systemContext] = await Promise.all([
     prefetchAllMcpResources(mcpConfigs),
-    getTools(toolPermissionContext),
     getUserContext(),
     getSystemContext(),
   ])
+  const tools = getTools(toolPermissionContext)
   // Extract individual context sizes and calculate total
   const gitStatusSize = systemContext.gitStatus?.length ?? 0
   const claudeMdSize = userContext.claudeMd?.length ?? 0

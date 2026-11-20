@@ -21,7 +21,7 @@ export function useDeferredHookMessages(
     const promise = pendingRef.current
     if (!promise) return
     let cancelled = false
-    promise.then((msgs) => {
+    void promise.then((msgs) => {
       if (cancelled) return
       resolvedRef.current = true
       pendingRef.current = null

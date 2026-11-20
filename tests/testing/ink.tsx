@@ -7,7 +7,6 @@
  */
 
 import { ConsoleOAuthFlow } from 'src/components/ConsoleOAuthFlow.tsx'
-import { UltraplanChoiceDialog } from 'src/components/UltraplanChoiceDialog.js'
 import { render } from 'src/ink.js'
 import { KeybindingSetup } from 'src/keybindings/KeybindingProviderSetup.tsx'
 import { AppStateProvider } from 'src/state/AppState.tsx'
@@ -15,7 +14,7 @@ import { enableConfigs } from 'src/utils/config.ts'
 
 enableConfigs()
 
-const test = await render(
+const _test = await render(
   <AppStateProvider>
     <KeybindingSetup>
       <ConsoleOAuthFlow onDone={() => {}} />

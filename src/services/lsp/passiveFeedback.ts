@@ -252,7 +252,7 @@ export function registerLSPNotificationHandlers(manager: LSPServerManager): Hand
       })
 
       logError(err)
-      logForDebugging(`Failed to register diagnostics handler for ${serverName}: ` + `Error: ${err.message}`)
+      logForDebugging(`Failed to register diagnostics handler for ${serverName}: Error: ${err.message}`)
     }
   }
 

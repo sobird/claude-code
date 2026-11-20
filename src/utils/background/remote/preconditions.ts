@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import { getOauthConfig } from 'src/constants/oauth.js'
 import { getOrganizationUUID } from 'src/services/oauth/client.js'
 
@@ -125,7 +125,7 @@ export async function checkGithubAppInstalled(owner: string, repo: string, signa
     return false
   } catch (error) {
     // 4XX errors typically mean app is not installed or repo not accessible
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       const status = error.response?.status
       if (status && status >= 400 && status < 500) {
         logForDebugging(`checkGithubAppInstalled: Got ${status} error, app likely not installed on ${owner}/${repo}`)
@@ -173,7 +173,7 @@ export async function checkGithubTokenSynced(): Promise<boolean> {
     logForDebugging(`GitHub token synced: ${synced} (status=${response.status}, data=${JSON.stringify(response.data)})`)
     return synced
   } catch (error) {
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       const status = error.response?.status
       if (status && status >= 400 && status < 500) {
         logForDebugging(`checkGithubTokenSynced: Got ${status}, token not synced`)

@@ -79,6 +79,7 @@ export async function showInvalidConfigDialog({ error }: InvalidConfigHandlerPro
     theme: SAFE_ERROR_THEME_NAME,
   }
 
+  // eslint-disable-next-line no-async-promise-executor -- resolve()-on-callback flow kept as-is; the dialog always unmounts via these callbacks
   await new Promise<void>(async (resolve) => {
     const { unmount } = await render(
       <AppStateProvider>

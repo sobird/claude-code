@@ -141,7 +141,7 @@ async function executeForkedSlashCommand(
   // isMeta prompts are hidden. Outside assistant mode, context:fork commands
   // are user-invoked skills (/commit etc.) that should run synchronously
   // with the progress UI.
-  if (feature('KAIROS') && (await context.getAppState()).kairosEnabled) {
+  if (feature('KAIROS') && context.getAppState().kairosEnabled) {
     // Standalone abortController — background subagents survive main-thread
     // ESC (same policy as AgentTool's async path). They're cron-driven; if
     // killed mid-run they just re-fire on the next schedule.

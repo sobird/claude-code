@@ -727,7 +727,7 @@ const PluginManifestSettingsSchema = lazySchema(() =>
     settings: z
       .record(z.string(), z.unknown())
       .optional()
-      .describe('Settings to merge when plugin is enabled. ' + 'Only allowlisted keys are kept (currently: agent)'),
+      .describe('Settings to merge when plugin is enabled. Only allowlisted keys are kept (currently: agent)'),
   }),
 )
 

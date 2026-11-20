@@ -1,7 +1,7 @@
 import { stat } from 'node:fs/promises'
 import * as platformPath from 'node:path'
 
-import chokidar, { type FSWatcher } from 'chokidar'
+import { type FSWatcher, watch } from 'chokidar'
 
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 import { registerCleanup } from '../cleanupRegistry.js'
@@ -92,7 +92,7 @@ export async function initialize(): Promise<void> {
     `Watching for changes in setting files ${[...settingsFiles].join(', ')}...${dropInDir ? ` and drop-in directory ${dropInDir}` : ''}`,
   )
 
-  watcher = chokidar.watch(dirs, {
+  watcher = watch(dirs, {
     persistent: true,
     ignoreInitial: true,
     depth: 0, // Only watch immediate children, not subdirectories

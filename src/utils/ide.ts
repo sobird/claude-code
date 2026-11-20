@@ -3,7 +3,7 @@ import * as os from 'node:os'
 import { basename, join, sep as pathSeparator, resolve } from 'node:path'
 
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import { execa } from 'execa'
 import capitalize from 'lodash-es/capitalize.js'
 import memoize from 'lodash-es/memoize.js'
@@ -1366,7 +1366,7 @@ async function installFromArtifactory(command: string): Promise<string> {
       }
     }
   } catch (error) {
-    if (axios.isAxiosError(error)) {
+    if (isAxiosError(error)) {
       throw new Error(`Failed to fetch extension version from artifactory: ${error.message}`, { cause: error })
     }
     throw error

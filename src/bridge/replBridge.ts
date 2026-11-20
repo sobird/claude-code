@@ -968,6 +968,7 @@ export async function initBridgeCore(params: BridgeCoreParams): Promise<BridgeCo
       // force=false → server re-queues. Likely already expired, but
       // idempotent and makes re-dispatch immediate if not.
       if (currentWorkId) {
+        // eslint-disable-next-line promise/no-promise-in-callback -- fire-and-forget cleanup inside a sync callback
         void api.stopWork(environmentId, currentWorkId, false).catch((e: unknown) => {
           logForDebugging(`[bridge:repl] stopWork after heartbeat fatal: ${errorMessage(e)}`)
         })

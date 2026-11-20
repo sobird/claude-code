@@ -85,7 +85,7 @@ export async function runFilePersistence(
     if (environmentKind === 'byoc') {
       result = await executeBYOCPersistence(turnStartTime, config, outputsDir, signal)
     } else {
-      result = await executeCloudPersistence()
+      result = executeCloudPersistence()
     }
 
     // Nothing to report

@@ -53,6 +53,7 @@ function extractFirstFrame(output: string): string {
  * Renders a React node to a string with ANSI escape codes (for terminal output).
  */
 export function renderToAnsiString(node: React.ReactNode, columns?: number): Promise<string> {
+  // eslint-disable-next-line no-async-promise-executor -- resolve()-based flow kept as-is; render() does not reject in practice
   return new Promise(async (resolve) => {
     let output = ''
 
@@ -80,7 +81,7 @@ export function renderToAnsiString(node: React.ReactNode, columns?: number): Pro
 
     // Extract only the first frame's content to avoid duplication
     // (Ink outputs multiple frames in non-TTY mode)
-    await resolve(extractFirstFrame(output))
+    resolve(extractFirstFrame(output))
   })
 }
 

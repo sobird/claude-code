@@ -295,7 +295,7 @@ function streamOnEnd(this: StreamState): void {
 
   const content = this.selectedLines.join('\n')
   const truncated = this.truncatedByBytes
-  this.mtimeReady.then((mtimeMs) => {
+  void this.mtimeReady.then((mtimeMs) => {
     this.resolve({
       content,
       lineCount: this.selectedLines.length,

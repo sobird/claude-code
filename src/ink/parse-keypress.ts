@@ -707,7 +707,7 @@ function parseKeypress(s: string = ''): ParsedKey {
     key.meta = true
     key.shift = /^[A-Z]$/.test(parts[1])
   } else if ((parts = FN_KEY_RE.exec(s))) {
-    const segs = [...s]
+    const segs = Array.from(s)
 
     if (segs[0] === '\u001b' && segs[1] === '\u001b') {
       key.option = true

@@ -4,6 +4,10 @@ import { type Point, type Rectangle, type Size, unionRect } from './layout/geome
 import { BEL, ESC, SEP } from './termio/ansi.js'
 import * as warn from './warn.js'
 
+// Cell bitfields below are extracted numerically (e.g. `cells[i] & WIDTH_MASK`)
+// and compared against CellWidth enum values by design.
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+
 // --- Shared Pools (interning for memory efficiency) ---
 
 // Character string pool shared across all screens.

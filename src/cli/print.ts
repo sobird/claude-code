@@ -4579,7 +4579,6 @@ function getStructuredIO(
  */
 export async function handleOrphanedPermissionResponse({
   message,
-  setAppState,
   onEnqueued,
   handledToolUseIds,
 }: {

@@ -17,13 +17,7 @@ import {
   type OperatorContext,
 } from '../vim/operators.js'
 import { type TransitionContext, transition } from '../vim/transitions.js'
-import {
-  createInitialPersistentState,
-  createInitialVimState,
-  type PersistentState,
-  type RecordedChange,
-  type VimState,
-} from '../vim/types.js'
+import { createInitialPersistentState, createInitialVimState, type RecordedChange } from '../vim/types.js'
 import { type UseTextInputProps, useTextInput } from './useTextInput.js'
 
 type UseVimInputProps = Omit<UseTextInputProps, 'inputFilter'> & {

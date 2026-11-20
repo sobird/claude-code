@@ -1674,7 +1674,7 @@ function walkArithmetic(node: Node): ParseForSecurityResult | null {
  *         heredoc_end
  *     )
  */
-function extractSafeCatHeredoc(subNode: Node): string | 'DANGEROUS' | null {
+function extractSafeCatHeredoc(subNode: Node): string | null {
   // Expect exactly: $( + one redirected_statement + )
   let stmt: Node | null = null
   for (const child of subNode.children) {

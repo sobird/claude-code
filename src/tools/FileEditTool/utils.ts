@@ -138,7 +138,7 @@ function isOpeningContext(chars: string[], index: number): boolean {
 }
 
 function applyCurlyDoubleQuotes(str: string): string {
-  const chars = [...str]
+  const chars = Array.from(str)
   const result: string[] = []
   for (let i = 0; i < chars.length; i++) {
     if (chars[i] === '"') {
@@ -151,7 +151,7 @@ function applyCurlyDoubleQuotes(str: string): string {
 }
 
 function applyCurlySingleQuotes(str: string): string {
-  const chars = [...str]
+  const chars = Array.from(str)
   const result: string[] = []
   for (let i = 0; i < chars.length; i++) {
     if (chars[i] === "'") {

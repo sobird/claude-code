@@ -38,7 +38,7 @@ export type WorkSecret = {
   }>
   auth: Array<{ type: string; token: string }>
   claude_code_args?: Record<string, string> | null
-  mcp_config?: unknown | null
+  mcp_config?: unknown
   environment_variables?: Record<string, string> | null
   /**
    * Server-driven CCR v2 selector. Set by prepare_work_secret() when the

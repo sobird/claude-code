@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 import chalk from 'chalk'
 import React from 'react'
 import { getOriginalCwd, getSessionId } from 'src/bootstrap/state.js'
@@ -690,7 +690,7 @@ export async function teleportFromSessionsAPI(
     const err = toError(error)
 
     // Handle 404 specifically
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
+    if (isAxiosError(error) && error.response?.status === 404) {
       logEvent('tengu_teleport_error_session_not_found_404', {
         sessionId: sessionId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })

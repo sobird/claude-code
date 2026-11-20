@@ -1,7 +1,7 @@
 import { Dialog } from 'src/components/design-system/Dialog.js'
 
 import { Box, Text } from '../ink.js'
-import { saveGlobalConfig, getGlobalConfig } from '../utils/config.js'
+import { saveGlobalConfig } from '../utils/config.js'
 import { Select } from './CustomSelect/index.js'
 
 interface Props {

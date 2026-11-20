@@ -7,15 +7,7 @@ import {
   logEvent,
 } from '../services/analytics/index.js'
 import type { ToolUseContext } from '../Tool.js'
-import type {
-  AssistantMessage,
-  Message,
-  RequestStartEvent,
-  StopHookInfo,
-  StreamEvent,
-  TombstoneMessage,
-  ToolUseSummaryMessage,
-} from '../types/message.js'
+import type { AssistantMessage, Message, RequestStartEvent, StopHookInfo, StreamEvent } from '../types/message.js'
 import { createAttachmentMessage } from '../utils/attachments.js'
 import { logForDebugging } from '../utils/debug.js'
 import { errorMessage } from '../utils/errors.js'

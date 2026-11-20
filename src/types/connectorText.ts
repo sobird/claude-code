@@ -7,7 +7,9 @@ export const CONNECTOR_TEXT_TYPES = {
 
 export class ConnectorTextBlock {
   type: string
-  content: any
+  content: unknown
+  // Runtime marker read by `isConnectorTextBlock`. Not serialized by toJSON.
+  _isConnectorTextBlock = true
   // Streaming accumulators the Messages API mutates on a connector_text block
   // (see `ConnectorTextDelta` / the `content_block_delta` handler in
   // services/api/claude.ts). Type-only — instances may only carry `content`.
@@ -17,10 +19,9 @@ export class ConnectorTextBlock {
   declare signature: string
   declare input: string
 
-  constructor(type: string, content: any) {
+  constructor(type: string, content: unknown) {
     this.type = type
     this.content = content
-    ;(this as any)._isConnectorTextBlock = true
   }
 
   toJSON() {
@@ -34,21 +35,26 @@ export class ConnectorTextBlock {
 /**
  * Check if a value is a connector text block
  */
-export function isConnectorTextBlock(value: any): value is ConnectorTextBlock {
-  return value && typeof value === 'object' && '_isConnectorTextBlock' in value && value._isConnectorTextBlock === true
+export function isConnectorTextBlock(value: unknown): value is ConnectorTextBlock {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '_isConnectorTextBlock' in value &&
+    value._isConnectorTextBlock === true
+  )
 }
 
 /**
  * Create a continue connector text block
  */
-export function createContinueConnector(content: any): ConnectorTextBlock {
+export function createContinueConnector(content: unknown): ConnectorTextBlock {
   return new ConnectorTextBlock(CONNECTOR_TEXT_TYPES.CONTINUE, content)
 }
 
 /**
  * Create a stop connector text block
  */
-export function createStopConnector(content: any): ConnectorTextBlock {
+export function createStopConnector(content: unknown): ConnectorTextBlock {
   return new ConnectorTextBlock(CONNECTOR_TEXT_TYPES.STOP, content)
 }
 

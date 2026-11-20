@@ -27,7 +27,6 @@ import type {
   Message,
   PartialCompactDirection,
   SystemCompactBoundaryMessage,
-  SystemMessage,
   UserMessage,
 } from '../../types/message.js'
 import {

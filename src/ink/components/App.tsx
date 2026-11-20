@@ -1,3 +1,8 @@
+// App is a class component: render() has no hooks, so the context values
+// below can't be memoized with useMemo. App only re-renders on prop/state
+// change, and every descendant re-renders with it, so the rule's
+// identity-churn concern doesn't apply here.
+/* eslint-disable react/jsx-no-constructed-context-values */
 import React, { PureComponent, type ReactNode } from 'react'
 
 import { updateLastInteractionTime } from '../../bootstrap/state.js'
@@ -170,33 +175,32 @@ export default class App extends PureComponent<Props, State> {
   }
 
   override render() {
+    const terminalSizeValue = {
+      columns: this.props.terminalColumns,
+      rows: this.props.terminalRows,
+    }
+    const appContextValue = {
+      exit: this.handleExit,
+    }
+    const stdinContextValue = {
+      stdin: this.props.stdin,
+      setRawMode: this.handleSetRawMode,
+      isRawModeSupported: this.isRawModeSupported(),
+
+      internal_exitOnCtrlC: this.props.exitOnCtrlC,
+
+      internal_eventEmitter: this.internal_eventEmitter,
+      internal_querier: this.querier,
+    }
+    const onCursorDeclaration = this.props.onCursorDeclaration ?? (() => {})
+
     return (
-      <TerminalSizeContext.Provider
-        value={{
-          columns: this.props.terminalColumns,
-          rows: this.props.terminalRows,
-        }}
-      >
-        <AppContext.Provider
-          value={{
-            exit: this.handleExit,
-          }}
-        >
-          <StdinContext.Provider
-            value={{
-              stdin: this.props.stdin,
-              setRawMode: this.handleSetRawMode,
-              isRawModeSupported: this.isRawModeSupported(),
-
-              internal_exitOnCtrlC: this.props.exitOnCtrlC,
-
-              internal_eventEmitter: this.internal_eventEmitter,
-              internal_querier: this.querier,
-            }}
-          >
+      <TerminalSizeContext.Provider value={terminalSizeValue}>
+        <AppContext.Provider value={appContextValue}>
+          <StdinContext.Provider value={stdinContextValue}>
             <TerminalFocusProvider>
               <ClockProvider>
-                <CursorDeclarationContext.Provider value={this.props.onCursorDeclaration ?? (() => {})}>
+                <CursorDeclarationContext.Provider value={onCursorDeclaration}>
                   {this.state.error ? <ErrorOverview error={this.state.error as Error} /> : this.props.children}
                 </CursorDeclarationContext.Provider>
               </ClockProvider>

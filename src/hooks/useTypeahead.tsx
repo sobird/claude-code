@@ -692,7 +692,7 @@ export function useTypeahead({
       if (mode === 'prompt') {
         const hashMatch = value.substring(0, effectiveCursorOffset).match(HASH_CHANNEL_RE)
         if (hashMatch && hasSlackMcpServer(store.getState().mcp.clients)) {
-          debouncedFetchSlackChannels(hashMatch[2])
+          void debouncedFetchSlackChannels(hashMatch[2])
           return
         } else if (suggestionType === 'slack-channel') {
           debouncedFetchSlackChannels.cancel()

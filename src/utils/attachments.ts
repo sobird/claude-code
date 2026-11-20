@@ -36,17 +36,14 @@ import { TASK_CREATE_TOOL_NAME } from '../tools/TaskCreateTool/constants.js'
 import { TASK_UPDATE_TOOL_NAME } from '../tools/TaskUpdateTool/constants.js'
 import { TODO_WRITE_TOOL_NAME } from '../tools/TodoWriteTool/constants.js'
 import type { Command } from '../types/command.js'
-import { count, uniq } from './array.js'
+import { uniq } from './array.js'
 import {
-  filterInjectedMemoryFiles,
   getManagedAndUserConditionalRules,
-  getMemoryFiles,
   getMemoryFilesForNestedDirectory,
   getConditionalRulesForCwdLevelDirectory,
   type MemoryFileInfo,
 } from './claudemd.js'
 import type { PastedContent } from './config.js'
-import { getGlobalConfig } from './config.js'
 import { getContextWindowForModel } from './context.js'
 import { logAntError } from './debug.js'
 import { isENOENT, toError } from './errors.js'
@@ -54,7 +51,6 @@ import { getFsImplementation } from './fsOperations.js'
 import { getConnectedIdeName } from './ide.js'
 import { maybeResizeAndDownsampleImageBlock } from './imageResizer.js'
 import { logError } from './log.js'
-import { getDefaultSonnetModel, getDefaultHaikuModel, getDefaultOpusModel } from './model/model.js'
 import { expandPath } from './path.js'
 import { getPlanFilePath, getPlan } from './plans.js'
 import { FileTooLargeError, readFileInRange } from './readFileInRange.js'
@@ -270,7 +266,7 @@ export type AsyncHookResponseAttachment = {
   type: 'async_hook_response'
   processId: string
   hookName: string
-  hookEvent: HookEvent | 'StatusLine' | 'FileSuggestion'
+  hookEvent: HookEvent
   toolName?: string
   response: SyncHookJSONOutput
   stdout: string
@@ -3058,7 +3054,7 @@ async function getAsyncHookResponseAttachments(): Promise<Attachment[]> {
   logForDebugging(`Hooks: getAsyncHookResponseAttachments found ${responses.length} responses`)
 
   const attachments = responses.map(
-    ({ processId, response, hookName, hookEvent, toolName, pluginId, stdout, stderr, exitCode }) => {
+    ({ processId, response, hookName, hookEvent, toolName, stdout, stderr, exitCode }) => {
       logForDebugging(`Hooks: Creating attachment for ${processId} (${hookName}): ${jsonStringify(response)}`)
       return {
         type: 'async_hook_response' as const,

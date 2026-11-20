@@ -1,6 +1,6 @@
 import * as platformPath from 'node:path'
 
-import chokidar, { type FSWatcher } from 'chokidar'
+import { type FSWatcher, watch } from 'chokidar'
 
 import { getAdditionalDirectoriesForClaudeMd } from '../../bootstrap/state.js'
 import { clearCommandMemoizationCaches, clearCommandsCache } from '../../commands.js'
@@ -100,7 +100,7 @@ export async function initialize(): Promise<void> {
 
   logForDebugging(`Watching for changes in skill/command directories: ${paths.join(', ')}...`)
 
-  watcher = chokidar.watch(paths, {
+  watcher = watch(paths, {
     persistent: true,
     ignoreInitial: true,
     depth: 2, // Skills use skill-name/SKILL.md format

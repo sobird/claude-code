@@ -35,7 +35,7 @@ export type MatchPosition = {
 // createContainer cost (~1ms). LegacyRoot: all work sync, no scheduling —
 // ConcurrentRoot's scheduler backlog leaks across roots via flushSyncWork.
 let root: DOMElement | undefined
-let container: ReturnType<typeof reconciler.createContainer> | undefined
+let container: ReturnType<typeof reconciler.createContainer>
 let stylePool: StylePool | undefined
 let charPool: CharPool | undefined
 let hyperlinkPool: HyperlinkPool | undefined

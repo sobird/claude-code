@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 
 import type { ToolCallEntry } from '../../../lib/session-reducer'
 import { summarizeTools } from '../ToolCallGroup'

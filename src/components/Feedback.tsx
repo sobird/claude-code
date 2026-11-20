@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises'
 
-import axios from 'axios'
+import axios, { isAxiosError, isCancel } from 'axios'
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { getLastAPIRequest } from 'src/bootstrap/state.js'
@@ -648,11 +648,11 @@ async function submitFeedback(
     return { success: false }
   } catch (err) {
     // Handle cancellation/abort - don't log as error
-    if (axios.isCancel(err)) {
+    if (isCancel(err)) {
       return { success: false }
     }
 
-    if (axios.isAxiosError(err) && err.response?.status === 403) {
+    if (isAxiosError(err) && err.response?.status === 403) {
       const errorData = err.response.data
       if (
         errorData?.error?.type === 'permission_error' &&

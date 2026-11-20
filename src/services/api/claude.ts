@@ -1359,7 +1359,7 @@ async function* queryModel(
     const extraBodyParams = getExtraBodyParams(bedrockBetas)
 
     const outputConfig: BetaOutputConfig = {
-      ...((extraBodyParams.output_config as BetaOutputConfig) ?? {}),
+      ...(extraBodyParams.output_config as BetaOutputConfig),
     }
 
     configureEffortParams(effort, outputConfig, extraBodyParams, betasParams, options.model)

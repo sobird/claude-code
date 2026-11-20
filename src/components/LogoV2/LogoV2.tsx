@@ -65,7 +65,6 @@ import { useMainLoopModel } from '../../hooks/useMainLoopModel.js'
 import { useAppState } from '../../state/AppState.js'
 import { getEffortSuffix } from '../../utils/effort.js'
 import { renderModelSetting } from '../../utils/model/model.js'
-import { plural } from '../../utils/stringUtils.js'
 import { useShowGuestPassesUpsell, incrementGuestPassesSeenCount } from './GuestPassesUpsell.js'
 import {
   useShowOverageCreditUpsell,

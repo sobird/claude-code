@@ -41,7 +41,7 @@ export function GenerateStep(): ReactNode {
   })
 
   const handleExternalEditor = useCallback(async () => {
-    const result = await editPromptInEditor(prompt)
+    const result = editPromptInEditor(prompt)
     if (result.content !== null) {
       setPrompt(result.content)
       setCursorOffset(result.content.length)

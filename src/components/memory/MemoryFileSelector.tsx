@@ -112,7 +112,7 @@ export function MemoryFileSelector({ onSelect, onCancel }: Props): React.ReactNo
       label = `${indent}L ${displayPath}${existsLabel}`
     } else {
       // For other memory files, just show the path
-      label = `${displayPath}`
+      label = displayPath
     }
 
     // Create description based on type - keep the original descriptions for built-in types

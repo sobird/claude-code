@@ -11,7 +11,7 @@
 import { chmod, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve, sep } from 'node:path'
 
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 
 import { waitForScrollIdle } from '../../bootstrap/state.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/index.js'
@@ -191,7 +191,7 @@ const KNOWN_FS_CODES = new Set([
  * (disk full, permission denied) before flipping the git-fallback kill switch.
  */
 export function classifyGcsError(e: unknown): string {
-  if (axios.isAxiosError(e)) {
+  if (isAxiosError(e)) {
     if (e.code === 'ECONNABORTED') return 'timeout'
     if (e.response) return `http_${e.response.status}`
     return 'network'

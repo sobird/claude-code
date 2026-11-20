@@ -28,7 +28,7 @@ import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 
-import axios from 'axios'
+import axios, { isAxiosError } from 'axios'
 
 import {
   CLAUDE_AI_INFERENCE_SCOPE,
@@ -251,7 +251,7 @@ async function fetchTeamMemoryOnce(
     }
   } catch (error) {
     const { kind, status, message } = classifyAxiosError(error)
-    const body = axios.isAxiosError(error) ? JSON.stringify(error.response?.data ?? '') : ''
+    const body = isAxiosError(error) ? JSON.stringify(error.response?.data ?? '') : ''
     if (kind !== 'other') {
       logForDebugging(`team-memory-sync: fetch error ${status}: ${body}`, {
         level: 'warn',
@@ -486,7 +486,7 @@ async function uploadTeamMemory(
       lastModified: response.data?.lastModified,
     }
   } catch (error) {
-    const body = axios.isAxiosError(error) ? JSON.stringify(error.response?.data ?? '') : ''
+    const body = isAxiosError(error) ? JSON.stringify(error.response?.data ?? '') : ''
     logForDebugging(`team-memory-sync: upload failed: ${error instanceof Error ? error.message : ''} ${body}`, {
       level: 'warn',
     })
@@ -499,7 +499,7 @@ async function uploadTeamMemory(
     // RequestTooLargeException includes error_code + extra_details with
     // the effective max_entries (may be GB-tuned per-org). Cache it so
     // the next push trims to the right value.
-    if (httpStatus === 413 && axios.isAxiosError(error)) {
+    if (httpStatus === 413 && isAxiosError(error)) {
       const parsed = TeamMemoryTooManyEntriesSchema().safeParse(error.response?.data)
       if (parsed.success) {
         serverErrorCode = parsed.data.error.details.error_code

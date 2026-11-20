@@ -62,7 +62,7 @@ export function ConfirmStepWrapper({ tools, existingAgents, onComplete }: Props)
             source: wizardData.location!,
             agentType: wizardData.finalAgent.agentType,
           })
-          await editFileInEditor(filePath)
+          editFileInEditor(filePath)
         }
 
         logEvent('tengu_agent_created', {

@@ -185,10 +185,9 @@ export async function getAnthropicClient({
     if (process.env.AWS_BEARER_TOKEN_BEDROCK) {
       bedrockArgs.skipAuth = true
       // Add the Bearer token for Bedrock API key authentication
-      bedrockArgs.defaultHeaders = {
-        ...bedrockArgs.defaultHeaders,
+      bedrockArgs.defaultHeaders = Object.assign({}, bedrockArgs.defaultHeaders, {
         Authorization: `Bearer ${process.env.AWS_BEARER_TOKEN_BEDROCK}`,
-      }
+      })
     } else if (!isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH)) {
       // Refresh auth and get credentials with cache clearing
       const cachedCredentials = await refreshAndGetAwsCredentials()

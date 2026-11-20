@@ -147,7 +147,6 @@ export class StructuredIO {
     private readonly input: AsyncIterable<string>,
     private readonly replayUserMessages?: boolean,
   ) {
-    this.input = input
     this.structuredInput = this.read()
   }
 

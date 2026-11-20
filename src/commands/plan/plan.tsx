@@ -82,7 +82,7 @@ export async function call(
   // If user typed "/plan open", open in editor
   const argList = args.trim().split(/\s+/)
   if (argList[0] === 'open') {
-    const result = await editFileInEditor(planPath)
+    const result = editFileInEditor(planPath)
     if (result.error) {
       onDone(`Failed to open plan in editor: ${result.error}`)
     } else {

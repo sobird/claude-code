@@ -21,7 +21,7 @@ export function PromptStep(): ReactNode {
   useKeybinding('confirm:no', goBack, { context: 'Settings' })
 
   const handleExternalEditor = useCallback(async () => {
-    const result = await editPromptInEditor(systemPrompt)
+    const result = editPromptInEditor(systemPrompt)
     if (result.content !== null) {
       setSystemPrompt(result.content)
       setCursorOffset(result.content.length)

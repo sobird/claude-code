@@ -40,14 +40,10 @@ import { fetchClaudeAIMcpConfigsIfEligible } from './claudeai.js'
 import { expandEnvVarsInString } from './envExpansion.js'
 import {
   type ConfigScope,
-  type McpHTTPServerConfig,
   type McpJsonConfig,
   McpJsonConfigSchema,
   type McpServerConfig,
   McpServerConfigSchema,
-  type McpSSEServerConfig,
-  type McpStdioServerConfig,
-  type McpWebSocketServerConfig,
   type ScopedMcpServerConfig,
 } from './types.js'
 import { getProjectMcpServerStatus } from './utils.js'

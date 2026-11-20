@@ -108,11 +108,9 @@ function logSpeculation(
     suggestion_length: suggestionLength,
     tools_executed: countToolsInMessages(messages),
     completed: boundary !== null,
-    boundary_type: boundary?.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined,
-    boundary_tool: getBoundaryTool(boundary) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined,
-    boundary_detail: getBoundaryDetail(boundary) as
-      | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-      | undefined,
+    boundary_type: boundary?.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    boundary_tool: getBoundaryTool(boundary) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    boundary_detail: getBoundaryDetail(boundary) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     ...extras,
   })
 }

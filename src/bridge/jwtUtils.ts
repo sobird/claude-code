@@ -18,7 +18,7 @@ function formatDuration(ms: number): string {
  * Returns the parsed JSON payload as `unknown`, or `null` if the
  * token is malformed or the payload is not valid JSON.
  */
-export function decodeJwtPayload(token: string): unknown | null {
+export function decodeJwtPayload(token: string): unknown {
   const jwt = token.startsWith('sk-ant-si-') ? token.slice('sk-ant-si-'.length) : token
   const parts = jwt.split('.')
   if (parts.length !== 3 || !parts[1]) return null
