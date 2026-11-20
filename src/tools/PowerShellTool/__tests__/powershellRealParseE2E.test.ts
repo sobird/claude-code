@@ -9,7 +9,7 @@
  * operator, nested CommandAst). Hand-built fixtures can drift from those.
  */
 
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, setDefaultTimeout, test } from 'bun:test'
 
 import { getEmptyToolPermissionContext, type ToolUseContext } from '../../../Tool.js'
 import { getAllCommands, parsePowerShellCommand, type ParsedCommandElement } from '../../../utils/powershell/parser.js'
@@ -18,6 +18,12 @@ import { powershellToolHasPermission } from '../powershellPermissions.js'
 import { isAllowlistedCommand } from '../readOnlyValidation.js'
 
 const hasPwsh = whichSync('pwsh') !== null || whichSync('powershell') !== null
+
+// Bun's 5s per-test default races the parser's own 5s timeout + one retry: on a
+// cold, loaded runner the first pwsh spawn can exceed 5s, so Bun kills the test
+// before the retry can absorb it and a perfectly good parse is reported as
+// valid:false. Give the file the full retry budget plus cold-start headroom.
+setDefaultTimeout(30_000)
 
 function permissionContext(): ToolUseContext {
   return {
