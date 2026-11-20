@@ -206,7 +206,50 @@ docker compose up -d --no-build
 
 The package is private by default; `docker login ghcr.io` with a PAT that can
 read packages, or change the package visibility on GitHub. `RCS_IMAGE` unset
-falls back to building `rcs:local` locally.
+falls back to building `rcs:local` locally. Published images are `linux/amd64`.
+
+#### Automated deploy (GitHub Actions)
+
+`.github/workflows/deploy.yml` (called by `release.yml`) runs when an RCS release
+is published — after `publish-rcs-image` pushes the version tag. It syncs the
+release tag's `docker-compose.yml` and `Caddyfile` into the stack directory, then
+rolls that pinned image onto a self-hosted server over SSH (`docker compose pull`
+then `up -d --no-build`). Syncing those two files keeps the server's config from
+drifting behind the image; `.env` is never touched by CI. Only the image tag and
+those files change, so Postgres/Caddy volumes are untouched; to roll back,
+redeploy an older tag using the manual steps above.
+
+One-time setup on the server: create the stack directory, add a filled-in
+`.env` (the deploy fails fast if it is missing, instead of falling back to the
+insecure demo defaults), and make sure the deploy user can run `docker compose`.
+`docker-compose.yml` and `Caddyfile` are pushed automatically on each deploy.
+
+Repository secrets consumed by the job:
+
+| Secret               | Purpose                                             |
+| -------------------- | --------------------------------------------------- |
+| `RCS_DEPLOY_HOST`    | Server hostname / IP                                |
+| `RCS_DEPLOY_USER`    | SSH user                                            |
+| `RCS_DEPLOY_SSH_KEY` | Private key for that user                           |
+| `RCS_DEPLOY_PATH`    | Stack directory, e.g. `/opt/rcs`                    |
+| `GHCR_PULL_TOKEN`    | PAT with `read:packages` for `docker login ghcr.io` |
+| `RCS_DEPLOY_PORT`    | Optional; defaults to 22                            |
+
+#### Behind an existing reverse proxy
+
+The bundled Caddy owns host ports 80/443. If the server already runs a reverse
+proxy (nginx, Caddy, Traefik) for other sites, skip it instead: disable the
+`caddy` service and let the host proxy forward to `app` and `gateway`. See
+[`deploy/docker-compose.override.yml.example`](deploy/docker-compose.override.yml.example)
+and [`deploy/nginx.conf.example`](deploy/nginx.conf.example).
+
+Copy the override to the stack directory as `docker-compose.override.yml`
+(Compose merges it automatically; the deploy workflow only syncs
+`docker-compose.yml`/`Caddyfile`, so it survives releases), adjust the published
+loopback ports to ones that are free, and add a matching `server_name` vhost to
+the host proxy. TLS is the host proxy's job — `certbot --nginx -d <host>` (or the
+proxy's own ACME) — and `Caddyfile` is unused in this mode. Point `RCS_BASE_URL`
+at the public origin and leave `NEXT_PUBLIC_RCS_API_URL` empty.
 
 ### Without Docker (development)
 

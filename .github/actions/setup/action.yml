@@ -1,0 +1,43 @@
+name: Set up
+description: Set up Node and Bun from version files, cache Bun dependencies, and install the workspace dependencies.
+
+# A local action is resolved from the already-checked-out workspace, so callers
+# must run actions/checkout first — this action cannot check out the repo itself.
+
+runs:
+  using: composite
+  steps:
+    # The CLI itself runs on Bun, but package.json pins engines.node and
+    # .node-version pins the major; some postinstall scripts invoke `node`, and
+    # publish.yml already installs the same file.
+    - name: Set up Node
+      uses: actions/setup-node@v7
+      with:
+        node-version-file: .node-version
+
+    - name: Set up Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: .bun-version
+
+    # Bun's global install cache skips re-downloading tarballs across runs. It
+    # does not cache postinstall side effects, so @vscode/ripgrep still calls
+    # the GitHub API on a cold node_modules.
+    - name: Cache Bun install cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.bun/install/cache
+        key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-bun-
+
+    - name: Install dependencies
+      shell: bash
+      run: bun install --frozen-lockfile
+      env:
+        # @vscode/ripgrep's postinstall downloads a prebuilt binary from the
+        # GitHub API; without a token, shared runner IPs blow past the anonymous
+        # rate limit and the install fails with HTTP 403. Composite actions
+        # cannot read the `secrets` context, but `github.token` is the same
+        # automatic token and is available here — no caller input needed.
+        GITHUB_TOKEN: ${{ github.token }}

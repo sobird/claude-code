@@ -1,0 +1,20 @@
+# Example: run RCS behind an existing host reverse proxy (nginx / Caddy /
+# Traefik) instead of the bundled Caddy. Copy to the stack directory on the
+# server as `docker-compose.override.yml` — Compose merges it automatically, and
+# the deploy workflow only syncs `docker-compose.yml`/`Caddyfile`, so this file
+# survives every release.
+#
+# The bundled Caddy is skipped; the host proxy talks to these published loopback
+# ports. Pick ports that are free on the host — the defaults below avoid
+# 3000/4000, which another service may already hold.
+services:
+  caddy:
+    profiles: ['disabled'] # 'docker compose up' ignores profiled-off services
+
+  app:
+    ports:
+      - '127.0.0.1:3100:3000'
+
+  gateway:
+    ports:
+      - '127.0.0.1:4100:4000'
