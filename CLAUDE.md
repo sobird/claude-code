@@ -43,5 +43,4 @@ Before declaring a task done, these must pass: `bun run typecheck`, `bun run fmt
 ## Known state
 
 - `typecheck` and `lint` are expected to pass cleanly; if they fail, suspect your own changes first (the historical `src/` backlogs were cleared).
-- Patch `tests/bg-sessions.test.ts`, when run in the full suite, can leave a non-zero process exit code even with all assertions passing; run it in isolation when investigating exit codes.
 - Husky `pre-commit` runs `lint-staged` (oxfmt, then `oxlint --fix`) on staged files.

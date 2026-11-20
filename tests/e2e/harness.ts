@@ -57,7 +57,12 @@ export function makeTempRoot(): TempRoot {
   // is a symlink to /private/var/.... Sessions are keyed by the real project
   // path, so a child started in the unresolved path would not find its own
   // transcripts with --continue.
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'claude-e2e-')))
+  //
+  // `.native` is what resolves Windows 8.3 short names (RUNNER~1) to the long
+  // form. The plain JS realpath leaves them short, and the CLI then sees
+  // in-cwd paths (written by the test via the short root) as outside its own
+  // long-form cwd, turning allowed tool calls into permission denials.
+  const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'claude-e2e-')))
   const home = join(root, 'home')
   const config = join(root, 'config')
   const work = join(root, 'work')
@@ -191,7 +196,12 @@ export function spawnSleep(children: Subprocess[]): number {
 }
 
 export function cleanupRoots(roots: string[]): void {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
+  for (const root of roots.splice(0)) {
+    // Windows can briefly keep handles on the tree open after a spawned CLI
+    // exits, so a single rmSync races and throws EBUSY; retry with a short
+    // linear backoff instead of failing the test's afterEach.
+    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  }
 }
 
 export function ptySupported(): boolean {

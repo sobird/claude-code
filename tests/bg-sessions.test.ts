@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -21,6 +21,13 @@ import {
   tailLines,
   type BgSessionRecord,
 } from '../src/cli/bg'
+
+// Bun carries `process.exitCode` across the whole run, so a handler that set 1
+// must not outlive its test even if a later assertion short-circuits. Without
+// this the full suite can exit non-zero while every assertion passes.
+afterEach(() => {
+  process.exitCode = 0
+})
 
 const AT = Date.parse('2026-11-20T12:00:00Z')
 
@@ -244,7 +251,9 @@ esac
     } finally {
       console.log = originalLog
       console.error = originalError
-      process.exitCode = originalExitCode
+      // Bun ignores `process.exitCode = undefined`, so a handler that set 1
+      // would leak a non-zero exit into the runner; restore an explicit 0.
+      process.exitCode = originalExitCode ?? 0
     }
   }
 
@@ -283,7 +292,9 @@ esac
     expect(result.stdout).toContain(logPath)
   })
 
-  test('killHandler targets the tmux session that owns the PID', async () => {
+  // The fake tmux below is a POSIX shell script, and tmux itself does not
+  // exist on Windows, so these three exercise POSIX-only code paths.
+  test.skipIf(process.platform === 'win32')('killHandler targets the tmux session that owns the PID', async () => {
     const pid = spawnSleep()
     const sessionId = 'dddddddd-1111-2222-3333-444444444444'
     writeSession({ pid, sessionId, kind: 'bg' })
@@ -295,34 +306,40 @@ esac
     expect(result.stdout).toContain('claude-bg-')
   })
 
-  test('attachHandler attaches to the tmux session that owns the PID', async () => {
-    const pid = spawnSleep()
-    const sessionId = 'eeeeeeee-1111-2222-3333-444444444444'
-    writeSession({ pid, sessionId, kind: 'bg' })
-    writeFileSync(panesFile, `${pid}\tclaude-bg-${sessionId}\n`)
+  test.skipIf(process.platform === 'win32')(
+    'attachHandler attaches to the tmux session that owns the PID',
+    async () => {
+      const pid = spawnSleep()
+      const sessionId = 'eeeeeeee-1111-2222-3333-444444444444'
+      writeSession({ pid, sessionId, kind: 'bg' })
+      writeFileSync(panesFile, `${pid}\tclaude-bg-${sessionId}\n`)
 
-    await capture(() => attachHandler(sessionId))
-    const calls = readFileSync(fakeLog, 'utf8')
-    expect(calls).toContain(`attach-session -t claude-bg-${sessionId}`)
-  })
+      await capture(() => attachHandler(sessionId))
+      const calls = readFileSync(fakeLog, 'utf8')
+      expect(calls).toContain(`attach-session -t claude-bg-${sessionId}`)
+    },
+  )
 
-  test('handleBgFlag starts a detached tmux session with bg env and a session ID', async () => {
-    const result = await capture(() => handleBgFlag(['--bg', '--name', 'nightly', 'fix tests', '--model', 'opus']))
-    const calls = readFileSync(fakeLog, 'utf8')
+  test.skipIf(process.platform === 'win32')(
+    'handleBgFlag starts a detached tmux session with bg env and a session ID',
+    async () => {
+      const result = await capture(() => handleBgFlag(['--bg', '--name', 'nightly', 'fix tests', '--model', 'opus']))
+      const calls = readFileSync(fakeLog, 'utf8')
 
-    expect(calls).toContain('new-session -d')
-    expect(calls).toContain('-s claude-bg-')
-    expect(calls).toContain('fix tests')
-    expect(calls).toContain('--name nightly')
-    expect(calls).toContain('--session-id')
-    expect(calls).not.toContain('--bg')
-    expect(calls).toContain('KIND=bg')
-    expect(calls).toContain('NAME=nightly')
-    expect(calls).toContain('LOG=')
-    expect(calls).toContain('pipe-pane')
-    expect(result.stdout).toContain('claude attach')
-    expect(result.stdout).toContain('claude logs')
-  })
+      expect(calls).toContain('new-session -d')
+      expect(calls).toContain('-s claude-bg-')
+      expect(calls).toContain('fix tests')
+      expect(calls).toContain('--name nightly')
+      expect(calls).toContain('--session-id')
+      expect(calls).not.toContain('--bg')
+      expect(calls).toContain('KIND=bg')
+      expect(calls).toContain('NAME=nightly')
+      expect(calls).toContain('LOG=')
+      expect(calls).toContain('pipe-pane')
+      expect(result.stdout).toContain('claude attach')
+      expect(result.stdout).toContain('claude logs')
+    },
+  )
 
   test('unknown targets fail with an actionable error', async () => {
     const result = await capture(() => killHandler('zzz'))

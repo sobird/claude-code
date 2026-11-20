@@ -93,7 +93,7 @@ test(
     const result = await run(root, server, '/workflows')
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('No workflows found in')
-    expect(result.stdout).toContain('.claude/workflows')
+    expect(result.stdout).toContain(join('.claude', 'workflows'))
     expect(server.requests.length).toBe(0)
   },
   TEST_TIMEOUT,

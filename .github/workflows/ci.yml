@@ -26,6 +26,11 @@ jobs:
 
       - name: Install Dependencies
         run: bun install
+        env:
+          # @vscode/ripgrep's postinstall downloads a prebuilt binary from the
+          # GitHub API; without a token, shared runner IPs blow past the
+          # anonymous rate limit and the install fails with HTTP 403.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Type Check
         run: bun run typecheck
@@ -49,6 +54,11 @@ jobs:
 
       - name: Install Dependencies
         run: bun install
+        env:
+          # @vscode/ripgrep's postinstall downloads a prebuilt binary from the
+          # GitHub API; without a token, shared runner IPs blow past the
+          # anonymous rate limit and the install fails with HTTP 403.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check formatting
         run: bun run fmt:check
