@@ -3106,10 +3106,10 @@ async function executeHooksOutsideREPL({
  * @param toolUseContext Optional ToolUseContext for prompt-based hooks
  * @returns Async generator that yields progress messages and returns blocking errors
  */
-export async function* executePreToolHooks(
+export async function* executePreToolHooks<ToolInput>(
   toolName: string,
   toolUseID: string,
-  toolInput: unknown,
+  toolInput: ToolInput,
   toolUseContext: ToolUseContext,
   permissionMode?: string,
   signal?: AbortSignal,
@@ -3162,10 +3162,10 @@ export async function* executePreToolHooks(
  * @param timeoutMs Optional timeout in milliseconds for hook execution
  * @returns Async generator that yields progress messages and blocking errors for automated feedback
  */
-export async function* executePostToolHooks<ToolResponse>(
+export async function* executePostToolHooks<ToolInput, ToolResponse>(
   toolName: string,
   toolUseID: string,
-  toolInput: unknown,
+  toolInput: ToolInput,
   toolResponse: ToolResponse,
   toolUseContext: ToolUseContext,
   permissionMode?: string,
@@ -3204,10 +3204,10 @@ export async function* executePostToolHooks<ToolResponse>(
  * @param timeoutMs Optional timeout in milliseconds for hook execution
  * @returns Async generator that yields progress messages and blocking errors
  */
-export async function* executePostToolUseFailureHooks(
+export async function* executePostToolUseFailureHooks<ToolInput>(
   toolName: string,
   toolUseID: string,
-  toolInput: unknown,
+  toolInput: ToolInput,
   error: string,
   toolUseContext: ToolUseContext,
   isInterrupt?: boolean,
@@ -3241,10 +3241,10 @@ export async function* executePostToolUseFailureHooks(
   })
 }
 
-export async function* executePermissionDeniedHooks(
+export async function* executePermissionDeniedHooks<ToolInput>(
   toolName: string,
   toolUseID: string,
-  toolInput: unknown,
+  toolInput: ToolInput,
   reason: string,
   toolUseContext: ToolUseContext,
   permissionMode?: string,
@@ -3843,10 +3843,10 @@ export async function executeSessionEndHooks(
  * @param timeoutMs Optional timeout in milliseconds for hook execution
  * @returns Async generator that yields progress messages and returns aggregated result
  */
-export async function* executePermissionRequestHooks(
+export async function* executePermissionRequestHooks<ToolInput>(
   toolName: string,
   toolUseID: string,
-  toolInput: unknown,
+  toolInput: ToolInput,
   toolUseContext: ToolUseContext,
   permissionMode?: string,
   permissionSuggestions?: PermissionUpdate[],

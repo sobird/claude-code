@@ -60,7 +60,7 @@ export type LSPServerInstance = {
   /** Register a handler for LSP notifications */
   onNotification(method: string, handler: (params: unknown) => void): void
   /** Register a handler for LSP requests from the server */
-  onRequest<TResult>(method: string, handler: (params: unknown) => TResult | Promise<TResult>): void
+  onRequest<TParams, TResult>(method: string, handler: (params: TParams) => TResult | Promise<TResult>): void
 }
 
 /**
@@ -431,7 +431,7 @@ export function createLSPServerInstance(name: string, config: ScopedLspServerCon
    * @param method - LSP request method (e.g., 'workspace/configuration')
    * @param handler - Callback function to handle the request and return a response
    */
-  function onRequest<TResult>(method: string, handler: (params: unknown) => TResult | Promise<TResult>): void {
+  function onRequest<TParams, TResult>(method: string, handler: (params: TParams) => TResult | Promise<TResult>): void {
     client.onRequest(method, handler)
   }
 

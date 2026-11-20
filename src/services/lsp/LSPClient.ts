@@ -31,7 +31,7 @@ export type LSPClient = {
   sendRequest: <TResult>(method: string, params: unknown) => Promise<TResult>
   sendNotification: (method: string, params: unknown) => Promise<void>
   onNotification: (method: string, handler: (params: unknown) => void) => void
-  onRequest: <TResult>(method: string, handler: (params: unknown) => TResult | Promise<TResult>) => void
+  onRequest: <TParams, TResult>(method: string, handler: (params: TParams) => TResult | Promise<TResult>) => void
   stop: () => Promise<void>
 }
 
@@ -301,7 +301,7 @@ export function createLSPClient(serverName: string, onCrash?: (error: Error) => 
       connection.onNotification(method, handler)
     },
 
-    onRequest<TResult>(method: string, handler: (params: unknown) => TResult | Promise<TResult>): void {
+    onRequest<TParams, TResult>(method: string, handler: (params: TParams) => TResult | Promise<TResult>): void {
       if (!connection) {
         // Queue handler for application when connection is ready (lazy initialization)
         pendingRequestHandlers.push({

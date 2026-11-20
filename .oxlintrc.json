@@ -66,8 +66,10 @@
     "react-hooks/exhaustive-deps": "off",
     "typescript/unbound-method": "off",
 
-    // Keep as warning: needs judgement per hit, not a blanket error.
-    "typescript/no-unnecessary-type-parameters": "warn"
+    // Flags callback-parameter generics as "used once", but the type parameter
+    // is required for contravariant assignability (e.g. LSP onRequest<TParams>).
+    // Known false-positive pattern, so off rather than warn.
+    "typescript/no-unnecessary-type-parameters": "off"
   },
   "overrides": [
     {
