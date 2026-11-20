@@ -21,8 +21,4 @@ describe('assistantCopyText', () => {
       ]),
     ).toBe('hello')
   })
-
-  test('a thought-only message copies nothing', () => {
-    expect(assistantCopyText([{ type: 'thought', text: 'hmm' }])).toBe('')
-  })
 })

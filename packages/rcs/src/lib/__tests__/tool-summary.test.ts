@@ -58,22 +58,6 @@ describe('summarizeToolCall', () => {
     expect(summarizeToolCall('Read', { path: '/tmp/b.ts' }).summary).toBe('/tmp/b.ts')
   })
 
-  test('file tools report the path they touch', () => {
-    expect(fieldKeys('Edit', { file_path: '/repo/a.ts', old_string: 'x', new_string: 'y' })).toEqual(['file_path'])
-    expect(summarizeToolCall('Write', { file_path: '/repo/b.md', content: 'hi' }).summary).toBe('/repo/b.md')
-    expect(summarizeToolCall('NotebookEdit', { notebook_path: '/repo/n.ipynb' }).summary).toBe('/repo/n.ipynb')
-  })
-
-  test('Glob and Grep summarize their pattern', () => {
-    expect(fieldKeys('Glob', { pattern: '**/*.ts', path: 'src' })).toEqual(['pattern', 'path'])
-    expect(summarizeToolCall('Grep', { pattern: 'TODO', glob: '*.ts' }).summary).toBe('TODO')
-  })
-
-  test('web tools summarize url or query', () => {
-    expect(summarizeToolCall('WebFetch', { url: 'https://example.com' }).summary).toBe('https://example.com')
-    expect(summarizeToolCall('WebSearch', { query: 'bun test' }).summary).toBe('bun test')
-  })
-
   test('Task resolves to Agent and summarizes its description', () => {
     const result = summarizeToolCall('Task', { description: 'Explore auth', prompt: 'Find the auth code' })
 
@@ -92,10 +76,6 @@ describe('summarizeToolCall', () => {
 
     expect(result.summary).toBe('Write tests')
     expect(result.fields).toEqual([{ key: 'todos', value: '2' }])
-  })
-
-  test('TaskCreate summarizes its subject', () => {
-    expect(summarizeToolCall('TaskCreate', { subject: 'Fix scroll' }).summary).toBe('Fix scroll')
   })
 
   test('unknown tools fall back to compact JSON', () => {

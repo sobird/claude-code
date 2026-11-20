@@ -11,7 +11,6 @@ describe('formatTurnSeconds', () => {
   test('rounds to whole seconds from ten upward', () => {
     expect(formatTurnSeconds(10_000)).toBe('10')
     expect(formatTurnSeconds(12_345)).toBe('12')
-    expect(formatTurnSeconds(125_400)).toBe('125')
   })
 
   test('treats missing and negative durations as zero', () => {

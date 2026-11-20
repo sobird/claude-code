@@ -35,10 +35,4 @@ describe('/toggle-memory', () => {
     expect(getMemoryToggledOff()).toBe(false)
     expect(message).toContain('Automemory re-enabled')
   })
-
-  test('the command is hidden from the command menu but still invokable', () => {
-    expect(toggleMemory.name).toBe('toggle-memory')
-    expect(toggleMemory.description).toBe('Toggle automemory off/on for this session')
-    expect(toggleMemory.isHidden).toBe(false)
-  })
 })

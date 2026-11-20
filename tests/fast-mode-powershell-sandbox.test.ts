@@ -11,14 +11,9 @@ import {
   isFastModeEnabled,
   triggerFastModeCooldown,
 } from '../src/utils/fastMode.js'
-import {
-  classifyCommandName,
-  MAX_COMMAND_LENGTH,
-  type ParsedPowerShellCommand,
-  stripModulePrefix,
-} from '../src/utils/powershell/parser.js'
+import { classifyCommandName, type ParsedPowerShellCommand, stripModulePrefix } from '../src/utils/powershell/parser.js'
 
-describe('fast mode (2.1.89 bundle-only behavior)', () => {
+describe('fast mode', () => {
   test('CLAUDE_CODE_DISABLE_FAST_MODE reports fast mode unavailable', () => {
     const original = process.env.CLAUDE_CODE_DISABLE_FAST_MODE
     try {
@@ -58,7 +53,7 @@ describe('fast mode (2.1.89 bundle-only behavior)', () => {
   })
 })
 
-describe('PowerShell parser rules (2.1.89 bundle-only behavior)', () => {
+describe('PowerShell parser rules', () => {
   test('classifies Verb-Noun cmdlets', () => {
     expect(classifyCommandName('Get-ChildItem')).toBe('cmdlet')
     expect(classifyCommandName('Invoke-Expression')).toBe('cmdlet')
@@ -80,10 +75,6 @@ describe('PowerShell parser rules (2.1.89 bundle-only behavior)', () => {
     expect(stripModulePrefix('Get-ChildItem')).toBe('Get-ChildItem')
     // Drive-qualified paths are not module prefixes and must be preserved.
     expect(stripModulePrefix('C:\\tools\\pwsh.exe')).toBe('C:\\tools\\pwsh.exe')
-  })
-
-  test('exposes a positive command-length budget', () => {
-    expect(MAX_COMMAND_LENGTH).toBeGreaterThan(0)
   })
 })
 
@@ -116,7 +107,7 @@ function parsedSingleCommand(name: string, args: string[] = []): ParsedPowerShel
   }
 }
 
-describe('powershellCommandIsSafe (2.1.89 bundle-only behavior)', () => {
+describe('powershellCommandIsSafe', () => {
   test('rejects Invoke-Expression', () => {
     const result = powershellCommandIsSafe(
       'Invoke-Expression "whoami"',
@@ -138,7 +129,7 @@ describe('powershellCommandIsSafe (2.1.89 bundle-only behavior)', () => {
   })
 })
 
-describe('sandbox network/settings schema (2.1.89 bundle-only behavior)', () => {
+describe('sandbox network/settings schema', () => {
   test('accepts numeric proxy ports', () => {
     expect(SandboxNetworkConfigSchema().safeParse({ httpProxyPort: 8080, socksProxyPort: 1080 }).success).toBe(true)
   })

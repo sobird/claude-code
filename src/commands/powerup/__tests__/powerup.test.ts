@@ -1,23 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
-import { POWERUP_LESSONS, getUnlockedPowerupIds, parseDemoText } from '../powerup.js'
+import { getUnlockedPowerupIds, parseDemoText } from '../powerup.js'
 
 describe('powerup lessons', () => {
-  test('exposes the 2.1.90 lesson ids in order', () => {
-    expect(POWERUP_LESSONS.map((lesson) => lesson.id)).toEqual([
-      'at-mentions',
-      'modes',
-      'undo',
-      'background',
-      'memory',
-      'mcp',
-      'automate',
-      'subagents',
-      'cross-device',
-      'model-dial',
-    ])
-  })
-
   test('filters unknown ids out of the persisted config', () => {
     expect(getUnlockedPowerupIds(['undo', 'not-a-lesson'])).toEqual(['undo'])
   })

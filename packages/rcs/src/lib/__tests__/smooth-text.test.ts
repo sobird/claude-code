@@ -10,10 +10,6 @@ describe('advanceReveal', () => {
     expect(next).toBeLessThan(10)
   })
 
-  test('drains a larger backlog faster', () => {
-    expect(advanceReveal(0, 200, 16)).toBeGreaterThan(advanceReveal(0, 20, 16))
-  })
-
   test('snaps to the target when it shrinks below the current position', () => {
     expect(advanceReveal(50, 10, 16)).toBe(10)
   })

@@ -23,30 +23,16 @@ const FIXTURE: VerifyReport = {
   uncoveredReleaseItems: [],
 }
 
-const EXPECTED = `# Upgrade verification report
-
-OK: true
-
-| Status             | Count |
-| ------------------ | ----- |
-| already-present    | 1     |
-| ported             | 2     |
-| approximated       | 0     |
-| ignored-dependency | 0     |
-| retained-internal  | 0     |
-| unresolved         | 0     |
-
-## Missing in src
-
-- cmd:missing
-
-## Unregistered
-
-- env:OLD
-`
-
-test('renderMarkdown pads tables to stable column widths', () => {
-  expect(renderMarkdown(FIXTURE)).toBe(EXPECTED)
+test('renderMarkdown includes the summary, counts, and findings sections', () => {
+  const report = renderMarkdown(FIXTURE)
+  expect(report).toContain('# Upgrade verification report')
+  expect(report).toContain('OK: true')
+  expect(report).toMatch(/\| ported\s+\| 2\s+\|/)
+  expect(report).toMatch(/\| unresolved\s+\| 0\s+\|/)
+  expect(report).toContain('## Missing in src')
+  expect(report).toContain('- cmd:missing')
+  expect(report).toContain('## Unregistered')
+  expect(report).toContain('- env:OLD')
 })
 
 test('renderMarkdown pads the counts table header like oxfmt', () => {

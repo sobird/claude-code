@@ -15,16 +15,13 @@ test('keys are isolated from one another', () => {
   expect(limiter.check('1.1.1.1:alice')).toBe(false)
 })
 
-test('window resets after it elapses', () => {
-  const limiter = createRateLimiter({ limit: 2, windowMs: 20 })
+test('window resets after it elapses', async () => {
+  const limiter = createRateLimiter({ limit: 2, windowMs: 10 })
   expect(limiter.check('key')).toBe(true)
   expect(limiter.check('key')).toBe(true)
   expect(limiter.check('key')).toBe(false)
 
-  const start = Date.now()
-  while (Date.now() - start < 30) {
-    // Busy-wait past the window; the limiter reads Date.now() per check.
-  }
+  await Bun.sleep(20)
 
   expect(limiter.check('key')).toBe(true)
 })

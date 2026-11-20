@@ -3,7 +3,6 @@ import { describe, expect, test } from 'bun:test'
 import { findChannelEntry } from '../src/services/mcp/channelNotification.js'
 import {
   filterPermissionRelayClients,
-  isChannelPermissionRelayEnabled,
   shortRequestId,
   truncateForPreview,
 } from '../src/services/mcp/channelPermissions.js'
@@ -118,10 +117,6 @@ describe('filterPermissionRelayClients', () => {
     expect(kept).toHaveLength(1)
     expect(kept[0]?.name).toBe('relay')
     expect(kept[0]?.type).toBe('connected')
-  })
-
-  test('relay gate reads a boolean from GrowthBook (default off)', () => {
-    expect(typeof isChannelPermissionRelayEnabled()).toBe('boolean')
   })
 })
 

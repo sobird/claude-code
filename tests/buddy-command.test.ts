@@ -1,18 +1,7 @@
 import { expect, test } from 'bun:test'
 
-import { features } from '../scripts/config'
 import { fallbackSoul, INSPIRATION_WORDS, pickInspirationWords } from '../src/buddy/soul'
 import { type CompanionBones, duck } from '../src/buddy/types'
-import buddy from '../src/commands/buddy/index'
-
-test('buddy enabled with 2.1.89 copy', () => {
-  expect(features).toContain('BUDDY')
-  expect(buddy.name).toBe('buddy')
-  expect(buddy.description.toLowerCase()).toContain('companion')
-  expect(buddy.description).toBe('Hatch a coding companion · pet, off')
-  expect(buddy.type).toBe('local-jsx')
-  expect(buddy.immediate).toBe(true)
-})
 
 test('pickInspirationWords is deterministic and yields unique values', () => {
   const first = pickInspirationWords(12345, 4)

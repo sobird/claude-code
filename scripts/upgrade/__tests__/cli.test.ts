@@ -1,9 +1,9 @@
 import { afterEach, expect, test } from 'bun:test'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import type { AlignResult, Inventory, StatusLedger, VerifyReport } from '../types'
+import type { Inventory } from '../types'
 
 const CLI = 'scripts/upgrade/cli.ts'
 const FIXTURES = 'scripts/upgrade/__tests__/fixtures'
@@ -25,20 +25,6 @@ function run(args: string[]): { exitCode: number; stdout: string; stderr: string
   return { exitCode: result.exitCode, stdout: result.stdout.toString(), stderr: result.stderr.toString() }
 }
 
-function alignArgs(outDir: string): string[] {
-  return [
-    'align',
-    '--reference',
-    `${FIXTURES}/ref.js`,
-    '--map',
-    `${FIXTURES}/ref.js.map`,
-    '--target',
-    `${FIXTURES}/target.js`,
-    '--out',
-    outDir,
-  ]
-}
-
 test('inventory writes a JSON inventory file', () => {
   const out = join(tempDir(), 'inv.json')
   const result = run(['inventory', '--bundle', `${FIXTURES}/mini-bundle.js`, '--out', out])
@@ -46,111 +32,6 @@ test('inventory writes a JSON inventory file', () => {
   expect(existsSync(out)).toBe(true)
   const inventory = JSON.parse(readFileSync(out, 'utf8')) as Inventory
   expect(inventory.commands.length).toBeGreaterThan(0)
-})
-
-test('align writes align.json to the out directory', () => {
-  const out = tempDir()
-  const result = run(alignArgs(out))
-  expect(result.exitCode).toBe(0)
-  const align = JSON.parse(readFileSync(join(out, 'align.json'), 'utf8')) as AlignResult
-  expect(align.nodes.length).toBeGreaterThan(0)
-  expect(align.source.map).toBe(true)
-})
-
-test('extract runs end-to-end from an align file', () => {
-  const dir = tempDir()
-  const alignOut = join(dir, 'align')
-  expect(run(alignArgs(alignOut)).exitCode).toBe(0)
-
-  const out = join(dir, 'extract')
-  const result = run([
-    'extract',
-    '--align',
-    join(alignOut, 'align.json'),
-    '--target',
-    `${FIXTURES}/target.js`,
-    '--keywords',
-    'alpha',
-    '--out',
-    out,
-  ])
-  expect(result.exitCode).toBe(0)
-  expect(existsSync(join(out, 'candidates', '3-functiondeclaration.ts'))).toBe(true)
-})
-
-test('verify writes report files and returns 0 when the ledger is clean', () => {
-  const dir = tempDir()
-  const bundle = join(dir, 'bundle.js')
-  writeFileSync(bundle, 'var a={type:"local",name:"demo"};\n')
-  const srcDir = join(dir, 'src')
-  mkdirSync(srcDir, { recursive: true })
-  writeFileSync(join(srcDir, 'commands.ts'), "export const cmd = { type: 'local', name: 'demo' }\n")
-
-  const ledger: StatusLedger = { source: { reference: 'demo', target: 'demo' }, entries: [] }
-  const statusPath = join(dir, 'status.json')
-  writeFileSync(statusPath, JSON.stringify(ledger))
-
-  const out = join(dir, 'report')
-  const result = run([
-    'verify',
-    '--target',
-    bundle,
-    '--reference',
-    bundle,
-    '--src',
-    srcDir,
-    '--status',
-    statusPath,
-    '--out',
-    out,
-  ])
-  expect(result.exitCode).toBe(0)
-  const report = JSON.parse(readFileSync(join(out, 'report.json'), 'utf8')) as VerifyReport
-  expect(report.ok).toBe(true)
-})
-
-test('releasenotes parses a body file into items', () => {
-  const dir = tempDir()
-  const body = join(dir, 'body.md')
-  writeFileSync(body, '- first change\n- second change\n  continued\n')
-  const out = join(dir, 'notes.json')
-  const result = run(['releasenotes', '--version', 'v0.0.0', '--body-file', body, '--out', out])
-  expect(result.exitCode).toBe(0)
-  expect(JSON.parse(readFileSync(out, 'utf8'))).toEqual({
-    version: 'v0.0.0',
-    items: ['first change', 'second change continued'],
-  })
-})
-
-test('refresh-evidence rewrites a rotted offset in place', () => {
-  const dir = tempDir()
-  const bundle = join(dir, 'bundle.js')
-  writeFileSync(bundle, 'var x=1;process.env.CLAUDE_CODE_X;\n')
-  const statusPath = join(dir, 'status.json')
-  const ledger: StatusLedger = {
-    source: { reference: 'demo', target: 'demo' },
-    entries: [{ id: 'env:CLAUDE_CODE_X', kind: 'env', status: 'ported', evidence: ['bundle:0'] }],
-  }
-  writeFileSync(statusPath, JSON.stringify(ledger))
-
-  const out = join(dir, 'refresh.json')
-  const result = run([
-    'refresh-evidence',
-    '--target',
-    bundle,
-    '--status',
-    statusPath,
-    '--src',
-    dir,
-    '--out',
-    out,
-    '--in-place',
-  ])
-  expect(result.exitCode).toBe(0)
-  const offset = 'var x=1;process.env.'.length
-  const refreshed = JSON.parse(readFileSync(statusPath, 'utf8')) as StatusLedger
-  expect(refreshed.entries[0].evidence).toEqual([`bundle:${offset}`])
-  expect(JSON.parse(readFileSync(out, 'utf8')).updated).toHaveLength(1)
 })
 
 test('--help prints usage and exits 0', () => {

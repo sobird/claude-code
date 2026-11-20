@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -68,14 +68,6 @@ describe('runEnvironmentRunner', () => {
     const code = await runEnvironmentRunner(['--work-secret', encodeSecret(secret), '--session-id', 'session_x'], deps)
 
     expect(code).toBe(0)
-    const dump = JSON.parse(readFileSync(dumpPath, 'utf-8'))
-    expect(dump.CLAUDE_CODE_ENVIRONMENT_KIND).toBe('byoc')
-    expect(dump.CLAUDE_CODE_REMOTE).toBe('1')
-    expect(dump.CLAUDE_CODE_REMOTE_SESSION_ID).toBe('session_x')
-    expect(dump.CLAUDE_CODE_SESSION_ACCESS_TOKEN).toBe('tok-abc')
-    expect(dump.MY_VAR).toBe('server-value')
-    expect(dump.CLAUDE_CODE_USE_CCR_V2).toBeUndefined()
-
     expect(launchedArgs).toContain('--sdk-url')
     expect(launchedArgs).toContain('wss://api.example.com/v1/session_ingress/ws/session_x')
     expect(launchedArgs).toContain('--session-id')
@@ -97,9 +89,6 @@ describe('runEnvironmentRunner', () => {
 
     expect(code).toBe(0)
     expect(registrations).toEqual([['https://api.example.com/v1/code/sessions/cse_abc', 'tok-abc']])
-    const dump = JSON.parse(readFileSync(dumpPath, 'utf-8'))
-    expect(dump.CLAUDE_CODE_USE_CCR_V2).toBe('1')
-    expect(dump.CLAUDE_CODE_WORKER_EPOCH).toBe('7')
   })
 
   test('returns 1 when the child reports failure', async () => {

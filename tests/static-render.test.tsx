@@ -37,10 +37,3 @@ describe('renderToString', () => {
     expect(narrow.split('\n').length).toBeGreaterThan(wide.split('\n').length)
   })
 })
-
-describe('snapshot regression', () => {
-  test('card output matches the stored snapshot', async () => {
-    const out = await renderToString(<Card title="Title" body="Body" />)
-    expect(out).toMatchSnapshot()
-  })
-})

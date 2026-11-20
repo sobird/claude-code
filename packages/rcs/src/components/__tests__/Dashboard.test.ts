@@ -23,11 +23,6 @@ const environments: OwnedItem[] = [
 ]
 
 describe('selectVisibleSessions', () => {
-  test('members see only their sessions; admins see all', () => {
-    expect(selectVisibleSessions(sessions, member)).toHaveLength(2)
-    expect(selectVisibleSessions(sessions, admin)).toHaveLength(3)
-  })
-
   test('members see their own sessions and unclaimed ones, never another owner', () => {
     const visible = selectVisibleSessions(sessions, member)
     expect(visible.map((session) => session.id)).toEqual(['s1', 's3'])

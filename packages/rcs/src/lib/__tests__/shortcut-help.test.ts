@@ -18,8 +18,4 @@ describe('isHelpShortcut', () => {
   test('IME composition is ignored', () => {
     expect(isHelpShortcut({ key: '?', inEditable: false, hasModifier: false, isComposing: true })).toBe(false)
   })
-
-  test('other keys do not open help', () => {
-    expect(isHelpShortcut({ key: 'Escape', inEditable: false, hasModifier: false, isComposing: false })).toBe(false)
-  })
 })

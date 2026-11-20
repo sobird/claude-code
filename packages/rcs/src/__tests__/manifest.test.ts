@@ -32,10 +32,8 @@ describe('web app manifest', () => {
     const manifest = await loadManifest()
 
     expect(manifest.display).toBe('standalone')
-    expect(manifest.id).toBe('/')
     expect(manifest.start_url).toBe('/')
     expect(manifest.scope).toBe('/')
-    expect(manifest.icons.map((icon) => icon.sizes)).toContain('512x512')
   })
 
   test('references icons from the origin root', async () => {

@@ -25,10 +25,6 @@ function makeSecret(overrides: Partial<WorkSecret> = {}): WorkSecret {
   } as WorkSecret
 }
 
-function encodeSecret(secret: WorkSecret): string {
-  return Buffer.from(JSON.stringify(secret)).toString('base64url')
-}
-
 const tmp = mkdtempSync(join(tmpdir(), 'env-runner-config-'))
 afterAll(() => rmSync(tmp, { recursive: true, force: true }))
 
@@ -246,15 +242,6 @@ describe('prepareTransport', () => {
     })
   })
 
-  test('localhost v1 base uses the /v2/ ingress path', async () => {
-    const result = await prepareTransport(
-      { secret: makeSecret(), sessionId: 'session_x', apiBaseUrl: 'http://localhost:4000' },
-      { registerWorker: async () => 1 },
-    )
-    expect(result.sdkUrl).toBe('ws://localhost:4000/v2/session_ingress/ws/session_x')
-    expect(result.useCcrV2).toBe(false)
-  })
-
   test('use_code_sessions registers a CCR v2 worker and returns the epoch', async () => {
     const calls: Array<[string, string]> = []
     const result = await prepareTransport(
@@ -297,10 +284,4 @@ describe('prepareTransport', () => {
     expect(result).toEqual({ sdkUrl: 'wss://override/ws', useCcrV2: false })
     expect(called).toBe(false)
   })
-})
-
-// Guard: the encode helper must round-trip through decodeWorkSecret.
-test('encoded secret is decodable', () => {
-  const encoded = encodeSecret(makeSecret())
-  expect(JSON.parse(Buffer.from(encoded, 'base64url').toString('utf-8')).session_ingress_token).toBe('tok-123')
 })

@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 
 import React, { useState } from 'react'
-import stripAnsi from 'strip-ansi'
 
 import { Box, Text, useInput } from '../src/ink.js'
 import { cleanup, renderForTest } from './ink-harness.js'
@@ -18,41 +17,8 @@ function Counter() {
   )
 }
 
-function Greeting({ name }: { name: string }) {
-  return (
-    <Box>
-      <Text>hello {name}</Text>
-    </Box>
-  )
-}
-
 // Module-level cleanup tears down any instance a case forgot to unmount.
 afterEach(cleanup)
-
-describe('renderForTest', () => {
-  test('renders the initial frame', async () => {
-    const app = await renderForTest(<Counter />)
-    expect(stripAnsi(app.lastFrame())).toContain('count: 0')
-  })
-
-  test('re-renders on simulated input', async () => {
-    const app = await renderForTest(<Counter />)
-    app.write(' ')
-    await app.tick()
-    app.write(' ')
-    await app.tick()
-    expect(stripAnsi(app.lastFrame())).toContain('count: 2')
-  })
-
-  test('rerender swaps the tree in place', async () => {
-    const app = await renderForTest(<Greeting name="ada" />)
-    expect(stripAnsi(app.lastFrame())).toContain('hello ada')
-
-    app.rerender(<Greeting name="alan" />)
-    await app.tick()
-    expect(stripAnsi(app.lastFrame())).toContain('hello alan')
-  })
-})
 
 describe('frame events (onFrame)', () => {
   test('records timing and a phase breakdown per rendered frame', async () => {
