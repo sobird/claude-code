@@ -195,12 +195,23 @@ export function spawnSleep(children: Subprocess[]): number {
   return child.pid
 }
 
+function isLockedRemoveError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return false
+  const { code } = error
+  return code === 'EBUSY' || code === 'EPERM' || code === 'ENOTEMPTY'
+}
+
 export function cleanupRoots(roots: string[]): void {
   for (const root of roots.splice(0)) {
-    // Windows can briefly keep handles on the tree open after a spawned CLI
-    // exits, so a single rmSync races and throws EBUSY; retry with a short
-    // linear backoff instead of failing the test's afterEach.
-    rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+    try {
+      rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+    } catch (error) {
+      // Windows (and real-time AV) can keep the tree locked past the retry
+      // window even after the CLI child exits. A leftover temp dir must not
+      // fail an otherwise-passing test; leave it for the OS to reclaim.
+      if (!isLockedRemoveError(error)) throw error
+      console.warn(`cleanupRoots: could not remove ${root}; leaving it in place`)
+    }
   }
 }
 
