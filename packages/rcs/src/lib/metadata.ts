@@ -39,6 +39,9 @@ export const baseMetadata: Metadata = {
     statusBarStyle: 'default',
     title: 'Sobird',
   },
+  // Next.js emits only the standards `mobile-web-app-capable` tag, but iOS gates
+  // `apple-touch-startup-image` splashes on the Apple-prefixed one. Keep both.
+  other: { 'apple-mobile-web-app-capable': 'yes' },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
