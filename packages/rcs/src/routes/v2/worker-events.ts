@@ -8,10 +8,10 @@
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import { getSession, updateSessionStatus } from '../../services/session.js'
-import { getEventBus, publishInboundEvent } from '../../transport/event-bus.js'
-import { legacySessionIngressAuth, notFound, readJson } from '../common.js'
+import type { AppEnv } from '@/auth/context'
+import { legacySessionIngressAuth, notFound, readJson } from '@/routes/common'
+import { getSession, updateSessionStatus } from '@/services/session'
+import { getEventBus, publishInboundEvent } from '@/transport/event-bus'
 
 const app = new Hono<AppEnv>()
 

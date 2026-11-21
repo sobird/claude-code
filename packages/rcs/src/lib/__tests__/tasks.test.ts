@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { shouldShowTaskPanel, taskProgress, tasksFromTaskState, tasksFromTodoWrite } from '../tasks'
+import { shouldShowTaskPanel, taskProgress, tasksFromTaskState, tasksFromTodoWrite } from '@/lib/tasks'
 
 describe('tasksFromTodoWrite', () => {
   test('maps TodoWrite todos onto tasks', () => {

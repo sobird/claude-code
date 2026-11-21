@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { selectVisibleEnvironments, selectVisibleSessions } from '../shell/selectors'
+import { selectVisibleEnvironments, selectVisibleSessions } from '@/components/shell/selectors'
 
 interface OwnedItem {
   id: string

@@ -10,9 +10,9 @@
  * tested under `bun test` (pure jose + the shared token helper).
  */
 
-import { signAccessToken } from '../auth/tokens'
-import type { Role } from '../contracts'
-import type { Repositories } from '../db/repositories/types'
+import { signAccessToken } from '@/auth/tokens'
+import type { Role } from '@/contracts'
+import type { Repositories } from '@/db/repositories/types'
 
 /** Access tokens are valid for five minutes. */
 export const ACCESS_TOKEN_TTL_SECONDS = 300

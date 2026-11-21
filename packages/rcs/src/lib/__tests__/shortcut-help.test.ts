@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { isHelpShortcut } from '../shortcut-help'
+import { isHelpShortcut } from '@/lib/shortcut-help'
 
 describe('isHelpShortcut', () => {
   test('? outside an input opens help', () => {

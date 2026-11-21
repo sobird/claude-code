@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { buildSetModelRequest, normalizeModel, normalizeModelOptions } from '../model-settings'
+import { buildSetModelRequest, normalizeModel, normalizeModelOptions } from '@/lib/model-settings'
 
 describe('normalizeModel', () => {
   test('trims and accepts non-empty strings', () => {

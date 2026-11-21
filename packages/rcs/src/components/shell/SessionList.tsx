@@ -3,7 +3,8 @@
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 
-import { formatEpochSeconds } from '../../lib/format'
+import { formatEpochSeconds } from '@/lib/format'
+
 import { StatusBadge } from './StatusBadge'
 import type { SessionSummary } from './types'
 

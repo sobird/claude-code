@@ -8,7 +8,7 @@
 
 import type { NextAuthConfig } from 'next-auth'
 
-import type { Role } from '../contracts'
+import type { Role } from '@/contracts'
 
 /** Where unauthenticated users are sent. */
 export const LOGIN_PATH = '/login'

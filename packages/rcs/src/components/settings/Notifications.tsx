@@ -4,8 +4,10 @@ import { Bell } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
-import { createApiClient } from '../../lib/api-client'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
+import { createApiClient } from '@/lib/api-client'
 import {
   detectPushState,
   subscriptionToRequest,
@@ -13,9 +15,8 @@ import {
   withTimeout,
   type PushEnvironment,
   type PushState,
-} from '../../lib/push-subscription'
-import { Button } from '../ui/Button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
+} from '@/lib/push-subscription'
+
 import { useSettingsApi } from './use-settings-api'
 
 import styles from './Notifications.module.css'

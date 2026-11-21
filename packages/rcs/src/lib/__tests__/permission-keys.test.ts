@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { resolvePermissionKey, type PermissionKeyInput } from '../permission-keys'
+import { resolvePermissionKey, type PermissionKeyInput } from '@/lib/permission-keys'
 
 function input(overrides: Partial<PermissionKeyInput>): PermissionKeyInput {
   return { key: 'a', requestCount: 1, selectedIndex: 0, inEditable: false, ...overrides }

@@ -5,9 +5,10 @@
 
 import { and, eq } from 'drizzle-orm'
 
-import type { AttachmentRecord } from '../../contracts'
-import type { Database } from '../client'
-import { attachments } from '../schema'
+import type { AttachmentRecord } from '@/contracts'
+import type { Database } from '@/db/client'
+import { attachments } from '@/db/schema'
+
 import type { AttachmentRepository, CreateAttachmentInput } from './types'
 
 export function createAttachmentRepository(db: Database): AttachmentRepository {

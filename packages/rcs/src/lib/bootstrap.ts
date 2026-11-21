@@ -10,8 +10,8 @@
  * importable under `bun test` with the in-memory repository.
  */
 
-import { hashPassword } from '../auth/password'
-import type { Repositories } from '../db/repositories/types'
+import { hashPassword } from '@/auth/password'
+import type { Repositories } from '@/db/repositories/types'
 
 export const BOOTSTRAP_ADMIN_DISPLAY_NAME = 'Administrator'
 

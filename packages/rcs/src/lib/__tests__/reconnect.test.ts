@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { runStreamWithRefresh, type RunStreamDeps, type StreamStatus } from '../reconnect'
+import { runStreamWithRefresh, type RunStreamDeps, type StreamStatus } from '@/lib/reconnect'
 
 const encoder = new TextEncoder()
 

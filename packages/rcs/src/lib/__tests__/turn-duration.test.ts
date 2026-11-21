@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { formatTurnSeconds } from '../turn-duration'
+import { formatTurnSeconds } from '@/lib/turn-duration'
 
 describe('formatTurnSeconds', () => {
   test('keeps one decimal below ten seconds', () => {

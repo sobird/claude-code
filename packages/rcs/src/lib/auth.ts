@@ -12,8 +12,9 @@ import NextAuth from 'next-auth'
 import type { User } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 
-import { verifyPassword } from '../auth/password'
-import type { Role } from '../contracts'
+import { verifyPassword } from '@/auth/password'
+import type { Role } from '@/contracts'
+
 import { authConfig } from './auth.config'
 import { ensureBootstrapAdminOnce } from './bootstrap-runner'
 import { getClientIp } from './client-ip'

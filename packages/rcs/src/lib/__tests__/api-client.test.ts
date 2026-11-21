@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import { getApiBaseUrl } from '../api-client'
+import { getApiBaseUrl } from '@/lib/api-client'
 
 const env = process.env as Record<string, string | undefined>
 const globals = globalThis as unknown as { window?: unknown }

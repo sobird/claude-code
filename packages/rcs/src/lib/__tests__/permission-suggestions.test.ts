@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 
-import { editableRule, permissionOptions, type PermissionSuggestion, withRuleContent } from '../permission-suggestions'
+import {
+  editableRule,
+  permissionOptions,
+  type PermissionSuggestion,
+  withRuleContent,
+} from '@/lib/permission-suggestions'
 
 function kinds(suggestions: PermissionSuggestion[]) {
   return permissionOptions(suggestions).map((option) => option.kind)

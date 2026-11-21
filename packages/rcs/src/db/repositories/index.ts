@@ -7,7 +7,8 @@
  * kept for earlier consumers that only need the user-facing subset.
  */
 
-import type { Database } from '../client'
+import type { Database } from '@/db/client'
+
 import { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys'
 import { createAttachmentRepository, createMemoryAttachmentRepository } from './attachments'
 import { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments'

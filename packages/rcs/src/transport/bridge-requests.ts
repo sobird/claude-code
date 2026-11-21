@@ -8,8 +8,8 @@
  * through to the normal persisted-event path in `ingestBridgeMessage`.
  */
 
-import type { ModelOption } from '../lib/model-settings.js'
-import { normalizeModelOptions } from '../lib/model-settings.js'
+import type { ModelOption } from '@/lib/model-settings'
+import { normalizeModelOptions } from '@/lib/model-settings'
 
 /** Paths returned to the web client per completion query. */
 export const MAX_SUGGESTION_PATHS = 20

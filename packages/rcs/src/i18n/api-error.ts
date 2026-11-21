@@ -1,4 +1,5 @@
-import { ApiError } from '../lib/api-client'
+import { ApiError } from '@/lib/api-client'
+
 import { apiErrorKey } from './error-codes'
 
 /** Translation key for an `ApiError` whose code has copy, otherwise `null`. */

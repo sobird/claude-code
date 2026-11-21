@@ -14,7 +14,7 @@
 import { useTranslations } from 'next-intl'
 import { useCallback } from 'react'
 
-import { errorTranslationKey } from '../i18n/api-error'
+import { errorTranslationKey } from '@/i18n/api-error'
 
 export function useApiErrorMessage(): (error: unknown, fallbackKey: string) => string {
   const t = useTranslations()

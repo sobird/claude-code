@@ -9,7 +9,7 @@ import {
   verifyAccessToken,
   verifyEnvironmentToken,
   verifyWorkerToken,
-} from '../tokens.js'
+} from '@/auth/tokens'
 
 const SECRET = 'edge-test-secret'
 process.env.RCS_AUTH_SECRET = SECRET

@@ -9,13 +9,14 @@ import { Check, ChevronDown, Clock, Copy, Pencil, RotateCcw, Send, X } from 'luc
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
-import { useAttachmentUrl } from '../../hooks/useAttachmentUrl'
-import { useSmoothText } from '../../hooks/useSmoothText'
-import type { AttachmentRef } from '../../lib/attachments'
-import { resolveEditKey } from '../../lib/composer-keys'
-import { assistantCopyText } from '../../lib/copy-text'
-import type { AssistantMessageEntry, UserMessageEntry } from '../../lib/session-reducer'
-import { cx } from '../../lib/utils'
+import { useAttachmentUrl } from '@/hooks/useAttachmentUrl'
+import { useSmoothText } from '@/hooks/useSmoothText'
+import type { AttachmentRef } from '@/lib/attachments'
+import { resolveEditKey } from '@/lib/composer-keys'
+import { assistantCopyText } from '@/lib/copy-text'
+import type { AssistantMessageEntry, UserMessageEntry } from '@/lib/session-reducer'
+import { cx } from '@/lib/utils'
+
 import { MarkdownText, usePacedText } from './Markdown'
 
 import styles from './MessageBubble.module.css'

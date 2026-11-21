@@ -16,8 +16,8 @@ import { ChevronDown, Loader2, Square } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 
-import { elapsedMs, type BackgroundTask } from '../../lib/background-tasks'
-import { formatTokenCount } from '../../lib/token-usage'
+import { elapsedMs, type BackgroundTask } from '@/lib/background-tasks'
+import { formatTokenCount } from '@/lib/token-usage'
 
 import styles from './BackgroundTaskPanel.module.css'
 

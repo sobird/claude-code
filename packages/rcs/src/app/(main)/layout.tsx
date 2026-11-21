@@ -3,19 +3,20 @@ import { NextIntlClientProvider } from 'next-intl'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
 
-import { DashboardDataProvider } from '../../components/shell/DashboardData'
-import { Navbar } from '../../components/shell/Navbar'
-import { NotificationNavigation } from '../../components/shell/NotificationNavigation'
-import { RootShell } from '../../components/shell/RootShell'
-import { loadMessages } from '../../i18n/catalogs'
-import { resolveRequestLocale } from '../../i18n/server'
-import { auth } from '../../lib/auth'
-import { baseViewport, localizedAppMetadata } from '../../lib/metadata'
+import { DashboardDataProvider } from '@/components/shell/DashboardData'
+import { Navbar } from '@/components/shell/Navbar'
+import { NotificationNavigation } from '@/components/shell/NotificationNavigation'
+import { RootShell } from '@/components/shell/RootShell'
+import { loadMessages } from '@/i18n/catalogs'
+import { resolveRequestLocale } from '@/i18n/server'
+import { auth } from '@/lib/auth'
+import { baseViewport, localizedAppMetadata } from '@/lib/metadata'
+
 import { signOutAction } from './actions'
 
 import styles from './layout.module.css'
 // oxlint-disable-next-line import/no-unassigned-import -- global stylesheet side effect
-import '../globals.css'
+import '@/app/globals.css'
 
 interface SessionUser {
   id?: string

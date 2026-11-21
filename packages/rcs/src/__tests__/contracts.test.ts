@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 
-import { loadConfig } from '../config.js'
-import { isSessionClosedStatus, toCompatibleCodeSessionId, toWebSessionId } from '../contracts.js'
+import { loadConfig } from '@/config'
+import { isSessionClosedStatus, toCompatibleCodeSessionId, toWebSessionId } from '@/contracts'
 
 test('session id mapping', () => {
   expect(toWebSessionId('cse_abc')).toBe('session_abc')

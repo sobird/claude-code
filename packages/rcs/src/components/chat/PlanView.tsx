@@ -9,8 +9,8 @@ import { CheckCircle2, ChevronRight, Circle, Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
-import type { PlanDisplayEntry, PlanEntry, PlanEntryPriority, PlanEntryStatus } from '../../lib/session-reducer'
-import { cx } from '../../lib/utils'
+import type { PlanDisplayEntry, PlanEntry, PlanEntryPriority, PlanEntryStatus } from '@/lib/session-reducer'
+import { cx } from '@/lib/utils'
 
 import styles from './PlanView.module.css'
 

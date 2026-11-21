@@ -26,38 +26,30 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
-import { isSessionClosedStatus } from '../../contracts'
-import { useAccessToken } from '../../hooks/useAccessToken'
-import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
-import { useSessionStream } from '../../hooks/useSessionStream'
-import { createApiClient } from '../../lib/api-client'
-import { withPendingApprovalCount } from '../../lib/approval-alert'
-import { buildUserContent, type AttachmentRef } from '../../lib/attachments'
-import { buildStopTaskRequest } from '../../lib/background-tasks'
+import { StatusBadge } from '@/components/shell/StatusBadge'
+import { Button } from '@/components/ui/Button'
+import { isSessionClosedStatus } from '@/contracts'
+import { useAccessToken } from '@/hooks/useAccessToken'
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
+import { useSessionStream } from '@/hooks/useSessionStream'
+import { createApiClient } from '@/lib/api-client'
+import { withPendingApprovalCount } from '@/lib/approval-alert'
+import { buildUserContent, type AttachmentRef } from '@/lib/attachments'
+import { buildStopTaskRequest } from '@/lib/background-tasks'
 import {
   copyTextForEntry,
   cursorEnterAction,
   latestPrompt,
   primaryInputOf,
   toolGroupCopyText,
-} from '../../lib/message-actions'
-import {
-  latestUserKey,
-  moveCursorKey,
-  resolveCursorKey,
-  type CursorItem,
-  type CursorKind,
-} from '../../lib/message-cursor'
-import { buildThreadTree } from '../../lib/message-tree'
-import { earlierStartIndex, windowStartIndex } from '../../lib/message-window'
-import { buildSetModelRequest, normalizeModelOptions, type ModelOption } from '../../lib/model-settings'
-import {
-  buildSetPermissionModeRequest,
-  nextWebPermissionMode,
-  type WebPermissionMode,
-} from '../../lib/permission-modes'
-import type { PermissionDecision } from '../../lib/permission-suggestions'
-import { randomUuid } from '../../lib/random-uuid'
+} from '@/lib/message-actions'
+import { latestUserKey, moveCursorKey, resolveCursorKey, type CursorItem, type CursorKind } from '@/lib/message-cursor'
+import { buildThreadTree } from '@/lib/message-tree'
+import { earlierStartIndex, windowStartIndex } from '@/lib/message-window'
+import { buildSetModelRequest, normalizeModelOptions, type ModelOption } from '@/lib/model-settings'
+import { buildSetPermissionModeRequest, nextWebPermissionMode, type WebPermissionMode } from '@/lib/permission-modes'
+import type { PermissionDecision } from '@/lib/permission-suggestions'
+import { randomUuid } from '@/lib/random-uuid'
 import {
   activeStreamEvents,
   applyHistory,
@@ -68,14 +60,13 @@ import {
   type ThreadEntry,
   type ToolCallEntry,
   type TurnEndEntry,
-} from '../../lib/session-reducer'
-import { isHelpShortcut } from '../../lib/shortcut-help'
-import { buildSetThinkingRequest, type ThinkingChoice } from '../../lib/thinking'
-import { formatTokenCount, promptTokens } from '../../lib/token-usage'
-import { formatTurnSeconds } from '../../lib/turn-duration'
-import { cx, uniqueKeys } from '../../lib/utils'
-import { StatusBadge } from '../shell/StatusBadge'
-import { Button } from '../ui/Button'
+} from '@/lib/session-reducer'
+import { isHelpShortcut } from '@/lib/shortcut-help'
+import { buildSetThinkingRequest, type ThinkingChoice } from '@/lib/thinking'
+import { formatTokenCount, promptTokens } from '@/lib/token-usage'
+import { formatTurnSeconds } from '@/lib/turn-duration'
+import { cx, uniqueKeys } from '@/lib/utils'
+
 import { BackgroundTaskPanel } from './BackgroundTaskPanel'
 import { ChatInput } from './ChatInput'
 import { AssistantBubble, UserBubble } from './MessageBubble'

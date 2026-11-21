@@ -8,10 +8,10 @@
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import { isAllowedPushEndpoint } from '../../lib/push-payload.js'
-import { getPushPublicConfig } from '../../services/push-notifier.js'
-import { legacyUserAuth, readJson } from '../common.js'
+import type { AppEnv } from '@/auth/context'
+import { isAllowedPushEndpoint } from '@/lib/push-payload'
+import { legacyUserAuth, readJson } from '@/routes/common'
+import { getPushPublicConfig } from '@/services/push-notifier'
 
 const app = new Hono<AppEnv>()
 

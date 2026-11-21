@@ -8,10 +8,10 @@
  * environment token, not a shared API key.
  */
 
-import { signEnvironmentToken } from '../auth/tokens.js'
-import { loadConfig } from '../config.js'
-import type { EnvironmentRecord } from '../contracts.js'
-import type { EnvironmentPatch, Repositories } from '../db/repositories/types.js'
+import { signEnvironmentToken } from '@/auth/tokens'
+import { loadConfig } from '@/config'
+import type { EnvironmentRecord } from '@/contracts'
+import type { EnvironmentPatch, Repositories } from '@/db/repositories/types'
 
 export interface RegisterEnvironmentInput {
   /** Previously issued environment id; reused only when still valid for this owner. */

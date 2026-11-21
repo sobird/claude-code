@@ -15,9 +15,10 @@ import type {
   ToolCallData,
   ToolCallEntry,
   ToolCallStatus,
-} from '../../lib/session-reducer'
-import { canonicalToolName, summarizeToolCall } from '../../lib/tool-summary'
-import { cx, uniqueKeys } from '../../lib/utils'
+} from '@/lib/session-reducer'
+import { canonicalToolName, summarizeToolCall } from '@/lib/tool-summary'
+import { cx, uniqueKeys } from '@/lib/utils'
+
 import { AssistantBubble } from './MessageBubble'
 
 import styles from './ToolCallGroup.module.css'

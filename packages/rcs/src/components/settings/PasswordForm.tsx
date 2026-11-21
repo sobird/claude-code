@@ -3,12 +3,13 @@
 import { useTranslations } from 'next-intl'
 import { useMemo, useState, type FormEvent } from 'react'
 
-import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
-import { createApiClient } from '../../lib/api-client'
-import { Button } from '../ui/Button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import { Input } from '../ui/Input'
-import { Label } from '../ui/Label'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
+import { createApiClient } from '@/lib/api-client'
+
 import { MIN_PASSWORD_LENGTH, validatePasswordChange, type PasswordChangeError } from './settings-utils'
 import { useSettingsApi } from './use-settings-api'
 

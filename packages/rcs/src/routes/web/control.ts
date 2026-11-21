@@ -12,15 +12,16 @@ import { randomUUID } from 'node:crypto'
 
 import { Hono } from 'hono'
 
-import type { AppContext, AppEnv } from '../../auth/context.js'
-import { isSessionClosedStatus } from '../../contracts.js'
-import { MAX_SIDE_QUESTION_LENGTH } from '../../lib/side-question.js'
+import type { AppContext, AppEnv } from '@/auth/context'
+import { isSessionClosedStatus } from '@/contracts'
+import { MAX_SIDE_QUESTION_LENGTH } from '@/lib/side-question'
+import { jsonError, legacyUserAuth, sessionClosed, webForbidden } from '@/routes/common'
 import {
   getSession,
   reactivateInactiveSession,
   resolveOwnedWebSessionId,
   updateSessionStatus,
-} from '../../services/session.js'
+} from '@/services/session'
 import {
   BRIDGE_CONTROL_TIMEOUT_MS,
   cancelBridgeRequest,
@@ -29,11 +30,10 @@ import {
   sideQuestionAnswerFromResponse,
   sideQuestionErrorFromResponse,
   suggestionPathsFromResponse,
-} from '../../transport/bridge-requests.js'
-import { getEventBus, publishSessionEvent } from '../../transport/event-bus.js'
-import { loadModelCatalog } from '../../transport/model-catalog.js'
-import { sendToBridge } from '../../transport/ws-handler.js'
-import { jsonError, legacyUserAuth, sessionClosed, webForbidden } from '../common.js'
+} from '@/transport/bridge-requests'
+import { getEventBus, publishSessionEvent } from '@/transport/event-bus'
+import { loadModelCatalog } from '@/transport/model-catalog'
+import { sendToBridge } from '@/transport/ws-handler'
 
 const app = new Hono<AppEnv>()
 

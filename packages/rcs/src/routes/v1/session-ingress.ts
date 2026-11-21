@@ -10,20 +10,20 @@
 import { Hono } from 'hono'
 import type { WSContext } from 'hono/ws'
 
-import type { AppEnv } from '../../auth/context.js'
-import { extractWebSocketAuthToken } from '../../auth/context.js'
-import { resolveSessionIngressAuth } from '../../auth/middleware.js'
-import { loadConfig } from '../../config.js'
-import type { Repositories } from '../../db/repositories/types.js'
+import type { AppEnv } from '@/auth/context'
+import { extractWebSocketAuthToken } from '@/auth/context'
+import { resolveSessionIngressAuth } from '@/auth/middleware'
+import { loadConfig } from '@/config'
+import type { Repositories } from '@/db/repositories/types'
+import { legacySessionIngressAuth, readLegacyKeys } from '@/routes/common'
 import {
   handleWebSocketClose,
   handleWebSocketMessage,
   handleWebSocketOpen,
   ingestBridgeMessage,
-} from '../../transport/ws-handler.js'
-import { handleSizedWsPayload, decodeWsPayload } from '../../transport/ws-payload.js'
-import { upgradeWebSocket, websocket } from '../../transport/ws-shared.js'
-import { legacySessionIngressAuth, readLegacyKeys } from '../common.js'
+} from '@/transport/ws-handler'
+import { handleSizedWsPayload, decodeWsPayload } from '@/transport/ws-payload'
+import { upgradeWebSocket, websocket } from '@/transport/ws-shared'
 
 const app = new Hono<AppEnv>()
 

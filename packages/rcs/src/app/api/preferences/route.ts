@@ -8,10 +8,10 @@
 
 import { NextResponse } from 'next/server'
 
-import { LOCALE_COOKIE, localeCookieOptions } from '../../../i18n/locales'
-import { auth } from '../../../lib/auth'
-import { setUserLocale } from '../../../lib/preferences'
-import { getRepositories } from '../../../lib/repos'
+import { LOCALE_COOKIE, localeCookieOptions } from '@/i18n/locales'
+import { auth } from '@/lib/auth'
+import { setUserLocale } from '@/lib/preferences'
+import { getRepositories } from '@/lib/repos'
 
 export const runtime = 'nodejs'
 

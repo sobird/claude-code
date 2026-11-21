@@ -6,8 +6,8 @@ import {
   latestPrompt,
   primaryInputOf,
   toolGroupCopyText,
-} from '../message-actions'
-import type { ThreadEntry, ToolCallEntry } from '../session-reducer'
+} from '@/lib/message-actions'
+import type { ThreadEntry, ToolCallEntry } from '@/lib/session-reducer'
 
 function user(id: string, content: string): ThreadEntry {
   return { type: 'user_message', id, content }

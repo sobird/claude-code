@@ -2,8 +2,8 @@ import { afterAll, expect, test } from 'bun:test'
 
 import { sql } from 'drizzle-orm'
 
-import { createPgliteDatabase, runMigrations } from '../client.js'
-import { schema, sessions, users } from '../schema.js'
+import { createPgliteDatabase, runMigrations } from '@/db/client'
+import { schema, sessions, users } from '@/db/schema'
 
 const ctx = await createPgliteDatabase()
 await runMigrations(ctx.db)

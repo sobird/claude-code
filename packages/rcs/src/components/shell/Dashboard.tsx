@@ -4,8 +4,9 @@ import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { Button } from '../ui/Button'
-import { Skeleton } from '../ui/Skeleton'
+import { Button } from '@/components/ui/Button'
+import { Skeleton } from '@/components/ui/Skeleton'
+
 import { useDashboardData } from './DashboardData'
 import { EnvironmentList } from './EnvironmentList'
 import { NewSessionDialog } from './NewSessionDialog'

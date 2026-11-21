@@ -6,8 +6,9 @@
  * produce the CCR `client_event` SSE frames consumed by the v2 worker stream.
  */
 
-import type { Repositories } from '../db/repositories/types.js'
-import { attachmentRefOfBlock } from '../lib/attachments.js'
+import type { Repositories } from '@/db/repositories/types'
+import { attachmentRefOfBlock } from '@/lib/attachments'
+
 import type { SessionEvent } from './event-bus.js'
 
 /** Resolves a stored attachment to the bytes the CLI needs. */

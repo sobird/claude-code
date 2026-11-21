@@ -10,8 +10,9 @@
 
 import type { WSContext } from 'hono/ws'
 
-import type { AuthUser } from '../auth/context.js'
-import type { Repositories } from '../db/repositories/types.js'
+import type { AuthUser } from '@/auth/context'
+import type { Repositories } from '@/db/repositories/types'
+
 import { findAcpConnectionByAgentId, sendToAgentWs } from './acp-ws-handler.js'
 import { acpBusKey, getAcpEventBus } from './event-bus.js'
 import type { SessionEvent } from './event-bus.js'

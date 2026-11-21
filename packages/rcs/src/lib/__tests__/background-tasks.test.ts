@@ -8,7 +8,7 @@ import {
   sanitizeTaskUsage,
   startBackgroundTask,
   type BackgroundTask,
-} from '../background-tasks'
+} from '@/lib/background-tasks'
 
 describe('sanitizeTaskUsage', () => {
   test('maps the snake_case SDK usage onto a finite non-negative shape', () => {

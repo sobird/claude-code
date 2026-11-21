@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { resolveAskQuestionKey } from '../ask-question-keys'
+import { resolveAskQuestionKey } from '@/lib/ask-question-keys'
 
 const base = {
   optionCount: 3,

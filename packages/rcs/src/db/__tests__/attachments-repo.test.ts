@@ -1,9 +1,9 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 
-import type { UserRecord } from '../../contracts.js'
-import { createPgliteDatabase, runMigrations } from '../client.js'
-import { createMemoryRepositories, createRepositories } from '../repositories/index.js'
-import type { Repositories } from '../repositories/index.js'
+import type { UserRecord } from '@/contracts'
+import { createPgliteDatabase, runMigrations } from '@/db/client'
+import { createMemoryRepositories, createRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories'
 
 const ctx = await createPgliteDatabase()
 await runMigrations(ctx.db)

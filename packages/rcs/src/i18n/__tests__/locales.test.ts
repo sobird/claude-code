@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { DEFAULT_LOCALE, isLocale, negotiateLocale, nextLocaleCookie, resolveLocale } from '../locales'
+import { DEFAULT_LOCALE, isLocale, negotiateLocale, nextLocaleCookie, resolveLocale } from '@/i18n/locales'
 
 describe('isLocale', () => {
   test('accepts only exact supported tags', () => {

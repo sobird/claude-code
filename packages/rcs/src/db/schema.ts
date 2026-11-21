@@ -20,7 +20,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import type { Role } from '../contracts'
+import type { Role } from '@/contracts'
 
 export type EventDirection = 'inbound' | 'outbound'
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { resolveComposerKey, type ComposerKeyInput } from '../../../lib/composer-keys'
+import { resolveComposerKey, type ComposerKeyInput } from '@/lib/composer-keys'
 
 function key(input: Partial<ComposerKeyInput>): ComposerKeyInput {
   return { key: 'Enter', shiftKey: false, isComposing: false, isLoading: false, ...input }

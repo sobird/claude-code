@@ -1,10 +1,10 @@
 import { beforeEach, expect, test } from 'bun:test'
 
-import { loadConfig } from '../../config.js'
-import { toWebSessionId } from '../../contracts.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import { initPushNotifier, resetPushNotifierForTests } from '../../services/push-notifier.js'
-import { publishInboundEvent } from '../event-bus.js'
+import { loadConfig } from '@/config'
+import { toWebSessionId } from '@/contracts'
+import { createMemoryRepositories } from '@/db/repositories'
+import { initPushNotifier, resetPushNotifierForTests } from '@/services/push-notifier'
+import { publishInboundEvent } from '@/transport/event-bus'
 
 const confirmation = {
   request_id: 'req-9',

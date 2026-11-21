@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { type CursorItem, latestUserKey, moveCursorKey, navigableItems, resolveCursorKey } from '../message-cursor'
+import { type CursorItem, latestUserKey, moveCursorKey, navigableItems, resolveCursorKey } from '@/lib/message-cursor'
 
 const items: CursorItem[] = [
   { key: 'u1', kind: 'user' },

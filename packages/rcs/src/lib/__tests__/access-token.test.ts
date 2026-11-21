@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test'
 
-import { verifyAccessToken } from '../../auth/tokens.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import { ACCESS_TOKEN_TTL_SECONDS, createAccessTokenForSession, mintAccessTokenForSession } from '../access-token.js'
+import { verifyAccessToken } from '@/auth/tokens'
+import { createMemoryRepositories } from '@/db/repositories'
+import { ACCESS_TOKEN_TTL_SECONDS, createAccessTokenForSession, mintAccessTokenForSession } from '@/lib/access-token'
 
 const previousSecret = process.env.RCS_AUTH_SECRET
 

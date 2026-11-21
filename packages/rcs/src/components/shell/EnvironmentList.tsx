@@ -2,8 +2,9 @@
 
 import { useLocale, useTranslations } from 'next-intl'
 
-import { formatEpochSeconds } from '../../lib/format'
-import { cx } from '../../lib/utils'
+import { formatEpochSeconds } from '@/lib/format'
+import { cx } from '@/lib/utils'
+
 import { StatusBadge } from './StatusBadge'
 import type { EnvironmentSummary } from './types'
 

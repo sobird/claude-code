@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 
-import { createRateLimiter } from '../rate-limit.js'
+import { createRateLimiter } from '@/lib/rate-limit'
 
 test('rate limiter blocks the sixth attempt in a window', () => {
   const limiter = createRateLimiter({ limit: 5, windowMs: 1000 })

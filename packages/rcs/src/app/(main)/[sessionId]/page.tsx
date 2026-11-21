@@ -1,4 +1,4 @@
-import { SessionView } from '../../../components/chat/ChatView'
+import { SessionView } from '@/components/chat/ChatView'
 
 /**
  * `/:sessionId` — session detail.

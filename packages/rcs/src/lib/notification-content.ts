@@ -3,7 +3,8 @@
  * localized notification. Runtime-neutral: no server-only or DOM-only imports,
  * so it can be loaded by the worker bundle.
  */
-import { CATALOGS } from '../i18n/catalogs.js'
+import { CATALOGS } from '@/i18n/catalogs'
+
 import type { PushNotificationKind, PushNotificationPayload } from './push-payload.js'
 
 export interface NotificationContent {

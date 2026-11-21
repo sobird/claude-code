@@ -3,7 +3,7 @@
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip'
 import type * as React from 'react'
 
-import { cx } from '../../lib/utils'
+import { cx } from '@/lib/utils'
 
 import styles from './Tooltip.module.css'
 

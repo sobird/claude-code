@@ -8,11 +8,11 @@
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import { registerEnvironment } from '../../services/environment.js'
-import { reconnectEnvironment, deregisterEnvironment } from '../../services/environment.js'
-import { reconnectWorkForEnvironment } from '../../services/work-dispatch.js'
-import { forbidden, legacyUserAuth, notFound, readJson } from '../common.js'
+import type { AppEnv } from '@/auth/context'
+import { forbidden, legacyUserAuth, notFound, readJson } from '@/routes/common'
+import { registerEnvironment } from '@/services/environment'
+import { reconnectEnvironment, deregisterEnvironment } from '@/services/environment'
+import { reconnectWorkForEnvironment } from '@/services/work-dispatch'
 
 const app = new Hono<AppEnv>()
 

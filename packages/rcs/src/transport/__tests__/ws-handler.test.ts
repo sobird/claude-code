@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
-import type { GatewayConfig } from '../../config.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import type { Repositories } from '../../db/repositories/types.js'
-import { requestBridgeControl } from '../bridge-requests.js'
-import type { SessionEvent } from '../event-bus.js'
-import { getAllEventBuses, getEventBus, removeEventBus } from '../event-bus.js'
+import type { GatewayConfig } from '@/config'
+import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
+import { requestBridgeControl } from '@/transport/bridge-requests'
+import type { SessionEvent } from '@/transport/event-bus'
+import { getAllEventBuses, getEventBus, removeEventBus } from '@/transport/event-bus'
 import {
   closeAllConnections,
   handleWebSocketClose,
@@ -13,7 +13,7 @@ import {
   handleWebSocketOpen,
   ingestBridgeMessage,
   sendToBridge,
-} from '../ws-handler.js'
+} from '@/transport/ws-handler'
 
 interface MockWs {
   readyState: number

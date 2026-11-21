@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { consumeSse, type SseEvent } from '../sse-client'
+import { consumeSse, type SseEvent } from '@/lib/sse-client'
 
 const encoder = new TextEncoder()
 

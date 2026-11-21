@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import type { ReactNode } from 'react'
 
-import { RootShell } from '../../components/shell/RootShell'
-import { loadMessages } from '../../i18n/catalogs'
-import { resolveRequestLocale } from '../../i18n/server'
-import { baseViewport, localizedAppMetadata } from '../../lib/metadata'
+import { RootShell } from '@/components/shell/RootShell'
+import { loadMessages } from '@/i18n/catalogs'
+import { resolveRequestLocale } from '@/i18n/server'
+import { baseViewport, localizedAppMetadata } from '@/lib/metadata'
 
 // oxlint-disable-next-line import/no-unassigned-import -- global stylesheet side effect
-import '../globals.css'
+import '@/app/globals.css'
 
 export const viewport: Viewport = baseViewport
 

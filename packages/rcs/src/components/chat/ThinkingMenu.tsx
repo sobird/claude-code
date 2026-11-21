@@ -12,8 +12,6 @@
 import { Brain, Check, ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-import type { ThinkingChoice, ThinkingState } from '../../lib/thinking'
-import { cx } from '../../lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +19,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/DropdownMenu'
+} from '@/components/ui/DropdownMenu'
+import type { ThinkingChoice, ThinkingState } from '@/lib/thinking'
+import { cx } from '@/lib/utils'
 
 import styles from './ThinkingMenu.module.css'
 

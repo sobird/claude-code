@@ -6,7 +6,7 @@
  * imports so both runtimes can load it.
  */
 
-import { toWebSessionId } from '../contracts.js'
+import { toWebSessionId } from '@/contracts'
 
 export type PushNotificationKind = 'permission' | 'question' | 'plan'
 

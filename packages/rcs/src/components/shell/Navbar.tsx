@@ -5,9 +5,9 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
 
-import { Button } from '../ui/Button'
-import { StatusIndicator } from '../ui/ConnectionStatus'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/Dialog'
+import { Button } from '@/components/ui/Button'
+import { StatusIndicator } from '@/components/ui/ConnectionStatus'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,9 +15,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/DropdownMenu'
-import { ScrollArea } from '../ui/ScrollArea'
-import { ThemeToggle } from '../ui/ThemeToggle'
+} from '@/components/ui/DropdownMenu'
+import { ScrollArea } from '@/components/ui/ScrollArea'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
+
 import { useDashboardData } from './DashboardData'
 import { selectVisibleSessions } from './selectors'
 import { SessionList } from './SessionList'

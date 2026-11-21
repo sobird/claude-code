@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { searchHistory } from '../history-search'
+import { searchHistory } from '@/lib/history-search'
 
 const history = ['Fix the login bug', 'Add dark mode', 'fix the build', 'Write docs']
 

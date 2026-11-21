@@ -9,12 +9,20 @@
 
 import { Hono } from 'hono'
 
-import type { AppContext, AppEnv } from '../../auth/context.js'
-import { isSessionClosedStatus, toWebSessionId } from '../../contracts.js'
-import type { SessionRecord } from '../../contracts.js'
-import { defaultSessionTitle, requestLocale } from '../../i18n/default-titles.js'
-import { getAutomationStateSnapshot } from '../../services/automationState.js'
-import { connectPresence, setPresenceVisible } from '../../services/presence.js'
+import type { AppContext, AppEnv } from '@/auth/context'
+import { isSessionClosedStatus, toWebSessionId } from '@/contracts'
+import type { SessionRecord } from '@/contracts'
+import { defaultSessionTitle, requestLocale } from '@/i18n/default-titles'
+import {
+  legacyUserAuth,
+  readJson,
+  resolveDispatchEnvironment,
+  sessionClosed,
+  webForbidden,
+  webNotFound,
+} from '@/routes/common'
+import { getAutomationStateSnapshot } from '@/services/automationState'
+import { connectPresence, setPresenceVisible } from '@/services/presence'
 import {
   createSession,
   getSession,
@@ -23,17 +31,9 @@ import {
   reactivateInactiveSession,
   resolveOwnedWebSessionId,
   toWebSessionResponse,
-} from '../../services/session.js'
-import { createWorkItem } from '../../services/work-dispatch.js'
-import { createSSEStream } from '../../transport/sse-writer.js'
-import {
-  legacyUserAuth,
-  readJson,
-  resolveDispatchEnvironment,
-  sessionClosed,
-  webForbidden,
-  webNotFound,
-} from '../common.js'
+} from '@/services/session'
+import { createWorkItem } from '@/services/work-dispatch'
+import { createSSEStream } from '@/transport/sse-writer'
 
 const app = new Hono<AppEnv>()
 const DEFAULT_HISTORY_LIMIT = 100

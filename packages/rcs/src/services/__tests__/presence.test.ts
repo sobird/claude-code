@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 
-import { connectPresence, isSessionVisible, resetPresenceForTests, setPresenceVisible } from '../presence.js'
+import { connectPresence, isSessionVisible, resetPresenceForTests, setPresenceVisible } from '@/services/presence'
 
 beforeEach(() => resetPresenceForTests())
 

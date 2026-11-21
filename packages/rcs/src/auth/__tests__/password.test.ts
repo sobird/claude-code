@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 
-import { hashPassword, verifyPassword } from '../password.js'
+import { hashPassword, verifyPassword } from '@/auth/password'
 
 test('password round-trip', async () => {
   const encoded = await hashPassword('correct horse battery staple')

@@ -7,11 +7,11 @@
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import { signWorkerToken } from '../../auth/tokens.js'
-import { loadConfig } from '../../config.js'
-import { createCodeSession, getSession, incrementEpoch, resolveOwnedWebSessionId } from '../../services/session.js'
-import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '../common.js'
+import type { AppEnv } from '@/auth/context'
+import { signWorkerToken } from '@/auth/tokens'
+import { loadConfig } from '@/config'
+import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '@/routes/common'
+import { createCodeSession, getSession, incrementEpoch, resolveOwnedWebSessionId } from '@/services/session'
 
 const app = new Hono<AppEnv>()
 

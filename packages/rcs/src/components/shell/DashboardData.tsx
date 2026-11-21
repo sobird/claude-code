@@ -12,10 +12,11 @@
 import { useTranslations } from 'next-intl'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
-import { useAccessToken } from '../../hooks/useAccessToken'
-import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
-import { createApiClient } from '../../lib/api-client'
-import type { ConnectionState } from '../ui/ConnectionStatus'
+import type { ConnectionState } from '@/components/ui/ConnectionStatus'
+import { useAccessToken } from '@/hooks/useAccessToken'
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
+import { createApiClient } from '@/lib/api-client'
+
 import type { CreatedSession, EnvironmentSummary, SessionSummary } from './types'
 
 const POLL_INTERVAL_MS = 10_000

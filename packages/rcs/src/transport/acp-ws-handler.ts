@@ -14,10 +14,11 @@ import { randomUUID } from 'node:crypto'
 
 import type { WSContext } from 'hono/ws'
 
-import type { AuthUser } from '../auth/context.js'
-import { loadConfig } from '../config.js'
-import type { EnvironmentRecord } from '../contracts.js'
-import type { Repositories } from '../db/repositories/types.js'
+import type { AuthUser } from '@/auth/context'
+import { loadConfig } from '@/config'
+import type { EnvironmentRecord } from '@/contracts'
+import type { Repositories } from '@/db/repositories/types'
+
 import { acpBusKey, getAcpEventBus } from './event-bus.js'
 import type { SessionEvent } from './event-bus.js'
 

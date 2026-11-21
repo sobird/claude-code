@@ -4,7 +4,7 @@ import { Menu } from '@base-ui/react/menu'
 import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
 import type * as React from 'react'
 
-import { cx } from '../../lib/utils'
+import { cx } from '@/lib/utils'
 
 import styles from './DropdownMenu.module.css'
 

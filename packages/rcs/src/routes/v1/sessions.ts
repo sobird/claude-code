@@ -8,8 +8,9 @@
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import { toCompatibleCodeSessionId } from '../../contracts.js'
+import type { AppEnv } from '@/auth/context'
+import { toCompatibleCodeSessionId } from '@/contracts'
+import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '@/routes/common'
 import {
   archiveSession,
   createSession,
@@ -17,10 +18,9 @@ import {
   resolveOwnedWebSessionId,
   unarchiveSession,
   updateSessionTitle,
-} from '../../services/session.js'
-import { createWorkItem } from '../../services/work-dispatch.js'
-import { getEventBus, publishInboundEvent, publishSessionEvent } from '../../transport/event-bus.js'
-import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '../common.js'
+} from '@/services/session'
+import { createWorkItem } from '@/services/work-dispatch'
+import { getEventBus, publishInboundEvent, publishSessionEvent } from '@/transport/event-bus'
 
 const app = new Hono<AppEnv>()
 

@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 
-import { RootShell } from '../../components/shell/RootShell'
-import { baseMetadata, baseViewport } from '../../lib/metadata'
+import { RootShell } from '@/components/shell/RootShell'
+import { baseMetadata, baseViewport } from '@/lib/metadata'
 
 // oxlint-disable-next-line import/no-unassigned-import -- global stylesheet side effect
-import '../globals.css'
+import '@/app/globals.css'
 
 export const metadata: Metadata = { ...baseMetadata, title: 'Sobird' }
 

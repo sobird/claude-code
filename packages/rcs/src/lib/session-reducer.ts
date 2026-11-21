@@ -11,7 +11,8 @@
  * arrives over history or live.
  */
 
-import { isSessionClosedStatus } from '../contracts'
+import { isSessionClosedStatus } from '@/contracts'
+
 import { extractUserAttachments, type AttachmentRef } from './attachments'
 import {
   completeBackgroundTask,

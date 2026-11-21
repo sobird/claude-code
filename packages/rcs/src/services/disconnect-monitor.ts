@@ -9,8 +9,9 @@
  *   row, its event stream, and its environment's poll — see `isSessionStale`.
  */
 
-import type { GatewayConfig } from '../config.js'
-import type { Repositories } from '../db/repositories/types.js'
+import type { GatewayConfig } from '@/config'
+import type { Repositories } from '@/db/repositories/types'
+
 import { listAllSessions, updateSessionStatus } from './session.js'
 
 export interface StartDisconnectMonitorOptions {

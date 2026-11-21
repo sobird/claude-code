@@ -11,7 +11,7 @@
 
 import { createContext, createElement, useContext, useMemo, type ReactNode } from 'react'
 
-import { useAccessToken } from '../../hooks/useAccessToken'
+import { useAccessToken } from '@/hooks/useAccessToken'
 
 export interface SettingsApi {
   /** `null` until the first token mint settles (or when unauthenticated). */

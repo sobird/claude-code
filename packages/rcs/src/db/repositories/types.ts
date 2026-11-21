@@ -19,7 +19,7 @@ import type {
   SessionWorkerRecord,
   UserRecord,
   WorkItemRecord,
-} from '../../contracts'
+} from '@/contracts'
 
 export interface CreateUserInput {
   username: string

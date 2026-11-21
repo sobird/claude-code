@@ -4,15 +4,23 @@ import { Copy, KeyRound, Plus, Trash2 } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
-import { createApiClient } from '../../lib/api-client'
-import { formatIsoDate } from '../../lib/format'
-import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/Dialog'
-import { Input } from '../ui/Input'
-import { Label } from '../ui/Label'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
+import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
+import { createApiClient } from '@/lib/api-client'
+import { formatIsoDate } from '@/lib/format'
+
 import { maskApiKey } from './settings-utils'
 import { useSettingsApi } from './use-settings-api'
 

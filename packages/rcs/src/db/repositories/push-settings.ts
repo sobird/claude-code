@@ -7,9 +7,10 @@
 
 import { eq } from 'drizzle-orm'
 
-import type { PushVapidKeys } from '../../contracts'
-import type { Database } from '../client'
-import { pushSettings } from '../schema'
+import type { PushVapidKeys } from '@/contracts'
+import type { Database } from '@/db/client'
+import { pushSettings } from '@/db/schema'
+
 import type { PushSettingsRepository } from './types'
 
 const SETTINGS_ID = 'default'

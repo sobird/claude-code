@@ -11,8 +11,8 @@
 import { CheckCircle2, ChevronDown, Circle, CircleDot, ListChecks } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-import { shouldShowTaskPanel, taskProgress, type TaskItem } from '../../lib/tasks'
-import { cx } from '../../lib/utils'
+import { shouldShowTaskPanel, taskProgress, type TaskItem } from '@/lib/tasks'
+import { cx } from '@/lib/utils'
 
 import styles from './TaskPanel.module.css'
 

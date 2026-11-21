@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import type { SessionEvent } from '../event-bus.js'
+import { createMemoryRepositories } from '@/db/repositories'
+import type { SessionEvent } from '@/transport/event-bus'
 import {
   AcpEventBus,
   EventBus,
@@ -14,7 +14,7 @@ import {
   publishSessionEvent,
   removeAcpEventBus,
   removeEventBus,
-} from '../event-bus.js'
+} from '@/transport/event-bus'
 
 let nextSeq = 1
 

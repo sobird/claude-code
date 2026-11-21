@@ -12,7 +12,7 @@ export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
 
   try {
-    const { runBootstrap } = await import('./lib/bootstrap-runner')
+    const { runBootstrap } = await import('@/lib/bootstrap-runner')
     await runBootstrap()
   } catch (error) {
     console.error('[rcs] instrumentation bootstrap failed:', error)

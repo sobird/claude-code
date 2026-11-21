@@ -1,10 +1,10 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 import { Buffer } from 'node:buffer'
 
-import { verifyWorkerToken } from '../../auth/tokens.js'
-import { toWebSessionId } from '../../contracts.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import type { Repositories } from '../../db/repositories/types.js'
+import { verifyWorkerToken } from '@/auth/tokens'
+import { toWebSessionId } from '@/contracts'
+import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
 import {
   ackWork,
   createWorkItem,
@@ -12,7 +12,7 @@ import {
   pollWork,
   reconnectWorkForEnvironment,
   stopWork,
-} from '../work-dispatch.js'
+} from '@/services/work-dispatch'
 
 const AUTH_SECRET = 'test-secret'
 const BASE_URL = 'http://localhost:3000'

@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 
-import { MIN_PASSWORD_LENGTH, canManageUsers, maskApiKey, validatePasswordChange } from '../settings/settings-utils'
+import {
+  MIN_PASSWORD_LENGTH,
+  canManageUsers,
+  maskApiKey,
+  validatePasswordChange,
+} from '@/components/settings/settings-utils'
 
 describe('maskApiKey', () => {
   test('keeps the rcs_ prefix visible and appends an ellipsis', () => {

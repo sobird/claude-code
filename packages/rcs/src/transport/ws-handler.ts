@@ -16,9 +16,10 @@
 
 import type { WSContext } from 'hono/ws'
 
-import type { GatewayConfig } from '../config.js'
-import type { Repositories } from '../db/repositories/types.js'
-import { sanitizeTaskUsage } from '../lib/background-tasks.js'
+import type { GatewayConfig } from '@/config'
+import type { Repositories } from '@/db/repositories/types'
+import { sanitizeTaskUsage } from '@/lib/background-tasks'
+
 import { clearBridgeResponses, settleBridgeResponse } from './bridge-requests.js'
 import { createAttachmentLoader, hasAttachmentRefs, hydrateClientPayload, toClientPayload } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'

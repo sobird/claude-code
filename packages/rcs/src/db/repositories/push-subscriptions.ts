@@ -10,9 +10,10 @@
 
 import { and, desc, eq, inArray } from 'drizzle-orm'
 
-import type { PushSubscriptionRecord } from '../../contracts'
-import type { Database } from '../client'
-import { pushSubscriptions } from '../schema'
+import type { PushSubscriptionRecord } from '@/contracts'
+import type { Database } from '@/db/client'
+import { pushSubscriptions } from '@/db/schema'
+
 import type { CreatePushSubscriptionInput, PushSubscriptionRepository } from './types'
 
 export const MAX_SUBSCRIPTIONS_PER_USER = 10

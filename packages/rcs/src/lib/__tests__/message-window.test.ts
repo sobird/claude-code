@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { earlierStartIndex, MESSAGE_WINDOW_SIZE, windowStartIndex } from '../message-window'
+import { earlierStartIndex, MESSAGE_WINDOW_SIZE, windowStartIndex } from '@/lib/message-window'
 
 function keys(count: number): string[] {
   return Array.from({ length: count }, (_, index) => `item-${index}`)

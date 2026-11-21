@@ -5,7 +5,7 @@ import {
   getAutomationStateEventPayload,
   getAutomationStateSnapshot,
   type AutomationStateResponse,
-} from '../automationState.js'
+} from '@/services/automationState'
 
 const DISABLED = { enabled: false, phase: null, next_tick_at: null, sleep_until: null }
 

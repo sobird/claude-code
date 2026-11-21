@@ -8,9 +8,9 @@
 
 import { beforeEach, describe, expect, test } from 'bun:test'
 
-import { loadConfig } from '../config.js'
-import { createMemoryRepositories } from '../db/repositories/index.js'
-import { createGateway } from '../gateway.js'
+import { loadConfig } from '@/config'
+import { createMemoryRepositories } from '@/db/repositories'
+import { createGateway } from '@/gateway'
 
 function makeGateway() {
   // Next's global types make `NODE_ENV` required on `ProcessEnv`; the same cast is used in

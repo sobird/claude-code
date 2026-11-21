@@ -5,7 +5,7 @@ import { XIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type * as React from 'react'
 
-import { cx } from '../../lib/utils'
+import { cx } from '@/lib/utils'
 
 import styles from './Dialog.module.css'
 

@@ -9,8 +9,9 @@
 
 import type { Context } from 'hono'
 
-import { loadConfig } from '../config.js'
-import type { Repositories } from '../db/repositories/types.js'
+import { loadConfig } from '@/config'
+import type { Repositories } from '@/db/repositories/types'
+
 import { createAttachmentLoader, toHydratedWorkerFrame, toSessionEventFrame } from './client-payload.js'
 import type { SessionEvent } from './event-bus.js'
 import { getEventBus, loadEventReplayWindow, subscribeReplayThenLive } from './event-bus.js'

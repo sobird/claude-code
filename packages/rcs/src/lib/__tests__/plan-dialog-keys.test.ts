@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { resolvePlanDialogKey } from '../plan-dialog-keys'
+import { resolvePlanDialogKey } from '@/lib/plan-dialog-keys'
 
 const base = { denyOpen: false }
 

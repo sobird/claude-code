@@ -7,9 +7,9 @@
  * enough; the gateway keeps its own pool.
  */
 
-import { createPostgresDatabase, type Database } from '../db/client'
-import { createRepositories } from '../db/repositories/index'
-import type { Repositories } from '../db/repositories/types'
+import { createPostgresDatabase, type Database } from '@/db/client'
+import { createRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
 
 let cached: { db: Database; repos: Repositories } | null = null
 

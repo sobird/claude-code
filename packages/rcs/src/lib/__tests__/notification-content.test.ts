@@ -5,8 +5,8 @@ import {
   parseNotificationPayload,
   shouldShowNotification,
   toNotificationContent,
-} from '../notification-content.js'
-import type { PushNotificationPayload } from '../push-payload.js'
+} from '@/lib/notification-content'
+import type { PushNotificationPayload } from '@/lib/push-payload'
 
 const payload: PushNotificationPayload = {
   v: 1,

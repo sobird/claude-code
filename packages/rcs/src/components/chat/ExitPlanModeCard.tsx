@@ -19,16 +19,17 @@ import { Check, ClipboardCheck, Maximize2, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 
+import { Button } from '@/components/ui/Button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 import {
   permissionOptions,
   type PermissionDecision,
   type PermissionOption,
   type PermissionSuggestion,
-} from '../../lib/permission-suggestions'
-import { resolvePlanDialogKey } from '../../lib/plan-dialog-keys'
-import type { PendingPermission } from '../../lib/session-reducer'
-import { Button } from '../ui/Button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/Dialog'
+} from '@/lib/permission-suggestions'
+import { resolvePlanDialogKey } from '@/lib/plan-dialog-keys'
+import type { PendingPermission } from '@/lib/session-reducer'
+
 import { MarkdownText } from './Markdown'
 import { optionDetail, optionLabel } from './permission-option-labels'
 

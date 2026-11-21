@@ -10,9 +10,10 @@
 
 import { and, asc, eq, inArray } from 'drizzle-orm'
 
-import type { EnvironmentRecord } from '../../contracts'
-import type { Database } from '../client'
-import { environments } from '../schema'
+import type { EnvironmentRecord } from '@/contracts'
+import type { Database } from '@/db/client'
+import { environments } from '@/db/schema'
+
 import type { CreateEnvironmentInput, EnvironmentPatch, EnvironmentRepository } from './types'
 
 /** Statuses a returning worker may reclaim; deregistered/archived ids are not reusable. */

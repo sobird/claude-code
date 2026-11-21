@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { formatTokenCount, promptTokens, usageFromPayload } from '../token-usage'
+import { formatTokenCount, promptTokens, usageFromPayload } from '@/lib/token-usage'
 
 describe('usageFromPayload', () => {
   test('reads usage nested in the assistant message', () => {

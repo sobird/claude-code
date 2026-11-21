@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { signInUrlHasError } from '../auth-redirect'
+import { signInUrlHasError } from '@/lib/auth-redirect'
 
 describe('signInUrlHasError', () => {
   test('detects Auth.js failure redirects', () => {

@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 
-import { loadConfig } from '../../config.js'
+import { loadConfig } from '@/config'
 import {
   buildNotificationPayload,
   isAllowedPushEndpoint,
   isConfirmationRequest,
   shouldNotifyOnce,
-} from '../push-payload.js'
+} from '@/lib/push-payload'
 
 const nested = {
   request_id: 'req-1',

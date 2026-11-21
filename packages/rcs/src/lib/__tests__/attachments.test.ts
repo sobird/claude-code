@@ -6,7 +6,7 @@ import {
   buildUserContent,
   extractUserAttachments,
   isAllowedAttachmentMediaType,
-} from '../attachments'
+} from '@/lib/attachments'
 
 describe('isAllowedAttachmentMediaType', () => {
   test('accepts the four supported image types', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
-import { isBtwCommand, parseBtwCommand } from '../side-question.js'
+import { isBtwCommand, parseBtwCommand } from '@/lib/side-question'
 
 describe('parseBtwCommand', () => {
   it('returns the question after /btw', () => {

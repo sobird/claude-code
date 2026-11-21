@@ -11,7 +11,7 @@ import {
   type SessionEventInput,
   type ToolCallEntry,
   type TurnEndEntry,
-} from '../session-reducer'
+} from '@/lib/session-reducer'
 
 let nextSeqNum = 1
 

@@ -9,7 +9,7 @@
 
 import { jwtVerify, SignJWT, type JWTPayload } from 'jose'
 
-import type { Role } from '../contracts.js'
+import type { Role } from '@/contracts'
 
 const ISSUER = 'rcs'
 

@@ -5,10 +5,10 @@
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import type { EnvironmentRecord } from '../../contracts.js'
-import { listActiveEnvironments, toEnvironmentResponse } from '../../services/environment.js'
-import { legacyUserAuth } from '../common.js'
+import type { AppEnv } from '@/auth/context'
+import type { EnvironmentRecord } from '@/contracts'
+import { legacyUserAuth } from '@/routes/common'
+import { listActiveEnvironments, toEnvironmentResponse } from '@/services/environment'
 
 const app = new Hono<AppEnv>()
 

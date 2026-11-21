@@ -11,7 +11,7 @@
 import NextAuth from 'next-auth'
 import { NextResponse } from 'next/server'
 
-import { authConfig, LOGIN_PATH } from './lib/auth.config'
+import { authConfig, LOGIN_PATH } from '@/lib/auth.config'
 
 const { auth } = NextAuth(authConfig)
 

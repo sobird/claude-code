@@ -10,11 +10,11 @@
 
 import { NextResponse } from 'next/server'
 
-import { ACCESS_TOKEN_TTL_SECONDS, mintAccessTokenForSession } from '../../../lib/access-token'
-import { auth } from '../../../lib/auth'
-import { getClientIp } from '../../../lib/client-ip'
-import { createRateLimiter } from '../../../lib/rate-limit'
-import { getRepositories } from '../../../lib/repos'
+import { ACCESS_TOKEN_TTL_SECONDS, mintAccessTokenForSession } from '@/lib/access-token'
+import { auth } from '@/lib/auth'
+import { getClientIp } from '@/lib/client-ip'
+import { createRateLimiter } from '@/lib/rate-limit'
+import { getRepositories } from '@/lib/repos'
 
 export const runtime = 'nodejs'
 

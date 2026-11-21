@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { getClientIp } from '../client-ip'
+import { getClientIp } from '@/lib/client-ip'
 
 function headers(values: Record<string, string>): Headers {
   return new Headers(values)

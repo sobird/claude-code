@@ -17,8 +17,9 @@ import { timingSafeEqual } from 'node:crypto'
 
 import type { MiddlewareHandler } from 'hono'
 
-import { toCompatibleCodeSessionId } from '../contracts.js'
-import type { Repositories } from '../db/repositories/types.js'
+import { toCompatibleCodeSessionId } from '@/contracts'
+import type { Repositories } from '@/db/repositories/types'
+
 import { hashApiKey } from './api-key.js'
 import type { AppContext, AppEnv, AuthUser } from './context.js'
 import { extractWebSocketAuthToken } from './context.js'

@@ -5,8 +5,8 @@
  * validated here (at the API boundary) before reaching the repository.
  */
 
-import type { Repositories } from '../db/repositories/types'
-import { isLocale, type Locale } from '../i18n/locales'
+import type { Repositories } from '@/db/repositories/types'
+import { isLocale, type Locale } from '@/i18n/locales'
 
 export type SetUserLocaleResult = { ok: true; locale: Locale } | { ok: false; code: 'invalid_locale' }
 

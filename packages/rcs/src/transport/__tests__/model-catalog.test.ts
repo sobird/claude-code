@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import { clearModelCatalog, getCachedModels, loadModelCatalog } from '../model-catalog.js'
+import { clearModelCatalog, getCachedModels, loadModelCatalog } from '@/transport/model-catalog'
 
 const MODELS = [{ value: 'sonnet', displayName: 'Sonnet' }]
 

@@ -1,6 +1,6 @@
 import type * as React from 'react'
 
-import { cx } from '../../lib/utils'
+import { cx } from '@/lib/utils'
 
 import styles from './Skeleton.module.css'
 

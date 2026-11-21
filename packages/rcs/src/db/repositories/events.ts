@@ -9,9 +9,10 @@
 
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 
-import type { SessionEventRecord } from '../../contracts'
-import type { Database } from '../client'
-import { sessionEvents } from '../schema'
+import type { SessionEventRecord } from '@/contracts'
+import type { Database } from '@/db/client'
+import { sessionEvents } from '@/db/schema'
+
 import type { AppendEventInput, EventRepository } from './types'
 
 function insertValues(input: AppendEventInput) {

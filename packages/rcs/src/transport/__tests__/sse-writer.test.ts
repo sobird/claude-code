@@ -4,11 +4,11 @@ import { Hono } from 'hono'
 
 process.env.RCS_AUTH_SECRET = 'test-secret'
 
-import type { AppEnv } from '../../auth/context.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import type { Repositories } from '../../db/repositories/types.js'
-import { getAllEventBuses, getEventBus, publishSessionEvent, removeEventBus } from '../event-bus.js'
-import { createSSEStream, createWorkerEventStream } from '../sse-writer.js'
+import type { AppEnv } from '@/auth/context'
+import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
+import { getAllEventBuses, getEventBus, publishSessionEvent, removeEventBus } from '@/transport/event-bus'
+import { createSSEStream, createWorkerEventStream } from '@/transport/sse-writer'
 
 function createApp(repos: Repositories) {
   const app = new Hono<AppEnv>()

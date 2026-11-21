@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { buildSessionEventsUrl, createPresenceReporter } from '../session-presence'
+import { buildSessionEventsUrl, createPresenceReporter } from '@/lib/session-presence'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 

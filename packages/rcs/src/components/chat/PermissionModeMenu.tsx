@@ -12,8 +12,6 @@
 import { Check, ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-import { WEB_PERMISSION_MODES, type WebPermissionMode } from '../../lib/permission-modes'
-import { cx } from '../../lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +19,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/DropdownMenu'
+} from '@/components/ui/DropdownMenu'
+import { WEB_PERMISSION_MODES, type WebPermissionMode } from '@/lib/permission-modes'
+import { cx } from '@/lib/utils'
 
 import styles from './PermissionModeMenu.module.css'
 

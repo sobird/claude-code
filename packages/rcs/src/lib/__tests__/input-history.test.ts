@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { appendHistory, moveHistory } from '../input-history'
+import { appendHistory, moveHistory } from '@/lib/input-history'
 
 describe('appendHistory', () => {
   test('appends a trimmed prompt', () => {

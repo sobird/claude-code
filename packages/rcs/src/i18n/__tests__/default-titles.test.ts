@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 
-import { defaultApiKeyName, defaultSessionTitle } from '../default-titles'
+import { defaultApiKeyName, defaultSessionTitle } from '@/i18n/default-titles'
 
 test('web defaults follow the negotiated locale', () => {
   expect(defaultSessionTitle('en')).toBe('New Session')

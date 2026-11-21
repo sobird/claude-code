@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
-import { ThemeProvider } from '../../lib/theme'
+import { ThemeProvider } from '@/lib/theme'
+
 import { ServiceWorkerRegistration } from './ServiceWorkerRegistration'
 
 /**

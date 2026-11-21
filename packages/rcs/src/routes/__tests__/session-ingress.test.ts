@@ -5,16 +5,16 @@ import { Hono } from 'hono'
 process.env.RCS_AUTH_SECRET = 'test-secret'
 process.env.RCS_API_KEYS = 'test-api-key'
 
-import type { AppEnv } from '../../auth/context.js'
-import { encodeWebSocketAuthProtocol } from '../../auth/context.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import type { Repositories } from '../../db/repositories/types.js'
-import { getAllEventBuses, getEventBus, publishSessionEvent, removeEventBus } from '../../transport/event-bus.js'
+import type { AppEnv } from '@/auth/context'
+import { encodeWebSocketAuthProtocol } from '@/auth/context'
+import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
 import sessionIngress, {
   decodeSessionIngressWsMessage,
   handleSessionIngressWsPayload,
   websocket as sessionIngressWebsocket,
-} from '../v1/session-ingress.js'
+} from '@/routes/v1/session-ingress'
+import { getAllEventBuses, getEventBus, publishSessionEvent, removeEventBus } from '@/transport/event-bus'
 
 function createApp(repos: Repositories) {
   const app = new Hono<AppEnv>()

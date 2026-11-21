@@ -4,11 +4,11 @@ import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { isLocale, SUPPORTED_LOCALES, type Locale } from '../../i18n/locales'
-import { PREFERENCES_PATH } from '../../lib/app-paths'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import { Label } from '../ui/Label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/Select'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Label } from '@/components/ui/Label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
+import { isLocale, SUPPORTED_LOCALES, type Locale } from '@/i18n/locales'
+import { PREFERENCES_PATH } from '@/lib/app-paths'
 
 import styles from './LanguageSelector.module.css'
 

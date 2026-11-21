@@ -4,13 +4,10 @@ import { Hono } from 'hono'
 import type { MiddlewareHandler } from 'hono'
 import { cors } from 'hono/cors'
 
-import type { UserRecord } from '../../contracts.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import type { Repositories } from '../../db/repositories/types.js'
-import { generateApiKey, hashApiKey } from '../api-key.js'
-import type { AppEnv } from '../context.js'
-import { encodeWebSocketAuthProtocol, extractBearerToken, extractWebSocketAuthToken } from '../context.js'
-import { webCorsOptions } from '../cors.js'
+import { generateApiKey, hashApiKey } from '@/auth/api-key'
+import type { AppEnv } from '@/auth/context'
+import { encodeWebSocketAuthProtocol, extractBearerToken, extractWebSocketAuthToken } from '@/auth/context'
+import { webCorsOptions } from '@/auth/cors'
 import {
   accessTokenAuth,
   apiKeyAuth,
@@ -20,8 +17,11 @@ import {
   requireAdmin,
   sessionIngressAuth,
   userAuth,
-} from '../middleware.js'
-import { signAccessToken, signEnvironmentToken, signWorkerToken } from '../tokens.js'
+} from '@/auth/middleware'
+import { signAccessToken, signEnvironmentToken, signWorkerToken } from '@/auth/tokens'
+import type { UserRecord } from '@/contracts'
+import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
 
 process.env.RCS_AUTH_SECRET = 'test-secret'
 

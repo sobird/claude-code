@@ -11,18 +11,18 @@ import { HelpCircle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { type KeyboardEvent as ReactKeyboardEvent, useState } from 'react'
 
-import { resolveAskQuestionKey } from '../../lib/ask-question-keys'
+import { Button } from '@/components/ui/Button'
+import { resolveAskQuestionKey } from '@/lib/ask-question-keys'
 import {
   buildAskUserAnswers,
   emptyDrafts,
   isAskUserComplete,
   parseAskUserQuestions,
   toggleOption,
-} from '../../lib/ask-user-question'
-import type { PermissionDecision } from '../../lib/permission-suggestions'
-import type { PendingPermission } from '../../lib/session-reducer'
-import { cx } from '../../lib/utils'
-import { Button } from '../ui/Button'
+} from '@/lib/ask-user-question'
+import type { PermissionDecision } from '@/lib/permission-suggestions'
+import type { PendingPermission } from '@/lib/session-reducer'
+import { cx } from '@/lib/utils'
 
 import styles from './AskUserQuestionCard.module.css'
 

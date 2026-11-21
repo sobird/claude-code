@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import { errorTranslationKey } from '../../i18n/api-error'
-import { ApiError, extractApiError, extractErrorMessage } from '../api-client'
+import { errorTranslationKey } from '@/i18n/api-error'
+import { ApiError, extractApiError, extractErrorMessage } from '@/lib/api-client'
 
 describe('extractApiError', () => {
   test('reads flat Web errors', () => {

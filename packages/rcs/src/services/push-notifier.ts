@@ -12,11 +12,12 @@
  * carries it while builds and tests that never enable push still resolve it on demand.
  */
 
-import type { GatewayConfig } from '../config.js'
-import type { PushVapidKeys } from '../contracts.js'
-import type { Repositories } from '../db/repositories/types.js'
-import { buildNotificationPayload, isConfirmationRequest, shouldNotifyOnce } from '../lib/push-payload.js'
-import { log } from '../logger.js'
+import type { GatewayConfig } from '@/config'
+import type { PushVapidKeys } from '@/contracts'
+import type { Repositories } from '@/db/repositories/types'
+import { buildNotificationPayload, isConfirmationRequest, shouldNotifyOnce } from '@/lib/push-payload'
+import { log } from '@/logger'
+
 import { isSessionVisible } from './presence.js'
 
 export interface PushNotifierProvider {

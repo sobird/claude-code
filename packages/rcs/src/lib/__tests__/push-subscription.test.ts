@@ -6,7 +6,7 @@ import {
   urlBase64ToUint8Array,
   withTimeout,
   type PushEnvironment,
-} from '../push-subscription.js'
+} from '@/lib/push-subscription'
 
 const healthy: PushEnvironment = {
   secureContext: true,

@@ -8,10 +8,10 @@
 
 import type { MiddlewareHandler } from 'hono'
 
-import { extractWebSocketAuthToken, type AppContext, type AppEnv } from '../auth/context.js'
-import { createEnvironmentAuth, createSessionIngressAuth, createUserAuth } from '../auth/middleware.js'
-import { verifyWorkerToken } from '../auth/tokens.js'
-import type { EnvironmentRecord } from '../contracts.js'
+import { extractWebSocketAuthToken, type AppContext, type AppEnv } from '@/auth/context'
+import { createEnvironmentAuth, createSessionIngressAuth, createUserAuth } from '@/auth/middleware'
+import { verifyWorkerToken } from '@/auth/tokens'
+import type { EnvironmentRecord } from '@/contracts'
 
 /** Reads legacy `RCS_API_KEYS` (comma separated) on every call. */
 export function readLegacyKeys(): string[] {

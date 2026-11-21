@@ -7,7 +7,7 @@ import {
   verifyAccessToken,
   verifyEnvironmentToken,
   verifyWorkerToken,
-} from '../tokens.js'
+} from '@/auth/tokens'
 
 process.env.RCS_AUTH_SECRET = 'test-secret'
 

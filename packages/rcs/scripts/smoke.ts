@@ -20,12 +20,12 @@ process.env.ADMIN_PASSWORD = 'smoke-admin-password'
 delete process.env.RCS_API_KEYS
 delete process.env.RCS_BASE_URL
 
-import { generateApiKey } from '../src/auth/api-key'
-import { verifyEnvironmentToken } from '../src/auth/tokens'
-import { loadConfig } from '../src/config'
-import { createMemoryRepositories } from '../src/db/repositories/index'
-import { createGateway } from '../src/gateway'
-import { ensureBootstrapAdmin } from '../src/lib/bootstrap'
+import { generateApiKey } from '@/auth/api-key'
+import { verifyEnvironmentToken } from '@/auth/tokens'
+import { loadConfig } from '@/config'
+import { createMemoryRepositories } from '@/db/repositories'
+import { createGateway } from '@/gateway'
+import { ensureBootstrapAdmin } from '@/lib/bootstrap'
 
 let failures = 0
 

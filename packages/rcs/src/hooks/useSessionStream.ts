@@ -12,10 +12,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { createApiClient, getApiBaseUrl } from '../lib/api-client'
-import { randomUuid } from '../lib/random-uuid'
-import { defaultSleep, runStreamWithRefresh, type StreamStatus } from '../lib/reconnect'
-import { buildSessionEventsUrl, createPresenceReporter } from '../lib/session-presence'
+import { createApiClient, getApiBaseUrl } from '@/lib/api-client'
+import { randomUuid } from '@/lib/random-uuid'
+import { defaultSleep, runStreamWithRefresh, type StreamStatus } from '@/lib/reconnect'
+import { buildSessionEventsUrl, createPresenceReporter } from '@/lib/session-presence'
+
 import { useAccessToken } from './useAccessToken'
 
 export interface SessionStreamEvent {

@@ -8,12 +8,12 @@
 
 import { Hono } from 'hono'
 
-import { generateApiKey } from '../../auth/api-key.js'
-import type { AppEnv } from '../../auth/context.js'
-import { hashPassword, verifyPassword } from '../../auth/password.js'
-import type { ApiKeyRecord } from '../../contracts.js'
-import { defaultApiKeyName, requestLocale } from '../../i18n/default-titles.js'
-import { legacyUserAuth, readJson } from '../common.js'
+import { generateApiKey } from '@/auth/api-key'
+import type { AppEnv } from '@/auth/context'
+import { hashPassword, verifyPassword } from '@/auth/password'
+import type { ApiKeyRecord } from '@/contracts'
+import { defaultApiKeyName, requestLocale } from '@/i18n/default-titles'
+import { legacyUserAuth, readJson } from '@/routes/common'
 
 const app = new Hono<AppEnv>()
 

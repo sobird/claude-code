@@ -6,7 +6,7 @@
 
 import type { useTranslations } from 'next-intl'
 
-import type { PermissionOption } from '../../lib/permission-suggestions'
+import type { PermissionOption } from '@/lib/permission-suggestions'
 
 export type ChatTranslator = ReturnType<typeof useTranslations<'chat'>>
 

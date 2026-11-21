@@ -43,7 +43,9 @@ rest and `README.md` for the full environment table.
 ## Boundaries
 
 - This package has no build-time dependency on the CLI's `src/`; keep it that
-  way. There is no `src/*` path alias — use relative imports only.
+  way. `@/*` maps to `packages/rcs/src/*` (tsconfig `paths`, plus the package
+  root for `server/` and `scripts/`). Use `@/...` for any import that leaves
+  the current directory; keep same-directory siblings as `./foo`.
 - Root `typecheck` / `lint` / `test` exclude this package. Use the `rcs:*` gates;
   do not widen the root gates to "fix" them.
 - Formatting is shared (root oxfmt): no semicolons, single quotes, 2-space indent,

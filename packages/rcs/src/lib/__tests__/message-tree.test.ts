@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import { buildThreadTree } from '../message-tree'
-import type { AssistantMessageEntry, ThreadEntry, ToolCallEntry } from '../session-reducer'
+import { buildThreadTree } from '@/lib/message-tree'
+import type { AssistantMessageEntry, ThreadEntry, ToolCallEntry } from '@/lib/session-reducer'
 
 function assistant(id: string, text: string, parentToolUseId?: string): AssistantMessageEntry {
   return { type: 'assistant_message', id, chunks: [{ type: 'message', text }], parentToolUseId }

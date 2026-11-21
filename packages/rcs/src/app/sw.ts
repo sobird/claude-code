@@ -2,8 +2,8 @@ import { defaultCache } from '@serwist/turbopack/worker'
 import { NetworkOnly, Serwist } from 'serwist'
 import type { PrecacheEntry, RuntimeCaching } from 'serwist'
 
-import { parseNotificationPayload, shouldShowNotification, toNotificationContent } from '../lib/notification-content.js'
-import { clearPendingNavigation, setPendingNavigation } from '../lib/pending-navigation.js'
+import { parseNotificationPayload, shouldShowNotification, toNotificationContent } from '@/lib/notification-content'
+import { clearPendingNavigation, setPendingNavigation } from '@/lib/pending-navigation'
 
 // The project's tsconfig uses the DOM lib, whose service-worker globals are
 // limited; declare only the slice this entry reads. `__SW_MANIFEST` is

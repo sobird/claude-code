@@ -2,20 +2,15 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import { hashPassword } from '../../auth/password.js'
-import { signAccessToken } from '../../auth/tokens.js'
-import { toWebSessionId } from '../../contracts.js'
-import type { SessionRecord, UserRecord } from '../../contracts.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import type { Repositories } from '../../db/repositories/types.js'
-import {
-  connectPresence,
-  isSessionVisible,
-  resetPresenceForTests,
-  setPresenceVisible,
-} from '../../services/presence.js'
-import webSessions from '../web/sessions.js'
+import type { AppEnv } from '@/auth/context'
+import { hashPassword } from '@/auth/password'
+import { signAccessToken } from '@/auth/tokens'
+import { toWebSessionId } from '@/contracts'
+import type { SessionRecord, UserRecord } from '@/contracts'
+import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
+import webSessions from '@/routes/web/sessions'
+import { connectPresence, isSessionVisible, resetPresenceForTests, setPresenceVisible } from '@/services/presence'
 
 process.env.RCS_AUTH_SECRET = 'test-secret'
 process.env.RCS_API_KEYS = 'test-api-key'

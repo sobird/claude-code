@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 
-import { cx } from '../../lib/utils'
+import { cx } from '@/lib/utils'
 
 import styles from './ConnectionStatus.module.css'
 

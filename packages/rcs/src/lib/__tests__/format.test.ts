@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { formatEpochSeconds, formatIsoDate } from '../format'
+import { formatEpochSeconds, formatIsoDate } from '@/lib/format'
 
 describe('formatEpochSeconds', () => {
   test('renders an empty string for missing input', () => {

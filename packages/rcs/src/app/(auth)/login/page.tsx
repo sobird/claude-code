@@ -4,10 +4,10 @@ import { getTranslations } from 'next-intl/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-import { LOCALE_COOKIE, localeCookieOptions, nextLocaleCookie } from '../../../i18n/locales'
-import { signIn } from '../../../lib/auth'
-import { signInUrlHasError } from '../../../lib/auth-redirect'
-import { getRepositories } from '../../../lib/repos'
+import { LOCALE_COOKIE, localeCookieOptions, nextLocaleCookie } from '@/i18n/locales'
+import { signIn } from '@/lib/auth'
+import { signInUrlHasError } from '@/lib/auth-redirect'
+import { getRepositories } from '@/lib/repos'
 
 import styles from './page.module.css'
 

@@ -4,7 +4,8 @@ import { Monitor, Moon, Sun } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 
-import { useTheme, type Theme } from '../../lib/theme'
+import { useTheme, type Theme } from '@/lib/theme'
+
 import { Button } from './Button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './DropdownMenu'
 

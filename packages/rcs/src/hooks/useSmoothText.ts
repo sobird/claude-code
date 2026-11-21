@@ -13,7 +13,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { advanceReveal } from '../lib/smooth-text'
+import { advanceReveal } from '@/lib/smooth-text'
 
 function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined' || !window.matchMedia) return false

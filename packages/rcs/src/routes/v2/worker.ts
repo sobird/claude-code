@@ -8,12 +8,12 @@
 
 import { Hono } from 'hono'
 
-import type { AppContext, AppEnv } from '../../auth/context.js'
-import type { SessionWorkerRecord } from '../../contracts.js'
-import { getAutomationStateEventPayload, automationStatesEqual } from '../../services/automationState.js'
-import { getSession, incrementEpoch, resolveOwnedWebSessionId, updateSessionStatus } from '../../services/session.js'
-import { getEventBus } from '../../transport/event-bus.js'
-import { forbidden, legacySessionIngressAuth, legacyUserAuth, notFound, readJson } from '../common.js'
+import type { AppContext, AppEnv } from '@/auth/context'
+import type { SessionWorkerRecord } from '@/contracts'
+import { forbidden, legacySessionIngressAuth, legacyUserAuth, notFound, readJson } from '@/routes/common'
+import { getAutomationStateEventPayload, automationStatesEqual } from '@/services/automationState'
+import { getSession, incrementEpoch, resolveOwnedWebSessionId, updateSessionStatus } from '@/services/session'
+import { getEventBus } from '@/transport/event-bus'
 
 const app = new Hono<AppEnv>()
 

@@ -14,8 +14,6 @@ import { Check, ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useRef, useState } from 'react'
 
-import type { ModelOption } from '../../lib/model-settings'
-import { cx } from '../../lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +21,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/DropdownMenu'
+} from '@/components/ui/DropdownMenu'
+import type { ModelOption } from '@/lib/model-settings'
+import { cx } from '@/lib/utils'
 
 import styles from './ModelMenu.module.css'
 

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 
-import { createAccessTokenStore, type TokenMintResult } from '../token-store.js'
+import { createAccessTokenStore, type TokenMintResult } from '@/lib/token-store'
 
 /** Drain pending microtasks without touching real timers. */
 async function flushMicrotasks(): Promise<void> {

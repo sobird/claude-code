@@ -11,8 +11,8 @@ import { Buffer } from 'node:buffer'
 
 import type { Context } from 'hono'
 
-import type { EnvironmentRecord, Role } from '../contracts.js'
-import type { Repositories } from '../db/repositories/types.js'
+import type { EnvironmentRecord, Role } from '@/contracts'
+import type { Repositories } from '@/db/repositories/types'
 
 /** The authenticated principal attached to requests by the auth middlewares. */
 export interface AuthUser {

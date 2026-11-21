@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 
-import { clearPendingNavigation, takePendingNavigation } from '../../lib/pending-navigation'
+import { clearPendingNavigation, takePendingNavigation } from '@/lib/pending-navigation'
 
 const PENDING_RETRY_ATTEMPTS = 5
 const PENDING_RETRY_DELAY_MS = 250

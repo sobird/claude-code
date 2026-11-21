@@ -7,17 +7,17 @@
  * and `/health`. `scripts/dev.ts` spawns it via `bun --watch server/index.ts`.
  */
 
-import { loadConfig } from '../src/config.js'
-import { closeDatabase, createPostgresDatabase, runMigrations } from '../src/db/client.js'
-import { createRepositories } from '../src/db/repositories/index.js'
-import { createGateway } from '../src/gateway.js'
-import { log } from '../src/logger.js'
-import { startDisconnectMonitor, stopDisconnectMonitor } from '../src/services/disconnect-monitor.js'
-import { initPushNotifier } from '../src/services/push-notifier.js'
-import { closeAllRelayConnections } from '../src/transport/acp-relay-handler.js'
-import { closeAllAcpConnections } from '../src/transport/acp-ws-handler.js'
-import { closeAllConnections } from '../src/transport/ws-handler.js'
-import { websocket } from '../src/transport/ws-shared.js'
+import { loadConfig } from '@/config'
+import { closeDatabase, createPostgresDatabase, runMigrations } from '@/db/client'
+import { createRepositories } from '@/db/repositories'
+import { createGateway } from '@/gateway'
+import { log } from '@/logger'
+import { startDisconnectMonitor, stopDisconnectMonitor } from '@/services/disconnect-monitor'
+import { initPushNotifier } from '@/services/push-notifier'
+import { closeAllRelayConnections } from '@/transport/acp-relay-handler'
+import { closeAllAcpConnections } from '@/transport/acp-ws-handler'
+import { closeAllConnections } from '@/transport/ws-handler'
+import { websocket } from '@/transport/ws-shared'
 
 const databaseUrl = process.env.DATABASE_URL?.trim()
 if (!databaseUrl) {

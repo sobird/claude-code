@@ -6,7 +6,7 @@ import {
   nextWebPermissionMode,
   WEB_PERMISSION_MODES,
   type WebPermissionMode,
-} from '../permission-modes'
+} from '@/lib/permission-modes'
 
 describe('isWebPermissionMode', () => {
   test('accepts every advertised mode', () => {

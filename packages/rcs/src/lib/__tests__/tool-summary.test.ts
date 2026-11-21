@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { canonicalToolName, summarizeToolCall } from '../tool-summary'
+import { canonicalToolName, summarizeToolCall } from '@/lib/tool-summary'
 
 function fieldKeys(name: string, input: Record<string, unknown>): string[] {
   return summarizeToolCall(name, input).fields.map((field) => field.key)

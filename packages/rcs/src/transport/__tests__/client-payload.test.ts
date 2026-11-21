@@ -1,7 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 
-import { toClientPayload, toHydratedSDKMessage, toHydratedWorkerFrame, toSessionEventFrame } from '../client-payload.js'
-import type { SessionEvent } from '../event-bus.js'
+import {
+  toClientPayload,
+  toHydratedSDKMessage,
+  toHydratedWorkerFrame,
+  toSessionEventFrame,
+} from '@/transport/client-payload'
+import type { SessionEvent } from '@/transport/event-bus'
 
 function makeEvent(overrides: Partial<SessionEvent> & Pick<SessionEvent, 'type' | 'sessionId'>): SessionEvent {
   return {

@@ -9,7 +9,7 @@ import {
   parseAskUserQuestions,
   toggleOption,
   type AskUserQuestion,
-} from '../ask-user-question'
+} from '@/lib/ask-user-question'
 
 const sampleQuestions: AskUserQuestion[] = [
   {

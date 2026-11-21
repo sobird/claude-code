@@ -8,9 +8,9 @@
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import { createWorkerEventStream } from '../../transport/sse-writer.js'
-import { legacySessionIngressAuth, notFound } from '../common.js'
+import type { AppEnv } from '@/auth/context'
+import { legacySessionIngressAuth, notFound } from '@/routes/common'
+import { createWorkerEventStream } from '@/transport/sse-writer'
 
 const app = new Hono<AppEnv>()
 

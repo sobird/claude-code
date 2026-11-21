@@ -4,17 +4,24 @@ import { Plus, RotateCcw } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
-import { createApiClient } from '../../lib/api-client'
-import { formatIsoDate } from '../../lib/format'
-import { useSettingsApi } from '../settings/use-settings-api'
-import { Badge } from '../ui/Badge'
-import { Button } from '../ui/Button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/Dialog'
-import { Input } from '../ui/Input'
-import { Label } from '../ui/Label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/Select'
+import { useSettingsApi } from '@/components/settings/use-settings-api'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
+import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
+import { createApiClient } from '@/lib/api-client'
+import { formatIsoDate } from '@/lib/format'
 
 import styles from './UserTable.module.css'
 

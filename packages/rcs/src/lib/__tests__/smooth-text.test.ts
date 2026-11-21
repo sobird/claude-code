@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { advanceReveal } from '../smooth-text'
+import { advanceReveal } from '@/lib/smooth-text'
 
 describe('advanceReveal', () => {
   test('advances toward the target without overshooting', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
-import { createMemoryRepositories } from '../../db/repositories/index'
-import { parseLocalePreference, setUserLocale } from '../preferences'
+import { createMemoryRepositories } from '@/db/repositories'
+import { parseLocalePreference, setUserLocale } from '@/lib/preferences'
 
 describe('parseLocalePreference', () => {
   test('accepts only supported locales', () => {

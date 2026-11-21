@@ -8,11 +8,11 @@
 
 import { Hono } from 'hono'
 
-import type { AppContext, AppEnv } from '../../auth/context.js'
-import type { WorkItemRecord } from '../../contracts.js'
-import { updatePollTime } from '../../services/environment.js'
-import { ackWork, heartbeatWork, pollWork, stopWork } from '../../services/work-dispatch.js'
-import { legacyEnvironmentAuth, notFound, workerOrEnvironmentAuth } from '../common.js'
+import type { AppContext, AppEnv } from '@/auth/context'
+import type { WorkItemRecord } from '@/contracts'
+import { legacyEnvironmentAuth, notFound, workerOrEnvironmentAuth } from '@/routes/common'
+import { updatePollTime } from '@/services/environment'
+import { ackWork, heartbeatWork, pollWork, stopWork } from '@/services/work-dispatch'
 
 const app = new Hono<AppEnv>()
 

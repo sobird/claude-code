@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { assistantCopyText } from '../copy-text'
+import { assistantCopyText } from '@/lib/copy-text'
 
 describe('assistantCopyText', () => {
   test('joins text chunks and skips thoughts', () => {

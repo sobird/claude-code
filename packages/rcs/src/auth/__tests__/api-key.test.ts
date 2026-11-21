@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 
-import { generateApiKey, hashApiKey } from '../api-key.js'
+import { generateApiKey, hashApiKey } from '@/auth/api-key'
 
 test('generated keys are prefixed, unique, and expose a 12-char prefix', () => {
   const a = generateApiKey()

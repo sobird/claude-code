@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { withPendingApprovalCount } from '../approval-alert'
+import { withPendingApprovalCount } from '@/lib/approval-alert'
 
 describe('withPendingApprovalCount', () => {
   test('returns the title unchanged when nothing is pending', () => {

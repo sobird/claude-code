@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 
-import { buildSetThinkingRequest, THINKING_ON_BUDGET, thinkingChoiceFromPayload, thinkingTokensFor } from '../thinking'
+import {
+  buildSetThinkingRequest,
+  THINKING_ON_BUDGET,
+  thinkingChoiceFromPayload,
+  thinkingTokensFor,
+} from '@/lib/thinking'
 
 describe('thinkingTokensFor', () => {
   test('default sends null so the CLI keeps its own default', () => {

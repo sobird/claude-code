@@ -7,10 +7,10 @@
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import { toWebSessionId } from '../../contracts.js'
-import { getSession, resolveOwnedWebSessionId } from '../../services/session.js'
-import { legacyUserAuth, readJson, webForbidden, webNotFound } from '../common.js'
+import type { AppEnv } from '@/auth/context'
+import { toWebSessionId } from '@/contracts'
+import { legacyUserAuth, readJson, webForbidden, webNotFound } from '@/routes/common'
+import { getSession, resolveOwnedWebSessionId } from '@/services/session'
 
 const app = new Hono<AppEnv>()
 

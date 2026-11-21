@@ -8,9 +8,10 @@
 
 import { and, asc, count, eq, isNull } from 'drizzle-orm'
 
-import type { UserRecord } from '../../contracts'
-import type { Database } from '../client'
-import { users } from '../schema'
+import type { UserRecord } from '@/contracts'
+import type { Database } from '@/db/client'
+import { users } from '@/db/schema'
+
 import type { CreateUserInput, GuardedUserPatch, GuardedUserUpdateResult, UserPatch, UserRepository } from './types'
 
 export function createUserRepository(db: Database): UserRepository {

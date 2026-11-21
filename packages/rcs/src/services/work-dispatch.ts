@@ -9,10 +9,11 @@
 
 import { Buffer } from 'node:buffer'
 
-import { signWorkerToken } from '../auth/tokens.js'
-import { loadConfig } from '../config.js'
-import { toCompatibleCodeSessionId, type WorkItemRecord } from '../contracts.js'
-import type { Repositories } from '../db/repositories/types.js'
+import { signWorkerToken } from '@/auth/tokens'
+import { loadConfig } from '@/config'
+import { toCompatibleCodeSessionId, type WorkItemRecord } from '@/contracts'
+import type { Repositories } from '@/db/repositories/types'
+
 import { notifyWorkAvailable, waitForWorkAvailable } from './transport.js'
 
 /**

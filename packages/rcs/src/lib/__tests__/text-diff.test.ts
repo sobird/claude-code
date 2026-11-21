@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { diffLines, toolEditPreview } from '../text-diff'
+import { diffLines, toolEditPreview } from '@/lib/text-diff'
 
 describe('diffLines', () => {
   test('an unchanged text is all context', () => {

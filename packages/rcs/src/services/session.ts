@@ -12,9 +12,9 @@ import {
   type SessionRecord,
   toCompatibleCodeSessionId,
   toWebSessionId,
-} from '../contracts.js'
-import type { Repositories, SessionListOptions } from '../db/repositories/types.js'
-import { getAllEventBuses, removeEventBus } from '../transport/event-bus.js'
+} from '@/contracts'
+import type { Repositories, SessionListOptions } from '@/db/repositories/types'
+import { getAllEventBuses, removeEventBus } from '@/transport/event-bus'
 
 export interface ServiceUser {
   id: string

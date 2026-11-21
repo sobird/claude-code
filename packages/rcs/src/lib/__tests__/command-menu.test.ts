@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { acceptCommand, commandQuery, filterCommands, moveIndex } from '../command-menu'
+import { acceptCommand, commandQuery, filterCommands, moveIndex } from '@/lib/command-menu'
 
 describe('commandQuery', () => {
   test('returns the token after a leading slash', () => {

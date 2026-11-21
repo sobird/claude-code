@@ -1,8 +1,8 @@
 // src/i18n/__tests__/catalogs.test.ts
 import { describe, expect, test } from 'bun:test'
 
-import { CATALOGS } from '../catalogs'
-import { KNOWN_ERROR_CODES } from '../error-codes'
+import { CATALOGS } from '@/i18n/catalogs'
+import { KNOWN_ERROR_CODES } from '@/i18n/error-codes'
 
 function flatten(value: unknown, prefix = ''): Map<string, string> {
   const out = new Map<string, string>()

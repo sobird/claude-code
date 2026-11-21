@@ -2,7 +2,7 @@
 
 import { useRender } from '@base-ui/react/use-render'
 
-import { cx } from '../../lib/utils'
+import { cx } from '@/lib/utils'
 
 import styles from './Button.module.css'
 

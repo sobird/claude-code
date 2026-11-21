@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 
-import { loadConfig } from '../../config.js'
-import { toWebSessionId } from '../../contracts.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import { connectPresence, resetPresenceForTests, setPresenceVisible } from '../presence.js'
+import { loadConfig } from '@/config'
+import { toWebSessionId } from '@/contracts'
+import { createMemoryRepositories } from '@/db/repositories'
+import { connectPresence, resetPresenceForTests, setPresenceVisible } from '@/services/presence'
 import {
   getPushPublicConfig,
   initPushNotifier,
   notifyInboundEvent,
   resetPushNotifierForTests,
   type PushNotifierProvider,
-} from '../push-notifier.js'
+} from '@/services/push-notifier'
 
 function fakeProvider(overrides: Partial<PushNotifierProvider> = {}) {
   const sent: Array<{ endpoint: string; payload: unknown }> = []

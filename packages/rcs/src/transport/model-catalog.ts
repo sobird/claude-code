@@ -7,7 +7,7 @@
  * fetches, and drop the cache when the socket goes away.
  */
 
-import type { ModelOption } from '../lib/model-settings.js'
+import type { ModelOption } from '@/lib/model-settings'
 
 const cache = new Map<string, ModelOption[]>()
 const inflight = new Map<string, Promise<ModelOption[]>>()

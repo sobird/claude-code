@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { normalizePayload } from '../event-bus.js'
+import { normalizePayload } from '@/transport/event-bus'
 
 // extractContent is not exported; we test it via normalizePayload's content field
 

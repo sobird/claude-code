@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
-import { applyFileSuggestion, fileQuery } from '../file-completion.js'
+import { applyFileSuggestion, fileQuery } from '@/lib/file-completion'
 
 describe('fileQuery', () => {
   it('finds an @ token at the end of the text', () => {

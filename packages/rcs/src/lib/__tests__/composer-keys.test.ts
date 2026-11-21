@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { resolveEditKey } from '../composer-keys'
+import { resolveEditKey } from '@/lib/composer-keys'
 
 describe('resolveEditKey', () => {
   test('Enter submits', () => {

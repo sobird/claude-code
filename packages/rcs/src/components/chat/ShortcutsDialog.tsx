@@ -7,7 +7,7 @@
 
 import { useTranslations } from 'next-intl'
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/Dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 
 import styles from './ShortcutsDialog.module.css'
 

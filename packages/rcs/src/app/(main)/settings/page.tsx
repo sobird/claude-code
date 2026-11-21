@@ -1,14 +1,14 @@
 import { getTranslations } from 'next-intl/server'
 
-import { ApiKeys } from '../../../components/settings/ApiKeys'
-import { InstallPrompt } from '../../../components/settings/InstallPrompt'
-import { LanguageSelector } from '../../../components/settings/LanguageSelector'
-import { Notifications } from '../../../components/settings/Notifications'
-import { PasswordForm } from '../../../components/settings/PasswordForm'
-import { SettingsApiProvider } from '../../../components/settings/use-settings-api'
-import { Badge } from '../../../components/ui/Badge'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card'
-import { auth } from '../../../lib/auth'
+import { ApiKeys } from '@/components/settings/ApiKeys'
+import { InstallPrompt } from '@/components/settings/InstallPrompt'
+import { LanguageSelector } from '@/components/settings/LanguageSelector'
+import { Notifications } from '@/components/settings/Notifications'
+import { PasswordForm } from '@/components/settings/PasswordForm'
+import { SettingsApiProvider } from '@/components/settings/use-settings-api'
+import { Badge } from '@/components/ui/Badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { auth } from '@/lib/auth'
 
 import styles from './page.module.css'
 

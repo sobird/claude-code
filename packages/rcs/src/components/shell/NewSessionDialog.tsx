@@ -3,12 +3,20 @@
 import { useTranslations } from 'next-intl'
 import { useEffect, useState, type FormEvent } from 'react'
 
-import { useApiErrorMessage } from '../../hooks/useApiErrorMessage'
-import { Button } from '../ui/Button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/Dialog'
-import { Input } from '../ui/Input'
-import { Label } from '../ui/Label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/Select'
+import { Button } from '@/components/ui/Button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
+import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
+
 import type { CreatedSession, EnvironmentSummary } from './types'
 
 import styles from './NewSessionDialog.module.css'

@@ -10,7 +10,7 @@ import {
   sideQuestionAnswerFromResponse,
   sideQuestionErrorFromResponse,
   suggestionPathsFromResponse,
-} from '../bridge-requests.js'
+} from '@/transport/bridge-requests'
 
 const pending = new Set<Promise<unknown>>()
 

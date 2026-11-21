@@ -1,6 +1,6 @@
-import { Dashboard } from '../../components/shell/Dashboard'
-import type { DashboardUser } from '../../components/shell/types'
-import { auth } from '../../lib/auth'
+import { Dashboard } from '@/components/shell/Dashboard'
+import type { DashboardUser } from '@/components/shell/types'
+import { auth } from '@/lib/auth'
 
 interface SessionUser {
   id?: string

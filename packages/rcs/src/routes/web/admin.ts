@@ -8,12 +8,12 @@
 
 import { Hono } from 'hono'
 
-import type { AppEnv } from '../../auth/context.js'
-import { requireAdmin } from '../../auth/middleware.js'
-import { hashPassword } from '../../auth/password.js'
-import type { Role, UserRecord } from '../../contracts.js'
-import type { GuardedUserPatch } from '../../db/repositories/types.js'
-import { legacyUserAuth, readJson } from '../common.js'
+import type { AppEnv } from '@/auth/context'
+import { requireAdmin } from '@/auth/middleware'
+import { hashPassword } from '@/auth/password'
+import type { Role, UserRecord } from '@/contracts'
+import type { GuardedUserPatch } from '@/db/repositories/types'
+import { legacyUserAuth, readJson } from '@/routes/common'
 
 const app = new Hono<AppEnv>()
 

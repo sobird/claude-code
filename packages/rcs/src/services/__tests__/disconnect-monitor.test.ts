@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 
-import type { GatewayConfig } from '../../config.js'
-import { loadConfig } from '../../config.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import type { Repositories } from '../../db/repositories/types.js'
-import { getAllEventBuses, getEventBus, removeEventBus } from '../../transport/event-bus.js'
+import type { GatewayConfig } from '@/config'
+import { loadConfig } from '@/config'
+import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
 import {
   isSessionStale,
   runDisconnectMonitorSweep,
   startDisconnectMonitor,
   stopDisconnectMonitor,
-} from '../disconnect-monitor.js'
+} from '@/services/disconnect-monitor'
+import { getAllEventBuses, getEventBus, removeEventBus } from '@/transport/event-bus'
 
 const AUTH_SECRET = 'test-secret'
 const DISCONNECT_TIMEOUT_SECONDS = 300

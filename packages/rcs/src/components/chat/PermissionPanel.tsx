@@ -14,8 +14,9 @@ import { Check, Pencil, ShieldAlert, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useState } from 'react'
 
-import { isAskUserQuestionRequest } from '../../lib/ask-user-question'
-import { resolvePermissionKey } from '../../lib/permission-keys'
+import { Button } from '@/components/ui/Button'
+import { isAskUserQuestionRequest } from '@/lib/ask-user-question'
+import { resolvePermissionKey } from '@/lib/permission-keys'
 import {
   editableRule,
   permissionOptions,
@@ -23,11 +24,11 @@ import {
   type PermissionDecision,
   type PermissionOption,
   type PermissionSuggestion,
-} from '../../lib/permission-suggestions'
-import type { PendingPermission } from '../../lib/session-reducer'
-import { diffLines, toolEditPreview } from '../../lib/text-diff'
-import { cx } from '../../lib/utils'
-import { Button } from '../ui/Button'
+} from '@/lib/permission-suggestions'
+import type { PendingPermission } from '@/lib/session-reducer'
+import { diffLines, toolEditPreview } from '@/lib/text-diff'
+import { cx } from '@/lib/utils'
+
 import { AskUserQuestionCard } from './AskUserQuestionCard'
 import { ExitPlanModeCard, isExitPlanModeRequest } from './ExitPlanModeCard'
 import { optionDetail, optionLabel } from './permission-option-labels'

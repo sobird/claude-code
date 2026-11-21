@@ -9,9 +9,9 @@
 
 import { Hono } from 'hono'
 
-import type { AppContext, AppEnv } from '../../auth/context.js'
-import { MAX_ATTACHMENT_BYTES, isAllowedAttachmentMediaType } from '../../lib/attachments.js'
-import { jsonError, legacyUserAuth } from '../common.js'
+import type { AppContext, AppEnv } from '@/auth/context'
+import { MAX_ATTACHMENT_BYTES, isAllowedAttachmentMediaType } from '@/lib/attachments'
+import { jsonError, legacyUserAuth } from '@/routes/common'
 
 const app = new Hono<AppEnv>()
 

@@ -6,10 +6,10 @@
  * extends this module with the WebSocket/SSE transport that consumes it.
  */
 
-import type { SessionEventRecord } from '../contracts.js'
-import type { Repositories } from '../db/repositories/types.js'
-import { sanitizeTaskUsage } from '../lib/background-tasks.js'
-import { notifyInboundEvent } from '../services/push-notifier.js'
+import type { SessionEventRecord } from '@/contracts'
+import type { Repositories } from '@/db/repositories/types'
+import { sanitizeTaskUsage } from '@/lib/background-tasks'
+import { notifyInboundEvent } from '@/services/push-notifier'
 
 export interface SessionEvent {
   /** Event UUID (`session_events.event_id`). */

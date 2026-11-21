@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 
-import { verifyEnvironmentToken } from '../../auth/tokens.js'
-import { toCompatibleCodeSessionId, toWebSessionId } from '../../contracts.js'
-import { createMemoryRepositories } from '../../db/repositories/index.js'
-import type { Repositories } from '../../db/repositories/types.js'
-import { getAllEventBuses, getEventBus, removeEventBus } from '../../transport/event-bus.js'
+import { verifyEnvironmentToken } from '@/auth/tokens'
+import { toCompatibleCodeSessionId, toWebSessionId } from '@/contracts'
+import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
 import {
   deregisterEnvironment,
   listActiveEnvironments,
@@ -12,7 +11,7 @@ import {
   registerEnvironment,
   toEnvironmentResponse,
   updatePollTime,
-} from '../environment.js'
+} from '@/services/environment'
 import {
   archiveSession,
   createCodeSession,
@@ -27,7 +26,8 @@ import {
   unarchiveSession,
   updateSessionStatus,
   updateSessionTitle,
-} from '../session.js'
+} from '@/services/session'
+import { getAllEventBuses, getEventBus, removeEventBus } from '@/transport/event-bus'
 
 const AUTH_SECRET = 'test-secret'
 

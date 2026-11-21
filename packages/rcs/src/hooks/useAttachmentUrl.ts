@@ -10,7 +10,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { createApiClient, type ApiClient } from '../lib/api-client'
+import { createApiClient, type ApiClient } from '@/lib/api-client'
+
 import { useAccessToken } from './useAccessToken'
 
 const MAX_CACHED_URLS = 50
