@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Remote Control",
+    "appName": "Sobird",
     "appDescription": "Remote control for Claude Code sessions",
     "account": "Account",
     "dashboard": "Dashboard",
@@ -307,8 +307,8 @@
     }
   },
   "auth": {
-    "pageTitle": "Sign in · Remote Control Server",
-    "brand": "Remote Control Server",
+    "pageTitle": "Sign in · Sobird",
+    "brand": "Sobird",
     "title": "Sign in",
     "subtitle": "Use your RCS account to continue.",
     "username": "Username",
@@ -382,7 +382,7 @@
     },
     "install": {
       "title": "Install app",
-      "description": "Install Remote Control for quick access from your home screen or dock.",
+      "description": "Install Sobird for quick access from your home screen or dock.",
       "button": "Install app",
       "iosHint": "On iOS Safari, tap the Share button, then choose <b>Add to Home Screen</b>.",
       "dismiss": "Not now"
@@ -461,7 +461,7 @@
   },
   "offline": {
     "title": "You are offline",
-    "description": "Remote Control needs a connection. Reconnect and the app will pick up where you left off."
+    "description": "Sobird needs a connection. Reconnect and the app will pick up where you left off."
   },
   "notifications": {
     "title": "Claude needs your confirmation",

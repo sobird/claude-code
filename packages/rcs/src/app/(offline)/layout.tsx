@@ -7,7 +7,7 @@ import { baseMetadata, baseViewport } from '../../lib/metadata'
 // oxlint-disable-next-line import/no-unassigned-import -- global stylesheet side effect
 import '../globals.css'
 
-export const metadata: Metadata = { ...baseMetadata, title: 'Remote Control' }
+export const metadata: Metadata = { ...baseMetadata, title: 'Sobird' }
 
 export const viewport: Viewport = baseViewport
 

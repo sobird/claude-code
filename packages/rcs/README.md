@@ -1,6 +1,11 @@
-# @sobird/rcs — Remote Control Server
+# Sobird — Remote Control Server
 
-Self-hosted control plane for Claude Code "remote control" sessions. One Postgres
+<p align="left"><img src="public/brand/rcs-logo.svg" width="220" alt="Sobird"></p>
+
+品牌规范（logo、颜色、字体、启动屏与导出规则）：[docs/brand.html](docs/brand.html)。
+
+Self-hosted control plane for Claude Code "remote control" sessions (package
+`@sobird/rcs`). One Postgres
 database, a Next.js web UI, and a Bun gateway that speaks the bridge/ACP
 protocols.
 

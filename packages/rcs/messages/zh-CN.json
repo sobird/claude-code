@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "远程控制",
+    "appName": "Sobird",
     "appDescription": "用于 Claude Code 会话的远程控制",
     "account": "账户",
     "dashboard": "仪表盘",
@@ -307,8 +307,8 @@
     }
   },
   "auth": {
-    "pageTitle": "登录 · 远程控制服务器",
-    "brand": "远程控制服务器",
+    "pageTitle": "登录 · Sobird",
+    "brand": "Sobird",
     "title": "登录",
     "subtitle": "使用你的 RCS 账户继续。",
     "username": "用户名",
@@ -382,7 +382,7 @@
     },
     "install": {
       "title": "安装应用",
-      "description": "安装远程控制，以便从主屏幕或程序坞快速访问。",
+      "description": "安装 Sobird，以便从主屏幕或程序坞快速访问。",
       "button": "安装应用",
       "iosHint": "在 iOS Safari 中，点按“共享”按钮，然后选择<b>添加到主屏幕</b>。",
       "dismiss": "暂不"
@@ -461,7 +461,7 @@
   },
   "offline": {
     "title": "当前离线",
-    "description": "远程控制需要网络连接。重新连接后，应用会从上次中断的地方继续。"
+    "description": "Sobird 需要网络连接。重新连接后，应用会从上次中断的地方继续。"
   },
   "notifications": {
     "title": "Claude 需要你确认",

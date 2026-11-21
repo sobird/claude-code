@@ -1,0 +1,1849 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sobird · 品牌手册 v1.0</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Lora:wght@600&family=Poppins:wght@400;500;600&display=swap');
+      :root {
+        --brand: #c96442;
+        --cream: #f6f5f2;
+        --ink: #1a1917;
+        --stone0: #efeee9;
+        --stone2: #fbfaf8;
+        --stone3: #dfddd8;
+        --muted: #969088;
+        --dark: #222120;
+        --bad: #a5462f;
+        --ok: #3f7d5a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--stone0);
+        color: var(--ink);
+        font-family: Poppins, 'PingFang SC', sans-serif;
+        padding: 42px 32px 70px;
+      }
+      header {
+        max-width: 1080px;
+        margin: 0 auto 14px;
+      }
+      header h1 {
+        font-family: Lora, Georgia, serif;
+        font-weight: 600;
+        font-size: 31px;
+        margin: 0 0 8px;
+        letter-spacing: -0.01em;
+      }
+      header p {
+        margin: 0;
+        color: #5e5a54;
+        font-size: 13.5px;
+        line-height: 1.75;
+        max-width: 900px;
+      }
+      header p b {
+        color: var(--ink);
+      }
+      .toc {
+        max-width: 1080px;
+        margin: 0 auto 18px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        position: sticky;
+        top: 0;
+        padding: 10px 0;
+        background: var(--stone0);
+        z-index: 5;
+      }
+      .toc a {
+        font-size: 11px;
+        color: #5e5a54;
+        text-decoration: none;
+        background: #fff;
+        border: 1px solid var(--stone3);
+        border-radius: 999px;
+        padding: 5px 12px;
+      }
+      .toc a:hover {
+        border-color: var(--brand);
+        color: var(--brand);
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .card {
+        background: var(--stone2);
+        border: 1px solid var(--stone3);
+        border-radius: 18px;
+        padding: 24px 26px;
+        scroll-margin-top: 56px;
+      }
+      .card h2 {
+        margin: 0 0 4px;
+        font-family: Lora, Georgia, serif;
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .card .sub {
+        margin: 0 0 20px;
+        font-size: 12.5px;
+        color: #5e5a54;
+        line-height: 1.7;
+        max-width: 940px;
+      }
+      .subhead {
+        margin: 22px 0 10px;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      /* hero */
+      .hero {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 34px;
+        align-items: center;
+      }
+      .hero .bigwrap {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        flex: none;
+        filter: drop-shadow(0 10px 22px rgba(60, 40, 30, 0.16));
+      }
+      .hero .bigwrap img {
+        width: 150px;
+        height: 150px;
+        display: block;
+      }
+      .hero .bigwrap svg {
+        position: absolute;
+        inset: 0;
+        width: 150px;
+        height: 150px;
+      }
+      .hero h2 {
+        margin: 0 0 3px;
+        font-family: Lora, Georgia, serif;
+        font-size: 23px;
+      }
+      .hero .en {
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 12px;
+      }
+      .hero p {
+        margin: 0 0 14px;
+        font-size: 12.5px;
+        line-height: 1.7;
+        color: #5e5a54;
+        max-width: 380px;
+      }
+      .lockups {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .lockup {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: max-content;
+        padding: 9px 16px 9px 10px;
+        border-radius: 11px;
+      }
+      .lockup img {
+        width: 28px;
+        height: 28px;
+      }
+      .lockup span {
+        font-family: Lora, Georgia, serif;
+        font-size: 21px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .lockup.light {
+        background: #fff;
+        border: 1px solid var(--stone3);
+      }
+      .lockup.light span {
+        color: #1a1917;
+      }
+      .lockup.dark {
+        background: var(--dark);
+      }
+      .lockup.dark span {
+        color: var(--cream);
+      }
+      .sizes {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        align-items: flex-end;
+      }
+      .sizes .row {
+        display: flex;
+        align-items: flex-end;
+        gap: 16px;
+      }
+      .sz {
+        text-align: center;
+      }
+      .sz small {
+        display: block;
+        margin-top: 6px;
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .raster {
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+      }
+      .raster canvas {
+        image-rendering: pixelated;
+        width: 52px;
+        height: 52px;
+        border-radius: 6px;
+        background: var(--stone0);
+      }
+      .raster span {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .raster div {
+        text-align: center;
+      }
+
+      /* scenes */
+      .scenes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .scene {
+        background: #fff;
+        border: 1px solid var(--stone3);
+        border-radius: 14px;
+        padding: 16px;
+      }
+      .scene h3 {
+        margin: 0 0 2px;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .scene .cap {
+        margin: 0 0 12px;
+        font-size: 10.5px;
+        color: var(--muted);
+      }
+      .browser {
+        border-radius: 9px;
+        overflow: hidden;
+        border: 1px solid var(--stone3);
+        background: var(--stone0);
+      }
+      .tabbar {
+        display: flex;
+        align-items: flex-end;
+        gap: 3px;
+        background: #dedcd6;
+        padding: 7px 7px 0;
+      }
+      .tab {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10.5px;
+        color: #6a655e;
+        background: #ecebe6;
+        border-radius: 7px 7px 0 0;
+        padding: 6px 11px;
+        max-width: 150px;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .tab.active {
+        background: #fff;
+        color: #1a1917;
+      }
+      .tab img {
+        width: 16px;
+        height: 16px;
+        flex: none;
+      }
+      .tab .ghost {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        background: #c9c6bf;
+        flex: none;
+      }
+      .addressbar {
+        background: #fff;
+        border-bottom: 1px solid #e7e5df;
+        padding: 6px 11px;
+        font-size: 10px;
+        color: #969088;
+      }
+      .browser .inner {
+        background: var(--stone0);
+        padding: 16px;
+      }
+      .browser .inner .nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        border: 1px solid var(--stone3);
+        border-radius: 8px;
+        padding: 7px 12px;
+      }
+      .browser .inner .nav img {
+        width: 20px;
+        height: 20px;
+      }
+      .browser .inner .nav span {
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .phonehome {
+        width: 100%;
+        max-width: 250px;
+        margin: 0 auto;
+        border-radius: 26px;
+        background: linear-gradient(165deg, #d8cbb9, #8f8172);
+        padding: 22px 16px 26px;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+      }
+      .ios-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px 12px;
+      }
+      .app {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+      }
+      .app img {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
+      }
+      .app .ghost {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.24);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .app span {
+        font-size: 9.5px;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      }
+      .masks {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        align-items: flex-end;
+        padding: 6px 0 2px;
+      }
+      .maskcell {
+        text-align: center;
+      }
+      .maskcell .shape {
+        width: 74px;
+        height: 74px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .maskcell .shape img {
+        width: 100%;
+        height: 100%;
+      }
+      .maskcell .circle {
+        border-radius: 50%;
+      }
+      .maskcell .squircle {
+        border-radius: 24%;
+      }
+      .maskcell .teardrop {
+        border-radius: 50% 50% 50% 8px;
+      }
+      .maskcell span {
+        display: block;
+        margin-top: 7px;
+        font-size: 9.5px;
+        color: var(--muted);
+      }
+      .navrows {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .navbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 13px;
+        border-radius: 8px;
+        width: max-content;
+      }
+      .navbar.light {
+        background: #fff;
+        border: 1px solid var(--stone3);
+      }
+      .navbar.dark {
+        background: var(--dark);
+      }
+      .navbar img {
+        width: 20px;
+        height: 20px;
+      }
+      .navbar span {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .navbar.light span {
+        color: #1a1917;
+      }
+      .navbar.dark span {
+        color: var(--stone0);
+      }
+      .gh {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .gh img {
+        width: 84px;
+        height: 84px;
+        border-radius: 50%;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
+      }
+      .gh .meta {
+        font-size: 11px;
+        line-height: 1.6;
+        color: #5e5a54;
+      }
+      .gh .meta b {
+        display: block;
+        font-size: 13px;
+        color: var(--ink);
+      }
+      .og {
+        width: 100%;
+        aspect-ratio: 1200/630;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--stone3);
+        background: var(--cream);
+        display: flex;
+        align-items: center;
+        gap: 5.5%;
+        padding: 0 6%;
+        position: relative;
+      }
+      .og .left {
+        display: flex;
+        flex-direction: column;
+        gap: 4.5%;
+      }
+      .og .left img {
+        width: 16%;
+        min-width: 54px;
+      }
+      .og .word {
+        font-family: Lora, Georgia, serif;
+        font-weight: 600;
+        font-size: clamp(22px, 4.4vw, 42px);
+        letter-spacing: -0.01em;
+        line-height: 1;
+      }
+      .og .tag {
+        font-size: clamp(8px, 1.15vw, 12px);
+        color: #5e5a54;
+        letter-spacing: 0.06em;
+      }
+      .og .term {
+        flex: 1;
+        background: var(--dark);
+        border-radius: 9px;
+        padding: 5% 4.5% 6%;
+        display: flex;
+        flex-direction: column;
+        gap: 8.5%;
+      }
+      .og .dots {
+        display: flex;
+        gap: 5px;
+      }
+      .og .dots i {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #5a5650;
+      }
+      .og .dots i:first-child {
+        background: var(--brand);
+      }
+      .og .line {
+        height: 6px;
+        border-radius: 3px;
+        background: #3a3835;
+      }
+      .og .line.w1 {
+        width: 62%;
+      }
+      .og .line.w2 {
+        width: 84%;
+      }
+      .og .line.w3 {
+        width: 46%;
+      }
+      .og .line.acc {
+        background: rgba(201, 100, 66, 0.55);
+        width: 34%;
+      }
+
+      /* motion */
+      .verdict {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+      .vcell {
+        border: 1px solid var(--stone3);
+        border-radius: 11px;
+        background: #fff;
+        padding: 13px 15px;
+      }
+      .vcell .k {
+        font-size: 9.5px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 7px;
+      }
+      .vcell b {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 5px;
+      }
+      .vcell p {
+        margin: 0;
+        font-size: 11px;
+        line-height: 1.6;
+        color: #5e5a54;
+      }
+      .vcell.no b {
+        color: var(--bad);
+      }
+      .vcell.yes b {
+        color: var(--ok);
+      }
+      .variants {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 16px;
+      }
+      .variant {
+        display: grid;
+        grid-template-columns: 88px 176px 1fr;
+        gap: 24px;
+        align-items: center;
+        background: #fff;
+        border: 1px solid var(--stone3);
+        border-radius: 14px;
+        padding: 16px 20px;
+      }
+      .variant .stage {
+        width: 88px;
+        height: 88px;
+        flex: none;
+        filter: drop-shadow(0 6px 13px rgba(60, 40, 30, 0.15));
+      }
+      .variant .stage svg {
+        width: 88px;
+        height: 88px;
+        display: block;
+      }
+      .variant .info h3 {
+        margin: 0 0 2px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .variant .info .en {
+        font-size: 9.5px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 7px;
+      }
+      .variant .info p {
+        margin: 0;
+        font-size: 11.5px;
+        line-height: 1.6;
+        color: #5e5a54;
+      }
+      .ctxs {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        align-items: flex-start;
+      }
+      .navchip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        background: #fff;
+        border: 1px solid var(--stone3);
+        border-radius: 8px;
+      }
+      .navchip svg {
+        width: 22px;
+        height: 22px;
+      }
+      .navchip span {
+        font-size: 13.5px;
+        font-weight: 600;
+      }
+      .wave {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        background: #fff;
+        border: 1px solid var(--stone3);
+        border-radius: 10px;
+        padding: 8px 14px;
+      }
+      .wave .dots {
+        display: inline-flex;
+        gap: 4px;
+      }
+      .wave .dots i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--brand);
+        display: block;
+      }
+      .wave em {
+        font-style: normal;
+        font-size: 11.5px;
+        color: #5e5a54;
+      }
+      @keyframes seq {
+        0%,
+        70%,
+        100% {
+          opacity: 0.4;
+          transform: scale(0.78);
+        }
+        20% {
+          opacity: 1;
+          transform: scale(1.16);
+        }
+      }
+      @keyframes breathe {
+        0%,
+        100% {
+          opacity: 0.62;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      @keyframes twinkle {
+        0%,
+        100% {
+          opacity: 0.75;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.1);
+        }
+      }
+      @keyframes stepwise {
+        0% {
+          opacity: 0.35;
+        }
+        12%,
+        33% {
+          opacity: 1;
+        }
+        45%,
+        100% {
+          opacity: 0.35;
+        }
+      }
+      .svg-anim .dot {
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      .svg-anim.a .d1 {
+        animation: seq 1.45s infinite;
+      }
+      .svg-anim.a .d2 {
+        animation: seq 1.45s 0.18s infinite;
+      }
+      .svg-anim.a .d3 {
+        animation: seq 1.45s 0.36s infinite;
+      }
+      .svg-anim.b .dot {
+        animation: breathe 2.6s ease-in-out infinite;
+      }
+      .svg-anim.b .spark,
+      .svg-anim.c .spark {
+        animation: twinkle 2.6s ease-in-out infinite;
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      .svg-anim.c .d1 {
+        animation: stepwise 2.1s infinite;
+      }
+      .svg-anim.c .d2 {
+        animation: stepwise 2.1s 0.7s infinite;
+      }
+      .svg-anim.c .d3 {
+        animation: stepwise 2.1s 1.4s infinite;
+      }
+      .seq .dots i {
+        animation: seq 1.45s infinite;
+      }
+      .seq .dots i:nth-child(2) {
+        animation-delay: 0.18s;
+      }
+      .seq .dots i:nth-child(3) {
+        animation-delay: 0.36s;
+      }
+      .stepwise-ui .dots i {
+        animation: stepwise 2.1s infinite;
+      }
+      .stepwise-ui .dots i:nth-child(2) {
+        animation-delay: 0.7s;
+      }
+      .stepwise-ui .dots i:nth-child(3) {
+        animation-delay: 1.4s;
+      }
+      .breathe-ui .dots i {
+        animation: breathe 2.6s ease-in-out infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .svg-anim *,
+        .seq .dots i,
+        .stepwise-ui .dots i,
+        .breathe-ui .dots i {
+          animation: none !important;
+          opacity: 1 !important;
+        }
+      }
+
+      /* splash */
+      .launchrow {
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        gap: 26px;
+        align-items: center;
+      }
+      .launchphone {
+        width: 206px;
+        aspect-ratio: 1170/2532;
+        border-radius: 26px;
+        background: var(--stone0);
+        position: relative;
+        overflow: hidden;
+        box-shadow:
+          0 14px 34px rgba(50, 35, 25, 0.16),
+          inset 0 0 0 5px #1c1b1a;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 13px;
+      }
+      .launchphone .notch {
+        position: absolute;
+        top: 11px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 66px;
+        height: 16px;
+        border-radius: 9px;
+        background: #1c1b1a;
+      }
+      .launchphone img {
+        width: 48px;
+        height: 48px;
+      }
+      .launchphone .name {
+        font-family: Lora, Georgia, serif;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .launchphone .hint {
+        position: absolute;
+        bottom: 15px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 8.5px;
+        color: var(--muted);
+      }
+      .launchphone.dark {
+        background: #1a1917;
+        box-shadow:
+          0 14px 34px rgba(20, 15, 12, 0.28),
+          inset 0 0 0 5px #0e0d0c;
+      }
+      .launchphone.dark .name {
+        color: #efeee9;
+      }
+      .launchphone.dark .hint {
+        color: #7d776f;
+      }
+      .scenesplash {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+      }
+      .scenesplash .launchphone {
+        width: 140px;
+        border-radius: 20px;
+        gap: 9px;
+        box-shadow:
+          0 10px 22px rgba(50, 35, 25, 0.14),
+          inset 0 0 0 4px #1c1b1a;
+      }
+      .scenesplash .launchphone.dark {
+        box-shadow:
+          0 10px 22px rgba(20, 15, 12, 0.24),
+          inset 0 0 0 4px #0e0d0c;
+      }
+      .scenesplash .launchphone .notch {
+        width: 48px;
+        height: 12px;
+        top: 8px;
+        border-radius: 7px;
+      }
+      .scenesplash .launchphone img {
+        width: 36px;
+        height: 36px;
+      }
+      .scenesplash .launchphone .name {
+        font-size: 12.5px;
+      }
+      .scenesplash .launchphone .hint {
+        display: none;
+      }
+      .layoutrow {
+        display: flex;
+        gap: 26px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+      }
+      .layoutcell {
+        text-align: center;
+      }
+      .miniphone {
+        width: 128px;
+        aspect-ratio: 1170/2532;
+        border-radius: 18px;
+        background: var(--stone0);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        box-shadow: inset 0 0 0 1px var(--stone3);
+      }
+      .miniphone img {
+        width: 34px;
+        height: 34px;
+      }
+      .miniphone .name {
+        font-family: Lora, Georgia, serif;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .miniphone.row {
+        flex-direction: row;
+        gap: 8px;
+      }
+      .miniphone.row img {
+        width: 26px;
+        height: 26px;
+      }
+      .miniphone.row .name {
+        font-size: 11.5px;
+      }
+      .miniphone.solo img {
+        width: 42px;
+        height: 42px;
+      }
+      .layoutcell .cap2 {
+        margin-top: 8px;
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .layoutcell .cap2 b {
+        color: var(--ink);
+      }
+      .splashmeta .row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        padding: 9px 0;
+        border-bottom: 1px solid #eeece7;
+        font-size: 12px;
+        line-height: 1.6;
+        color: #5e5a54;
+      }
+      .splashmeta .row:last-child {
+        border-bottom: 0;
+      }
+      .splashmeta .row b {
+        flex: none;
+        width: 88px;
+        color: var(--ink);
+        font-weight: 600;
+      }
+      code {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 0.92em;
+        background: rgba(201, 100, 66, 0.08);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+
+      /* tables */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      th {
+        text-align: left;
+        font-size: 9.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 600;
+        padding: 0 10px 8px;
+        border-bottom: 1px solid var(--stone3);
+      }
+      td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #eeece7;
+        vertical-align: top;
+        color: #5e5a54;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      td.path {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 11px;
+        color: #3f3b36;
+      }
+      td.note {
+        color: #5e5a54;
+      }
+      td.mono {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 10.5px;
+        color: #3f3b36;
+      }
+      td b {
+        color: var(--ink);
+      }
+      .sw {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        white-space: nowrap;
+      }
+      .sw i {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        display: inline-block;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+      }
+      .pillbad {
+        display: inline-block;
+        font-size: 9.5px;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 2px 8px;
+        background: rgba(165, 70, 47, 0.13);
+        color: var(--bad);
+        white-space: nowrap;
+      }
+      .pillok {
+        display: inline-block;
+        font-size: 9.5px;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 2px 8px;
+        background: rgba(63, 125, 90, 0.14);
+        color: var(--ok);
+        white-space: nowrap;
+      }
+      ul.notes {
+        margin: 14px 0 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      ul.notes li {
+        font-size: 12px;
+        line-height: 1.65;
+        color: #5e5a54;
+        padding-left: 15px;
+        position: relative;
+      }
+      ul.notes li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--brand);
+      }
+      ul.notes li b {
+        color: var(--ink);
+      }
+      .rules {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .rules .col {
+        background: #fff;
+        border: 1px solid var(--stone3);
+        border-radius: 11px;
+        padding: 14px 16px;
+      }
+      .rules .col h3 {
+        margin: 0 0 8px;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .rules .do h3 {
+        color: var(--ok);
+      }
+      .rules .dont h3 {
+        color: var(--bad);
+      }
+      .rules ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .rules li {
+        font-size: 11.5px;
+        line-height: 1.55;
+        color: #5e5a54;
+        padding-left: 14px;
+        position: relative;
+      }
+      .rules li::before {
+        position: absolute;
+        left: 0;
+        top: 0;
+        font-size: 11px;
+      }
+      .rules .do li::before {
+        content: '✓';
+        color: var(--ok);
+      }
+      .rules .dont li::before {
+        content: '✕';
+        color: var(--bad);
+      }
+
+      footer {
+        max-width: 1080px;
+        margin: 24px auto 0;
+        font-size: 12px;
+        color: #5e5a54;
+        line-height: 1.7;
+      }
+      footer b {
+        color: var(--ink);
+      }
+      @media (max-width: 900px) {
+        .hero {
+          grid-template-columns: 1fr;
+          justify-items: start;
+        }
+        .scenes {
+          grid-template-columns: 1fr;
+        }
+        .verdict {
+          grid-template-columns: 1fr;
+        }
+        .launchrow {
+          grid-template-columns: 1fr 1fr;
+        }
+        .splashmeta {
+          grid-column: 1 / -1;
+        }
+        .rules {
+          grid-template-columns: 1fr;
+        }
+        .variant {
+          grid-template-columns: 88px 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Sobird · 品牌手册 <span style="font-size: 15px; color: #969088; font-weight: 400">v1.0</span></h1>
+      <p>
+        本页只放<b>长期有效的规范</b>：标志、几何、颜色、字体、场景、动效、启动屏与导出规则。上线进度、文件状态与带日期的决策不在本页维护。
+      </p>
+    </header>
+    <nav class="toc">
+      <a href="#mark">标志</a>
+      <a href="#geometry">几何</a>
+      <a href="#color">颜色</a>
+      <a href="#type">字体</a>
+      <a href="#applications">应用</a>
+      <a href="#motion">动效</a>
+      <a href="#splash">启动屏</a>
+      <a href="#export">导出</a>
+      <a href="#rules">禁区</a>
+      <a href="#assets">资产</a>
+    </nav>
+    <main>
+      <section class="card hero" id="mark">
+        <div class="bigwrap" id="bigwrap"></div>
+        <div>
+          <h2>Sobird</h2>
+          <div class="en">Remote control for Claude Code</div>
+          <p>
+            暖石底 <b style="color: #c96442">#c96442</b> + 奶油前景 <b style="color: #1a1917">#f6f5f2</b>，对比
+            3.58:1，满足图形 3:1 阈值。标志由三部分构成：终端提示符
+            <b>&gt;</b>（发起）、三个分离的点（进行中）、右上角星火（远端 AI）。浅/深背景共用同一枚满底图标。
+          </p>
+          <div class="lockups" id="lockups"></div>
+        </div>
+        <div class="sizes">
+          <div class="row" id="sizes"></div>
+          <div class="raster" id="raster"></div>
+        </div>
+      </section>
+
+      <section class="card" id="geometry">
+        <h2>几何与安全区</h2>
+        <p class="sub">
+          主图标画布 64×64，圆角 15（约 23%）。所有部件在 16px 下仍能分辨：提示符描边 7.5；三点半径 3、间距 8.5、基线
+          y=44.5；星火中心 (48.5, 24.5)，半径 6.4，内凹比 0.22。最远点距圆心 r≈24.1。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 120px">部件</th>
+              <th style="width: 230px">参数</th>
+              <th>说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>画布 / 圆角</b></td>
+              <td class="mono">64 × 64 · rx 15</td>
+              <td>UI 内嵌使用；系统图标导出时改为满底直角（见「导出」）。</td>
+            </tr>
+            <tr>
+              <td><b>提示符</b></td>
+              <td class="mono">M16 19.5 L27.5 32 L16 44.5<br />stroke 7.5</td>
+              <td>圆头圆角端点，居左偏中；表达「终端 / 发起指令」。</td>
+            </tr>
+            <tr>
+              <td><b>三个点</b></td>
+              <td class="mono">r 3 @ y 44.5<br />x = 32 / 40.5 / 49</td>
+              <td>间距 8.5；三点不重叠，缩小到 16px 仍能读成「进行中」。</td>
+            </tr>
+            <tr>
+              <td><b>星火</b></td>
+              <td class="mono">中心 (48.5, 24.5)<br />R 6.4 · ratio 0.22</td>
+              <td>对称四角星，右上角；表达「远端 AI 在回应」。</td>
+            </tr>
+            <tr>
+              <td><b>maskable 安全区</b></td>
+              <td class="mono">半径 25.6（80%）<br />标志最远 r≈24.1</td>
+              <td>Android 自适应图标满底 + 内容内缩到 80%；所有裁切形状都不会切到标志。</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 class="subhead">最小尺寸</h3>
+        <ul class="notes">
+          <li><b>完整标志</b>：≥ 24px 使用完整版（提示符 + 三点 + 星火）；导航栏固定 20px。</li>
+          <li><b>16px favicon</b>：用简化版，只留「&gt; + 星火」，去掉三点，避免糊成一团。</li>
+          <li><b>系统图标</b>：iOS 180、Android 512、maskable 512，均按「导出」规则生成。</li>
+          <li><b>留白</b>：标志四周至少留出 1/4 画布宽的空白，不与文字或边框贴边。</li>
+        </ul>
+      </section>
+
+      <section class="card" id="color">
+        <h2>颜色</h2>
+        <p class="sub">
+          单一强调色 + 暖石中性色。品牌色只用于图标底、关键强调与小面积高亮；大面积背景用表面色，保证长时间阅读不刺眼。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 170px">Token</th>
+              <th style="width: 140px">值</th>
+              <th>用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="sw"><i style="background: #c96442"></i><b>brand</b></td>
+              <td class="mono">#c96442</td>
+              <td>图标底、CTA、选中态、关键数字；不用于正文。</td>
+            </tr>
+            <tr>
+              <td class="sw"><i style="background: #f6f5f2"></i><b>cream</b></td>
+              <td class="mono">#f6f5f2</td>
+              <td>品牌色上的图形/大号文字；正文背景的表面色之一。</td>
+            </tr>
+            <tr>
+              <td class="sw"><i style="background: #efeee9"></i><b>surface-0</b></td>
+              <td class="mono">#efeee9</td>
+              <td>页面底色、PWA 启动屏底色、manifest <code>background_color</code>。</td>
+            </tr>
+            <tr>
+              <td class="sw"><i style="background: #f6f5f2"></i><b>surface-1</b></td>
+              <td class="mono">#f6f5f2</td>
+              <td>卡片、侧栏等一级容器。</td>
+            </tr>
+            <tr>
+              <td class="sw"><i style="background: #fbfaf8"></i><b>surface-2</b></td>
+              <td class="mono">#fbfaf8</td>
+              <td>页面主内容区。</td>
+            </tr>
+            <tr>
+              <td class="sw"><i style="background: #dfddd8"></i><b>surface-3</b></td>
+              <td class="mono">#dfddd8</td>
+              <td>分割线、边框、禁用态。</td>
+            </tr>
+            <tr>
+              <td class="sw"><i style="background: #1a1917"></i><b>ink</b></td>
+              <td class="mono">#1a1917</td>
+              <td>主文字；深色模式的页面底色。</td>
+            </tr>
+            <tr>
+              <td class="sw"><i style="background: #5e5a54"></i><b>secondary</b></td>
+              <td class="mono">#5e5a54</td>
+              <td>正文、说明文字。</td>
+            </tr>
+            <tr>
+              <td class="sw"><i style="background: #969088"></i><b>muted</b></td>
+              <td class="mono">#969088</td>
+              <td>元信息、占位符、次要标签。</td>
+            </tr>
+            <tr>
+              <td class="sw"><i style="background: #222120"></i><b>dark surface</b></td>
+              <td class="mono">#1a1917 / #222120<br />#2c2a28 / #3a3835</td>
+              <td>深色模式的分层表面，依次用于底、容器、悬浮层、边框。</td>
+            </tr>
+          </tbody>
+        </table>
+        <ul class="notes">
+          <li><b>对比度</b>：cream on brand = 3.58:1，白色 on brand = 3.90:1——都只够图形与大号文字，不能承载正文。</li>
+          <li><b>不要</b>引入第二个高饱和强调色；需要层级时用暖石中性色的明度差，而不是再加色相。</li>
+        </ul>
+      </section>
+
+      <section class="card" id="type">
+        <h2>字体与字标</h2>
+        <p class="sub">
+          字标用 Lora 600（Title Case「Sobird」），界面正文用 Poppins，中文字体回落到 PingFang
+          SC，代码与终端输出用等宽字体。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 150px">角色</th>
+              <th style="width: 250px">字体</th>
+              <th>用法</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>字标 / 标题</b></td>
+              <td class="mono">Lora 600</td>
+              <td>「Sobird」始终 Title Case；标题与品牌语境的大字。</td>
+            </tr>
+            <tr>
+              <td><b>界面正文</b></td>
+              <td class="mono">Poppins 400 / 500 / 600</td>
+              <td>按钮、标签、正文；字重不超过 600。</td>
+            </tr>
+            <tr>
+              <td><b>中文回落</b></td>
+              <td class="mono">PingFang SC</td>
+              <td>与 Poppins 混排时保持行高一致。</td>
+            </tr>
+            <tr>
+              <td><b>代码</b></td>
+              <td class="mono">JetBrains Mono</td>
+              <td>终端、路径、命令；不用于品牌字标。</td>
+            </tr>
+          </tbody>
+        </table>
+        <ul class="notes">
+          <li><b>字标组合</b>：图标与文字间距约 0.35 倍文字高度；不要压缩字距或拉伸字体。</li>
+          <li><b>副标题</b>：「Remote control for Claude Code」以小号大写字母、宽字距呈现，不抢字标。</li>
+        </ul>
+      </section>
+
+      <section class="card" id="applications">
+        <h2>应用示例</h2>
+        <p class="sub">
+          同一枚图标在真实界面里的样子；Android 使用 80% 内缩的 maskable 版本铺进裁切形状，iOS 使用不透明的 180px
+          圆角图标。
+        </p>
+        <div class="scenes" id="scenes-grid"></div>
+      </section>
+
+      <section class="card" id="motion">
+        <h2>动效原则</h2>
+        <p class="sub">
+          系统启动屏与主屏图标都不能动；呼吸效果只放在 App
+          加载完成后的产品界面。三版共用同一套静态几何，只改节奏；系统开启「减少动态效果」时全部静止。
+        </p>
+        <div class="verdict">
+          <div class="vcell no">
+            <div class="k">iOS PWA 启动屏</div>
+            <b>静态 PNG</b>
+            <p>只有 apple-touch-startup-image，按设备尺寸一张张声明；不支持 SVG、CSS、视频。</p>
+          </div>
+          <div class="vcell no">
+            <div class="k">主屏 / favicon</div>
+            <b>静态位图</b>
+            <p>iOS、Android 主屏图标与浏览器 favicon 都不播放动画，也不读取 SVG 内的 CSS 动画。</p>
+          </div>
+          <div class="vcell yes">
+            <div class="k">产品内界面</div>
+            <b>可动画</b>
+            <p>加载遮罩、思考指示、连接状态都能用 CSS/SVG 动效，这里才是呼吸灯生效的地方。</p>
+          </div>
+        </div>
+        <div class="variants" id="variants"></div>
+        <ul class="notes">
+          <li>
+            <b>推荐搭配</b>：思考/执行用 A（顺序呼吸），加载/连接遮罩用 B（整体呼吸）；C
+            留给多阶段加载，别在常驻导航栏里播放。
+          </li>
+          <li><b>节奏</b>：周期 1.4–2.6s，不要更快；导航栏保持静态，只在真实等待态动画。</li>
+          <li><b>降级</b>：<code>prefers-reduced-motion: reduce</code> 下停掉全部动画，保留静态图标。</li>
+        </ul>
+      </section>
+
+      <section class="card" id="splash">
+        <h2>启动屏视觉规范</h2>
+        <p class="sub">
+          iOS 是「你给图」，按机型出静态 PNG；Android 由浏览器按 manifest 现画，一套图标通吃。两端都只显示静态画面。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 130px"></th>
+              <th>iOS（Safari / 主屏 Web App）</th>
+              <th>Android（Chrome / 安装型 PWA）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>启动图来源</b></td>
+              <td>项目提供的 <code>apple-touch-startup-image</code></td>
+              <td>浏览器用 manifest 生成</td>
+            </tr>
+            <tr>
+              <td><b>能否自定义</b></td>
+              <td>能，任意静态 PNG</td>
+              <td>不能，只有图标 + 名称 + 背景色</td>
+            </tr>
+            <tr>
+              <td><b>动画</b></td>
+              <td><span class="pillbad">不支持</span></td>
+              <td><span class="pillbad">不支持</span>（Android 12 图标动画仅原生 App）</td>
+            </tr>
+            <tr>
+              <td><b>色彩来源</b></td>
+              <td>图片自带底色</td>
+              <td>manifest <code>background_color</code> + <code>theme_color</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="launchrow" style="margin-top: 20px">
+          <div class="launchphone">
+            <div class="notch"></div>
+            <img id="splashIcon" alt="" />
+            <span class="name">Sobird</span>
+            <span class="hint">1170 × 2532 · #efeee9</span>
+          </div>
+          <div class="launchphone dark">
+            <div class="notch"></div>
+            <img id="splashIconDark" alt="" />
+            <span class="name">Sobird</span>
+            <span class="hint">dark 变体 · #1a1917</span>
+          </div>
+          <div class="splashmeta">
+            <div class="row">
+              <b>底色</b
+              ><span
+                ><code>#efeee9</code>（surface-0），与首屏同色、切换无接缝；Android 的
+                <code>background_color</code> 用同值。</span
+              >
+            </div>
+            <div class="row">
+              <b>构图</b><span>图标在上、名称在下，整体垂直居中；沿用主屏「图标压名称」的心理模型。</span>
+            </div>
+            <div class="row">
+              <b>比例</b
+              ><span
+                >图标边长约为屏宽的 22%（上限 120pt）；名称为 Lora 600，约为屏宽的 5%（16–28pt）；两者间距约 0.15
+                倍图标边长。</span
+              >
+            </div>
+            <div class="row">
+              <b>留白</b><span>四周留白充足，内容组不超过屏宽的 60%，避免小屏 iPad 上显得拥挤。</span>
+            </div>
+            <div class="row">
+              <b>深浅</b
+              ><span>深色启动图用 <code>#1a1917</code> 底 + 同一枚满底图标；未提供深色图时统一使用浅色。</span>
+            </div>
+            <div class="row">
+              <b>不透明</b><span>iOS 图标与启动图都避免 alpha 通道（半透明会被系统填成黑底）。</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="subhead">构图对比</h3>
+        <div class="layoutrow" id="layoutrow"></div>
+
+        <ul class="notes">
+          <li>
+            <b>构图</b
+            >：用「图标在上、名称在下」。主屏图标本来就是图标压名称，启动页沿用同一心理模型；并排更像网站页头，纯图标最安静但少了名称确认。
+          </li>
+          <li>
+            <b>动效衔接</b>：静态启动图交给系统 → App
+            挂载后若网关/会话还没就绪，再显示产品内呼吸遮罩，就绪即淡出，不做固定延时。
+          </li>
+          <li>
+            <b>深色模式</b>：media 可以带 <code>prefers-color-scheme</code>，但跟随的是系统外观而非 App
+            内主题，且需要额外一套图；规范允许但默认可不做。
+          </li>
+        </ul>
+      </section>
+
+      <section class="card" id="export">
+        <h2>导出规则</h2>
+        <p class="sub">
+          同一份矢量稿，按用途导出不同形态。核心区分：UI
+          内嵌用圆角，交给操作系统的图标一律方形满底、不透明、圆角由系统切。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 170px">用途</th>
+              <th style="width: 210px">形态</th>
+              <th>要求</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>UI 内嵌 / 网页</b></td>
+              <td class="mono">SVG · rx 15</td>
+              <td>带圆角的满底图标；导航栏、登录页、页脚统一使用。</td>
+            </tr>
+            <tr>
+              <td><b>favicon</b></td>
+              <td class="mono">ICO 16/32/48</td>
+              <td>16px 用简化版（&gt; + 星火），32px 起用完整版；均满底。</td>
+            </tr>
+            <tr>
+              <td><b>iOS 主屏</b></td>
+              <td class="mono">PNG 180 × 180</td>
+              <td>方形、满底、不透明、无圆角；系统自己切圆角。</td>
+            </tr>
+            <tr>
+              <td><b>Android 启动器</b></td>
+              <td class="mono">PNG 512 × 512</td>
+              <td>方形满底；maskable 版本内容内缩到 80% 安全区。</td>
+            </tr>
+            <tr>
+              <td><b>启动屏</b></td>
+              <td class="mono">PNG 各机型</td>
+              <td>尺寸 = CSS 宽高 × DPR；底色 #efeee9；内容按启动屏构图规范摆放。</td>
+            </tr>
+            <tr>
+              <td><b>分享卡</b></td>
+              <td class="mono">PNG 1200 × 630</td>
+              <td>cream 底 + 品牌组合 + 终端示意；以绝对 URL 引用。</td>
+            </tr>
+            <tr>
+              <td><b>主题图标（可选）</b></td>
+              <td class="mono">PNG 512 · monochrome</td>
+              <td>单色前景、透明底，供 Android 13 主题图标使用。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card" id="rules">
+        <h2>用法禁区</h2>
+        <div class="rules">
+          <div class="col do">
+            <h3>可以</h3>
+            <ul>
+              <li>在浅色或深色表面上使用满底图标，保持同一几何。</li>
+              <li>按用途选择圆角版（UI）与直角版（系统图标）。</li>
+              <li>用 maskable 版本铺进任意裁切形状。</li>
+              <li>在真实等待态使用 A/B 动效，并尊重 reduced-motion。</li>
+              <li>小尺寸时切换到 16px 简化版。</li>
+            </ul>
+          </div>
+          <div class="col dont">
+            <h3>不要</h3>
+            <ul>
+              <li>拉伸、压扁、旋转图标或字标。</li>
+              <li>更换底色、给标志加描边、阴影、渐变或发光。</li>
+              <li>把三点合成短杠、移动星火位置或改变内凹比。</li>
+              <li>在品牌色以外的低对比背景上叠加标志。</li>
+              <li>给主屏图标、favicon 或启动图加动画。</li>
+              <li>把整枚标志缩到 16px 以下仍要求完整细节。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="assets">
+        <h2>资产索引</h2>
+        <p class="sub">品牌资产的规范文件名与用途。新增或替换的执行状态不记在这里。</p>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 330px">路径</th>
+              <th>用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="path">public/brand/rcs-icon.svg</td>
+              <td>主图标（UI 圆角版，SVG）</td>
+            </tr>
+            <tr>
+              <td class="path">public/brand/rcs-icon-square.svg</td>
+              <td>OS 图标源文件（方形满底、无圆角）</td>
+            </tr>
+            <tr>
+              <td class="path">public/brand/rcs-icon-maskable.svg</td>
+              <td>Android 自适应图标（512 画布，内容 80%）</td>
+            </tr>
+            <tr>
+              <td class="path">public/brand/rcs-logo.svg</td>
+              <td>浅色字标：图标 + Lora「Sobird」</td>
+            </tr>
+            <tr>
+              <td class="path">public/brand/rcs-logo-dark.svg</td>
+              <td>深色字标：同上，奶油色文字</td>
+            </tr>
+            <tr>
+              <td class="path">public/brand/og.png</td>
+              <td>1200×630 分享卡</td>
+            </tr>
+            <tr>
+              <td class="path">public/icons/icon-192.png</td>
+              <td>PWA 图标</td>
+            </tr>
+            <tr>
+              <td class="path">public/icons/icon-512.png</td>
+              <td>PWA 图标 / Android 启动器</td>
+            </tr>
+            <tr>
+              <td class="path">public/icons/icon-maskable-512.png</td>
+              <td>maskable 版本（80% 内缩）</td>
+            </tr>
+            <tr>
+              <td class="path">public/icons/apple-icon-180.png</td>
+              <td>iOS 主屏（不透明、无圆角）</td>
+            </tr>
+            <tr>
+              <td class="path">public/icons/icon-monochrome-512.png</td>
+              <td>Android 13 主题图标（可选）</td>
+            </tr>
+            <tr>
+              <td class="path">public/icons/splash/*.png</td>
+              <td>iOS 启动图（按机型，浅色；深色可选）</td>
+            </tr>
+            <tr>
+              <td class="path">public/favicon.ico</td>
+              <td>16/32/48 浏览器图标</td>
+            </tr>
+            <tr>
+              <td class="path">public/favicon.svg</td>
+              <td>16px 简化版（&gt; + 星火）</td>
+            </tr>
+            <tr>
+              <td class="path">public/manifest.webmanifest</td>
+              <td>名称、主题色、背景色与图标清单</td>
+            </tr>
+            <tr>
+              <td class="path">src/lib/metadata.ts</td>
+              <td>页面标题、应用名、图标与分享元数据</td>
+            </tr>
+            <tr>
+              <td class="path">src/components/shell/RootShell.tsx</td>
+              <td>启动图与图标 link 的统一挂载点</td>
+            </tr>
+            <tr>
+              <td class="path">src/components/shell/Navbar.tsx</td>
+              <td>导航栏 BrandMark</td>
+            </tr>
+            <tr>
+              <td class="path">messages/en.json · zh-CN.json</td>
+              <td>应用名文案</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+    <footer>
+      <b>Sobird 品牌手册 v1.0 · 2026-11-21</b><br />定稿几何：viewBox 0 0 64 64，tile rx15；提示符 stroke 7.5；三点 r3 @
+      y44.5，x=32/40.5/49；星火中心 (48.5,24.5) R6.4 ratio 0.22。规范变更请 bump 版本号。
+    </footer>
+
+    <script>
+      const B = '#c96442',
+        CR = '#f6f5f2'
+      const CHEV = 'M16 19.5 L27.5 32 L16 44.5'
+      const SPARK =
+        'M48.5 18.1 Q49.908 23.092 54.9 24.5 Q49.908 25.908 48.5 30.9 Q47.092 25.908 42.1 24.5 Q47.092 23.092 48.5 18.1 Z'
+      const tile = (extra = '') => `<rect width="64" height="64" rx="15" fill="${B}"/>${extra}`
+      const stroke = (d, w = 7.5) =>
+        `<path d="${d}" fill="none" stroke="${CR}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`
+      const dot = (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${CR}"/>`
+      function spark(cx, cy, R, ratio = 0.22) {
+        const k = R * ratio
+        return `<path d="M${cx} ${cy - R} Q${cx + k} ${cy - k} ${cx + R} ${cy} Q${cx + k} ${cy + k} ${cx} ${cy + R} Q${cx - k} ${cy + k} ${cx - R} ${cy} Q${cx - k} ${cy - k} ${cx} ${cy - R} Z" fill="${CR}"/>`
+      }
+      const DOTS = () => dot(32, 44.5, 3.0) + dot(40.5, 44.5, 3.0) + dot(49, 44.5, 3.0)
+      const FINAL = tile(stroke(CHEV) + DOTS() + spark(48.5, 24.5, 6.4, 0.22))
+      const MASKABLE = `<rect width="64" height="64" fill="${B}"/><g transform="translate(32 32) scale(0.8) translate(-32 -32)">${stroke(CHEV) + DOTS() + spark(48.5, 24.5, 6.4, 0.22)}</g>`
+      const svgFull = (inner) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${inner}</svg>`
+      const url = (inner) => 'data:image/svg+xml;utf8,' + encodeURIComponent(svgFull(inner))
+
+      /* identity */
+      document.getElementById('bigwrap').innerHTML = `<img src="${url(FINAL)}" alt="">
+  <svg viewBox="0 0 64 64"><defs><mask id="safeMask"><rect width="64" height="64" fill="#fff"/><circle cx="32" cy="32" r="25.6" fill="#000"/></mask></defs>
+  <rect width="64" height="64" rx="15" fill="rgba(18,14,10,.42)" mask="url(#safeMask)"/>
+  <circle cx="32" cy="32" r="25.6" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="0.55" stroke-dasharray="1.8 1.5"/></svg>`
+      document.getElementById('lockups').innerHTML = `
+  <div class="lockup light"><img src="${url(FINAL)}"><span>Sobird</span></div>
+  <div class="lockup dark"><img src="${url(FINAL)}"><span>Sobird</span></div>`
+      document.getElementById('sizes').innerHTML = [72, 48, 32, 16]
+        .map((n) => `<div class="sz"><img src="${url(FINAL)}" width="${n}" height="${n}"><small>${n}</small></div>`)
+        .join('')
+      document.getElementById('raster').innerHTML =
+        `<div><canvas width="64" height="64" data-n="32"></canvas><span>32 位图</span></div>
+   <div><canvas width="64" height="64" data-n="16"></canvas><span>16 位图</span></div>`
+
+      /* scenes */
+      const scenes = [
+        {
+          title: '浏览器标签页',
+          cap: '16px favicon + 标题',
+          html: `
+    <div class="browser">
+      <div class="tabbar">
+        <div class="tab"><span class="ghost"></span>GitHub</div>
+        <div class="tab active"><img src="${url(FINAL)}">Sobird</div>
+        <div class="tab"><span class="ghost"></span>Docs</div>
+      </div>
+      <div class="addressbar">127.0.0.1:3000</div>
+      <div class="inner"><div class="nav"><img src="${url(FINAL)}"><span>Sobird</span></div></div>
+    </div>`,
+        },
+        {
+          title: 'iOS 主屏',
+          cap: '180px 圆角，不透明底',
+          html: `
+    <div class="phonehome"><div class="ios-grid">
+      <div class="app"><div class="ghost">M</div><span>Mail</span></div>
+      <div class="app"><img src="${url(FINAL)}"><span>Sobird</span></div>
+      <div class="app"><div class="ghost">N</div><span>Notes</span></div>
+    </div></div>`,
+        },
+        {
+          title: 'Android 自适应图标',
+          cap: '80% 安全区内的 maskable 版本',
+          html: `
+    <div class="masks">
+      <div class="maskcell"><div class="shape circle"><img src="${url(MASKABLE)}"></div><span>圆形</span></div>
+      <div class="maskcell"><div class="shape squircle"><img src="${url(MASKABLE)}"></div><span>方圆</span></div>
+      <div class="maskcell"><div class="shape teardrop"><img src="${url(MASKABLE)}"></div><span>水滴</span></div>
+    </div>`,
+        },
+        {
+          title: '导航栏',
+          cap: '浅色 / 深色，20px',
+          html: `
+    <div class="navrows">
+      <div class="navbar light"><img src="${url(FINAL)}"><span>Sobird</span></div>
+      <div class="navbar dark"><img src="${url(FINAL)}"><span>Sobird</span></div>
+    </div>`,
+        },
+        {
+          title: 'GitHub 头像',
+          cap: '512 圆形裁切',
+          html: `
+    <div class="gh"><img src="${url(FINAL)}"><div class="meta"><b>sobird/rcs</b>Self-hosted remote control for Claude Code</div></div>`,
+        },
+        {
+          title: 'OG 分享卡',
+          cap: '1200×630',
+          html: `
+    <div class="og">
+      <div class="left"><img src="${url(FINAL)}"><span class="word">Sobird</span><span class="tag">REMOTE CONTROL FOR CLAUDE CODE</span></div>
+      <div class="term"><div class="dots"><i></i><i></i><i></i></div><div class="line w1"></div><div class="line w2"></div><div class="line acc"></div><div class="line w3"></div></div>
+    </div>`,
+        },
+        {
+          title: 'PWA 启动页',
+          cap: '静态图 · 详见启动屏章节',
+          html: `
+    <div class="scenesplash">
+      <div class="launchphone"><div class="notch"></div><img src="${url(FINAL)}"><span class="name">Sobird</span></div>
+      <div class="launchphone dark"><div class="notch"></div><img src="${url(FINAL)}"><span class="name">Sobird</span></div>
+    </div>`,
+        },
+      ]
+      document.getElementById('scenes-grid').innerHTML = scenes
+        .map(
+          (s) => `
+  <div class="scene"><h3>${s.title}</h3><p class="cap">${s.cap}</p>${s.html}</div>`,
+        )
+        .join('')
+
+      /* motion */
+      function iconSvg(anim) {
+        return `<svg viewBox="0 0 64 64" class="svg-anim ${anim}">
+    <rect width="64" height="64" rx="15" fill="${B}"/>
+    <path d="${CHEV}" fill="none" stroke="${CR}" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle class="dot d1" cx="32" cy="44.5" r="3" fill="${CR}"/>
+    <circle class="dot d2" cx="40.5" cy="44.5" r="3" fill="${CR}"/>
+    <circle class="dot d3" cx="49" cy="44.5" r="3" fill="${CR}"/>
+    <path class="spark" d="${SPARK}" fill="${CR}"/>
+  </svg>`
+      }
+      const VARIANTS = [
+        {
+          key: 'A',
+          anim: 'a',
+          name: '顺序呼吸',
+          en: 'Sequential',
+          desc: '三个点依次亮起再落下，最像「正在输入/思考」。适合聊天里的 typing 指示与任务执行中。',
+          ui: `<div class="wave seq"><span class="dots"><i></i><i></i><i></i></span><em>正在执行…</em></div>`,
+        },
+        {
+          key: 'B',
+          anim: 'b',
+          name: '整体呼吸',
+          en: 'Ambient',
+          desc: '三点与星火同步缓慢起伏，最克制。适合加载遮罩、启动后等待会话就绪的过渡。',
+          ui: `<div class="wave breathe-ui"><span class="dots"><i></i><i></i><i></i></span><em>正在连接网关…</em></div>`,
+        },
+        {
+          key: 'C',
+          anim: 'c',
+          name: '阶梯点亮',
+          en: 'Stepped',
+          desc: '点逐个点亮（进度感），星火同步闪烁。适合多阶段加载，但节奏最强、最抢眼。',
+          ui: `<div class="wave stepwise-ui"><span class="dots"><i></i><i></i><i></i></span><em>正在载入会话…</em></div>`,
+        },
+      ]
+      document.getElementById('variants').innerHTML = VARIANTS.map(
+        (v) => `
+  <div class="variant">
+    <div class="stage">${iconSvg(v.anim)}</div>
+    <div class="ctxs"><div class="navchip">${iconSvg(v.anim)}<span>Sobird</span></div>${v.ui}</div>
+    <div class="info"><h3>${v.key} · ${v.name}</h3><div class="en">${v.en}</div><p>${v.desc}</p></div>
+  </div>`,
+      ).join('')
+
+      /* splash icons + compositions */
+      const plainSvg = () => svgFull(tile(stroke(CHEV) + DOTS() + `<path d="${SPARK}" fill="${CR}"/>`))
+      const splashUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(plainSvg())
+      document.getElementById('splashIcon').src = splashUrl
+      document.getElementById('splashIconDark').src = splashUrl
+      document.getElementById('layoutrow').innerHTML = `
+  <div class="layoutcell"><div class="miniphone"><img src="${url(FINAL)}"><span class="name">Sobird</span></div><div class="cap2"><b>上下 · 推荐</b><br>图标为主体，名称做确认</div></div>
+  <div class="layoutcell"><div class="miniphone row"><img src="${url(FINAL)}"><span class="name">Sobird</span></div><div class="cap2">并排 · 像页头<br>横向重心，启动屏偏散</div></div>
+  <div class="layoutcell"><div class="miniphone solo"><img src="${url(FINAL)}"></div><div class="cap2">只放图标 · 最安静<br>少了名称确认</div></div>
+`
+
+      /* raster */
+      const img = new Image()
+      img.onload = () => {
+        for (const c of document.querySelectorAll('.raster canvas')) {
+          const n = Number(c.dataset.n)
+          const t = document.createElement('canvas')
+          t.width = t.height = n
+          t.getContext('2d').drawImage(img, 0, 0, n, n)
+          const ctx = c.getContext('2d')
+          ctx.imageSmoothingEnabled = false
+          ctx.drawImage(t, 0, 0, 64, 64)
+        }
+      }
+      img.src = url(FINAL)
+    </script>
+  </body>
+</html>

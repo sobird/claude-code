@@ -1,6 +1,6 @@
 {
-  "name": "Remote Control Server",
-  "short_name": "Remote Control",
+  "name": "Sobird",
+  "short_name": "Sobird",
   "description": "Remote control for Claude Code sessions",
   "id": "/",
   "start_url": "/",

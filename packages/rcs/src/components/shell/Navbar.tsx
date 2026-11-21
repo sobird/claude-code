@@ -30,10 +30,26 @@ interface NavbarProps {
   signOutAction: () => Promise<void>
 }
 
+/** Brand mark: a prompt chevron, three in-progress dots, and a remote spark. */
 function BrandMark() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" className={styles.brandIcon}>
-      <path d="M10 1L12.2 7.8L19 10L12.2 12.2L10 19L7.8 12.2L1 10L7.8 7.8L10 1Z" fill="var(--color-brand)" />
+    <svg width="20" height="20" viewBox="0 0 64 64" aria-hidden="true" className={styles.brandIcon}>
+      <rect width="64" height="64" rx="15" fill="var(--color-brand)" />
+      <path
+        d="M16 19.5 L27.5 32 L16 44.5"
+        fill="none"
+        stroke="#f6f5f2"
+        strokeWidth="7.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="32" cy="44.5" r="3" fill="#f6f5f2" />
+      <circle cx="40.5" cy="44.5" r="3" fill="#f6f5f2" />
+      <circle cx="49" cy="44.5" r="3" fill="#f6f5f2" />
+      <path
+        d="M48.5 18.1 Q49.908 23.092 54.9 24.5 Q49.908 25.908 48.5 30.9 Q47.092 25.908 42.1 24.5 Q47.092 23.092 48.5 18.1 Z"
+        fill="#f6f5f2"
+      />
     </svg>
   )
 }
