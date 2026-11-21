@@ -48,7 +48,7 @@ export const baseMetadata: Metadata = {
       { url: '/favicon.svg', type: 'image/svg+xml' },
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
     ],
-    apple: '/icons/apple-icon-180.png',
+    apple: { url: '/icons/apple-icon-180.png', sizes: '180x180', type: 'image/png' },
   },
   ...socialMetadata('Sobird', description),
 }

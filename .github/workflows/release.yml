@@ -48,21 +48,30 @@ jobs:
           # This is useful if splitting release tagging from PR creation.
           # skip-github-release: true
 
+  # Publishes the CLI to npm and, for an RCS release, builds and pushes the
+  # pinned container image. `packages: write` is needed for the latter; the
+  # reusable workflow's own jobs narrow it back down.
   publish:
     if: needs.release.outputs.created
     needs: release
-    uses: ./.github/workflows/publish.yml
-    secrets: inherit
-
-  # Builds and pushes the RCS image, then rolls that pinned tag onto the
-  # self-hosted server. Both steps live in deploy.yml (two separate jobs) so
-  # all RCS release work is in one file. Runs only for an RCS release.
-  deploy:
-    if: needs.release.outputs.rcs_released == 'true'
-    needs: release
     permissions:
       contents: read
+      id-token: write
       packages: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      rcs_released: ${{ needs.release.outputs.rcs_released == 'true' }}
+      rcs_version: ${{ needs.release.outputs.rcs_version }}
+      rcs_tag: ${{ needs.release.outputs.rcs_tag }}
+    secrets: inherit
+
+  # Rolls the image published above onto the self-hosted server. Runs only for
+  # an RCS release, and after publish has pushed the pinned image.
+  deploy:
+    if: needs.release.outputs.rcs_released == 'true'
+    needs: [release, publish]
+    permissions:
+      contents: read
     uses: ./.github/workflows/deploy.yml
     with:
       version: ${{ needs.release.outputs.rcs_version }}

@@ -215,12 +215,13 @@ falls back to building `rcs:local` locally. Published images are `linux/amd64`.
 
 #### Automated deploy (GitHub Actions)
 
-`.github/workflows/deploy.yml` (called by `release.yml`) runs when an RCS release
-is published — after `publish-rcs-image` pushes the version tag. It syncs the
-release tag's `docker-compose.yml` and `Caddyfile` into the stack directory, then
-rolls that pinned image onto a self-hosted server over SSH (`docker compose pull`
-then `up -d --no-build`). Syncing those two files keeps the server's config from
-drifting behind the image; `.env` is never touched by CI. Only the image tag and
+`.github/workflows/publish.yml` (called by `release.yml`) builds and pushes the
+RCS image for an RCS release; `.github/workflows/deploy.yml` then runs after it.
+The deploy workflow syncs the release tag's `docker-compose.yml` and `Caddyfile`
+into the stack directory, then rolls that pinned image onto a self-hosted server
+over SSH (`docker compose pull` then `up -d --no-build`). Syncing those two files
+keeps the server's config from drifting behind the image; `.env` is never touched
+by CI. Only the image tag and
 those files change, so Postgres/Caddy volumes are untouched; to roll back,
 redeploy an older tag using the manual steps above.
 
