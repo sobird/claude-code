@@ -1,5 +1,5 @@
 /**
- * Route protection middleware (Edge runtime).
+ * Route protection proxy (Next.js `proxy.ts` convention, Node.js runtime).
  *
  * Uses only the DB-free shared Auth.js config. Unauthenticated page requests
  * are redirected to `/login?next=<path>`; authenticated users visiting the
@@ -37,10 +37,9 @@ export default auth((request) => {
 })
 
 export const config = {
-  // Exclude the gateway's path prefixes: the UI and the gateway share one URL
-  // space, and in dev Next rewrites proxy these paths to the gateway. Middleware
-  // runs before rewrites, so without this an unauthenticated `/web/...` call
-  // would be redirected to `/login` instead of reaching the gateway.
+  // Exclude the gateway's path prefixes. In production Caddy routes them to the
+  // gateway before Next sees them; the exclusion also keeps a direct hit on the
+  // Next dev server (`:3000/web/...`) from being redirected to `/login`.
   //
   // Also exclude Auth.js endpoints, Next internals, and static assets; API
   // routes enforce auth themselves.
