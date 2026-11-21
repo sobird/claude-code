@@ -114,6 +114,8 @@ self.addEventListener('push', (event: Event) => {
           body: content.body,
           tag: content.tag,
           icon: '/icons/icon-192.png',
+          // Android renders `badge` as a white alpha mask; iOS uses the app icon.
+          badge: '/icons/icon-monochrome-512.png',
           data: { url: content.url },
         })
       } catch (error) {

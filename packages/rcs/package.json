@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "brand:generate": "bun scripts/brand/generate.ts",
     "build": "next build",
     "build:gateway": "bun build --target bun --outfile dist/gateway.js server/index.ts",
     "build:migrate": "bun build --target bun --outfile dist/migrate.js src/db/migrate.ts",
@@ -58,6 +59,8 @@
     "@types/react-dom": "^19.3.0",
     "@types/web-push": "^3.6.4",
     "drizzle-kit": "^0.31.11",
-    "esbuild-wasm": "^0.25"
+    "esbuild-wasm": "^0.25",
+    "fontkit": "^3.0.0",
+    "sharp": "^0.35.5"
   }
 }
