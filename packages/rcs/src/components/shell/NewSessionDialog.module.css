@@ -52,6 +52,12 @@
   background-color: var(--color-surface-2);
 }
 
+.hint {
+  font-size: 0.8125rem;
+  line-height: calc(1.25 / 0.8125);
+  color: var(--color-text-muted);
+}
+
 .error {
   font-size: 0.875rem;
   line-height: calc(1.25 / 0.875);

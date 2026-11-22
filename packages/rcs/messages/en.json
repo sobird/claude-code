@@ -63,11 +63,12 @@
     },
     "newSession": {
       "title": "New Session",
-      "description": "Start a session on a connected environment (or leave it unassigned).",
+      "description": "Start a session on a connected environment.",
       "titleLabel": "Title (optional)",
       "titlePlaceholder": "My session",
       "environmentLabel": "Environment",
-      "noEnvironment": "No environment",
+      "environmentPlaceholder": "Select an environment",
+      "noEnvironmentsHint": "No connected environment yet. Connect a machine first, then start a session.",
       "create": "Create session",
       "creating": "Creating…"
     }

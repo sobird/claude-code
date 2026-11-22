@@ -21,8 +21,6 @@ import type { CreatedSession, EnvironmentSummary } from './types'
 
 import styles from './NewSessionDialog.module.css'
 
-const NO_ENVIRONMENT = 'none'
-
 interface NewSessionDialogProps {
   open: boolean
   environments: EnvironmentSummary[]
@@ -31,34 +29,33 @@ interface NewSessionDialogProps {
   onCreated: (session: CreatedSession) => void
 }
 
-/** Create-session form: optional title plus an optional bridge environment. */
+/** Create-session form: optional title plus the bridge environment that runs it. */
 export function NewSessionDialog({ open, environments, onClose, onCreate, onCreated }: NewSessionDialogProps) {
   const t = useTranslations('dashboard')
   const tCommon = useTranslations('common')
   const describeError = useApiErrorMessage()
   const [title, setTitle] = useState('')
-  const [environmentId, setEnvironmentId] = useState(NO_ENVIRONMENT)
+  const [environmentId, setEnvironmentId] = useState(environments[0]?.id ?? '')
   const [error, setError] = useState<unknown>(null)
   const [pending, setPending] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setTitle('')
-    setEnvironmentId(NO_ENVIRONMENT)
+    setEnvironmentId(environments[0]?.id ?? '')
     setError(null)
     setPending(false)
   }, [open])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (pending) return
+    if (pending || !environmentId) return
     setPending(true)
     setError(null)
     try {
-      const input: { title?: string; environment_id?: string } = {}
+      const input: { title?: string; environment_id?: string } = { environment_id: environmentId }
       const trimmed = title.trim()
       if (trimmed.length > 0) input.title = trimmed
-      if (environmentId !== NO_ENVIRONMENT) input.environment_id = environmentId
       const created = await onCreate(input)
       onCreated(created)
     } catch (createError) {
@@ -67,15 +64,12 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
     }
   }
 
-  const environmentItems: Record<string, string> = {
-    [NO_ENVIRONMENT]: t('newSession.noEnvironment'),
-    ...Object.fromEntries(
-      environments.map((environment) => [
-        environment.id,
-        `${environment.machine_name || environment.id}${environment.branch ? ` (${environment.branch})` : ''}`,
-      ]),
-    ),
-  }
+  const environmentItems: Record<string, string> = Object.fromEntries(
+    environments.map((environment) => [
+      environment.id,
+      `${environment.machine_name || environment.id}${environment.branch ? ` (${environment.branch})` : ''}`,
+    ]),
+  )
 
   return (
     <Dialog
@@ -114,13 +108,12 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
               onValueChange={(value) => {
                 if (value !== null) setEnvironmentId(value)
               }}
-              disabled={pending}
+              disabled={pending || environments.length === 0}
             >
               <SelectTrigger id="session-environment" className={styles.selectTrigger}>
-                <SelectValue items={environmentItems} placeholder={t('newSession.noEnvironment')} />
+                <SelectValue items={environmentItems} placeholder={t('newSession.environmentPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_ENVIRONMENT}>{t('newSession.noEnvironment')}</SelectItem>
                 {environments.map((environment) => (
                   <SelectItem key={environment.id} value={environment.id}>
                     {environment.machine_name || environment.id}
@@ -129,6 +122,7 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
                 ))}
               </SelectContent>
             </Select>
+            {environments.length === 0 ? <p className={styles.hint}>{t('newSession.noEnvironmentsHint')}</p> : null}
           </div>
 
           {error ? (
@@ -141,7 +135,7 @@ export function NewSessionDialog({ open, environments, onClose, onCreate, onCrea
             <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
               {tCommon('cancel')}
             </Button>
-            <Button type="submit" variant="brand" disabled={pending}>
+            <Button type="submit" variant="brand" disabled={pending || !environmentId}>
               {pending ? t('newSession.creating') : t('newSession.create')}
             </Button>
           </DialogFooter>

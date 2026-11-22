@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "dev": "bun scripts/dev.ts",
     "dev:gateway": "bun --watch server/index.ts",
+    "dev:remote-control": "bun scripts/dev-remote-control.ts",
     "dev:web": "next dev --port 3000",
     "gateway": "bun server/index.ts",
     "smoke": "bun scripts/smoke.ts",

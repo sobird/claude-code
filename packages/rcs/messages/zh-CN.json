@@ -63,11 +63,12 @@
     },
     "newSession": {
       "title": "新建会话",
-      "description": "在已连接的环境上启动会话（或留空不分配）。",
+      "description": "在已连接的环境上启动会话。",
       "titleLabel": "标题（可选）",
       "titlePlaceholder": "我的会话",
       "environmentLabel": "环境",
-      "noEnvironment": "不指定环境",
+      "environmentPlaceholder": "选择环境",
+      "noEnvironmentsHint": "暂无已连接的环境，请先连接一台机器后再新建会话。",
       "create": "创建会话",
       "creating": "正在创建…"
     }

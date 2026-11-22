@@ -46,6 +46,7 @@
     "prepare": "husky",
     "rcs:build": "bun run --filter \"@sobird/rcs\" build",
     "rcs:dev": "bun run --filter \"@sobird/rcs\" dev",
+    "rcs:dev:remote-control": "bun run --filter \"@sobird/rcs\" dev:remote-control",
     "rcs:lint": "oxlint packages/rcs/src packages/rcs/server",
     "rcs:test": "bun run --filter \"@sobird/rcs\" test",
     "rcs:typecheck": "bun run --filter \"@sobird/rcs\" typecheck",
