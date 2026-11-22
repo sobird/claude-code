@@ -13,6 +13,7 @@
     "dev": "bun scripts/dev.ts",
     "dev:gateway": "bun --watch server/index.ts",
     "dev:remote-control": "bun scripts/dev-remote-control.ts",
+    "dev:remote-control:production": "bun --env-file=.env.production scripts/dev-remote-control.ts --require-profile",
     "dev:web": "next dev --port 3000",
     "gateway": "bun server/index.ts",
     "smoke": "bun scripts/smoke.ts",

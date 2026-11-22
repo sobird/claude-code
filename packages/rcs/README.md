@@ -335,6 +335,14 @@ you: it derives the gateway origin with the same certificate discovery as
 `bun run dev` and trusts mkcert's root CA for loopback origins only. It accepts
 `RCS_DEV_API_KEY` as an alias for `CLAUDE_BRIDGE_OAUTH_TOKEN`.
 
+To switch between the deployed server and a local one without re-exporting
+variables, put the remote pair in `packages/rcs/.env.production` (gitignored)
+and run `bun run dev:remote-control:production` (root alias
+`bun run rcs:dev:remote-control:production`). The profile is loaded with
+`bun --env-file`, so shell variables still win; if the file is missing or does
+not define a non-loopback base URL the launcher refuses to start instead of
+silently falling back to the local gateway.
+
 - `CLAUDE_BRIDGE_BASE_URL` — public origin of this deployment.
 - `CLAUDE_BRIDGE_OAUTH_TOKEN` — a per-user RCS API key. It is sent as
   `Authorization: Bearer …` on every bridge call.

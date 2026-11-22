@@ -12,6 +12,11 @@
  * The token is a per-user API key created at /settings; `RCS_DEV_API_KEY` is
  * accepted as an alias. Set `CLAUDE_BRIDGE_BASE_URL` to override the detected
  * gateway origin. Arguments after `--` are forwarded to the CLI.
+ *
+ * `dev:remote-control:production` runs this same script with
+ * `--env-file=.env.production` and `--require-profile`; the latter refuses to
+ * start when the profile did not supply a non-loopback base URL, because Bun
+ * ignores a missing `--env-file` and would otherwise use the local gateway.
  */
 import { resolve } from 'node:path'
 
@@ -26,14 +31,28 @@ function fail(message: string): never {
 }
 
 async function main(): Promise<never> {
+  // The production script passes `--require-profile` before any forwarded args;
+  // `bun run dev:remote-control -- --flag` arrives with a literal `--` first.
+  const forwarded = process.argv.slice(2)
+  const requireProfile = forwarded[0] === '--require-profile'
+  if (requireProfile) forwarded.shift()
+  if (forwarded[0] === '--') forwarded.shift()
+
+  const baseUrl = process.env.CLAUDE_BRIDGE_BASE_URL?.trim() || devGatewayOrigin()
+  // `bun --env-file` silently ignores a missing file, so without this guard a
+  // typo'd or absent profile would quietly fall back to the local gateway.
+  if (requireProfile && (!process.env.CLAUDE_BRIDGE_BASE_URL?.trim() || isLoopback(baseUrl))) {
+    fail(
+      'production profile not loaded: create packages/rcs/.env.production with CLAUDE_BRIDGE_BASE_URL=https://<domain> and CLAUDE_BRIDGE_OAUTH_TOKEN=rcs_...',
+    )
+  }
+
   const apiKey = (process.env.CLAUDE_BRIDGE_OAUTH_TOKEN ?? process.env.RCS_DEV_API_KEY ?? '').trim()
   if (!apiKey) {
     fail(
       'missing API key: create one at /settings, then set CLAUDE_BRIDGE_OAUTH_TOKEN (or RCS_DEV_API_KEY) in packages/rcs/.env',
     )
   }
-
-  const baseUrl = process.env.CLAUDE_BRIDGE_BASE_URL?.trim() || devGatewayOrigin()
   const env: Record<string, string | undefined> = {
     ...process.env,
     USER_TYPE: 'ant',
@@ -47,10 +66,6 @@ async function main(): Promise<never> {
     const root = process.env.NODE_EXTRA_CA_CERTS || mkcertRoot()
     if (root) env.NODE_EXTRA_CA_CERTS = root
   }
-
-  // `bun run dev:remote-control -- --flag` arrives with a literal `--` first.
-  const forwarded = process.argv.slice(2)
-  if (forwarded[0] === '--') forwarded.shift()
 
   console.log(`[dev:remote-control] ${baseUrl} → bun scripts/dev.ts remote-control`)
   const child = Bun.spawn(['bun', 'scripts/dev.ts', 'remote-control', ...forwarded], {
