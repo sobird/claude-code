@@ -13,44 +13,12 @@
  * accepted as an alias. Set `CLAUDE_BRIDGE_BASE_URL` to override the detected
  * gateway origin. Arguments after `--` are forwarded to the CLI.
  */
-import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { resolve } from 'node:path'
+
+import { devGatewayOrigin, isLoopback, mkcertRoot } from './dev-net'
 
 const PACKAGE_DIR = resolve(import.meta.dir, '..')
 const REPO_ROOT = resolve(PACKAGE_DIR, '../..')
-const GATEWAY_PORT = process.env.RCS_PORT?.trim() || '4000'
-
-function firstExisting(paths: string[]): string | null {
-  for (const path of paths) {
-    if (path && existsSync(path)) return path
-  }
-  return null
-}
-
-/** Mirror `scripts/dev.ts`: TLS is on when the local dev certs exist. */
-function devGatewayOrigin(): string {
-  const certsDir = process.env.RCS_DEV_CERTS_DIR?.trim() || join(homedir(), 'certificates')
-  const cert = firstExisting([
-    process.env.RCS_DEV_TLS_CERT?.trim() ?? '',
-    join(certsDir, 'localhost+3.pem'),
-    join(certsDir, 'cert.pem'),
-  ])
-  const key = firstExisting([
-    process.env.RCS_DEV_TLS_KEY?.trim() ?? '',
-    join(certsDir, 'localhost+3-key.pem'),
-    join(certsDir, 'key.pem'),
-  ])
-  return `${cert && key ? 'https' : 'http'}://localhost:${GATEWAY_PORT}`
-}
-
-/** mkcert's root CA, when installed, so the bridge trusts the dev TLS cert. */
-function mkcertRoot(): string | null {
-  return firstExisting([
-    join(homedir(), 'Library/Application Support/mkcert/rootCA.pem'),
-    join(homedir(), '.local/share/mkcert/rootCA.pem'),
-  ])
-}
 
 function fail(message: string): never {
   console.error(`[dev:remote-control] ${message}`)
@@ -73,9 +41,9 @@ async function main(): Promise<never> {
     CLAUDE_BRIDGE_OAUTH_TOKEN: apiKey,
     CLAUDE_CODE_INCLUDE_PARTIAL_MESSAGES: process.env.CLAUDE_CODE_INCLUDE_PARTIAL_MESSAGES ?? '1',
   }
-  // Node does not read the macOS keychain, so point it at mkcert's root CA when
-  // the dev gateway serves the self-signed localhost certificate.
-  if (baseUrl.startsWith('https://')) {
+  // Node does not read the macOS keychain, so point it at mkcert's root CA for a
+  // loopback dev gateway. Never widen trust for a remote deployment.
+  if (baseUrl.startsWith('https://') && isLoopback(baseUrl)) {
     const root = process.env.NODE_EXTRA_CA_CERTS || mkcertRoot()
     if (root) env.NODE_EXTRA_CA_CERTS = root
   }

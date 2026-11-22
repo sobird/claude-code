@@ -287,6 +287,14 @@ machine's local IPv4 addresses) while preserving any origins you configured. Set
 `NEXT_PUBLIC_RCS_API_URL` before `bun run dev` to point the UI at a different
 gateway origin.
 
+When a local certificate pair is present (`RCS_DEV_TLS_CERT` / `RCS_DEV_TLS_KEY`,
+else `RCS_DEV_CERTS_DIR`, else `~/certificates`), `scripts/dev.ts` serves both the
+UI and the gateway over HTTPS and advertises `https://localhost:4000` as the
+gateway origin. The discovery lives in `scripts/dev-net.ts` and is shared with
+`dev:remote-control`, which also trusts mkcert's root CA for loopback origins
+only. `RCS_TLS_CERT` / `RCS_TLS_KEY` are development inputs: production leaves
+them unset because Caddy terminates TLS.
+
 ## Accounts, roles and API keys
 
 - On an **empty users table**, `ensureBootstrapAdmin` creates `ADMIN_USERNAME`
@@ -321,6 +329,11 @@ bun scripts/dev.ts remote-control
 
 Run the command from this repository (or a build of it). The public npm `claude`
 binary does not contain the `CLAUDE_BRIDGE_*` overrides.
+
+Against a local dev deployment, `bun run dev:remote-control` does the above for
+you: it derives the gateway origin with the same certificate discovery as
+`bun run dev` and trusts mkcert's root CA for loopback origins only. It accepts
+`RCS_DEV_API_KEY` as an alias for `CLAUDE_BRIDGE_OAUTH_TOKEN`.
 
 - `CLAUDE_BRIDGE_BASE_URL` — public origin of this deployment.
 - `CLAUDE_BRIDGE_OAUTH_TOKEN` — a per-user RCS API key. It is sent as
