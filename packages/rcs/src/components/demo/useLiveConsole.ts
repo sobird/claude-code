@@ -1,12 +1,11 @@
 'use client'
 
 /**
- * Live adapter for the demo console.
+ * 演示控制台的实时适配器。
  *
- * Polls the gateway for sessions and environments (10s, like the dashboard),
- * loads the active session's history once, folds live SSE frames through the
- * pure `session-reducer`, and maps the result onto the console's view model.
- * Sending and permission approvals use the same endpoints as `ChatView`.
+ * 轮询网关获取会话与环境（10 秒，与仪表盘一致），一次性加载活动会话的历史，
+ * 把实时 SSE 帧折叠进纯粹的 `session-reducer`，再将结果映射到控制台的视图模型。
+ * 发送消息和审批权限使用与 `ChatView` 相同的 endpoints。
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -49,11 +48,11 @@ interface EventActionResponse {
 }
 
 export interface LiveConsole {
-  /** True once the first sessions/environments poll settles (success or failure). */
+  /** 首次 sessions/environments 轮询结束后（无论成功失败）为 true。 */
   loading: boolean
-  /** A gateway token exists; the UI can write once the user takes over. */
+  /** 存在网关 token；用户接管后界面即可写入。 */
   authenticated: boolean
-  /** No token and the mint failed — show the login CTA. */
+  /** 没有 token 且签发失败 —— 展示登录 CTA。 */
   signedOut: boolean
   connection: 'connecting' | 'connected' | 'error'
   latencyMs: number | null
@@ -77,7 +76,7 @@ function errorMessage(error: unknown): string {
 function mapStatus(raw: string | null | undefined): SessionStatus {
   if (raw === 'running') return 'running'
   if (raw === 'active' || raw === 'requires_action') return 'active'
-  // idle / inactive / archived (closed rows never reach the list) read as idle.
+  // idle / inactive / archived（已关闭的行永远不会进入列表）都显示为空闲。
   return 'idle'
 }
 
@@ -136,8 +135,8 @@ function toolLineOf(entry: Extract<ThreadEntry, { type: 'tool_call' }>): ToolLin
 }
 
 /**
- * Fold the reducer's flat transcript into the console's grouped entries: runs
- * of tool calls collapse into one log, and pending permissions become cards.
+ * 把 reducer 的扁平 transcript 折叠为控制台的分组条目：连续的若干工具调用
+ * 合并成一条日志，待处理的权限请求变成卡片。
  */
 function mapEntries(chat: ChatState): Entry[] {
   const entries: Entry[] = []
@@ -232,8 +231,8 @@ export function useLiveConsole(enabled: boolean): LiveConsole {
   const [history, setHistory] = useState<SessionEventInput[]>([])
   const [extraEvents, setExtraEvents] = useState<SessionEventInput[]>([])
 
-  // Only the token's presence drives reloads; its periodic rotation must not
-  // reset the transcript or restart the poll loop.
+  // 只有 token 是否存在才驱动重新加载；它的周期性轮换不能重置
+  // transcript 或重启轮询循环。
   const hasToken = token !== null
 
   useEffect(() => {
@@ -290,7 +289,7 @@ export function useLiveConsole(enabled: boolean): LiveConsole {
     return () => clearInterval(timer)
   }, [enabled, hasToken, tokenError, load])
 
-  // Keep the selection valid: default to the most recently updated session.
+  // 保持选中项有效：默认选最近更新的会话。
   useEffect(() => {
     if (!enabled) return
     if (summaries.length === 0) {
@@ -304,7 +303,7 @@ export function useLiveConsole(enabled: boolean): LiveConsole {
     })
   }, [enabled, summaries])
 
-  // Load the active session's detail and first history page.
+  // 加载活动会话的详情和第一页历史。
   useEffect(() => {
     if (!enabled || activeId === null || !hasToken) return undefined
     let cancelled = false

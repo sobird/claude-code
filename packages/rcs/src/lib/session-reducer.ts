@@ -1,14 +1,13 @@
 /**
- * Pure chat reducer for the session detail view.
+ * 会话详情视图的纯聊天 reducer。
  *
- * Folds durable history (`GET /web/sessions/:id/history`) and live SSE frames
- * (`useSessionStream`) into one `ThreadEntry[]` model. It is React-free so the
- * fold semantics can be unit tested, and it dedupes by durable `seqNum` because
- * the stream replays the newest window on every (re)connect.
+ * 把持久历史（`GET /web/sessions/:id/history`）与实时 SSE 帧
+ * （`useSessionStream`）折叠成一个 `ThreadEntry[]` 模型。它不依赖 React，以便对
+ * 折叠语义做单元测试；它按持久化 `seqNum` 去重，因为流在每次（重）连接时都会重放
+ * 最新窗口。
  *
- * Unlike the legacy Vite adapter it also resolves `control_response` /
- * `permission_response`, so approvals race-free regardless of whether the echo
- * arrives over history or live.
+ * 与旧的 Vite adapter 不同，它还会结算 `control_response` /
+ * `permission_response`，因此无论回显来自历史还是实时，审批都不会产生竞态。
  */
 
 import { isSessionClosedStatus } from '@/contracts'
@@ -28,7 +27,7 @@ import { thinkingChoiceFromPayload, type ThinkingChoice, type ThinkingState } fr
 import { usageFromPayload, type TokenUsage } from './token-usage'
 
 // =============================================================================
-// Chat model
+// 聊天模型
 // =============================================================================
 
 export type ToolCallStatus = 'running' | 'complete' | 'error' | 'waiting_for_confirmation' | 'rejected' | 'canceled'
@@ -47,12 +46,12 @@ export interface ToolCallData {
   status: ToolCallStatus
   rawInput?: Record<string, unknown>
   rawOutput?: Record<string, unknown>
-  /** Present while `status === 'waiting_for_confirmation'`. */
+  /** 在 `status === 'waiting_for_confirmation'` 时存在。 */
   permissionRequest?: {
     requestId: string
     options: PermissionOption[]
   }
-  /** Permission request that had no matching in-flight tool call. */
+  /** 没有匹配到在途工具调用的权限请求。 */
   isStandalonePermission?: boolean
 }
 
@@ -60,9 +59,9 @@ export interface UserMessageEntry {
   type: 'user_message'
   id: string
   content: string
-  /** Stored image references rendered from `/web/attachments/:id`. */
+  /** 从 `/web/attachments/:id` 渲染的已存储图片引用。 */
   attachments?: AttachmentRef[]
-  /** Sent while the agent was running; the CLI processes it after the turn. */
+  /** 在 agent 运行期间发送；CLI 会在本轮结束后处理它。 */
   queued?: boolean
 }
 
@@ -70,12 +69,11 @@ export interface AssistantMessageEntry {
   type: 'assistant_message'
   id: string
   chunks: AssistantChunk[]
-  /** Transient bubble fed by `stream_event` deltas; replaced by the durable message. */
+  /** 由 `stream_event` 增量填充的临时气泡；会被持久消息取代。 */
   streaming?: boolean
   /**
-   * Agent tool call this message belongs to. Subagent traffic arrives as
-   * ordinary assistant/user messages tagged with `parent_tool_use_id`; the
-   * transcript stays flat and the view nests by this pointer.
+   * 此消息所属的 agent 工具调用。subagent 流量以普通 assistant/user 消息形式
+   * 到达，并带有 `parent_tool_use_id` 标签；transcript 保持扁平，视图按此指针嵌套。
    */
   parentToolUseId?: string
 }
@@ -83,7 +81,7 @@ export interface AssistantMessageEntry {
 export interface ToolCallEntry {
   type: 'tool_call'
   toolCall: ToolCallData
-  /** Agent tool call this tool ran under, when issued by a subagent. */
+  /** 该工具运行所在的 agent 工具调用（由 subagent 发起时）。 */
   parentToolUseId?: string
 }
 
@@ -103,8 +101,8 @@ export interface PlanDisplayEntry {
 }
 
 /**
- * Marker closing a completed turn; the view renders it as a muted line so the
- * reader can see how long the CLI worked (history uses server timestamps).
+ * 结束一轮已完成对话的标记；视图将其渲染为一行浅色文本，让读者看到
+ * CLI 工作了多久（历史使用服务器时间戳）。
  */
 export interface TurnEndEntry {
   type: 'turn_end'
@@ -113,8 +111,8 @@ export interface TurnEndEntry {
 }
 
 /**
- * Informational transcript row (compaction, API errors, hook summaries, …),
- * rendered only while the detailed-transcript toggle is on.
+ * 信息性的 transcript 行（压缩、API 错误、hook 摘要……），
+ * 仅在详细 transcript 开关开启时渲染。
  */
 export interface SystemEntry {
   type: 'system'
@@ -124,7 +122,7 @@ export interface SystemEntry {
   level?: string
   commands?: string[]
   writtenPaths?: string[]
-  /** Final status on a `task_notification` row. */
+  /** `task_notification` 行的最终状态。 */
   taskStatus?: string
 }
 
@@ -142,11 +140,11 @@ export interface PendingPermission {
   toolName: string
   toolInput: Record<string, unknown>
   description?: string
-  /** CLI-proposed PermissionUpdate objects ("always allow …"). */
+  /** CLI 提议的 PermissionUpdate 对象（“始终允许……”）。 */
   suggestions: PermissionSuggestion[]
-  /** Path that made the permission check fail, when the CLI reports one. */
+  /** 导致权限检查失败的路径（CLI 报告时才有）。 */
   blockedPath?: string
-  /** Free-text explanation from the CLI (not forwarded by the bridge today). */
+  /** CLI 的自由文本说明（目前 bridge 不转发）。 */
   decisionReason?: string
 }
 
@@ -157,61 +155,59 @@ export interface ChatState {
   closed: boolean
   lastSeqNum: number
   seenSeqNums: Set<number>
-  /** Events without a numeric `seqNum` dedupe by uuid instead. */
+  /** 没有数值 `seqNum` 的事件改用 uuid 去重。 */
   seenEventIds: Set<string>
   /**
-   * Assistant message uuids already rendered. The bridge replays history into
-   * the CLI on every ingress reconnect and the CLI echoes assistant messages
-   * back, so the same message arrives again under a fresh durable seqNum.
-   * Dedupe by message uuid so the replay does not repeat text in the UI.
+   * 已渲染过的 assistant 消息 uuid。bridge 每次入站重连都会把历史重放给
+   * CLI，而 CLI 又回显 assistant 消息，因此同一条消息会在新的持久 seqNum 下
+   * 再次到达。按消息 uuid 去重，避免重放导致 UI 重复文本。
    */
   seenAssistantUuids: Set<string>
   error: string | null
-  /** Bridge-safe slash commands from the latest `system/init` (empty until one arrives). */
+  /** 来自最新 `system/init` 的 bridge 安全斜杠命令（在收到前为空）。 */
   slashCommands: string[]
-  /** Current CLI permission mode from `system/init`; `null` hides the mode control. */
+  /** 来自 `system/init` 的当前 CLI 权限模式；`null` 时隐藏模式控件。 */
   permissionMode: string | null
-  /** Mode switch sent but not yet acknowledged by the CLI. */
+  /** 已发送但尚未被 CLI 确认的模式切换。 */
   pendingMode: { requestId: string; mode: WebPermissionMode } | null
-  /** CLI rejection of the last mode switch (e.g. bypass is disabled). */
+  /** CLI 对最近一次模式切换的拒绝（例如 bypass 被禁用）。 */
   modeError: string | null
-  /** Current model from `system/init`; `null` means the CLI default (or not yet reported). */
+  /** 来自 `system/init` 的当前模型；`null` 表示 CLI 默认值（或尚未上报）。 */
   model: string | null
-  /** Model switch sent but not yet acknowledged by the CLI; `null` model resets to default. */
+  /** 已发送但尚未被 CLI 确认的模型切换；`model` 为 `null` 表示重置为默认值。 */
   pendingModel: { requestId: string; model: string | null } | null
-  /** CLI rejection of the last model switch. */
+  /** CLI 对最近一次模型切换的拒绝。 */
   modelError: string | null
   /**
-   * Last web-requested thinking state the CLI confirmed; `null` is the CLI
-   * default (or unknown — `system/init` carries no thinking state).
+   * CLI 已确认的最近一次 Web 端请求的 thinking 状态；`null` 是 CLI 默认值
+   * （或未知——`system/init` 不携带 thinking 状态）。
    */
   thinking: ThinkingState
-  /** Thinking switch sent but not yet acknowledged by the CLI. */
+  /** 已发送但尚未被 CLI 确认的 thinking 切换。 */
   pendingThinking: { requestId: string; choice: ThinkingChoice } | null
-  /** CLI rejection of the last thinking switch. */
+  /** CLI 对最近一次 thinking 切换的拒绝。 */
   thinkingError: string | null
   /**
-   * `stop_task` requests awaiting a control_response, keyed by request id to
-   * task id. The reply itself closes the row: a killed task may not send a
-   * `task_notification` (the CLI suppresses it for shells), and an error
-   * reply means no live task exists under that id anyway.
+   * 等待 control_response 的 `stop_task` 请求，按请求 id 映射到任务 id。
+   * 回复本身就会关闭该行：被终止的任务可能不会发送 `task_notification`
+   *（CLI 对 shell 会抑制它），而错误回复意味着该 id 下本就没有存活的任务。
    */
   pendingStops: Record<string, string>
-  /** Wall-clock start of the running turn, from the newest user message. */
+  /** 运行中这一轮的实际开始时间，来自最新的用户消息。 */
   turnStartedAt: number | null
-  /** True between a turn's first event and its `result`; gates the queued hint. */
+  /** 在一轮的首个事件与其 `result` 之间为 true；用于控制排队提示的显示。 */
   turnOpen: boolean
-  /** Latest task list from `TodoWrite` (or an upstream `task_state` payload). */
+  /** 来自 `TodoWrite`（或上游 `task_state` 载荷）的最新任务列表。 */
   tasks: TaskItem[]
-  /** Background tasks (agents, workflows) the CLI is still running. */
+  /** CLI 仍在运行的后台任务（agents、workflows）。 */
   backgroundTasks: BackgroundTask[]
-  /** Usage of the most recent assistant message; `null` until one reports it. */
+  /** 最近一条 assistant 消息的用量；在上报之前为 `null`。 */
   lastUsage: TokenUsage | null
 }
 
 /**
- * Shape shared by durable history rows and live SSE frames. Both carry a
- * `seqNum`; only history carries the event uuid in `id`.
+ * 持久历史行与实时 SSE 帧共享的形状。两者都携带 `seqNum`；只有历史在 `id`
+ * 里携带事件 uuid。
  */
 export interface SessionEventInput {
   id?: string
@@ -222,7 +218,7 @@ export interface SessionEventInput {
   sessionId?: string
   createdAt?: number
   receivedAt?: number
-  /** Live-only frame (SSE without an `id:`); falls outside the durable sequence. */
+  /** 仅实时帧（不带 `id:` 的 SSE）；不在持久序列之内。 */
   ephemeral?: boolean
 }
 
@@ -255,7 +251,7 @@ export const initialChatState: ChatState = {
 }
 
 // =============================================================================
-// Payload helpers
+// 载荷辅助函数
 // =============================================================================
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -267,10 +263,9 @@ function asText(value: unknown): string {
 }
 
 /**
- * Parent Agent tool call id for subagent traffic. The CLI puts
- * `parent_tool_use_id` at the top level of derived assistant/user messages;
- * the gateway's `normalizePayload` keeps the original under `raw`, so read
- * either shape.
+ * subagent 流量的父 Agent 工具调用 id。CLI 把 `parent_tool_use_id` 放在派生出的
+ * assistant/user 消息顶层；gateway 的 `normalizePayload` 把原始内容保存在 `raw`
+ * 下，因此两种形状都要读取。
  */
 function parentToolUseIdOf(payload: Record<string, unknown>): string | undefined {
   const direct = asText(payload.parent_tool_use_id)
@@ -280,8 +275,8 @@ function parentToolUseIdOf(payload: Record<string, unknown>): string | undefined
 }
 
 /**
- * Server time for history rows, client receive time for live frames: durable
- * rows carry `createdAt`, SSE frames only `receivedAt`.
+ * 历史行用服务器时间，实时帧用客户端接收时间：持久行携带 `createdAt`，
+ * SSE 帧只有 `receivedAt`。
  */
 function eventTimeOf(event: SessionEventInput): number | null {
   for (const value of [event.createdAt, event.receivedAt]) {
@@ -290,7 +285,7 @@ function eventTimeOf(event: SessionEventInput): number | null {
   return null
 }
 
-/** Pull a display string out of a `content` / `message.content` payload. */
+/** 从 `content` / `message.content` 载荷中提取显示字符串。 */
 export function extractEventText(payload: unknown): string {
   const record = asRecord(payload)
   if (!record) return typeof payload === 'string' ? payload : ''
@@ -325,12 +320,12 @@ function numericSeqNum(event: SessionEventInput): number | null {
 }
 
 // =============================================================================
-// Reducer
+// 状态归约器
 // =============================================================================
 
 /**
- * Streaming snapshots are published live without a durable row and never replayed,
- * so they must bypass the seqNum/uuid dedupe bookkeeping entirely.
+ * 流式快照是实时发布的，没有持久行，也不会被重放，
+ * 因此它们必须完全绕过 seqNum/uuid 去重记账。
  */
 export function isEphemeralEvent(event: SessionEventInput): boolean {
   return event.ephemeral === true || event.type === 'stream_event'
@@ -373,7 +368,7 @@ function replaceEntry(entries: ThreadEntry[], index: number, entry: ThreadEntry)
 
 const STREAMING_ENTRY_ID = 'streaming'
 
-/** Transient bubble id per thread; the main thread keeps the historical id. */
+/** 每个线程的临时气泡 id；主线程沿用历史 id。 */
 function streamingEntryId(parentToolUseId?: string): string {
   return parentToolUseId ? `${STREAMING_ENTRY_ID}:${parentToolUseId}` : STREAMING_ENTRY_ID
 }
@@ -383,16 +378,16 @@ function isStreamingEntry(entry: ThreadEntry, parentToolUseId?: string): entry i
 }
 
 /**
- * Remove the transient streamed bubble for one thread (`undefined` = main thread);
- * the durable message replaces it. Threads stream independently, so a durable
- * subagent message must not clear the main-thread prefix.
+ * 移除某个线程的临时流式气泡（`undefined` = 主线程）；
+ * 持久消息会取代它。各线程独立流式输出，因此持久化的 subagent 消息
+ * 不得清除主线程的前缀。
  */
 function dropThreadStreaming(state: ChatState, parentToolUseId?: string): ChatState {
   if (!state.entries.some((entry) => isStreamingEntry(entry, parentToolUseId))) return state
   return { ...state, entries: state.entries.filter((entry) => !isStreamingEntry(entry, parentToolUseId)) }
 }
 
-/** The turn ended or was interrupted: every thread's streamed bubble is stale. */
+/** 本轮已结束或被中断：各线程的流式气泡都已过期。 */
 function dropAllStreaming(state: ChatState): ChatState {
   if (!state.entries.some((entry) => entry.type === 'assistant_message' && entry.streaming)) return state
   return {
@@ -402,9 +397,8 @@ function dropAllStreaming(state: ChatState): ChatState {
 }
 
 /**
- * Append a delta to its thread's transient bubble. Threads interleave in the
- * flat transcript, so the bubble is located by parent pointer rather than by
- * position — a subagent delta never merges into the main thread's text.
+ * 把一个增量追加到所属线程的临时气泡。线程在扁平 transcript 中交错，
+ * 因此气泡按父指针而非位置定位——subagent 的增量绝不会并入主线程的文本。
  */
 function appendStreaming(
   state: ChatState,
@@ -453,8 +447,8 @@ function appendAssistantText(
   parentToolUseId?: string,
 ): ThreadEntry[] {
   const last = entries[entries.length - 1]
-  // Only continue a message from the same thread; a subagent turn never
-  // appends into the main-thread bubble (or into another agent's).
+  // 只续接同一线程的消息；subagent 的一轮绝不会追加到主线程气泡
+  //（也不会追加到另一个 agent 的气泡）。
   if (last && last.type === 'assistant_message' && last.parentToolUseId === parentToolUseId) {
     const chunks = last.chunks.slice()
     const lastChunk = chunks[chunks.length - 1]
@@ -510,14 +504,14 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
   const nextId = event.id || `assistant-${seqNum ?? state.entries.length}`
   const parentToolUseId = parentToolUseIdOf(payload)
 
-  // A replayed assistant message carries the uuid it was first rendered under.
+  // 重放的 assistant 消息带有它首次渲染时的 uuid。
   const messageUuid = asText(payload.uuid) || nextId
   if (messageUuid && state.seenAssistantUuids.has(messageUuid)) return state
   const seenAssistantUuids = new Set(state.seenAssistantUuids)
   seenAssistantUuids.add(messageUuid)
 
-  // A durable message supersedes its own thread's streamed prefix; other threads'
-  // bubbles (main vs. subagent) keep streaming.
+  // 持久消息会取代其自身线程的流式前缀；其他线程的气泡
+  //（主线程 vs. subagent）继续流式输出。
   const base = dropThreadStreaming(state, parentToolUseId)
   let entries = base.entries
   const text = typeof payload.content === 'string' ? payload.content : extractEventText(payload)
@@ -588,7 +582,7 @@ interface ToolResultBlock {
   isError: boolean
 }
 
-/** Concatenates the text blocks of a tool_result's content. */
+/** 拼接 tool_result 内容中的文本块。 */
 function textFromBlocks(value: unknown): string {
   if (typeof value === 'string') return value
   if (!Array.isArray(value)) return ''
@@ -600,9 +594,9 @@ function textFromBlocks(value: unknown): string {
 }
 
 /**
- * The CLI reports tool results as a synthetic `user` turn whose content is a
- * list of `tool_result` blocks — not as a standalone `tool_result` event. Pull
- * them out so the matching tool card leaves its running state.
+ * CLI 把工具结果报告为一个合成的 `user` 轮次，其内容是 `tool_result` 块列表
+ * ——而不是独立的 `tool_result` 事件。把它们提取出来，让对应的工具卡片
+ * 退出运行状态。
  */
 function collectUserToolResults(payload: Record<string, unknown>): ToolResultBlock[] {
   const message = asRecord(payload.message)
@@ -638,9 +632,8 @@ function settleToolResult(entries: ThreadEntry[], result: ToolResultBlock): Thre
 function handleToolResult(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
   const toolCallId = asText(payload.tool_call_id)
-  // An explicitly named call that does not match stays a no-op. A missing/empty
-  // id is positional, so fall back to the most recent running call in the same
-  // thread — subagent calls interleave in the flat transcript.
+  // 显式命名但未匹配的工具调用保持不变。缺失/空的 id 按位置匹配，因此回退到
+  // 同一线程中最近的运行中调用——subagent 调用在扁平 transcript 中交错。
   let index = toolCallId ? findToolCallIndex(state.entries, toolCallId) : -1
   if (!toolCallId) index = mostRecentRunningIndex(state.entries, parentToolUseIdOf(payload))
   if (index < 0) return state
@@ -661,16 +654,16 @@ function handleToolResult(state: ChatState, event: SessionEventInput): ChatState
 }
 
 /**
- * Background shells (`local_bash`) outlive the turn that started them: the CLI
- * only holds `result` back for agents/workflows, so clearing on a turn end must
- * keep them until their own `task_notification`.
+ * 后台 shell（`local_bash`）的存活时间长于启动它的那一轮：CLI 只为
+ * agents/workflows 保留 `result`，因此在轮次结束时清理必须保留它们，
+ * 直到它们自己的 `task_notification` 到来。
  */
 function retainPersistentTasks(tasks: BackgroundTask[]): BackgroundTask[] {
   const kept = tasks.filter((task) => task.taskType === 'local_bash')
   return kept.length === tasks.length ? tasks : kept
 }
 
-/** Informational system subtypes the detailed transcript renders as rows. */
+/** 详细 transcript 渲染为行的信息性 system 子类型。 */
 const SYSTEM_ROW_SUBTYPES = new Set([
   'compact_boundary',
   'microcompact_boundary',
@@ -683,22 +676,21 @@ const SYSTEM_ROW_SUBTYPES = new Set([
 ])
 
 /**
- * `system/init` carries the bridge-safe slash commands and the current
- * permission mode; `system/status` reports the live mode after a change the
- * web did not initiate (e.g. approving ExitPlanMode with auto-accept edits).
- * The informational subtypes in SYSTEM_ROW_SUBTYPES become transcript rows;
- * everything else is still ignored.
+ * `system/init` 携带 bridge 安全的斜杠命令和当前权限模式；`system/status`
+ * 在上报由 Web 未发起的变更后的实时模式（例如通过自动接受编辑来批准
+ * ExitPlanMode）。SYSTEM_ROW_SUBTYPES 中的信息性子类型会变成 transcript 行；
+ * 其余仍然被忽略。
  *
- * A reconnect re-sends init, so a later message simply replaces the previous
- * snapshot (history replays fold in sequence order).
+ * 重连会重新发送 init，因此后续消息只是替换先前的快照
+ *（历史重放按序列顺序折叠）。
  */
 function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
   const subtype = asText(payload.subtype)
 
   if (subtype === 'status') {
-    // Status carries no commands, so only the mode moves; an unrecognized value
-    // (e.g. CLI-only `auto`) leaves the last known mode in place.
+    // status 不携带命令，因此只有模式会变化；无法识别的值
+    //（例如仅 CLI 的 `auto`）会保留上次已知的模式。
     if (!isWebPermissionMode(payload.permissionMode) || payload.permissionMode === state.permissionMode) return state
     return { ...state, permissionMode: payload.permissionMode }
   }
@@ -710,7 +702,7 @@ function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatStat
         ].slice(0, 100)
       : state.slashCommands
     const permissionMode = isWebPermissionMode(payload.permissionMode) ? payload.permissionMode : state.permissionMode
-    // A missing/invalid model keeps the last known one; the CLI always sends it in init.
+    // 缺失/无效的 model 保留上次已知值；CLI 总会在 init 中发送它。
     const model = normalizeModel(payload.model) ?? state.model
 
     return {
@@ -725,8 +717,8 @@ function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatStat
     }
   }
 
-  // Background-task lifecycle. `task_started` opens the turn window the queue
-  // hint keys off: the CLI holds `result` back while these tasks run.
+  // 后台任务生命周期。`task_started` 打开队列提示所依据的轮次窗口：
+  // 这些任务运行期间 CLI 会保留 `result`。
   if (subtype === 'task_started') {
     return {
       ...state,
@@ -745,10 +737,9 @@ function handleSystemEvent(state: ChatState, event: SessionEventInput): ChatStat
     backgroundTasks = completeBackgroundTask(backgroundTasks, asText(payload.task_id))
   }
 
-  // `session_state_changed` is the CLI's own liveness claim. Going idle ends the
-  // turn-scoped tasks (agents/workflows hold `result` back, so they are already
-  // gone); background shells keep running. The turn state stays owned by
-  // result/session_status.
+  // `session_state_changed` 是 CLI 自身的存活声明。转入 idle 会结束轮次范围内的
+  // 任务（agents/workflows 会保留 `result`，因此它们已经消失）；后台 shell 继续
+  // 运行。轮次状态仍由 result/session_status 掌管。
   if (subtype === 'session_state_changed') {
     if (payload.state !== 'idle' || state.backgroundTasks.length === 0) return state
     const backgroundTasks = retainPersistentTasks(state.backgroundTasks)
@@ -785,25 +776,23 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
   const requestId = asText(payload.request_id)
   if (!requestId) return state
 
-  // Non-permission control requests share the envelope. `set_permission_mode`
-  // and `set_model` are echoed back as outbound events, so they double as the
-  // pending trackers for their respective switches.
+  // 非权限的 control 请求共享同一个信封。`set_permission_mode` 和 `set_model`
+  // 会作为出站事件被回显，因此它们同时充当各自切换的待处理跟踪器。
   const subtype = asText(request.subtype)
   if (subtype && subtype !== 'can_use_tool') {
     if (subtype === 'set_model') {
       return { ...state, pendingModel: { requestId, model: normalizeModel(request.model) }, modelError: null }
     }
     if (subtype === 'stop_task') {
-      // Remember which row the web asked to stop: the CLI answers with a
-      // control_response instead of a task_notification here (the child only
-      // bookends tasks it kills; an already-finished task is an error reply).
+      // 记住 Web 端要求停止的行：CLI 在这里用 control_response 回应，
+      // 而不是 task_notification（子进程只为它终止的任务打点；已完成的任务
+      // 会得到错误回复）。
       const taskId = asText(request.task_id)
       if (!taskId) return state
       return { ...state, pendingStops: { ...state.pendingStops, [requestId]: taskId } }
     }
     if (subtype === 'set_max_thinking_tokens') {
-      // The echoed request carries the budget the web sent: null = default,
-      // 0 = off, >0 = on.
+      // 回显的请求携带 Web 端发送的预算：null = 默认，0 = 关闭，>0 = 开启。
       const raw = request.max_thinking_tokens
       const choice: ThinkingChoice =
         raw === null || raw === undefined ? 'default' : (thinkingChoiceFromPayload(raw) ?? 'default')
@@ -840,16 +829,15 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
         },
       ]
 
-  // Already bound to this exact request (replayed frame): don't create a second card.
+  // 已绑定到这一确切请求（重放的帧）：不再创建第二张卡片。
   const alreadyBound = state.entries.some(
     (entry) => entry.type === 'tool_call' && entry.toolCall.permissionRequest?.requestId === requestId,
   )
   if (alreadyBound) return { ...state, pendingPermissions }
 
-  // Prefer the most recent running call for the same tool; fall back to the
-  // most recent running call in the same thread (subagent calls interleave in
-  // the flat transcript). Calls already awaiting confirmation are never
-  // rebound to a different request.
+  // 优先选择同一工具最近的运行中调用；回退到同一线程中最近的运行中调用
+  //（subagent 调用在扁平 transcript 中交错）。已在等待确认的调用绝不会
+  // 重新绑定到另一个请求。
   const parentToolUseId = parentToolUseIdOf(payload)
   let target = -1
   for (let i = state.entries.length - 1; i >= 0; i--) {
@@ -903,7 +891,7 @@ function handlePermissionRequest(state: ChatState, event: SessionEventInput): Ch
   }
 }
 
-/** The CLI's control_response nests its outcome under `response`. */
+/** CLI 的 control_response 把其结果嵌套在 `response` 下。 */
 function responseOutcome(payload: Record<string, unknown>): { subtype: string; error: string } {
   const response = asRecord(payload.response) ?? {}
   return {
@@ -917,11 +905,10 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
   const requestId = requestIdOf(payload)
   if (!requestId) return state
 
-  // A stop_task reply is authoritative either way: success means the CLI
-  // killed the task (and some CLI versions suppress the closing
-  // task_notification for killed shells, so waiting for it would keep the
-  // row up forever), error means it never had a live task. Drop the row now;
-  // a late notification is a no-op and still appends its transcript row.
+  // stop_task 的回复无论哪种结果都是权威的：成功表示 CLI 终止了该任务
+  //（某些 CLI 版本对被终止的 shell 会抑制结束的 task_notification，若等待它
+  // 会让该行永远挂着），错误表示它本就没有存活的任务。立即删除该行；
+  // 迟到的通知是无操作，仍会追加它的 transcript 行。
   const stoppedTaskId = state.pendingStops[requestId]
   if (stoppedTaskId !== undefined) {
     const { [requestId]: _, ...pendingStops } = state.pendingStops
@@ -932,7 +919,7 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
     }
   }
 
-  // A mode switch resolves against pendingMode, not against a permission card.
+  // 模式切换针对 pendingMode 结算，而不是针对权限卡片。
   const pendingMode = state.pendingMode
   if (pendingMode && pendingMode.requestId === requestId) {
     const outcome = responseOutcome(payload)
@@ -942,8 +929,8 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
     return { ...state, pendingMode: null, modeError: null, permissionMode: pendingMode.mode }
   }
 
-  // Likewise for a model switch. The success reply carries no model, so adopt the
-  // requested value; the next `system/init` corrects any alias the CLI normalized.
+  // 模型切换同理。成功回复不携带模型，因此采用请求的值；
+  // 下一次 `system/init` 会纠正 CLI 规范化过的任何别名。
   const pendingModel = state.pendingModel
   if (pendingModel && pendingModel.requestId === requestId) {
     const outcome = responseOutcome(payload)
@@ -953,8 +940,8 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
     return { ...state, pendingModel: null, modelError: null, model: pendingModel.model }
   }
 
-  // And for a thinking switch. `default` clears the adopted state; the CLI does
-  // not echo the effective budget, so this only remembers the web's last choice.
+  // thinking 切换亦然。`default` 会清除已采用的状态；CLI 不会回显
+  // 生效的预算，因此这里只记住 Web 端最后的选择。
   const pendingThinking = state.pendingThinking
   if (pendingThinking && pendingThinking.requestId === requestId) {
     const outcome = responseOutcome(payload)
@@ -977,8 +964,8 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
     if (entry.type !== 'tool_call') return entry
     if (entry.toolCall.permissionRequest?.requestId !== requestId) return entry
     changed = true
-    // A standalone card has no tool call behind it, so it will never receive a
-    // `tool_result`; settle it here (approved → complete, denied → rejected).
+    // 独立卡片背后没有工具调用，因此永远不会收到 `tool_result`；
+    // 在此结算（批准 → complete，拒绝 → rejected）。
     const status: ToolCallStatus = entry.toolCall.isStandalonePermission
       ? approved
         ? 'complete'
@@ -1001,9 +988,9 @@ function handlePermissionResponse(state: ChatState, event: SessionEventInput): C
 }
 
 /**
- * The CLI resolved a request locally (hook/classifier/recheck) and cancelled it
- * instead of answering. Drop the matching card so it stops blocking the UI; a
- * bound tool call resumes as running, a standalone card disappears.
+ * CLI 在本地（hook/classifier/recheck）决定了请求并取消它，而不是给出答复。
+ * 移除匹配的卡片，使其不再阻塞 UI；已绑定的工具调用恢复为运行中，
+ * 独立卡片则消失。
  */
 function handleControlCancel(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
@@ -1064,21 +1051,21 @@ function handleSessionStatus(state: ChatState, event: SessionEventInput): ChatSt
   const payload = asRecord(event.payload) ?? {}
   const status = asText(payload.status)
   if (!status) return state
-  // The turn stopped (idle/archived/inactive): any in-flight stream is stale.
+  // 本轮已停止（idle/archived/inactive）：任何在途流都已过期。
   const base = status === 'running' ? state : dropAllStreaming(state)
-  // A reported non-running state ends the queue window even if no result event
-  // arrived (crashed or interrupted turns).
+  // 上报的非运行状态会结束队列窗口，即使没有 result 事件到达
+  //（崩溃或中断的轮次）。
   const turnOpen = status === 'running' || status === 'requires_action'
   const closed = isSessionClosedStatus(status)
   return { ...base, status, closed, turnOpen, backgroundTasks: closed ? [] : state.backgroundTasks }
 }
 
 /**
- * Locate the raw SDK stream event inside a `stream_event` payload.
+ * 在 `stream_event` 载荷中定位原始 SDK 流事件。
  *
- * Raw frames wrap it under `event`. The gateway's `normalizePayload` stores every
- * inbound message as `{ content, raw }` before publishing it, so the live SSE stream
- * nests the SDK message under `raw` and the event under `raw.event`.
+ * 原始帧把它包在 `event` 下。gateway 的 `normalizePayload` 在发布前把每条
+ * 入站消息存为 `{ content, raw }`，因此实时 SSE 流把 SDK 消息嵌套在 `raw`
+ * 下，把事件嵌套在 `raw.event` 下。
  */
 function streamEventOf(payload: Record<string, unknown>): Record<string, unknown> {
   const direct = asRecord(payload.event)
@@ -1089,9 +1076,9 @@ function streamEventOf(payload: Record<string, unknown>): Record<string, unknown
 }
 
 /**
- * `stream_event` payloads wrap the raw SDK event under `event`. Deltas are
- * keyed by their thread (`parent_tool_use_id`): main-thread text streams in the
- * plain bubble, while subagent text streams inside its own Agent card.
+ * `stream_event` 载荷把原始 SDK 事件包在 `event` 下。增量按其线程
+ *（`parent_tool_use_id`）归属：主线程文本流入普通气泡，而 subagent 文本
+ * 在其自己的 Agent 卡片内流式输出。
  */
 function handleStreamEvent(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
@@ -1113,11 +1100,11 @@ function handleResult(state: ChatState, event: SessionEventInput): ChatState {
   const payload = asRecord(event.payload) ?? {}
   const base = dropAllStreaming(state)
 
-  // Close the running turn with its wall-clock length. The marker is dropped
-  // when the start time is unknown (e.g. history older than the first page).
+  // 用实际时长结束运行中的一轮。当开始时间未知时丢弃标记
+  //（例如早于第一页的历史）。
   let entries = base.entries
 
-  // The CLI picks up messages queued during this turn as soon as it ends.
+  // 本轮一结束，CLI 就会取出本轮期间排队的消息。
   if (entries.some((entry) => entry.type === 'user_message' && entry.queued)) {
     entries = entries.map((entry) =>
       entry.type === 'user_message' && entry.queued ? { ...entry, queued: undefined } : entry,
@@ -1131,8 +1118,8 @@ function handleResult(state: ChatState, event: SessionEventInput): ChatState {
       entries = [...entries, { type: 'turn_end', id, durationMs: Math.max(0, endedAt - base.turnStartedAt) }]
     }
   }
-  // A result ends the turn; agents/workflows finished (they hold `result` back),
-  // but background shells may still be serving.
+  // result 结束本轮；agents/workflows 已完成（它们保留 `result`），
+  // 但后台 shell 可能仍在运行。
   const closed = {
     ...base,
     entries,
@@ -1179,31 +1166,30 @@ function handlePlan(state: ChatState, event: SessionEventInput): ChatState {
 function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
   switch (event.type) {
     case 'user': {
-      // Both directions render: the gateway persists outbound sends as `user`
-      // events but does not echo them back inbound, so treating only inbound as
-      // displayable would lose every sent message on reload.
+      // 两个方向都会渲染：gateway 把出站发送持久化为 `user` 事件，但不会
+      // 作为入站回显，因此只把入站视为可显示，会在重新加载时丢失每条已发送的消息。
       const payload = asRecord(event.payload) ?? {}
-      // Replay acknowledgments echo a message the history already holds.
+      // 重放确认会回显历史已持有的消息。
       if (payload.isReplay === true) return state
       let entries = state.entries
       for (const result of collectUserToolResults(payload)) {
         entries = settleToolResult(entries, result)
       }
-      // A subagent's user turn carries its tool results (and sometimes meta
-      // text); it is not a prompt the user typed, so it gets no bubble.
+      // subagent 的 user 轮次携带它的工具结果（有时还有元文本）；它
+      // 不是用户输入的提示，因此不生成气泡。
       if (parentToolUseIdOf(payload)) return entries === state.entries ? state : { ...state, entries }
       const text = extractEventText(event.payload)
-      // Image-only prompts have no text projection but still render.
+      // 仅有图片的提示没有文本投影，但仍会渲染。
       const attachments = extractUserAttachments(event.payload)
       if (!text && attachments.length === 0) return entries === state.entries ? state : { ...state, entries }
       const seqNum = numericSeqNum(event)
       const id = asText(payload.uuid) || (seqNum !== null ? String(seqNum) : event.id || `user-${entries.length}`)
-      // Dedupe by uuid: an optimistic send and its history/echo counterpart
-      // share the uuid even when their seqNums differ.
+      // 按 uuid 去重：乐观发送及其历史/回显对应项即使在 seqNum 不同时
+      // 也共享同一 uuid。
       if (entries.some((entry) => entry.type === 'user_message' && entry.id === id)) return { ...state, entries }
       const startedAt = eventTimeOf(event)
-      // Queued = the CLI is mid-turn. Bridges do not always publish
-      // session_status, so an open turn is the reliable signal.
+      // queued = CLI 正处于一轮之中。bridge 不总会发布
+      // session_status，因此开放的轮次是可靠的信号。
       const queued = state.status === 'running' || state.turnOpen
       return {
         ...state,
@@ -1217,7 +1203,7 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
             ...(queued ? { queued: true } : {}),
           },
         ],
-        // A new turn starts fresh; the previous failure no longer describes it.
+        // 新的一轮从零开始；先前的失败不再描述它。
         error: null,
         turnStartedAt: startedAt ?? state.turnStartedAt,
         turnOpen: true,
@@ -1257,22 +1243,22 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
     case 'interrupt':
       return dropAllStreaming(state)
     default:
-      // partial_assistant, automation_state, status, … are intentionally
-      // ignored. Background-task lifecycle rides on `system` subtypes.
+      // partial_assistant、automation_state、status 等有意忽略。
+      // 后台任务生命周期搭载于 `system` 子类型之上。
       return state
   }
 }
 
-/** Fold one history row or live frame into the chat state. */
+/** 把一行历史或一个实时帧折叠进聊天状态。 */
 export function reduceSessionEvent(state: ChatState, event: SessionEventInput): ChatState {
-  // Ephemeral frames are never replayed, so they skip the durable dedupe sets.
+  // 临时帧永远不会被重放，因此跳过持久去重集合。
   if (isEphemeralEvent(event)) return applyEvent(state, event)
   if (isDuplicate(state, event)) return state
   const seeded = markSeen(state, event)
   return applyEvent(seeded, event)
 }
 
-/** Durable event types that close the current streamed assistant message. */
+/** 会关闭当前流式 assistant 消息的持久事件类型。 */
 const TERMINAL_STREAM_EVENT_TYPES = new Set([
   'assistant',
   'result',
@@ -1283,19 +1269,17 @@ const TERMINAL_STREAM_EVENT_TYPES = new Set([
 ])
 
 /**
- * The live delta window to replay on top of durable history: every ephemeral
- * frame that arrived after the last terminal durable event. Feeding the whole
- * live log would resurrect a finished streamed bubble on each render pass.
+ * 要在持久历史之上重放的实时增量窗口：最后一条终态持久事件之后到达的每个
+ * 临时帧。喂入整个实时日志会在每次渲染时复活一个已完成的流式气泡。
  *
- * Windows are per thread: a durable assistant message retires only its own
- * thread's prefix (a subagent finishing must not blank the main stream, and
- * vice versa), while turn-ending events close every thread.
+ * 窗口是按线程的：一条持久 assistant 消息只会退役它自己线程的前缀
+ *（subagent 结束不得清空主流，反之亦然），而结束轮次的事件会关闭所有线程。
  */
 export function activeStreamEvents(events: readonly SessionEventInput[]): SessionEventInput[] {
   let globalStart = 0
   const threadStarts = new Map<string, number>()
 
-  // First pass: the last cut per thread (and the last turn-ending cut overall).
+  // 第一遍：每个线程的最后一次切分（以及整体的最后一次结束轮次切分）。
   for (let i = 0; i < events.length; i++) {
     const candidate = events[i]
     if (!candidate || isEphemeralEvent(candidate)) continue
@@ -1308,7 +1292,7 @@ export function activeStreamEvents(events: readonly SessionEventInput[]): Sessio
     }
   }
 
-  // Second pass: frames that survived every cut applying to their thread.
+  // 第二遍：通过了所有适用于其线程的切分的帧。
   return events.filter((candidate, i) => {
     if (!isEphemeralEvent(candidate)) return false
     const thread = parentToolUseIdOf(asRecord(candidate.payload) ?? {}) ?? ''
@@ -1316,7 +1300,7 @@ export function activeStreamEvents(events: readonly SessionEventInput[]): Sessio
   })
 }
 
-/** Fold a page of durable history (oldest→newest) through the reducer. */
+/** 通过 reducer 折叠一页持久历史（从旧到新）。 */
 export function applyHistory(state: ChatState, events: readonly SessionEventInput[]): ChatState {
   let next = state
   for (const event of events) next = reduceSessionEvent(next, event)

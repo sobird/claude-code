@@ -1,14 +1,14 @@
-/* Design study: an editorial "field console" for the remote agent sessions.
-   Breakpoints follow Tailwind defaults: 40rem, 55rem, 60rem, 75rem. */
+/* 设计研究：一个服务于远程智能体会话的编辑式「现场控制台」。
+   断点沿用 Tailwind 默认值：40rem、55rem、60rem、75rem。 */
 
 .root {
   --rail-w: 19rem;
   --rail-w-compact: 4.25rem;
   --ledger-w: 18rem;
-  /* Chinese-first type: a system CJK sans stack (PingFang / HarmonyOS / YaHei /
-     Source Han / Noto) instead of the Latin Lora + Poppins webfonts, which have
-     no Chinese glyphs and rely on fonts.googleapis.com — often unreachable in
-     mainland China. Mono is reserved for code, branches, and Latin metadata. */
+  /* 中文优先字体：使用系统 CJK 无衬线字族（PingFang / HarmonyOS / YaHei /
+     Source Han / Noto），而不是拉丁文的 Lora + Poppins 网络字体——后者没有
+     中文字形，还依赖 fonts.googleapis.com（在中国大陆常常无法访问）。
+     等宽字体只用于代码、分支和拉丁文元数据。 */
   --font-sans:
     'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Source Han Sans SC', 'Noto Sans SC', 'Hiragino Sans GB',
     system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -25,7 +25,7 @@
   color: var(--color-text-primary);
 }
 
-/* ---- shared bits ---- */
+/* ---- 公共片段 ---- */
 
 .icon {
   width: 1rem;
@@ -95,7 +95,7 @@
   animation: breathe-brand 2s ease-out infinite;
 }
 
-/* ---- fleet rail ---- */
+/* ---- 环境侧栏 ---- */
 
 .rail {
   position: relative;
@@ -160,7 +160,7 @@
   cursor: pointer;
 }
 
-/* The drawer below 55rem uses the X; the fixed column uses the collapse icon. */
+/* 低于 55rem 的抽屉使用 X；固定列使用折叠图标。 */
 .railClose {
   display: none;
 }
@@ -328,7 +328,7 @@
   font-weight: 600;
 }
 
-/* ---- compact rail (desktop, collapsed) ---- */
+/* ---- 紧凑侧栏（桌面端，已折叠） ---- */
 
 .railCompact {
   display: none;
@@ -430,7 +430,7 @@
   color: var(--color-text-primary);
 }
 
-/* ---- stage ---- */
+/* ---- 主舞台 ---- */
 
 .stage {
   position: relative;
@@ -439,8 +439,8 @@
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  /* Size container: the header responds to the stage's own width, which the
-     ledger opening/closing changes, rather than to the viewport. */
+  /* 尺寸容器：头部响应舞台自身的宽度（上下文面板的开关会改变它），
+     而不是响应视口宽度。 */
   container-type: inline-size;
   background:
     radial-gradient(58ch 46ch at 6% -12%, color-mix(in oklab, var(--color-brand) 8%, transparent), transparent 62%),
@@ -613,7 +613,7 @@
   background: color-mix(in oklab, var(--color-status-idle) 7%, transparent);
 }
 
-/* ---- thread ---- */
+/* ---- 对话流 ---- */
 
 .scroll {
   position: relative;
@@ -737,7 +737,7 @@
   font-size: 0.82em;
 }
 
-/* ---- tool log ---- */
+/* ---- 工具日志 ---- */
 
 .tools {
   overflow: hidden;
@@ -840,7 +840,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- permission ---- */
+/* ---- 权限请求 ---- */
 
 .permission {
   padding: 0.85rem 1rem 0.95rem;
@@ -957,9 +957,9 @@
   color: var(--color-status-error);
 }
 
-/* ---- streaming indicator ---- */
+/* ---- 流式指示器 ---- */
 
-/* ---- live notices ---- */
+/* ---- 实时提示 ---- */
 
 .notice {
   display: flex;
@@ -1021,7 +1021,7 @@
   animation-delay: 0.3s;
 }
 
-/* ---- composer ---- */
+/* ---- 输入区 ---- */
 
 .composerWrap {
   padding: 0.85rem clamp(1rem, 2.6vw, 2.25rem) 1rem;
@@ -1142,7 +1142,7 @@
   height: 1rem;
 }
 
-/* ---- ledger ---- */
+/* ---- 上下文面板 ---- */
 
 .ledger {
   position: relative;
@@ -1353,7 +1353,7 @@
   color: var(--color-text-muted);
 }
 
-/* ---- new session ---- */
+/* ---- 新建会话 ---- */
 
 .railHeadRow {
   display: flex;
@@ -1477,10 +1477,10 @@
   margin-top: 0.3rem;
 }
 
-/* ---- responsive ---- */
+/* ---- 响应式 ---- */
 
-/* Header degrades by the stage's own width (container queries), so the title
-   keeps priority over the secondary crumb/meta as the ledger closes in. */
+/* 头部按舞台自身的宽度降级（容器查询），因此当上下文面板收窄空间时，
+   标题优先于次要的面包屑/元信息。 */
 @container (max-width: 64rem) {
   .crumbMeta {
     display: none;
@@ -1580,8 +1580,8 @@
     z-index: 60;
     width: min(19rem, 88vw);
     border-right: 1px solid var(--color-border);
-    /* Drawer floats over the thread, so it must be opaque (the desktop rail's
-       translucent gradient would let the thread bleed through here). */
+    /* 抽屉悬浮在对话流之上，因此必须不透明（桌面侧栏的半透明渐变
+       会让对话流透出来）。 */
     background: var(--color-surface-1);
     box-shadow: 24px 0 60px -40px rgb(0 0 0 / 0.6);
     transform: translateX(-100%);
@@ -1606,9 +1606,8 @@
   }
 }
 
-/* Desktop collapse: the full rail gives way to a compact icon rail, and the
-   thread takes the rest. Below 55rem the full rail is already an overlay
-   drawer, so these rules do not apply there. */
+/* 桌面端折叠：完整侧栏让位给紧凑图标栏，对话流占据其余空间。
+   低于 55rem 时完整侧栏本就是覆盖抽屉，因此这些规则在那里不生效。 */
 @media (min-width: 55.01rem) {
   .railCollapsed .rail {
     display: none;
@@ -1662,7 +1661,7 @@
   }
 }
 
-/* ---- animation ---- */
+/* ---- 动画 ---- */
 
 @keyframes rise {
   from {

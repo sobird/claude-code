@@ -35,7 +35,7 @@ import { useLiveConsole } from './useLiveConsole'
 import styles from './DemoConsole.module.css'
 
 /* ------------------------------------------------------------------ */
-/* Mock data                                                           */
+/* Mock 数据                                                           */
 /* ------------------------------------------------------------------ */
 
 const DEMO = {
@@ -161,7 +161,7 @@ const THINKING = ['标准', '扩展', '关闭'] as const
 
 const QUEUED_REPLY = '已排入下一轮——CLI 会在不打断你正在查看的这次运行的情况下把它并入。'
 
-/** Placeholder while live data loads or when there is no session to show. */
+/** 实时数据加载中或没有可展示的会话时的占位。 */
 const EMPTY_SESSION: FleetSession = {
   id: '',
   environmentId: null,
@@ -177,7 +177,7 @@ const EMPTY_SESSION: FleetSession = {
 }
 
 /* ------------------------------------------------------------------ */
-/* Helpers                                                             */
+/* 辅助函数                                                            */
 /* ------------------------------------------------------------------ */
 
 function cycle<T>(options: readonly [T, ...T[]], current: T): T {
@@ -189,7 +189,7 @@ function formatTokens(value: number): string {
   return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value)
 }
 
-/** Gateway ids are long (`session_…`); keep the crumb readable. */
+/** 网关 id 很长（`session_…`）；让面包屑保持可读。 */
 function shortId(id: string): string {
   return id.length > 14 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id
 }
@@ -210,7 +210,7 @@ function delayFor(index: number): { animationDelay: string } {
   return { animationDelay: `${Math.min(index, 8) * 55}ms` }
 }
 
-/** Brand mark: the prompt chevron, three commits, and the remote spark. */
+/** 品牌标记：提示符箭头、三个提交点，以及远程火花。 */
 function BrandMark() {
   return (
     <svg viewBox="0 0 64 64" aria-hidden="true" className={styles.brandSvg}>
@@ -241,7 +241,7 @@ export function DemoConsole({ source = 'live' }: { source?: DemoSource }) {
   const live = useLiveConsole(isLive)
   const { resolvedTheme, setTheme } = useTheme()
 
-  // Mock study state — only read when `?source=mock`.
+  // Mock 设计研究状态 —— 仅在 `?source=mock` 时使用。
   const [mockSessions, setMockSessions] = useState(INITIAL_SESSIONS)
   const [mockActiveId, setMockActiveId] = useState('auth')
   const [draft, setDraft] = useState('')
@@ -259,8 +259,8 @@ export function DemoConsole({ source = 'live' }: { source?: DemoSource }) {
   const [createOpen, setCreateOpen] = useState(false)
   const [createTitle, setCreateTitle] = useState('')
   const [createEnv, setCreateEnv] = useState('')
-  // Live mode starts read-only; taking over gates sending, approvals, and
-  // session creation. `?source=mock` ignores this entirely.
+  // 实时模式初始为只读；接管后会放开发送、审批和新建会话。
+  // `?source=mock` 完全忽略这一点。
   const [takeover, setTakeover] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -341,7 +341,7 @@ export function DemoConsole({ source = 'live' }: { source?: DemoSource }) {
       try {
         await live.send(text)
       } catch (error) {
-        // Restore the draft so a failed send can be retried.
+        // 恢复草稿，便于重试失败的发送。
         setDraft(text)
         setActionError(error instanceof Error ? error.message : String(error))
       }
@@ -437,8 +437,8 @@ export function DemoConsole({ source = 'live' }: { source?: DemoSource }) {
     setMobileLedgerOpen((open) => !open)
   }
 
-  // The rail is a fixed column on desktop and an overlay drawer below 55rem.
-  // Reopening sets both flags so the header button works in either layout.
+  // 侧栏在桌面端是固定列，低于 55rem 时是覆盖抽屉。
+  // 重新打开时同时设置两个标志，让头部按钮在两种布局下都可用。
   function openRail(): void {
     setDesktopRailOpen(true)
     setRailOpen(true)
@@ -530,7 +530,7 @@ export function DemoConsole({ source = 'live' }: { source?: DemoSource }) {
       }
 
       case 'permission': {
-        // Live cards key on the gateway request id; mock cards fall back to position.
+        // 实时卡片以网关请求 id 作为 key；mock 卡片回退到位置。
         const permissionKey = entry.requestId ?? `${activeId}-permission-${index}`
         const answer = answers[permissionKey]
         return (

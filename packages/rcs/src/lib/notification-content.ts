@@ -1,7 +1,7 @@
 /**
- * Pure helpers the service worker uses to turn a pushed payload into a
- * localized notification. Runtime-neutral: no server-only or DOM-only imports,
- * so it can be loaded by the worker bundle.
+ * 服务工作线程用来把推送载荷转成本地化通知的纯函数。
+ * 运行时中立：不引入仅限服务端或仅限 DOM 的依赖，
+ * 因此可由 worker bundle 加载。
  */
 import { CATALOGS } from '@/i18n/catalogs'
 
@@ -15,8 +15,8 @@ export interface NotificationContent {
 }
 
 /**
- * Session titles longer than this are clipped so the notification stays readable.
- * Counts Unicode code points (via `Array.from`), not UTF-16 code units.
+ * 超过该长度的会话标题会被截断，以免通知难以阅读。
+ * 按 Unicode 码点计数（通过 `Array.from`），而非 UTF-16 码元。
  */
 export const MAX_TITLE_LENGTH = 60
 
@@ -26,7 +26,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
 }
 
-/** Structural validation of a pushed payload; `null` for anything malformed. */
+/** 对推送载荷做结构校验；任何格式不合规的输入返回 `null`。 */
 export function parseNotificationPayload(value: unknown): PushNotificationPayload | null {
   const record = asRecord(value)
   if (!record) return null
@@ -52,13 +52,13 @@ export function parseNotificationPayload(value: unknown): PushNotificationPayloa
 }
 
 function truncateTitle(title: string): string {
-  // Count code points so an astral character (emoji, rare CJK) is not split
-  // into a lone surrogate at the boundary.
+  // 按码点计数，避免星际平面字符（emoji、生僻 CJK）在边界处
+  // 被拆成孤立的代理项。
   const chars = Array.from(title)
   return chars.length > MAX_TITLE_LENGTH ? `${chars.slice(0, MAX_TITLE_LENGTH).join('')}…` : title
 }
 
-/** Localized title/body plus the dedupe tag and click-through URL. */
+/** 本地化的标题/正文，加上去重标签与点击跳转 URL。 */
 export function toNotificationContent(payload: PushNotificationPayload, locale: 'en' | 'zh-CN'): NotificationContent {
   const copy = CATALOGS[locale].notifications
   const sessionTitle = payload.sessionTitle?.trim()
@@ -71,7 +71,7 @@ export function toNotificationContent(payload: PushNotificationPayload, locale: 
   }
 }
 
-/** False when a visible client is already showing that session. */
+/** 当某个可见客户端已在展示该会话时返回 false。 */
 export function shouldShowNotification(visiblePaths: string[], sessionId: string): boolean {
   return !visiblePaths.includes(`/${sessionId}`)
 }

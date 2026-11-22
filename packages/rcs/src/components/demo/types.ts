@@ -1,9 +1,8 @@
 /**
- * View models shared by the demo console's mock data and its live adapter.
+ * 演示控制台的 mock 数据与实时适配器共用的视图模型。
  *
- * `DemoConsole` renders one visual model; `?source=mock` fills it from the
- * hand-written study below, while the default live mode maps real gateway
- * sessions/messages onto the same shapes (`useLiveConsole`).
+ * `DemoConsole` 只渲染一套视觉模型；`?source=mock` 用下方手写的设计研究填充它，
+ * 而默认的实时模式通过 `useLiveConsole` 把真实的网关会话/消息映射到相同的形状上。
  */
 
 export type SessionStatus = 'running' | 'active' | 'idle'
@@ -26,7 +25,7 @@ export type Entry =
       title: string
       detail: string
       command: string
-      /** Present in live mode: the gateway request id to answer. */
+      /** 实时模式下存在：需要回应的网关请求 id。 */
       requestId?: string
     }
 
@@ -55,13 +54,13 @@ export interface DemoEnvironment {
   status: 'online' | 'idle' | 'offline'
 }
 
-/** A fleet row: a console session plus which environment it lives on (null = unassigned). */
+/** 一条环境列表行：一个控制台会话，以及它所在的环境（null = 未分配）。 */
 export interface FleetSession extends DemoSession {
   id: string
   environmentId: string | null
 }
 
-/** The active session in live mode carries a little state the rail rows do not. */
+/** 实时模式下的活动会话，带有一些列表行没有的状态。 */
 export interface ActiveSession extends FleetSession {
   closed: boolean
   streaming: boolean

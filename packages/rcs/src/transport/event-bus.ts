@@ -1,9 +1,9 @@
 /**
- * In-process session event bus.
+ * 进程内的会话事件总线。
  *
- * This is a publish/subscribe fan-out only: the bus keeps no history and performs no
- * durable replay. Persistence is the caller's job via `repos.events.append`; Task 11
- * extends this module with the WebSocket/SSE transport that consumes it.
+ * 这里只做发布/订阅的扇出：总线不保留历史，也不做持久化重放。持久化由调用方
+ * 通过 `repos.events.append` 负责；Task 11 会为本模块补上消费它的
+ * WebSocket/SSE 传输层。
  */
 
 import type { SessionEventRecord } from '@/contracts'
@@ -12,23 +12,22 @@ import { sanitizeTaskUsage } from '@/lib/background-tasks'
 import { notifyInboundEvent } from '@/services/push-notifier'
 
 export interface SessionEvent {
-  /** Event UUID (`session_events.event_id`). */
+  /** 事件 UUID（`session_events.event_id`）。 */
   id: string
   sessionId: string
   type: string
   payload: unknown
   direction: 'inbound' | 'outbound'
   /**
-   * Sequence number. Durable events use the `session_events.id` bigserial (the SSE
-   * cursor); live-only events use a reserved in-memory range and never advance it.
+   * 序列号。持久化事件使用 `session_events.id` 的 bigserial（SSE 游标）；
+   * 仅实时事件使用保留的内存区间，永远不会推进它。
    */
   seqNum: number
   /** Epoch milliseconds. */
   createdAt: number
   /**
-   * Live-only event (streaming deltas): delivered to connected subscribers, never
-   * persisted and never replayed. Its frame carries no SSE `id:`, so it is never a
-   * `Last-Event-ID` cursor.
+   * 仅实时事件（流式增量）：投递给已连接的订阅者，从不持久化、从不重放。
+   * 它的帧不带 SSE `id:`，因此永远不会成为 `Last-Event-ID` 游标。
    */
   ephemeral?: boolean
 }
@@ -56,7 +55,7 @@ export class EventBus {
       try {
         callback(event)
       } catch {
-        // A failing subscriber must not break the publisher; drop the error.
+        // 失败的订阅者不能打断发布者；丢弃该错误。
       }
     }
     return event
@@ -92,12 +91,12 @@ export function getAllEventBuses(): Map<string, EventBus> {
 }
 
 /**
- * History-retaining event bus for ACP channel groups (R25).
+ * 为 ACP channel group 保留历史的事件总线（R25）。
  *
- * Unlike the session `EventBus` (fan-out only; durability lives in `session_events`), ACP
- * channel-group traffic stays in memory: the pre-rewrite bus kept the tail so a
- * reconnecting SSE consumer could replay recent events via `Last-Event-ID`. Port that
- * behaviour verbatim: at most `MAX_ACP_EVENTS_PER_BUS` events, evicting the oldest half.
+ * 不同于会话 `EventBus`（仅扇出；持久化落在 `session_events`），ACP channel-group
+ * 的流量留在内存里：重写前的总线保留了尾部，使重连的 SSE 消费者能经由
+ * `Last-Event-ID` 重放近期事件。原样照搬该行为：最多保留 `MAX_ACP_EVENTS_PER_BUS`
+ * 个事件，超出时淘汰最旧的一半。
  */
 const MAX_ACP_EVENTS_PER_BUS = 5000
 
@@ -129,7 +128,7 @@ export class AcpEventBus {
       try {
         callback(full)
       } catch {
-        // A failing subscriber must not break the publisher; drop the error.
+        // 失败的订阅者不能打断发布者；丢弃该错误。
       }
     }
     return full
@@ -139,7 +138,7 @@ export class AcpEventBus {
     return this.seqNum
   }
 
-  /** Retained events with `seqNum > seqNum`, oldest first. */
+  /** 保留的事件中 `seqNum > seqNum` 的部分，最早的在前。 */
   getEventsSince(seqNum: number): SessionEvent[] {
     const index = this.events.findIndex((event) => event.seqNum > seqNum)
     return index === -1 ? [] : this.events.slice(index)
@@ -155,9 +154,9 @@ export class AcpEventBus {
 const acpBuses = new Map<string, AcpEventBus>()
 
 /**
- * Namespaced key for an ACP channel-group bus. `channel_group_id` is client-supplied and
- * only meaningful within one owner's environments, so the bus is keyed by owner too —
- * otherwise two owners that pick the same id would share one event bus.
+ * ACP channel-group 总线的命名空间化 key。`channel_group_id` 是客户端提供的，
+ * 只在单个 owner 的环境内有意义，因此总线也按 owner 作 key——否则两个 owner
+ * 选了相同 id 时会共用一个事件总线。
  */
 export function acpBusKey(ownerUserId: string, channelGroupId: string): string {
   return `${ownerUserId}:${channelGroupId}`
@@ -180,15 +179,15 @@ export function removeAcpEventBus(channelGroupId: string): void {
   }
 }
 
-/** Test/shutdown helper: all live ACP channel-group buses. */
+/** 测试/关闭辅助：所有活跃的 ACP channel-group 总线。 */
 export function getAllAcpEventBuses(): Map<string, AcpEventBus> {
   return acpBuses
 }
 
 /**
- * Extract plain text from the various message payload shapes the bridge emits:
- * `{ content: "text" }`, `{ message: { content: "text" } }`, and
- * `{ message: { content: [{ type: 'text', text: '…' }] } }`.
+ * 从 bridge 发出的各种消息载荷形状中提取纯文本：
+ * `{ content: "text" }`、`{ message: { content: "text" } }`，以及
+ * `{ message: { content: [{ type: 'text', text: '…' }] } }`。
  */
 function extractContent(payload: unknown): string {
   if (!payload || typeof payload !== 'object') {
@@ -218,9 +217,8 @@ function extractContent(payload: unknown): string {
 }
 
 /**
- * Normalize an event payload into a flat structure with a guaranteed `content`
- * string. The original payload is preserved in `raw`; tool- and permission-specific
- * fields are copied through.
+ * 把事件载荷规范化为带保证的 `content` 字符串的扁平结构。原始载荷保留在
+ * `raw` 中；工具与权限相关的字段会被复制过去。
  */
 export function normalizePayload(type: string, payload: unknown): Record<string, unknown> {
   if (!payload || typeof payload !== 'object') {
@@ -235,7 +233,7 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
 
   if (typeof p.uuid === 'string' && p.uuid) normalized.uuid = p.uuid
   if (typeof p.isSynthetic === 'boolean') normalized.isSynthetic = p.isSynthetic
-  // subagent traffic points at its Agent tool call; the web reducer nests by it.
+  // subagent 流量指向它的 Agent 工具调用；Web 端 reducer 据此嵌套。
   if (typeof p.parent_tool_use_id === 'string') normalized.parent_tool_use_id = p.parent_tool_use_id
   if (typeof p.status === 'string') normalized.status = p.status
   if (typeof p.subtype === 'string') normalized.subtype = p.subtype
@@ -247,9 +245,9 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
 
   if (p.request_id) normalized.request_id = p.request_id
   if (p.request) normalized.request = p.request
-  // `control_response` carries its correlation id and result inside `response`;
-  // the web reducer settles pending control requests (e.g. set_permission_mode)
-  // from it, so it must stay at the top level as well as in `raw`.
+  // `control_response` 把关联 id 和结果放在 `response` 里；
+  // Web 端 reducer 据此结算待处理的 control 请求（如 set_permission_mode），
+  // 因此它既要留在 `raw` 里，也要提到顶层。
   if (p.response) normalized.response = p.response
   if (p.approved !== undefined) normalized.approved = p.approved
   if (p.updated_input) normalized.updated_input = p.updated_input
@@ -257,10 +255,9 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
 
   if (p.message) normalized.message = p.message
 
-  // `system/init` drives the web slash-command menu and permission-mode control,
-  // so lift its flat fields out of `raw` where clients look for them. The
-  // detailed-transcript fields (compaction level, retried commands, saved
-  // paths) ride along the same way.
+  // `system/init` 驱动 Web 端的斜杠命令菜单和权限模式控件，
+  // 因此把它的扁平字段从 `raw` 中提到客户端查找它们的位置。详细
+  // transcript 字段（压缩级别、重试命令、已写入路径）也以同样方式带出。
   if (type === 'system') {
     if (Array.isArray(p.slash_commands)) normalized.slash_commands = p.slash_commands
     if (typeof p.permissionMode === 'string') normalized.permissionMode = p.permissionMode
@@ -273,8 +270,8 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
     if (Array.isArray(p.writtenPaths)) {
       normalized.writtenPaths = p.writtenPaths.filter((item) => typeof item === 'string')
     }
-    // Background-task lifecycle fields. `status` is already lifted above for every
-    // type; these are the task-specific ones the reducer folds into ChatState.
+    // 后台任务生命周期字段。`status` 已在上面为所有类型提到顶层；
+    // 这里是与任务相关的字段，由 reducer 折叠进 ChatState。
     if (typeof p.task_id === 'string') normalized.task_id = p.task_id
     if (typeof p.tool_use_id === 'string') normalized.tool_use_id = p.tool_use_id
     if (typeof p.description === 'string') normalized.description = p.description
@@ -296,13 +293,13 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
 }
 
 /**
- * Event types whose `uuid` identifies a whole message, so a repeated uuid is a replay of
- * a message that is already durable. Streaming deltas (`stream_event`, `partial_assistant`)
- * share the eventual message uuid but are distinct events and must never be deduplicated.
+ * `uuid` 唯一标识整条消息的事件类型，因此重复的 uuid 说明这是一条已经持久化
+ * 的消息的重放。流式增量（`stream_event`、`partial_assistant`）与最终消息共享
+ * uuid，但属于不同事件，绝不能去重。
  */
 const UUID_IDENTIFIED_EVENT_TYPES = new Set(['user', 'assistant', 'system', 'result', 'result_success'])
 
-/** Extract the dedupe key for `type` from an already-normalized payload. */
+/** 从已规范化的载荷中提取 `type` 的去重 key。 */
 function messageUuidOf(type: string, normalizedPayload: unknown): string | null {
   if (!UUID_IDENTIFIED_EVENT_TYPES.has(type)) return null
   if (!normalizedPayload || typeof normalizedPayload !== 'object') return null
@@ -326,8 +323,8 @@ async function appendAndPublish(
 }
 
 /**
- * Persist a session event (write-through to `session_events`) and publish it to the
- * supplied bus. Returns the published event; its `seqNum` is the durable row id.
+ * 持久化一个会话事件（写穿到 `session_events`）并发布到给定的总线。
+ * 返回发布的事件；它的 `seqNum` 就是持久化行的 id。
  */
 export async function publishSessionEvent(
   repos: Repositories,
@@ -342,24 +339,23 @@ export async function publishSessionEvent(
 }
 
 /**
- * Event types that are inherently live-only: the bridge re-emits a full-so-far snapshot
- * roughly every 100ms while a message streams. No consumer replays them (the web reducer
- * ignores them; the bridge and worker streams replay outbound only), so persisting them
- * only grows `session_events` and doubles the payload under `raw`.
+ * 天生只实时的事件类型：消息流式输出时，bridge 大约每 100ms 重新发送一次
+ * 截至目前的全量快照。没有任何消费者会重放它们（Web reducer 忽略它们；
+ * bridge 与 worker 流只重放出站），因此持久化它们只会让 `session_events`
+ * 增长，并在 `raw` 下把载荷翻倍。
  */
 const EPHEMERAL_EVENT_TYPES = new Set(['stream_event', 'partial_assistant'])
 
 /**
- * Ephemeral events have no durable row, but SSE consumers still need a unique numeric
- * `seqNum` for per-connection dedupe. Allocate from a reserved high range that durable
- * bigserial ids will not reach in practice; the frame omits `id:`, so this value never
- * becomes a resume cursor.
+ * 临时事件没有持久化行，但 SSE 消费者仍需要一个唯一的数值 `seqNum` 用于
+ * 每连接去重。从一个保留的高位区间分配，持久化 bigserial id 实际不会触及它；
+ * 帧省略 `id:`，所以这个值永远不会变成续传游标。
  */
 const EPHEMERAL_SEQ_BASE = Number.MAX_SAFE_INTEGER - 2 ** 32
 let ephemeralSeqNum = EPHEMERAL_SEQ_BASE
 
 export interface PublishInboundOptions {
-  /** The client marks stream snapshots `ephemeral: true`; publish live without persisting. */
+  /** 客户端把流快照标记为 `ephemeral: true`；仅实时发布、不持久化。 */
   ephemeral?: boolean
 }
 
@@ -384,20 +380,18 @@ function publishEphemeralEvent(
 }
 
 /**
- * Persist an inbound bridge event unless a whole-message event with the same uuid is
- * already durable for the session, and publish it.
+ * 持久化一个入站 bridge 事件（除非该会话已存在同 uuid 的整条消息事件），
+ * 然后发布它。
  *
- * The bridge replays its history to the child on every reconnect; the child injects and
- * echoes those messages back, and acks duplicate user prompts with `isReplay: true`.
- * Persisting every echo makes the next replay window larger, so the loop compounds until
- * the model API rejects duplicated `tool_use` blocks. The transport contract is explicit
- * that the server deduplicates bridge writes by UUID (WebSocketTransport's reconnect
- * replay), so this is the server's responsibility.
+ * bridge 每次重连都会把历史重放给子进程；子进程注入并回显这些消息，
+ * 并以 `isReplay: true` 确认重复的用户提示。持久化每一次回显会让下一次
+ * 重放窗口变大，于是循环不断累积，直到模型 API 因重复的 `tool_use` 块而
+ * 报错。传输契约明确要求服务端按 UUID 对 bridge 写入去重
+ * （WebSocketTransport 的重连重放），所以这是服务端的责任。
  *
- * Ephemeral events (explicit flag or a streaming-delta type) skip persistence entirely
- * and are delivered live only.
+ * 临时事件（显式标志或流式增量类型）完全跳过持久化，仅实时投递。
  *
- * Returns `null` when the event was dropped as a duplicate.
+ * 事件因重复被丢弃时返回 `null`。
  */
 export async function publishInboundEvent(
   repos: Repositories,
@@ -412,9 +406,9 @@ export async function publishInboundEvent(
     return publishEphemeralEvent(eventBus, sessionId, type, normalized)
   }
   const messageUuid = messageUuidOf(type, normalized)
-  // Cheap early exit for the common sequential replay; the read is not authoritative.
+  // 常见顺序重放的廉价提前退出；这次读取不是权威判断。
   if (messageUuid && (await repos.events.hasMessageUuid(sessionId, messageUuid))) return null
-  // The durable key is the real guard: two concurrent writers can both pass the check above.
+  // 持久化 key 才是真正的守卫：两个并发写入者可能都通过上面的检查。
   const record = await repos.events.appendIfAbsent({
     sessionId,
     type,
@@ -429,7 +423,7 @@ export async function publishInboundEvent(
   return event
 }
 
-/** Map a persisted `session_events` row onto the in-process event shape. */
+/** 把持久化的 `session_events` 行映射为进程内事件形状。 */
 export function toSessionEvent(record: SessionEventRecord): SessionEvent {
   return {
     id: record.eventId,
@@ -443,13 +437,12 @@ export function toSessionEvent(record: SessionEventRecord): SessionEvent {
 }
 
 /**
- * Load one durable replay window in ascending `seqNum` order.
+ * 按 `seqNum` 升序加载一个持久化重放窗口。
  *
- * A real cursor replays the *oldest* events after it (bounded by `limit`). Without a
- * cursor there is nothing to resume from, so replay the *newest* `limit` events: the
- * pre-rewrite in-memory bus retained the tail (evicting oldest), and replaying from 0
- * would silently drop the most recent pre-connect history of a long session. Events
- * appended after `latestId` resolves are delivered live by the caller's subscription.
+ * 真正的游标会重放它之后的最旧事件（受 `limit` 限制）。没有游标时就没有
+ * 可续传的起点，因此重放最新的 `limit` 个事件：重写前的内存总线保留尾部
+ * （淘汰最旧），而从 0 重放会静默丢掉长会话连接前最近的历史。在 `latestId`
+ * 解析之后追加的事件由调用方的订阅实时投递。
  */
 export async function loadEventReplayWindow(
   repos: Repositories,
@@ -458,8 +451,8 @@ export async function loadEventReplayWindow(
   limit: number,
   direction?: SessionEventRecord['direction'],
 ): Promise<SessionEvent[]> {
-  // `direction` is applied inside the query, so the limit counts replayable rows instead
-  // of being consumed by a backlog of the other direction.
+  // `direction` 在查询内部应用，因此 limit 统计的是可重放行，
+  // 而不是被另一方向的积压消耗掉。
   if (cursor > 0) {
     return (await repos.events.listSince(sessionId, cursor, limit, direction)).map(toSessionEvent)
   }
@@ -471,42 +464,40 @@ export async function loadEventReplayWindow(
 
 export interface ReplayThenLiveOptions {
   bus: EventBus
-  /** Cursor: replay events with `seqNum > fromSeqNum`. */
+  /** 游标：重放 `seqNum > fromSeqNum` 的事件。 */
   fromSeqNum: number
   /**
-   * Load the durable replay window. Called once, after the live subscription is active.
-   * Ignored unless `replay` is true.
+   * 加载持久化重放窗口。在实时订阅激活后调用一次。
+   * 除非 `replay` 为 true，否则忽略。
    */
   loadSince: () => Promise<SessionEvent[]>
-  /** Emit replayed events, in ascending `seqNum` order. */
+  /** 按 `seqNum` 升序发出重放事件。 */
   onReplayEvent: (event: SessionEvent) => void
-  /** Emit live events, including any buffered during the replay query. */
+  /** 发出实时事件，包括重放查询期间缓冲的那些。 */
   onLiveEvent: (event: SessionEvent) => void
-  /** Force replay even when `fromSeqNum` is 0; the WebSocket and SSE paths both set it. */
+  /** 即使 `fromSeqNum` 为 0 也强制重放；WebSocket 与 SSE 两条路径都会设置它。 */
   replay?: boolean
-  /** Live-only filter; replayed events are filtered by `loadSince`. */
+  /** 仅实时过滤器；重放事件由 `loadSince` 过滤。 */
   filterLiveEvent?: (event: SessionEvent) => boolean
-  /** True once the consumer is gone; emission stops and the subscription is dropped. */
+  /** 消费者一旦消失即为 true；停止发出并取消订阅。 */
   isClosed?: () => boolean
 }
 
 export interface ReplayThenLiveSubscription {
-  /** Resolves once the replay has been emitted and buffered live events have been flushed. */
+  /** 在重放发出、缓冲的实时事件冲刷完毕后 resolve。 */
   ready: Promise<void>
-  /** Detach the live subscription and drop any buffered events. */
+  /** 解除实时订阅并丢弃任何缓冲的事件。 */
   unsubscribe: () => void
 }
 
 /**
- * Subscribe to a session bus before reading durable history, then emit the replay followed
- * by live events.
+ * 先订阅会话总线再读取持久化历史，然后先发出重放、再发出实时事件。
  *
- * This closes the persist-then-publish race (R22): an event appended between "read history"
- * and "subscribe" would otherwise be lost, and an event appended before the history read
- * but published during it would otherwise be duplicated. Live events received while the
- * replay query is in flight are buffered; after the replay they are flushed only when their
- * `seqNum` exceeds the last replayed `seqNum`, which dedupes the replay/live boundary
- * without losing anything.
+ * 这弥补了「先持久化后发布」的竞态（R22）：否则在「读取历史」与「订阅」之间
+ * 追加的事件会丢失，而在读取历史之前追加、却在读取期间发布的事件会重复。
+ * 重放查询进行期间收到的实时事件会被缓冲；重放之后，只有当它们的 `seqNum`
+ * 超过最后重放的 `seqNum` 时才冲刷，从而在不丢失内容的前提下对
+ * 重放/实时的边界去重。
  */
 export function subscribeReplayThenLive(options: ReplayThenLiveOptions): ReplayThenLiveSubscription {
   const { bus } = options
@@ -572,7 +563,7 @@ export function subscribeReplayThenLive(options: ReplayThenLiveOptions): ReplayT
         unsubscribe()
         return
       }
-      // Dedupe the replay/live boundary: anything already covered by the replay is dropped.
+      // 对重放/实时的边界去重：已被重放覆盖的都被丢弃。
       if (event.seqNum <= lastReplayedSeqNum) continue
       try {
         options.onLiveEvent(event)
