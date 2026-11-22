@@ -49,8 +49,12 @@ export const config = {
   // the app could never be installed. The service worker route and its chunks,
   // icons, and the offline page are likewise loaded outside an authenticated page
   // context, so they are excluded from the guard as well.
+  //
+  // `/demo` is the mock-data design study; it stays public so the interaction
+  // model can be reviewed without an account. Remove the segment when the demo
+  // graduates into the real surfaces.
   matcher: [
     '/',
-    '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/|serwist/|~offline|(?:v1|v2|acp|web)(?:/|$)|health$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/|serwist/|~offline|demo(?:/|$)|(?:v1|v2|acp|web)(?:/|$)|health$).*)',
   ],
 }
