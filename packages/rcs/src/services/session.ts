@@ -132,6 +132,43 @@ export async function resolveOwnedWebSessionId(
   return null
 }
 
+/** 可读会话的解析结果：`not_found` 与 `forbidden` 分开，路由各自映射成自己的错误体。 */
+export type SessionAccess = { ok: true; sessionId: string } | { ok: false; reason: 'not_found' | 'forbidden' }
+
+/** 可写会话的解析结果；`closed` 带上状态，便于路由拼 409。 */
+export type SessionWriteAccess = SessionAccess | { ok: false; reason: 'closed'; status: string }
+
+/** 解析调用方可读的会话：先判存在，再判归属（同时把无主会话认领给首个读者）。 */
+export async function resolveAccessibleSession(
+  repos: Repositories,
+  requested: string,
+  user: ServiceUser,
+): Promise<SessionAccess> {
+  if (!(await getSession(repos, requested))) return { ok: false, reason: 'not_found' }
+  const owned = await resolveOwnedWebSessionId(repos, requested, user)
+  if (!owned) return { ok: false, reason: 'forbidden' }
+  return { ok: true, sessionId: owned }
+}
+
+/**
+ * 解析调用方可写的会话：可读 + 未归档（`archived` 终态，返回 `closed`）；`inactive`
+ * 属于存活信号而非终态，写入时恢复为 `idle`。路由据此统一返回 403/404/409。
+ */
+export async function authorizeSessionWrite(
+  repos: Repositories,
+  requested: string,
+  user: ServiceUser,
+): Promise<SessionWriteAccess> {
+  const access = await resolveAccessibleSession(repos, requested, user)
+  if (!access.ok) return access
+
+  const session = await getSession(repos, access.sessionId)
+  if (!session) return { ok: false, reason: 'not_found' }
+  if (isSessionClosedStatus(session.status)) return { ok: false, reason: 'closed', status: session.status }
+  await reactivateInactiveSession(repos, access.sessionId)
+  return access
+}
+
 /** Web-facing sessions for a user; admins see every owner's sessions. */
 export async function listWebSessionsByOwner(repos: Repositories, user: ServiceUser): Promise<SessionResponse[]> {
   const records = user.role === 'admin' ? await listAllSessions(repos) : await repos.sessions.listByOwner(user.id)

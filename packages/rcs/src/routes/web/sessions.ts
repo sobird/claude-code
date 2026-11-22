@@ -24,12 +24,12 @@ import {
 import { getAutomationStateSnapshot } from '@/services/automationState'
 import { connectPresence, setPresenceVisible } from '@/services/presence'
 import {
+  authorizeSessionWrite,
   createSession,
   getSession,
   listAllSessions,
   listWebSessionsByOwner,
-  reactivateInactiveSession,
-  resolveOwnedWebSessionId,
+  resolveAccessibleSession,
   toWebSessionResponse,
 } from '@/services/session'
 import { createWorkItem } from '@/services/work-dispatch'
@@ -138,9 +138,9 @@ app.get('/sessions/all', legacyUserAuth, async (c) => {
 app.get('/sessions/:id', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return webNotFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return webForbidden(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? webNotFound(c) : webForbidden(c)
+  const owned = access.sessionId
 
   const session = await getSession(repos, owned)
   if (!session) return webNotFound(c)
@@ -154,9 +154,9 @@ app.get('/sessions/:id', legacyUserAuth, async (c) => {
 app.get('/sessions/:id/history', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return webNotFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return webForbidden(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? webNotFound(c) : webForbidden(c)
+  const owned = access.sessionId
 
   const limitParam = Number.parseInt(c.req.query('limit') ?? '', 10)
   const limit = Number.isFinite(limitParam)
@@ -183,15 +183,12 @@ app.get('/sessions/:id/history', legacyUserAuth, async (c) => {
 app.get('/sessions/:id/events', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return webNotFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return webForbidden(c)
-
-  const session = await getSession(repos, owned)
-  if (!session) return webNotFound(c)
-  if (isSessionClosedStatus(session.status)) return sessionClosed(c, session.status)
-  // Opening the stream is a resume signal: a reaped session comes back as `idle`.
-  await reactivateInactiveSession(repos, owned)
+  const access = await authorizeSessionWrite(repos, requested, c.get('user'))
+  if (!access.ok) {
+    if (access.reason === 'closed') return sessionClosed(c, access.status)
+    return access.reason === 'not_found' ? webNotFound(c) : webForbidden(c)
+  }
+  const owned = access.sessionId
 
   const lastEventId = c.req.header('Last-Event-ID')
   const parsed = lastEventId ? Number.parseInt(lastEventId, 10) : 0
@@ -208,9 +205,9 @@ app.get('/sessions/:id/events', legacyUserAuth, async (c) => {
 app.post('/sessions/:id/presence', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return webNotFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return webForbidden(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? webNotFound(c) : webForbidden(c)
+  const owned = access.sessionId
 
   const body = await readJson(c)
   const clientId = typeof body.client_id === 'string' ? body.client_id.trim().slice(0, 128) : ''

@@ -14,6 +14,7 @@ import {
 } from '@/services/environment'
 import {
   archiveSession,
+  authorizeSessionWrite,
   createCodeSession,
   createSession,
   getSession,
@@ -21,6 +22,7 @@ import {
   listSessionsByEnvironment,
   listWebSessionsByOwner,
   reactivateInactiveSession,
+  resolveAccessibleSession,
   resolveExistingSessionId,
   resolveOwnedWebSessionId,
   unarchiveSession,
@@ -282,6 +284,60 @@ describe('Session Service', () => {
       const session = await createCodeSession(repos, { ownerUserId: 'bob' })
       expect(await resolveOwnedWebSessionId(repos, session.id, { id: 'alice', role: 'member' })).toBeNull()
       expect(await resolveOwnedWebSessionId(repos, session.id, { id: 'root', role: 'admin' })).toBe(session.id)
+    })
+  })
+
+  describe('resolveAccessibleSession', () => {
+    test('reports not_found for an unknown session', async () => {
+      expect(await resolveAccessibleSession(repos, 'nope', { id: 'alice', role: 'member' })).toEqual({
+        ok: false,
+        reason: 'not_found',
+      })
+    })
+
+    test('reports forbidden for another member session', async () => {
+      const session = await createCodeSession(repos, { ownerUserId: 'bob' })
+      expect(await resolveAccessibleSession(repos, session.id, { id: 'alice', role: 'member' })).toEqual({
+        ok: false,
+        reason: 'forbidden',
+      })
+    })
+
+    test('returns the canonical id for the owner', async () => {
+      const session = await createCodeSession(repos, { ownerUserId: 'alice' })
+      expect(
+        await resolveAccessibleSession(repos, toWebSessionId(session.id), { id: 'alice', role: 'member' }),
+      ).toEqual({ ok: true, sessionId: session.id })
+    })
+  })
+
+  describe('authorizeSessionWrite', () => {
+    test('reports the archived status for a closed session', async () => {
+      const session = await createSession(repos, { ownerUserId: 'alice' })
+      await updateSessionStatus(repos, session.id, 'archived')
+
+      expect(await authorizeSessionWrite(repos, session.id, { id: 'alice', role: 'member' })).toEqual({
+        ok: false,
+        reason: 'closed',
+        status: 'archived',
+      })
+    })
+
+    test('revives an inactive session and returns its canonical id', async () => {
+      const session = await createCodeSession(repos, { ownerUserId: 'alice' })
+      await updateSessionStatus(repos, session.id, 'inactive')
+
+      const access = await authorizeSessionWrite(repos, toWebSessionId(session.id), { id: 'alice', role: 'member' })
+      expect(access).toEqual({ ok: true, sessionId: session.id })
+      expect((await getSession(repos, session.id))?.status).toBe('idle')
+    })
+
+    test('passes through forbidden without touching the session', async () => {
+      const session = await createCodeSession(repos, { ownerUserId: 'bob' })
+      expect(await authorizeSessionWrite(repos, session.id, { id: 'alice', role: 'member' })).toEqual({
+        ok: false,
+        reason: 'forbidden',
+      })
     })
   })
 

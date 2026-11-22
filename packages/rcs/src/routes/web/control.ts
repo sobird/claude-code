@@ -13,15 +13,9 @@ import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 
 import type { AppContext, AppEnv } from '@/auth/context'
-import { isSessionClosedStatus } from '@/contracts'
 import { MAX_SIDE_QUESTION_LENGTH } from '@/lib/side-question'
 import { jsonError, legacyUserAuth, sessionClosed, webForbidden } from '@/routes/common'
-import {
-  getSession,
-  reactivateInactiveSession,
-  resolveOwnedWebSessionId,
-  updateSessionStatus,
-} from '@/services/session'
+import { authorizeSessionWrite, updateSessionStatus } from '@/services/session'
 import {
   BRIDGE_CONTROL_TIMEOUT_MS,
   cancelBridgeRequest,
@@ -39,21 +33,15 @@ const app = new Hono<AppEnv>()
 
 type Ownership = { ok: true; sessionId: string } | { ok: false; response: Response }
 
+/**
+ * 控制写入的会话守卫。未知会话在这里也按 403 处理（沿用历史行为，避免向未认证者
+ * 区分“不存在”和“不属于你”），归档会话返回 409。
+ */
 async function checkOwnership(c: AppContext, requested: string): Promise<Ownership> {
-  const repos = c.get('repos')
-  if (!(await getSession(repos, requested))) {
-    return { ok: false, response: webForbidden(c) }
-  }
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return { ok: false, response: webForbidden(c) }
-
-  const session = await getSession(repos, owned)
-  if (!session) return { ok: false, response: webForbidden(c) }
-  if (isSessionClosedStatus(session.status)) {
-    return { ok: false, response: sessionClosed(c, session.status) }
-  }
-  await reactivateInactiveSession(repos, owned)
-  return { ok: true, sessionId: owned }
+  const access = await authorizeSessionWrite(c.get('repos'), requested, c.get('user'))
+  if (access.ok) return access
+  if (access.reason === 'closed') return { ok: false, response: sessionClosed(c, access.status) }
+  return { ok: false, response: webForbidden(c) }
 }
 
 /** POST /web/sessions/:id/events — Send a user message. */

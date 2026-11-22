@@ -5,124 +5,23 @@
  * consume it. Timestamps are `Date` instances in camelCase, mirroring the DB columns.
  */
 
-export type Role = 'admin' | 'member'
-
-export interface UserRecord {
-  id: string
-  /** Stored normalized to lowercase. */
-  username: string
-  displayName: string | null
-  passwordHash: string
-  role: Role
-  locale: string | null
-  disabledAt: Date | null
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface ApiKeyRecord {
-  id: string
-  userId: string
-  name: string
-  tokenPrefix: string
-  tokenHash: string
-  lastUsedAt: Date | null
-  revokedAt: Date | null
-  createdAt: Date
-}
-
-export interface EnvironmentRecord {
-  id: string
-  ownerUserId: string | null
-  machineName: string | null
-  directory: string | null
-  branch: string | null
-  gitRepoUrl: string | null
-  maxSessions: number
-  workerType: string
-  bridgeId: string | null
-  capabilities: Record<string, unknown> | null
-  status: string
-  lastPollAt: Date | null
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface SessionRecord {
-  id: string
-  environmentId: string | null
-  ownerUserId: string | null
-  title: string | null
-  status: string
-  source: string
-  permissionMode: string | null
-  workerEpoch: number
-  createdAt: Date
-  updatedAt: Date
-  archivedAt: Date | null
-}
-
-export interface SessionWorkerRecord {
-  sessionId: string
-  workerStatus: string | null
-  externalMetadata: Record<string, unknown> | null
-  requiresActionDetails: Record<string, unknown> | null
-  lastHeartbeatAt: Date | null
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface WorkItemRecord {
-  id: string
-  environmentId: string
-  sessionId: string
-  state: string
-  secret: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface AttachmentRecord {
-  /** `att_…` id referenced from persisted user message blocks. */
-  id: string
-  ownerUserId: string
-  mediaType: string
-  /** sha256 hex of `data`; dedupe key within one owner. */
-  sha256: string
-  byteLength: number
-  data: Uint8Array
-  createdAt: Date
-}
-
-export interface PushSubscriptionRecord {
-  id: string
-  userId: string
-  endpoint: string
-  p256dh: string
-  auth: string
-  userAgent: string | null
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface PushVapidKeys {
-  publicKey: string
-  privateKey: string
-  subject: string
-}
-
-export interface SessionEventRecord {
-  /** Globally monotonic bigserial id, used as the SSE `Last-Event-ID` / seqNum. */
-  id: number
-  eventId: string
-  sessionId: string
-  type: string
-  payload: unknown
-  direction: 'inbound' | 'outbound'
-  /** Whole-message uuid used for inbound dedupe; null for streaming deltas and control traffic. */
-  messageUuid: string | null
-  createdAt: Date
-}
+/**
+ * 记录形状由 `src/db/schema.ts` 的表定义推导（`$inferSelect`），这里只做类型转发，
+ * 避免手写接口与表定义漂移。`export type` 在编译期擦除，运行时不会加载 drizzle。
+ */
+export type {
+  ApiKeyRecord,
+  AttachmentRecord,
+  EnvironmentRecord,
+  PushSubscriptionRecord,
+  PushVapidKeys,
+  Role,
+  SessionEventRecord,
+  SessionRecord,
+  SessionWorkerRecord,
+  UserRecord,
+  WorkItemRecord,
+} from '@/db/schema'
 
 const CODE_SESSION_PREFIX = 'cse_'
 const WEB_SESSION_PREFIX = 'session_'

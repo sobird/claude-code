@@ -12,7 +12,7 @@ import type { AppContext, AppEnv } from '@/auth/context'
 import type { SessionWorkerRecord } from '@/contracts'
 import { forbidden, legacySessionIngressAuth, legacyUserAuth, notFound, readJson } from '@/routes/common'
 import { getAutomationStateEventPayload, automationStatesEqual } from '@/services/automationState'
-import { getSession, incrementEpoch, resolveOwnedWebSessionId, updateSessionStatus } from '@/services/session'
+import { getSession, incrementEpoch, resolveAccessibleSession, updateSessionStatus } from '@/services/session'
 import { getEventBus } from '@/transport/event-bus'
 
 const app = new Hono<AppEnv>()
@@ -115,10 +115,9 @@ app.post('/:id/worker/heartbeat', legacySessionIngressAuth, async (c) => {
 app.post('/:id/worker/register', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
-  return c.json({ worker_epoch: await incrementEpoch(repos, owned) }, 200)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? notFound(c) : forbidden(c)
+  return c.json({ worker_epoch: await incrementEpoch(repos, access.sessionId) }, 200)
 })
 
 export default app

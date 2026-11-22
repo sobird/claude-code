@@ -10,7 +10,7 @@ import { Hono } from 'hono'
 import type { AppEnv } from '@/auth/context'
 import { toWebSessionId } from '@/contracts'
 import { legacyUserAuth, readJson, webForbidden, webNotFound } from '@/routes/common'
-import { getSession, resolveOwnedWebSessionId } from '@/services/session'
+import { resolveAccessibleSession } from '@/services/session'
 
 const app = new Hono<AppEnv>()
 
@@ -23,12 +23,10 @@ app.post('/bind', legacyUserAuth, async (c) => {
   if (!requested) {
     return c.json({ error: 'sessionId is required', code: 'session_id_required' }, 400)
   }
-  if (!(await getSession(repos, requested))) return webNotFound(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? webNotFound(c) : webForbidden(c)
 
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return webForbidden(c)
-
-  return c.json({ ok: true, sessionId: toWebSessionId(owned) }, 200)
+  return c.json({ ok: true, sessionId: toWebSessionId(access.sessionId) }, 200)
 })
 
 export default app

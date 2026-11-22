@@ -11,7 +11,7 @@ import type { AppEnv } from '@/auth/context'
 import { signWorkerToken } from '@/auth/tokens'
 import { loadConfig } from '@/config'
 import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '@/routes/common'
-import { createCodeSession, getSession, incrementEpoch, resolveOwnedWebSessionId } from '@/services/session'
+import { createCodeSession, incrementEpoch, resolveAccessibleSession } from '@/services/session'
 
 const app = new Hono<AppEnv>()
 
@@ -43,13 +43,12 @@ app.post('/', legacyUserAuth, async (c) => {
 app.post('/:id/bridge', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? notFound(c) : forbidden(c)
 
   const config = loadConfig()
-  const workerEpoch = await incrementEpoch(repos, owned)
-  const workerJwt = await signWorkerToken(owned, config.jwtExpiresIn)
+  const workerEpoch = await incrementEpoch(repos, access.sessionId)
+  const workerJwt = await signWorkerToken(access.sessionId, config.jwtExpiresIn)
 
   return c.json(
     {

@@ -15,7 +15,7 @@ import {
   archiveSession,
   createSession,
   getSession,
-  resolveOwnedWebSessionId,
+  resolveAccessibleSession,
   unarchiveSession,
   updateSessionTitle,
 } from '@/services/session'
@@ -89,9 +89,9 @@ app.post('/', legacyUserAuth, async (c) => {
 app.get('/:id', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? notFound(c) : forbidden(c)
+  const owned = access.sessionId
   return c.json(await getSession(repos, owned), 200)
 })
 
@@ -99,9 +99,9 @@ app.get('/:id', legacyUserAuth, async (c) => {
 app.patch('/:id', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? notFound(c) : forbidden(c)
+  const owned = access.sessionId
 
   const body = await readJson(c)
   if (typeof body.title === 'string' && body.title) {
@@ -114,9 +114,9 @@ app.patch('/:id', legacyUserAuth, async (c) => {
 app.post('/:id/archive', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? notFound(c) : forbidden(c)
+  const owned = access.sessionId
 
   await archiveSession(repos, owned)
   return c.json({ status: 'ok' }, 200)
@@ -126,9 +126,9 @@ app.post('/:id/archive', legacyUserAuth, async (c) => {
 app.post('/:id/unarchive', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? notFound(c) : forbidden(c)
+  const owned = access.sessionId
 
   await unarchiveSession(repos, owned)
   return c.json({ status: 'ok' }, 200)
@@ -138,9 +138,9 @@ app.post('/:id/unarchive', legacyUserAuth, async (c) => {
 app.post('/:id/events', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
-  if (!(await getSession(repos, requested))) return notFound(c)
-  const owned = await resolveOwnedWebSessionId(repos, requested, c.get('user'))
-  if (!owned) return forbidden(c)
+  const access = await resolveAccessibleSession(repos, requested, c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? notFound(c) : forbidden(c)
+  const owned = access.sessionId
 
   const body: unknown = await c.req.json().catch(() => ({}))
   const events = extractEvents(body)

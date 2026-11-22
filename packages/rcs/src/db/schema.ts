@@ -20,7 +20,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-import type { Role } from '@/contracts'
+export type Role = 'admin' | 'member'
 
 export type EventDirection = 'inbound' | 'outbound'
 
@@ -223,6 +223,23 @@ export const pushSubscriptions = pgTable(
   },
   (table) => [index('push_subscriptions_user_idx').on(table.userId)],
 )
+
+/**
+ * 交给 services/routes 的记录形状，直接由表定义推导（`$inferSelect`），列名、可空性、
+ * 时间/字节类型都不会与写入的接口漂移。`contracts.ts` 以 `export type` 转发这些类型，
+ * 业务代码仍从 `@/contracts` 取，运行时不会因此加载 drizzle。
+ */
+export type UserRecord = typeof users.$inferSelect
+export type ApiKeyRecord = typeof apiKeys.$inferSelect
+export type EnvironmentRecord = typeof environments.$inferSelect
+export type SessionRecord = typeof sessions.$inferSelect
+export type SessionWorkerRecord = typeof sessionWorkers.$inferSelect
+export type WorkItemRecord = typeof workItems.$inferSelect
+export type SessionEventRecord = typeof sessionEvents.$inferSelect
+export type AttachmentRecord = typeof attachments.$inferSelect
+export type PushSubscriptionRecord = typeof pushSubscriptions.$inferSelect
+/** Web Push 配置的发送侧投影，不是整行。 */
+export type PushVapidKeys = Pick<typeof pushSettings.$inferSelect, 'publicKey' | 'privateKey' | 'subject'>
 
 export const schema = {
   users,
