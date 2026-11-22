@@ -12,6 +12,8 @@ import {
   Gauge,
   GitBranch,
   Loader2,
+  Lock,
+  LockOpen,
   Menu,
   Moon,
   PanelLeftClose,
@@ -27,40 +29,14 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTheme } from '@/lib/theme'
 import { cx } from '@/lib/utils'
 
+import { STATUS_LABEL, type DemoEnvironment, type DemoSession, type Entry, type FleetSession, type Turn } from './types'
+import { useLiveConsole } from './useLiveConsole'
+
 import styles from './DemoConsole.module.css'
 
 /* ------------------------------------------------------------------ */
 /* Mock data                                                           */
 /* ------------------------------------------------------------------ */
-
-type SessionStatus = 'running' | 'active' | 'idle'
-type ToolState = 'done' | 'running'
-
-interface ToolLine {
-  name: string
-  detail: string
-  time: string
-  state: ToolState
-}
-
-type Entry =
-  | { kind: 'system'; text: string }
-  | { kind: 'user'; text: string; at: string }
-  | { kind: 'assistant'; paragraphs: string[] }
-  | { kind: 'tools'; items: ToolLine[] }
-  | { kind: 'permission'; title: string; detail: string; command: string }
-
-interface DemoSession {
-  title: string
-  status: SessionStatus
-  updated: string
-  branch: string
-  elapsed: string
-  tokens: number
-  limit: number
-  entries: Entry[]
-  tasks: { label: string; done: boolean; active?: boolean }[]
-}
 
 const DEMO = {
   auth: {
@@ -168,23 +144,10 @@ const DEMO = {
   },
 } satisfies Record<string, DemoSession>
 
-interface DemoEnvironment {
-  id: string
-  name: string
-  host: string
-  status: 'online' | 'idle'
-}
-
 const ENVIRONMENTS: readonly DemoEnvironment[] = [
   { id: 'env-mbp', name: 'MacBook Pro', host: 'apple-silicon', status: 'online' },
   { id: 'env-studio', name: 'Studio', host: 'linux', status: 'idle' },
 ]
-
-/** A fleet row: a demo session plus which environment it lives on (null = unassigned). */
-interface FleetSession extends DemoSession {
-  id: string
-  environmentId: string | null
-}
 
 const INITIAL_SESSIONS: FleetSession[] = [
   { ...DEMO.auth, id: 'auth', environmentId: 'env-mbp' },
@@ -196,15 +159,22 @@ const MODELS = ['Opus 4.6', 'Sonnet 4.6', 'Haiku 4.5'] as const
 const PERMISSIONS = ['询问', '自动', '计划'] as const
 const THINKING = ['标准', '扩展', '关闭'] as const
 
-const STATUS_LABEL: Record<SessionStatus, string> = {
-  running: '运行中',
-  active: '进行中',
-  idle: '空闲',
-}
-
 const QUEUED_REPLY = '已排入下一轮——CLI 会在不打断你正在查看的这次运行的情况下把它并入。'
 
-type Turn = { role: 'user'; text: string } | { role: 'assistant'; text: string }
+/** Placeholder while live data loads or when there is no session to show. */
+const EMPTY_SESSION: FleetSession = {
+  id: '',
+  environmentId: null,
+  title: '等待会话',
+  status: 'idle',
+  updated: '—',
+  branch: '—',
+  elapsed: '—',
+  tokens: 0,
+  limit: 200_000,
+  entries: [],
+  tasks: [],
+}
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -217,6 +187,11 @@ function cycle<T>(options: readonly [T, ...T[]], current: T): T {
 
 function formatTokens(value: number): string {
   return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value)
+}
+
+/** Gateway ids are long (`session_…`); keep the crumb readable. */
+function shortId(id: string): string {
+  return id.length > 14 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id
 }
 
 function renderInline(text: string): ReactNode[] {
@@ -259,10 +234,16 @@ function BrandMark() {
   )
 }
 
-export function DemoConsole() {
+export type DemoSource = 'live' | 'mock'
+
+export function DemoConsole({ source = 'live' }: { source?: DemoSource }) {
+  const isLive = source === 'live'
+  const live = useLiveConsole(isLive)
   const { resolvedTheme, setTheme } = useTheme()
-  const [sessions, setSessions] = useState(INITIAL_SESSIONS)
-  const [activeId, setActiveId] = useState('auth')
+
+  // Mock study state — only read when `?source=mock`.
+  const [mockSessions, setMockSessions] = useState(INITIAL_SESSIONS)
+  const [mockActiveId, setMockActiveId] = useState('auth')
   const [draft, setDraft] = useState('')
   const [model, setModel] = useState<(typeof MODELS)[number]>('Opus 4.6')
   const [permission, setPermission] = useState<(typeof PERMISSIONS)[number]>('询问')
@@ -277,17 +258,29 @@ export function DemoConsole() {
   const [pending, setPending] = useState<Record<string, boolean>>({})
   const [createOpen, setCreateOpen] = useState(false)
   const [createTitle, setCreateTitle] = useState('')
-  const [createEnv, setCreateEnv] = useState(ENVIRONMENTS[0].id)
+  const [createEnv, setCreateEnv] = useState('')
+  // Live mode starts read-only; taking over gates sending, approvals, and
+  // session creation. `?source=mock` ignores this entirely.
+  const [takeover, setTakeover] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const timers = useRef(new Set<ReturnType<typeof setTimeout>>())
 
-  const session = sessions.find((item) => item.id === activeId) ?? INITIAL_SESSIONS[0]
-  const extraTurns = turns[activeId] ?? []
-  const isPending = Boolean(pending[activeId])
-  const environmentName = ENVIRONMENTS.find((env) => env.id === session.environmentId)?.name ?? '未分配'
+  const sessions = isLive ? live.sessions : mockSessions
+  const environments: readonly DemoEnvironment[] = isLive ? live.environments : ENVIRONMENTS
+  const activeId = isLive ? (live.activeId ?? '') : mockActiveId
+  const mockSession = mockSessions.find((item) => item.id === mockActiveId) ?? INITIAL_SESSIONS[0]
+  const liveSession = live.active
+  const session: FleetSession = (isLive ? liveSession : mockSession) ?? EMPTY_SESSION
+  const extraTurns = isLive ? [] : (turns[mockActiveId] ?? [])
+  const isPending = isLive ? Boolean(liveSession?.turnOpen || liveSession?.streaming) : Boolean(pending[mockActiveId])
+  const closed = isLive && (liveSession?.closed ?? false)
+  const signedOut = isLive && live.signedOut
+  const canWrite = isLive ? takeover && session.id !== '' && !closed : true
+  const environmentName = environments.find((env) => env.id === session.environmentId)?.name ?? '未分配'
   const envGroups = [
-    ...ENVIRONMENTS.map((env) => ({
+    ...environments.map((env) => ({
       id: env.id,
       name: env.name,
       host: env.host,
@@ -307,10 +300,21 @@ export function DemoConsole() {
     session.entries.filter((entry) => entry.kind === 'user').length +
     extraTurns.filter((turn) => turn.role === 'user').length
 
+  const linkLabel = !isLive
+    ? '网关已连接'
+    : signedOut
+      ? '未登录'
+      : live.connection === 'connected'
+        ? '网关已连接'
+        : live.connection === 'error'
+          ? '网关连接失败'
+          : '连接中…'
+  const linkLatency = isLive ? (live.latencyMs !== null ? `${live.latencyMs} ms` : '—') : '18 ms'
+
   useEffect(() => {
     const element = scrollRef.current
     if (element) element.scrollTop = element.scrollHeight
-  }, [activeId, turns, pending])
+  }, [activeId, session.entries.length, extraTurns.length, isPending])
 
   useEffect(() => {
     const activeTimers = timers.current
@@ -320,10 +324,32 @@ export function DemoConsole() {
     }
   }, [])
 
-  function handleSend(): void {
+  function selectSession(id: string): void {
+    if (isLive) live.setActiveId(id)
+    else setMockActiveId(id)
+    setRailOpen(false)
+  }
+
+  async function handleSend(): Promise<void> {
     const text = draft.trim()
-    if (!text || isPending) return
-    const sessionId = activeId
+    if (!text) return
+
+    if (isLive) {
+      if (!canWrite) return
+      setActionError(null)
+      setDraft('')
+      try {
+        await live.send(text)
+      } catch (error) {
+        // Restore the draft so a failed send can be retried.
+        setDraft(text)
+        setActionError(error instanceof Error ? error.message : String(error))
+      }
+      return
+    }
+
+    if (isPending) return
+    const sessionId = mockActiveId
     setDraft('')
     setTurns((prev) => ({ ...prev, [sessionId]: [...(prev[sessionId] ?? []), { role: 'user', text }] }))
     setPending((prev) => ({ ...prev, [sessionId]: true }))
@@ -339,14 +365,46 @@ export function DemoConsole() {
     timers.current.add(timer)
   }
 
-  function handleCreateSession(): void {
-    const title = createTitle.trim() || '未命名会话'
+  function answerPermission(key: string, requestId: string | undefined, approved: boolean): void {
+    if (isLive) {
+      if (!canWrite || requestId === undefined) return
+      const answer = approved ? 'approved' : 'denied'
+      setActionError(null)
+      setAnswers((prev) => ({ ...prev, [key]: answer }))
+      void live.respondPermission(requestId, approved).catch((error: unknown) => {
+        setAnswers((prev) => {
+          const next = { ...prev }
+          delete next[key]
+          return next
+        })
+        setActionError(error instanceof Error ? error.message : String(error))
+      })
+      return
+    }
+    setAnswers((prev) => ({ ...prev, [key]: approved ? 'approved' : 'denied' }))
+  }
+
+  async function handleCreateSession(): Promise<void> {
+    const title = createTitle.trim()
+    if (isLive) {
+      if (!takeover || !createEnv) return
+      setActionError(null)
+      try {
+        await live.createSession({ title: title || undefined, environmentId: createEnv })
+        setCreateOpen(false)
+        setCreateTitle('')
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : String(error))
+      }
+      return
+    }
+
     const environment = ENVIRONMENTS.find((env) => env.id === createEnv) ?? ENVIRONMENTS[0]
     const id = `web-${Date.now()}`
     const created: FleetSession = {
       id,
       environmentId: environment.id,
-      title,
+      title: title || '未命名会话',
       status: 'idle',
       updated: '刚刚',
       branch: 'web',
@@ -356,17 +414,22 @@ export function DemoConsole() {
       entries: [{ kind: 'system', text: `已派发到 ${environment.name}，等待工作进程认领…` }],
       tasks: [],
     }
-    setSessions((prev) => [created, ...prev])
-    setActiveId(id)
+    setMockSessions((prev) => [created, ...prev])
+    setMockActiveId(id)
     setCreateOpen(false)
     setCreateTitle('')
-    setCreateEnv(ENVIRONMENTS[0].id)
+    setCreateEnv('')
+  }
+
+  function openCreate(): void {
+    setCreateOpen(true)
+    if (!environments.some((env) => env.id === createEnv)) setCreateEnv(environments[0]?.id ?? '')
   }
 
   function closeCreate(): void {
     setCreateOpen(false)
     setCreateTitle('')
-    setCreateEnv(ENVIRONMENTS[0].id)
+    setCreateEnv('')
   }
 
   function toggleLedger(): void {
@@ -449,6 +512,8 @@ export function DemoConsole() {
                     <span className={styles.toolState} data-state={item.state}>
                       {item.state === 'running' ? (
                         <Loader2 className={styles.spin} aria-label="运行中" />
+                      ) : item.state === 'error' ? (
+                        <Circle aria-label="失败" />
                       ) : (
                         <CircleCheck aria-label="已完成" />
                       )}
@@ -465,7 +530,8 @@ export function DemoConsole() {
       }
 
       case 'permission': {
-        const permissionKey = `${activeId}-permission-${index}`
+        // Live cards key on the gateway request id; mock cards fall back to position.
+        const permissionKey = entry.requestId ?? `${activeId}-permission-${index}`
         const answer = answers[permissionKey]
         return (
           <div key={entryKey} className={cx(styles.entry, styles.permission)} style={delayFor(index)}>
@@ -483,23 +549,27 @@ export function DemoConsole() {
               <p className={styles.permissionAnswer} data-answer={answer}>
                 {answer === 'approved' ? '已批准——已发送到环境。' : '已拒绝——智能体稍后会再次询问。'}
               </p>
-            ) : (
+            ) : canWrite ? (
               <div className={styles.permissionActions}>
                 <button
                   type="button"
                   className={styles.btnPrimary}
-                  onClick={() => setAnswers((prev) => ({ ...prev, [permissionKey]: 'approved' }))}
+                  onClick={() => answerPermission(permissionKey, entry.requestId, true)}
                 >
                   批准
                 </button>
                 <button
                   type="button"
                   className={styles.btnGhost}
-                  onClick={() => setAnswers((prev) => ({ ...prev, [permissionKey]: 'denied' }))}
+                  onClick={() => answerPermission(permissionKey, entry.requestId, false)}
                 >
                   拒绝
                 </button>
               </div>
+            ) : (
+              <p className={styles.permissionAnswer} data-answer="denied">
+                只读预览——接管后可审批。
+              </p>
             )}
           </div>
         )
@@ -580,7 +650,7 @@ export function DemoConsole() {
         <div className={styles.railBody}>
           <div className={styles.railHeadRow}>
             <p className={styles.eyebrow}>01 — 会话</p>
-            <button type="button" className={styles.newSessionBtn} onClick={() => setCreateOpen(true)}>
+            <button type="button" className={styles.newSessionBtn} onClick={openCreate}>
               <Plus className={styles.icon} aria-hidden="true" />
               新建
             </button>
@@ -601,10 +671,7 @@ export function DemoConsole() {
                       type="button"
                       className={styles.sessionButton}
                       aria-current={isActive}
-                      onClick={() => {
-                        setActiveId(item.id)
-                        setRailOpen(false)
-                      }}
+                      onClick={() => selectSession(item.id)}
                     >
                       <span className={styles.sessionTop}>
                         <span className={styles.statusDot} data-status={item.status} />
@@ -628,8 +695,8 @@ export function DemoConsole() {
         <footer className={styles.railFoot}>
           <div className={styles.linkState}>
             <span className={styles.pulseDot} aria-hidden="true" />
-            <span>网关已连接</span>
-            <span className={styles.linkLatency}>18 ms</span>
+            <span>{linkLabel}</span>
+            <span className={styles.linkLatency}>{linkLatency}</span>
           </div>
           <div className={styles.railFootRow}>
             <button
@@ -640,7 +707,7 @@ export function DemoConsole() {
             >
               {resolvedTheme === 'dark' ? <Moon className={styles.icon} /> : <Sun className={styles.icon} />}
             </button>
-            <span className={styles.demoTag}>设计研究</span>
+            <span className={styles.demoTag}>{isLive ? '实时' : '设计研究'}</span>
             <span className={styles.avatar} aria-hidden="true">
               S
             </span>
@@ -661,7 +728,7 @@ export function DemoConsole() {
         <button
           type="button"
           className={styles.railCompactAction}
-          onClick={() => setCreateOpen(true)}
+          onClick={openCreate}
           aria-label="新建会话"
           title="新建会话"
         >
@@ -674,7 +741,9 @@ export function DemoConsole() {
               className={styles.railCompactDot}
               title={`${group.name} · ${group.host}`}
               role="img"
-              aria-label={`${group.name}：${group.status === 'online' ? '在线' : '空闲'}`}
+              aria-label={`${group.name}：${
+                group.status === 'online' ? '在线' : group.status === 'offline' ? '离线' : '空闲'
+              }`}
             >
               <span className={styles.statusDot} data-status={group.status} />
             </span>
@@ -699,7 +768,7 @@ export function DemoConsole() {
             <button type="button" className={styles.fleetButton} onClick={openRail} aria-label="打开会话列表">
               <Menu className={styles.icon} />
             </button>
-            <span className={styles.crumbId}>会话 / {activeId}</span>
+            <span className={styles.crumbId}>会话 / {activeId ? (isLive ? shortId(activeId) : activeId) : '—'}</span>
             <h1 className={styles.title}>{session.title}</h1>
             <div className={styles.crumbMeta}>
               <GitBranch className={styles.metaIcon} aria-hidden="true" />
@@ -742,6 +811,22 @@ export function DemoConsole() {
               <span className={styles.chipLabel}>{permission}</span>
               <ChevronDown className={styles.chipChevron} aria-hidden="true" />
             </button>
+            {isLive ? (
+              <button
+                type="button"
+                className={cx(styles.chip, takeover && styles.chipActive)}
+                onClick={() => setTakeover((value) => !value)}
+                disabled={!live.authenticated}
+                title={takeover ? '已接管：发送与审批会写入网关' : '接管后可发送消息和审批权限'}
+              >
+                {takeover ? (
+                  <LockOpen className={styles.chipIcon} aria-hidden="true" />
+                ) : (
+                  <Lock className={styles.chipIcon} aria-hidden="true" />
+                )}
+                <span className={styles.chipLabel}>{takeover ? '已接管' : '接管'}</span>
+              </button>
+            ) : null}
             <span className={styles.statusPill} data-status={session.status}>
               <span className={styles.statusDot} data-status={session.status} />
               <span className={styles.statusLabel}>{STATUS_LABEL[session.status]}</span>
@@ -754,6 +839,19 @@ export function DemoConsole() {
 
         <div className={styles.scroll} ref={scrollRef}>
           <div className={styles.thread}>
+            {signedOut ? (
+              <div className={styles.notice}>
+                实时模式需要登录才能读取网关数据。
+                <a className={styles.noticeLink} href="/login?next=/demo">
+                  前往登录 →
+                </a>
+              </div>
+            ) : null}
+            {isLive && live.error ? <div className={cx(styles.notice, styles.noticeError)}>{live.error}</div> : null}
+            {actionError ? <div className={cx(styles.notice, styles.noticeError)}>{actionError}</div> : null}
+            {isLive && !signedOut && !live.loading && sessions.length === 0 ? (
+              <div className={styles.notice}>还没有会话——点击左侧“新建”在已连接的环境上启动一个。</div>
+            ) : null}
             {session.entries.map((entry, index) => renderEntry(entry, index))}
             {extraTurns.map((turn, index) => renderTurn(turn, session.entries.length + index))}
             {isPending ? (
@@ -775,7 +873,7 @@ export function DemoConsole() {
             className={styles.composer}
             onSubmit={(event) => {
               event.preventDefault()
-              handleSend()
+              void handleSend()
             }}
           >
             <div className={styles.composerRow}>
@@ -788,21 +886,43 @@ export function DemoConsole() {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                     event.preventDefault()
-                    handleSend()
+                    void handleSend()
                   }
                 }}
                 rows={1}
                 aria-label="给智能体发消息"
-                placeholder={isPending ? '智能体处理中——发送后续消息会排队' : '给智能体发消息…'}
+                disabled={isLive && (!canWrite || signedOut)}
+                placeholder={
+                  signedOut
+                    ? '未登录——先登录再发送'
+                    : closed
+                      ? '会话已关闭'
+                      : isLive && !takeover
+                        ? '只读预览——点“接管”后可发送'
+                        : isPending
+                          ? '智能体处理中——发送后续消息会排队'
+                          : '给智能体发消息…'
+                }
                 className={styles.textarea}
               />
             </div>
             <div className={styles.composerBar}>
               <span className={styles.keyHint}>
-                <CornerDownLeft className={styles.keyHintIcon} aria-hidden="true" />
-                Enter 发送 · Shift+Enter 换行
+                {isLive && (!takeover || signedOut) ? (
+                  <>{signedOut ? '未登录' : '只读预览 · 接管后可发送'}</>
+                ) : (
+                  <>
+                    <CornerDownLeft className={styles.keyHintIcon} aria-hidden="true" />
+                    Enter 发送 · Shift+Enter 换行
+                  </>
+                )}
               </span>
-              <button type="submit" className={styles.sendButton} disabled={!draft.trim()} aria-label="发送消息">
+              <button
+                type="submit"
+                className={styles.sendButton}
+                disabled={!draft.trim() || (isLive && (!canWrite || signedOut))}
+                aria-label="发送消息"
+              >
                 <ArrowUp className={styles.sendIcon} />
               </button>
             </div>
@@ -884,7 +1004,13 @@ export function DemoConsole() {
           </ul>
         </section>
 
-        <p className={styles.ledgerNote}>设计研究 · 仅演示数据。不会发送到网关。</p>
+        <p className={styles.ledgerNote}>
+          {isLive
+            ? takeover
+              ? '实时数据 · 已接管，发送与审批会写入网关。'
+              : '实时数据 · 只读预览。点上方“接管”后可发送与审批。'
+            : '设计研究 · 仅演示数据。不会发送到网关。'}
+        </p>
       </aside>
 
       {createOpen ? (
@@ -902,7 +1028,7 @@ export function DemoConsole() {
             aria-labelledby="new-session-title"
             onSubmit={(event) => {
               event.preventDefault()
-              handleCreateSession()
+              void handleCreateSession()
             }}
           >
             <h2 id="new-session-title" className={styles.modalTitle}>
@@ -927,7 +1053,7 @@ export function DemoConsole() {
                 value={createEnv}
                 onChange={(event) => setCreateEnv(event.target.value)}
               >
-                {ENVIRONMENTS.map((env) => (
+                {environments.map((env) => (
                   <option key={env.id} value={env.id}>
                     {env.name}
                   </option>
@@ -935,11 +1061,13 @@ export function DemoConsole() {
               </select>
             </label>
 
+            {isLive && !takeover ? <p className={styles.modalDesc}>只读模式下无法创建会话——先点“接管”。</p> : null}
+
             <div className={styles.modalActions}>
               <button type="button" className={styles.btnGhost} onClick={closeCreate}>
                 取消
               </button>
-              <button type="submit" className={styles.btnPrimary}>
+              <button type="submit" className={styles.btnPrimary} disabled={isLive && (!takeover || !createEnv)}>
                 创建会话
               </button>
             </div>

@@ -1,12 +1,19 @@
 import { DemoConsole } from '@/components/demo/DemoConsole'
 
 /**
- * `/demo` — a self-contained design study for the console UI.
+ * `/demo` — an interaction-design study for the console UI.
  *
- * All data is local mock data; nothing here talks to the gateway. The page
- * exists to review the interaction model before porting it onto the real
- * dashboard and session surfaces.
+ * By default it renders live gateway data (sessions, environments, transcript
+ * stream) read-only until the viewer takes over; sending and approvals are
+ * gated behind that toggle. `?source=mock` keeps the original self-contained
+ * mock study for reviewing the visuals without an account.
  */
-export default function DemoPage() {
-  return <DemoConsole />
+export default async function DemoPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = await searchParams
+  const source = params.source === 'mock' ? 'mock' : 'live'
+  return <DemoConsole source={source} />
 }

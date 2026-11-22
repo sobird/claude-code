@@ -18,7 +18,8 @@ export const viewport: Viewport = baseViewport
 /**
  * Standalone root layout for the interaction-design demo. It deliberately skips
  * the authenticated app shell so the proposed console can own the full
- * viewport; `proxy.ts` still gates `/demo` like every other page.
+ * viewport; `proxy.ts` keeps `/demo` public so it can be reviewed without an
+ * account, and the page itself gates writes behind the in-UI takeover toggle.
  */
 export default function DemoLayout({ children }: { children: ReactNode }) {
   return <RootShell lang="en">{children}</RootShell>

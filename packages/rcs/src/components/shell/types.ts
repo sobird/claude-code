@@ -10,6 +10,7 @@ export interface SessionSummary {
   id: string
   title: string | null
   status: string
+  environment_id: string | null
   owner_user_id: string | null
   updated_at: number
 }

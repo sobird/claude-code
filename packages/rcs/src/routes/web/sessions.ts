@@ -61,6 +61,7 @@ function toSummary(record: SessionRecord) {
     id: toWebSessionId(record.id),
     title: record.title,
     status: record.status,
+    environment_id: record.environmentId,
     owner_user_id: record.ownerUserId,
     updated_at: record.updatedAt.getTime() / 1000,
   }
