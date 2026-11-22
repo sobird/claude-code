@@ -26,7 +26,7 @@ export default async function SettingsPage() {
   const tCommon = await getTranslations('common')
   const username = sessionUser?.name ?? tCommon('account')
   const role = sessionUser?.role ?? 'member'
-  const roleLabel = tCommon.has(`role.${role}`) ? tCommon(`role.${role}`) : role
+  const roleLabel = role === 'admin' || role === 'member' ? tCommon(`role.${role}`) : role
 
   return (
     <div className={styles.root}>

@@ -16,9 +16,30 @@ const statusStyles: Record<string, string> = {
   error: styles.error,
 }
 
+/** Statuses with localized copy under `common.status`; others render verbatim. */
+const LABELED_STATUSES = [
+  'active',
+  'running',
+  'idle',
+  'inactive',
+  'requires_action',
+  'archived',
+  'error',
+  'online',
+  'offline',
+] as const
+
+type LabeledStatus = (typeof LABELED_STATUSES)[number]
+
+const LABELED_STATUS_SET: ReadonlySet<string> = new Set(LABELED_STATUSES)
+
+function isLabeledStatus(value: string): value is LabeledStatus {
+  return LABELED_STATUS_SET.has(value)
+}
+
 /** Small pill describing a session or environment status. */
 export function StatusBadge({ status }: { status: string }) {
   const t = useTranslations('common')
-  const label = t.has(`status.${status}`) ? t(`status.${status}`) : status
+  const label = isLabeledStatus(status) ? t(`status.${status}`) : status
   return <span className={cx(styles.badge, statusStyles[status] ?? styles.fallback)}>{label}</span>
 }

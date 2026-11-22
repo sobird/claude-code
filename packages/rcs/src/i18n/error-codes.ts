@@ -29,9 +29,14 @@ export const KNOWN_ERROR_CODES = [
 
 export type KnownErrorCode = (typeof KNOWN_ERROR_CODES)[number]
 
-const KNOWN_CODES: ReadonlySet<string> = new Set<string>(KNOWN_ERROR_CODES)
+/** Fully-qualified catalog key for a known code. */
+export type ErrorCodeKey = `errors.codes.${KnownErrorCode}`
+
+const CODE_KEYS: ReadonlyMap<string, ErrorCodeKey> = new Map(
+  KNOWN_ERROR_CODES.map((code) => [code, `errors.codes.${code}`]),
+)
 
 /** Catalog key for a known code, or `null` when the code has no copy. */
-export function apiErrorKey(code: string): string | null {
-  return KNOWN_CODES.has(code) ? `errors.codes.${code}` : null
+export function apiErrorKey(code: string): ErrorCodeKey | null {
+  return CODE_KEYS.get(code) ?? null
 }

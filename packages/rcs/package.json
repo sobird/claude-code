@@ -61,6 +61,8 @@
     "drizzle-kit": "^0.31.11",
     "esbuild-wasm": "^0.25",
     "fontkit": "^3.0.0",
-    "sharp": "^0.35.5"
+    "icu-minify": "^4.15.1",
+    "sharp": "^0.35.5",
+    "use-intl": "^4.15.1"
   }
 }

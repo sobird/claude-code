@@ -14,6 +14,7 @@ import Credentials from 'next-auth/providers/credentials'
 
 import { verifyPassword } from '@/auth/password'
 import type { Role } from '@/contracts'
+import { isLocale, type Locale } from '@/i18n/locales'
 
 import { authConfig } from './auth.config'
 import { ensureBootstrapAdminOnce } from './bootstrap-runner'
@@ -26,7 +27,7 @@ export const LOGIN_RATE_LIMIT = { limit: 5, windowMs: 60_000 } as const
 
 const loginLimiter = createRateLimiter(LOGIN_RATE_LIMIT)
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   ...authConfig,
   providers: [
     Credentials({
@@ -51,10 +52,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!user || user.disabledAt) return null
           if (!(await verifyPassword(password, user.passwordHash))) return null
 
-          const authenticated: User & { role: Role } = {
+          const authenticated: User & { role: Role; locale: Locale | null } = {
             id: user.id,
             name: user.username,
             role: user.role,
+            locale: isLocale(user.locale) ? user.locale : null,
           }
           return authenticated
         } catch (error) {

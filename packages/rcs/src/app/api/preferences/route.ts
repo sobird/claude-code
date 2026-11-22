@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server'
 
 import { LOCALE_COOKIE, localeCookieOptions } from '@/i18n/locales'
-import { auth } from '@/lib/auth'
+import { auth, unstable_update } from '@/lib/auth'
 import { setUserLocale } from '@/lib/preferences'
 import { getRepositories } from '@/lib/repos'
 
@@ -26,6 +26,11 @@ export async function POST(request: Request): Promise<Response> {
   if (!result.ok) {
     return NextResponse.json({ error: 'invalid locale', code: result.code }, { status: 400 })
   }
+
+  // Keep the device cookie authoritative for the current browser, and stamp the
+  // locale claim into this device's JWT so a fresh render (router.refresh) reads
+  // the same value before the cookie is even consulted.
+  await unstable_update({ user: { locale: result.locale } })
 
   const response = NextResponse.json({ locale: result.locale })
   response.cookies.set(LOCALE_COOKIE, result.locale, localeCookieOptions())

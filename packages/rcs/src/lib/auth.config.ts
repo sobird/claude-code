@@ -9,6 +9,7 @@
 import type { NextAuthConfig } from 'next-auth'
 
 import type { Role } from '@/contracts'
+import type { Locale } from '@/i18n/locales'
 
 /** Where unauthenticated users are sent. */
 export const LOGIN_PATH = '/login'
@@ -20,11 +21,25 @@ export const LOGIN_PATH = '/login'
  */
 export const AUTH_BASE_PATH = '/api/auth'
 
-/** Extra claims persisted in the encrypted Auth.js session JWT. */
+/**
+ * Extra claims persisted in the encrypted Auth.js session JWT. The `jwt` and
+ * `session` callbacks receive opaque Auth.js types (`User | AdapterUser`, a
+ * `Record<string, unknown>` token), so this view is the single documented
+ * boundary where those claims are read and written.
+ */
 interface SessionClaims {
   id?: string
   username?: string
   role?: Role
+  locale?: Locale | null
+}
+
+/** The subset of `session.user` we populate from the claims. */
+interface SessionUserView {
+  id?: string
+  name?: string | null
+  role?: Role
+  locale?: Locale | null
 }
 
 export const authConfig = {
@@ -35,22 +50,31 @@ export const authConfig = {
   pages: { signIn: LOGIN_PATH },
   providers: [],
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
         const claims = user as SessionClaims & { name?: string | null }
         token.id = claims.id
         token.username = claims.name ?? undefined
         token.role = claims.role
+        token.locale = claims.locale ?? null
+      }
+      // `unstable_update({ user: { locale } })` lands here after a preference
+      // change so the current device's JWT carries the new locale without a
+      // re-login.
+      if (trigger === 'update') {
+        const update = session as { user?: SessionUserView } | null
+        if (update?.user?.locale !== undefined) token.locale = update.user.locale
       }
       return token
     },
     session({ session, token }) {
       if (session.user) {
         const claims = token as SessionClaims & { sub?: string }
-        const target = session.user as { id?: string; name?: string | null; role?: Role }
+        const target = session.user as SessionUserView
         target.id = claims.id ?? claims.sub
         if (claims.username) target.name = claims.username
         target.role = claims.role
+        target.locale = claims.locale ?? null
       }
       return session
     },

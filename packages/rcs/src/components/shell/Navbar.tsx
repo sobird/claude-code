@@ -63,7 +63,7 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
 
   const visibleSessions = selectVisibleSessions(toOwnedSessions(sessions), user)
   const initial = (user.name || '?').charAt(0).toUpperCase()
-  const roleLabel = t.has('role.' + user.role) ? t('role.' + user.role) : user.role
+  const roleLabel = user.role === 'admin' || user.role === 'member' ? t(`role.${user.role}`) : user.role
 
   return (
     <header className={styles.header}>

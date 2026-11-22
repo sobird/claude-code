@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
-import { WEB_PERMISSION_MODES, type WebPermissionMode } from '@/lib/permission-modes'
+import { isWebPermissionMode, WEB_PERMISSION_MODES, type WebPermissionMode } from '@/lib/permission-modes'
 import { cx } from '@/lib/utils'
 
 import styles from './PermissionModeMenu.module.css'
@@ -45,7 +45,7 @@ export function PermissionModeMenu({
   const t = useTranslations('session.view.mode')
   if (!mode) return null
 
-  const currentLabel = t.has(mode) ? t(mode) : mode
+  const currentLabel = isWebPermissionMode(mode) ? t(mode) : mode
 
   return (
     <DropdownMenu>
@@ -73,7 +73,7 @@ export function PermissionModeMenu({
             disabled={pending}
             onClick={() => onSelect(option)}
           >
-            <span className={styles.optionLabel}>{t.has(option) ? t(option) : option}</span>
+            <span className={styles.optionLabel}>{t(option)}</span>
             {option === mode ? <Check className={styles.check} aria-hidden="true" /> : null}
           </DropdownMenuItem>
         ))}

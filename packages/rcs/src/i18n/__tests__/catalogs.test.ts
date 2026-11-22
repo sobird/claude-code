@@ -1,8 +1,11 @@
 // src/i18n/__tests__/catalogs.test.ts
 import { describe, expect, test } from 'bun:test'
 
+import compile from 'icu-minify/compile'
+
 import { CATALOGS } from '@/i18n/catalogs'
 import { KNOWN_ERROR_CODES } from '@/i18n/error-codes'
+import { SUPPORTED_LOCALES } from '@/i18n/locales'
 
 function flatten(value: unknown, prefix = ''): Map<string, string> {
   const out = new Map<string, string>()
@@ -29,6 +32,14 @@ describe('message catalogs', () => {
     const zh = flatten(CATALOGS['zh-CN'])
     for (const [key, text] of en) {
       expect({ key, placeholders: placeholders(zh.get(key) ?? '') }).toEqual({ key, placeholders: placeholders(text) })
+    }
+  })
+
+  test('every message is valid ICU', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      for (const [key, text] of flatten(CATALOGS[locale])) {
+        expect(() => compile(text), `${locale} ${key}`).not.toThrow()
+      }
     }
   })
 

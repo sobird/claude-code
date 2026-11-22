@@ -63,8 +63,15 @@ export function nextLocaleCookie(stored: string | null | undefined): Locale | nu
   return isLocale(stored) ? stored : null
 }
 
-export function resolveLocale(input: { cookie?: string | null; acceptLanguage?: string | null }): Locale {
-  return nextLocaleCookie(input.cookie) ?? negotiateLocale(input.acceptLanguage) ?? DEFAULT_LOCALE
+export function resolveLocale(input: {
+  cookie?: string | null
+  /** Locale claim from the session JWT; lets devices converge across sign-ins. */
+  session?: string | null
+  acceptLanguage?: string | null
+}): Locale {
+  const cookieLocale = nextLocaleCookie(input.cookie)
+  const sessionLocale = isLocale(input.session) ? input.session : null
+  return cookieLocale ?? sessionLocale ?? negotiateLocale(input.acceptLanguage) ?? DEFAULT_LOCALE
 }
 
 export function localeCookieOptions(): {

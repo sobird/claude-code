@@ -42,6 +42,15 @@ describe('resolveLocale', () => {
     expect(resolveLocale({ cookie: 'fr', acceptLanguage: 'zh-TW' })).toBe('zh-CN')
   })
 
+  test('prefers the device cookie over the session claim', () => {
+    expect(resolveLocale({ cookie: 'en', session: 'zh-CN' })).toBe('en')
+  })
+
+  test('uses the session claim before Accept-Language', () => {
+    expect(resolveLocale({ session: 'en', acceptLanguage: 'zh-CN' })).toBe('en')
+    expect(resolveLocale({ session: 'fr', acceptLanguage: 'zh-TW' })).toBe('zh-CN')
+  })
+
   test('defaults to zh-CN', () => {
     expect(resolveLocale({})).toBe(DEFAULT_LOCALE)
     expect(DEFAULT_LOCALE).toBe('zh-CN')
