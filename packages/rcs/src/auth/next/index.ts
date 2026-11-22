@@ -15,12 +15,12 @@ import Credentials from 'next-auth/providers/credentials'
 import { verifyPassword } from '@/auth/password'
 import type { Role } from '@/contracts'
 import { isLocale, type Locale } from '@/i18n/locales'
+import { ensureBootstrapAdminOnce } from '@/lib/bootstrap-runner'
+import { getClientIp } from '@/lib/client-ip'
+import { createRateLimiter } from '@/lib/rate-limit'
+import { getRepositories } from '@/lib/repos'
 
-import { authConfig } from './auth.config'
-import { ensureBootstrapAdminOnce } from './bootstrap-runner'
-import { getClientIp } from './client-ip'
-import { createRateLimiter } from './rate-limit'
-import { getRepositories } from './repos'
+import { authConfig } from './config'
 
 /** Five login attempts per minute per `(ip, username)`. */
 export const LOGIN_RATE_LIMIT = { limit: 5, windowMs: 60_000 } as const

@@ -79,6 +79,58 @@
         // types are read as void, so the rule only produces false positives.
         "typescript/await-thenable": "off"
       }
+    },
+    {
+      // The gateway/Bun runtime is a separate process from the Next server and
+      // must not load the Node-only NextAuth adapter (`src/auth/next`), which
+      // pulls in next-auth, the DB repos, and Node globals. Verify access
+      // tokens with `@/auth/tokens` instead.
+      "files": [
+        "packages/rcs/server/**",
+        "packages/rcs/src/gateway.ts",
+        "packages/rcs/src/routes/**",
+        "packages/rcs/src/transport/**",
+        "packages/rcs/src/services/**"
+      ],
+      "rules": {
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/auth/next", "@/auth/next/*", "@/auth/next/**", "**/lib/auth"],
+                "message": "The gateway runtime must not import the Next Auth adapter; verify access tokens via @/auth/tokens."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // Primitives in `src/auth/*.ts` stay runtime-neutral (gateway + tests);
+      // only `src/auth/next/**` may depend on next-auth.
+      "files": ["packages/rcs/src/auth/*.ts"],
+      "rules": {
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "./next",
+                  "./next/*",
+                  "../next",
+                  "../next/*",
+                  "@/auth/next",
+                  "@/auth/next/*",
+                  "@/auth/next/**"
+                ],
+                "message": "src/auth primitives stay runtime-neutral; put Next-only code in src/auth/next/**."
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "ignorePatterns": ["dist/", "node_modules/", "vendor/", "scripts/upgrade/__tests__/fixtures/"]

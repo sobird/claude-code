@@ -8,8 +8,8 @@
 
 import { NextResponse } from 'next/server'
 
+import { auth, unstable_update } from '@/auth/next'
 import { LOCALE_COOKIE, localeCookieOptions } from '@/i18n/locales'
-import { auth, unstable_update } from '@/lib/auth'
 import { setUserLocale } from '@/lib/preferences'
 import { getRepositories } from '@/lib/repos'
 

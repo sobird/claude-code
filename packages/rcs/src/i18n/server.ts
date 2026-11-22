@@ -2,7 +2,7 @@
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
 
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth/next'
 
 import { LOCALE_COOKIE, resolveLocale, type Locale } from './locales'
 

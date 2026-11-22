@@ -3,7 +3,8 @@
  *
  * Holds everything the middleware needs (secret, trustHost, JWT sessions,
  * pages, claim mapping) without any database or Node-only imports. The full
- * instance in `auth.ts` spreads this config and adds the Credentials provider.
+ * instance in `auth/next/index.ts` spreads this config and adds the Credentials
+ * provider.
  */
 
 import type { NextAuthConfig } from 'next-auth'

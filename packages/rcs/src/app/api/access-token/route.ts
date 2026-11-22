@@ -10,8 +10,8 @@
 
 import { NextResponse } from 'next/server'
 
-import { ACCESS_TOKEN_TTL_SECONDS, mintAccessTokenForSession } from '@/lib/access-token'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth/next'
+import { ACCESS_TOKEN_TTL_SECONDS, mintAccessTokenForSession } from '@/auth/next/access-token'
 import { getClientIp } from '@/lib/client-ip'
 import { createRateLimiter } from '@/lib/rate-limit'
 import { getRepositories } from '@/lib/repos'
