@@ -10,6 +10,7 @@
  */
 
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process'
+import { constants } from 'node:os'
 import { resolve } from 'node:path'
 
 import { isInBundledMode } from './bundledMode.js'
@@ -31,4 +32,33 @@ export function buildCliLaunch(extraArgs: string[]): CliLaunch {
 
 export function spawnCli(launch: CliLaunch, options: SpawnOptions): ChildProcess {
   return spawn(launch.command, launch.args, options)
+}
+
+/**
+ * Replaces the current process with a fresh CLI invocation replaying the
+ * original argv. Used after saving configuration that only takes effect on the
+ * next start (e.g. switching the API provider to Vertex AI). Forwards
+ * SIGINT/SIGTERM/SIGHUP to the child and mirrors its exit code; the returned
+ * promise never resolves because the process exits when the child does.
+ */
+export async function execRelaunch(): Promise<never> {
+  const child = spawnCli(buildCliLaunch(process.argv.slice(2)), { stdio: 'inherit', env: process.env })
+  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+    process.on(signal, () => {
+      try {
+        child.kill(signal)
+      } catch {
+        // Child already exited.
+      }
+    })
+  }
+  return new Promise<never>(() => {
+    child.on('close', (code, signal) => {
+      process.exit(code ?? (signal ? 128 + (constants.signals[signal] ?? 0) : 0))
+    })
+    child.on('error', (error) => {
+      process.stderr.write(`Failed to relaunch Claude Code: ${error.message}\n`)
+      process.exit(1)
+    })
+  })
 }

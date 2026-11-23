@@ -62,12 +62,6 @@ const MonitorTool = feature('MONITOR_TOOL')
       .MonitorTool
   : null
 
-const MonitorPermissionRequest = feature('MONITOR_TOOL')
-  ? (
-      require('./MonitorPermissionRequest/MonitorPermissionRequest.js') as typeof import('./MonitorPermissionRequest/MonitorPermissionRequest.js')
-    ).MonitorPermissionRequest
-  : null
-
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import type { z } from 'zod/v4'
@@ -102,7 +96,7 @@ function permissionComponentForTool(tool: Tool): React.ComponentType<PermissionR
     case WorkflowTool:
       return WorkflowPermissionRequest ?? FallbackPermissionRequest
     case MonitorTool:
-      return MonitorPermissionRequest ?? FallbackPermissionRequest
+      return BashPermissionRequest
     case GlobTool:
     case GrepTool:
     case FileReadTool:
