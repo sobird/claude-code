@@ -21,7 +21,7 @@ import { cx, uniqueKeys } from '@/lib/utils'
 
 import { AssistantBubble } from './MessageBubble'
 import { bashViewModel } from './tool-views/bash-model'
-import { diffStats, fileViewModel } from './tool-views/file-model'
+import { diffStats, fileViewModel, formatInputSize } from './tool-views/file-model'
 import { GenericToolBody } from './tool-views/GenericToolBody'
 import { toolViewKind } from './tool-views/kinds'
 import { TOOL_VIEWS } from './tool-views/registry'
@@ -154,8 +154,10 @@ function SingleToolCard({
   const summary = summarizeToolCall(tool.title, tool.rawInput)
   const kind = toolViewKind(tool.title)
   const ToolView = kind ? TOOL_VIEWS[kind] : undefined
-  const hunks = kind === 'file' ? fileViewModel(tool)?.hunks : undefined
+  const fileModel = kind === 'file' ? fileViewModel(tool) : null
+  const hunks = fileModel?.hunks ?? undefined
   const stats = hunks ? diffStats(hunks) : null
+  const inputSize = fileModel?.inputSize ?? null
   const exitCode = kind === 'bash' ? (bashViewModel(tool)?.exitCode ?? null) : null
   // running/waiting 已有可见标签；其余终态补一条视觉隐藏文本供屏幕阅读器读取。
   const statusLabel =
@@ -184,6 +186,7 @@ function SingleToolCard({
               <span className={styles.diffRemoved} aria-hidden="true">{`-${stats.removed}`}</span>
             </span>
           ) : null}
+          {inputSize !== null ? <span className={styles.inputSize}>{formatInputSize(inputSize)}</span> : null}
           {exitCode !== null ? <span className={styles.exitCode}>{t('exitCode', { code: exitCode })}</span> : null}
         </span>
         {tool.status === 'running' ? <span className={styles.runningLabel}>{t('running')}</span> : null}

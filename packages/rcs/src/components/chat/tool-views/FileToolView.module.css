@@ -64,6 +64,58 @@
   color: var(--color-text-secondary);
 }
 
+.readView {
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  border-radius: 0.375rem;
+  background-color: color-mix(in oklab, var(--color-surface-2) 70%, transparent);
+}
+
+.lineBlock {
+  max-height: 18rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.25rem 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1rem;
+}
+
+.line {
+  display: flex;
+}
+
+.lineNumber {
+  flex-shrink: 0;
+  min-width: 2.5rem;
+  padding-inline: 0.5rem 0.75rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
+.lineText {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: var(--color-text-secondary);
+}
+
+.toggle {
+  display: block;
+  width: 100%;
+  border-top: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.toggle:hover {
+  color: var(--color-text-secondary);
+}
+
 .images {
   display: flex;
   flex-direction: column;

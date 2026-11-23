@@ -3,16 +3,51 @@
 /** 文件正文：编辑类工具展示行级差异，读取类工具展示内容；无路径时退回通用正文。 */
 
 import { FileCode2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { useState } from 'react'
 
 import { diffLines } from '@/lib/text-diff'
 import { cx } from '@/lib/utils'
 
 import { CollapsibleOutput } from './CollapsibleOutput'
-import { fileViewModel } from './file-model'
+import { fileViewModel, type ReadLine } from './file-model'
+import { OUTPUT_MAX_LINES } from './format'
 import { GenericToolBody } from './GenericToolBody'
 import type { ToolViewProps } from './types'
 
 import styles from './FileToolView.module.css'
+
+/** 中部折叠时保留的首尾行数。 */
+const HEAD_LINES = 10
+const TAIL_LINES = 5
+
+/** Read 行号视图：长文件折叠中部，保留开头与结尾便于定位。 */
+function LineNumberedView({ lines }: { lines: ReadLine[] }) {
+  const t = useTranslations('chat')
+  const [expanded, setExpanded] = useState(false)
+  const collapsible = lines.length > OUTPUT_MAX_LINES
+  const open = expanded || !collapsible
+  const visible = open ? lines : [...lines.slice(0, HEAD_LINES), ...lines.slice(-TAIL_LINES)]
+  return (
+    <div className={styles.readView}>
+      <pre className={styles.lineBlock}>
+        {visible.map((line) => (
+          <div key={line.number} className={styles.line}>
+            <span className={styles.lineNumber} aria-hidden="true">
+              {line.number}
+            </span>
+            <span className={styles.lineText}>{line.text || ' '}</span>
+          </div>
+        ))}
+      </pre>
+      {collapsible ? (
+        <button type="button" className={styles.toggle} onClick={() => setExpanded(!expanded)}>
+          {open ? t('collapseOutput') : t('hiddenLines', { count: lines.length - HEAD_LINES - TAIL_LINES })}
+        </button>
+      ) : null}
+    </div>
+  )
+}
 
 export function FileToolView({ tool }: ToolViewProps) {
   const model = fileViewModel(tool)
@@ -64,6 +99,8 @@ export function FileToolView({ tool }: ToolViewProps) {
             </div>
           ))}
         </div>
+      ) : model.lines ? (
+        <LineNumberedView lines={model.lines} />
       ) : model.output ? (
         <CollapsibleOutput text={model.output} errored={model.errored} />
       ) : null}

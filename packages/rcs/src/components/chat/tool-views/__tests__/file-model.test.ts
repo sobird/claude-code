@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import type { ToolCallData } from '@/lib/session-reducer'
 
-import { diffStats, fileViewModel } from '../file-model'
+import { diffStats, fileViewModel, formatInputSize, readLinesFromOutput } from '../file-model'
 
 function tool(title: string, rawInput: Record<string, unknown>, overrides: Partial<ToolCallData> = {}): ToolCallData {
   return { id: 't1', title, status: 'complete', rawInput, ...overrides }
@@ -93,6 +93,79 @@ describe('fileViewModel', () => {
 
   test('returns null without a path', () => {
     expect(fileViewModel(tool('Edit', { old_string: 'x', new_string: 'y' }))).toBeNull()
+  })
+
+  test('reports the input size once written content passes 1KB', () => {
+    const content = 'x'.repeat(1536)
+    expect(fileViewModel(tool('Write', { file_path: '/a.ts', content }))?.inputSize).toBe(1536)
+    const newString = '中'.repeat(400) // 1200 UTF-8 bytes
+    expect(fileViewModel(tool('Edit', { file_path: '/a.ts', old_string: 'a', new_string: newString }))?.inputSize).toBe(
+      1200,
+    )
+  })
+
+  test('input size stays null for small or read-only calls', () => {
+    expect(fileViewModel(tool('Edit', { file_path: '/a.ts', old_string: 'a', new_string: 'b' }))?.inputSize).toBeNull()
+    expect(fileViewModel(tool('Read', { file_path: '/a.ts' }))?.inputSize).toBeNull()
+  })
+
+  test('sums every MultiEdit payload', () => {
+    const model = fileViewModel(
+      tool('MultiEdit', {
+        file_path: '/a.ts',
+        edits: [
+          { old_string: 'a', new_string: 'x'.repeat(600) },
+          { old_string: 'b', new_string: 'y'.repeat(600) },
+        ],
+      }),
+    )
+    expect(model?.inputSize).toBe(1200)
+  })
+})
+
+describe('readLinesFromOutput', () => {
+  test('parses the padded arrow format Read emits', () => {
+    expect(readLinesFromOutput('     1→const a = 1\n     2→\n     3→export {}\n')).toEqual([
+      { number: 1, text: 'const a = 1' },
+      { number: 2, text: '' },
+      { number: 3, text: 'export {}' },
+    ])
+  })
+
+  test('parses the compact tab format', () => {
+    expect(readLinesFromOutput('1\talpha\n2\tbeta')).toEqual([
+      { number: 1, text: 'alpha' },
+      { number: 2, text: 'beta' },
+    ])
+  })
+
+  test('rejects output without line numbers', () => {
+    expect(readLinesFromOutput('const a = 1\nexport {}')).toBeNull()
+    expect(readLinesFromOutput('read 42 lines\nfile.ts')).toBeNull()
+  })
+
+  test('rejects non-sequential numbers', () => {
+    expect(readLinesFromOutput('1→a\n9→b\n10→c')).toBeNull()
+  })
+
+  test('a Read tool carries its lines on the model', () => {
+    const model = fileViewModel(
+      tool('Read', { file_path: '/a.ts' }, { rawOutput: { output: '     1→const a = 1\n     2→export {}' } }),
+    )
+    expect(model?.lines).toHaveLength(2)
+  })
+
+  test('an Edit keeps hunks and no line view', () => {
+    const model = fileViewModel(tool('Edit', { file_path: '/a.ts', old_string: 'x', new_string: 'y' }))
+    expect(model?.lines).toBeNull()
+  })
+})
+
+describe('formatInputSize', () => {
+  test('renders kilobytes with one decimal', () => {
+    expect(formatInputSize(1536)).toBe('1.5 KB')
+    expect(formatInputSize(1024)).toBe('1.0 KB')
+    expect(formatInputSize(1024 * 1024)).toBe('1024.0 KB')
   })
 })
 
