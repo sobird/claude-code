@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { canonicalToolName, parseMcpToolName, summarizeToolCall } from '@/lib/tool-summary'
+import { canonicalToolName, parseMcpToolName, summarizeToolCall, toolDisplayName } from '@/lib/tool-summary'
 
 function fieldKeys(name: string, input: Record<string, unknown>): string[] {
   return summarizeToolCall(name, input).fields.map((field) => field.key)
@@ -39,6 +39,17 @@ describe('parseMcpToolName', () => {
     expect(parseMcpToolName('Bash')).toBeNull()
     expect(parseMcpToolName('mcp')).toBeNull()
     expect(parseMcpToolName('mcp__only')).toBeNull()
+  })
+})
+
+describe('toolDisplayName', () => {
+  test('splits MCP tools into tool over server', () => {
+    expect(toolDisplayName('mcp__demo__echo')).toBe('echo · demo')
+  })
+
+  test('keeps canonical built-in names', () => {
+    expect(toolDisplayName('Bash')).toBe('Bash')
+    expect(toolDisplayName('Task')).toBe('Agent')
   })
 })
 

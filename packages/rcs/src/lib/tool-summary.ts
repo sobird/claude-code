@@ -38,6 +38,12 @@ export function canonicalToolName(name: string): string {
   return alias ?? trimmed
 }
 
+/** 分组摘要用的短显示名；MCP 工具拆成 `tool · server`。 */
+export function toolDisplayName(name: string): string {
+  const mcp = parseMcpToolName(name)
+  return mcp ? `${mcp.tool} · ${mcp.server}` : canonicalToolName(name)
+}
+
 export interface McpToolName {
   server: string
   tool: string

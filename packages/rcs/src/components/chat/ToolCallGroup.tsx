@@ -16,7 +16,7 @@ import type {
   ToolCallEntry,
   ToolCallStatus,
 } from '@/lib/session-reducer'
-import { canonicalToolName, summarizeToolCall } from '@/lib/tool-summary'
+import { canonicalToolName, summarizeToolCall, toolDisplayName } from '@/lib/tool-summary'
 import { cx, uniqueKeys } from '@/lib/utils'
 
 import { AssistantBubble } from './MessageBubble'
@@ -271,12 +271,14 @@ export function summarizeTools(entries: ToolCallEntry[]): {
   total: number
   groups: Array<{ name: string; count: number }>
 } {
-  const counts = new Map<string, number>()
+  const counts = new Map<string, { name: string; count: number }>()
   for (const entry of entries) {
-    const name = canonicalToolName(entry.toolCall.title)
-    counts.set(name, (counts.get(name) ?? 0) + 1)
+    const key = canonicalToolName(entry.toolCall.title)
+    const group = counts.get(key)
+    if (group) group.count += 1
+    else counts.set(key, { name: toolDisplayName(entry.toolCall.title), count: 1 })
   }
-  return { total: entries.length, groups: [...counts].map(([name, count]) => ({ name, count })) }
+  return { total: entries.length, groups: [...counts.values()] }
 }
 
 function buildSummary(entries: ToolCallEntry[], t: ChatTranslator): string {

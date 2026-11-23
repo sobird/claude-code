@@ -17,6 +17,16 @@ test('groups adjacent calls by simplified tool name', () => {
   })
 })
 
+test('labels MCP groups with the tool over its server', () => {
+  expect(summarizeTools([entry('1', 'mcp__a__echo'), entry('2', 'mcp__a__echo'), entry('3', 'mcp__b__echo')])).toEqual({
+    total: 3,
+    groups: [
+      { name: 'echo · a', count: 2 },
+      { name: 'echo · b', count: 1 },
+    ],
+  })
+})
+
 test('handles an empty list', () => {
   expect(summarizeTools([])).toEqual({ total: 0, groups: [] })
 })
