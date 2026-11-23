@@ -73,3 +73,9 @@
 ### R7：release 说明覆盖
 
 2.1.96 / 2.1.97 / 2.1.98 的逐条覆盖（`releaseItems`）在台账中按条推进；2.1.100 自身 release notes 为空。未覆盖项以 `verify --release-notes` 的 `uncoveredReleaseItems` 为准逐一补齐，UI/无 flicker/终端专属项按 `approximated` 或 `ignored-dependency` 记录原因。
+
+### R8：状态行扩展（2.1.96 #3、2.1.98 #4/#53）
+
+- `statusLine.refreshInterval`（`z.number().min(1)`）：设置后 `StatusLine` 用 `setInterval(max(1,N)*1000)` 额外触发一次 `doUpdate`，与事件驱动更新并存。
+- `workspace.git_worktree`：当前目录位于 linked git worktree 时填该 worktree 名。复用 `src/utils/git/gitFilesystem.ts` 的 `resolveGitDir`，新增 `getGitWorktreeName`（普通仓库 gitdir 的 basename 为 `.git` → null；仅 `<common>/worktrees/<name>` 取 `<name>`），测试见 `src/utils/git/__tests__/getGitWorktreeName.test.ts`。
+- 已存在、仅登记 `releaseItems` 的下游项：OTEL `TRACEPARENT`（#46/#54）、LSP `clientInfo`（#55）、print `--exclude-dynamic-system-prompt-sections`（#52）。

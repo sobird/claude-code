@@ -37,6 +37,7 @@ import { calculateContextPercentages, getContextWindowForModel } from '../utils/
 import { getCwd } from '../utils/cwd.js'
 import { logForDebugging } from '../utils/debug.js'
 import { isFullscreenEnvEnabled } from '../utils/fullscreen.js'
+import { getGitWorktreeName } from '../utils/git/gitFilesystem.js'
 import { createBaseHookInput, executeStatusLineCommand } from '../utils/hooks.js'
 import { getLastAssistantMessage } from '../utils/messages.js'
 import { getRuntimeMainLoopModel, type ModelName, renderModelName } from '../utils/model/model.js'
@@ -59,6 +60,7 @@ function buildStatusLineCommandInput(
   messages: Message[],
   addedDirs: string[],
   mainLoopModel: ModelName,
+  gitWorktreeName: string | null,
   vimMode?: VimMode,
 ): StatusLineCommandInput {
   const agentType = getMainThreadAgentType()
@@ -102,6 +104,7 @@ function buildStatusLineCommandInput(
       current_dir: getCwd(),
       project_dir: getOriginalCwd(),
       added_dirs: addedDirs,
+      ...(gitWorktreeName && { git_worktree: gitWorktreeName }),
     },
     version: MACRO.VERSION,
     output_style: {
@@ -235,6 +238,7 @@ function StatusLineInner({ messagesRef, lastAssistantMessageId, vimMode }: Props
         previousStateRef.current.exceeds200kTokens = exceeds200kTokens
       }
 
+      const gitWorktreeName = await getGitWorktreeName(getCwd())
       const statusInput = buildStatusLineCommandInput(
         permissionModeRef.current,
         exceeds200kTokens,
@@ -242,6 +246,7 @@ function StatusLineInner({ messagesRef, lastAssistantMessageId, vimMode }: Props
         msgs,
         Array.from(addedDirsRef.current.keys()),
         mainLoopModelRef.current,
+        gitWorktreeName,
         vimModeRef.current,
       )
 
@@ -301,6 +306,15 @@ function StatusLineInner({ messagesRef, lastAssistantMessageId, vimMode }: Props
     logNextResultRef.current = true
     void doUpdate()
   }, [statusLineCommand, doUpdate])
+
+  // Re-run the command every N seconds when the user opts in via refreshInterval.
+  const refreshInterval = settings?.statusLine?.refreshInterval
+  useEffect(() => {
+    if (refreshInterval === undefined) return
+    const ms = Math.max(1, refreshInterval) * 1000
+    const timer = setInterval(() => void doUpdate(), ms)
+    return () => clearInterval(timer)
+  }, [refreshInterval, doUpdate])
 
   // Separate effect for logging on mount
   useEffect(() => {

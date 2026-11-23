@@ -25,6 +25,8 @@ export type StatusLineCommandInput = {
     current_dir: string
     project_dir: string
     added_dirs: string[]
+    // Set only when cwd is inside a linked git worktree.
+    git_worktree?: string
   }
   version: string
   output_style: {

@@ -14,7 +14,7 @@
 
 import { unwatchFile, watchFile } from 'node:fs'
 import { readdir, readFile, stat } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 
 import { waitForScrollIdle } from '../../bootstrap/state.js'
 import { registerCleanup } from '../cleanupRegistry.js'
@@ -72,6 +72,21 @@ export async function resolveGitDir(startPath?: string): Promise<string | null> 
     resolveGitDirCache.set(cwd, null)
     return null
   }
+}
+
+/**
+ * Return the git worktree name when `startPath` is inside a linked worktree
+ * (i.e. its gitdir lives at `<common>/worktrees/<name>`), otherwise null.
+ * Mirrors upstream `F_1`: a normal repo's gitdir is `<root>/.git`, so the
+ * basename check rejects it; only `.git/worktrees/<name>` yields a name.
+ */
+export async function getGitWorktreeName(startPath?: string): Promise<string | null> {
+  const gitDir = await resolveGitDir(startPath)
+  if (!gitDir) return null
+  const name = basename(gitDir)
+  if (name === '.git') return null
+  if (basename(dirname(gitDir)) !== 'worktrees') return null
+  return name
 }
 
 // ---------------------------------------------------------------------------

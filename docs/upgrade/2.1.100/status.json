@@ -273,6 +273,66 @@
         "files": ["src/utils/worktree.ts"],
         "symbols": ["cleanupStaleAgentWorktrees"]
       }
+    },
+    {
+      "id": "behavior:statusline-git-worktree",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [4, 53],
+      "evidence": ["bundle:git_worktree"],
+      "notes": "状态行 JSON 的 workspace.git_worktree 在当前目录位于 linked git worktree 时设为该 worktree 名称。上游 F_1：解析 gitdir，basename 为 .git 时返回 null（普通仓库），否则要求 gitdir 的父目录 basename 为 worktrees 才返回 basename。本仓库复用 src/utils/git/gitFilesystem.ts 的 resolveGitDir 实现 getGitWorktreeName，StatusLine.doUpdate 里 await 后写入 workspace。",
+      "srcEvidence": {
+        "files": ["src/utils/git/gitFilesystem.ts", "src/components/StatusLine.tsx", "src/types/statusLine.ts"],
+        "symbols": ["getGitWorktreeName", "git_worktree"]
+      }
+    },
+    {
+      "id": "behavior:statusline-refresh-interval",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [3],
+      "evidence": ["bundle:refreshInterval"],
+      "notes": "statusLine 设置新增 refreshInterval（zod number().min(1).optional().catch(undefined)），StatusLine 用 setInterval 每 max(1,N)*1000ms 额外触发一次 doUpdate，与事件驱动更新并存（2.1.96）。",
+      "srcEvidence": {
+        "files": ["src/utils/settings/types.ts", "src/components/StatusLine.tsx"],
+        "symbols": ["refreshInterval"]
+      }
+    },
+    {
+      "id": "behavior:otel-traceparent",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [46, 54],
+      "evidence": ["bundle:TRACEPARENT"],
+      "notes": "OTEL 开启时 Bash 子进程继承 W3C TRACEPARENT，子进程 span 正确挂到 Claude Code trace 树。本仓库 src/utils/Shell.ts:294 与 src/utils/telemetry/sessionTracing.ts:735 早已实现，无需改动。",
+      "srcEvidence": {
+        "files": ["src/utils/Shell.ts", "src/utils/telemetry/sessionTracing.ts"],
+        "symbols": ["TRACEPARENT"]
+      }
+    },
+    {
+      "id": "behavior:lsp-client-info",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [55],
+      "evidence": ["bundle:clientInfo"],
+      "notes": "LSP initialize 请求里通过 clientInfo 标识自身。本仓库 src/services/lsp/LSPServerInstance.ts:165 早已发送，无需改动。",
+      "srcEvidence": {
+        "files": ["src/services/lsp/LSPServerInstance.ts"],
+        "symbols": ["clientInfo"]
+      }
+    },
+    {
+      "id": "behavior:print-exclude-dynamic-prompt",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [52],
+      "evidence": ["bundle:--exclude-dynamic-system-prompt-sections"],
+      "notes": "print 模式新增 --exclude-dynamic-system-prompt-sections，提升跨用户提示缓存命中。本仓库 src/main.tsx:1322 早已接线（配合 src/utils/queryContext.ts / src/constants/prompts.ts），无需改动。",
+      "srcEvidence": {
+        "files": ["src/main.tsx", "src/utils/queryContext.ts", "src/constants/prompts.ts"],
+        "symbols": ["--exclude-dynamic-system-prompt-sections"]
+      }
     }
   ]
 }
