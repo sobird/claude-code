@@ -2,7 +2,7 @@
   "ok": true,
   "counts": {
     "already-present": 16,
-    "ported": 19,
+    "ported": 20,
     "approximated": 28,
     "ignored-dependency": 1,
     "retained-internal": 3,
@@ -13,10 +13,7 @@
   "unexpectedInSrc": [],
   "unregistered": [],
   "unresolved": [],
-  "evidenceErrors": [
-    "behavior:plugin-update-refresh-marketplace: bundle:10759490 points at \",\", not a literal or identifier",
-    "behavior:streaming-stall-nonstreaming-fallback: bundle:11797120 points at \",\", not a literal or identifier"
-  ],
+  "evidenceErrors": [],
   "srcEvidenceErrors": [],
   "uncoveredReleaseItems": []
 }

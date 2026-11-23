@@ -110,7 +110,7 @@ transcript 里 `hook_non_blocking_error` 原本只显示「{hook} hook error」�
 
 上游 `XI6` 在 `getPluginById` 之前读 `loadKnownMarketplacesConfig()[marketplace].source`，仅当 `source=='github'|'git'|'url'` 时 `await refreshMarketplace(name, undefined, {skipIfRecent:true})`，失败吞掉并 `warn` 回退缓存。`refreshMarketplace` 新增 `skipIfRecent`：`lastUpdated` 在 30s 内直接 return，避免 autoupdate 路径已刷新后的重复拉取。
 
-移植到 `src/services/plugins/pluginOperations.ts`（`updatePluginOp`）与 `src/utils/plugins/marketplaceManager.ts`（`refreshMarketplace` 的 `skipIfRecent`）。该子系统无现成单测（读写真实 marketplace/fs），本轮以 typecheck/lint 与 bundle 对拍钉住语义；证据 `bundle:10759490`（update 前置刷新块）、`bundle:9836922`（skipIfRecent 跳过日志）。
+移植到 `src/services/plugins/pluginOperations.ts`（`updatePluginOp`）与 `src/utils/plugins/marketplaceManager.ts`（`refreshMarketplace` 的 `skipIfRecent`）。该子系统无现成单测（读写真实 marketplace/fs），本轮以 typecheck/lint 与 bundle 对拍钉住语义；证据 `bundle:10759856`（update 前置刷新块）、`bundle:9837254`（skipIfRecent 跳过日志）。
 
 ### R14：卡住的流式回落非流式（2.1.98 #60）
 
@@ -118,4 +118,14 @@ transcript 里 `hook_non_blocking_error` 原本只显示「{hook} hook error」�
 
 2.1.98 的两处改动（`v100` 的 catch）：① 该 throw 加守卫 `else if(!streamIdleAborted)` —— watchdog 已 fire 时不再抛超时，落到下面的回落分支；② 计算 `$1 = streamIdleAborted ? Error('Stream idle timeout - no chunks received') : E8`，用于日志文案、`tengu_streaming_fallback_to_non_streaming` 的 `error` 名，以及 `fallback_disabled` 为真时的 `throw`（此时抛出的是 idle-timeout 错误而非原始超时）。
 
-移植到 `src/services/api/claude.ts`：`else if (!streamIdleAborted)`；新增 `fallbackError`，disableFallback 日志/throw 与回落日志/事件统一改用 `fallbackError`。该生成器依赖真实 SDK 流、无现成单测，本轮以 typecheck/lint 与 bundle 对拍钉住；证据 `bundle:11797120`（`$1=E6?Error("Stream idle timeout…")`）、`bundle:11796856`（`Streaming timeout (SDK abort)` 守卫处）。
+移植到 `src/services/api/claude.ts`：`else if (!streamIdleAborted)`；新增 `fallbackError`，disableFallback 日志/throw 与回落日志/事件统一改用 `fallbackError`。该生成器依赖真实 SDK 流、无现成单测，本轮以 typecheck/lint 与 bundle 对拍钉住；证据 `bundle:11797553`（`$1=E6?Error("Stream idle timeout…")`）、`bundle:11797289`（`Streaming timeout (SDK abort)` 守卫处）。
+
+### R15：缩小 transcript（2.1.98 #44）
+
+两处改动合并为「session transcript 体积」条目：
+
+- `isLoggableMessage`（上游 `QM6`）在 `progress` 过滤之后新增：`hook_success` 附件的 `content`、`stdout.trim()`、`stderr.trim()` 全为空则不入账——空 hook 结果只占行数。
+- 写 transcript 前对 user 消息的 `toolUseResult` 调 `capStoredPreEditFileCopy`（上游 `jyK`）：`originalFile` 是字符串且长度 > `1e4`（`SZY`）时置为 `null`。Edit/Write 结果带整份原文，几次大文件编辑就会主导 JSONL；截断会渲染半个文件，所以丢成 null。
+- 上游同一区域还有 tools 的 `stripForStorage` 钩子与 `HyK`（仅对最近 `_=200` 条之外的消息裁剪内存里的 `toolUseResult`）——那属于会话内存而非落盘大小，未纳入本条目；如后续做 UI 大文件 diff（#18/#76）再评估。
+
+测试：`src/utils/__tests__/transcriptStorageCap.test.ts`。证据：`bundle:9902098`（空 hook_success 判断）、`bundle:9945880`（`originalFile.length>SZY`）、`bundle:11588253`（`insertMessageChain` 里 `X.toolUseResult=jyK(...)` 调用点）。

@@ -1000,6 +1000,14 @@ class Project {
           gitBranch,
           slug,
         }
+        // Cap the pre-edit copy of the file we persist (2.1.98): Edit/Write
+        // results carry the whole original file in `toolUseResult.originalFile`,
+        // and a few large edits otherwise dominate the session JSONL. Mirrors
+        // upstream's 10k-char cap — drop it to null instead of truncating so
+        // the UI never diffs a half file.
+        if (transcriptMessage.type === 'user' && transcriptMessage.toolUseResult != null) {
+          transcriptMessage.toolUseResult = capStoredPreEditFileCopy(transcriptMessage.toolUseResult)
+        }
         await this.appendEntry(transcriptMessage)
         if (isChainParticipant(message)) {
           parentUuid = message.uuid
@@ -4043,8 +4051,32 @@ export async function loadAllSubagentTranscriptsFromDisk(): Promise<{
 
 // Exported so useLogMessages can sync-compute the last loggable uuid
 // without awaiting recordTranscript's return value (race-free hint tracking).
+// Edit/Write tool results embed the full pre-edit file in `originalFile`.
+// Persisting it for large files bloats every session JSONL; above this many
+// characters the transcript stores null instead (2.1.98 #44).
+const MAX_STORED_ORIGINAL_FILE_CHARS = 10_000
+
+/** Drops an oversized `originalFile` pre-edit copy before transcript storage. */
+export function capStoredPreEditFileCopy(toolUseResult: unknown): unknown {
+  if (typeof toolUseResult !== 'object' || toolUseResult === null) return toolUseResult
+  if (!('originalFile' in toolUseResult) || typeof toolUseResult.originalFile !== 'string') return toolUseResult
+  if (toolUseResult.originalFile.length <= MAX_STORED_ORIGINAL_FILE_CHARS) return toolUseResult
+  return { ...toolUseResult, originalFile: null }
+}
+
 export function isLoggableMessage(m: Message): boolean {
   if (m.type === 'progress') return false
+  // A hook that produced no output still yields a hook_success attachment;
+  // persisting those empty entries only grows the transcript (2.1.98 #44).
+  if (
+    m.type === 'attachment' &&
+    m.attachment.type === 'hook_success' &&
+    !m.attachment.content &&
+    !m.attachment.stdout?.trim() &&
+    !m.attachment.stderr?.trim()
+  ) {
+    return false
+  }
   // IMPORTANT: We deliberately filter out most attachments for non-ants because
   // they have sensitive info for training that we don't want exposed to the public.
   // When enabled, we allow hook_additional_context through since it contains

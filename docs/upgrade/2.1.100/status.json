@@ -774,7 +774,7 @@
       "kind": "behavior",
       "status": "ported",
       "releaseItems": [24],
-      "evidence": ["bundle:10759490", "bundle:9836922"],
+      "evidence": ["bundle:10759856", "bundle:9837254"],
       "notes": "claude plugin update 对 git/github/url 来源的 marketplace 在计算版本前先 git pull，否则陈旧本地 clone 会让 update 误报「already at the latest version」（上游 2.1.97）。移植：updatePluginOp 在 getPluginById 前按 source 类型调用 refreshMarketplace(name, undefined, { skipIfRecent: true }) 并吞掉失败回退缓存；refreshMarketplace 新增 skipIfRecent 选项（lastUpdated 在 30s 内则跳过，避免 autoupdate 已刷新后的重复拉取）。见 notes R13。",
       "srcEvidence": {
         "files": ["src/services/plugins/pluginOperations.ts", "src/utils/plugins/marketplaceManager.ts"],
@@ -786,11 +786,28 @@
       "kind": "behavior",
       "status": "ported",
       "releaseItems": [60],
-      "evidence": ["bundle:11797120", "bundle:11796856"],
+      "evidence": ["bundle:11797289", "bundle:11797553"],
       "notes": "流式卡住（idle watchdog 触发）时应回落到非流式，而不是当成可重试超时。上游 2.1.98：当 watchdog 已 fire（streamIdleAborted）时，SDK 抛 APIUserAbortError 且信号未中止也不再抛 `Request timed out`（改为 `else if(!streamIdleAborted)`，落到下方回落分支）；并把对外错误替换为 `Error('Stream idle timeout - no chunks received')`（用于日志与 fallback_disabled 时的 throw）。移植到 src/services/api/claude.ts 的 catch 分支。见 notes R14。",
       "srcEvidence": {
         "files": ["src/services/api/claude.ts"],
         "symbols": ["streamIdleAborted", "fallbackError"]
+      }
+    },
+    {
+      "id": "behavior:transcript-size-empty-hooks-and-original-file-cap",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [44],
+      "evidence": [
+        "bundle:9902098",
+        "bundle:9945880",
+        "bundle:11588253",
+        "test:src/utils/__tests__/transcriptStorageCap.test.ts"
+      ],
+      "notes": "缩小会话 transcript：① isLoggableMessage 跳过 content/stdout/stderr 全空的 hook_success 附件；② 写 transcript 前把 Edit/Write 结果里超过 1e4 字符的 originalFile 置 null（上游 jyK / SZY=1e4）。上游另有 tools 的 stripForStorage + 只裁剪最近 200 条之外的内存 toolUseResult（HyK），该项属会话内存而非 transcript 存储，未纳入本条目。见 notes R15。",
+      "srcEvidence": {
+        "files": ["src/utils/sessionStorage.ts"],
+        "symbols": ["isLoggableMessage", "capStoredPreEditFileCopy"]
       }
     }
   ]
