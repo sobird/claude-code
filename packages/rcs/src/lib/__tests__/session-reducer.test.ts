@@ -139,6 +139,99 @@ describe('reduceSessionEvent', () => {
     expect(state.entries.filter((entry) => entry.type === 'user_message')).toHaveLength(0)
   })
 
+  test('keeps base64 image blocks from a tool result alongside the text', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        content: '',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'toolu_1', name: 'Read', input: { file_path: '/repo/a.png' } }],
+        },
+      }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('user', {
+        message: {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu_1',
+              content: [
+                { type: 'text', text: 'screenshot' },
+                {
+                  type: 'image',
+                  source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0KGgo=' },
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    )
+
+    const [call] = tools(state)
+    expect(call?.toolCall.rawOutput).toEqual({
+      output: 'screenshot',
+      images: [{ mediaType: 'image/png', data: 'iVBORw0KGgo=' }],
+    })
+  })
+
+  test('drops image blocks outside the raster whitelist or missing data', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        content: '',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'toolu_1', name: 'Read', input: {} }],
+        },
+      }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('user', {
+        message: {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu_1',
+              content: [
+                { type: 'image', source: { type: 'base64', media_type: 'image/svg+xml', data: 'PHN2Zz4=' } },
+                { type: 'image', source: { type: 'base64', media_type: 'image/png', data: '' } },
+                { type: 'image', source: { type: 'url', url: 'https://example.com/a.png' } },
+              ],
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(tools(state)[0]?.toolCall.rawOutput).toEqual({ output: '' })
+  })
+
+  test('tool_result events with block content keep text and images apart', () => {
+    let state = reduceSessionEvent(initialChatState, event('tool_use', { tool_call_id: 'call-1', tool_name: 'Read' }))
+    state = reduceSessionEvent(
+      state,
+      event('tool_result', {
+        tool_call_id: 'call-1',
+        content: [
+          { type: 'text', text: 'ok' },
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: '/9j/4AAQ' } },
+        ],
+      }),
+    )
+
+    expect(tools(state)[0]?.toolCall.rawOutput).toEqual({
+      output: 'ok',
+      images: [{ mediaType: 'image/jpeg', data: '/9j/4AAQ' }],
+    })
+  })
+
   test('multiple tool_result blocks settle every call and join text blocks', () => {
     let state = reduceSessionEvent(
       initialChatState,

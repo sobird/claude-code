@@ -7,6 +7,7 @@ import { FileCode2 } from 'lucide-react'
 import { diffLines } from '@/lib/text-diff'
 import { cx } from '@/lib/utils'
 
+import { CollapsibleOutput } from './CollapsibleOutput'
 import { fileViewModel } from './file-model'
 import { GenericToolBody } from './GenericToolBody'
 import type { ToolViewProps } from './types'
@@ -22,6 +23,19 @@ export function FileToolView({ tool }: ToolViewProps) {
         <FileCode2 className={styles.pathIcon} aria-hidden="true" />
         <span className={styles.path}>{model.path}</span>
       </div>
+      {model.images.length > 0 ? (
+        <div className={styles.images}>
+          {model.images.map((image, imageIndex) => (
+            <img
+              key={imageIndex}
+              className={styles.image}
+              src={`data:${image.mediaType};base64,${image.data}`}
+              alt={`${model.path} #${imageIndex + 1}`}
+              loading="lazy"
+            />
+          ))}
+        </div>
+      ) : null}
       {model.hunks ? (
         <div className={styles.hunks}>
           {model.hunks.map((hunk, hunkIndex) => (
@@ -51,7 +65,7 @@ export function FileToolView({ tool }: ToolViewProps) {
           ))}
         </div>
       ) : model.output ? (
-        <pre className={cx(styles.content, model.errored && styles.contentError)}>{model.output}</pre>
+        <CollapsibleOutput text={model.output} errored={model.errored} />
       ) : null}
     </>
   )

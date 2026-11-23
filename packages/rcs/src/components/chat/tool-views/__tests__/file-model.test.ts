@@ -52,6 +52,45 @@ describe('fileViewModel', () => {
     expect(model?.errored).toBe(true)
   })
 
+  test('a Read of an image exposes its previews', () => {
+    const model = fileViewModel(
+      tool(
+        'Read',
+        { file_path: '/repo/a.png' },
+        { rawOutput: { output: 'screenshot', images: [{ mediaType: 'image/png', data: 'iVBORw0KGgo=' }] } },
+      ),
+    )
+    expect(model?.images).toEqual([{ mediaType: 'image/png', data: 'iVBORw0KGgo=' }])
+    expect(model?.output).toBe('screenshot')
+  })
+
+  test('drops malformed or non-raster images from persisted payloads', () => {
+    const model = fileViewModel(
+      tool(
+        'Read',
+        { file_path: '/repo/a.png' },
+        {
+          rawOutput: {
+            output: '',
+            images: [
+              { mediaType: 'image/png', data: 'ok' },
+              { mediaType: 'image/svg+xml', data: 'PHN2Zz4=' },
+              { mediaType: 'image/png', data: '' },
+              { mediaType: 'image/png' },
+              'not-an-image',
+            ],
+          },
+        },
+      ),
+    )
+    expect(model?.images).toEqual([{ mediaType: 'image/png', data: 'ok' }])
+  })
+
+  test('a text tool result has no images', () => {
+    const model = fileViewModel(tool('Read', { file_path: '/a.ts' }, { rawOutput: { output: 'const a = 1' } }))
+    expect(model?.images).toEqual([])
+  })
+
   test('returns null without a path', () => {
     expect(fileViewModel(tool('Edit', { old_string: 'x', new_string: 'y' }))).toBeNull()
   })

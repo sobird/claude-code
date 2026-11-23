@@ -157,13 +157,26 @@ function SingleToolCard({
   const hunks = kind === 'file' ? fileViewModel(tool)?.hunks : undefined
   const stats = hunks ? diffStats(hunks) : null
   const exitCode = kind === 'bash' ? (bashViewModel(tool)?.exitCode ?? null) : null
+  // running/waiting 已有可见标签；其余终态补一条视觉隐藏文本供屏幕阅读器读取。
+  const statusLabel =
+    tool.status === 'complete'
+      ? t('toolStatusDone')
+      : tool.status === 'error'
+        ? t('toolStatusError')
+        : tool.status === 'rejected'
+          ? t('toolStatusRejected')
+          : tool.status === 'canceled'
+            ? t('toolStatusCanceled')
+            : null
 
   return (
     <div className={cx(styles.card, compact ? styles.cardCompact : styles.cardRoomy)}>
       <button type="button" className={styles.cardHeaderButton} onClick={toggle} aria-expanded={expanded}>
         <StatusIcon status={tool.status} />
         <span className={styles.cardTitle}>
-          {summary.name || t('toolFallback')}
+          <span className={tool.status === 'running' ? styles.shimmer : undefined}>
+            {summary.name || t('toolFallback')}
+          </span>
           {summary.summary ? <span className={styles.cardTitleSuffix}>{summary.summary}</span> : null}
           {stats && (stats.added > 0 || stats.removed > 0) ? (
             <span className={styles.diffStat} aria-label={t('diffStatAria', stats)}>
@@ -177,6 +190,7 @@ function SingleToolCard({
         {tool.status === 'waiting_for_confirmation' ? (
           <span className={styles.waitingLabel}>{t('waiting')}</span>
         ) : null}
+        {statusLabel ? <span className={styles.visuallyHidden}>{statusLabel}</span> : null}
         {subagentEntries && subagentEntries.length > 0 ? (
           <span className={styles.agentSteps}>{t('agentSteps', { count: subagentEntries.length })}</span>
         ) : null}

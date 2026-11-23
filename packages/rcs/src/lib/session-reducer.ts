@@ -576,9 +576,15 @@ function mostRecentRunningIndex(entries: ThreadEntry[], parentToolUseId?: string
   return -1
 }
 
+export interface ToolResultImage {
+  mediaType: string
+  data: string
+}
+
 interface ToolResultBlock {
   id: string
   content: string
+  images: ToolResultImage[]
   isError: boolean
 }
 
@@ -591,6 +597,26 @@ function textFromBlocks(value: unknown): string {
     .filter((block): block is Record<string, unknown> => !!block && block.type === 'text')
     .map((block) => asText(block.text))
     .join('')
+}
+
+/** 可直接交给 `<img>` 渲染的栅格类型；SVG 等可执行类型不进卡片。 */
+const RASTER_MEDIA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
+
+/** 提取 tool_result 内容中的 base64 图片块。 */
+function imagesFromBlocks(value: unknown): ToolResultImage[] {
+  if (!Array.isArray(value)) return []
+  const images: ToolResultImage[] = []
+  for (const item of value) {
+    const block = asRecord(item)
+    if (!block || block.type !== 'image') continue
+    const source = asRecord(block.source)
+    if (!source || source.type !== 'base64') continue
+    const mediaType = asText(source.media_type)
+    const data = asText(source.data)
+    if (!RASTER_MEDIA_TYPES.has(mediaType) || !data) continue
+    images.push({ mediaType, data })
+  }
+  return images
 }
 
 /**
@@ -609,7 +635,12 @@ function collectUserToolResults(payload: Record<string, unknown>): ToolResultBlo
     if (!block || block.type !== 'tool_result') continue
     const id = asText(block.tool_use_id)
     if (!id) continue
-    results.push({ id, content: textFromBlocks(block.content), isError: block.is_error === true })
+    results.push({
+      id,
+      content: textFromBlocks(block.content),
+      images: imagesFromBlocks(block.content),
+      isError: block.is_error === true,
+    })
   }
   return results
 }
@@ -624,7 +655,7 @@ function settleToolResult(entries: ThreadEntry[], result: ToolResultBlock): Thre
     toolCall: {
       ...entry.toolCall,
       status: result.isError ? 'error' : 'complete',
-      rawOutput: { output: result.content },
+      rawOutput: { output: result.content, ...(result.images.length > 0 ? { images: result.images } : {}) },
     },
   })
 }
@@ -641,13 +672,15 @@ function handleToolResult(state: ChatState, event: SessionEventInput): ChatState
   const entry = state.entries[index]
   if (!entry || entry.type !== 'tool_call') return state
 
-  const output = payload.content ?? payload.output ?? ''
+  const content = payload.content ?? payload.output ?? ''
+  const output = Array.isArray(content) ? textFromBlocks(content) : content
+  const images = imagesFromBlocks(payload.content)
   const next: ToolCallEntry = {
     ...entry,
     toolCall: {
       ...entry.toolCall,
       status: payload.is_error === true ? 'error' : 'complete',
-      rawOutput: { output },
+      rawOutput: { output, ...(images.length > 0 ? { images } : {}) },
     },
   }
   return { ...state, entries: replaceEntry(state.entries, index, next) }
