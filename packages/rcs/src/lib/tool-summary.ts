@@ -38,6 +38,23 @@ export function canonicalToolName(name: string): string {
   return alias ?? trimmed
 }
 
+export interface McpToolName {
+  server: string
+  tool: string
+}
+
+/**
+ * 解析 `mcp__<server>__<tool>` 形式的限定名。按 `__` 切分：第一段必须是
+ * `mcp`，第二段为 server，其余全部拼回 tool——与 CLI 的解析保持一致。
+ */
+export function parseMcpToolName(name: string): McpToolName | null {
+  const parts = canonicalToolName(name).split('__')
+  const [mcp, server, ...rest] = parts
+  if (mcp !== 'mcp' || !server || rest.length === 0) return null
+  const tool = rest.join('__')
+  return tool ? { server, tool } : null
+}
+
 export function summarizeToolCall(
   name: string,
   input: Record<string, unknown> = {},
@@ -130,6 +147,10 @@ export function summarizeToolCall(
       add('args', input.args)
       break
     default: {
+      const mcp = parseMcpToolName(canonical)
+      if (mcp) {
+        return { name: mcp.tool, summary: clip(mcp.server, maxLength), fields: [], fallback: false }
+      }
       const json = compactJson(input)
       return { name: canonical, summary: clip(json, maxLength), fields: [], fallback: true }
     }

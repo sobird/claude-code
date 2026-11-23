@@ -41,8 +41,13 @@ describe('toolViewKind', () => {
     expect(toolViewKind('SendMessage')).toBe('message')
   })
 
+  test('maps MCP tools by their prefix', () => {
+    expect(toolViewKind('mcp__thing__do')).toBe('mcp')
+    expect(toolViewKind('mcp__plugin_playwright_playwright__browser_navigate')).toBe('mcp')
+  })
+
   test('leaves unregistered tools on the generic body', () => {
-    expect(toolViewKind('mcp__thing__do')).toBeNull()
+    expect(toolViewKind('SomeOtherTool')).toBeNull()
   })
 })
 
@@ -60,6 +65,7 @@ describe('TOOL_VIEWS', () => {
       'TaskOutput',
       'Skill',
       'SendMessage',
+      'mcp__demo__echo',
     ]) {
       const kind = toolViewKind(name)
       expect(kind).not.toBeNull()

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { canonicalToolName, summarizeToolCall } from '@/lib/tool-summary'
+import { canonicalToolName, parseMcpToolName, summarizeToolCall } from '@/lib/tool-summary'
 
 function fieldKeys(name: string, input: Record<string, unknown>): string[] {
   return summarizeToolCall(name, input).fields.map((field) => field.key)
@@ -19,7 +19,39 @@ describe('canonicalToolName', () => {
   })
 })
 
+describe('parseMcpToolName', () => {
+  test('splits the server and the tool', () => {
+    expect(parseMcpToolName('mcp__playwright__browser_navigate')).toEqual({
+      server: 'playwright',
+      tool: 'browser_navigate',
+    })
+    expect(parseMcpToolName('mcp__plugin_playwright_playwright__browser_tabs')).toEqual({
+      server: 'plugin_playwright_playwright',
+      tool: 'browser_tabs',
+    })
+  })
+
+  test('keeps double underscores inside the tool name', () => {
+    expect(parseMcpToolName('mcp__srv__a__b')).toEqual({ server: 'srv', tool: 'a__b' })
+  })
+
+  test('rejects names that are not fully qualified MCP tools', () => {
+    expect(parseMcpToolName('Bash')).toBeNull()
+    expect(parseMcpToolName('mcp')).toBeNull()
+    expect(parseMcpToolName('mcp__only')).toBeNull()
+  })
+})
+
 describe('summarizeToolCall', () => {
+  test('MCP tools summarize as the tool name over the server', () => {
+    const result = summarizeToolCall('mcp__playwright__browser_navigate', { url: 'https://example.com' })
+
+    expect(result.name).toBe('browser_navigate')
+    expect(result.summary).toBe('playwright')
+    expect(result.fields).toEqual([])
+    expect(result.fallback).toBe(false)
+  })
+
   test('Bash surfaces the command and its description', () => {
     const result = summarizeToolCall('Bash', { command: 'ls -la', description: 'List files' })
 

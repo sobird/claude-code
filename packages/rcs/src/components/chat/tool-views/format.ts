@@ -1,4 +1,4 @@
-import type { ToolCallData } from '@/lib/session-reducer'
+import type { ToolCallData, ToolResultImage } from '@/lib/session-reducer'
 
 /** 原始输入 JSON 的展示上限（输出文本不再截断）。 */
 export const OUTPUT_LIMIT = 2000
@@ -21,6 +21,28 @@ export function firstString(...values: unknown[]): string {
     if (typeof value === 'string' && value) return value
   }
   return ''
+}
+
+const RASTER_IMAGE = /^image\/(png|jpeg|gif|webp)$/
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
+}
+
+/** 读取结果里的图片预览并过滤历史数据中的非法项（类型白名单、非空 data）。 */
+export function toolImages(tool: ToolCallData): ToolResultImage[] {
+  const raw = tool.rawOutput?.images
+  if (!Array.isArray(raw)) return []
+  const images: ToolResultImage[] = []
+  for (const item of raw) {
+    const record = asRecord(item)
+    if (!record) continue
+    const { mediaType, data } = record
+    if (typeof mediaType !== 'string' || !RASTER_IMAGE.test(mediaType)) continue
+    if (typeof data !== 'string' || !data) continue
+    images.push({ mediaType, data })
+  }
+  return images
 }
 
 /** 优先取字符串形式的 `output`，否则序列化整个 `rawOutput`；保留全文供折叠展示。 */

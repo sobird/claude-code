@@ -1,7 +1,7 @@
 import type { ToolCallData, ToolResultImage } from '@/lib/session-reducer'
 import { diffLines, toolEditPreview, type EditPreviewHunk } from '@/lib/text-diff'
 
-import { firstString, formatOutput } from './format'
+import { firstString, formatOutput, toolImages } from './format'
 
 export interface FileViewModel {
   path: string
@@ -27,7 +27,6 @@ export interface ReadLine {
 /** 查看弹层的正文类型；优先级：行号 → Write 全文 → 编辑 diff → 纯文本输出。 */
 export type FilePreviewBodyKind = 'lines' | 'text' | 'diff' | 'output'
 
-const RASTER_IMAGE = /^image\/(png|jpeg|gif|webp)$/
 const INPUT_SIZE_MIN = 1024
 const encoder = new TextEncoder()
 /** CLI 的两种行号前缀：默认 `     12→content`，紧凑模式 `12\tcontent`。 */
@@ -37,22 +36,6 @@ const NUMBERED_RATIO = 0.6
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
-}
-
-/** 读取预览图并过滤历史数据中的非法项（类型白名单、非空 data）。 */
-function imagesFromTool(tool: ToolCallData): ToolResultImage[] {
-  const raw = tool.rawOutput?.images
-  if (!Array.isArray(raw)) return []
-  const images: ToolResultImage[] = []
-  for (const item of raw) {
-    const record = asRecord(item)
-    if (!record) continue
-    const { mediaType, data } = record
-    if (typeof mediaType !== 'string' || !RASTER_IMAGE.test(mediaType)) continue
-    if (typeof data !== 'string' || !data) continue
-    images.push({ mediaType, data })
-  }
-  return images
 }
 
 /** 汇总所有 hunk 的增删行数，用于卡片头部的 `+N -M`。 */
@@ -137,7 +120,7 @@ export function fileViewModel(tool: ToolCallData): FileViewModel | null {
   return {
     path,
     hunks,
-    images: imagesFromTool(tool),
+    images: toolImages(tool),
     output,
     errored: tool.status === 'error',
     inputSize: inputSizeOf(input),

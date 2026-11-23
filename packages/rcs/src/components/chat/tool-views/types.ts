@@ -20,6 +20,7 @@ export type ToolViewKind =
   | 'background'
   | 'skill'
   | 'message'
+  | 'mcp'
 
 export interface ToolViewProps {
   tool: ToolCallData

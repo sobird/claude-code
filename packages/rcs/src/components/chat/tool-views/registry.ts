@@ -6,6 +6,7 @@ import { AgentToolView } from './AgentToolView'
 import { BackgroundTaskToolView } from './BackgroundTaskToolView'
 import { BashToolView } from './BashToolView'
 import { FileToolView } from './FileToolView'
+import { McpToolView } from './McpToolView'
 import { MessageToolView } from './MessageToolView'
 import { QuestionToolView } from './QuestionToolView'
 import { SearchToolView } from './SearchToolView'
@@ -19,6 +20,8 @@ interface ToolViewDefinition {
   kind: ToolViewKind
   /** 归入该视图族的规范工具名（经 `canonicalToolName` 归一后匹配）。 */
   tools: readonly string[]
+  /** 按名称前缀归入该族（如全部 `mcp__` 工具）；精确名未命中时兜底。 */
+  prefix?: string
   component: ComponentType<ToolViewProps>
 }
 
@@ -41,6 +44,7 @@ const TOOL_VIEW_DEFINITIONS: readonly ToolViewDefinition[] = [
   },
   { kind: 'skill', tools: ['Skill'], component: SkillToolView },
   { kind: 'message', tools: ['Brief', 'SendMessage'], component: MessageToolView },
+  { kind: 'mcp', tools: [], prefix: 'mcp__', component: McpToolView },
   { kind: 'todo', tools: ['TodoWrite'], component: TodoToolView },
   { kind: 'question', tools: ['AskUserQuestion'], component: QuestionToolView },
 ]
@@ -49,9 +53,17 @@ const KIND_BY_TOOL = new Map<string, ToolViewKind>(
   TOOL_VIEW_DEFINITIONS.flatMap((definition) => definition.tools.map((tool) => [tool, definition.kind] as const)),
 )
 
+const KIND_BY_PREFIX = TOOL_VIEW_DEFINITIONS.flatMap((definition) =>
+  definition.prefix ? [[definition.prefix, definition.kind] as const] : [],
+)
+
 /** 返回工具应使用的正文视图族，未知工具返回 `null`。 */
 export function toolViewKind(name: string): ToolViewKind | null {
-  return KIND_BY_TOOL.get(canonicalToolName(name)) ?? null
+  const canonical = canonicalToolName(name)
+  const exact = KIND_BY_TOOL.get(canonical)
+  if (exact) return exact
+  const prefixed = KIND_BY_PREFIX.find(([prefix]) => canonical.startsWith(prefix))
+  return prefixed?.[1] ?? null
 }
 
 /** 视图族 → 正文组件。 */
