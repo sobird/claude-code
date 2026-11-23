@@ -9,7 +9,13 @@ import { getSettingsWithErrors } from './settings/settings.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import type { Theme } from './theme.js'
 
-export type ThinkingConfig = { type: 'adaptive' } | { type: 'enabled'; budgetTokens: number } | { type: 'disabled' }
+export type ThinkingDisplay = 'summarized' | 'omitted'
+
+export type ThinkingConfig = { display?: ThinkingDisplay } & (
+  | { type: 'adaptive' }
+  | { type: 'enabled'; budgetTokens: number }
+  | { type: 'disabled' }
+)
 
 /**
  * Build-time gate (feature) + runtime gate (GrowthBook). The build flag

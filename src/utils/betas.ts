@@ -183,11 +183,11 @@ export function modelSupportsAutoMode(model: string): boolean {
 /**
  * Get the correct tool search beta header for the current API provider.
  * - Claude API / Foundry: advanced-tool-use-2025-11-20
- * - Vertex AI / Bedrock: tool-search-tool-2025-10-19
+ * - Vertex AI / Bedrock / Mantle: tool-search-tool-2025-10-19
  */
 export function getToolSearchBetaHeader(): string {
   const provider = getAPIProvider()
-  if (provider === 'vertex' || provider === 'bedrock') {
+  if (provider === 'vertex' || provider === 'bedrock' || provider === 'mantle') {
     return TOOL_SEARCH_BETA_HEADER_3P
   }
   return TOOL_SEARCH_BETA_HEADER_1P

@@ -12,8 +12,19 @@
       "notes": "Amazon Bedrock powered by Mantle：providers.ts 新增 mantle provider（getAPIProvider 顺序、getSecondaryProvider、按模型 getProviderForModel）；configs.ts 每个模型加 mantle 键（haiku-4-5 为 anthropic.claude-haiku-4-5）；client.ts mantle 分支用 @anthropic-ai/bedrock-sdk 的 AnthropicBedrockMantle（升级到 1.1.3，与上游同类），按 awsRegion / skipAuth / 缓存凭证构造，见 notes R1。",
       "releaseItems": [1],
       "srcEvidence": {
-        "files": ["src/utils/model/providers.ts", "src/utils/model/configs.ts", "src/services/api/client.ts"],
-        "symbols": ["getSecondaryProvider", "getProviderForModel", "CLAUDE_CODE_USE_MANTLE", "AnthropicBedrockMantle"]
+        "files": [
+          "src/utils/model/providers.ts",
+          "src/utils/model/configs.ts",
+          "src/services/api/client.ts",
+          "src/utils/betas.ts"
+        ],
+        "symbols": [
+          "getSecondaryProvider",
+          "getProviderForModel",
+          "CLAUDE_CODE_USE_MANTLE",
+          "AnthropicBedrockMantle",
+          "getToolSearchBetaHeader"
+        ]
       }
     },
     {
@@ -290,6 +301,17 @@
       "evidence": ["bundle:settings.json"],
       "notes": "[VSCode] settings.json 解析失败时显示警告横幅：仅 VS Code 扩展侧 UI，本仓库无对应实现，未移植。",
       "releaseItems": [25]
+    },
+    {
+      "id": "flag:--thinking-display",
+      "kind": "flag",
+      "status": "ported",
+      "evidence": ["bundle:--thinking-display", "bundle:13209309"],
+      "notes": "隐藏 CLI flag：控制 thinking 内容在响应中的呈现（summarized/omitted），写请求的 thinking.display。属 inventory 漏收（不在 25 条 release 说明内），按上游补移植；见 notes R7。",
+      "srcEvidence": {
+        "files": ["src/main.tsx", "src/services/api/claude.ts", "src/utils/thinking.ts"],
+        "symbols": ["thinkingDisplay", "ThinkingDisplay"]
+      }
     },
     {
       "id": "cmd:autofix-pr",

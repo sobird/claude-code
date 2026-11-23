@@ -1417,6 +1417,9 @@ async function* queryModel(
           type: 'enabled',
         } satisfies BetaMessageStreamParams['thinking']
       }
+      if (thinkingConfig.display) {
+        thinking.display = thinkingConfig.display
+      }
     }
 
     // Get API context management strategies if enabled

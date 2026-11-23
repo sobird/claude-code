@@ -1235,6 +1235,11 @@ async function run(): Promise<CommanderCommand> {
         .hideHelp(),
     )
     .addOption(
+      new Option('--thinking-display <display>', 'How thinking content appears in the response')
+        .choices(['summarized', 'omitted'])
+        .hideHelp(),
+    )
+    .addOption(
       new Option(
         '--max-thinking-tokens <tokens>',
         '[DEPRECATED. Use --thinking instead for newer models] Maximum number of thinking tokens (only works with --print)',
@@ -3025,6 +3030,13 @@ async function run(): Promise<CommanderCommand> {
             thinkingConfig = { type: 'disabled' }
           }
         }
+      }
+
+      if (
+        thinkingConfig.type !== 'disabled' &&
+        (options.thinkingDisplay === 'summarized' || options.thinkingDisplay === 'omitted')
+      ) {
+        thinkingConfig.display = options.thinkingDisplay
       }
 
       logForDiagnosticsNoPII('info', 'started', {

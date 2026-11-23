@@ -8,12 +8,12 @@ inventory 对拍（2.1.92 → 2.1.94）结果：
 
 - 命令：新增 `autofix-pr`、`team-onboarding`；无移除。
 - `CLAUDE_CODE_*`：新增 `CLAUDE_CODE_MCP_ALLOWLIST_ENV`、`CLAUDE_CODE_SANDBOXED`、`CLAUDE_CODE_SKIP_MANTLE_AUTH`、`CLAUDE_CODE_TEAM_ONBOARDING`、`CLAUDE_CODE_USE_MANTLE`；无移除。
-- CLI flag：无增删。
+- CLI flag：inventory 无增删；但目标 bundle 含隐藏 flag `--thinking-display <display>`（inventory 漏收），已手动登记并移植（见 R7）。
 - 字符串：`strings` 分诊后新增 inSrc 97 / releaseNotes 132 / noise 6 / unclassified 82；移除 inSrc 39 / releaseNotes 15 / noise 4 / unclassified 21。新增 `unclassified` 多为打包依赖文案、GrowthBook 实验键、以及本次已移植的 team-onboarding/autofix-pr/betas 字面量（见 R7）；`noise` 来自打包依赖。
 
 ## 台账统计
 
-- `ported`：23 个 behavior + 2 个 `cmd:` + 5 个 `env:`（`behavior:mantle-bedrock` 用 SDK 原生类后转为 ported，见 R1）。
+- `ported`：23 个 behavior + 2 个 `cmd:` + 5 个 `env:` + 1 个 `flag:`（`flag:--thinking-display`，见 R7；`behavior:mantle-bedrock` 用 SDK 原生类后转为 ported，见 R1）。
 - `approximated`：`behavior:scrollback-diff-repeat`（R2，未移植）+ 3 个 VSCode behavior（R3）+ 5 个沿用的依赖/扫描噪声 `env:`（R6）。
 - 无 `unresolved`；`missingInSrc` / `unexpectedInSrc` / `unregistered` / `evidenceErrors` / `srcEvidenceErrors` / `uncoveredReleaseItems` 均为空（release 说明 1..25 全覆盖）。
 
@@ -51,11 +51,11 @@ inventory 对拍（2.1.92 → 2.1.94）结果：
 - R2：第 12 条（长会话回滚缓冲重复 diff / 空白页）未移植。该改动为纯逻辑（无新增字面量），本地 minified bundle 无法定位到可靠实现点，证据仅有 `bundle:scrollback` 关键词；未改动 `src/`，台账如实记 `approximated`。
 - R3：第 23–25 条为 `[VSCode]` 扩展侧改动（冷启动子进程、下拉选择、settings.json 解析横幅），本仓库只有 CLI，无对应扩展代码，未移植；台账记 `approximated` 并写明原因。
 - R4：两个新命令为近似实现。
-  - `cmd:autofix-pr`：按上游接线 `teleportToRemote` + `registerRemoteAgentTask`（`remoteTaskType:'autofix-pr'`），`subscribe-pr` 订阅端点内联实现（2xx 与 409 均视为成功）。差异：未透传上游的 `source:"autofix_pr"` 遥测字段；`logEvent` 的 result 事件压缩为 `{success}`；`/v1/code/github/subscribe-pr` 使用 `ccr-byoc-2025-07-29` beta 头。
-  - `cmd:team-onboarding`：prompt 型命令，`PROMPT_TEMPLATE`/`GUIDE_TEMPLATE` 逐字移植自上游 bundle；用量扫描（slash 命令、MCP 服务器、会话描述符、`git config user.name`、当前仓库）按本地 `loadMessageLogs()` 重写。门控 `CLAUDE_CODE_TEAM_ONBOARDING` 或 GrowthBook `tengu_flint_harbor`，prompt/guide 模板可由 `tengu_flint_harbor_prompt` 覆盖。
-- R5：Mantle 的 provider 判定未全量铺开。`usesFirstPartyModelFormat` 已含 `mantle`（`effort.ts` 等按模型走），但 `isFirstPartyLikeProvider` 仍只含 `firstParty`/`anthropicAws`，因此 `src/utils/thinking.ts`（thinking/tool-search 的 1P/3P 分支）与 `src/constants/betas.ts` 的 provider 门控对 mantle 仍按第三方处理。上游若对 mantle 有专属 beta/thinking 分支，需在后续版本补；本版 release 说明未要求，故不扩散改动范围。
+  - `cmd:autofix-pr`：按上游接线 `teleportToRemote` + `registerRemoteAgentTask`（`remoteTaskType:'autofix-pr'`），`subscribe-pr` 订阅端点内联实现（2xx 与 409 均视为成功）。差异：未透传上游的 `source:"autofix_pr"` 遥测字段；`logEvent` 的 result 事件压缩为 `{success}`；`/v1/code/github/subscribe-pr` 使用 `ccr-byoc-2025-07-29` beta 头；上游对 PR 探测/订阅失败细分的错误码（`gh_failed`/`gh_not_found`/`no_open_pr`/`pr_not_open`/`not_eligible`/`bad_pr_url`/`http_413`）本仓未实现，统一以布尔 `success` 归并，故失败原因不区分。
+  - `cmd:team-onboarding`：prompt 型命令，`PROMPT_TEMPLATE`/`GUIDE_TEMPLATE` 逐字移植自上游 bundle；用量扫描（slash 命令、MCP 服务器、会话描述符、`git config user.name`、当前仓库）按本地 `loadMessageLogs()` 重写。门控 `CLAUDE_CODE_TEAM_ONBOARDING` 或 GrowthBook `tengu_flint_harbor`，prompt/guide 模板可由 `tengu_flint_harbor_prompt` 覆盖。差异：本仓仅记 `_invoked`/`_generated` 遥测，未记上游的 `tengu_team_onboarding_discovery_shown`。
+- R5：Mantle provider 判定已与上游逐条核对一致，无遗留补项。上游 `isFirstPartyLikeProvider`（`M2`，≈2285805）与实验性 beta 门控（`h76`，≈3446929）均只含 `firstParty`/`anthropicAws`（`h76` 另含 `foundry`），**不含** `mantle`；`usesFirstPartyModelFormat`（`ru`，≈2285870）含 `foundry`/`mantle`；工具搜索 beta 头选择 `Nuq`（≈3446926）把 `vertex`/`bedrock`/`mantle` 归为 3P 头。本仓 `isFirstPartyLikeProvider`、`shouldIncludeFirstPartyOnlyBetas`、`usesFirstPartyModelFormat` 与上游一致；本轮补齐 `getToolSearchBetaHeader` 的 `mantle → 3P` 分支（`src/utils/betas.ts`）。计费头（`system.ts` 的 `cch=00000` 排除 `mantle`）、`utils/status.tsx` 的 Mantle/区域诊断、`coreSchemas` 的 `apiProvider` 枚举均已含 `mantle`，与上游同。
 - R6：五个依赖/扫描噪声 `env:`（`CLAUDE_CODE_HOST_HTTP_PROXY_PORT`、`CLAUDE_CODE_HOST_SOCKS_PROXY_PORT`、`CLAUDE_CODE_RESUME_THRESHOLD_MINUTES`、`CLAUDE_CODE_RESUME_TOKEN_THRESHOLD`、`CLAUDE_CODE_SM_COMPACT`）沿用 2.1.92 结论，偏移刷新到 2.1.94 bundle；`src/` 不直接读取。
-- R7：字符串分诊。新增 `unclassified` 82 条经回查：GrowthBook 实验键（如 `tengu_flint_harbor*`、memory/advisor 相关）、team-onboarding/autofix-pr 已移植字面量、内容与系统提示模板、XML/JSON 解析器错误文案、依赖内部文案等；移除 `unclassified` 21 条为旧版文案/依赖残余。除已在 release 说明范围内者外不移植（不在 25 条范围内）。
+- R7：字符串分诊。新增 `unclassified` 82 条经回查：GrowthBook 实验键（如 `tengu_flint_harbor*`、memory/advisor 相关）、team-onboarding/autofix-pr 已移植字面量、内容与系统提示模板、XML/JSON 解析器错误文案、依赖内部文案等；移除 `unclassified` 21 条为旧版文案/依赖残余。此外，目标 bundle 的隐藏 CLI flag `--thinking-display <display>`（`summarized`/`omitted`，写请求 `thinking.display`）属 `inventory` 漏收、也不在 25 条 release 说明内，本轮按上游补移植：`src/main.tsx` 加 option 并在 thinking 推导后设置 `thinkingConfig.display`（`g4.type!=="disabled"` 时），`src/services/api/claude.ts` 把它拷到请求 `thinking.display`，`src/utils/thinking.ts` 新增 `ThinkingDisplay` 类型；台账 `flag:--thinking-display`（`ported`，`bundle:` 偏移 13186607/13209309）。其余未命中 release 说明的 `unclassified` 不移植（不在 25 条范围内）。
 
 ## 交叉验证（§1.5）
 
