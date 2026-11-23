@@ -8,6 +8,8 @@ export class FakeRcs {
   readonly events: Record<string, unknown>[] = []
   readonly statuses: { status: string; details: unknown }[] = []
   heartbeats = 0
+  /** 让创建会话失败，用来验证「复用成功时不会新建」。 */
+  failCreate = false
 
   private readonly sessionId: string
   private seq = 0
@@ -85,6 +87,7 @@ export class FakeRcs {
     const session = this.sessionId
 
     if (request.method === 'POST' && path === '/v1/code/sessions') {
+      if (this.failCreate) return json({ error: 'create disabled' }, 500)
       return json({ session: { id: session } })
     }
     if (request.method === 'POST' && path === `/v1/code/sessions/${session}/bridge`) {

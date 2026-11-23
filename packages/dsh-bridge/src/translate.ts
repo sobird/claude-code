@@ -157,8 +157,29 @@ function resultMessage(kind: string, reason: Record<string, unknown> | null): st
 }
 
 /**
- * 翻译一个 dsh 会话事件。`user/message`（包括 dsh 注入的合成上下文）不回发：
- * RCS 侧已经有用户发出的原始消息，回发会重复。
+ * dsh 会话里由人键入的 `user/message` → RCS 的 user 事件。`source.kind` 为
+ * `'user'`（含 Web 的 `user-rpc`）；合成上下文与工具结果来源返回 null。
+ * 只有文本会回发：图片在 dsh 侧已换成持久引用，RCS 无法渲染。
+ */
+export function userMessageEvent(data: Record<string, unknown>): RcsEvent | null {
+  const source = recordOf(data.source)
+  if (asText(source?.kind) !== 'user') return null
+  const id = asText(data.id)
+  const text = textOfContent(data.content)
+  if (!id || !text) return null
+  return {
+    type: 'user',
+    payload: {
+      type: 'user',
+      uuid: id,
+      message: { role: 'user', content: [{ type: 'text', text }] },
+    },
+  }
+}
+
+/**
+ * 翻译一个 dsh 会话事件。`user/message` 不回发：RCS 发起的轮次它已经持有原始
+ * 消息，回发会重复。dsh UI 里键入的消息改走 `userMessageEvent`，由插件按 id 去重。
  */
 export function translateSessionEvent(event: DshSessionEvent): RcsEvent[] {
   switch (event.type) {

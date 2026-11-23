@@ -11,6 +11,7 @@ export {
   questionRequestEvent,
   questionResult,
   translateSessionEvent,
+  userMessageEvent,
 } from './translate'
 export type { ControlResolution, DshPromptBlock, DshSessionEvent, RcsEvent } from './translate'
 export { asArray, asNumber, asText, errorMessage, isRecord, parseJsonObject, stripTrailingSlash } from './util'

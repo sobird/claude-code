@@ -5,6 +5,8 @@ import type {
   AgentsServiceLike,
   ApprovalOutcomeLike,
   ApprovalRequestLike,
+  AssistantStreamFrameLike,
+  AssistantStreamPayloadLike,
   CreateAgentOptionsLike,
   Disposer,
   PluginContextLike,
@@ -113,6 +115,7 @@ export class FakeContext implements PluginContextLike {
   private readonly disposers: Disposer[] = []
   private readonly sessionListeners: PluginEvents['session/event'][] = []
   private readonly statusListeners: PluginEvents['agent/status'][] = []
+  private readonly streamListeners: PluginEvents['agent/assistant-stream'][] = []
   private readonly approvalListeners: PluginEvents['approval/request'][] = []
   private readonly questionListeners: PluginEvents['user-questions/request'][] = []
 
@@ -128,7 +131,9 @@ export class FakeContext implements PluginContextLike {
     // 测试接缝：泛型擦除后按事件名入桶，类型由各桶自己保证。
     if (event === 'session/event') this.add(this.sessionListeners, listener as PluginEvents['session/event'], options)
     else if (event === 'agent/status') this.add(this.statusListeners, listener as PluginEvents['agent/status'], options)
-    else if (event === 'approval/request') {
+    else if (event === 'agent/assistant-stream') {
+      this.add(this.streamListeners, listener as PluginEvents['agent/assistant-stream'], options)
+    } else if (event === 'approval/request') {
       this.add(this.approvalListeners, listener as PluginEvents['approval/request'], options)
     } else if (event === 'user-questions/request') {
       this.add(this.questionListeners, listener as PluginEvents['user-questions/request'], options)
@@ -160,6 +165,11 @@ export class FakeContext implements PluginContextLike {
   emitAgentStatus(agentId: string, status: 'idle' | 'running'): void {
     const event: AgentStatusLike = { agent: this.agents.get(agentId), status }
     for (const listener of this.statusListeners) listener(event)
+  }
+
+  emitAssistantStream(agentId: string, frame: AssistantStreamFrameLike): void {
+    const payload: AssistantStreamPayloadLike = { agent: this.agents.get(agentId), frame }
+    for (const listener of this.streamListeners) listener(payload)
   }
 
   /** 从第一个监听器开始的 waterfall；没有监听器时落到终端实现。 */

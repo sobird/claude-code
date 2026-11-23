@@ -7,8 +7,11 @@ import type { PluginContextLike } from './types'
 /** Cordis 插件名；与 `cordis.patch.yml` 的行 id 区分（行 id 是 `rcs-bridge`）。 */
 export const name = 'rcs-bridge'
 
-/** 只为等待 agents 服务；agent 本身在首条消息时懒创建，避开 agent-loop 的加载顺序。 */
-export const inject = ['agents']
+/**
+ * 等待 agents 服务；agent 本身在首条消息时懒创建，避开 agent-loop 的加载顺序。
+ * `sessionQuery` 用于启动时复用既有 dsh 会话，dsh-base（web/sdk profile 的底座）都会挂载它。
+ */
+export const inject = ['agents', 'sessionQuery']
 
 /** 把当前 dsh 进程接到一条 RCS 会话；卸载时中止桥接。 */
 export async function apply(ctx: PluginContextLike, config: unknown): Promise<void> {

@@ -12,6 +12,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/** 从记录下来的 `stream_event` 里取出 `content_block_delta` 的 `delta`。 */
+function streamDeltas(events: Record<string, unknown>[]): Record<string, unknown>[] {
+  const deltas: Record<string, unknown>[] = []
+  for (const event of events) {
+    const stream = isRecord(event.event) ? event.event : null
+    if (stream?.type !== 'content_block_delta') continue
+    const delta = isRecord(stream.delta) ? stream.delta : null
+    if (delta) deltas.push(delta)
+  }
+  return deltas
+}
+
 describe('dsh-rcs-plugin bridge', () => {
   let rcs: FakeRcs
   let ctx: FakeContext
@@ -107,6 +119,34 @@ describe('dsh-rcs-plugin bridge', () => {
     expect(registry.workspace.attachments).toEqual([SESSION_ID])
   }, 15000)
 
+  test('a restart reuses the newest bridge session for the same workdir and resumes it', async () => {
+    await bridge.stop()
+    ctx.provide('sessionQuery', {
+      listSessions: async () => [
+        { header: { id: 'cse_elsewhere', cwd: '/tmp/other' } },
+        { header: { id: SESSION_ID, cwd: '/tmp/rcs-work' } },
+      ],
+    })
+    ctx.provide('sessionPersistence', { stat: async () => ({ header: { cwd: '/tmp/rcs-work' } }) })
+    // 复用成功就不该走新建：让创建接口失败来证明这一点。
+    rcs.failCreate = true
+    bridge = await startPluginBridge(ctx, config())
+
+    expect(bridge.sessionId).toBe(SESSION_ID)
+    rcs.push({ type: 'user', message: { role: 'user', content: 'after restart' } })
+    const resumed = await waitFor(() => ctx.agents.resumes[0], 'agent resume from reused id')
+    expect(resumed.resumeSessionId).toBe(SESSION_ID)
+  }, 15000)
+
+  test('an unreachable candidate falls back to a fresh session', async () => {
+    await bridge.stop()
+    ctx.provide('sessionQuery', { listSessions: async () => [{ header: { id: 'cse_dead', cwd: '/tmp/rcs-work' } }] })
+    bridge = await startPluginBridge(ctx, config())
+
+    // FakeRcs 只认自己的会话 id，cse_dead 的 bridge 握手会 404，于是回落到新建。
+    expect(bridge.sessionId).toBe(SESSION_ID)
+  }, 15000)
+
   test('session events translate to RCS events in order and finish idle', async () => {
     ctx.emitSessionEvent(SESSION_ID, {
       type: 'assistant/message',
@@ -132,6 +172,83 @@ describe('dsh-rcs-plugin bridge', () => {
       () => (rcs.statuses.length > 0 && rcs.statuses[rcs.statuses.length - 1]?.status === 'idle' ? true : undefined),
       'idle after turn',
     )
+  }, 15000)
+
+  test('a prompt typed in the dsh UI is forwarded to RCS', async () => {
+    ctx.emitSessionEvent(SESSION_ID, {
+      type: 'user/message',
+      seq: 1,
+      data: {
+        id: 'u-web',
+        role: 'user',
+        content: [{ type: 'text', text: 'from the web ui' }],
+        source: { kind: 'user', rpcId: 'r1' },
+      },
+    })
+
+    const forwarded = await waitFor(
+      () => rcs.events.find((event) => event.type === 'user' && event.uuid === 'u-web'),
+      'forwarded user message',
+    )
+    expect(forwarded).toMatchObject({
+      message: { role: 'user', content: [{ type: 'text', text: 'from the web ui' }] },
+    })
+  }, 15000)
+
+  test('prompts injected by the plugin are not echoed back to RCS', async () => {
+    rcs.push({ type: 'user', message: { role: 'user', content: 'from rcs' } })
+    const agent = await waitFor(() => ctx.agents.live.get(SESSION_ID), 'live agent')
+    const injected = await waitFor(() => agent.followups[0], 'injected message')
+
+    ctx.emitSessionEvent(SESSION_ID, {
+      type: 'user/message',
+      seq: 1,
+      data: { id: injected.id, role: 'user', content: injected.content, source: { kind: 'user' } },
+    })
+    await Bun.sleep(150)
+    expect(rcs.events.filter((event) => event.type === 'user')).toHaveLength(0)
+  }, 15000)
+
+  test('assistant stream deltas reach RCS ahead of the final message', async () => {
+    ctx.agents.live.set(SESSION_ID, new FakeAgent(SESSION_ID))
+
+    ctx.emitAssistantStream(SESSION_ID, { type: 'start' })
+    ctx.emitAssistantStream(SESSION_ID, { type: 'chunk', chunk: { type: 'reasoning-delta', text: 'hmm' } })
+    ctx.emitAssistantStream(SESSION_ID, { type: 'chunk', chunk: { type: 'text-delta', text: 'he' } })
+    ctx.emitAssistantStream(SESSION_ID, { type: 'chunk', chunk: { type: 'text-delta', text: 'llo' } })
+    ctx.emitAssistantStream(SESSION_ID, { type: 'end' })
+
+    ctx.emitSessionEvent(SESSION_ID, {
+      type: 'assistant/message',
+      seq: 5,
+      data: { message: { content: [{ type: 'text', text: 'hello' }] } },
+    })
+    ctx.emitSessionEvent(SESSION_ID, { type: 'turn/end', seq: 6, data: { reason: { kind: 'completed' } } })
+
+    await waitFor(() => rcs.events.find((event) => event.type === 'result'), 'result event')
+    expect(rcs.events.map((event) => event.type)).toEqual([
+      'stream_event',
+      'stream_event',
+      'stream_event',
+      'assistant',
+      'result',
+    ])
+    expect(rcs.events[0]).toEqual({ type: 'stream_event', event: { type: 'message_start' } })
+    expect(streamDeltas(rcs.events)).toEqual([
+      { type: 'thinking_delta', thinking: 'hmm' },
+      { type: 'text_delta', text: 'hello' },
+    ])
+  }, 15000)
+
+  test('stop discards buffered deltas', async () => {
+    ctx.agents.live.set(SESSION_ID, new FakeAgent(SESSION_ID))
+    ctx.emitAssistantStream(SESSION_ID, { type: 'start' })
+    ctx.emitAssistantStream(SESSION_ID, { type: 'chunk', chunk: { type: 'text-delta', text: 'partial' } })
+
+    await bridge.stop()
+    await Bun.sleep(150)
+
+    expect(streamDeltas(rcs.events)).toHaveLength(0)
   }, 15000)
 
   test('ignores events from other sessions', async () => {

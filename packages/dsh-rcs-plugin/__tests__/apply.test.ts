@@ -8,7 +8,7 @@ import { FakeContext } from './helpers/fake-ctx'
 describe('plugin entry', () => {
   test('declares the Cordis contract', () => {
     expect(name).toBe('rcs-bridge')
-    expect(inject).toEqual(['agents'])
+    expect(inject).toEqual(['agents', 'sessionQuery'])
   })
 
   test('apply starts the bridge and registers a disposer', async () => {

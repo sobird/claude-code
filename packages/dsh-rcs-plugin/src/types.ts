@@ -40,6 +40,11 @@ export type SessionLike = { readonly id: string }
 export type SessionEventLike = { type?: unknown; seq?: unknown; data?: unknown }
 export type AgentStatusLike = { agent?: AgentLike; status?: unknown }
 
+/** `agent/assistant-stream` 的最小帧形状；只关心帧类型与增量块。 */
+export type AssistantStreamFrameLike = { type?: unknown; chunk?: unknown }
+
+export type AssistantStreamPayloadLike = { agent?: AgentLike; frame?: AssistantStreamFrameLike }
+
 export type ApprovalRequestLike = {
   agent?: AgentLike
   toolName?: string
@@ -61,6 +66,7 @@ export type QuestionAnswerLike = Record<string, unknown>
 export interface PluginEvents {
   'session/event': (session: SessionLike, event: SessionEventLike) => void
   'agent/status': (event: AgentStatusLike) => void
+  'agent/assistant-stream': (payload: AssistantStreamPayloadLike) => void
   'approval/request': (
     request: ApprovalRequestLike,
     next: () => Promise<ApprovalOutcomeLike>,
@@ -110,6 +116,18 @@ export interface SessionTitleLike {
 
 export function isSessionTitle(value: unknown): value is SessionTitleLike {
   return isRecord(value) && typeof value.rename === 'function'
+}
+
+/** dsh 会话列表里插件用到的字段；列表与 dsh Web UI 同源。 */
+export type SessionRecordLike = { header?: { id?: unknown; cwd?: unknown } }
+
+/** 会话查询服务：`listSessions` 按创建时间倒序返回全部逻辑会话。 */
+export interface SessionQueryLike {
+  listSessions(signal?: AbortSignal): Promise<readonly SessionRecordLike[]>
+}
+
+export function isSessionQuery(value: unknown): value is SessionQueryLike {
+  return isRecord(value) && typeof value.listSessions === 'function'
 }
 
 /** 会话持久化服务：只需判断某个会话 id 是否已有落盘记录。 */

@@ -59,15 +59,23 @@ Web 端也可以走 **Plugins** 菜单用「安装本地插件」添加同一个
 
 ## 行为
 
-- **会话**：首次收到 prompt 时才 `ctx.agents.create`（或按 `sessionId` 命中
-  `sessionPersistence` 时 `resume`），避免与 agent-loop 的加载顺序竞争。
+- **会话**：启动时优先复用最近一条工作目录一致的 `cse_` 会话（与 dsh Web UI 同源的
+  `sessionQuery` 列表），向 RCS `openWorker` 探测可用后继续；探测失败或没有候选才新建。
+  dsh agent 仍延迟到首次 prompt 时创建：有落盘记录就 `resume`，否则 `create`，避免与
+  agent-loop 的加载顺序竞争。日志区分 `(configured)` / `(reused)` / `(created)`。
 - **工作区**：建/恢复会话后把 `workdir` 注册成工作区（已注册则复用）并挂载该会话，
   dsh 侧边栏才会按工作区分组；`sessionTitle` 同时重命名为 dsh 会话标题。缺少
   `workspaceRegistry` 服务（例如 SDK profile）或挂载失败只记 stderr，会话仍落在「未分组」。
 - **入站**：文本直接转成冻结的 user message；图片经 `attachments.admitPromptContent`
   换成持久引用（profile 缺该服务时报错并回一条 error result）。
+- **双向同步**：dsh Web UI 里键入的 `user/message`（`source.kind === 'user'`）按消息 id
+  回发成 RCS 的 `user` 事件；插件自己从 RCS 注入的消息记在内存里，会话事件回发时跳过。
+  仅同步文本——图片在 dsh 侧已换成持久引用，RCS 无法渲染。
 - **出站**：`session/event` 按 `translateSessionEvent` 翻译成 `assistant` / `tool_use` /
   user `tool_result` / `result`，串行上报保证顺序。
+- **流式**：`agent/assistant-stream` 的 `text-delta` / `reasoning-delta` 累积后约 80ms
+  合批发成临时 `stream_event`（`content_block_delta`），最终 `assistant/message` 前先
+  flush，RCS 侧气泡随生成增量刷新；`start` 发 `message_start`，停止/中断时丢弃缓冲。
 - **审批**：`approval/request` 发 `can_use_tool` 卡片并置 `requires_action`；回执为允许时记
   住 `updatedPermissions` 里的「总是允许」，本进程内命中即短路放行。非本 agent 的请求
   `next()` 交回其它监听器。
@@ -129,3 +137,7 @@ bun run e2e
 - 「总是允许」只记在插件进程内存里（按 `sessionId + toolName`），重启后失效。
 - 一条 RCS 会话对应一条专属 dsh 会话；不支持镜像/接管用户现有的 UI 会话。
 - 与独立桥不要同时接同一条 RCS 会话（会互相抢 worker 状态）。
+- 自动复用按 `sessionQuery` 列表 + 工作目录挑最新的 `cse_` 会话。多个桥或多台机器共用同一
+  `$DSH_HOME` 与 RCS 账号时可能选中对方的会话，请显式配置 `sessionId` 区分。
+- 插件声明依赖 `agents` 与 `sessionQuery`，都由 dsh-base 提供；`sdk-minimal` 这类不叠 base
+  的 profile 不会加载本插件。

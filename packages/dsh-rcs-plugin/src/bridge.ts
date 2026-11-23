@@ -13,6 +13,7 @@ import {
   questionRequestEvent,
   questionResult,
   translateSessionEvent,
+  userMessageEvent,
   type ControlResolution,
   type DshPromptBlock,
   type RcsEvent,
@@ -27,12 +28,14 @@ import { createUserMessage } from './message'
 import {
   isAttachments,
   isSessionPersistence,
+  isSessionQuery,
   isSessionTitle,
   isWorkspaceRegistry,
   type AgentLike,
   type AgentStatusLike,
   type ApprovalOutcomeLike,
   type ApprovalRequestLike,
+  type AssistantStreamPayloadLike,
   type PluginContextLike,
   type QuestionAnswerLike,
   type QuestionRequestLike,
@@ -42,6 +45,15 @@ import {
 
 const HEARTBEAT_MS = 30_000
 const RECONNECT_MS = 1_000
+/** 插件自己创建的 RCS 会话 id 前缀；复用时只认这些，避免接管他人的 dsh 会话。 */
+const SESSION_ID_PREFIX = 'cse_'
+/** 增量合批间隔：RCS 的流式气泡是临时事件，太频繁只会放大 HTTP 次数。 */
+const STREAM_FLUSH_MS = 80
+
+/** 临时 `stream_event`；RCS reducer 从 `event` 下读 SDK 形状的流事件。 */
+function streamEvent(event: Record<string, unknown>): RcsEvent {
+  return { type: 'stream_event', payload: { type: 'stream_event', event } }
+}
 
 /** 挂起的人工请求；`settle(null)` 表示被取消（中断/停止/信号中止）。 */
 type PendingHuman = (resolution: ControlResolution | null) => void
@@ -74,6 +86,12 @@ class InProcessBridge implements PluginBridge {
   private readonly abort = new AbortController()
   private readonly pendingHuman = new Map<string, PendingHuman>()
   private readonly alwaysAllow = new Set<string>()
+  /** 插件自己注入的 user 消息 id：它们来自 RCS，会话事件回发时跳过，避免重复。 */
+  private readonly injectedUserIds = new Set<string>()
+
+  private streamText = ''
+  private streamThought = ''
+  private streamTimer: ReturnType<typeof setTimeout> | null = null
 
   private agent: AgentLike | null = null
   private starting: Promise<AgentLike> | null = null
@@ -95,6 +113,7 @@ class InProcessBridge implements PluginBridge {
   async begin(): Promise<void> {
     this.ctx.on('session/event', this.onSessionEvent)
     this.ctx.on('agent/status', this.onAgentStatus)
+    this.ctx.on('agent/assistant-stream', this.onAssistantStream)
     this.ctx.on('approval/request', this.onApproval, { prepend: true })
     this.ctx.on('user-questions/request', this.onQuestion, { prepend: true })
     await this.setStatus('idle')
@@ -108,6 +127,7 @@ class InProcessBridge implements PluginBridge {
     if (this.heartbeat) clearInterval(this.heartbeat)
     this.heartbeat = null
     await this.cancelPendingHuman('Interrupted')
+    this.clearStreamBuffer()
     this.currentAgent()?.cancel({ kind: 'user' })
     await this.posting
     await this.setStatus('idle')
@@ -119,6 +139,12 @@ class InProcessBridge implements PluginBridge {
     const type = asText(event.type)
     if (type === 'turn/start') this.turnOpen = true
     if (type === 'turn/end') this.turnOpen = false
+    if (type === 'user/message') {
+      this.forwardUserMessage(isRecord(event.data) ? event.data : {})
+      return
+    }
+    // 最终 assistant 消息与结果都会先顶掉流式气泡，增量必须先入队。
+    if (type === 'assistant/message' || type === 'turn/end') this.flushStream()
     const events = translateSessionEvent({
       type,
       seq: asNumber(event.seq),
@@ -126,6 +152,74 @@ class InProcessBridge implements PluginBridge {
     })
     void this.post(events)
     if (type === 'turn/end' && this.pendingHuman.size === 0) void this.setStatus('idle')
+  }
+
+  /** dsh UI 里键入的提问同步回 RCS；插件自己注入的消息按 id 跳过。 */
+  private forwardUserMessage(data: Record<string, unknown>): void {
+    const id = asText(data.id)
+    if (id && this.injectedUserIds.delete(id)) return
+    const event = userMessageEvent(data)
+    if (event) void this.post([event])
+  }
+
+  /** 把模型增量累积成 RCS 的临时 `stream_event`；最终消息到达前会先 flush。 */
+  private onAssistantStream = (payload: AssistantStreamPayloadLike): void => {
+    if (payload.agent?.id !== this.sessionId) return
+    const type = asText(payload.frame?.type)
+    if (type === 'start') {
+      this.clearStreamBuffer()
+      void this.post([streamEvent({ type: 'message_start' })])
+      return
+    }
+    if (type === 'end') {
+      this.flushStream()
+      return
+    }
+    const chunk = isRecord(payload.frame?.chunk) ? payload.frame.chunk : null
+    const chunkType = asText(chunk?.type)
+    const text = asText(chunk?.text)
+    if (!text) return
+    if (chunkType === 'text-delta') this.streamText += text
+    else if (chunkType === 'reasoning-delta') this.streamThought += text
+    else return
+    this.scheduleStreamFlush()
+  }
+
+  private scheduleStreamFlush(): void {
+    if (this.streamTimer) return
+    this.streamTimer = setTimeout(() => {
+      this.streamTimer = null
+      this.flushStream()
+    }, STREAM_FLUSH_MS)
+    this.streamTimer.unref?.()
+  }
+
+  private flushStream(): void {
+    if (this.streamTimer) {
+      clearTimeout(this.streamTimer)
+      this.streamTimer = null
+    }
+    const events: RcsEvent[] = []
+    if (this.streamThought) {
+      events.push(
+        streamEvent({ type: 'content_block_delta', delta: { type: 'thinking_delta', thinking: this.streamThought } }),
+      )
+      this.streamThought = ''
+    }
+    if (this.streamText) {
+      events.push(streamEvent({ type: 'content_block_delta', delta: { type: 'text_delta', text: this.streamText } }))
+      this.streamText = ''
+    }
+    if (events.length > 0) void this.post(events)
+  }
+
+  private clearStreamBuffer(): void {
+    if (this.streamTimer) {
+      clearTimeout(this.streamTimer)
+      this.streamTimer = null
+    }
+    this.streamText = ''
+    this.streamThought = ''
   }
 
   private onAgentStatus = (event: AgentStatusLike): void => {
@@ -267,7 +361,9 @@ class InProcessBridge implements PluginBridge {
       const agent = await this.ensureAgent()
       this.turnOpen = true
       await this.setStatus('running')
-      agent.followup(createUserMessage(await this.admit(blocks)))
+      const message = createUserMessage(await this.admit(blocks))
+      this.injectedUserIds.add(message.id)
+      agent.followup(message)
     } catch (error) {
       this.turnOpen = false
       await this.postResultError(errorMessage(error))
@@ -299,6 +395,7 @@ class InProcessBridge implements PluginBridge {
   /** 停止当前轮：给挂起卡片补应答，再取消 agent；aborted result 由 turn/end 产生。 */
   private async interrupt(): Promise<void> {
     await this.cancelPendingHuman('Interrupted')
+    this.clearStreamBuffer()
     this.currentAgent()?.cancel({ kind: 'user' })
   }
 
@@ -323,14 +420,13 @@ class InProcessBridge implements PluginBridge {
 
   private async createAgent(): Promise<AgentLike> {
     const agentOptions = { provider: this.config.provider, model: this.config.model }
-    if (this.config.sessionId) {
-      const persistence = this.ctx.get('sessionPersistence')
-      if (isSessionPersistence(persistence) && (await persistence.stat(this.sessionId))) {
-        const handle = await this.ctx.agents.resume({ resumeSessionId: this.sessionId, agentOptions })
-        this.agent = handle.agent
-        await this.registerSession(handle.agent)
-        return handle.agent
-      }
+    // 会话 id 就是身份：有落盘记录就恢复（重启复用），否则新建。
+    const persistence = this.ctx.get('sessionPersistence')
+    if (isSessionPersistence(persistence) && (await persistence.stat(this.sessionId))) {
+      const handle = await this.ctx.agents.resume({ resumeSessionId: this.sessionId, agentOptions })
+      this.agent = handle.agent
+      await this.registerSession(handle.agent)
+      return handle.agent
     }
     const handle = await this.ctx.agents.create({
       sessionId: this.sessionId,
@@ -416,11 +512,53 @@ class InProcessBridge implements PluginBridge {
   }
 }
 
-/** 建 RCS 会话（或复用 `sessionId`）、换 worker 凭据并开始桥接。 */
+/**
+ * 挑一条可复用的桥接会话：与 dsh Web UI 同源的 `sessionQuery` 列表里，取最近的
+ * `cse_` 会话（优先工作目录一致）。列表或探测失败都回落到新建。
+ */
+async function findReusableSession(ctx: PluginContextLike, workdir: string): Promise<string | undefined> {
+  const query = ctx.get('sessionQuery')
+  if (!isSessionQuery(query)) {
+    log('sessionQuery unavailable: starting a fresh session')
+    return undefined
+  }
+  try {
+    const records = await query.listSessions()
+    const candidates = records.filter((record) => {
+      const id = asText(record.header?.id)
+      return id.startsWith(SESSION_ID_PREFIX)
+    })
+    log(`session list: ${records.length} record(s), ${candidates.length} reusable candidate(s)`)
+    const preferred = candidates.find((record) => asText(record.header?.cwd) === workdir) ?? candidates[0]
+    return preferred ? asText(preferred.header?.id) || undefined : undefined
+  } catch (error) {
+    log(`session list: ${errorMessage(error)}`)
+    return undefined
+  }
+}
+
+/** 建 RCS 会话（复用已落盘的身份，或新开一条）、换 worker 凭据并开始桥接。 */
 export async function startPluginBridge(ctx: PluginContextLike, config: ResolvedConfig): Promise<PluginBridge> {
   const rcs = new RcsClient({ baseUrl: config.rcsBaseUrl, apiKey: config.apiKey })
-  const sessionId = config.sessionId ?? (await rcs.createSession(config.sessionTitle))
-  const worker = await rcs.openWorker(sessionId)
+  let sessionId = config.sessionId
+  let worker: WorkerSession | undefined
+  let origin: 'configured' | 'reused' | 'created' = 'configured'
+  if (!sessionId) {
+    origin = 'created'
+    const reusable = await findReusableSession(ctx, config.workdir)
+    if (reusable) {
+      try {
+        worker = await rcs.openWorker(reusable)
+        sessionId = reusable
+        origin = 'reused'
+      } catch (error) {
+        log(`reuse ${reusable}: ${errorMessage(error)}`)
+      }
+    }
+  }
+  sessionId ??= await rcs.createSession(config.sessionTitle)
+  worker ??= await rcs.openWorker(sessionId)
+  log(`attached to ${config.rcsBaseUrl} session ${sessionId} (${origin})`)
   const bridge = new InProcessBridge(ctx, config, rcs, worker)
   await bridge.begin()
   return bridge
