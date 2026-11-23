@@ -36,6 +36,7 @@ import { buildBridgeConnectUrl } from 'src/bridge/bridgeStatusUtil.js'
 import { collectFileSuggestions } from 'src/bridge/fileSuggestions.js'
 import { resolveAndPrepend } from 'src/bridge/inboundAttachments.js'
 import { extractInboundMessageFields, inboundDeliveryOf, queuePriorityOf } from 'src/bridge/inboundMessages.js'
+import { applyQueueUpdate, getBridgeQueueSnapshot, subscribeBridgeQueueChanges } from 'src/bridge/queueControl.js'
 import type { ReplBridgeHandle } from 'src/bridge/replBridge.js'
 import { installOAuthTokens } from 'src/cli/handlers/auth.js'
 import { RemoteIO } from 'src/cli/remoteIO.js'
@@ -797,7 +798,8 @@ export async function runHeadless(
       message.type !== 'keep_alive' &&
       message.type !== 'streamlined_text' &&
       message.type !== 'streamlined_tool_use_summary' &&
-      message.type !== 'prompt_suggestion'
+      message.type !== 'prompt_suggestion' &&
+      message.type !== 'queue_snapshot'
     ) {
       if (needsFullArray) {
         messages.push(message)
@@ -3479,6 +3481,10 @@ function runHeadlessStreaming(
                       }
                     }
                   },
+                  getQueueSnapshot: getBridgeQueueSnapshot,
+                  subscribeQueueChanges: subscribeBridgeQueueChanges,
+                  // 有一轮在跑（abortController 非空）才允许插话。
+                  onQueueUpdate: (update) => applyQueueUpdate(update, { canSteer: abortController !== undefined }),
                   onStateChange(state, detail) {
                     if (state === 'failed') {
                       bridgeFailureDetail = detail

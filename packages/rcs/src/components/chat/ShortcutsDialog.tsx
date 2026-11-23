@@ -17,6 +17,7 @@ const SECTIONS = [
     items: [
       { keys: 'Enter', label: 'send' },
       { keys: 'Cmd/Ctrl+Enter', label: 'sendQueued' },
+      { keys: 'Cmd/Ctrl+Enter (empty draft)', label: 'steerAll' },
       { keys: 'Shift+Enter', label: 'newline' },
       { keys: 'Esc', label: 'interrupt' },
       { keys: '↑ / ↓', label: 'history' },

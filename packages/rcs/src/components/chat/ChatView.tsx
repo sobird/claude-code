@@ -79,6 +79,7 @@ import { ModelMenu } from './ModelMenu'
 import { PermissionModeMenu } from './PermissionModeMenu'
 import { PermissionPanel } from './PermissionPanel'
 import { PlanView } from './PlanView'
+import { QueueDock } from './QueueDock'
 import { sameChildThreads, sameEntryList } from './row-equality'
 import { ShortcutsDialog } from './ShortcutsDialog'
 import { SideQuestionCard, type SideQuestionState } from './SideQuestionCard'
@@ -894,6 +895,26 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     }
   }, [api, sessionId])
 
+  // 队列操作只发请求，状态由随后的 `queue_snapshot` 推送回填（CLI 是唯一真值）。
+  const sendQueueUpdate = useCallback(
+    async (action: 'edit' | 'remove' | 'steer', uuid: string, content?: string) => {
+      await api.post(`/web/sessions/${encodeURIComponent(sessionId)}/queue`, {
+        action,
+        uuid,
+        ...(content !== undefined ? { content } : {}),
+      })
+    },
+    [api, sessionId],
+  )
+
+  const queueItems = chat.queue ?? []
+  const handleQueueSteerAll = useCallback(async () => {
+    // 顺序执行：前一条失败就停下，避免把剩余条目也推到同一个错误上。
+    for (const item of queueItems) {
+      await sendQueueUpdate('steer', item.uuid)
+    }
+  }, [queueItems, sendQueueUpdate])
+
   // Honor both the live status event and the fetched session status, so an
   // archived session never shows an enabled composer when its status event is
   // outside the loaded history window.
@@ -1263,6 +1284,15 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
       <SideQuestionCard state={sideQuestion} onClose={closeSideQuestion} onRetry={retrySideQuestion} />
 
+      <QueueDock
+        items={queueItems}
+        canSteer={!closed && busy}
+        onEdit={(uuid, content) => sendQueueUpdate('edit', uuid, content)}
+        onRemove={(uuid) => sendQueueUpdate('remove', uuid)}
+        onSteer={(uuid) => sendQueueUpdate('steer', uuid)}
+        onSteerAll={handleQueueSteerAll}
+      />
+
       <ChatInput
         onSubmit={handleSend}
         onSideQuestion={closed || !hasToken ? undefined : handleSideQuestion}
@@ -1276,6 +1306,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         onCyclePermissionMode={
           chat.permissionMode !== null && chat.pendingMode === null && !closed ? handleCycleMode : undefined
         }
+        onSteerAll={!closed && busy && queueItems.length > 0 ? handleQueueSteerAll : undefined}
       />
     </div>
   )

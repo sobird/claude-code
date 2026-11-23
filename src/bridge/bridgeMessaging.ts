@@ -178,6 +178,23 @@ export function handleIngressMessage(
 
 // ─── Server-initiated control requests ───────────────────────────────────────
 
+/** 队列面板的一行：RCS 直接渲染这些字段。 */
+export type BridgeQueueItem = {
+  uuid: string
+  content: string
+  priority: 'now' | 'next' | 'later'
+  editable: boolean
+}
+
+/** 远程端对一条排队消息的操作。 */
+export type BridgeQueueUpdate = {
+  action: 'edit' | 'remove' | 'steer'
+  uuid: string
+  content?: string
+}
+
+export type BridgeQueueUpdateResult = { ok: true; queue: BridgeQueueItem[] } | { ok: false; error: string }
+
 export type ServerControlRequestHandlers = {
   transport: ReplBridgeTransport | null
   sessionId: string
@@ -195,6 +212,10 @@ export type ServerControlRequestHandlers = {
   onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
   /** Answers `@` completion queries from remote clients; absent replies with an empty list. */
   onFileSuggestions?: (query: string) => Promise<string[]> | string[]
+  /** 返回当前排队消息快照；缺省回空队列。 */
+  onQueueSnapshot?: () => BridgeQueueItem[] | Promise<BridgeQueueItem[]>
+  /** 编辑/删除/插话一条排队消息；缺省回 error，避免给远程端假成功。 */
+  onQueueUpdate?: (update: BridgeQueueUpdate) => BridgeQueueUpdateResult | Promise<BridgeQueueUpdateResult>
 }
 
 const OUTBOUND_ONLY_ERROR = 'This session is outbound-only. Enable Remote Control locally to allow inbound control.'
@@ -221,6 +242,8 @@ export async function handleServerControlRequest(
     onSetMaxThinkingTokens,
     onSetPermissionMode,
     onFileSuggestions,
+    onQueueSnapshot,
+    onQueueUpdate,
   } = handlers
   if (!transport) {
     logForDebugging('[bridge:repl] Cannot respond to control_request: transport not configured')
@@ -338,6 +361,48 @@ export async function handleServerControlRequest(
           response: { suggestions },
         },
       }
+      break
+    }
+
+    case 'queue_snapshot': {
+      const queue = onQueueSnapshot ? await onQueueSnapshot() : []
+      response = {
+        type: 'control_response',
+        response: {
+          subtype: 'success',
+          request_id: request.request_id,
+          response: { queue },
+        },
+      }
+      break
+    }
+
+    case 'queue_update': {
+      // 未注册回调时显式报错，避免远程端把"没处理"当成成功。
+      const verdict = onQueueUpdate
+        ? await onQueueUpdate({
+            action: request.request.action,
+            uuid: request.request.uuid,
+            ...(typeof request.request.content === 'string' ? { content: request.request.content } : {}),
+          })
+        : { ok: false as const, error: 'queue control is not supported in this context' }
+      response = verdict.ok
+        ? {
+            type: 'control_response',
+            response: {
+              subtype: 'success',
+              request_id: request.request_id,
+              response: { queue: verdict.queue },
+            },
+          }
+        : {
+            type: 'control_response',
+            response: {
+              subtype: 'error',
+              request_id: request.request_id,
+              error: verdict.error,
+            },
+          }
       break
     }
 

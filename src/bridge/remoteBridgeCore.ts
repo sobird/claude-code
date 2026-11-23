@@ -53,6 +53,9 @@ import {
   isEligibleBridgeMessage,
   extractTitleText,
   BoundedUUIDSet,
+  type BridgeQueueItem,
+  type BridgeQueueUpdate,
+  type BridgeQueueUpdateResult,
 } from './bridgeMessaging.js'
 import { logBridgeSkip } from './debugUtils.js'
 import { getEnvLessBridgeConfig, type EnvLessBridgeConfig } from './envLessBridgeConfig.js'
@@ -112,6 +115,12 @@ export type EnvLessBridgeParams = {
   onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
   /** Answers `@` completion queries from remote clients; absent replies with an empty list. */
   onFileSuggestions?: (query: string) => Promise<string[]> | string[]
+  /** 当前排队消息快照（RCS 队列面板）。 */
+  getQueueSnapshot?: () => BridgeQueueItem[]
+  /** 订阅本地队列变化并推送快照；返回取消订阅。 */
+  subscribeQueueChanges?: (send: (queue: BridgeQueueItem[]) => void) => () => void
+  /** 应用远程队列编辑/删除/插话。 */
+  onQueueUpdate?: (update: BridgeQueueUpdate) => BridgeQueueUpdateResult | Promise<BridgeQueueUpdateResult>
   onStateChange?: (state: BridgeState, detail?: string) => void
   /**
    * When true, skip opening the SSE read stream — only the CCRClient write
@@ -148,6 +157,9 @@ export async function initEnvLessBridgeCore(params: EnvLessBridgeParams): Promis
     onSetMaxThinkingTokens,
     onSetPermissionMode,
     onFileSuggestions,
+    getQueueSnapshot,
+    subscribeQueueChanges,
+    onQueueUpdate,
     onStateChange,
     outboundOnly,
     tags,
@@ -336,6 +348,11 @@ export async function initEnvLessBridgeCore(params: EnvLessBridgeParams): Promis
         cause: connectCause as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
 
+      // 新连接先发一次队列快照，重连/多端打开时远端立刻看到队列真值。
+      if (getQueueSnapshot) {
+        void transport.write({ type: 'queue_snapshot', session_id: sessionId, queue: getQueueSnapshot() })
+      }
+
       if (!initialFlushDone && initialMessages && initialMessages.length > 0) {
         initialFlushDone = true
         // Capture current transport — if 401/teardown happens mid-flush,
@@ -385,6 +402,8 @@ export async function initEnvLessBridgeCore(params: EnvLessBridgeParams): Promis
             onSetMaxThinkingTokens,
             onSetPermissionMode,
             onFileSuggestions,
+            onQueueSnapshot: getQueueSnapshot,
+            onQueueUpdate,
             outboundOnly,
           }),
       )
@@ -518,6 +537,12 @@ export async function initEnvLessBridgeCore(params: EnvLessBridgeParams): Promis
 
   wireTransportCallbacks()
 
+  // 队列变化时推送快照（RCS 队列面板）。transport 重建后仍指向新的实例。
+  const queueUnsub = subscribeQueueChanges?.((queue) => {
+    if (tornDown) return
+    void transport.write({ type: 'queue_snapshot', session_id: sessionId, queue })
+  })
+
   // Start flushGate BEFORE connect so writeMessages() during handshake
   // queues instead of racing the history POST.
   if (initialMessages && initialMessages.length > 0) {
@@ -586,6 +611,7 @@ export async function initEnvLessBridgeCore(params: EnvLessBridgeParams): Promis
     refresh.cancelAll()
     clearTimeout(connectDeadline)
     flushGate.drop()
+    queueUnsub?.()
 
     // Fire the result message before archive — transport.write() only awaits
     // enqueue (SerialBatchEventUploader resolves once buffered, drain is

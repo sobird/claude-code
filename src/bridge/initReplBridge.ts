@@ -47,6 +47,7 @@ import {
   isCseShimEnabled,
   isEnvLessBridgeEnabled,
 } from './bridgeEnabled.js'
+import type { BridgeQueueItem, BridgeQueueUpdate, BridgeQueueUpdateResult } from './bridgeMessaging.js'
 import { archiveBridgeSession, createBridgeSession, updateBridgeSessionTitle } from './createSession.js'
 import { logBridgeSkip } from './debugUtils.js'
 import { checkEnvLessBridgeMinVersion } from './envLessBridgeConfig.js'
@@ -65,6 +66,12 @@ export type InitBridgeOptions = {
   onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
   /** Answers `@` completion queries from remote clients; absent replies with an empty list. */
   onFileSuggestions?: (query: string) => Promise<string[]> | string[]
+  /** 当前排队消息快照（RCS 队列面板）；见 BridgeCoreParams.getQueueSnapshot。 */
+  getQueueSnapshot?: () => BridgeQueueItem[]
+  /** 订阅本地队列变化并推送快照；返回取消订阅。 */
+  subscribeQueueChanges?: (send: (queue: BridgeQueueItem[]) => void) => () => void
+  /** 应用远程队列编辑/删除/插话。 */
+  onQueueUpdate?: (update: BridgeQueueUpdate) => BridgeQueueUpdateResult | Promise<BridgeQueueUpdateResult>
   onStateChange?: (state: BridgeState, detail?: string) => void
   initialMessages?: Message[]
   // Explicit session name from `/remote-control <name>`. When set, overrides
@@ -100,6 +107,9 @@ export async function initReplBridge(options?: InitBridgeOptions): Promise<ReplB
     onSetMaxThinkingTokens,
     onSetPermissionMode,
     onFileSuggestions,
+    getQueueSnapshot,
+    subscribeQueueChanges,
+    onQueueUpdate,
     onStateChange,
     initialMessages,
     getMessages,
@@ -400,6 +410,9 @@ export async function initReplBridge(options?: InitBridgeOptions): Promise<ReplB
       onSetMaxThinkingTokens,
       onSetPermissionMode,
       onFileSuggestions,
+      getQueueSnapshot,
+      subscribeQueueChanges,
+      onQueueUpdate,
       onStateChange,
       outboundOnly,
       tags,
@@ -490,6 +503,9 @@ export async function initReplBridge(options?: InitBridgeOptions): Promise<ReplB
     onSetMaxThinkingTokens,
     onSetPermissionMode,
     onFileSuggestions,
+    getQueueSnapshot,
+    subscribeQueueChanges,
+    onQueueUpdate,
     onStateChange,
     perpetual,
   })

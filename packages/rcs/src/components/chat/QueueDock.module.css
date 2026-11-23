@@ -1,0 +1,202 @@
+/* 排队消息面板：贴在输入框上方，条目多时自身滚动，不挤压 transcript。 */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  border: 1px solid var(--color-surface-3);
+  border-radius: 0.75rem;
+  background-color: var(--color-surface-1);
+  padding: 0.5rem 0.625rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.steerAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-brand);
+  transition: background-color 150ms;
+}
+
+.steerAll:hover:not(:disabled) {
+  background-color: var(--color-brand-subtle);
+}
+
+.steerAll:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon {
+  height: 0.875rem;
+  width: 0.875rem;
+}
+
+.list {
+  display: flex;
+  max-height: 12rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  background-color: var(--color-surface-2);
+  padding: 0.375rem 0.5rem;
+}
+
+.contentButton {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.priority {
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background-color: var(--color-brand-subtle);
+  padding: 0.0625rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--color-brand);
+}
+
+.content {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.contentExpanded {
+  -webkit-line-clamp: unset;
+  display: block;
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.iconButton {
+  display: inline-flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: var(--color-text-muted);
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+
+.iconButton:hover:not(:disabled) {
+  background-color: var(--color-surface-3);
+  color: var(--color-text-primary);
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.removeButton:hover:not(:disabled) {
+  color: var(--color-status-error);
+}
+
+.actionIcon {
+  height: 0.875rem;
+  width: 0.875rem;
+}
+
+.editForm {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.editInput {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--color-surface-3);
+  border-radius: 0.5rem;
+  background-color: var(--color-surface-2);
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text-primary);
+}
+
+.editInput:focus {
+  outline: 2px solid var(--color-brand);
+  outline-offset: -1px;
+}
+
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.save {
+  border-radius: 0.375rem;
+  background-color: var(--color-brand);
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-inverted);
+}
+
+.save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancel {
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.cancel:hover {
+  background-color: var(--color-surface-3);
+}
+
+.error {
+  font-size: 0.75rem;
+  color: var(--color-status-error);
+}

@@ -386,6 +386,9 @@ export async function ingestBridgeMessage(
     payload = { response: msg.response }
   } else if (eventType === 'result' || eventType === 'result_success') {
     payload = { subtype: msg.subtype, uuid: msg.uuid, result: msg.result }
+  } else if (eventType === 'queue_snapshot') {
+    // 队列快照持久化并随历史重放：最后一条快照即当前队列（last-wins）。
+    payload = { queue: Array.isArray(msg.queue) ? msg.queue : [] }
   } else {
     payload = msg
   }

@@ -33,6 +33,9 @@ import {
   isEligibleBridgeMessage,
   extractTitleText,
   BoundedUUIDSet,
+  type BridgeQueueItem,
+  type BridgeQueueUpdate,
+  type BridgeQueueUpdateResult,
 } from './bridgeMessaging.js'
 import { createCapacityWake, type CapacitySignal } from './capacityWake.js'
 import { describeAxiosError, extractHttpStatus, logBridgeSkip } from './debugUtils.js'
@@ -169,6 +172,16 @@ export type BridgeCoreParams = {
   onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string }
   /** Answers `@` completion queries from remote clients; absent replies with an empty list. */
   onFileSuggestions?: (query: string) => Promise<string[]> | string[]
+  /**
+   * 当前排队消息快照（RCS 队列面板）。注入而不是直接 import
+   * messageQueueManager：后者经 sessionStorage → commands 拖进整个命令注册表，
+   * 违反 bootstrap-isolation。
+   */
+  getQueueSnapshot?: () => BridgeQueueItem[]
+  /** 订阅本地队列变化，用于向远端推送快照；返回取消订阅。 */
+  subscribeQueueChanges?: (send: (queue: BridgeQueueItem[]) => void) => () => void
+  /** 应用远程队列编辑/删除/插话；缺省回 error。 */
+  onQueueUpdate?: (update: BridgeQueueUpdate) => BridgeQueueUpdateResult | Promise<BridgeQueueUpdateResult>
   onStateChange?: (state: BridgeState, detail?: string) => void
   /**
    * Fires on each real user message to flow through writeMessages() until
@@ -265,6 +278,9 @@ export async function initBridgeCore(params: BridgeCoreParams): Promise<BridgeCo
     onSetMaxThinkingTokens,
     onSetPermissionMode,
     onFileSuggestions,
+    getQueueSnapshot,
+    subscribeQueueChanges,
+    onQueueUpdate,
     onStateChange,
     onUserMessage,
     perpetual,
@@ -495,6 +511,12 @@ export async function initBridgeCore(params: BridgeCoreParams): Promise<BridgeCo
   // server-driven via secret.use_code_sessions, with CLAUDE_BRIDGE_USE_CCR_V2
   // as an ant-dev override.
   let transport: ReplBridgeTransport | null = null
+  // 队列快照订阅（RCS 队列面板）：CLI 消费/入队时向 bridge 推送一次全量队列。
+  // 只在有 transport 时写；连接建立时再补发一次（见 wireTransport）。
+  const queueUnsub = subscribeQueueChanges?.((queue) => {
+    if (!transport) return
+    void transport.write({ type: 'queue_snapshot', session_id: currentSessionId, queue })
+  })
   // Bumped on every onWorkReceived. Captured in createV2ReplTransport's .then()
   // closure to detect stale resolutions: if two calls race while transport is
   // null, both registerWorker() (bumping server epoch), and whichever resolves
@@ -1102,6 +1124,8 @@ export async function initBridgeCore(params: BridgeCoreParams): Promise<BridgeCo
           onSetMaxThinkingTokens,
           onSetPermissionMode,
           onFileSuggestions,
+          onQueueSnapshot: getQueueSnapshot,
+          onQueueUpdate,
         })
       }
 
@@ -1120,6 +1144,15 @@ export async function initBridgeCore(params: BridgeCoreParams): Promise<BridgeCo
 
           logForDebugging('[bridge:repl] Ingress transport connected')
           logEvent('tengu_bridge_repl_ws_connected', {})
+
+          // 新连接先发一次队列快照，重连/多端打开时远端立刻看到队列真值。
+          if (getQueueSnapshot) {
+            void newTransport.write({
+              type: 'queue_snapshot',
+              session_id: currentSessionId,
+              queue: getQueueSnapshot(),
+            })
+          }
 
           // Update the env var with the latest OAuth token so POST writes
           // (which read via getSessionIngressAuthToken()) use a fresh token.
@@ -1443,6 +1476,7 @@ export async function initBridgeCore(params: BridgeCoreParams): Promise<BridgeCo
     if (keepAliveTimer !== null) {
       clearInterval(keepAliveTimer)
     }
+    queueUnsub?.()
     if (sigusr2Handler) {
       process.off('SIGUSR2', sigusr2Handler)
     }

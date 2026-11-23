@@ -2076,6 +2076,104 @@ describe('Web Control Routes', () => {
     }
   })
 
+  test('POST /web/sessions/:id/queue 403 for another member', async () => {
+    const res = await app.request(`/web/sessions/${sessionId}/queue`, {
+      method: 'POST',
+      headers: bearer(s.otherToken),
+      body: JSON.stringify({ action: 'remove', uuid: 'q1' }),
+    })
+    expect(res.status).toBe(403)
+  })
+
+  test('POST /web/sessions/:id/queue validates the action and uuid', async () => {
+    for (const body of [{}, { action: 'explode', uuid: 'q1' }, { action: 'remove' }, { action: 'edit', uuid: '  ' }]) {
+      const res = await app.request(`/web/sessions/${sessionId}/queue`, {
+        method: 'POST',
+        headers: bearer(s.memberToken),
+        body: JSON.stringify(body),
+      })
+      expect(res.status).toBe(400)
+    }
+  })
+
+  test('POST /web/sessions/:id/queue fails without a live bridge', async () => {
+    const res = await app.request(`/web/sessions/${sessionId}/queue`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ action: 'remove', uuid: 'q1' }),
+    })
+    expect(res.status).toBe(409)
+    const payload = (await resJson(res)) as { error?: { code?: string } }
+    expect(payload.error?.code).toBe('bridge_unavailable')
+  })
+
+  test('POST /web/sessions/:id/queue forwards the edit and returns the fresh queue', async () => {
+    const recordId = sessionId.replace(/^session_/, 'cse_')
+    const ws = createBridgeWs()
+    await handleWebSocketOpen(s.repos, loadConfig(), ws as never, recordId)
+    try {
+      const pending = app.request(`/web/sessions/${sessionId}/queue`, {
+        method: 'POST',
+        headers: bearer(s.memberToken),
+        body: JSON.stringify({ action: 'edit', uuid: 'q1', content: 'edited text' }),
+      })
+      await waitFor(() => ws.sent.length > 0)
+      const request = JSON.parse(ws.sent.at(-1) ?? '{}') as {
+        type?: string
+        request_id?: string
+        request?: { subtype?: string; action?: string; uuid?: string; content?: string }
+      }
+      expect(request.type).toBe('control_request')
+      expect(request.request).toMatchObject({
+        subtype: 'queue_update',
+        action: 'edit',
+        uuid: 'q1',
+        content: 'edited text',
+      })
+
+      settleBridgeResponse(recordId, {
+        subtype: 'success',
+        request_id: request.request_id,
+        response: { queue: [{ uuid: 'q1', content: 'edited text', priority: 'next', editable: true }] },
+      })
+      const res = await pending
+      expect(res.status).toBe(200)
+      expect((await resJson(res)).queue).toEqual([
+        { uuid: 'q1', content: 'edited text', priority: 'next', editable: true },
+      ])
+    } finally {
+      handleWebSocketClose(ws as never, recordId)
+      closeAllConnections()
+    }
+  })
+
+  test('POST /web/sessions/:id/queue maps the CLI verdict to an HTTP error', async () => {
+    const recordId = sessionId.replace(/^session_/, 'cse_')
+    const ws = createBridgeWs()
+    await handleWebSocketOpen(s.repos, loadConfig(), ws as never, recordId)
+    try {
+      const pending = app.request(`/web/sessions/${sessionId}/queue`, {
+        method: 'POST',
+        headers: bearer(s.memberToken),
+        body: JSON.stringify({ action: 'steer', uuid: 'q1' }),
+      })
+      await waitFor(() => ws.sent.length > 0)
+      const request = JSON.parse(ws.sent.at(-1) ?? '{}') as { request_id?: string }
+      settleBridgeResponse(recordId, {
+        subtype: 'error',
+        request_id: request.request_id,
+        error: 'steer-unavailable',
+      })
+      const res = await pending
+      expect(res.status).toBe(409)
+      const payload = (await resJson(res)) as { error?: { code?: string } }
+      expect(payload.error?.code).toBe('steer_unavailable')
+    } finally {
+      handleWebSocketClose(ws as never, recordId)
+      closeAllConnections()
+    }
+  })
+
   test('GET /web/sessions/:id/models returns an empty list without a bridge', async () => {
     const res = await app.request(`/web/sessions/${sessionId}/models`, {
       headers: bearer(s.memberToken),

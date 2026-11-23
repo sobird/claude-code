@@ -23,6 +23,7 @@ import type { SubmitDelivery } from './chat-delivery'
 import { normalizeModel } from './model-settings'
 import { isWebPermissionMode, type WebPermissionMode } from './permission-modes'
 import type { PermissionSuggestion } from './permission-suggestions'
+import { parseQueue, type QueuedMessage } from './queue'
 import { tasksFromTaskState, tasksFromTodoWrite, type TaskItem } from './tasks'
 import { thinkingChoiceFromPayload, type ThinkingChoice, type ThinkingState } from './thinking'
 import { usageFromPayload, type TokenUsage } from './token-usage'
@@ -213,6 +214,11 @@ export interface ChatState {
   backgroundTasks: BackgroundTask[]
   /** 最近一条 assistant 消息的用量；在上报之前为 `null`。 */
   lastUsage: TokenUsage | null
+  /**
+   * CLI 当前的排队消息快照；`null` 表示还没收到过快照（旧会话/离线期间），
+   * 此时 `queued` 徽标回退到“本轮是否进行中”的启发式。
+   */
+  queue: QueuedMessage[] | null
 }
 
 /**
@@ -259,6 +265,7 @@ export const initialChatState: ChatState = {
   tasks: [],
   backgroundTasks: [],
   lastUsage: null,
+  queue: null,
 }
 
 // =============================================================================
@@ -1170,8 +1177,9 @@ function handleResult(state: ChatState, event: SessionEventInput): ChatState {
   //（例如早于第一页的历史）。
   let entries = base.entries
 
-  // 本轮一结束，CLI 就会取出本轮期间排队的消息。
-  if (entries.some((entry) => entry.type === 'user_message' && entry.queued)) {
+  // 本轮一结束，CLI 就会取出本轮期间排队的消息——但只在没有队列快照时
+  // 靠这个启发式清标记；有快照时以 uuid 归属为准，避免与随后的推送闪一下。
+  if (state.queue === null && entries.some((entry) => entry.type === 'user_message' && entry.queued)) {
     entries = entries.map((entry) =>
       entry.type === 'user_message' && entry.queued ? { ...entry, queued: undefined } : entry,
     )
@@ -1231,6 +1239,25 @@ function handlePlan(state: ChatState, event: SessionEventInput): ChatState {
   return { ...state, entries: [...state.entries, planEntry] }
 }
 
+/**
+ * `queue_snapshot` 是 CLI 推送的权威队列（last-wins）。保存快照并按 uuid
+ * 重新标注已渲染用户消息的 `queued` 徽标，这既是队列面板的数据源，
+ * 也是“排队中 → 已被消费”的实时反馈。
+ */
+function handleQueueSnapshot(state: ChatState, event: SessionEventInput): ChatState {
+  const queue = parseQueue(event.payload)
+  const queuedIds = new Set(queue.map((item) => item.uuid))
+  let changed = false
+  const entries = state.entries.map((entry) => {
+    if (entry.type !== 'user_message') return entry
+    const queued = queuedIds.has(entry.id)
+    if (Boolean(entry.queued) === queued) return entry
+    changed = true
+    return queued ? { ...entry, queued: true } : { ...entry, queued: undefined }
+  })
+  return changed ? { ...state, queue, entries } : { ...state, queue }
+}
+
 function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
   switch (event.type) {
     case 'user': {
@@ -1256,9 +1283,12 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       // 也共享同一 uuid。
       if (entries.some((entry) => entry.type === 'user_message' && entry.id === id)) return { ...state, entries }
       const startedAt = eventTimeOf(event)
-      // queued = CLI 正处于一轮之中。bridge 不总会发布
-      // session_status，因此开放的轮次是可靠的信号。
-      const queued = state.status === 'running' || state.turnOpen
+      // 有任何快照后，queued 由 uuid 是否仍在 CLI 队列里决定；否则回退到
+      // “本轮进行中”的启发式（bridge 不总会发布 session_status）。
+      const queued =
+        state.queue !== null
+          ? state.queue.some((item) => item.uuid === id)
+          : state.status === 'running' || state.turnOpen
       const delivery: SubmitDelivery = asText(payload.delivery) === 'queue' ? 'queue' : 'steer'
       return {
         ...state,
@@ -1305,6 +1335,8 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       return handleError(state, event)
     case 'plan':
       return handlePlan(state, event)
+    case 'queue_snapshot':
+      return handleQueueSnapshot(state, event)
     case 'stream_event':
       return handleStreamEvent(state, event)
     case 'result':

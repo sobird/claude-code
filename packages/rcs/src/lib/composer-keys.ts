@@ -33,6 +33,35 @@ export function resolveComposerKey({
   return 'ignore'
 }
 
+export interface SteerAllChordInput {
+  key: string
+  shiftKey: boolean
+  altKey: boolean
+  metaKey: boolean
+  ctrlKey: boolean
+  /** 输入框有草稿或已挂附件时，Cmd/Ctrl+Enter 仍是“排队发送”。 */
+  hasDraft: boolean
+  /** 只有存在排队消息且一轮进行中时调用方才启用。 */
+  enabled: boolean
+}
+
+/**
+ * 空草稿的 Cmd/Ctrl+Enter 是“立即插话全部排队消息”。它与 P1 的
+ * “有草稿 = 排队到本轮结束”共用组合键，靠草稿是否为空区分。
+ */
+export function isSteerAllChord({
+  key,
+  shiftKey,
+  altKey,
+  metaKey,
+  ctrlKey,
+  hasDraft,
+  enabled,
+}: SteerAllChordInput): boolean {
+  if (!enabled || hasDraft) return false
+  return key === 'Enter' && !shiftKey && !altKey && (metaKey || ctrlKey)
+}
+
 export type EditKeyAction = 'submit' | 'cancel' | 'newline' | 'ignore'
 
 export interface EditKeyInput {

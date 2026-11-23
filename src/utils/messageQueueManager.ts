@@ -295,6 +295,57 @@ export function removeByFilter(predicate: (cmd: QueuedCommand) => boolean): Queu
   return removed
 }
 
+/** Bridge 可见的排队条目（RCS 队列面板读取的结构化视图）。 */
+export type BridgeQueueItem = {
+  uuid: string
+  content: string
+  priority: QueuePriority
+  /** 只有纯文本条目可编辑；带附件（content block）的只能删除/插话。 */
+  editable: boolean
+}
+
+/**
+ * 原地修改一条排队命令（按 uuid 匹配），保持位置与 uuid 不变。
+ *
+ * - `value`：仅纯文本条目可改；带附件的条目返回 false，避免吞掉图片。
+ * - `priority`：插话就是把它从 `later` 提到 `next`，位置不动，保证相对顺序。
+ *
+ * 条目不存在或不可编辑返回 false；调用方据此回 `queue-item-not-found`。
+ */
+export function updateQueuedCommand(uuid: string, patch: { value?: string; priority?: QueuePriority }): boolean {
+  const command = commandQueue.find((cmd) => cmd.uuid === uuid)
+  if (!command || !isQueuedCommandEditable(command)) return false
+
+  if (patch.value !== undefined) {
+    if (typeof command.value !== 'string') return false
+    command.value = patch.value
+  }
+  if (patch.priority !== undefined) {
+    command.priority = patch.priority
+  }
+  notifySubscribers()
+  return true
+}
+
+/**
+ * 队列的桥接视图：可编辑的 prompt 条目（带 uuid），供 RCS 的 QueueDock 展示与操作。
+ * 附件条目提取文本用于展示，但标记不可编辑。
+ */
+export function getBridgeQueueSnapshot(): BridgeQueueItem[] {
+  const items: BridgeQueueItem[] = []
+  for (const command of commandQueue) {
+    if (!isQueuedCommandEditable(command)) continue
+    if (typeof command.uuid !== 'string' || !command.uuid) continue
+    items.push({
+      uuid: command.uuid,
+      content: extractTextFromValue(command.value),
+      priority: command.priority ?? 'next',
+      editable: typeof command.value === 'string',
+    })
+  }
+  return items
+}
+
 /**
  * Clear all commands from the queue.
  * Used by ESC cancellation to discard queued notifications.

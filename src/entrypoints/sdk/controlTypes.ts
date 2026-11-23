@@ -18,6 +18,7 @@ import type {
   SDKControlRequestSchema,
   SDKControlResponseSchema,
   SDKKeepAliveMessageSchema,
+  SDKQueueSnapshotMessageSchema,
   SDKUpdateEnvironmentVariablesMessageSchema,
 } from './controlSchemas.js'
 import type {
@@ -47,6 +48,7 @@ export type SDKControlReloadPluginsResponse = FromSchema<typeof SDKControlReload
 export type { SDKPartialAssistantMessage }
 export type SDKKeepAliveMessage = FromSchema<typeof SDKKeepAliveMessageSchema>
 export type SDKUpdateEnvironmentVariablesMessage = FromSchema<typeof SDKUpdateEnvironmentVariablesMessageSchema>
+export type SDKQueueSnapshotMessage = FromSchema<typeof SDKQueueSnapshotMessageSchema>
 
 /**
  * Outbound stream — mirrors StdoutMessageSchema, but composed from the typed
@@ -62,6 +64,7 @@ export type StdoutMessage =
   | SDKControlRequest
   | SDKControlCancelRequest
   | SDKKeepAliveMessage
+  | SDKQueueSnapshotMessage
 
 /** Inbound stream — mirrors StdinMessageSchema, composed from typed members. */
 export type StdinMessage =

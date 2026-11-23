@@ -605,6 +605,25 @@ export const SDKControlSideQuestionRequestSchema = lazySchema(() =>
     .describe('Asks a side question against the last turn context.'),
 )
 
+export const SDKControlQueueSnapshotRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('queue_snapshot'),
+    })
+    .describe('Asks the CLI for its current pending-message queue.'),
+)
+
+export const SDKControlQueueUpdateRequestSchema = lazySchema(() =>
+  z
+    .object({
+      subtype: z.literal('queue_update'),
+      action: z.enum(['edit', 'remove', 'steer']),
+      uuid: z.string(),
+      content: z.string().optional(),
+    })
+    .describe('Edits, removes, or steers a message waiting in the CLI queue.'),
+)
+
 export const SDKControlSetProactiveRequestSchema = lazySchema(() =>
   z
     .object({
@@ -661,6 +680,8 @@ export const SDKControlRequestInnerSchema = lazySchema(() =>
     SDKControlClaudeOAuthWaitForCompletionRequestSchema(),
     SDKControlGenerateSessionTitleRequestSchema(),
     SDKControlSideQuestionRequestSchema(),
+    SDKControlQueueSnapshotRequestSchema(),
+    SDKControlQueueUpdateRequestSchema(),
     SDKControlSetProactiveRequestSchema(),
     SDKControlRemoteControlRequestSchema(),
   ]),
@@ -728,6 +749,23 @@ export const SDKUpdateEnvironmentVariablesMessageSchema = lazySchema(() =>
 // Aggregate Message Types
 // ============================================================================
 
+export const SDKQueueSnapshotMessageSchema = lazySchema(() =>
+  z
+    .object({
+      type: z.literal('queue_snapshot'),
+      session_id: z.string().optional(),
+      queue: z.array(
+        z.object({
+          uuid: z.string(),
+          content: z.string(),
+          priority: z.enum(['now', 'next', 'later']),
+          editable: z.boolean(),
+        }),
+      ),
+    })
+    .describe('Current pending-message queue; the latest snapshot wins.'),
+)
+
 export const StdoutMessageSchema = lazySchema(() =>
   z.union([
     SDKMessageSchema(),
@@ -738,6 +776,7 @@ export const StdoutMessageSchema = lazySchema(() =>
     SDKControlRequestSchema(),
     SDKControlCancelRequestSchema(),
     SDKKeepAliveMessageSchema(),
+    SDKQueueSnapshotMessageSchema(),
   ]),
 )
 

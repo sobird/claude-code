@@ -297,6 +297,10 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
     if (Array.isArray(p.tasks)) normalized.tasks = p.tasks
   }
 
+  // CLI 推送的排队消息快照。Web reducer 与队列面板都从载荷顶层读 `queue`，
+  // 因此从 `raw` 提出来；条目形状由 `parseQueue` 防御性校验。
+  if (type === 'queue_snapshot' && Array.isArray(p.queue)) normalized.queue = p.queue
+
   return normalized
 }
 

@@ -10,6 +10,7 @@
 
 import type { ModelOption } from '@/lib/model-settings'
 import { normalizeModelOptions } from '@/lib/model-settings'
+import { parseQueue, type QueuedMessage } from '@/lib/queue'
 
 /** Paths returned to the web client per completion query. */
 export const MAX_SUGGESTION_PATHS = 20
@@ -162,6 +163,27 @@ export function sideQuestionErrorFromResponse(response: unknown): string | null 
   if (typeof error !== 'string') return null
   const trimmed = error.trim()
   return trimmed.length > 0 ? trimmed : null
+}
+
+/** 队列操作的结果：成功带最新队列，失败带 CLI 给的错误码。 */
+export type QueueUpdateOutcome = { ok: true; queue: QueuedMessage[] } | { ok: false; error: string }
+
+/**
+ * 解析 `queue_update` 控制响应。
+ *
+ * CLI 成功时回 `{ subtype: 'success', response: { queue } }`，失败时回
+ * `{ subtype: 'error', error }`（`invalid-content` / `queue-item-not-found` /
+ * `steer-unavailable`）。无法识别的形状返回 null，由调用方当作上游故障。
+ */
+export function queueUpdateOutcomeFromResponse(response: unknown): QueueUpdateOutcome | null {
+  if (!response || typeof response !== 'object' || Array.isArray(response)) return null
+  const record = response as Record<string, unknown>
+  if (record.subtype === 'error') {
+    const error = typeof record.error === 'string' ? record.error.trim() : ''
+    return { ok: false, error: error || 'queue update failed' }
+  }
+  if (record.subtype !== 'success') return null
+  return { ok: true, queue: parseQueue(record.response) }
 }
 
 /** Pull the model list out of an `initialize` control response, defensively. */

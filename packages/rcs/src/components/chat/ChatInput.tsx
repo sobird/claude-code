@@ -13,7 +13,7 @@ import { MAX_ATTACHMENTS_PER_MESSAGE, type AttachmentRef } from '@/lib/attachmen
 import { isImageFile, prepareImageFile } from '@/lib/attachments-client'
 import { type SubmitDelivery } from '@/lib/chat-delivery'
 import { acceptCommand, commandQuery, filterCommands, moveIndex } from '@/lib/command-menu'
-import { resolveComposerKey } from '@/lib/composer-keys'
+import { isSteerAllChord, resolveComposerKey } from '@/lib/composer-keys'
 import { applyFileSuggestion, fileQuery, type FileQueryToken } from '@/lib/file-completion'
 import { type HistoryMatch, searchHistory } from '@/lib/history-search'
 import { appendHistory, moveHistory } from '@/lib/input-history'
@@ -68,6 +68,11 @@ interface ChatInputProps {
   fileSuggestions?: (query: string) => Promise<string[]>
   /** Cycles the permission mode on Shift+Tab; absent leaves the shortcut to the browser. */
   onCyclePermissionMode?: () => void
+  /**
+   * 空草稿时 Cmd/Ctrl+Enter 一键插话全部排队消息；有草稿时该组合键仍是
+   * “排队到本轮结束再发送”。只在有排队消息且一轮进行中时传入。
+   */
+  onSteerAll?: () => void
   className?: string
 }
 
@@ -82,6 +87,7 @@ export function ChatInput({
   commands = [],
   fileSuggestions,
   onCyclePermissionMode,
+  onSteerAll,
   className,
 }: ChatInputProps) {
   const t = useTranslations('chat')
@@ -727,6 +733,23 @@ export function ChatInput({
                   return
                 }
               }
+              // 空草稿的 Cmd/Ctrl+Enter 让位于“全部插话”：不占用 P1 的
+              // “有草稿 = 排队发送”语义，也让一键插话在触屏键盘外可用。
+              if (
+                isSteerAllChord({
+                  key: event.key,
+                  shiftKey: event.shiftKey,
+                  altKey: event.altKey,
+                  metaKey: event.metaKey,
+                  ctrlKey: event.ctrlKey,
+                  hasDraft: text.trim() !== '' || imagesRef.current.length > 0,
+                  enabled: onSteerAll !== undefined && !disabled && !sending,
+                })
+              ) {
+                event.preventDefault()
+                onSteerAll?.()
+                return
+              }
               const action = resolveComposerKey({
                 key: event.key,
                 shiftKey: event.shiftKey,
@@ -793,7 +816,9 @@ export function ChatInput({
         </div>
       </div>
       <div className={styles.hintRow}>
-        <span className={styles.hint}>{isLoading ? t('busyHint') : t('enterHint')}</span>
+        <span className={styles.hint}>
+          {isLoading ? (onSteerAll !== undefined ? t('busyHintSteerAll') : t('busyHint')) : t('enterHint')}
+        </span>
       </div>
     </div>
   )

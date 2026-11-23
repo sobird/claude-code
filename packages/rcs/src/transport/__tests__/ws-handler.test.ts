@@ -749,6 +749,31 @@ describe('handleWebSocketMessage', () => {
     expect(events.map((event) => event.type)).toEqual(['user', 'assistant'])
   })
 
+  // 队列快照要持久化（重连后 last-wins），且 `queue` 必须留在归一化载荷顶层，
+  // Web reducer 才能直接读到。
+  test('persists a queue snapshot with the queue at the payload top level', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    const ws = createMockWs()
+    await handleWebSocketMessage(
+      repos,
+      ws as never,
+      's1',
+      JSON.stringify({
+        type: 'queue_snapshot',
+        queue: [{ uuid: 'q1', content: 'hold this', priority: 'later', editable: true }],
+      }) + '\n',
+    )
+
+    expect(events).toHaveLength(1)
+    const [event] = events
+    expect(event?.type).toBe('queue_snapshot')
+    expect(event?.payload).toMatchObject({
+      queue: [{ uuid: 'q1', content: 'hold this', priority: 'later', editable: true }],
+    })
+  })
+
   test('ignores malformed JSON lines', async () => {
     const events: SessionEvent[] = []
     getEventBus('s1').subscribe((event) => events.push(event))

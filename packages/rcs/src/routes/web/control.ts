@@ -20,6 +20,7 @@ import {
   BRIDGE_CONTROL_TIMEOUT_MS,
   cancelBridgeRequest,
   modelOptionsFromResponse,
+  queueUpdateOutcomeFromResponse,
   requestBridgeControl,
   sideQuestionAnswerFromResponse,
   sideQuestionErrorFromResponse,
@@ -201,6 +202,68 @@ app.get('/sessions/:id/models', legacyUserAuth, async (c) => {
     return response ? modelOptionsFromResponse(response) : null
   })
   return c.json({ models }, 200)
+})
+
+/**
+ * POST /web/sessions/:id/queue — 编辑、删除或插话一条排队消息。
+ *
+ * 队列在 CLI 内存里，网关只做协议转发：请求走实时 bridge 与内存 broker，
+ * 不写 `session_events`（真正的状态变化由 CLI 的 `queue_snapshot` 推送落盘）。
+ */
+app.post('/sessions/:id/queue', legacyUserAuth, async (c) => {
+  const ownership = await checkOwnership(c, c.req.param('id'))
+  if (!ownership.ok) return ownership.response
+
+  const body: unknown = await c.req.json().catch(() => ({}))
+  const record = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>) : {}
+  const action =
+    record.action === 'edit' || record.action === 'remove' || record.action === 'steer' ? record.action : null
+  if (!action) {
+    return jsonError(c, 'invalid_request', 'action must be edit, remove, or steer', 400, 'invalid_action')
+  }
+  const uuid = typeof record.uuid === 'string' ? record.uuid.trim() : ''
+  if (!uuid) return jsonError(c, 'invalid_request', 'A queue item uuid is required', 400, 'invalid_uuid')
+  const content = typeof record.content === 'string' ? record.content : undefined
+
+  const requestId = `q_${randomUUID()}`
+  const request = {
+    subtype: 'queue_update',
+    action,
+    uuid,
+    ...(content !== undefined ? { content } : {}),
+  }
+  const pending = requestBridgeControl(ownership.sessionId, requestId, request, BRIDGE_CONTROL_TIMEOUT_MS)
+  const sent = sendToBridge(ownership.sessionId, {
+    type: 'control_request',
+    request_id: requestId,
+    request,
+  })
+  if (!sent) {
+    cancelBridgeRequest(ownership.sessionId, requestId)
+    return jsonError(c, 'bridge_unavailable', 'No live bridge for this session', 409, 'bridge_unavailable')
+  }
+
+  const response = await pending
+  if (!response) {
+    return jsonError(c, 'queue_timeout', 'The queue update timed out', 504, 'queue_timeout')
+  }
+  const outcome = queueUpdateOutcomeFromResponse(response)
+  if (!outcome) {
+    return jsonError(c, 'queue_failed', 'The bridge returned an invalid queue response', 502, 'queue_failed')
+  }
+  if (!outcome.ok) {
+    switch (outcome.error) {
+      case 'invalid-content':
+        return jsonError(c, 'invalid_request', 'Content cannot be empty', 400, 'invalid_content')
+      case 'queue-item-not-found':
+        return jsonError(c, 'not_found', 'That queued message is gone', 404, 'queue_item_not_found')
+      case 'steer-unavailable':
+        return jsonError(c, 'conflict', 'Steering is only available while a turn is running', 409, 'steer_unavailable')
+      default:
+        return jsonError(c, 'queue_failed', outcome.error, 502, 'queue_failed')
+    }
+  }
+  return c.json({ status: 'ok', queue: outcome.queue }, 200)
 })
 
 /** POST /web/sessions/:id/interrupt — Interrupt and mark the session idle. */

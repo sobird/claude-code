@@ -11,6 +11,7 @@ import {
 import { buildBridgeConnectUrl } from '../bridge/bridgeStatusUtil.js'
 import { collectFileSuggestions } from '../bridge/fileSuggestions.js'
 import { extractInboundMessageFields, inboundDeliveryOf, queuePriorityOf } from '../bridge/inboundMessages.js'
+import { applyQueueUpdate, getBridgeQueueSnapshot, subscribeBridgeQueueChanges } from '../bridge/queueControl.js'
 import type { BridgeState, ReplBridgeHandle } from '../bridge/replBridge.js'
 import { setReplBridgeHandle } from '../bridge/replBridgeHandle.js'
 import type { Command } from '../commands.js'
@@ -492,6 +493,10 @@ export function useReplBridge(
               return { ok: true }
             },
             onFileSuggestions: (query) => collectFileSuggestions(query),
+            getQueueSnapshot: getBridgeQueueSnapshot,
+            subscribeQueueChanges: subscribeBridgeQueueChanges,
+            // 插话只在有一轮在跑时成立；空闲时队列里的 later 条目本来就会立刻被取走。
+            onQueueUpdate: (update) => applyQueueUpdate(update, { canSteer: abortControllerRef.current !== null }),
             onStateChange: handleStateChange,
             initialMessages: messages.length > 0 ? messages : undefined,
             getMessages: () => messagesRef.current,

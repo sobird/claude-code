@@ -14,6 +14,7 @@ import {
   type SessionEventInput,
   type ToolCallEntry,
   type TurnEndEntry,
+  type UserMessageEntry,
 } from '@/lib/session-reducer'
 
 let nextSeqNum = 1
@@ -35,6 +36,10 @@ function tools(state: ChatState): ToolCallEntry[] {
 
 function assistants(state: ChatState): AssistantMessageEntry[] {
   return state.entries.filter((entry): entry is AssistantMessageEntry => entry.type === 'assistant_message')
+}
+
+function userMessages(state: ChatState): UserMessageEntry[] {
+  return state.entries.filter((entry): entry is UserMessageEntry => entry.type === 'user_message')
 }
 
 describe('reduceSessionEvent', () => {
@@ -2307,5 +2312,44 @@ describe('hasUnseenEvents', () => {
 
   test('cannot prove coverage for an event without a sequence number', () => {
     expect(hasUnseenEvents([seq(undefined)], new Set([1]))).toBe(true)
+  })
+})
+
+describe('queue snapshots', () => {
+  test('a snapshot marks queued messages by uuid and exposes the queue', () => {
+    let state = reduceSessionEvent(initialChatState, event('user', { content: 'hold this', uuid: 'q-1' }))
+    expect(userMessages(state)[0]?.queued).toBeUndefined()
+
+    state = reduceSessionEvent(
+      state,
+      event('queue_snapshot', {
+        queue: [{ uuid: 'q-1', content: 'hold this', priority: 'later', editable: true }],
+      }),
+    )
+    expect(state.queue).toEqual([{ uuid: 'q-1', content: 'hold this', priority: 'later', editable: true }])
+    expect(userMessages(state)[0]?.queued).toBe(true)
+
+    // 被 CLI 消费：空快照清掉徽标，但消息本身保留。
+    state = reduceSessionEvent(state, event('queue_snapshot', { queue: [] }))
+    expect(state.queue).toEqual([])
+    expect(userMessages(state)[0]?.queued).toBeUndefined()
+  })
+
+  test('the latest snapshot wins over an older one', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('queue_snapshot', { queue: [{ uuid: 'a', content: 'a', priority: 'next', editable: true }] }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('queue_snapshot', { queue: [{ uuid: 'b', content: 'b', priority: 'next', editable: true }] }),
+    )
+    expect(state.queue?.map((item) => item.uuid)).toEqual(['b'])
+  })
+
+  test('without a snapshot, queued still falls back to an open turn', () => {
+    let state = reduceSessionEvent(initialChatState, event('session_status', { status: 'running' }))
+    state = reduceSessionEvent(state, event('user', { content: 'steer now', uuid: 's-1' }))
+    expect(userMessages(state)[0]?.queued).toBe(true)
   })
 })
