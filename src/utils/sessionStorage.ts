@@ -4064,6 +4064,14 @@ export function capStoredPreEditFileCopy(toolUseResult: unknown): unknown {
   return { ...toolUseResult, originalFile: null }
 }
 
+// Attachment types that must never reach the transcript for external users.
+// Upstream used to allowlist the few "safe" attachment types here, which
+// dropped everything else — including the `queued_command` attachments that
+// carry input typed while Claude is working — so `--resume` lost those
+// messages. 2.1.97 flipped it to a denylist (currently empty): persist
+// attachments by default, block only what is explicitly listed (2.1.97 #19/#20).
+const NON_ANT_ATTACHMENT_DENYLIST = new Set<string>()
+
 export function isLoggableMessage(m: Message): boolean {
   if (m.type === 'progress') return false
   // A hook that produced no output still yields a hook_success attachment;
@@ -4077,17 +4085,8 @@ export function isLoggableMessage(m: Message): boolean {
   ) {
     return false
   }
-  // IMPORTANT: We deliberately filter out most attachments for non-ants because
-  // they have sensitive info for training that we don't want exposed to the public.
-  // When enabled, we allow hook_additional_context through since it contains
-  // user-configured hook output that is useful for session context on resume.
-  if (m.type === 'attachment' && getUserType() !== 'ant') {
-    if (
-      m.attachment.type === 'hook_additional_context' &&
-      isEnvTruthy(process.env.CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT)
-    ) {
-      return true
-    }
+  // Denylist, not allowlist: everything is persisted unless explicitly blocked.
+  if (m.type === 'attachment' && getUserType() !== 'ant' && NON_ANT_ATTACHMENT_DENYLIST.has(m.attachment.type)) {
     return false
   }
   return true

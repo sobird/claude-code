@@ -44,6 +44,26 @@ describe('capStoredPreEditFileCopy', () => {
   })
 })
 
+function queuedCommand(prompt: string): AttachmentMessage {
+  return {
+    type: 'attachment',
+    uuid: randomUUID(),
+    timestamp: new Date().toISOString(),
+    attachment: { type: 'queued_command', prompt },
+  }
+}
+
+function withUserType<T>(value: string, fn: () => T): T {
+  const previous = process.env.USER_TYPE
+  process.env.USER_TYPE = value
+  try {
+    return fn()
+  } finally {
+    if (previous === undefined) delete process.env.USER_TYPE
+    else process.env.USER_TYPE = previous
+  }
+}
+
 describe('isLoggableMessage', () => {
   test('skips empty hook_success entries', () => {
     expect(isLoggableMessage(hookSuccess())).toBe(false)
@@ -70,5 +90,22 @@ describe('isLoggableMessage', () => {
       message: { role: 'user', content: 'hello' },
     }
     expect(isLoggableMessage(user)).toBe(true)
+  })
+})
+
+describe('isLoggableMessage (external users)', () => {
+  test('keeps queued_command attachments so mid-turn input survives --resume', () => {
+    // Input typed while Claude is working arrives as a queued_command
+    // attachment. The old non-ant allowlist dropped it; 2.1.97 persists it
+    // (#19/#20).
+    expect(withUserType('external', () => isLoggableMessage(queuedCommand('typed while working')))).toBe(true)
+  })
+
+  test('still skips empty hook_success attachments for external users', () => {
+    expect(withUserType('external', () => isLoggableMessage(hookSuccess()))).toBe(false)
+  })
+
+  test('keeps non-empty hook_success attachments for external users', () => {
+    expect(withUserType('external', () => isLoggableMessage(hookSuccess({ stdout: 'hook ran' })))).toBe(true)
   })
 })

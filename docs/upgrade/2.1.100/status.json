@@ -81,17 +81,6 @@
       }
     },
     {
-      "id": "env:CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT",
-      "kind": "env",
-      "status": "retained-internal",
-      "evidence": ["bundle:absent:CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT"],
-      "notes": "上游 2.1.100 移除该变量，本仓库 src/utils/sessionStorage.ts 仍用它控制 hook additionalContext 的落盘，故保留并登记 retained-internal。",
-      "srcEvidence": {
-        "files": ["src/utils/sessionStorage.ts"],
-        "symbols": ["CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT"]
-      }
-    },
-    {
       "id": "env:CLAUDE_CODE_HOST_HTTP_PROXY_PORT",
       "kind": "env",
       "status": "approximated",
@@ -808,6 +797,18 @@
       "srcEvidence": {
         "files": ["src/utils/sessionStorage.ts"],
         "symbols": ["isLoggableMessage", "capStoredPreEditFileCopy"]
+      }
+    },
+    {
+      "id": "behavior:persist-attachments-for-external-users",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [19, 20],
+      "evidence": ["bundle:11617350", "bundle:11627130", "test:src/utils/__tests__/transcriptStorageCap.test.ts"],
+      "notes": "修复 --resume 丢失中途输入：上游 2.1.97 把 isLoggableMessage 的非 ant 附件过滤从「白名单」改成「黑名单」（KlY 为空集）。旧白名单只放行 hook_additional_context / hook_deferred_tool / 若干 *_delta、skill_listing 等，其余附件（含承载中途输入的 queued_command）在外部用户下全被丢弃；改成黑名单后默认全部落盘，仅显式列出的类型才排除。互动与 SDK 两条 transcript 写入路径都经 cleanMessagesForLogging→isLoggableMessage，故一并修复。CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT 随之失去唯一读取点，已按上游同步移除。见 notes R16。",
+      "srcEvidence": {
+        "files": ["src/utils/sessionStorage.ts"],
+        "symbols": ["isLoggableMessage", "NON_ANT_ATTACHMENT_DENYLIST"]
       }
     }
   ]

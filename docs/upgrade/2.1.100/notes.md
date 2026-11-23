@@ -14,7 +14,7 @@
 | `env:`  | +CLAUDE_CODE_PERFORCE_MODE                | already-present   | src 早有 PERFORCE 只读保护  |
 | `env:`  | +CLAUDE_CODE_SCRIPT_CAPS                  | already-present   | src 早有 SCRIPT_CAPS        |
 | `env:`  | −CLAUDE_CODE_REPL                         | retained-internal | src 仍有 REPLTool；见 R1    |
-| `env:`  | −CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT | retained-internal | src 仍用它落盘；见 R1       |
+| `env:`  | −CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT | removed           | 随 #19/#20 同步下线；见 R16 |
 | `flag:` | 无差异                                    | —                 | 94→100 cliFlags 集合相同    |
 
 `verify`（不带 `--release-notes`）已 `ok=true`。另 5 条 `approximated` env 是依赖噪声 / resume 提示阈值 / 扫描器子串噪声，按 2.1.94 台账原样延续（见 R2）。
@@ -25,7 +25,8 @@
 
 - `cmd:buddy`：上游 2.1.100 不再注册 buddy 命令；本仓库保留 `src/commands/buddy`。
 - `env:CLAUDE_CODE_REPL`：上游移除；`src/tools/REPLTool/constants.ts` 仍以它作为 REPL 工具前提。
-- `env:CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT`：上游移除；`src/utils/sessionStorage.ts` 仍用它控制 hook additionalContext 落盘。
+
+`env:CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT` 原先也登记在这里（仅 `isLoggableMessage` 读取）。R16 把该函数改成上游 2.1.97 的黑名单形态后，它不再有任何读取点，故随上游一并移除，登记条目已删除。
 
 跟进：若后续决定跟随上游下线 REPL / buddy，再分别删除并改台账，不要为过 `verify` 反向删代码。
 
@@ -129,3 +130,13 @@ transcript 里 `hook_non_blocking_error` 原本只显示「{hook} hook error」�
 - 上游同一区域还有 tools 的 `stripForStorage` 钩子与 `HyK`（仅对最近 `_=200` 条之外的消息裁剪内存里的 `toolUseResult`）——那属于会话内存而非落盘大小，未纳入本条目；如后续做 UI 大文件 diff（#18/#76）再评估。
 
 测试：`src/utils/__tests__/transcriptStorageCap.test.ts`。证据：`bundle:9902098`（空 hook_success 判断）、`bundle:9945880`（`originalFile.length>SZY`）、`bundle:11588253`（`insertMessageChain` 里 `X.toolUseResult=jyK(...)` 调用点）。
+
+### R16：外部用户附件默认落盘（2.1.97 #19/#20）
+
+`isLoggableMessage`（上游 v94 `MX6` → v98/v100 `QM6`）对非 ant 用户的附件过滤从「白名单」改为「黑名单」。v94 只放行 `hook_additional_context`（且需 `CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT`）、`hook_deferred_tool`、若干 `*_delta`、`skill_listing` 等少数类型，其余附件一律丢弃；`queued_command`——承载「Claude 工作时用户中途敲入的输入」——正在丢弃之列，于是这些消息不落 transcript，`--resume` 后丢失（2.1.97 #19/#20）。
+
+v98/v100 改为默认全落盘，仅排除显式列出的类型（黑名单 `KlY=new Set([])`，当前为空集）。移植为 `NON_ANT_ATTACHMENT_DENYLIST`（空集）+ `isLoggableMessage` 的黑名单判断；互动（`useLogMessages`/REPL）与 SDK（`QueryEngine`）两条 transcript 写入路径都经 `cleanMessagesForLogging→isLoggableMessage`，故一处修改同时覆盖。
+
+`CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT` 原先只在旧白名单分支读取；改成黑名单后失去唯一读取点，随上游一并移除（inventory 差异登记 `removed`，台账条目删除，见 R1）。
+
+测试：`src/utils/__tests__/transcriptStorageCap.test.ts`（external 用户下 `queued_command` 落盘、空/非空 `hook_success` 仍按 #44 规则过滤）。证据：`bundle:11617350`（`QM6` 标识符起点）、`bundle:11627130`（`KlY=new Set([])` 黑名单）。
