@@ -1062,6 +1062,11 @@ async function streamCompactSummary({
           forkLabel: 'compact',
           maxTurns: 1,
           skipCacheWrite: true,
+          // The compact fork replays the whole (potentially multi-MB) fork
+          // context; writing its sidechain transcript dropped a fresh
+          // subagents/agent-<id>.jsonl on every prompt-too-long retry
+          // (2.1.100 #23). Skip it, like the other one-shot forks.
+          skipTranscript: true,
           // Pass the compact context's abortController so user Esc aborts the
           // fork — same signal the streaming fallback uses at
           // `signal: context.abortController.signal` below.

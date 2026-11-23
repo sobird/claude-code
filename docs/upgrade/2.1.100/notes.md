@@ -148,3 +148,13 @@ v98/v100 改为默认全落盘，仅排除显式列出的类型（黑名单 `KlY
 上游 v100（`fc4`）把该渲染改为 `firstLine: _ ? DO(_) : null, fileContent: _ || void 0`——缺 `originalFile` 时 `firstLine=null`、`fileContent=undefined`，由始终落盘的 `structuredPatch` 渲染 diff。移植：`firstLine={originalFile ? firstLineOf(originalFile) : null}`、`fileContent={originalFile || undefined}`（`firstLineOf` 即上游 `DO`）。`originalFile` 的 zod 契约仍为 `string`，运行时 null 由真值守卫兼容，无需断言。Write 侧渲染本就用 `content` 取 firstLine、`fileContent ?? undefined`，不受影响。
 
 验证：typecheck/lint + bundle 对拍（`fc4` 守卫）。证据：`bundle:7278514`（`firstLine` 守卫）、`bundle:7278537`（`fileContent` 回落）。
+
+### R18：compaction 不再重复写子代理 transcript（2.1.100 #23）
+
+compaction 的摘要走 prompt-cache 共享分支：`streamCompactSummary` 用 `runForkedAgent` 起一个 fork 子代理，`forkContextMessages` 是整段（可能数 MB 的）被压缩对话。`runForkedAgent` 默认给每次 fork 生成新 `agentId` 并把初始消息链写进 `<session>/subagents/agent-<agentId>.jsonl`。prompt-too-long 时压缩会重试，每次重试都新建 fork、新 agentId，于是每轮重试都落下一份重复的多 MB 子代理 transcript（2.1.100 #23）。
+
+上游 v100（`DkK`）给该 fork 调用加 `skipTranscript: !0`。`runForkedAgent` 早已支持该开关（置位时不建 agentId、不做任何 transcript I/O），其余一次性 fork（taskSummary/agentSummary 等）也都这样。移植：在 `src/services/compact/compact.ts` 的 `streamCompactSummary` 里 `skipCacheWrite: true` 后加 `skipTranscript: true`。一处改动覆盖 proactive autoCompact、reactiveCompact 与 `/compact`（都经 `compactConversation`→本函数）。
+
+注意：v100 同处还多了 `maxOutputTokens: Math.min(...)`，那是另一项上游改动；本仓库该分支明确注释「不设 maxOutputTokens」以保持与主线程 prompt-cache 对齐（compact.ts:1050-1056），未一并移植。
+
+验证：typecheck/lint + bundle 对拍（v94 无、v100 有 `skipTranscript:!0`）。证据：`bundle:9679412`（`skipTranscript` 标识符起点，位于 `DkK` 内）。

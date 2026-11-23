@@ -822,6 +822,18 @@
         "files": ["src/tools/FileEditTool/UI.tsx"],
         "symbols": ["renderToolResultMessage"]
       }
+    },
+    {
+      "id": "behavior:compact-fork-skip-transcript",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [23],
+      "evidence": ["bundle:9679412"],
+      "notes": "修复 compaction 在 prompt-too-long 重试时写出重复多 MB 子代理 transcript（2.1.100 #23）：compaction 的摘要 fork（streamCompactSummary→runForkedAgent）把整段可能数 MB 的 forkContextMessages 写进 subagents/agent-<id>.jsonl；每次 PTL 重试都新建 fork/新 agentId，于是每轮落一份重复文件。上游 v100 给该 fork 传 skipTranscript:!0（runForkedAgent 已实现：置位时不建 agentId、不做任何 transcript I/O）。移植到 src/services/compact/compact.ts 的 streamCompactSummary（其余一次性 fork 早已如此）。见 notes R18。",
+      "srcEvidence": {
+        "files": ["src/services/compact/compact.ts"],
+        "symbols": ["streamCompactSummary"]
+      }
     }
   ]
 }
