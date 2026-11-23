@@ -1366,3 +1366,36 @@ export function applyHistory(state: ChatState, events: readonly SessionEventInpu
   for (const event of events) next = reduceSessionEvent(next, event)
   return next
 }
+
+/** 增量折叠缓存：上一次折叠用的事件列表与结果。 */
+export interface FoldCache {
+  events: readonly SessionEventInput[]
+  state: ChatState
+}
+
+/**
+ * `next` 是否只是在 `prev` 末尾追加了事件（前缀同一批、顺序不变）。
+ * 按 seqNum + id + type 比较而非对象引用：历史分页会重建数组，但对象可能复用。
+ */
+export function isAppendOnly(prev: readonly SessionEventInput[], next: readonly SessionEventInput[]): boolean {
+  if (next.length < prev.length) return false
+  for (let i = 0; i < prev.length; i++) {
+    const before = prev[i]
+    const after = next[i]
+    if (before === after) continue
+    if (!before || !after) return false
+    if (before.seqNum !== after.seqNum || before.id !== after.id || before.type !== after.type) return false
+  }
+  return true
+}
+
+/**
+ * 缓存优先的持久历史折叠：上一批仍是新列表的前缀时只折叠新增尾部；前缀变化
+ * （向上加载了更早分页、或列表被替换）则从头全量重折叠。返回值作为下次输入。
+ */
+export function foldWithCache(cache: FoldCache | null, events: readonly SessionEventInput[]): FoldCache {
+  if (cache && isAppendOnly(cache.events, events)) {
+    return { events, state: applyHistory(cache.state, events.slice(cache.events.length)) }
+  }
+  return { events, state: applyHistory(initialChatState, events) }
+}

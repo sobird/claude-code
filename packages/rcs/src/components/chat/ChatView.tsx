@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { StatusBadge } from '@/components/shell/StatusBadge'
 import { Button } from '@/components/ui/Button'
@@ -53,8 +53,9 @@ import { randomUuid } from '@/lib/random-uuid'
 import {
   activeStreamEvents,
   applyHistory,
-  initialChatState,
+  foldWithCache,
   isEphemeralEvent,
+  type FoldCache,
   type SessionEventInput,
   type SystemEntry,
   type ThreadEntry,
@@ -239,8 +240,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   // lands, so the initial view is the newest window of the loaded transcript.
   const [pinnedKey, setPinnedKey] = useState<string | null>(null)
   // Pinned node's viewport top captured before a reveal; the layout effect
-  // restores it after the older items mount.
-  const revealAnchorRef = useRef<{ key: string; top: number } | null>(null)
+  // restores it after the older items mount. `target` 是这次揭示要钉住的键，
+  // 过渡提交前的其他渲染不应提前消耗锚点。
+  const revealAnchorRef = useRef<{ key: string; top: number; target: string } | null>(null)
   // A server page that arrives with older events is followed by one local
   // reveal so the click always shows something new.
   const revealAfterLoadRef = useRef(false)
@@ -348,10 +350,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     }
   }, [api, sessionId, nextBefore, loadingEarlier])
 
-  // Fold durable events first (history, live frames, locally-sent events) in
-  // sequence order so an assistant reply never lands before its prompt. Streamed
-  // deltas carry no durable sequence, so they are replayed separately on top:
-  // only the window after the last terminal event is still live.
+  // 按序列号折叠持久事件（历史、实时帧、本地发送），保证回复不会先于提问。
+  // 上一批事件仍是新列表的前缀时只折叠新增尾部，避免每帧对整段历史重跑
+  // reducer。流式增量没有持久序列号，单独在持久状态之上重放：只有最后一条
+  // 终态事件之后的帧仍然是活的。
+  const foldCacheRef = useRef<FoldCache | null>(null)
   const chat = useMemo(() => {
     const merged: SessionEventInput[] = []
     for (const event of history ?? []) merged.push(event)
@@ -360,8 +363,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const durable = merged
       .filter((event) => !isEphemeralEvent(event))
       .toSorted((a, b) => (a.seqNum ?? 0) - (b.seqNum ?? 0))
-    const historyState = applyHistory(initialChatState, durable)
-    return applyHistory(historyState, activeStreamEvents(stream.events))
+    const base = foldWithCache(foldCacheRef.current, durable)
+    foldCacheRef.current = base
+    return applyHistory(base.state, activeStreamEvents(stream.events))
   }, [history, stream.events, extraEvents])
 
   const entries = chat.entries
@@ -415,9 +419,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const el = scrollRef.current
     const first = windowKeys[windowStart]
     if (!el || !first || windowStart === 0) return
+    const nextKey = windowKeys[earlierStartIndex(windowStart)]
+    if (!nextKey) return
     const node = findMessageNode(el, first)
-    if (node) revealAnchorRef.current = { key: first, top: node.getBoundingClientRect().top }
-    setPinnedKey(windowKeys[earlierStartIndex(windowStart)])
+    if (node) revealAnchorRef.current = { key: first, top: node.getBoundingClientRect().top, target: nextKey }
+    // 把挂载更早卡片的这次渲染降为过渡更新，滚动输入先保持响应。
+    startTransition(() => setPinnedKey(nextKey))
   }, [windowKeys, windowStart])
 
   // Older items mount above the pinned one; put it back where it was so the
@@ -431,8 +438,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   useLayoutEffect(() => {
     const anchor = revealAnchorRef.current
     const el = scrollRef.current
-    revealAnchorRef.current = null
     if (!anchor || !el) return
+    // 揭示被 startTransition 延后，中间的流式提交会先跑这个 effect；
+    // 等真正钉住目标键的那次提交再校正滚动位置。
+    if (pinnedKey !== anchor.target) return
+    revealAnchorRef.current = null
 
     const place = () => {
       const node = findMessageNode(el, anchor.key)

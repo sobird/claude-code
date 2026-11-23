@@ -3,7 +3,9 @@ import { describe, expect, test } from 'bun:test'
 import {
   activeStreamEvents,
   applyHistory,
+  foldWithCache,
   initialChatState,
+  isAppendOnly,
   isEphemeralEvent,
   reduceSessionEvent,
   type AssistantMessageEntry,
@@ -2171,5 +2173,89 @@ describe('background tasks', () => {
     )
 
     expect(state.entries.filter((entry) => entry.type === 'system')).toHaveLength(1)
+  })
+})
+
+describe('isAppendOnly', () => {
+  function seq(seqNum: number): SessionEventInput {
+    return { id: `e${seqNum}`, seqNum, type: 'assistant', payload: { content: `s${seqNum}` }, direction: 'inbound' }
+  }
+
+  test('accepts a longer list that keeps the same prefix', () => {
+    expect(isAppendOnly([seq(1), seq(2)], [seq(1), seq(2), seq(3)])).toBe(true)
+  })
+
+  test('accepts an identical list', () => {
+    const events = [seq(1), seq(2)]
+    expect(isAppendOnly(events, events)).toBe(true)
+  })
+
+  test('rejects a shorter list', () => {
+    expect(isAppendOnly([seq(1), seq(2)], [seq(1)])).toBe(false)
+  })
+
+  test('rejects prepended older events', () => {
+    expect(isAppendOnly([seq(5), seq(6)], [seq(3), seq(4), seq(5), seq(6)])).toBe(false)
+  })
+
+  test('rejects a replaced prefix of the same length', () => {
+    expect(isAppendOnly([seq(1), seq(2)], [seq(1), seq(9), seq(10)])).toBe(false)
+  })
+
+  test('compares by seqNum and id rather than object identity', () => {
+    const previous: SessionEventInput = { id: 'same-id', seqNum: 7, type: 'assistant', payload: { content: 'a' } }
+    expect(isAppendOnly([previous], [{ ...previous }])).toBe(true)
+  })
+})
+
+describe('foldWithCache', () => {
+  function seq(seqNum: number, content = `s${seqNum}`): SessionEventInput {
+    return { id: `e${seqNum}`, seqNum, type: 'assistant', payload: { content }, direction: 'inbound' }
+  }
+
+  function fullFold(events: SessionEventInput[]): ChatState {
+    return applyHistory(initialChatState, events)
+  }
+
+  test('folds from scratch when there is no cache', () => {
+    const events = [seq(1), seq(2)]
+    const folded = foldWithCache(null, events)
+    expect(folded.events).toBe(events)
+    expect(folded.state.entries).toEqual(fullFold(events).entries)
+  })
+
+  test('matches a full fold after appending a tail event', () => {
+    const first = [seq(1), seq(2)]
+    const cached = foldWithCache(null, first)
+    const next = [...first, seq(3)]
+    const folded = foldWithCache(cached, next)
+    const expected = fullFold(next)
+    expect(folded.events).toBe(next)
+    expect(folded.state.entries).toEqual(expected.entries)
+    expect(folded.state.lastSeqNum).toBe(expected.lastSeqNum)
+    expect([...folded.state.seenSeqNums]).toEqual([...expected.seenSeqNums])
+  })
+
+  test('reuses the cached state when nothing was appended', () => {
+    const events = [seq(1), seq(2)]
+    const cached = foldWithCache(null, events)
+    expect(foldWithCache(cached, events).state).toBe(cached.state)
+  })
+
+  test('falls back to a full fold when older events are prepended', () => {
+    const recent = [seq(5), seq(6)]
+    const cached = foldWithCache(null, recent)
+    const withOlder = [seq(3), seq(4), ...recent]
+    const folded = foldWithCache(cached, withOlder)
+    expect(folded.events).toBe(withOlder)
+    expect(folded.state.entries).toEqual(fullFold(withOlder).entries)
+    expect([...folded.state.seenSeqNums]).toEqual([...fullFold(withOlder).seenSeqNums])
+  })
+
+  test('falls back to a full fold when the prefix was replaced', () => {
+    const cached = foldWithCache(null, [seq(1), seq(2)])
+    const replaced = [seq(1), seq(9)]
+    const folded = foldWithCache(cached, replaced)
+    expect(folded.state.entries).toEqual(fullFold(replaced).entries)
   })
 })

@@ -10,8 +10,8 @@
 
 /** Grouped items rendered before the older ones must be revealed. */
 export const MESSAGE_WINDOW_SIZE = 80
-/** Older grouped items revealed per step. */
-export const MESSAGE_WINDOW_STEP = 80
+/** 每次揭示更早一屏的条数。取窗口的一半，让单次挂载的卡片量不至于卡顿。 */
+export const MESSAGE_WINDOW_STEP = 40
 
 /** Index of the first rendered item. */
 export function windowStartIndex(

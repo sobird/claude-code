@@ -41,6 +41,10 @@ describe('earlierStartIndex', () => {
     expect(earlierStartIndex(200, 80)).toBe(120)
   })
 
+  test('defaults to a half-window step so a reveal mounts fewer cards', () => {
+    expect(earlierStartIndex(200)).toBe(160)
+  })
+
   test('clamps at zero', () => {
     expect(earlierStartIndex(40, 80)).toBe(0)
     expect(earlierStartIndex(0, 80)).toBe(0)
