@@ -5,7 +5,7 @@ import type { Repositories } from '@/db/repositories/types'
 import { createTestRepositories } from '@/db/testing'
 import { requestBridgeControl } from '@/transport/bridge-requests'
 import type { SessionEvent } from '@/transport/event-bus'
-import { getAllEventBuses, getEventBus, removeEventBus } from '@/transport/event-bus'
+import { getAllEventBuses, getEventBus, publishSessionEvent, removeEventBus } from '@/transport/event-bus'
 import {
   closeAllConnections,
   closeBridgeConnection,
@@ -924,6 +924,43 @@ describe('toSDKMessage (via live outbound delivery)', () => {
     const message = sentJson(ws, ws.sent.length - 1)
     expect(message.uuid).toBe('web-message-uuid')
     expect((message.message as { content: string }).content).toBe('hello from web')
+  })
+
+  // 端到端接缝：Web 端 POST 的 delivery 经 publishSessionEvent → normalizePayload →
+  // toClientPayload 后必须仍在桥接帧顶层，CLI 才能映射成队列优先级。
+  test('carries delivery through normalizePayload into the bridge frame', async () => {
+    const ws = createMockWs()
+    await handleWebSocketOpen(repos, makeConfig(), ws as never, 's1')
+    await publishSessionEvent(
+      repos,
+      getEventBus('s1'),
+      's1',
+      'user',
+      { uuid: 'web-queued', content: 'send this at turn end', delivery: 'queue' },
+      'outbound',
+    )
+
+    const message = sentJson(ws, ws.sent.length - 1)
+    expect(message.type).toBe('user')
+    expect(message.uuid).toBe('web-queued')
+    expect(message.delivery).toBe('queue')
+  })
+
+  test('omits delivery for a plain steer message', async () => {
+    const ws = createMockWs()
+    await handleWebSocketOpen(repos, makeConfig(), ws as never, 'ctl')
+    await publishSessionEvent(
+      repos,
+      getEventBus('ctl'),
+      'ctl',
+      'user',
+      { uuid: 'web-steer', content: 'steer now' },
+      'outbound',
+    )
+
+    const message = sentJson(ws, ws.sent.length - 1)
+    expect(message.type).toBe('user')
+    expect(message.delivery).toBeUndefined()
   })
 
   test('converts generic event types', async () => {
