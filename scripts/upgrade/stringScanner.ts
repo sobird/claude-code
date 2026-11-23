@@ -44,7 +44,7 @@ function precedingWord(source: string, i: number): string {
   return source.slice(start + 1, end + 1)
 }
 
-function startsRegex(source: string, i: number, prev: string): boolean {
+export function startsRegex(source: string, i: number, prev: string): boolean {
   return REGEX_PRECEDERS.has(prev) || REGEX_KEYWORDS.has(precedingWord(source, i))
 }
 
@@ -123,7 +123,7 @@ export function extractStringLiterals(source: string): string[] {
   return out
 }
 
-function readQuoted(source: string, start: number, quote: string): { value: string; next: number } {
+export function readQuoted(source: string, start: number, quote: string): { value: string; next: number } {
   const n = source.length
   let i = start + 1
   let value = ''
@@ -149,7 +149,7 @@ function readQuoted(source: string, start: number, quote: string): { value: stri
   return { value, next: i }
 }
 
-function readTemplate(source: string, start: number): { value: string; next: number } {
+export function readTemplate(source: string, start: number): { value: string; next: number } {
   const n = source.length
   let i = start + 1
   let value = ''
@@ -240,7 +240,7 @@ function skipInterpolation(source: string, i: number): number {
 
 // Skip a regex literal starting at `start` (the leading `/`). Returns the index
 // just past the literal and its flags.
-function skipRegex(source: string, start: number): number {
+export function skipRegex(source: string, start: number): number {
   const n = source.length
   let i = start + 1
   let inClass = false

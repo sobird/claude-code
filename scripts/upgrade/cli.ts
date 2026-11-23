@@ -4,6 +4,7 @@ import { parseArgs } from 'node:util'
 
 import { alignBundles } from './align'
 import { carveNativeBundle } from './carve'
+import { type AnchorsResult, analyzeAnchors, type DiffResult, diffAround, diffSegment } from './diffbundle'
 import { refreshEvidence } from './evidence'
 import { extractCandidates } from './extract'
 import { GATE_COMMANDS, type GateName, runGates, writeGatesReport } from './gates'
@@ -33,6 +34,9 @@ Subcommands:
   probe     --target <bundle> --scenario <file> --out <json>
   verify    --target <bundle> --reference <bundle> --src <dir> --status <status.json> --out <report dir>
             [--strict-evidence] [--scenarios <dir>] [--release-notes <json>]
+  diffbundle --reference <bundle> --target <bundle> --out <json>
+            (--segment --start <s> --end <e> | --around <anchor> --pad <n> | --anchors --band <lo:hi>)
+            [--max-edits <n>] [--min-run <n>] [--min-len <n>] [--min-chg <n>] [--min-extra <n>]
 `
 
 type Values = Record<string, string | boolean | undefined>
@@ -46,6 +50,23 @@ function requireValue(values: Values, name: string): string {
   const value = values[name]
   if (typeof value !== 'string' || value.length === 0) throw new Error(`missing required --${name}`)
   return value
+}
+
+function optionalNumber(values: Values, name: string): number | undefined {
+  const value = values[name]
+  if (typeof value !== 'string' || value.length === 0) return undefined
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) throw new Error(`--${name} must be a number, got ${JSON.stringify(value)}`)
+  return parsed
+}
+
+function optionalBand(values: Values, name: string): [number, number] | undefined {
+  const value = values[name]
+  if (typeof value !== 'string' || value.length === 0) return undefined
+  const [lo, hi] = value.split(':').map((part) => Number(part))
+  if (!Number.isFinite(lo) || !Number.isFinite(hi))
+    throw new Error(`--${name} must be <lo>:<hi>, got ${JSON.stringify(value)}`)
+  return [lo, hi]
 }
 
 async function carveCommand(args: string[]): Promise<number> {
@@ -297,6 +318,71 @@ async function verifyCommand(args: string[]): Promise<number> {
   return report.ok ? 0 : 1
 }
 
+async function diffbundleCommand(args: string[]): Promise<number> {
+  const values = parseOptions(args, {
+    reference: { type: 'string' },
+    target: { type: 'string' },
+    out: { type: 'string' },
+    segment: { type: 'boolean' },
+    start: { type: 'string' },
+    end: { type: 'string' },
+    around: { type: 'string' },
+    pad: { type: 'string' },
+    anchors: { type: 'boolean' },
+    band: { type: 'string' },
+    'max-edits': { type: 'string' },
+    'min-run': { type: 'string' },
+    'min-len': { type: 'string' },
+    'min-chg': { type: 'string' },
+    'min-extra': { type: 'string' },
+  })
+  const out = requireValue(values, 'out')
+  const reference = await readFile(requireValue(values, 'reference'), 'utf8')
+  const target = await readFile(requireValue(values, 'target'), 'utf8')
+  const maxEdits = optionalNumber(values, 'max-edits')
+  const minRun = optionalNumber(values, 'min-run')
+
+  let result: DiffResult | AnchorsResult
+  let summary: string
+  if (values.segment === true || typeof values.start === 'string' || typeof values.end === 'string') {
+    const diff = diffSegment(reference, target, {
+      startAnchor: requireValue(values, 'start'),
+      endAnchor: requireValue(values, 'end'),
+      maxEdits,
+      minRun,
+    })
+    result = diff
+    const s = diff.stats
+    summary = `tokens ${s.tokensReference}/${s.tokensTarget}, eq ${s.eq}, ins ${s.ins}, del ${s.del}${diff.truncated ? ', truncated' : ''}`
+  } else if (typeof values.around === 'string') {
+    const diff = diffAround(reference, target, {
+      anchor: values.around,
+      pad: optionalNumber(values, 'pad') ?? 4000,
+      maxEdits,
+      minRun,
+    })
+    result = diff
+    const s = diff.stats
+    summary = `tokens ${s.tokensReference}/${s.tokensTarget}, eq ${s.eq}, ins ${s.ins}, del ${s.del}${diff.truncated ? ', truncated' : ''}`
+  } else if (values.anchors === true) {
+    const anchors = analyzeAnchors(reference, target, {
+      band: optionalBand(values, 'band'),
+      minLen: optionalNumber(values, 'min-len'),
+      minChg: optionalNumber(values, 'min-chg'),
+      minExtra: optionalNumber(values, 'min-extra'),
+    })
+    result = anchors
+    summary = `${anchors.anchorCount} anchors, ${anchors.changePoints.length} change points, ${anchors.bigInsertions.length} big insertions`
+  } else {
+    throw new Error('diffbundle: choose --segment (--start/--end), --around <anchor>, or --anchors')
+  }
+
+  await mkdir(dirname(out), { recursive: true })
+  await writeFile(out, `${JSON.stringify(result, null, 2)}\n`, 'utf8')
+  console.log(`wrote ${out} (${summary})`)
+  return 0
+}
+
 export async function main(argv: string[]): Promise<number> {
   if (argv.includes('--help') || argv.includes('-h')) {
     process.stdout.write(USAGE)
@@ -328,6 +414,8 @@ export async function main(argv: string[]): Promise<number> {
         return await probeCommand(rest)
       case 'verify':
         return await verifyCommand(rest)
+      case 'diffbundle':
+        return await diffbundleCommand(rest)
       default:
         process.stderr.write(USAGE)
         return 1

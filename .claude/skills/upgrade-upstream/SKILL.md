@@ -51,6 +51,7 @@ bun scripts/upgrade/cli.ts carve --binary <native/claude> --out <work/claude-<�
 | `releasenotes --version --out [--repo]`                                                                 | 用 `gh release view` 拉官方说明并解析顶层条目；默认仓库 `anthropics/claude-code`  |
 | `table --bundle --anchor [--whole] [--baseline <json> \| --src <path>#<export>] --out [--fail-on-diff]` | 从 bundle 锚点抽字面量表（`--whole` 取包含锚点的整张表），与参考版或 src 导出对拍 |
 | `strings --target-inventory --reference-inventory --src [--release-notes] --out`                        | 新增字符串分诊：inSrc / releaseNotes / noise / unclassified                       |
+| `diffbundle --reference --target --out (--segment --start --end \| --around --pad \| --anchors --band)` | 纯逻辑（无新字面量）改动定位：标识符归一化的 token 差分 / 唯一字面量锚点 delta    |
 | `refresh-evidence --target --status [--in-place] [--fail-on-skipped]`                                   | 校验台账里的 `bundle:` 偏移，失效的按字符串重定位                                 |
 | `gates --ref <git-ref> --out <dir> [--gate typecheck,lint,test] [--fail-on-new]`                        | 在 `--ref` 的临时 worktree 跑 typecheck/lint/test，与工作区做归一化多集差分       |
 
@@ -60,7 +61,7 @@ bun scripts/upgrade/cli.ts carve --binary <native/claude> --out <work/claude-<�
 
 ## 1.5 交叉验证（release 说明 + 结构化常量表）
 
-`inventory` / `align` / `extract` 只覆盖命令、env、flag 与字符串的增删。三处盲区必须补，`verify` 绿了也不代表没有漏项。
+`inventory` / `align` / `extract` 只覆盖命令、env、flag 与字符串的增删。四处盲区必须补，`verify` 绿了也不代表没有漏项。
 
 ### 官方 release 说明
 
@@ -111,6 +112,26 @@ bun scripts/upgrade/cli.ts strings \
 
 四类桶：`inSrc`（源码已有，可能是改名/移动）、`releaseNotes`（命中 release 说明）、`noise`（依赖/压缩产物）、`unclassified`（需人工判断）。`unclassified` 逐条回 bundle 看上下文；上游 UI 文案、打包依赖内部等写进 `notes.md` 即可，不伪造移植。扫描器是字符级 JS 字面量扫描（处理引号/转义/模板插值/正则启发式），压缩 bundle 安全；长字符串偶尔会因正则识别误吞，用 `unclassified` 桶兜底。
 
+### 纯逻辑（无新字面量）改动的定位
+
+有些 release 条目（如「修复长会话回滚缓冲重复 diff / 空白页」）只改控制流，不加字符串、不改表项，`inventory` / `table` / `strings` 全都看不到。这时用 `diffbundle` 在 minified bundle 上做**标识符归一化的 token 差分**：把每个非关键字标识符归一成 `I`，压缩改名带来的差异就消失，只剩真正的逻辑增删。
+
+```bash
+# segment：两版都有的稳定字面量之间做 token 差分（最可信）
+bun scripts/upgrade/cli.ts diffbundle --reference <ref/cli.js> --target <target/cli.js> \
+  --segment --start '<起始字面量>' --end '<结束字面量>' --out <work/diff.json>
+# around：一个锚点前后 ±pad 窗口（快，但两版窗口可能错位，定位不如 segment 稳）
+bun scripts/upgrade/cli.ts diffbundle --reference <ref/cli.js> --target <target/cli.js> \
+  --around '<锚点>' --pad 4000 --out <work/diff.json>
+# anchors：O(n) 唯一字面量 delta 图，几 MB 区间也安全（不跑 Myers）
+bun scripts/upgrade/cli.ts diffbundle --reference <ref/cli.js> --target <target/cli.js> \
+  --anchors --out <work/anchors.json>
+```
+
+- 优先 `segment`：用两个稳定唯一字面量夹住可疑函数，例如 `render()` 从 `"Full reset (shrink->below)"` 到 `"Slow render:"`。`stats.identical` 为真即逐 token 等价（只剩改名），`runs[].text` 是 bundle 原文，可直接对读。
+- Myers 有 `--max-edits` 预算：区间内有大段整体不同时返回 `truncated`，换更窄的 `segment`；或先 `--anchors` 用 `bigInsertions[].extra` 定位巨大插入点，再对那一小段做 segment，别让 O(N\*M) 卡死。
+- **判定「修复其实在打包依赖里」**：待移植文件的核心函数 `segment` 出来 `identical`、而整段渲染带仍有差异时，多半差异落在打包依赖内部（wrap-ansi、ansi-tokenize、React reconciler、AWS smithy 等）。先拿该文件**独有的一个字符串字面量**作锚点，确认渲染带里哪个区间属于这个文件，再逐段查差异来源；只有依赖内部的差异就如实记 `approximated`（+ `ignored-dependency` 性质），不要硬凑移植。
+
 ## 2. 台账约定
 
 权威实现：`scripts/upgrade/verify.ts` 与 `scripts/upgrade/types.ts`。
@@ -138,6 +159,7 @@ bun scripts/upgrade/cli.ts strings \
 
 - `bundle:<字符串>`、`bundle:<解码后字符偏移>`（如 `bundle:9937634`；用 `fs.readFileSync(path,'utf8')` + `indexOf` 得到，不是字节偏移）
 - 偏移校验：`bundle:<偏移>` 处必须落在字面量内或标识符起始；`env:` 条目的偏移必须正好是变量名首字符（否则 `evidenceErrors`）。
+- 行为类证据（`bundle:<偏移>`）必须指向**实际修复点**，不能只命中一个相关关键词。`bundle:scrollback` 可能只是 `csi.ts` 的 ED 擦除模式枚举，与「回滚重复 diff」无关；只命中关键词、而 `diffbundle --segment` 证明该处逐 token 等价时，应如实记 `approximated`（并写明原因），别让关键词制造「已定位」的假象。
 - 缺失证明：`bundle:absent:<值>`、`bundle:no-name:"<值>"`
 - `scenario:<scenario 文件名>`；有测试钉住行为时加 `test:<测试路径>`
 
@@ -150,10 +172,10 @@ id 前缀：`cmd:` / `env:` / `flag:` / `str:`；非 inventory 类问题用 `bun
 - 不稳定的运行时功能（GrowthBook、MCP 服务器、OAuth、claude.ai 端点）probe 无法驱动，改用静态偏移作证据，并在 `notes.md` 记 R 条目。
 - `verify` 只读 `src/` 下的 `.ts`/`.tsx`（`readSources`）。把证据写进文档或 JSON 不会让检查通过，该在代码里出现的东西必须真的在代码里。
 - feature flag 必须字面量写成 `feature('NAME')` 且直接位于 if/三元条件中，否则 tree-shaking 失效。
-- 相对导入用 `.js` 后缀；格式由 oxfmt 决定，生成的 `report.md`、`status.json`、`report.json` 也要过 `fmt:check`。
+- 相对导入用 `.js` 后缀；格式由 oxfmt 决定，生成的 `report.md`、`status.json`、`report.json` 也要过 `fmt:check`。`refresh-evidence` / `verify` 重写这些 JSON 时会把数组压成单行，收尾用 `bunx oxfmt <改动的 json/md>` 定点格式化再 `--check`（别跑全仓 `bun run fmt`，会顺带改到并行会话的未提交文件）。
 - 移植上游压缩产物后 lint 高发：`[...].sort()`→`toSorted()`、`.reverse()`→`toReversed()`、去掉无谓展开、删除拆分残留的未用变量（本轮 6 条 lint 全属此类）。
 - 无 source map 时对齐置信度只有 medium/low；跨版本用 `--prior-align` 继承上一轮对齐结果。
-- `verify` 默认 `--reference cli.js`，别忘了显式传上一版本 bundle。
+- `verify` 默认 `--reference cli.js`，别忘了显式传上一版本 bundle；`--out` 传的是**版本目录**本身（如 `docs/upgrade/2.1.94`），不是 `.../report`，否则会在 `report/` 下再套一层。
 - probe 会真实启动 bundle（node inspector + `ws`），场景里的断点行号是 bundle 里的位置，不是源码行号。
 - 一处表项变更常带同族联动：安全动作参数白名单同时改了公共参数集（4 个短别名并入 `x$K`）。只按 release 说明标题移植会窄一圈——移植时抽上游整段 diff，别只抽标题命中的字符串。
 - 仓库有跨表不变量：`CMDLET_ALLOWLIST` 里每个带 `additionalCommandIsDangerousCallback` 的条目，必须在 `src/utils/powershell/dangerousCmdlets.ts` 的 `ARG_GATED_CMDLETS`（进而 `NEVER_SUGGEST`）里，否则权限对话框会建议 `cmd:*` 通配、永久绕过回调。新增回调必须同步并跑一致性断言。
@@ -170,3 +192,4 @@ id 前缀：`cmd:` / `env:` / `flag:` / `str:`；非 inventory 类问题用 `bun
    - test 门禁跑的是 `bun test`（递归全仓，**含 `packages/rcs`**），不是 `bun run test`（排除 rcs）。rcs 用例依赖共享 PGlite/端口，在 gate 的临时 worktree 里环境不同、并行负载下易 flake，整段 rcs 失败会以 added 出现而基线为 0——这不是本升级引入的。
    - 只改 `src/` 时用 `--gate typecheck,lint`；若坚持跑 test，确认 added 全是 `packages/rcs` 后单跑 `bun test packages/rcs` 佐证，并在 `notes.md` 记 R 条目。
    - current 侧是**整个工作区**（含未提交的并行改动），跑前先 `git status`。
+7. **并行会话卫生**：本工作区可能与另一个会话并行改动（如 `packages/rcs`）。提交 / 格式化 / 门禁都只圈定本轮路径：按文件名 `git add <具体文件>`，绝不 `git add -A` / `git add .`；用 `bunx oxfmt <改动文件>` 定点格式化，不跑全仓 `fmt`；确认 `packages/rcs` 的未提交改动属于并行会话就原样留着，不纳入本轮提交。
