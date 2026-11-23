@@ -4,7 +4,7 @@
 
 import { X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { diffLines } from '@/lib/text-diff'
 import { cx } from '@/lib/utils'
@@ -16,10 +16,19 @@ import styles from './FilePreviewDialog.module.css'
 export function FilePreviewDialog({ model, onClose }: { model: FileViewModel; onClose: () => void }) {
   const t = useTranslations('chat')
   const body = previewBodyKind(model)
+  const closeRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        onClose()
+        return
+      }
+      // 正文只读、唯一可聚焦元素是关闭按钮：把 Tab 圈在弹层内，保持模态语义。
+      if (event.key === 'Tab') {
+        event.preventDefault()
+        closeRef.current?.focus()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -30,7 +39,14 @@ export function FilePreviewDialog({ model, onClose }: { model: FileViewModel; on
       <div className={styles.dialog} role="dialog" aria-modal="true" aria-label={model.path}>
         <header className={styles.header}>
           <span className={styles.title}>{model.path}</span>
-          <button type="button" className={styles.close} aria-label={t('filePreviewClose')} onClick={onClose} autoFocus>
+          <button
+            ref={closeRef}
+            type="button"
+            className={styles.close}
+            aria-label={t('filePreviewClose')}
+            onClick={onClose}
+            autoFocus
+          >
             <X className={styles.closeIcon} aria-hidden="true" />
           </button>
         </header>

@@ -4,7 +4,7 @@
 
 import { FileCode2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { diffLines } from '@/lib/text-diff'
 import { cx } from '@/lib/utils'
@@ -52,13 +52,19 @@ function LineNumberedView({ lines }: { lines: ReadLine[] }) {
 
 export function FileToolView({ tool }: ToolViewProps) {
   const [previewing, setPreviewing] = useState(false)
+  const pathRef = useRef<HTMLButtonElement>(null)
   const model = fileViewModel(tool)
+  const closePreview = () => {
+    setPreviewing(false)
+    // 关闭后把焦点还给打开弹层的路径按钮，键盘用户不会掉到页首。
+    pathRef.current?.focus()
+  }
   if (!model) return <GenericToolBody tool={tool} />
   return (
     <>
       <div className={styles.pathRow}>
         <FileCode2 className={styles.pathIcon} aria-hidden="true" />
-        <button type="button" className={styles.pathButton} onClick={() => setPreviewing(true)}>
+        <button ref={pathRef} type="button" className={styles.pathButton} onClick={() => setPreviewing(true)}>
           {model.path}
         </button>
       </div>
@@ -108,7 +114,7 @@ export function FileToolView({ tool }: ToolViewProps) {
       ) : model.output ? (
         <CollapsibleOutput text={model.output} errored={model.errored} />
       ) : null}
-      {previewing ? <FilePreviewDialog model={model} onClose={() => setPreviewing(false)} /> : null}
+      {previewing ? <FilePreviewDialog model={model} onClose={closePreview} /> : null}
     </>
   )
 }
