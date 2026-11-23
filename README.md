@@ -107,10 +107,10 @@ bun scripts/upgrade/cli.ts strings --target-inventory <target-inventory.json> --
 bun scripts/upgrade/cli.ts refresh-evidence --target <target/cli.js> --status docs/upgrade/2.1.91/status.json --in-place
 
 # 基线门禁：在 --ref 的临时 worktree 跑同一个门禁，与工作区做多集差分
-bun scripts/upgrade/cli.ts gates --ref HEAD --repo-root . --out <work/gates> --fail-on-new
+bun scripts/upgrade/cli.ts gates --ref HEAD --out <work/gates> --fail-on-new
 ```
 
-`gates` 会归一化行/列、根路径、耗时、依赖顺序与 lint 代码框，只报告真正新增的发现；`verify` 只证明台账闭合，不证明行为等价。
+`gates` 会归一化行/列、根路径、耗时、依赖顺序与 lint 代码框，只报告真正新增的发现；`verify` 只证明台账闭合，不证明行为等价。test 门禁跑的是 `bun test`（递归全仓，含 `packages/rcs`），rcs 用例依赖共享 PGlite/端口，环境差异导致的失败不等同于本轮回归；只改 `src/` 时可用 `--gate typecheck,lint`。
 
 ## 🐛 调试
 

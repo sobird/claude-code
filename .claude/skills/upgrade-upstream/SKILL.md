@@ -18,6 +18,7 @@ description: Port a new upstream Claude Code release into this repo's hand-writt
 - 目标版本官方 release 说明：`https://github.com/anthropics/claude-code/releases/tag/v<版本>`，流水线跑完后逐条对拍（见 1.5）。
 - 新建 `docs/upgrade/<新版本>/`，所有产物放这里（参考 `docs/upgrade/2.1.89/`）。
 - 先读上一版本的 `status.json` 和 `notes.md`：沿用台账格式、id 前缀和 R# 编号习惯。
+- 开工先跑 `git status`：gates 的 current 侧是整个工作区（含未提交改动），并行会话的提交/改动会混进门禁结果。
 - 开工前先和用户确认范围：哪些能力要移植，哪些允许 `ignored-dependency`。
 - 探查场景参考 `scripts/upgrade/scenarios/`。最小形态是 `{"args":["--version"],"breakpoints":[],"capture":[]}`；断点需要 `script`（bundle 的 basename）、`line`、`column`、`label`，`capture` 可取 `args` / `return` / `fn.toString`。
 
@@ -45,13 +46,13 @@ bun scripts/upgrade/cli.ts carve --binary <native/claude> --out <work/claude-<�
 
 辅助子命令（§1.5 交叉验证与收尾用）：
 
-| 子命令                                                                                 | 用途                                                                              |
-| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `releasenotes --version --out [--repo]`                                                | 用 `gh release view` 拉官方说明并解析顶层条目；默认仓库 `anthropics/claude-code`  |
-| `table --bundle --anchor [--whole] [--baseline <json> \| --src <path>#<export>] --out` | 从 bundle 锚点抽字面量表（`--whole` 取包含锚点的整张表），与参考版或 src 导出对拍 |
-| `strings --target-inventory --reference-inventory --src [--release-notes] --out`       | 新增字符串分诊：inSrc / releaseNotes / noise / unclassified                       |
-| `refresh-evidence --target --status [--in-place] [--fail-on-skipped]`                  | 校验台账里的 `bundle:` 偏移，失效的按字符串重定位                                 |
-| `gates --ref --repo-root [--gates] [--fail-on-new] --out`                              | 在 `--ref` 的临时 worktree 跑 typecheck/lint/test，与工作区做归一化多集差分       |
+| 子命令                                                                                                  | 用途                                                                              |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `releasenotes --version --out [--repo]`                                                                 | 用 `gh release view` 拉官方说明并解析顶层条目；默认仓库 `anthropics/claude-code`  |
+| `table --bundle --anchor [--whole] [--baseline <json> \| --src <path>#<export>] --out [--fail-on-diff]` | 从 bundle 锚点抽字面量表（`--whole` 取包含锚点的整张表），与参考版或 src 导出对拍 |
+| `strings --target-inventory --reference-inventory --src [--release-notes] --out`                        | 新增字符串分诊：inSrc / releaseNotes / noise / unclassified                       |
+| `refresh-evidence --target --status [--in-place] [--fail-on-skipped]`                                   | 校验台账里的 `bundle:` 偏移，失效的按字符串重定位                                 |
+| `gates --ref <git-ref> --out <dir> [--gate typecheck,lint,test] [--fail-on-new]`                        | 在 `--ref` 的临时 worktree 跑 typecheck/lint/test，与工作区做归一化多集差分       |
 
 `align.json` 的节点有 `classification`（`matched` / `changed` / `new`，另有 `ignored-dependency` / `unattributed`）和 `confidence`；移植对象主要从 `changed` 和 `new` 里挑。`changed` 配对现在按字符串字面量重叠（Jaccard）+ 相对位置打分，选最像的候选，不再是同 kind 的第一个。
 
@@ -72,6 +73,7 @@ bun scripts/upgrade/cli.ts releasenotes --version v<目标版本> --out <work/re
 - 每条都回目标 bundle 定位实现（`bundle:<偏移>` 写进 evidence），并和参考版逐行对照语义，不要只命中字符串。
 - 说明里的「行为类」条目（过滤条件、重试、退出码、表格数据）通常不在 inventory 里，是漏项高发区。
 - 无法移植的条目（UI/性能优化、打包依赖内部、本仓库没有的功能前提）在 `notes.md` 写明原因，不伪造实现。
+- inventory 是双向漏报：CLI flag 可能漏收（本轮 `--remote-control-session-name-prefix` 走帮助/解析路径未被收录），要对着 release 说明和 bundle 里的 `--xxx` 字面量自查后手动登记；反过来，inventory 判定的目标新增 `cmd:` / `env:`（如隐藏的 `stop-hook`）也可能不在 release 说明里，台账仍要求闭合。
 
 ### 结构化常量表
 
@@ -128,11 +130,14 @@ bun scripts/upgrade/cli.ts strings \
 - 参考版有、目标版没有、但 `src` 仍存在的 `cmd:` / `env:`，必须登记为 `already-present` / `retained-internal`，否则进 `unexpectedInSrc`。
 - `flag:` / `str:` 按「属于哪个 bundle」分类，不看 `src`；`ignored-dependency` 跳过。
 - 只有 `cmd:` / `env:` 的差异会自动报 `unregistered`（有差异但没登记）。新的 `flag:` 或字符串不登记就不会报——想纳入验收的项要手动登记。
+- `env:` 没有「不移植」状态：上一版以 `approximated` 登记的依赖/扫描噪声 env（如 `CLAUDE_CODE_HOST_HTTP_PROXY_PORT` 一族）每个版本都要延续登记，并用 `refresh-evidence` 刷新偏移，否则会以 `unregistered` 重新出现。
+- 目标新增的 `cmd:` 在 `src` 只有占位（如 `name:'stub'`）时，按上游命令对象补全 name/type/aliases/门控/load，接线到既有机制，不要新写业务逻辑（teleport 案例）。
 - 任意登记条目为 `unresolved`，直接进报告的 `unresolved` 并让 `ok=false`。
 
 证据格式（`evidence` 数组）：
 
 - `bundle:<字符串>`、`bundle:<解码后字符偏移>`（如 `bundle:9937634`；用 `fs.readFileSync(path,'utf8')` + `indexOf` 得到，不是字节偏移）
+- 偏移校验：`bundle:<偏移>` 处必须落在字面量内或标识符起始；`env:` 条目的偏移必须正好是变量名首字符（否则 `evidenceErrors`）。
 - 缺失证明：`bundle:absent:<值>`、`bundle:no-name:"<值>"`
 - `scenario:<scenario 文件名>`；有测试钉住行为时加 `test:<测试路径>`
 
@@ -145,7 +150,8 @@ id 前缀：`cmd:` / `env:` / `flag:` / `str:`；非 inventory 类问题用 `bun
 - 不稳定的运行时功能（GrowthBook、MCP 服务器、OAuth、claude.ai 端点）probe 无法驱动，改用静态偏移作证据，并在 `notes.md` 记 R 条目。
 - `verify` 只读 `src/` 下的 `.ts`/`.tsx`（`readSources`）。把证据写进文档或 JSON 不会让检查通过，该在代码里出现的东西必须真的在代码里。
 - feature flag 必须字面量写成 `feature('NAME')` 且直接位于 if/三元条件中，否则 tree-shaking 失效。
-- 相对导入用 `.js` 后缀；格式由 oxfmt 决定，生成的 `report.md` 也要过 `fmt:check`。
+- 相对导入用 `.js` 后缀；格式由 oxfmt 决定，生成的 `report.md`、`status.json`、`report.json` 也要过 `fmt:check`。
+- 移植上游压缩产物后 lint 高发：`[...].sort()`→`toSorted()`、`.reverse()`→`toReversed()`、去掉无谓展开、删除拆分残留的未用变量（本轮 6 条 lint 全属此类）。
 - 无 source map 时对齐置信度只有 medium/low；跨版本用 `--prior-align` 继承上一轮对齐结果。
 - `verify` 默认 `--reference cli.js`，别忘了显式传上一版本 bundle。
 - probe 会真实启动 bundle（node inspector + `ws`），场景里的断点行号是 bundle 里的位置，不是源码行号。
@@ -161,3 +167,6 @@ id 前缀：`cmd:` / `env:` / `flag:` / `str:`；非 inventory 类问题用 `bun
 4. 不要为了通过而改 `status.json`——先修 `src`，或如实保留 `unresolved` 并说明。
 5. **收尾交叉验证**：即使 `verify` 已绿，也要按 1.5 走一遍——release 说明逐条确认（`releasenotes` + `releaseItems` 覆盖率）、本轮接触的安全/白名单表全表对拍（`table --whole`）、新增字符串分诊（`strings`）；差异分类后写进 `notes.md` 的 R 条目（无论移植与否）。
 6. **基线门禁**：`gates --ref <上一版本或 HEAD> --fail-on-new` 只报本轮新增的 typecheck/lint/test 发现；仓库自带存量报错，不要用绝对退出码判断。非 0 时读 `gates.md` 的 Added 段，确认是本次改动引入还是基线已有。
+   - test 门禁跑的是 `bun test`（递归全仓，**含 `packages/rcs`**），不是 `bun run test`（排除 rcs）。rcs 用例依赖共享 PGlite/端口，在 gate 的临时 worktree 里环境不同、并行负载下易 flake，整段 rcs 失败会以 added 出现而基线为 0——这不是本升级引入的。
+   - 只改 `src/` 时用 `--gate typecheck,lint`；若坚持跑 test，确认 added 全是 `packages/rcs` 后单跑 `bun test packages/rcs` 佐证，并在 `notes.md` 记 R 条目。
+   - current 侧是**整个工作区**（含未提交的并行改动），跑前先 `git status`。
