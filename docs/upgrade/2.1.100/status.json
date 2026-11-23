@@ -834,6 +834,18 @@
         "files": ["src/services/compact/compact.ts"],
         "symbols": ["streamCompactSummary"]
       }
+    },
+    {
+      "id": "behavior:mcp-fetch-abort-bridge-leak",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [13],
+      "evidence": ["bundle:6894457", "bundle:6894848"],
+      "notes": "修复 MCP HTTP/SSE 重连时缓冲未释放（~50MB/hr，2.1.100 #13）：wrapFetchWithTimeout 原先在响应头返回后（cleanup）就移除「传输 parentSignal → 每请求 controller」的 abort 监听。Streamable-HTTP/SSE 的响应体在响应头之后才流式传输，此后若服务器重连触发传输 abort，body 已与传输信号脱钩、不会被取消，reader 持续缓冲却无消费者。上游 v100（Bc1）改为：parentSignal 已 abort 则直接 abort，否则注册 {once:true} 监听且常驻到 response 生命周期，finally 只 clearTimeout、不再 removeEventListener。移植到 src/services/mcp/client.ts 的 wrapFetchWithTimeout。见 notes R19。",
+      "srcEvidence": {
+        "files": ["src/services/mcp/client.ts"],
+        "symbols": ["wrapFetchWithTimeout"]
+      }
     }
   ]
 }

@@ -158,3 +158,11 @@ compaction 的摘要走 prompt-cache 共享分支：`streamCompactSummary` 用 `
 注意：v100 同处还多了 `maxOutputTokens: Math.min(...)`，那是另一项上游改动；本仓库该分支明确注释「不设 maxOutputTokens」以保持与主线程 prompt-cache 对齐（compact.ts:1050-1056），未一并移植。
 
 验证：typecheck/lint + bundle 对拍（v94 无、v100 有 `skipTranscript:!0`）。证据：`bundle:9679412`（`skipTranscript` 标识符起点，位于 `DkK` 内）。
+
+### R19：MCP fetch 的 abort 桥接到响应体生命周期（2.1.100 #13）
+
+`wrapFetchWithTimeout` 把传输的 `parentSignal` 桥接到每次请求的 `controller`。旧实现（v94）在响应头返回后即 `cleanup()`——`clearTimeout` 且 `removeEventListener('abort')`，于是 `controller.signal` 只覆盖到「拿到响应头」为止。但 Streamable-HTTP / SSE 的响应体是在响应头之后才流式传输的：此后若 MCP 服务器断线重连、传输层 abort 掉 `parentSignal`，正在传输的 body 已与传输信号脱钩、不会被取消，reader 继续缓冲却没有消费者，累计约 50MB/hr（2.1.100 #13）。
+
+上游 v100（`Bc1`）改为：`parentSignal` 已 abort 时直接 `controller.abort`，否则注册 `{ once: true }` 监听并常驻到 response 生命周期；`finally` 只 `clearTimeout`，不再 `removeEventListener`。这样重连的 abort 能真正取消仍在传输的 body 并释放缓冲。移植到 `src/services/mcp/client.ts` 的 `wrapFetchWithTimeout`（外层 `if (parentSignal)` 收窄，避免断言；删掉旧的 `abort`/`cleanup` 帮助函数）。
+
+验证：typecheck/lint + bundle 对拍（v94 成功路径 `removeEventListener`，v100 改为 `once` + `finally{clearTimeout}`）。证据：`bundle:6894457`（`Bc1` 标识符起点）、`bundle:6894848`（`{ once:!0 }` 的 `once`）。

@@ -470,28 +470,28 @@ export function wrapFetchWithTimeout(baseFetch: FetchLike): FetchLike {
     timer.unref?.()
 
     const parentSignal = init?.signal
-    const abort = () => controller.abort(parentSignal?.reason)
-    parentSignal?.addEventListener('abort', abort)
-    if (parentSignal?.aborted) {
-      controller.abort(parentSignal.reason)
-    }
-
-    const cleanup = () => {
-      clearTimeout(timer)
-      parentSignal?.removeEventListener('abort', abort)
+    if (parentSignal) {
+      // Bridge the transport's abort into this request's controller and keep the
+      // listener attached (once) for the response's lifetime, not just until the
+      // headers arrive. Streamable-HTTP/SSE bodies stream after the headers, so
+      // detaching on completion left those bodies un-cancelled when the server
+      // reconnected, leaking their buffers (~50 MB/hr per reconnecting server;
+      // 2.1.100 #13).
+      if (parentSignal.aborted) {
+        controller.abort(parentSignal.reason)
+      } else {
+        parentSignal.addEventListener('abort', () => controller.abort(parentSignal.reason), { once: true })
+      }
     }
 
     try {
-      const response = await baseFetch(url, {
+      return await baseFetch(url, {
         ...init,
         headers,
         signal: controller.signal,
       })
-      cleanup()
-      return response
-    } catch (error) {
-      cleanup()
-      throw error
+    } finally {
+      clearTimeout(timer)
     }
   }
 }
