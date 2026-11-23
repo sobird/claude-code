@@ -9,6 +9,7 @@ import { updateLastInteractionTime } from '../../bootstrap/state.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { stopCapturingEarlyInput } from '../../utils/earlyInput.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
+import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { isMouseClicksDisabled } from '../../utils/fullscreen.js'
 import { logError } from '../../utils/log.js'
 import { EventEmitter } from '../events/emitter.js'
@@ -285,17 +286,31 @@ export default class App extends PureComponent<Props, State> {
         }
         // Probe terminal identity. XTVERSION survives SSH (query/reply goes
         // through the pty), unlike TERM_PROGRAM. Used for wheel-scroll base
-        // detection when env vars are absent. Fire-and-forget: the DA1
-        // sentinel bounds the round-trip, and if the terminal ignores the
-        // query, flush() still resolves and name stays undefined.
+        // detection and hyperlink handling when env vars are absent.
+        // Fire-and-forget: the DA1 sentinel bounds the round-trip, and if the
+        // terminal ignores the query, flush() still resolves and name stays
+        // undefined.
         // Deferred to next tick so it fires AFTER the current synchronous
         // init sequence completes — avoids interleaving with alt-screen/mouse
         // tracking enable writes that may happen in the same render cycle.
         setImmediate(() => {
-          void Promise.all([this.querier.send(xtversion()), this.querier.flush()]).then(([r]) => {
+          void Promise.all([this.querier.send(xtversion()), this.querier.flush()]).then(async ([r]) => {
             if (r) {
-              setXtversionName(r.name)
-              logForDebugging(`XTVERSION: terminal identified as "${r.name}"`)
+              let name = r.name
+              // Under tmux, XTVERSION answers "tmux <version>", masking the
+              // real client (e.g. xterm.js), which is what actually handles
+              // OSC 8 links. Resolve the client termtype so isXtermJs() works
+              // inside tmux and links aren't opened twice.
+              if (process.env.TMUX && name.startsWith('tmux ')) {
+                const { stdout } = await execFileNoThrow('tmux', ['display-message', '-p', '#{client_termtype}'], {
+                  timeout: 1000,
+                  useCwd: false,
+                })
+                const resolved = stdout.trim()
+                if (resolved) name = resolved
+              }
+              setXtversionName(name)
+              logForDebugging(`XTVERSION: terminal identified as "${name}"`)
             } else {
               logForDebugging('XTVERSION: no reply (terminal ignored query)')
             }

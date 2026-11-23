@@ -38,10 +38,12 @@ export function HighlightedThinkingText({ text, useBriefLayout, timestamp }: Pro
 
   if (triggers.length === 0) {
     return (
-      <Text>
-        <Text color={pointerColor}>{figures.pointer} </Text>
+      <Box flexDirection="row">
+        <Box flexShrink={0}>
+          <Text color={pointerColor}>{figures.pointer} </Text>
+        </Box>
         <Text color="text">{text}</Text>
-      </Text>
+      </Box>
     )
   }
 
@@ -74,9 +76,11 @@ export function HighlightedThinkingText({ text, useBriefLayout, timestamp }: Pro
   }
 
   return (
-    <Text>
-      <Text color={pointerColor}>{figures.pointer} </Text>
-      {parts}
-    </Text>
+    <Box flexDirection="row">
+      <Box flexShrink={0}>
+        <Text color={pointerColor}>{figures.pointer} </Text>
+      </Box>
+      <Text>{parts}</Text>
+    </Box>
   )
 }

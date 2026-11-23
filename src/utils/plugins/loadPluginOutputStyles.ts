@@ -49,10 +49,13 @@ async function loadOutputStyleFromFile(
       coerceDescriptionToString(frontmatter.description, name) ??
       extractDescriptionFromMarkdown(markdownContent, `Output style from ${pluginName} plugin`)
 
-    // Parse forceForPlugin flag (supports both boolean and string values)
+    // Parse forceForPlugin / keepCodingInstructions flags (supports both boolean and string values)
     const forceRaw = frontmatter['force-for-plugin']
     const forceForPlugin =
       forceRaw === true || forceRaw === 'true' ? true : forceRaw === false || forceRaw === 'false' ? false : undefined
+    const keepRaw = frontmatter['keep-coding-instructions']
+    const keepCodingInstructions =
+      keepRaw === true || keepRaw === 'true' ? true : keepRaw === false || keepRaw === 'false' ? false : undefined
 
     return {
       name,
@@ -60,6 +63,7 @@ async function loadOutputStyleFromFile(
       prompt: markdownContent.trim(),
       source: 'plugin',
       forceForPlugin,
+      keepCodingInstructions,
     }
   } catch (error) {
     logForDebugging(`Failed to load output style from ${filePath}: ${error}`, {

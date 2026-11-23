@@ -918,6 +918,10 @@ function renderNodeToOutput(
               // point fall through to yoga + the fine-grained check below,
               // preserving the ghost-box fix.
               let cumHeightShift = 0
+              // Topmost stable row wiped so far this pass. A clean child's
+              // stale shifted rect can overlap a previously wiped area; cap
+              // the wipe here so we don't clear rows already repaired.
+              let clearedTop: number | undefined
               for (const childNode of content.childNodes) {
                 const childElem = childNode as DOMElement
                 const isDirty = dirtyChildren.has(childNode)
@@ -949,8 +953,25 @@ function renderNodeToOutput(
                 // painted it → render.
                 if (!isDirty) {
                   const childCached = nodeCache.get(childElem)
-                  if (childCached && Math.floor(childCached.y) - delta === screenY) {
-                    continue
+                  if (childCached) {
+                    const shiftedY = Math.floor(childCached.y) - delta
+                    if (shiftedY === screenY) continue
+                    // The shift parked this clean child's old pixels at
+                    // shiftedY, but it now belongs at screenY (it grew or a
+                    // sibling above it did). Wipe the stale shifted rect so
+                    // it doesn't ghost; clamp to the scroll region and cap at
+                    // clearedTop to avoid re-clearing repaired rows.
+                    const wipeTop = Math.max(shiftedY, top)
+                    const wipeBottom = Math.min(shiftedY + childCached.height, clearedTop ?? bottom + 1)
+                    if (wipeTop < wipeBottom) {
+                      output.write(
+                        Math.floor(x),
+                        wipeTop,
+                        Array(wipeBottom - wipeTop)
+                          .fill(spaces)
+                          .join('\n'),
+                      )
+                    }
                   }
                 }
                 // Wipe this child's region with spaces to overwrite stale
@@ -961,6 +982,7 @@ function renderNodeToOutput(
                   Math.floor((y1 ?? y) + padTop + innerHeight),
                 )
                 if (screenY < screenBottom) {
+                  clearedTop ??= screenY
                   const fill = Array(screenBottom - screenY)
                     .fill(spaces)
                     .join('\n')

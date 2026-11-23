@@ -12,7 +12,7 @@ import { getDisplayPath } from './file.js'
 import { formatNumber } from './format.js'
 import { getIdeClientName, type IDEExtensionInstallationStatus, isJetBrainsIde, toIDEDisplayName } from './ide.js'
 import { getClaudeAiUserDefaultModelDescription, modelDisplayString } from './model/model.js'
-import { getAPIProvider } from './model/providers.js'
+import { getAPIProvider, getSecondaryProvider, type APIProvider } from './model/providers.js'
 import { getMTLSConfig } from './mtls.js'
 import { checkInstall } from './nativeInstaller/index.js'
 import { getProxyUrl } from './proxy.js'
@@ -295,16 +295,18 @@ export function buildAPIProviderProperties(): Property[] {
   const properties: Property[] = []
 
   if (apiProvider !== 'firstParty') {
-    const providerLabel = {
+    const providerLabel: Record<Exclude<APIProvider, 'firstParty'>, string> = {
       bedrock: 'AWS Bedrock',
       vertex: 'Google Vertex AI',
       foundry: 'Microsoft Foundry',
       anthropicAws: 'Claude Platform on AWS',
-    }[apiProvider]
+      mantle: 'Amazon Bedrock (Mantle)',
+    }
+    const secondary = getSecondaryProvider()
 
     properties.push({
       label: 'API provider',
-      value: providerLabel,
+      value: secondary ? `${providerLabel[apiProvider]} + ${providerLabel[secondary]}` : providerLabel[apiProvider],
     })
   }
 
@@ -409,6 +411,29 @@ export function buildAPIProviderProperties(): Property[] {
     if (isEnvTruthy(process.env.CLAUDE_CODE_SKIP_ANTHROPIC_AWS_AUTH)) {
       properties.push({
         value: 'Claude Platform on AWS auth skipped',
+      })
+    }
+  }
+
+  if (apiProvider === 'mantle' || getSecondaryProvider() === 'mantle') {
+    const mantleBaseUrl = process.env.ANTHROPIC_BEDROCK_MANTLE_BASE_URL
+    if (mantleBaseUrl) {
+      properties.push({
+        label: 'Amazon Bedrock (Mantle) base URL',
+        value: mantleBaseUrl,
+      })
+    }
+
+    if (apiProvider === 'mantle') {
+      properties.push({
+        label: 'AWS region',
+        value: getAWSRegion(),
+      })
+    }
+
+    if (isEnvTruthy(process.env.CLAUDE_CODE_SKIP_MANTLE_AUTH)) {
+      properties.push({
+        value: 'Amazon Bedrock (Mantle) auth skipped',
       })
     }
   }

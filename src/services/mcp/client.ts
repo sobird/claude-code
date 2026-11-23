@@ -3,7 +3,7 @@ import { feature } from 'bun:bundle'
 import type { Base64ImageSource, ContentBlockParam, MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport, type SSEClientTransportOptions } from '@modelcontextprotocol/sdk/client/sse.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js'
 import {
   StreamableHTTPClientTransport,
   type StreamableHTTPClientTransportOptions,
@@ -71,7 +71,7 @@ import { getWebSocketTLSOptions } from '../../utils/mtls.js'
 import { getProxyFetchOptions, getWebSocketProxyAgent, getWebSocketProxyUrl } from '../../utils/proxy.js'
 import { recursivelySanitizeUnicode } from '../../utils/sanitization.js'
 import { getSessionIngressAuthToken } from '../../utils/sessionIngressAuth.js'
-import { subprocessEnv } from '../../utils/subprocessEnv.js'
+import { shouldUseMcpAllowlistEnv, subprocessEnv, upstreamProxyEnv } from '../../utils/subprocessEnv.js'
 import { isPersistError, persistToolResult } from '../../utils/toolResultStorage.js'
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../analytics/index.js'
 import { type ElicitationWaitingState, runElicitationHooks, runElicitationResultHooks } from './elicitationHandler.js'
@@ -195,6 +195,9 @@ import { isClaudeInChromeMCPServer } from '../../utils/claudeInChrome/common.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const claudeInChromeToolRendering = (): typeof import('../../utils/claudeInChrome/toolRendering.js') =>
   require('../../utils/claudeInChrome/toolRendering.js')
+// Lazy: toolRendering.tsx pulls React/ink; only needed for the Slack MCP tools
+const slackToolRendering = (): typeof import('../../utils/slack/toolRendering.js') =>
+  require('../../utils/slack/toolRendering.js')
 // Lazy: wrapper.tsx → hostAdapter.ts → executor.ts pulls both native modules
 // (@ant/computer-use-input + @ant/computer-use-swift). Runtime-gated by
 // GrowthBook tengu_malort_pedway (see gates.ts).
@@ -840,7 +843,7 @@ export const connectToServer = memoize(
           command: finalCommand,
           args: finalArgs,
           env: {
-            ...subprocessEnv(),
+            ...(shouldUseMcpAllowlistEnv() ? { ...getDefaultEnvironment(), ...upstreamProxyEnv() } : subprocessEnv()),
             ...serverRef.env,
           } as Record<string, string>,
           stderr: 'pipe', // prevents error output from the MCP server from printing to the UI
@@ -1760,6 +1763,9 @@ export const fetchToolsForClient = memoizeWithLRU(
             (client.config.type === 'stdio' || !client.config.type) &&
             isComputerUseMCPServer!(client.name)
               ? computerUseWrapper!().getComputerUseMCPToolOverrides(tool.name)
+              : {}),
+            ...(slackToolRendering().isSlackMCPToolName(tool.name)
+              ? slackToolRendering().getSlackMCPToolOverrides()
               : {}),
           }
         })

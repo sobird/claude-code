@@ -1,4 +1,4 @@
-import { isEnvTruthy } from './envUtils.js'
+import { isEnvDefinedFalsy, isEnvTruthy } from './envUtils.js'
 
 /**
  * Env vars to strip from subprocess environments when running inside GitHub
@@ -74,14 +74,44 @@ export function registerUpstreamProxyEnvFn(fn: () => Record<string, string>): vo
   _getUpstreamProxyEnv = fn
 }
 
-export function subprocessEnv(): NodeJS.ProcessEnv {
-  // CCR upstreamproxy: inject HTTPS_PROXY + CA bundle vars so curl/gh/python
-  // in agent subprocesses route through the local relay. Returns {} when the
-  // proxy is disabled or not registered (non-CCR), so this is a no-op outside
-  // CCR containers.
-  const proxyEnv = _getUpstreamProxyEnv?.() ?? {}
+/**
+ * CCR upstreamproxy: inject HTTPS_PROXY + CA bundle vars so curl/gh/python in
+ * agent subprocesses route through the local relay. Returns {} when the proxy
+ * is disabled or not registered (non-CCR), so this is a no-op outside CCR
+ * containers.
+ */
+export function upstreamProxyEnv(): Record<string, string> {
+  return _getUpstreamProxyEnv?.() ?? {}
+}
 
-  if (!isEnvTruthy(process.env.CLAUDE_CODE_SUBPROCESS_ENV_SCRUB)) {
+/**
+ * Decide whether subprocess env should be scrubbed. Explicit
+ * CLAUDE_CODE_SUBPROCESS_ENV_SCRUB wins; when unset, scrub under the
+ * local-agent entrypoint (an inherently untrusted content surface).
+ */
+function shouldScrubSubprocessEnv(): boolean {
+  const scrub = process.env.CLAUDE_CODE_SUBPROCESS_ENV_SCRUB
+  if (isEnvTruthy(scrub)) return true
+  if (isEnvDefinedFalsy(scrub)) return false
+  return process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent'
+}
+
+/**
+ * Whether MCP stdio servers should receive an allowlisted env (the MCP SDK's
+ * default inherited vars plus the upstream proxy) instead of the full scrubbed
+ * process env. Follows the same gate shape as the scrub decision.
+ */
+export function shouldUseMcpAllowlistEnv(): boolean {
+  const allowlist = process.env.CLAUDE_CODE_MCP_ALLOWLIST_ENV
+  if (isEnvTruthy(allowlist)) return true
+  if (isEnvDefinedFalsy(allowlist)) return false
+  return process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent'
+}
+
+export function subprocessEnv(): NodeJS.ProcessEnv {
+  const proxyEnv = upstreamProxyEnv()
+
+  if (!shouldScrubSubprocessEnv()) {
     return Object.keys(proxyEnv).length > 0 ? { ...process.env, ...proxyEnv } : process.env
   }
   const env = { ...process.env, ...proxyEnv }

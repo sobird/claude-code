@@ -2144,6 +2144,25 @@ async function* queryModel(
         // If the signal is aborted, it's a user-initiated abort
         // If not, it's likely a timeout from the SDK
         if (signal.aborted) {
+          // SDK/print: an interrupt can land mid text block, before
+          // content_block_stop fires, so the partial block was never turned
+          // into an assistant message. Flush it so the partial reply stays in
+          // session history instead of silently vanishing.
+          if (options.querySource === 'sdk') {
+            const inProgressBlock = contentBlocks[newMessages.length]
+            if (inProgressBlock?.type === 'text' && inProgressBlock.text.trim() && partialMessage) {
+              yield {
+                message: {
+                  ...partialMessage,
+                  content: normalizeContentFromAPI([inProgressBlock] as BetaContentBlock[], tools, options.agentId),
+                },
+                requestId: streamRequestId ?? undefined,
+                type: 'assistant',
+                uuid: randomUUID(),
+                timestamp: new Date().toISOString(),
+              } satisfies AssistantMessage
+            }
+          }
           // This is a real user abort (ESC key was pressed)
           logForDebugging(`Streaming aborted by user: ${errorMessage(streamingError)}`)
           if (isAdvisorInProgress) {

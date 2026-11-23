@@ -988,35 +988,40 @@ export async function saveApiKey(apiKey: string): Promise<void> {
 
   // Store as primary API key
   await maybeRemoveApiKeyFromMacOSKeychain()
-  let savedToKeychain = false
-  if (process.platform === 'darwin') {
-    try {
-      // TODO: migrate to SecureStorage
-      const storageServiceName = getMacOsKeychainStorageServiceName()
-      const username = getUsername()
+  const isMacOs = process.platform === 'darwin'
+  if (isMacOs) {
+    // TODO: migrate to SecureStorage
+    const storageServiceName = getMacOsKeychainStorageServiceName()
+    const username = getUsername()
 
-      // Convert to hexadecimal to avoid any escaping issues
-      const hexValue = Buffer.from(apiKey, 'utf-8').toString('hex')
+    // Convert to hexadecimal to avoid any escaping issues
+    const hexValue = Buffer.from(apiKey, 'utf-8').toString('hex')
 
-      // Use security's interactive mode (-i) with -X (hexadecimal) option
-      // This ensures credentials never appear in process command-line arguments
-      // Process monitors only see "security -i", not the password
-      const command = `add-generic-password -U -a "${username}" -s "${storageServiceName}" -X "${hexValue}"\n`
+    // Use security's interactive mode (-i) with -X (hexadecimal) option
+    // This ensures credentials never appear in process command-line arguments
+    // Process monitors only see "security -i", not the password
+    const command = `add-generic-password -U -a "${username}" -s "${storageServiceName}" -X "${hexValue}"\n`
 
-      await execa('security', ['-i'], {
-        input: command,
-        reject: false,
-      })
+    const result = await execa('security', ['-i'], {
+      input: command,
+      reject: false,
+      timeout: 5000,
+    })
 
-      logEvent('tengu_api_key_saved_to_keychain', {})
-      savedToKeychain = true
-    } catch (e) {
-      logError(e)
+    if (result.exitCode !== 0) {
+      // A locked or desynced login keychain used to swallow this failure, so
+      // Console login appeared to succeed while the next request reported
+      // "Not logged in". Surface the error and point at `claude doctor`.
+      const detail = (result.stderr || result.stdout || '').trim().replace(/\s*\n\s*/g, '; ')
       logEvent('tengu_api_key_keychain_error', {
-        error: errorMessage(e) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error: detail as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
-      logEvent('tengu_api_key_saved_to_config', {})
+      throw new Error(
+        `Failed to save API key to macOS Keychain${detail ? ` (${detail})` : ''}. Run \`claude doctor\` to diagnose keychain access.`,
+      )
     }
+
+    logEvent('tengu_api_key_saved_to_keychain', {})
   } else {
     logEvent('tengu_api_key_saved_to_config', {})
   }
@@ -1029,7 +1034,7 @@ export async function saveApiKey(apiKey: string): Promise<void> {
     return {
       ...current,
       // Only save to config if keychain save failed or not on darwin
-      primaryApiKey: savedToKeychain ? current.primaryApiKey : apiKey,
+      primaryApiKey: isMacOs ? current.primaryApiKey : apiKey,
       customApiKeyResponses: {
         ...current.customApiKeyResponses,
         approved: approved.includes(normalizedKey) ? approved : [...approved, normalizedKey],

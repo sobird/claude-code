@@ -86,6 +86,9 @@ function shouldRetry529(querySource: QuerySource | undefined): boolean {
 const PERSISTENT_MAX_BACKOFF_MS = 5 * 60 * 1000
 const PERSISTENT_RESET_CAP_MS = 6 * 60 * 60 * 1000
 const HEARTBEAT_INTERVAL_MS = 30_000
+// A Retry-After longer than this is surfaced immediately (external builds)
+// rather than waited out, so a pathological header can't hang the CLI.
+const RETRY_AFTER_SURFACE_THRESHOLD_MS = 60_000
 
 function isPersistentRetryEnabled(): boolean {
   return feature('UNATTENDED_RETRY') ? isEnvTruthy(process.env.CLAUDE_CODE_UNATTENDED_RETRY) : false
@@ -379,6 +382,16 @@ export async function* withRetry<T>(
         )
       } else {
         delayMs = getRetryDelay(attempt, retryAfter)
+        // 429s (and other retryables) carrying a long Retry-After surface
+        // immediately instead of sleeping until the delay elapses.
+        if (process.env.USER_TYPE !== 'ant' && delayMs > RETRY_AFTER_SURFACE_THRESHOLD_MS) {
+          logEvent('tengu_api_retry_after_too_long', {
+            delayMs,
+            status: (error as APIError).status,
+            provider: getAPIProviderForStatsig(),
+          })
+          throw new CannotRetryError(error, retryContext)
+        }
       }
 
       // In persistent mode the for-loop `attempt` is clamped at maxRetries+1;

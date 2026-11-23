@@ -778,6 +778,7 @@ export const UserPromptSubmitHookSpecificOutputSchema = lazySchema(() =>
   z.object({
     hookEventName: z.literal('UserPromptSubmit'),
     additionalContext: z.string().optional(),
+    sessionTitle: z.string().optional(),
   }),
 )
 
@@ -1009,7 +1010,7 @@ export const AccountInfoSchema = lazySchema(() =>
       tokenSource: z.string().optional(),
       apiKeySource: z.string().optional(),
       apiProvider: z
-        .enum(['firstParty', 'bedrock', 'vertex', 'foundry', 'anthropicAws'])
+        .enum(['firstParty', 'bedrock', 'vertex', 'foundry', 'anthropicAws', 'mantle'])
         .optional()
         .describe(
           'Active API backend. Anthropic OAuth login only applies when "firstParty"; for 3P providers the other fields are absent and auth is external (AWS creds, gcloud ADC, etc.).',

@@ -5,6 +5,7 @@ import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { Box, Text } from '../../ink.js'
 import ScrollBox from '../../ink/components/ScrollBox.js'
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js'
+import { useDeclaredCursor } from '../../ink/hooks/use-declared-cursor.js'
 import { stringWidth } from '../../ink/stringWidth.js'
 import { useKeybindings } from '../../keybindings/useKeybinding.js'
 import type { Theme } from '../../utils/theme.js'
@@ -66,6 +67,34 @@ const TabsContext = createContext<TabsContextValue>({
   blurHeader: () => {},
   registerOptIn: () => () => {},
 })
+
+type TabHeaderItemProps = {
+  title: string
+  isCurrent: boolean
+  headerFocused: boolean
+  color: keyof Theme | undefined
+}
+
+function TabHeaderItem({ title, isCurrent, headerFocused, color }: TabHeaderItemProps): React.ReactNode {
+  const hasColorCursor = Boolean(color) && isCurrent && headerFocused
+  // Park the native cursor on the selected tab's label (column 1 = first
+  // char past the leading space) so screen readers / magnifiers follow
+  // the active tab in dialogs.
+  const cursorRef = useDeclaredCursor({ line: 0, column: 1, active: isCurrent && headerFocused })
+  return (
+    <Box ref={cursorRef}>
+      <Text
+        backgroundColor={hasColorCursor ? color : undefined}
+        color={hasColorCursor ? 'inverseText' : undefined}
+        inverse={isCurrent && !hasColorCursor}
+        bold={isCurrent}
+      >
+        {' '}
+        {title}{' '}
+      </Text>
+    </Box>
+  )
+}
 
 export function Tabs({
   title,
@@ -213,22 +242,15 @@ export function Tabs({
                 {title}
               </Text>
             )}
-            {tabs.map(([id, title], i) => {
-              const isCurrent = selectedTabIndex === i
-              const hasColorCursor = color && isCurrent && headerFocused
-              return (
-                <Text
-                  key={id}
-                  backgroundColor={hasColorCursor ? color : undefined}
-                  color={hasColorCursor ? 'inverseText' : undefined}
-                  inverse={isCurrent && !hasColorCursor}
-                  bold={isCurrent}
-                >
-                  {' '}
-                  {title}{' '}
-                </Text>
-              )
-            })}
+            {tabs.map(([id, title], i) => (
+              <TabHeaderItem
+                key={id}
+                title={title}
+                isCurrent={selectedTabIndex === i}
+                headerFocused={headerFocused}
+                color={color}
+              />
+            ))}
             {spacerWidth > 0 && <Text>{' '.repeat(spacerWidth)}</Text>}
           </Box>
         )}

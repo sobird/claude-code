@@ -130,7 +130,7 @@ export function Doctor({ onDone }: Props): React.ReactNode {
   }, [])
 
   useEffect(() => {
-    void getDoctorDiagnostic().then(setDiagnostic)
+    void getDoctorDiagnostic({ probeKeychain: true }).then(setDiagnostic)
 
     void (async () => {
       const userAgentsDir = join(getClaudeConfigHomeDir(), 'agents')

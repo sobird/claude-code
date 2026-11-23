@@ -1829,25 +1829,31 @@ async function loadPluginFromMarketplaceEntryCacheOnly(
   let pluginPath: string
 
   if (typeof entry.source === 'string') {
-    // Local relative path — read from the marketplace source dir directly.
-    // Skip copyPluginToVersionedCache; startup doesn't need a fresh copy.
-    let marketplaceDir: string
-    try {
-      marketplaceDir = (await stat(marketplaceInstallLocation)).isDirectory()
-        ? marketplaceInstallLocation
-        : join(marketplaceInstallLocation, '..')
-    } catch {
-      errorsOut.push({
-        type: 'plugin-cache-miss',
-        source: pluginId,
-        plugin: entry.name,
-        installPath: marketplaceInstallLocation,
-      })
-      return null
+    // Local relative path. Prefer the recorded installed cache (installPath)
+    // so ${CLAUDE_PLUGIN_ROOT} points at the versioned cache rather than the
+    // marketplace source dir. Fall back to the marketplace source dir when no
+    // cache has been recorded yet (startup doesn't force a fresh copy).
+    if (installPath && (await pathExists(installPath))) {
+      pluginPath = installPath
+    } else {
+      let marketplaceDir: string
+      try {
+        marketplaceDir = (await stat(marketplaceInstallLocation)).isDirectory()
+          ? marketplaceInstallLocation
+          : join(marketplaceInstallLocation, '..')
+      } catch {
+        errorsOut.push({
+          type: 'plugin-cache-miss',
+          source: pluginId,
+          plugin: entry.name,
+          installPath: marketplaceInstallLocation,
+        })
+        return null
+      }
+      pluginPath = join(marketplaceDir, entry.source)
+      // finishLoadingPluginFromPath reads pluginPath — its error handling
+      // surfaces ENOENT as a load failure, no need to pre-check here.
     }
-    pluginPath = join(marketplaceDir, entry.source)
-    // finishLoadingPluginFromPath reads pluginPath — its error handling
-    // surfaces ENOENT as a load failure, no need to pre-check here.
   } else {
     // External source (npm/github/url/git-subdir) — use recorded installPath.
     if (!installPath || !(await pathExists(installPath))) {

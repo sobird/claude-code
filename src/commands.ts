@@ -44,6 +44,7 @@ import share from './commands/share/index.js'
 import skills from './commands/skills/index.js'
 import status from './commands/status/index.js'
 import tasks from './commands/tasks/index.js'
+import teamOnboarding from './commands/team-onboarding.js'
 import teleport from './commands/teleport/index.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const agentsPlatform = process.env.USER_TYPE === 'ant' ? require('./commands/agents-platform/index.js').default : null
@@ -205,7 +206,6 @@ export const INTERNAL_ONLY_COMMANDS = [
   oauthRefresh,
   debugToolCall,
   agentsPlatform,
-  autofixPr,
 ].filter(Boolean)
 
 // Declared as a function so that we don't run this until getCommands is called,
@@ -216,6 +216,7 @@ const COMMANDS = memoize((): Command[] => [
   agents,
   autocompact,
   autocompactNonInteractive,
+  autofixPr,
   branch,
   btw,
   chrome,
@@ -295,6 +296,7 @@ const COMMANDS = memoize((): Command[] => [
   passes,
   ...(peersCmd ? [peersCmd] : []),
   tasks,
+  teamOnboarding,
   ...(workflowsCmd ? [workflowsCmd] : []),
   ...(torch ? [torch] : []),
   ...(process.env.USER_TYPE === 'ant' && !process.env.IS_DEMO ? INTERNAL_ONLY_COMMANDS : []),

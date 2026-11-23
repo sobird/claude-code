@@ -2474,10 +2474,10 @@ function readFileTailSync(fullPath: string): string {
 /* eslint-enable custom-rules/no-sync-fs */
 
 export async function saveCustomTitle(
-  sessionId: UUID,
+  sessionId: SessionId | UUID,
   customTitle: string,
   fullPath?: string,
-  source: 'user' | 'auto' = 'user',
+  source: 'user' | 'auto' | 'hook' = 'user',
 ) {
   // Fall back to computed path if fullPath is not provided
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
@@ -2652,10 +2652,10 @@ export function reAppendSessionMetadata(): void {
 }
 
 export async function saveAgentName(
-  sessionId: UUID,
+  sessionId: SessionId | UUID,
   agentName: string,
   fullPath?: string,
-  source: 'user' | 'auto' = 'user',
+  source: 'user' | 'auto' | 'hook' = 'user',
 ) {
   const resolvedPath = fullPath ?? getTranscriptPathForSession(sessionId)
   appendEntryToFile(resolvedPath, { type: 'agent-name', agentName, sessionId })

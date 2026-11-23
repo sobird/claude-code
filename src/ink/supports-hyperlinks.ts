@@ -1,4 +1,4 @@
-import supportsHyperlinksLib from 'supports-hyperlinks'
+import { createSupportsHyperlinks } from 'supports-hyperlinks'
 
 // Additional terminals that support OSC 8 hyperlinks but aren't detected by supports-hyperlinks.
 // Checked against both TERM_PROGRAM and LC_TERMINAL (the latter is preserved inside tmux).
@@ -17,12 +17,17 @@ type SupportsHyperlinksOptions = {
  * @param options Optional overrides for testing (env, stdoutSupported)
  */
 export function supportsHyperlinks(options?: SupportsHyperlinksOptions): boolean {
-  const stdoutSupported = options?.stdoutSupported ?? supportsHyperlinksLib.stdout
+  const env = options?.env ?? process.env
+  // Re-evaluate at call time (not module load) so FORCE_HYPERLINK set via
+  // settings.json env is honored, then short-circuit on it so a disabled
+  // FORCE_HYPERLINK wins over terminal detection.
+  const stdoutSupported = options?.stdoutSupported ?? createSupportsHyperlinks(process.stdout)
+  if ('FORCE_HYPERLINK' in env) {
+    return stdoutSupported
+  }
   if (stdoutSupported) {
     return true
   }
-
-  const env = options?.env ?? process.env
 
   // Check for additional terminals not detected by supports-hyperlinks
   const termProgram = env['TERM_PROGRAM']

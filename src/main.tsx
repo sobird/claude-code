@@ -1026,6 +1026,9 @@ async function getInputPrompt(
     !process.argv.includes('mcp')
   ) {
     if (inputFormat === 'stream-json') {
+      // Decode stdin as UTF-8 before returning it so multibyte sequences split
+      // across chunk boundaries (e.g. CJK) aren't corrupted into U+FFFD.
+      process.stdin.setEncoding('utf8')
       return process.stdin
     }
     process.stdin.setEncoding('utf8')

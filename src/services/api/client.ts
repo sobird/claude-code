@@ -15,7 +15,7 @@ import {
 } from 'src/utils/auth.js'
 import { getUserAgent } from 'src/utils/http.js'
 import { getSmallFastModel } from 'src/utils/model/model.js'
-import { shouldAttachClientRequestId } from 'src/utils/model/providers.js'
+import { getProviderForModel, shouldAttachClientRequestId } from 'src/utils/model/providers.js'
 import { getProxyFetchOptions } from 'src/utils/proxy.js'
 
 import { getIsNonInteractiveSession, getSessionId } from '../../bootstrap/state.js'
@@ -162,6 +162,35 @@ export async function getAnthropicClient({
       fetch: createProviderFetch(providerConfig, resolvedFetch ?? globalThis.fetch),
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     })
+  }
+
+  // Amazon Bedrock powered by Mantle: per-model routing (primary mantle, or
+  // the bedrock+mantle secondary provider for Mantle-native IDs). The stock
+  // SDK has no dedicated AnthropicBedrockMantle class, but AnthropicBedrock
+  // accepts a baseURL and shares the same SigV4 signing, so point it at the
+  // Mantle endpoint.
+  if (getProviderForModel(model) === 'mantle') {
+    const { AnthropicBedrock } = await import('@anthropic-ai/bedrock-sdk')
+    const awsRegion = getAWSRegion()
+    const skipAuth = isEnvTruthy(process.env.CLAUDE_CODE_SKIP_MANTLE_AUTH)
+    const mantleArgs: BedrockClientOptions = {
+      ...ARGS,
+      awsRegion,
+      baseURL: process.env.ANTHROPIC_BEDROCK_MANTLE_BASE_URL ?? `https://bedrock-mantle.${awsRegion}.api.aws/anthropic`,
+      ...(skipAuth && { skipAuth: true }),
+      ...(isDebugToStdErr() && { logger: createStderrLogger() }),
+    }
+    if (!process.env.AWS_BEARER_TOKEN_BEDROCK && !skipAuth) {
+      const cachedCredentials = await refreshAndGetAwsCredentials()
+      if (cachedCredentials) {
+        mantleArgs.awsAccessKey = cachedCredentials.accessKeyId
+        mantleArgs.awsSecretKey = cachedCredentials.secretAccessKey
+        mantleArgs.awsSessionToken = cachedCredentials.sessionToken
+      }
+    }
+    return new AnthropicBedrock(
+      mantleArgs as unknown as ConstructorParameters<typeof AnthropicBedrock>[0],
+    ) as unknown as Anthropic
   }
 
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK)) {

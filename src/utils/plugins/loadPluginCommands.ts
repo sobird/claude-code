@@ -21,6 +21,7 @@ import { getFsImplementation, isDuplicatePath } from '../fsOperations.js'
 import { extractDescriptionFromMarkdown, parseSlashCommandToolsFromFrontmatter } from '../markdownConfigLoader.js'
 import { parseUserSpecifiedModel } from '../model/model.js'
 import { executeShellCommandsInPrompt } from '../promptShellExecution.js'
+import { HooksSchema, type HooksSettings } from '../settings/types.js'
 import { loadAllPluginsCacheOnly } from './pluginLoader.js'
 import { loadPluginOptions, substitutePluginVariables, substituteUserConfigInContent } from './pluginOptionsStorage.js'
 import type { CommandMetadata, PluginManifest } from './schemas.js'
@@ -247,6 +248,19 @@ function createPluginCommand(
 
     const shell = parseShellFrontmatter(frontmatter.shell, commandName)
 
+    // Plugin skills may declare hooks in their YAML frontmatter. Parse them so
+    // they get registered when the skill is invoked (processSlashCommand reads
+    // command.hooks). Plugin commands (not skills) ignore frontmatter hooks.
+    let hooks: HooksSettings | undefined
+    if ((isSkill || config.isSkillMode) && frontmatter.hooks) {
+      const parsed = HooksSchema().safeParse(frontmatter.hooks)
+      if (parsed.success) {
+        hooks = parsed.data
+      } else {
+        logForDebugging(`Invalid hooks in plugin skill '${commandName}': ${parsed.error.message}`)
+      }
+    }
+
     return {
       type: 'prompt',
       name: commandName,
@@ -264,6 +278,10 @@ function createPluginCommand(
       contentLength: content.length,
       source: 'plugin' as const,
       loadedFrom: isSkill || config.isSkillMode ? 'plugin' : undefined,
+      hooks,
+      // Skill hooks resolve ${CLAUDE_PLUGIN_ROOT} to the plugin root (the
+      // skill lives inside the plugin's installed cache directory).
+      skillRoot: (isSkill || config.isSkillMode) && hooks ? pluginPath : undefined,
       pluginInfo: {
         pluginManifest,
         repository: sourceName,
@@ -626,7 +644,11 @@ async function loadSkillsFromDirectory(
     try {
       const { frontmatter, content: markdownContent } = parseFrontmatter(directSkillContent, directSkillPath)
 
-      const skillName = `${pluginName}:${basename(skillsPath)}`
+      // Use the skill's frontmatter `name` when present; fall back to the
+      // directory name. Sanitize so the command name stays shell/URL-safe.
+      const baseSkillName =
+        (typeof frontmatter.name === 'string' ? frontmatter.name.trim() : '') || basename(skillsPath)
+      const skillName = `${pluginName}:${baseSkillName.replace(/[^a-zA-Z0-9_-]/g, '-')}`
 
       const file: PluginMarkdownFile = {
         filePath: directSkillPath,
@@ -697,7 +719,7 @@ async function loadSkillsFromDirectory(
       try {
         const { frontmatter, content: markdownContent } = parseFrontmatter(content, skillFilePath)
 
-        const skillName = `${pluginName}:${entry.name}`
+        const skillName = `${pluginName}:${entry.name.replace(/[^a-zA-Z0-9_-]/g, '-')}`
 
         const file: PluginMarkdownFile = {
           filePath: skillFilePath,

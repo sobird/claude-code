@@ -1,0 +1,400 @@
+{
+  "source": {
+    "reference": "2.1.92",
+    "target": "2.1.94"
+  },
+  "entries": [
+    {
+      "id": "behavior:mantle-bedrock",
+      "kind": "behavior",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_USE_MANTLE", "bundle:AnthropicBedrockMantle"],
+      "notes": "Amazon Bedrock powered by Mantle：providers.ts 新增 mantle provider（getAPIProvider 顺序、getSecondaryProvider、按模型 getProviderForModel）；configs.ts 每个模型加 mantle 键（haiku-4-5 为 anthropic.claude-haiku-4-5）；client.ts 该 provider 走 Mantle 端点。差异：已装 @anthropic-ai/sdk/bedrock-sdk 无 AnthropicBedrockMantle 类，改用 AnthropicBedrock + baseURL(https://bedrock-mantle.<region>.api.aws/anthropic 或 ANTHROPIC_BEDROCK_MANTLE_BASE_URL) 实现，见 notes R1。",
+      "releaseItems": [1],
+      "srcEvidence": {
+        "files": ["src/utils/model/providers.ts", "src/utils/model/configs.ts", "src/services/api/client.ts"],
+        "symbols": ["getSecondaryProvider", "getProviderForModel", "CLAUDE_CODE_USE_MANTLE"]
+      }
+    },
+    {
+      "id": "behavior:default-effort-high",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:tengu_grey_step2"],
+      "notes": "默认 effort 由 medium 改为 high（API-key、Bedrock/Vertex/Foundry、Team、Enterprise）：effort.ts getDefaultEffortForModel 去掉 Team 的 medium 默认与无订阅门控的 ultrathink medium，ultrathink 默认仅限 Pro/Max 订阅，其余回退 high。",
+      "releaseItems": [2],
+      "srcEvidence": {
+        "files": ["src/utils/effort.ts"],
+        "symbols": ["getDefaultEffortForModel"]
+      }
+    },
+    {
+      "id": "behavior:slack-slacked-header",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:Slacked", "bundle:app_redirect?channel="],
+      "notes": "Slack MCP send-message 工具调用显示紧凑 `Slacked #channel` 头与可点击频道链接：新增 src/utils/slack/toolRendering.tsx，并在 src/services/mcp/client.ts 按工具名接入。",
+      "releaseItems": [3],
+      "srcEvidence": {
+        "files": ["src/utils/slack/toolRendering.tsx", "src/services/mcp/client.ts"],
+        "symbols": ["isSlackMCPToolName", "getSlackMCPToolOverrides"]
+      }
+    },
+    {
+      "id": "behavior:output-style-keep-coding-instructions",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:keep-coding-instructions"],
+      "notes": "插件 output style 支持 keep-coding-instructions frontmatter：loadPluginOutputStyles.ts 解析该字段并回传，prompts.ts 已消费 keepCodingInstructions。",
+      "releaseItems": [4],
+      "srcEvidence": {
+        "files": ["src/utils/plugins/loadPluginOutputStyles.ts"],
+        "symbols": ["keepCodingInstructions"]
+      }
+    },
+    {
+      "id": "behavior:hook-session-title",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:sessionTitle"],
+      "notes": "UserPromptSubmit hook 支持 hookSpecificOutput.sessionTitle 设置会话标题：schema/types/hooks.ts/sessionStorage 放宽签名，processUserInput.ts 清洗并应用（≤200 字符，hook 来源）。",
+      "releaseItems": [5],
+      "srcEvidence": {
+        "files": [
+          "src/types/hooks.ts",
+          "src/utils/hooks.ts",
+          "src/utils/processUserInput/processUserInput.ts",
+          "src/utils/sessionStorage.ts",
+          "src/entrypoints/sdk/coreSchemas.ts"
+        ],
+        "symbols": ["sessionTitle", "applyHookSessionTitle"]
+      }
+    },
+    {
+      "id": "behavior:plugin-skill-name-frontmatter",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:SKILL.md"],
+      "notes": "通过 \"skills\":[\"./\"] 声明的插件 skill 用 frontmatter name 作调用名：loadPluginCommands.ts 以 frontmatter.name 规整后拼 pluginName。",
+      "releaseItems": [6],
+      "srcEvidence": {
+        "files": ["src/utils/plugins/loadPluginCommands.ts"],
+        "symbols": ["skillName"]
+      }
+    },
+    {
+      "id": "behavior:retry-after-too-long",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:tengu_api_retry_after_too_long"],
+      "notes": "长时间 Retry-After 的 429 立即浮现而非静默等待：withRetry.ts 非持久分支在外部构建下 delay>60s 抛 CannotRetryError 并记事件。",
+      "releaseItems": [7],
+      "srcEvidence": {
+        "files": ["src/services/api/withRetry.ts"],
+        "symbols": ["RETRY_AFTER_SURFACE_THRESHOLD_MS", "tengu_api_retry_after_too_long"]
+      }
+    },
+    {
+      "id": "behavior:macos-keychain-login-error",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:Claude Code-doctor-probe", "bundle:unlock-keychain"],
+      "notes": "macOS Console 登录在钥匙串被锁/密码不同步时浮现错误：auth.ts 保存密钥失败时抛错并记事件；doctorDiagnostic 新增钥匙串可写探测，Doctor.tsx 接入。",
+      "releaseItems": [8],
+      "srcEvidence": {
+        "files": ["src/utils/auth.ts", "src/utils/doctorDiagnostic.ts", "src/screens/Doctor.tsx"],
+        "symbols": ["detectMacOsKeychainWritable"]
+      }
+    },
+    {
+      "id": "behavior:plugin-skill-frontmatter-hooks",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:Invalid hooks in plugin skill"],
+      "notes": "插件 skill YAML frontmatter 的 hooks 不再被忽略：loadPluginCommands.ts 解析 HooksSchema 并随命令返回 hooks/skillRoot，调用时注册。",
+      "releaseItems": [9],
+      "srcEvidence": {
+        "files": ["src/utils/plugins/loadPluginCommands.ts"],
+        "symbols": ["HooksSchema"]
+      }
+    },
+    {
+      "id": "behavior:plugin-hook-plugin-root-missing",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:Hook command references"],
+      "notes": "未设置 CLAUDE_PLUGIN_ROOT 时插件 hook 不再报 No such file：hooks.ts execCommandHook 在替换前校验 ${CLAUDE_PLUGIN_ROOT}/${CLAUDE_PLUGIN_DATA} 引用并给出清晰错误。",
+      "releaseItems": [10],
+      "srcEvidence": {
+        "files": ["src/utils/hooks.ts"],
+        "symbols": ["CLAUDE_PLUGIN_ROOT"]
+      }
+    },
+    {
+      "id": "behavior:plugin-root-installed-cache",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:installed_plugins.json"],
+      "notes": "本地 marketplace 插件启动时 ${CLAUDE_PLUGIN_ROOT} 指向安装缓存而非源目录：pluginLoader.ts 优先用 installed_plugins.json 的 installPath。",
+      "releaseItems": [11],
+      "srcEvidence": {
+        "files": ["src/utils/plugins/pluginLoader.ts"],
+        "symbols": ["installPath"]
+      }
+    },
+    {
+      "id": "behavior:scrollback-diff-repeat",
+      "kind": "behavior",
+      "status": "approximated",
+      "evidence": ["bundle:scrollback"],
+      "notes": "长会话中回滚缓冲重复同一 diff / 空白页：该修复为纯逻辑改动、无新增字面量，未能在本地 bundle 定位到可靠实现，未改动 src。见 notes R2（未移植）。",
+      "releaseItems": [12]
+    },
+    {
+      "id": "behavior:transcript-multiline-indent",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:❯"],
+      "notes": "多行用户提示续行缩进到文本列而非 ❯ 光标下：HighlightedThinkingText.tsx 改为行内 Box + 固定宽指针列。",
+      "releaseItems": [13],
+      "srcEvidence": {
+        "files": ["src/components/messages/HighlightedThinkingText.tsx"]
+      }
+    },
+    {
+      "id": "behavior:shift-space-search-input",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:===\"space\")return\" \""],
+      "notes": "搜索输入 Shift+Space 插入空格而非字面 \"space\"：ink/events/keyboard-event.ts 当 key name 为 space 时返回 \" \"。",
+      "releaseItems": [14],
+      "srcEvidence": {
+        "files": ["src/ink/events/keyboard-event.ts"]
+      }
+    },
+    {
+      "id": "behavior:tmux-hyperlink-double-tab",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:client_termtype"],
+      "notes": "tmux + xterm.js 终端内点击超链接打开两个标签：ink/components/App.tsx 在 TMUX 下用 tmux display-message 解析真实客户端终端，使 isXtermJs 生效。",
+      "releaseItems": [15],
+      "srcEvidence": {
+        "files": ["src/ink/components/App.tsx"]
+      }
+    },
+    {
+      "id": "behavior:alt-screen-ghost-lines",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:DECSTBM"],
+      "notes": "alt-screen 滚动中内容高度变化残留鬼影行：ink/render-node-to-output.ts 第二遍渲染擦除移位后遗留的陈旧区块（clearedTop 逻辑）。",
+      "releaseItems": [16],
+      "srcEvidence": {
+        "files": ["src/ink/render-node-to-output.ts"],
+        "symbols": ["clearedTop"]
+      }
+    },
+    {
+      "id": "behavior:force-hyperlink-settings-env",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:FORCE_HYPERLINK"],
+      "notes": "settings.json env 中的 FORCE_HYPERLINK 被忽略：supports-hyperlinks.ts 在调用时用 createSupportsHyperlinks 重新求值并在存在 FORCE_HYPERLINK 时短路。",
+      "releaseItems": [17],
+      "srcEvidence": {
+        "files": ["src/ink/supports-hyperlinks.ts"],
+        "symbols": ["createSupportsHyperlinks"]
+      }
+    },
+    {
+      "id": "behavior:dialog-cursor-tab-tracking",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:{line:0,column:1"],
+      "notes": "对话框切换 Tab 时原生终端光标未跟随选中项：components/design-system/Tabs.tsx 新增 TabHeaderItem 用 useDeclaredCursor 把光标停在选中标签首字符。",
+      "releaseItems": [18],
+      "srcEvidence": {
+        "files": ["src/components/design-system/Tabs.tsx"],
+        "symbols": ["TabHeaderItem"]
+      }
+    },
+    {
+      "id": "behavior:bedrock-sonnet35-v2-inference-profile",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:us.anthropic.claude-3-5-sonnet-20241022-v2:0"],
+      "notes": "Bedrock 调用 Sonnet 3.5 v2 使用 us. 推理档案 ID：configs.ts CLAUDE_3_5_V2_SONNET_CONFIG.bedrock。",
+      "releaseItems": [19],
+      "srcEvidence": {
+        "files": ["src/utils/model/configs.ts"],
+        "symbols": ["CLAUDE_3_5_V2_SONNET_CONFIG"]
+      }
+    },
+    {
+      "id": "behavior:sdk-partial-response-preserve",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:partialMessage", "bundle:APIUserAbortError"],
+      "notes": "SDK/print 模式流中断时保留部分助手回复：claude.ts 在 APIUserAbortError 且 signal aborted 且 sdk 来源时，先 yield 合成 assistant 消息再抛错。",
+      "releaseItems": [20],
+      "srcEvidence": {
+        "files": ["src/services/api/claude.ts"],
+        "symbols": ["APIUserAbortError"]
+      }
+    },
+    {
+      "id": "behavior:resume-cross-worktree",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:worktree"],
+      "notes": "--resume 直接恢复同仓库其它 worktree 会话而非打印 cd：crossProjectResume.ts 删除 USER_TYPE 门控的 cd 兜底，统一走 same-repo worktree 判定。",
+      "releaseItems": [21],
+      "srcEvidence": {
+        "files": ["src/utils/crossProjectResume.ts"],
+        "symbols": ["crossProjectResume"]
+      }
+    },
+    {
+      "id": "behavior:stream-json-multibyte",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:stream-json"],
+      "notes": "stream-json 输入 chunk 边界切断 UTF-8 导致 CJK U+FFFD：main.tsx stream-json 分支返回 process.stdin 前 setEncoding(utf8)，由 StringDecoder 跨 chunk 拼接。",
+      "releaseItems": [22],
+      "srcEvidence": {
+        "files": ["src/main.tsx"],
+        "symbols": ["setEncoding"]
+      }
+    },
+    {
+      "id": "behavior:vscode-cold-open",
+      "kind": "behavior",
+      "status": "approximated",
+      "evidence": ["bundle:VSCode"],
+      "notes": "[VSCode] 降低启动子进程开销：仅 VS Code 扩展侧改动，本仓库 CLI 无对应实现，未移植。",
+      "releaseItems": [23]
+    },
+    {
+      "id": "behavior:vscode-dropdown-selection",
+      "kind": "behavior",
+      "status": "approximated",
+      "evidence": ["bundle:vscode"],
+      "notes": "[VSCode] 修复下拉菜单选择错误项：仅 VS Code 扩展侧 UI，本仓库无对应实现，未移植。",
+      "releaseItems": [24]
+    },
+    {
+      "id": "behavior:vscode-settings-parse-banner",
+      "kind": "behavior",
+      "status": "approximated",
+      "evidence": ["bundle:settings.json"],
+      "notes": "[VSCode] settings.json 解析失败时显示警告横幅：仅 VS Code 扩展侧 UI，本仓库无对应实现，未移植。",
+      "releaseItems": [25]
+    },
+    {
+      "id": "cmd:autofix-pr",
+      "kind": "cmd",
+      "status": "ported",
+      "evidence": ["bundle:autofix-pr"],
+      "notes": "新增 /autofix-pr：检测当前分支 PR 并 spawn 远程会话自动修复。接 RemoteAgentTask/teleport 既有机制；gating 为已登录远程控制 && isPolicyAllowed(\"allow_remote_sessions\")。",
+      "srcEvidence": {
+        "files": ["src/commands/autofix-pr/index.ts", "src/commands/autofix-pr/autofix-pr.tsx", "src/commands.ts"]
+      }
+    },
+    {
+      "id": "cmd:team-onboarding",
+      "kind": "cmd",
+      "status": "ported",
+      "evidence": ["bundle:team-onboarding"],
+      "notes": "新增 /team-onboarding（prompt 型）：扫描本机用量生成 ONBOARDING.md；isEnabled 读 CLAUDE_CODE_TEAM_ONBOARDING 或 GrowthBook tengu_flint_harbor。",
+      "srcEvidence": {
+        "files": ["src/commands/team-onboarding.ts", "src/commands.ts"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_MCP_ALLOWLIST_ENV",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:CLAUDE_CODE_MCP_ALLOWLIST_ENV"],
+      "notes": "MCP 子进程 env 白名单开关：subprocessEnv.ts shouldUseMcpAllowlistEnv，接入 mcp/client.ts stdio spawn。",
+      "srcEvidence": {
+        "files": ["src/utils/subprocessEnv.ts", "src/services/mcp/client.ts"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_SANDBOXED",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:CLAUDE_CODE_SANDBOXED"],
+      "notes": "视为已沙箱/已信任：utils/config.ts computeTrustDialogAccepted 开头读取。",
+      "srcEvidence": {
+        "files": ["src/utils/config.ts"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_SKIP_MANTLE_AUTH",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:CLAUDE_CODE_SKIP_MANTLE_AUTH"],
+      "notes": "Mantle 客户端跳过 SigV4 鉴权：client.ts mantle 分支。",
+      "srcEvidence": {
+        "files": ["src/services/api/client.ts"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_TEAM_ONBOARDING",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:CLAUDE_CODE_TEAM_ONBOARDING"],
+      "notes": "启用 team-onboarding 命令：team-onboarding.ts isEnabled。",
+      "srcEvidence": {
+        "files": ["src/commands/team-onboarding.ts"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_USE_MANTLE",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:CLAUDE_CODE_USE_MANTLE"],
+      "notes": "启用 Mantle provider：providers.ts getAPIProvider/getSecondaryProvider。",
+      "srcEvidence": {
+        "files": ["src/utils/model/providers.ts"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_HTTP_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_HOST_HTTP_PROXY_PORT"],
+      "notes": "由打包依赖 @anthropic-ai/sandbox-runtime 注入沙箱子进程；src/ 不直接读取（依赖噪声，沿用 2.1.92 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT"],
+      "notes": "同 HOST_HTTP_PROXY_PORT：sandbox-runtime 依赖注入，src/ 不直接读取（依赖噪声）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_THRESHOLD_MINUTES",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_RESUME_THRESHOLD_MINUTES"],
+      "notes": "resume-return 提示阈值，本仓库无此提示（沿用 2.1.92 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_TOKEN_THRESHOLD",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_RESUME_TOKEN_THRESHOLD"],
+      "notes": "resume-return 提示阈值，本仓库无此提示（沿用 2.1.92 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_SM_COMPACT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_SM_COMPACT"],
+      "notes": "扫描器 ENV_RE 从 ENABLE_/DISABLE_CLAUDE_CODE_SM_COMPACT 截取的子串名，真实读取点带前缀（扫描噪声）。"
+    }
+  ]
+}

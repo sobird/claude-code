@@ -77,7 +77,7 @@ export function getAttributionHeader(fingerprint: string): string {
   // token. Bedrock and Claude Platform on AWS requests are signed by their own
   // transports, so the placeholder is omitted there.
   const provider = getAPIProvider()
-  const attestable = provider !== 'bedrock' && provider !== 'anthropicAws'
+  const attestable = provider !== 'bedrock' && provider !== 'anthropicAws' && provider !== 'mantle'
   const cch = feature('NATIVE_CLIENT_ATTESTATION') && attestable ? ' cch=00000;' : ''
   // cc_workload: turn-scoped hint so the API can route e.g. cron-initiated
   // requests to a lower QoS pool. Absent = interactive default. Safe re:

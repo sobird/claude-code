@@ -1,11 +1,11 @@
 import type { EffortLevel } from 'src/entrypoints/sdk/runtimeTypes.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
 
-import { isProSubscriber, isMaxSubscriber, isTeamSubscriber } from './auth.js'
+import { isProSubscriber, isMaxSubscriber } from './auth.js'
 import { isEnvTruthy } from './envUtils.js'
 import { resolveAntModel, getAntModelOverrideConfig } from './model/antModels.js'
 import { get3PModelCapabilityOverride } from './model/modelSupportOverrides.js'
-import { isFirstPartyLikeProvider } from './model/providers.js'
+import { getProviderForModel, usesFirstPartyModelFormat } from './model/providers.js'
 import { getInitialSettings } from './settings/settings.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { isUltrathinkEnabled } from './thinking.js'
@@ -42,7 +42,7 @@ export function modelSupportsEffort(model: string): boolean {
   // Default to true for unknown model strings on 1P.
   // Do not default to true for 3P as they have different formats for their
   // model strings (ex. anthropics/claude-code#30795)
-  return isFirstPartyLikeProvider()
+  return usesFirstPartyModelFormat(getProviderForModel(model))
 }
 
 // @[MODEL LAUNCH]: Add the new model to the allowlist if it supports 'max' effort.
@@ -290,18 +290,20 @@ export function getDefaultEffortForModel(model: string): EffortValue | undefined
   // that can greatly affect model quality and bashing.
 
   // Default effort on Opus 4.6 to medium for Pro.
-  // Max/Team also get medium when the tengu_grey_step2 config is enabled.
+  // Max also gets medium when the tengu_grey_step2 config is enabled.
   if (model.toLowerCase().includes('opus-4-6')) {
     if (isProSubscriber()) {
       return 'medium'
     }
-    if (getOpusDefaultEffortConfig().enabled && (isMaxSubscriber() || isTeamSubscriber())) {
+    if (getOpusDefaultEffortConfig().enabled && isMaxSubscriber()) {
       return 'medium'
     }
   }
 
-  // When ultrathink feature is on, default effort to medium (ultrathink bumps to high)
-  if (isUltrathinkEnabled() && modelSupportsEffort(model)) {
+  // When ultrathink feature is on, default effort to medium for Pro/Max
+  // subscribers (ultrathink bumps to high). Everyone else — API-key users,
+  // Bedrock/Vertex/Foundry, Team, Enterprise — falls through to high.
+  if (isUltrathinkEnabled() && modelSupportsEffort(model) && (isProSubscriber() || isMaxSubscriber())) {
     return 'medium'
   }
 

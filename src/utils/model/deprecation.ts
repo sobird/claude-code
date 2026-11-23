@@ -39,6 +39,7 @@ const DEPRECATED_MODELS: Record<string, DeprecationEntry> = {
       vertex: 'January 5, 2026',
       foundry: 'January 5, 2026',
       anthropicAws: null,
+      mantle: null,
     },
   },
   'claude-3-7-sonnet': {
@@ -49,6 +50,7 @@ const DEPRECATED_MODELS: Record<string, DeprecationEntry> = {
       vertex: 'May 11, 2026',
       foundry: 'February 19, 2026',
       anthropicAws: null,
+      mantle: null,
     },
   },
   'claude-3-5-haiku': {
@@ -59,6 +61,7 @@ const DEPRECATED_MODELS: Record<string, DeprecationEntry> = {
       vertex: null,
       foundry: null,
       anthropicAws: null,
+      mantle: null,
     },
   },
 }

@@ -6,6 +6,7 @@ import type { QuerySource } from 'src/constants/querySource.js'
 import { logEvent } from 'src/services/analytics/index.js'
 import { getContentText } from 'src/utils/messages.js'
 
+import { getSessionId } from '../../bootstrap/state.js'
 import { findCommand, getCommandName, isBridgeSafeCommand, type LocalJSXCommandContext } from '../../commands.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import type { IDESelection } from '../../hooks/useIdeSelection.js'
@@ -29,10 +30,40 @@ import { createImageMetadataText, maybeResizeAndDownsampleImageBlock } from '../
 import { storeImages } from '../imageStore.js'
 import { createCommandInputMessage, createSystemMessage, createUserMessage } from '../messages.js'
 import { queryCheckpoint } from '../queryProfiler.js'
+import { getCurrentSessionTitle, saveAgentName, saveCustomTitle } from '../sessionStorage.js'
 import { parseSlashCommand } from '../slashCommandParsing.js'
+import { isTeammate } from '../teammate.js'
 import { isUltraplanEnabled } from '../ultraplan/enabled.js'
 import { hasUltraplanKeyword, replaceUltraplanKeyword } from '../ultraplan/keyword.js'
 import { processTextPrompt } from './processTextPrompt.js'
+
+// Cap for UserPromptSubmit hook-provided session titles. Strips control chars
+// (which would corrupt the terminal title / transcript) then truncates by code
+// point so surrogate pairs aren't split.
+const MAX_HOOK_SESSION_TITLE_LENGTH = 200
+
+function sanitizeHookSessionTitle(title: string): string {
+  // eslint-disable-next-line no-control-regex
+  return Array.from(title.replace(/[\x00-\x1f\x7f-\x9f]/g, ''))
+    .slice(0, MAX_HOOK_SESSION_TITLE_LENGTH)
+    .join('')
+}
+
+/**
+ * Apply a session title supplied by a UserPromptSubmit hook. Skips teammate
+ * sessions (their title belongs to the leader), and is a no-op when the
+ * sanitized title is empty or unchanged.
+ */
+async function applyHookSessionTitle(title: string): Promise<void> {
+  if (isTeammate()) return
+  const sanitized = sanitizeHookSessionTitle(title)
+  if (!sanitized) return
+  const sessionId = getSessionId()
+  const current = getCurrentSessionTitle(sessionId)
+  if (sanitized === (current && sanitizeHookSessionTitle(current))) return
+  await saveCustomTitle(sessionId, sanitized, undefined, 'hook')
+  await saveAgentName(sessionId, sanitized, undefined, 'hook')
+}
 export type ProcessUserInputContext = ToolUseContext & LocalJSXCommandContext
 
 export type ProcessUserInputBaseResult = {
@@ -146,6 +177,7 @@ export async function processUserInput({
   // Execute UserPromptSubmit hooks and handle blocking
   queryCheckpoint('query_hooks_start')
   const inputMessage = getContentText(input) || ''
+  let hookSessionTitle: string | undefined
 
   for await (const hookResult of executeUserPromptSubmitHooks(
     inputMessage,
@@ -186,6 +218,10 @@ export async function processUserInput({
       return result
     }
 
+    if (hookResult.sessionTitle) {
+      hookSessionTitle = hookResult.sessionTitle
+    }
+
     // Collect additional contexts
     if (hookResult.additionalContexts && hookResult.additionalContexts.length > 0) {
       result.messages.push(
@@ -220,6 +256,9 @@ export async function processUserInput({
           break
       }
     }
+  }
+  if (hookSessionTitle) {
+    await applyHookSessionTitle(hookSessionTitle)
   }
   queryCheckpoint('query_hooks_end')
 

@@ -315,6 +315,7 @@ export interface HookResult {
   hookPermissionDecisionReason?: string
   additionalContext?: string
   initialUserMessage?: string
+  sessionTitle?: string
   updatedInput?: Record<string, unknown>
   updatedMCPToolOutput?: unknown
   permissionRequestResult?: PermissionRequestResult
@@ -335,6 +336,7 @@ export type AggregatedHookResult = {
   permissionBehavior?: PermissionResult['behavior'] | 'defer'
   additionalContexts?: string[]
   initialUserMessage?: string
+  sessionTitle?: string
   updatedInput?: Record<string, unknown>
   updatedMCPToolOutput?: unknown
   permissionRequestResult?: PermissionRequestResult
@@ -580,6 +582,7 @@ function processHookJSONOutput({
         break
       case 'UserPromptSubmit':
         result.additionalContext = json.hookSpecificOutput.additionalContext
+        result.sessionTitle = json.hookSpecificOutput.sessionTitle
         break
       case 'SessionStart':
         result.additionalContext = json.hookSpecificOutput.additionalContext
@@ -756,6 +759,27 @@ async function execCommandHook(
   // entered value containing the literal text ${CLAUDE_PLUGIN_ROOT} is treated
   // as opaque — not re-interpreted as a template.
   let command = hook.command
+
+  // A command that references ${CLAUDE_PLUGIN_ROOT}/${CLAUDE_PLUGIN_DATA} but
+  // has no plugin (or skill) root to substitute would pass the literal text
+  // through to the shell and fail with "No such file or directory". Fail early
+  // with a clear message instead. Skill hooks only get CLAUDE_PLUGIN_ROOT (the
+  // plugin root); CLAUDE_PLUGIN_DATA is plugin-only.
+  const hookVarSources: [string, string | undefined][] = [
+    ['CLAUDE_PLUGIN_ROOT', pluginRoot || skillRoot],
+    ['CLAUDE_PLUGIN_DATA', pluginRoot],
+  ]
+  for (const [name, sourceRoot] of hookVarSources) {
+    if (sourceRoot || !command.includes(`\${${name}}`)) {
+      continue
+    }
+    throw new Error(
+      skillRoot
+        ? `Hook command references \${${name}} but only \${CLAUDE_PLUGIN_ROOT} is available for skill hooks (\${CLAUDE_PLUGIN_DATA} is plugin-only). Command: ${command}`
+        : `Hook command references \${${name}} but the hook is not associated with a plugin. This variable is only available in hooks defined in a plugin's hooks/hooks.json file, not in settings.json. Command: ${command}`,
+    )
+  }
+
   let pluginOpts: ReturnType<typeof loadPluginOptions> | undefined
   if (pluginRoot) {
     // Plugin directory gone (orphan GC race, concurrent session deleted it):
@@ -2620,6 +2644,15 @@ async function* executeHooks({
       )
       yield {
         watchPaths: result.watchPaths,
+      }
+    }
+
+    if (result.sessionTitle) {
+      logForDebugging(
+        `Hook ${hookEvent} (${getHookDisplayText(result.hook)}) provided sessionTitle (${Array.from(result.sessionTitle).length} chars)`,
+      )
+      yield {
+        sessionTitle: result.sessionTitle,
       }
     }
 
