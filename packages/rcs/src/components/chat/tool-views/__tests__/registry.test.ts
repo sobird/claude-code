@@ -16,15 +16,20 @@ describe('toolViewKind', () => {
     expect(toolViewKind('AskUserQuestion')).toBe('question')
   })
 
+  test('maps the agent tool and its legacy task alias', () => {
+    expect(toolViewKind('Agent')).toBe('agent')
+    expect(toolViewKind('Task')).toBe('agent')
+    expect(toolViewKind('task')).toBe('agent')
+  })
+
   test('leaves unregistered tools on the generic body', () => {
-    expect(toolViewKind('Task')).toBeNull()
     expect(toolViewKind('mcp__thing__do')).toBeNull()
   })
 })
 
 describe('TOOL_VIEWS', () => {
   test('provides a component for every kind a tool resolves to', () => {
-    for (const name of ['Bash', 'Read', 'Grep', 'WebFetch', 'TodoWrite', 'AskUserQuestion']) {
+    for (const name of ['Bash', 'Read', 'Grep', 'WebFetch', 'TodoWrite', 'AskUserQuestion', 'Agent']) {
       const kind = toolViewKind(name)
       expect(kind).not.toBeNull()
       expect(kind ? TOOL_VIEWS[kind] : undefined).toBeDefined()

@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 
 import { canonicalToolName } from '@/lib/tool-summary'
 
+import { AgentToolView } from './AgentToolView'
 import { BashToolView } from './BashToolView'
 import { FileToolView } from './FileToolView'
 import { QuestionToolView } from './QuestionToolView'
@@ -27,6 +28,7 @@ const TOOL_VIEW_DEFINITIONS: readonly ToolViewDefinition[] = [
   { kind: 'file', tools: ['Read', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit'], component: FileToolView },
   { kind: 'search', tools: ['Grep', 'Glob'], component: SearchToolView },
   { kind: 'web', tools: ['WebFetch', 'WebSearch'], component: WebToolView },
+  { kind: 'agent', tools: ['Agent'], component: AgentToolView },
   { kind: 'todo', tools: ['TodoWrite'], component: TodoToolView },
   { kind: 'question', tools: ['AskUserQuestion'], component: QuestionToolView },
 ]
