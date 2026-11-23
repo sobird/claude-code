@@ -1,6 +1,10 @@
+import { resolve } from 'node:path'
+
 import type { AppState } from '../../state/AppState.js'
+import type { ToolPermissionContext } from '../../Tool.js'
 import { logForDebugging } from '../debug.js'
 import { updateHooksConfigSnapshot } from '../hooks/hooksConfigSnapshot.js'
+import { expandPath } from '../path.js'
 import { syncPermissionRulesFromDisk } from '../permissions/permissions.js'
 import {
   createDisabledBypassPermissionsContext,
@@ -10,6 +14,7 @@ import {
   transitionPlanAutoMode,
 } from '../permissions/permissionSetup.js'
 import { loadAllPermissionRulesFromDisk } from '../permissions/permissionsLoader.js'
+import { applyPermissionUpdate } from '../permissions/PermissionUpdate.js'
 import type { SettingSource } from './constants.js'
 import { getInitialSettings } from './settings.js'
 
@@ -30,6 +35,58 @@ import { getInitialSettings } from './settings.js'
  * Side-effects like clearing auth caches and applying env vars are handled by
  * `onChangeAppState` which fires when `settings` changes in state.
  */
+// Directory sources that are not backed by a settings file: --add-dir, the
+// /add-dir command, and session-scoped grants. A settings edit must never
+// revoke one of these (upstream 2.1.98 #21).
+const PROTECTED_DIRECTORY_SOURCES = new Set<string>(['cliArg', 'command', 'session'])
+
+const normalizeDirectory = (dir: string): string => resolve(expandPath(dir))
+
+/**
+ * Reconcile `additionalWorkingDirectories` with a mid-session settings edit.
+ *
+ * Directories removed from `permissions.additionalDirectories` lose access
+ * immediately and newly added ones work without a restart (2.1.98 #20), while
+ * directories granted by --add-dir / /add-dir / the session survive the edit
+ * (2.1.98 #21). Untouched directories are left alone.
+ */
+export function reconcileAdditionalDirectories(
+  context: ToolPermissionContext,
+  previousDirectories: readonly string[] | undefined,
+  nextDirectories: readonly string[] | undefined,
+): ToolPermissionContext {
+  const previous = new Set((previousDirectories ?? []).map(normalizeDirectory))
+  const next = new Set((nextDirectories ?? []).map(normalizeDirectory))
+  if (previous.size === next.size && [...previous].every((dir) => next.has(dir))) return context
+
+  const dirs = context.additionalWorkingDirectories
+  const isProtected = (dir: string): boolean => {
+    const source = dirs.get(dir)?.source
+    return source !== undefined && PROTECTED_DIRECTORY_SOURCES.has(source)
+  }
+
+  const removed = [...previous].filter((dir) => !next.has(dir) && !isProtected(dir))
+  const added = [...next].filter((dir) => !previous.has(dir) && !isProtected(dir))
+  if (removed.length === 0 && added.length === 0) return context
+
+  let updated = context
+  if (removed.length > 0) {
+    updated = applyPermissionUpdate(updated, {
+      type: 'removeDirectories',
+      directories: removed,
+      destination: 'localSettings',
+    })
+  }
+  if (added.length > 0) {
+    updated = applyPermissionUpdate(updated, {
+      type: 'addDirectories',
+      directories: added,
+      destination: 'localSettings',
+    })
+  }
+  return updated
+}
+
 export function applySettingsChange(
   source: SettingSource,
   setAppState: (f: (prev: AppState) => AppState) => void,
@@ -43,6 +100,11 @@ export function applySettingsChange(
 
   setAppState((prev) => {
     let newContext = syncPermissionRulesFromDisk(prev.toolPermissionContext, updatedRules)
+    newContext = reconcileAdditionalDirectories(
+      newContext,
+      prev.settings.permissions?.additionalDirectories,
+      newSettings.permissions?.additionalDirectories,
+    )
 
     // Ant-only: re-strip overly broad Bash allow rules after settings sync
     if (process.env.USER_TYPE === 'ant' && process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent') {

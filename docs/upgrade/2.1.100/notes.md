@@ -55,6 +55,18 @@
 - 权限规则名与 `Object.prototype` 属性同名（`toString`）时不再让 settings.json 规则被静默忽略（`Object.hasOwn` 查表）。
 - 反斜杠转义空白、环境变量前缀等其余条目在 src 中已具备（backslash guard、safe env 白名单、Map 规则聚合）。
 
-### R6：release 说明覆盖
+### R6：设置会话内生效（2.1.98 #20/#21、2.1.98 #10 / 2.1.100 #66）
+
+`applySettingsChange` 在重放磁盘规则后调用新增的 `reconcileAdditionalDirectories`：
+
+- `permissions.additionalDirectories` 的会话内变更即时生效——移除的目录立即失权、新增的无需重启（2.1.98 #20 / 2.1.100 #67）。
+- 由 `--add-dir` / `/add-dir` / 会话（`cliArg` / `command` / `session`）授予的同名目录不被设置编辑收回（2.1.98 #21 / 2.1.100 #68）。
+- 目录先按 `resolve(expandPath(x))` 归一化再比对，`~` 与相对路径不会误判为增删。
+
+`syncPermissionRulesFromDisk` 的清理循环覆盖全部五个规则来源（user/project/local/flag/policy），与上游 `tf` 一致。旧实现只清三处磁盘来源，导致管理员移除的 managed（policy）允许规则在 policy 组清空后残留到进程重启（2.1.98 #10 / 2.1.100 #66）；现在组清空时也会被显式清掉。
+
+测试：`src/utils/settings/__tests__/reconcileAdditionalDirectories.test.ts`、`src/utils/permissions/__tests__/syncPermissionRulesFromDisk.test.ts`。
+
+### R7：release 说明覆盖
 
 2.1.96 / 2.1.97 / 2.1.98 的逐条覆盖（`releaseItems`）在台账中按条推进；2.1.100 自身 release notes 为空。未覆盖项以 `verify --release-notes` 的 `uncoveredReleaseItems` 为准逐一补齐，UI/无 flicker/终端专属项按 `approximated` 或 `ignored-dependency` 记录原因。

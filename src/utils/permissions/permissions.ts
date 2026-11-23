@@ -1266,20 +1266,26 @@ export function syncPermissionRulesFromDisk(
     }
   }
 
-  // Clear all disk-based source:behavior combos before applying new rules.
-  // Without this, removing a rule from settings (e.g. deleting a deny entry)
-  // would leave the old rule in the context because convertRulesToUpdates
-  // only generates replaceRules for source:behavior pairs that have rules —
-  // an empty group produces no update, so stale rules persist.
-  const diskSources: PermissionUpdateDestination[] = ['userSettings', 'projectSettings', 'localSettings']
-  for (const diskSource of diskSources) {
-    for (const behavior of ['allow', 'deny', 'ask'] as PermissionBehavior[]) {
-      context = applyPermissionUpdate(context, {
-        type: 'replaceRules',
-        rules: [],
-        behavior,
-        destination: diskSource,
-      })
+  // Clear every source:behavior combo before applying new rules, including the
+  // read-only flag and managed (policy) sources. Without this, removing a rule
+  // from settings would leave the old rule in the context because
+  // convertRulesToUpdates only generates replaceRules for source:behavior pairs
+  // that still have rules — an empty group produces no update, so stale rules
+  // persist. That previously left admin-removed managed allow rules active
+  // until process restart (2.1.98 #10, 2.1.100 #66).
+  const ruleSources: PermissionRuleSource[] = [
+    'userSettings',
+    'projectSettings',
+    'localSettings',
+    'flagSettings',
+    'policySettings',
+  ]
+  for (const source of ruleSources) {
+    context = {
+      ...context,
+      alwaysAllowRules: { ...context.alwaysAllowRules, [source]: [] },
+      alwaysDenyRules: { ...context.alwaysDenyRules, [source]: [] },
+      alwaysAskRules: { ...context.alwaysAskRules, [source]: [] },
     }
   }
 

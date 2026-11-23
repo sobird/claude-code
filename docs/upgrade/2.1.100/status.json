@@ -213,6 +213,30 @@
         "files": ["src/tools/MonitorTool/MonitorTool.tsx", "src/components/permissions/PermissionRequest.tsx"],
         "symbols": ["MonitorTool"]
       }
+    },
+    {
+      "id": "behavior:additional-directories-midsession",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [11, 12, 67, 68],
+      "evidence": ["test:src/utils/settings/__tests__/reconcileAdditionalDirectories.test.ts"],
+      "notes": "settings.permissions.additionalDirectories 的会话内变更即时生效：移除的目录立即失去访问，新增的目录无需重启；而 --add-dir / /add-dir / 会话授予的同名目录不被设置编辑收回（2.1.98 #20/#21）。applySettingsChange 在同步权限规则后调用 reconcileAdditionalDirectories。",
+      "srcEvidence": {
+        "files": ["src/utils/settings/applySettingsChange.ts"],
+        "symbols": ["reconcileAdditionalDirectories"]
+      }
+    },
+    {
+      "id": "behavior:managed-rules-removed-midsession",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [10, 66],
+      "evidence": ["test:src/utils/permissions/__tests__/syncPermissionRulesFromDisk.test.ts"],
+      "notes": "管理员移除 managed-settings 允许规则后立即生效，无需重启：syncPermissionRulesFromDisk 在重放前清空全部来源（user/project/local/flag/policy），而不仅是三处磁盘来源。旧实现只清三处磁盘来源，policy/flag 全空时 convertRulesToUpdates 不产出 replaceRules，旧规则残留到进程重启（2.1.98 #10、2.1.100 #66）。",
+      "srcEvidence": {
+        "files": ["src/utils/permissions/permissions.ts"],
+        "symbols": ["syncPermissionRulesFromDisk"]
+      }
     }
   ]
 }
