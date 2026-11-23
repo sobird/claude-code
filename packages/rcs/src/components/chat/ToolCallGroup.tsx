@@ -20,6 +20,9 @@ import { canonicalToolName, summarizeToolCall } from '@/lib/tool-summary'
 import { cx, uniqueKeys } from '@/lib/utils'
 
 import { AssistantBubble } from './MessageBubble'
+import { GenericToolBody } from './tool-views/GenericToolBody'
+import { toolViewKind } from './tool-views/kinds'
+import { TOOL_VIEWS } from './tool-views/registry'
 
 import styles from './ToolCallGroup.module.css'
 
@@ -147,10 +150,8 @@ function SingleToolCard({
     setOverride(!expanded)
   }
   const summary = summarizeToolCall(tool.title, tool.rawInput)
-  const hasOutput =
-    tool.status !== 'running' &&
-    tool.status !== 'waiting_for_confirmation' &&
-    (tool.rawOutput !== undefined || tool.status === 'error')
+  const kind = toolViewKind(tool.title)
+  const ToolView = kind ? TOOL_VIEWS[kind] : undefined
 
   return (
     <div className={cx(styles.card, compact ? styles.cardCompact : styles.cardRoomy)}>
@@ -171,29 +172,7 @@ function SingleToolCard({
 
       {expanded ? (
         <div className={styles.cardBody}>
-          {summary.fields.length > 0 ? (
-            <div className={styles.fields}>
-              {summary.fields.map((field) => (
-                <div key={field.key} className={styles.fieldRow}>
-                  <span className={styles.fieldKey}>{field.key}</span>
-                  <span className={styles.fieldValue}>{field.value}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {tool.rawInput && Object.keys(tool.rawInput).length > 0 ? (
-            <details>
-              <summary className={styles.rawSummary}>{t('toolRawInput')}</summary>
-              <pre className={cx(styles.pre, styles.preInput)}>
-                {truncate(JSON.stringify(tool.rawInput, null, 2), 2000)}
-              </pre>
-            </details>
-          ) : null}
-          {hasOutput ? (
-            <pre className={cx(styles.pre, tool.status === 'error' ? styles.preError : styles.preOutput)}>
-              {formatOutput(tool)}
-            </pre>
-          ) : null}
+          {ToolView ? <ToolView tool={tool} /> : <GenericToolBody tool={tool} />}
           {subagentEntries && subagentEntries.length > 0 ? (
             <div className={styles.subagent}>
               <SubagentTranscript entries={subagentEntries} expandAll={expandAll} childrenByParent={childrenByParent} />
@@ -283,17 +262,4 @@ function buildSummary(entries: ToolCallEntry[], t: ChatTranslator): string {
 
   if (parts.length === 1) return parts[0] ?? ''
   return t('summary.grouped', { total, tools: parts.join(', ') })
-}
-
-function formatOutput(tool: ToolCallData): string {
-  if (tool.rawOutput && Object.keys(tool.rawOutput).length > 0) {
-    const output = tool.rawOutput.output
-    if (typeof output === 'string') return truncate(output, 2000)
-    return truncate(JSON.stringify(tool.rawOutput, null, 2), 2000)
-  }
-  return ''
-}
-
-function truncate(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max)}...` : value
 }

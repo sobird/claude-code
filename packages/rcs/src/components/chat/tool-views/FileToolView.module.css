@@ -1,0 +1,83 @@
+.pathRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.pathIcon {
+  height: 0.75rem;
+  width: 0.75rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.path {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.hunks > * + * {
+  margin-top: 0.5rem;
+}
+
+.hunk {
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  border-radius: 0.375rem;
+  background-color: color-mix(in oklab, var(--color-surface-2) 70%, transparent);
+}
+
+.newFile {
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  padding: 0.25rem 0.5rem;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.diff {
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.25rem 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1rem;
+}
+
+.diffLine {
+  padding-inline: 0.5rem;
+}
+
+.diffAdd {
+  background-color: var(--color-diff-add-bg);
+  color: var(--color-diff-add-text);
+}
+
+.diffRemove {
+  background-color: var(--color-diff-remove-bg);
+  color: var(--color-diff-remove-text);
+}
+
+.diffContext {
+  color: var(--color-text-secondary);
+}
+
+.content {
+  max-height: 18rem;
+  overflow: auto;
+  border-radius: 0.375rem;
+  background-color: var(--color-surface-1);
+  padding: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.contentError {
+  background-color: color-mix(in oklab, var(--color-status-error) 10%, transparent);
+  color: var(--color-status-error);
+}
