@@ -86,7 +86,7 @@ bun scripts/upgrade/cli.ts verify --target <2.1.89/cli.js> --reference ./cli.js 
 
 其余五个步骤里，`inventory` 与 `align` 建立差异基线（`align` 对 `changed` 候选按字符串字面量重叠 + 相对位置打分配对），`extract` 与 `probe` 收集待移植的静态字符串和运行时证据，`verify` 最终核对所有台账条目是否处于终态并生成 `report.md` / `report.json`。
 
-交叉验证与收尾有五组辅助子命令，补齐 inventory/align 看不到的盲区：
+交叉验证与收尾有六组辅助子命令，补齐 inventory/align 看不到的盲区：
 
 ```bash
 # 官方 release 说明：下载并解析顶层条目（releaseItems 覆盖率用）
@@ -102,6 +102,11 @@ bun scripts/upgrade/cli.ts table --bundle <target/cli.js> --anchor get-date --wh
 # 字符串分诊：输入是两份 inventory.json，把新增字符串切成 inSrc / releaseNotes / noise / unclassified
 bun scripts/upgrade/cli.ts strings --target-inventory <target-inventory.json> --reference-inventory <ref-inventory.json> \
   --src src --release-notes <work/release-notes-2.1.91.json> --out <work/strings-2.1.91>
+
+# 功能变更报告：inventory 增删 + 台账的保留/跟随删除 + release items 逐条状态
+bun scripts/upgrade/cli.ts features --status docs/upgrade/2.1.91/status.json \
+  --reference-inventory <ref-inventory.json> --target-inventory <target-inventory.json> \
+  --release-notes <work/release-notes-2.1.91.json> --out docs/upgrade/2.1.91
 
 # 证据刷新：校验 status.json 的 bundle 偏移，失效的按字符串重定位
 bun scripts/upgrade/cli.ts refresh-evidence --target <target/cli.js> --status docs/upgrade/2.1.91/status.json --in-place

@@ -7,10 +7,11 @@ import { carveNativeBundle } from './carve'
 import { type AnchorsResult, analyzeAnchors, type DiffResult, diffAround, diffSegment } from './diffbundle'
 import { refreshEvidence } from './evidence'
 import { extractCandidates } from './extract'
+import { buildFeaturesReport, writeFeaturesReport } from './features'
 import { GATE_COMMANDS, type GateName, runGates, writeGatesReport } from './gates'
 import { scanBundle } from './inventory'
 import { runProbe } from './probe'
-import { fetchReleaseNotes, parseReleaseNotes } from './releaseNotes'
+import { fetchReleaseNotes, parseReleaseNotes, type ReleaseNotes } from './releaseNotes'
 import { writeReport } from './report'
 import { triageStrings, writeStringsReport } from './strings'
 import { type TableDiff, diffTables, extractTable, isEmptyDiff, loadSrcTable } from './table'
@@ -28,6 +29,7 @@ Subcommands:
   table     --bundle <file> --anchor <key> [--whole] [--baseline <json> | --src <path#export>] --out <json>
             [--fail-on-diff]
   strings   --reference-inventory <json> --target-inventory <json> --src <dir> [--release-notes <file>] --out <dir>
+  features  --status <json> --reference-inventory <json> --target-inventory <json> --release-notes <json> --out <dir>
   releasenotes --version <tag> [--body-file <md>] [--repo <owner/name>] --out <json>
   refresh-evidence --target <bundle> --status <status.json> [--src <dir>] --out <json> [--in-place]
             [--fail-on-skipped]
@@ -224,6 +226,36 @@ async function stringsCommand(args: string[]): Promise<number> {
   return 0
 }
 
+async function featuresCommand(args: string[]): Promise<number> {
+  const values = parseOptions(args, {
+    status: { type: 'string' },
+    'reference-inventory': { type: 'string' },
+    'target-inventory': { type: 'string' },
+    'release-notes': { type: 'string' },
+    out: { type: 'string' },
+  })
+  const out = requireValue(values, 'out')
+  const [referenceText, targetText, ledgerText, notesText] = await Promise.all([
+    readFile(requireValue(values, 'reference-inventory'), 'utf8'),
+    readFile(requireValue(values, 'target-inventory'), 'utf8'),
+    readFile(requireValue(values, 'status'), 'utf8'),
+    readFile(requireValue(values, 'release-notes'), 'utf8'),
+  ])
+  const report = buildFeaturesReport({
+    reference: JSON.parse(referenceText) as Inventory,
+    target: JSON.parse(targetText) as Inventory,
+    ledger: JSON.parse(ledgerText) as StatusLedger,
+    notes: JSON.parse(notesText) as ReleaseNotes,
+  })
+  await writeFeaturesReport(report, out)
+  const counts = report.counts
+  console.log(
+    `wrote ${join(out, 'features.json')} (added ${counts.added}, retained ${counts.retained}, ` +
+      `synced ${counts.synced}, releaseItems ${counts.releaseItems}, uncovered ${counts.uncovered})`,
+  )
+  return 0
+}
+
 async function releaseNotesCommand(args: string[]): Promise<number> {
   const values = parseOptions(args, {
     version: { type: 'string' },
@@ -406,6 +438,8 @@ export async function main(argv: string[]): Promise<number> {
         return await tableCommand(rest)
       case 'strings':
         return await stringsCommand(rest)
+      case 'features':
+        return await featuresCommand(rest)
       case 'releasenotes':
         return await releaseNotesCommand(rest)
       case 'refresh-evidence':

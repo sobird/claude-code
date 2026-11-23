@@ -1,0 +1,1214 @@
+{
+  "source": {
+    "reference": "2.1.94",
+    "target": "2.1.100"
+  },
+  "counts": {
+    "added": 4,
+    "retained": 2,
+    "synced": 1,
+    "releaseItems": 104,
+    "uncovered": 0,
+    "unknown": 0
+  },
+  "added": {
+    "commands": [
+      {
+        "type": "local-jsx",
+        "name": "setup-vertex"
+      }
+    ],
+    "envVars": ["CLAUDE_CODE_MAX_CONTEXT_TOKENS", "CLAUDE_CODE_PERFORCE_MODE", "CLAUDE_CODE_SCRIPT_CAPS"],
+    "cliFlags": []
+  },
+  "removed": {
+    "retained": [
+      {
+        "id": "cmd:buddy",
+        "status": "retained-internal",
+        "notes": "上游 2.1.100 移除了 buddy 命令（target bundle 里不再有 name:\"buddy\" 的命令注册），本仓库有意保留 src/commands/buddy，故登记 retained-internal，不随上游删除。"
+      },
+      {
+        "id": "env:CLAUDE_CODE_REPL",
+        "status": "retained-internal",
+        "notes": "上游 2.1.100 移除该变量（REPL 特性下线），本仓库 src/tools/REPLTool/constants.ts 仍有 REPLTool 前提，故保留并登记 retained-internal。若后续跟进去 REPL，再改为删除。"
+      }
+    ],
+    "synced": ["env:CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT"]
+  },
+  "releaseItems": [
+    {
+      "item": 1,
+      "text": "Fixed Bedrock requests failing with `403 \"Authorization header is missing\"` when using `AWS_BEARER_TOKEN_BEDROCK` or `CLAUDE_CODE_SKIP_BEDROCK_AUTH` (regression in 2.1.94)",
+      "entries": [
+        {
+          "id": "behavior:bedrock-empty-auth",
+          "status": "already-present",
+          "notes": "Bedrock 在 AWS_BEARER_TOKEN_BEDROCK / CLAUDE_CODE_SKIP_BEDROCK_AUTH 为空字符串时不再误判：src/utils/model/bedrock.ts 用 isEnvTruthy 与 `!process.env.X`（空串为假值）判定，空串等同未设置。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 2,
+      "text": "Added focus view toggle (`Ctrl+O`) in `NO_FLICKER` mode showing prompt, one-line tool summary with edit diffstats, and final response",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-terminal-fixes",
+          "status": "approximated",
+          "notes": "NO_FLICKER/fullscreen 的 Focus 视图、zellij 滚动、流式内存、Windows Terminal 滚轮、短终端状态行、Warp 快捷键、Windows 复制乱码均为手写精简渲染层未覆盖的终端专属细节，未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 3,
+      "text": "Added `refreshInterval` status line setting to re-run the status line command every N seconds",
+      "entries": [
+        {
+          "id": "behavior:statusline-refresh-interval",
+          "status": "ported",
+          "notes": "statusLine 设置新增 refreshInterval（zod number().min(1).optional().catch(undefined)），StatusLine 用 setInterval 每 max(1,N)*1000ms 额外触发一次 doUpdate，与事件驱动更新并存（2.1.96）。"
+        }
+      ]
+    },
+    {
+      "item": 4,
+      "text": "Added `workspace.git_worktree` to the status line JSON input, set when the current directory is inside a linked git worktree",
+      "entries": [
+        {
+          "id": "behavior:statusline-git-worktree",
+          "status": "ported",
+          "notes": "状态行 JSON 的 workspace.git_worktree 在当前目录位于 linked git worktree 时设为该 worktree 名称。上游 F_1：解析 gitdir，basename 为 .git 时返回 null（普通仓库），否则要求 gitdir 的父目录 basename 为 worktrees 才返回 basename。本仓库复用 src/utils/git/gitFilesystem.ts 的 resolveGitDir 实现 getGitWorktreeName，StatusLine.doUpdate 里 await 后写入 workspace。"
+        }
+      ]
+    },
+    {
+      "item": 5,
+      "text": "Added `● N running` indicator in `/agents` next to agent types with live subagent instances",
+      "entries": [
+        {
+          "id": "behavior:agents-running-tab",
+          "status": "approximated",
+          "notes": "/agents 为手写实现，未加 Running/Library 双 tab 与 Run agent / View running instance 动作，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 6,
+      "text": "Added syntax highlighting for Cedar policy files (`.cedar`, `.cedarpolicy`)",
+      "entries": [
+        {
+          "id": "behavior:cedar-highlighting",
+          "status": "approximated",
+          "notes": "Cedar 策略文件（.cedar/.cedarpolicy）语法高亮属高亮器细节，手写高亮未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 7,
+      "text": "Fixed `--dangerously-skip-permissions` being silently downgraded to accept-edits mode after approving a write to a protected path",
+      "entries": [
+        {
+          "id": "behavior:protected-path-mode-downgrade",
+          "status": "ported",
+          "notes": "写保护路径获批后不再把会话悄悄降级到 accept-edits：Bash 路径检查器只在 default/plan 模式下建议 setMode:acceptEdits，filesystem.ts 的 generateSuggestions 早已有同一守卫。"
+        }
+      ]
+    },
+    {
+      "item": 8,
+      "text": "Fixed and hardened Bash tool permissions, tightening checks around env-var prefixes and network redirects, and reducing false prompts on common commands",
+      "entries": [
+        {
+          "id": "behavior:bash-permission-hardening",
+          "status": "already-present",
+          "notes": "Bash 权限加固与降噪：SAFE_ENV_VARS 白名单（LANG/TZ/NO_COLOR）只在安全变量下跳过 env 前缀，process wrapper（timeout/nice/nohup 等）去壳后再匹配，backslash 转义空白守卫，piped cd 与 deny 规则的 cd+git 门控均在 src/tools/BashTool/bashPermissions.ts；网络重定向在 pathValidation.ts。均无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 9,
+      "text": "Fixed permission rules with names matching JavaScript prototype properties (e.g. `toString`) causing `settings.json` to be silently ignored",
+      "entries": [
+        {
+          "id": "behavior:prototype-rule-names",
+          "status": "ported",
+          "notes": "工具名别名表用 Object.hasOwn 查表，toString/constructor 等原型属性名不再解析成函数导致 settings.json 规则被静默忽略（2.1.97 #8）。"
+        }
+      ]
+    },
+    {
+      "item": 10,
+      "text": "Fixed managed-settings allow rules remaining active after an admin removed them until process restart",
+      "entries": [
+        {
+          "id": "behavior:managed-rules-removed-midsession",
+          "status": "ported",
+          "notes": "管理员移除 managed-settings 允许规则后立即生效，无需重启：syncPermissionRulesFromDisk 在重放前清空全部来源（user/project/local/flag/policy），而不仅是三处磁盘来源。旧实现只清三处磁盘来源，policy/flag 全空时 convertRulesToUpdates 不产出 replaceRules，旧规则残留到进程重启（2.1.98 #10、2.1.100 #66）。"
+        }
+      ]
+    },
+    {
+      "item": 11,
+      "text": "Fixed `permissions.additionalDirectories` changes in settings not applying mid-session",
+      "entries": [
+        {
+          "id": "behavior:additional-directories-midsession",
+          "status": "ported",
+          "notes": "settings.permissions.additionalDirectories 的会话内变更即时生效：移除的目录立即失去访问，新增的目录无需重启；而 --add-dir / /add-dir / 会话授予的同名目录不被设置编辑收回（2.1.98 #20/#21）。applySettingsChange 在同步权限规则后调用 reconcileAdditionalDirectories。"
+        }
+      ]
+    },
+    {
+      "item": 12,
+      "text": "Fixed removing a directory from `settings.permissions.additionalDirectories` revoking access to the same directory passed via `--add-dir`",
+      "entries": [
+        {
+          "id": "behavior:additional-directories-midsession",
+          "status": "ported",
+          "notes": "settings.permissions.additionalDirectories 的会话内变更即时生效：移除的目录立即失去访问，新增的目录无需重启；而 --add-dir / /add-dir / 会话授予的同名目录不被设置编辑收回（2.1.98 #20/#21）。applySettingsChange 在同步权限规则后调用 reconcileAdditionalDirectories。"
+        }
+      ]
+    },
+    {
+      "item": 13,
+      "text": "Fixed MCP HTTP/SSE connections accumulating ~50 MB/hr of unreleased buffers when servers reconnect",
+      "entries": [
+        {
+          "id": "behavior:mcp-fetch-abort-bridge-leak",
+          "status": "ported",
+          "notes": "修复 MCP HTTP/SSE 重连时缓冲未释放（~50MB/hr，2.1.100 #13）：wrapFetchWithTimeout 原先在响应头返回后（cleanup）就移除「传输 parentSignal → 每请求 controller」的 abort 监听。Streamable-HTTP/SSE 的响应体在响应头之后才流式传输，此后若服务器重连触发传输 abort，body 已与传输信号脱钩、不会被取消，reader 持续缓冲却无消费者。上游 v100（Bc1）改为：parentSignal 已 abort 则直接 abort，否则注册 {once:true} 监听且常驻到 response 生命周期，finally 只 clearTimeout、不再 removeEventListener。移植到 src/services/mcp/client.ts 的 wrapFetchWithTimeout。见 notes R19。"
+        }
+      ]
+    },
+    {
+      "item": 14,
+      "text": "Fixed MCP OAuth `oauth.authServerMetadataUrl` not being honored on token refresh after restart, fixing ADFS and similar IdPs",
+      "entries": [
+        {
+          "id": "behavior:mcp-oauth-metadata-refresh",
+          "status": "already-present",
+          "notes": "MCP OAuth 的 oauth.authServerMetadataUrl 在重启后刷新 token 时被沿用：src/services/mcp/auth.ts 与 types.ts 均带该字段。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 15,
+      "text": "Fixed 429 retries burning all attempts in ~13 seconds when the server returns a small `Retry-After` — exponential backoff now applies as a minimum",
+      "entries": [
+        {
+          "id": "behavior:retry-after-backoff",
+          "status": "already-present",
+          "notes": "429 且 Retry-After 很小时不再瞬间耗尽重试：src/services/api/withRetry.ts 的 getRetryDelay(persistentAttempt, retryAfter, ...) 以指数退避为下限，且有 SHORT_RETRY_THRESHOLD_MS / cooldown 分流。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 16,
+      "text": "Fixed rate-limit upgrade options disappearing after context compaction",
+      "entries": [
+        {
+          "id": "behavior:rate-limit-upsell-visibility",
+          "status": "approximated",
+          "notes": "压缩后/重新挂载后 rate-limit 升级提示可见性为 UI 细节，未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 17,
+      "text": "Fixed several `/resume` picker issues: `--resume <name>` opening uneditable, Ctrl+A reload wiping search, empty list swallowing navigation, task-status text replacing conversation summary, and cross-project staleness",
+      "entries": [
+        {
+          "id": "behavior:resume-picker-fixes",
+          "status": "approximated",
+          "notes": "/resume 选择器为手写实现；上游若干交互修复（--resume <name> 可编辑、Ctrl+A/筛选重载重置、空列表吞导航、跨项目陈旧、任务状态覆盖摘要）未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 18,
+      "text": "Fixed file-edit diffs disappearing on `--resume` when the edited file was larger than 10KB",
+      "entries": [
+        {
+          "id": "behavior:file-edit-diff-on-resume",
+          "status": "ported",
+          "notes": "修复 --resume 后 >10KB 文件的编辑 diff 消失（2.1.96 #18 / 2.1.100 #76）：2.1.98 #44 落盘时把 toolUseResult.originalFile（>10KB）置 null 以压 transcript，但回放该 tool_result 的渲染直接 originalFile.split 抛错/空白，diff 整块丢失。上游 v100（fc4）改为 firstLine:_?DO(_):null、fileContent:_||void 0，缺 originalFile 时改由 structuredPatch 渲染。移植到 src/tools/FileEditTool/UI.tsx 的 renderToolResultMessage；Write 侧本就以 content 取 firstLine 且 fileContent 已 ?? undefined，无需改。见 notes R17。"
+        }
+      ]
+    },
+    {
+      "item": 19,
+      "text": "Fixed `--resume` cache misses and lost mid-turn input from attachment messages not being saved to the transcript",
+      "entries": [
+        {
+          "id": "behavior:persist-attachments-for-external-users",
+          "status": "ported",
+          "notes": "修复 --resume 丢失中途输入：上游 2.1.97 把 isLoggableMessage 的非 ant 附件过滤从「白名单」改成「黑名单」（KlY 为空集）。旧白名单只放行 hook_additional_context / hook_deferred_tool / 若干 *_delta、skill_listing 等，其余附件（含承载中途输入的 queued_command）在外部用户下全被丢弃；改成黑名单后默认全部落盘，仅显式列出的类型才排除。互动与 SDK 两条 transcript 写入路径都经 cleanMessagesForLogging→isLoggableMessage，故一并修复。CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT 随之失去唯一读取点，已按上游同步移除。见 notes R16。"
+        }
+      ]
+    },
+    {
+      "item": 20,
+      "text": "Fixed messages typed while Claude is working not being persisted to the transcript",
+      "entries": [
+        {
+          "id": "behavior:persist-attachments-for-external-users",
+          "status": "ported",
+          "notes": "修复 --resume 丢失中途输入：上游 2.1.97 把 isLoggableMessage 的非 ant 附件过滤从「白名单」改成「黑名单」（KlY 为空集）。旧白名单只放行 hook_additional_context / hook_deferred_tool / 若干 *_delta、skill_listing 等，其余附件（含承载中途输入的 queued_command）在外部用户下全被丢弃；改成黑名单后默认全部落盘，仅显式列出的类型才排除。互动与 SDK 两条 transcript 写入路径都经 cleanMessagesForLogging→isLoggableMessage，故一并修复。CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT 随之失去唯一读取点，已按上游同步移除。见 notes R16。"
+        }
+      ]
+    },
+    {
+      "item": 21,
+      "text": "Fixed prompt-type `Stop`/`SubagentStop` hooks failing on long sessions, and hook evaluator API errors displaying \"JSON validation failed\" instead of the actual message",
+      "entries": [
+        {
+          "id": "behavior:stop-hook-long-session-truncation",
+          "status": "ported",
+          "notes": "修复 Stop/SubagentStop 提示词钩子（LLM 判定）在长会话下把整段 transcript 塞给评估模型导致上下文溢出、钩子报错（2.1.98 #21）以及评估器返回 API 错误时错误文案不可读（2.1.98 #87）。上游 v100（drK）：① 在传给 queryModelWithoutStreaming 前用 nlY 截断 transcript —— 预算 floor((has1mContext?1e6:200k)*0.7)，先用 tokenCountFromLastAPIResponse 快判，超出则按 assistant message.id 边界分轮（CQ8），从最近整轮向前保留到预算内（至少保留最近一轮），丢弃前缀时在最前面插入一条说明用 user 消息并记 tengu_hook_prompt_transcript_truncated；② 评估器返回 isApiErrorMessage 时，取文本 trim 后作为 non_blocking_error（stderr `Hook evaluator API error: …`），不再把错误正文送进 JSON 解析。移植到 src/utils/hooks/execPromptHook.ts，新增 hookModel（hook.model ?? getSmallFastModel）统一用于截断预算与 options.model，并新增 groupMessagesByTurn / estimateTurnTokens / truncateStopHookTranscript。见 notes R20。"
+        }
+      ]
+    },
+    {
+      "item": 22,
+      "text": "Fixed subagents with worktree isolation or `cwd:` override leaking their working directory back to the parent session's Bash tool",
+      "entries": [
+        {
+          "id": "behavior:subagent-cwd-isolation",
+          "status": "ported",
+          "notes": "带 worktree 隔离或 cwd: 覆盖的子代理不再把工作目录泄漏回父会话的 Bash 工具：cwd 覆盖改存可变对象 {cwd}，setCwdForCurrentContext 在覆盖内只改本地上下文、覆盖外才写全局 setCwdState；Shell 默认 cwd 变更时仅在非覆盖上下文更新 session env 缓存与 CwdChanged hook（2.1.98 #22）。"
+        }
+      ]
+    },
+    {
+      "item": 23,
+      "text": "Fixed compaction writing duplicate multi-MB subagent transcript files on prompt-too-long retries",
+      "entries": [
+        {
+          "id": "behavior:compact-fork-skip-transcript",
+          "status": "ported",
+          "notes": "修复 compaction 在 prompt-too-long 重试时写出重复多 MB 子代理 transcript（2.1.100 #23）：compaction 的摘要 fork（streamCompactSummary→runForkedAgent）把整段可能数 MB 的 forkContextMessages 写进 subagents/agent-<id>.jsonl；每次 PTL 重试都新建 fork/新 agentId，于是每轮落一份重复文件。上游 v100 给该 fork 传 skipTranscript:!0（runForkedAgent 已实现：置位时不建 agentId、不做任何 transcript I/O）。移植到 src/services/compact/compact.ts 的 streamCompactSummary（其余一次性 fork 早已如此）。见 notes R18。"
+        }
+      ]
+    },
+    {
+      "item": 24,
+      "text": "Fixed `claude plugin update` reporting \"already at the latest version\" for git-based marketplace plugins when the remote had newer commits",
+      "entries": [
+        {
+          "id": "behavior:plugin-update-refresh-marketplace",
+          "status": "ported",
+          "notes": "claude plugin update 对 git/github/url 来源的 marketplace 在计算版本前先 git pull，否则陈旧本地 clone 会让 update 误报「already at the latest version」（上游 2.1.97）。移植：updatePluginOp 在 getPluginById 前按 source 类型调用 refreshMarketplace(name, undefined, { skipIfRecent: true }) 并吞掉失败回退缓存；refreshMarketplace 新增 skipIfRecent 选项（lastUpdated 在 30s 内则跳过，避免 autoupdate 已刷新后的重复拉取）。见 notes R13。"
+        }
+      ]
+    },
+    {
+      "item": 25,
+      "text": "Fixed slash command picker breaking when a plugin's frontmatter `name` is a YAML boolean keyword",
+      "entries": [
+        {
+          "id": "behavior:plugin-frontmatter-name-coercion",
+          "status": "approximated",
+          "notes": "插件命令名由文件名派生，frontmatter.name 仅 `as string` 用于展示；YAML 布尔关键字（yes/on）解析成 boolean 时未强制转字符串，与上游「不再让选择器崩坏」的修复不完全等价。"
+        }
+      ]
+    },
+    {
+      "item": 26,
+      "text": "Fixed copying wrapped URLs in `NO_FLICKER` mode inserting spaces at line breaks",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-copy-wrapped-urls",
+          "status": "approximated",
+          "notes": "NO_FLICKER/fullscreen 渲染层为手写精简实现，未移植「复制换行 URL 插入空格」的修复，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 27,
+      "text": "Fixed scroll rendering artifacts in `NO_FLICKER` mode when running inside zellij",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-terminal-fixes",
+          "status": "approximated",
+          "notes": "NO_FLICKER/fullscreen 的 Focus 视图、zellij 滚动、流式内存、Windows Terminal 滚轮、短终端状态行、Warp 快捷键、Windows 复制乱码均为手写精简渲染层未覆盖的终端专属细节，未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 28,
+      "text": "Fixed a crash in `NO_FLICKER` mode when hovering over MCP tool results",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-mcp-hover-crash",
+          "status": "approximated",
+          "notes": "本仓库渲染层无对应「悬停 MCP 工具结果崩溃」路径，未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 29,
+      "text": "Fixed a `NO_FLICKER` mode memory leak where API retries left stale streaming state",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-terminal-fixes",
+          "status": "approximated",
+          "notes": "NO_FLICKER/fullscreen 的 Focus 视图、zellij 滚动、流式内存、Windows Terminal 滚轮、短终端状态行、Warp 快捷键、Windows 复制乱码均为手写精简渲染层未覆盖的终端专属细节，未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 30,
+      "text": "Fixed slow mouse-wheel scrolling in `NO_FLICKER` mode on Windows Terminal",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-terminal-fixes",
+          "status": "approximated",
+          "notes": "NO_FLICKER/fullscreen 的 Focus 视图、zellij 滚动、流式内存、Windows Terminal 滚轮、短终端状态行、Warp 快捷键、Windows 复制乱码均为手写精简渲染层未覆盖的终端专属细节，未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 31,
+      "text": "Fixed custom status line not displaying in `NO_FLICKER` mode on terminals shorter than 24 rows",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-terminal-fixes",
+          "status": "approximated",
+          "notes": "NO_FLICKER/fullscreen 的 Focus 视图、zellij 滚动、流式内存、Windows Terminal 滚轮、短终端状态行、Warp 快捷键、Windows 复制乱码均为手写精简渲染层未覆盖的终端专属细节，未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 32,
+      "text": "Fixed Shift+Enter and Alt/Cmd+arrow shortcuts not working in Warp with `NO_FLICKER` mode",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-terminal-fixes",
+          "status": "approximated",
+          "notes": "NO_FLICKER/fullscreen 的 Focus 视图、zellij 滚动、流式内存、Windows Terminal 滚轮、短终端状态行、Warp 快捷键、Windows 复制乱码均为手写精简渲染层未覆盖的终端专属细节，未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 33,
+      "text": "Fixed Korean/Japanese/Unicode text becoming garbled when copied in no-flicker mode on Windows",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-terminal-fixes",
+          "status": "approximated",
+          "notes": "NO_FLICKER/fullscreen 的 Focus 视图、zellij 滚动、流式内存、Windows Terminal 滚轮、短终端状态行、Warp 快捷键、Windows 复制乱码均为手写精简渲染层未覆盖的终端专属细节，未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 34,
+      "text": "Fixed Bedrock SigV4 authentication failing when `AWS_BEARER_TOKEN_BEDROCK` or `ANTHROPIC_BEDROCK_BASE_URL` are set to empty strings (as GitHub Actions does for unset inputs)",
+      "entries": [
+        {
+          "id": "behavior:bedrock-empty-auth",
+          "status": "already-present",
+          "notes": "Bedrock 在 AWS_BEARER_TOKEN_BEDROCK / CLAUDE_CODE_SKIP_BEDROCK_AUTH 为空字符串时不再误判：src/utils/model/bedrock.ts 用 isEnvTruthy 与 `!process.env.X`（空串为假值）判定，空串等同未设置。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 35,
+      "text": "Improved Accept Edits mode to auto-approve filesystem commands prefixed with safe env vars or process wrappers (e.g. `LANG=C rm foo`, `timeout 5 mkdir out`)",
+      "entries": [
+        {
+          "id": "behavior:bash-permission-hardening",
+          "status": "already-present",
+          "notes": "Bash 权限加固与降噪：SAFE_ENV_VARS 白名单（LANG/TZ/NO_COLOR）只在安全变量下跳过 env 前缀，process wrapper（timeout/nice/nohup 等）去壳后再匹配，backslash 转义空白守卫，piped cd 与 deny 规则的 cd+git 门控均在 src/tools/BashTool/bashPermissions.ts；网络重定向在 pathValidation.ts。均无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 36,
+      "text": "Improved auto mode and bypass-permissions mode to auto-approve sandbox network access prompts",
+      "entries": [
+        {
+          "id": "behavior:sandbox-network-autoapprove",
+          "status": "approximated",
+          "notes": "auto / bypass-permissions 下自动批准沙箱网络提示的细节未逐条对拍，登记近似（沙箱配置见 src/utils/sandbox/）。"
+        }
+      ]
+    },
+    {
+      "item": 37,
+      "text": "Improved sandbox: `sandbox.network.allowMachLookup` now takes effect on macOS",
+      "entries": [
+        {
+          "id": "bundle-only:sandbox-allowmachlookup",
+          "status": "ignored-dependency",
+          "notes": "sandbox.network.allowMachLookup 的 macOS 生效由打包依赖 @anthropic-ai/sandbox-runtime 实现，src 不直接读取该字段（依赖实现）。"
+        }
+      ]
+    },
+    {
+      "item": 38,
+      "text": "Improved image handling: pasted and attached images are now compressed to the same token budget as images read via the Read tool",
+      "entries": [
+        {
+          "id": "behavior:image-compression-budget",
+          "status": "approximated",
+          "notes": "粘贴/附件图片压缩到与 Read 相同的 token 预算，src 有 src/utils/imageResizer.ts 但预算是否完全对齐未逐行核对，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 39,
+      "text": "Improved slash command and `@`-mention completion to trigger after CJK sentence punctuation, so Japanese/Chinese input no longer requires a space before `/` or `@`",
+      "entries": [
+        {
+          "id": "behavior:cjk-completion-trigger",
+          "status": "approximated",
+          "notes": "斜杠命令与 @ 提及在中日韩句末标点后触发的输入细节未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 40,
+      "text": "Improved Bridge sessions to show the local git repo, branch, and working directory on the claude.ai session card",
+      "entries": [
+        {
+          "id": "behavior:bridge-session-card",
+          "status": "approximated",
+          "notes": "Bridge 会话卡片展示本地 git 仓库/分支/工作目录属 claude.ai 侧卡片渲染，CLI 仅提供数据，未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 41,
+      "text": "Improved footer layout: indicators (Focus, notifications) now stay on the mode-indicator row instead of wrapping below",
+      "entries": [
+        {
+          "id": "behavior:footer-indicator-layout",
+          "status": "approximated",
+          "notes": "footer 指示器（Focus/通知）布局属 UI 细节，本仓库为手写布局，未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 42,
+      "text": "Improved context-low warning to show as a transient footer notification instead of a persistent row",
+      "entries": [
+        {
+          "id": "behavior:context-low-footer-notification",
+          "status": "approximated",
+          "notes": "context 偏低提示改为 transient footer 通知的展示细节未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 43,
+      "text": "Improved markdown blockquotes to show a continuous left bar across wrapped lines",
+      "entries": [
+        {
+          "id": "bundle-only:markdown-blockquote-bar",
+          "status": "approximated",
+          "notes": "markdown 引用块跨行连续左竖线属渲染细节，手写 markdown 渲染未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 44,
+      "text": "Improved session transcript size by skipping empty hook entries and capping stored pre-edit file copies",
+      "entries": [
+        {
+          "id": "behavior:transcript-size-empty-hooks-and-original-file-cap",
+          "status": "ported",
+          "notes": "缩小会话 transcript：① isLoggableMessage 跳过 content/stdout/stderr 全空的 hook_success 附件；② 写 transcript 前把 Edit/Write 结果里超过 1e4 字符的 originalFile 置 null（上游 jyK / SZY=1e4）。上游另有 tools 的 stripForStorage + 只裁剪最近 200 条之外的内存 toolUseResult（HyK），该项属会话内存而非 transcript 存储，未纳入本条目。见 notes R15。"
+        }
+      ]
+    },
+    {
+      "item": 45,
+      "text": "Improved transcript accuracy: per-block entries now carry the final token usage instead of the streaming placeholder",
+      "entries": [
+        {
+          "id": "behavior:transcript-final-token-usage",
+          "status": "already-present",
+          "notes": "transcript 条目记录最终 token 用量而非流式占位：src/utils/tokens.ts、src/services/api/claude.ts、src/utils/forkedAgent.ts 装配 usage。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 46,
+      "text": "Improved Bash tool OTEL tracing: subprocesses now inherit a W3C `TRACEPARENT` env var when tracing is enabled",
+      "entries": [
+        {
+          "id": "behavior:otel-traceparent",
+          "status": "already-present",
+          "notes": "OTEL 开启时 Bash 子进程继承 W3C TRACEPARENT，子进程 span 正确挂到 Claude Code trace 树。本仓库 src/utils/Shell.ts:294 与 src/utils/telemetry/sessionTracing.ts:735 早已实现，无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 47,
+      "text": "Updated `/claude-api` skill to cover Managed Agents alongside the Claude API",
+      "entries": [
+        {
+          "id": "bundle-only:claude-api-skill-managed-agents",
+          "status": "approximated",
+          "notes": "/claude-api skill 存在（src/skills/bundled/claude-api），但未含「Managed Agents」章节；属技能文档内容，未逐字移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 48,
+      "text": "Added interactive Google Vertex AI setup wizard accessible from the login screen when selecting \"3rd-party platform\", guiding you through GCP authentication, project and region configuration, credential verification, and model pinning",
+      "entries": [
+        {
+          "id": "cmd:setup-vertex",
+          "status": "ported",
+          "notes": "新增登录页 3rd-party platform 的 Google Vertex AI 交互式向导（GCP 认证 → 项目/区域 → 凭证校验 → 模型钉定）。移植为 src/commands/setup-vertex/*、src/components/VertexSetupWizard.tsx、src/utils/vertexSetup.ts，并在 cliLaunch.ts 加 execRelaunch() 重启进入向导。见 notes R3。"
+        }
+      ]
+    },
+    {
+      "item": 49,
+      "text": "Added `CLAUDE_CODE_PERFORCE_MODE` env var: when set, Edit/Write/NotebookEdit fail on read-only files with a `p4 edit` hint instead of silently overwriting them",
+      "entries": [
+        {
+          "id": "env:CLAUDE_CODE_PERFORCE_MODE",
+          "status": "already-present",
+          "notes": "上游 2.1.98 新增：只读文件上 Edit/Write/NotebookEdit 失败并提示 p4 edit。本仓库 src/context.ts 与 src/utils/file.ts 早有该变量与 PERFORCE_READ_ONLY_MESSAGE/isPerforceReadOnly，三个编辑工具均已接线。"
+        }
+      ]
+    },
+    {
+      "item": 50,
+      "text": "Added Monitor tool for streaming events from background scripts",
+      "entries": [
+        {
+          "id": "behavior:monitor-tool",
+          "status": "ported",
+          "notes": "Monitor 工具改为流式：每条 stdout 行作为事件通知，令牌桶 10/2s、200ms 批聚合、支持 timeout/persistent，权限复用 bashToolHasPermission。见 notes R4。"
+        }
+      ]
+    },
+    {
+      "item": 51,
+      "text": "Added subprocess sandboxing with PID namespace isolation on Linux when `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` is set, and `CLAUDE_CODE_SCRIPT_CAPS` env var to limit per-session script invocations",
+      "entries": [
+        {
+          "id": "env:CLAUDE_CODE_SCRIPT_CAPS",
+          "status": "already-present",
+          "notes": "上游 2.1.98 新增：限制每会话脚本调用次数（配合 Linux PID namespace 沙箱）。本仓库 src/utils/subprocessEnv.ts 早已有 SCRIPT_CAPS/SUBPROCESS_ENV_SCRUB，并在 Shell.ts 的 enforceScriptCaps/subprocessEnv 接线。"
+        }
+      ]
+    },
+    {
+      "item": 52,
+      "text": "Added `--exclude-dynamic-system-prompt-sections` flag to print mode for improved cross-user prompt caching",
+      "entries": [
+        {
+          "id": "behavior:print-exclude-dynamic-prompt",
+          "status": "already-present",
+          "notes": "print 模式新增 --exclude-dynamic-system-prompt-sections，提升跨用户提示缓存命中。本仓库 src/main.tsx:1322 早已接线（配合 src/utils/queryContext.ts / src/constants/prompts.ts），无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 53,
+      "text": "Added `workspace.git_worktree` to the status line JSON input, set whenever the current directory is inside a linked git worktree",
+      "entries": [
+        {
+          "id": "behavior:statusline-git-worktree",
+          "status": "ported",
+          "notes": "状态行 JSON 的 workspace.git_worktree 在当前目录位于 linked git worktree 时设为该 worktree 名称。上游 F_1：解析 gitdir，basename 为 .git 时返回 null（普通仓库），否则要求 gitdir 的父目录 basename 为 worktrees 才返回 basename。本仓库复用 src/utils/git/gitFilesystem.ts 的 resolveGitDir 实现 getGitWorktreeName，StatusLine.doUpdate 里 await 后写入 workspace。"
+        }
+      ]
+    },
+    {
+      "item": 54,
+      "text": "Added W3C `TRACEPARENT` env var to Bash tool subprocesses when OTEL tracing is enabled, so child-process spans correctly parent to Claude Code's trace tree",
+      "entries": [
+        {
+          "id": "behavior:otel-traceparent",
+          "status": "already-present",
+          "notes": "OTEL 开启时 Bash 子进程继承 W3C TRACEPARENT，子进程 span 正确挂到 Claude Code trace 树。本仓库 src/utils/Shell.ts:294 与 src/utils/telemetry/sessionTracing.ts:735 早已实现，无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 55,
+      "text": "LSP: Claude Code now identifies itself to language servers via `clientInfo` in the initialize request",
+      "entries": [
+        {
+          "id": "behavior:lsp-client-info",
+          "status": "already-present",
+          "notes": "LSP initialize 请求里通过 clientInfo 标识自身。本仓库 src/services/lsp/LSPServerInstance.ts:165 早已发送，无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 56,
+      "text": "Fixed a Bash tool permission bypass where a backslash-escaped flag could be auto-allowed as read-only and lead to arbitrary code execution",
+      "entries": [
+        {
+          "id": "behavior:bash-permission-hardening",
+          "status": "already-present",
+          "notes": "Bash 权限加固与降噪：SAFE_ENV_VARS 白名单（LANG/TZ/NO_COLOR）只在安全变量下跳过 env 前缀，process wrapper（timeout/nice/nohup 等）去壳后再匹配，backslash 转义空白守卫，piped cd 与 deny 规则的 cd+git 门控均在 src/tools/BashTool/bashPermissions.ts；网络重定向在 pathValidation.ts。均无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 57,
+      "text": "Fixed compound Bash commands bypassing forced permission prompts for safety checks and explicit ask rules in auto and bypass-permissions modes",
+      "entries": [
+        {
+          "id": "behavior:compound-ask-safety-bypass",
+          "status": "ported",
+          "notes": "复合 Bash 命令不再在 auto/bypass 模式下绕过强制询问：显式 ask 规则与安全路径检查（safetyCheck）现在会递归进 subcommandResults，即使多个子命令同时需要确认也会命中。之前只检查顶层 decisionReason，多子命令聚合出的 type:'subcommandResults' 让 1f/1g 判定落空，bypass 的 2a 直接放行（2.1.98 #57）。"
+        }
+      ]
+    },
+    {
+      "item": 58,
+      "text": "Fixed read-only commands with env-var prefixes not prompting unless the var is known-safe (`LANG`, `TZ`, `NO_COLOR`, etc.)",
+      "entries": [
+        {
+          "id": "behavior:bash-permission-hardening",
+          "status": "already-present",
+          "notes": "Bash 权限加固与降噪：SAFE_ENV_VARS 白名单（LANG/TZ/NO_COLOR）只在安全变量下跳过 env 前缀，process wrapper（timeout/nice/nohup 等）去壳后再匹配，backslash 转义空白守卫，piped cd 与 deny 规则的 cd+git 门控均在 src/tools/BashTool/bashPermissions.ts；网络重定向在 pathValidation.ts。均无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 59,
+      "text": "Fixed redirects to `/dev/tcp/...` or `/dev/udp/...` not prompting instead of auto-allowing",
+      "entries": [
+        {
+          "id": "behavior:network-device-redirect",
+          "status": "ported",
+          "notes": "重定向目标为 /dev/tcp|udp 时标记 network_device 并强制询问；字符串与 AST 两条路径都带原因，消息区分网络设备与 shell 展开。"
+        }
+      ]
+    },
+    {
+      "item": 60,
+      "text": "Fixed stalled streaming responses timing out instead of falling back to non-streaming mode",
+      "entries": [
+        {
+          "id": "behavior:streaming-stall-nonstreaming-fallback",
+          "status": "ported",
+          "notes": "流式卡住（idle watchdog 触发）时应回落到非流式，而不是当成可重试超时。上游 2.1.98：当 watchdog 已 fire（streamIdleAborted）时，SDK 抛 APIUserAbortError 且信号未中止也不再抛 `Request timed out`（改为 `else if(!streamIdleAborted)`，落到下方回落分支）；并把对外错误替换为 `Error('Stream idle timeout - no chunks received')`（用于日志与 fallback_disabled 时的 throw）。移植到 src/services/api/claude.ts 的 catch 分支。见 notes R14。"
+        }
+      ]
+    },
+    {
+      "item": 61,
+      "text": "Fixed 429 retries burning all attempts in ~13s when the server returns a small `Retry-After` — exponential backoff now applies as a minimum",
+      "entries": [
+        {
+          "id": "behavior:retry-after-backoff",
+          "status": "already-present",
+          "notes": "429 且 Retry-After 很小时不再瞬间耗尽重试：src/services/api/withRetry.ts 的 getRetryDelay(persistentAttempt, retryAfter, ...) 以指数退避为下限，且有 SHORT_RETRY_THRESHOLD_MS / cooldown 分流。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 62,
+      "text": "Fixed MCP OAuth `oauth.authServerMetadataUrl` config override not being honored on token refresh after restart, affecting ADFS and similar IdPs",
+      "entries": [
+        {
+          "id": "behavior:mcp-oauth-metadata-refresh",
+          "status": "already-present",
+          "notes": "MCP OAuth 的 oauth.authServerMetadataUrl 在重启后刷新 token 时被沿用：src/services/mcp/auth.ts 与 types.ts 均带该字段。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 63,
+      "text": "Fixed capital letters being dropped to lowercase on xterm and VS Code integrated terminal when the kitty keyboard protocol is active",
+      "entries": [
+        {
+          "id": "bundle-only:terminal-keyboard-unicode",
+          "status": "approximated",
+          "notes": "kitty keyboard protocol 下大小写丢失、macOS 文本替换删触发词属终端/输入法细节，手写输入层未逐条修复，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 64,
+      "text": "Fixed macOS text replacements deleting the trigger word instead of inserting the substitution",
+      "entries": [
+        {
+          "id": "bundle-only:terminal-keyboard-unicode",
+          "status": "approximated",
+          "notes": "kitty keyboard protocol 下大小写丢失、macOS 文本替换删触发词属终端/输入法细节，手写输入层未逐条修复，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 65,
+      "text": "Fixed `--dangerously-skip-permissions` being silently downgraded to accept-edits mode after approving a write to a protected path via Bash",
+      "entries": [
+        {
+          "id": "behavior:protected-path-mode-downgrade",
+          "status": "ported",
+          "notes": "写保护路径获批后不再把会话悄悄降级到 accept-edits：Bash 路径检查器只在 default/plan 模式下建议 setMode:acceptEdits，filesystem.ts 的 generateSuggestions 早已有同一守卫。"
+        }
+      ]
+    },
+    {
+      "item": 66,
+      "text": "Fixed managed-settings allow rules remaining active after an admin removed them, until process restart",
+      "entries": [
+        {
+          "id": "behavior:managed-rules-removed-midsession",
+          "status": "ported",
+          "notes": "管理员移除 managed-settings 允许规则后立即生效，无需重启：syncPermissionRulesFromDisk 在重放前清空全部来源（user/project/local/flag/policy），而不仅是三处磁盘来源。旧实现只清三处磁盘来源，policy/flag 全空时 convertRulesToUpdates 不产出 replaceRules，旧规则残留到进程重启（2.1.98 #10、2.1.100 #66）。"
+        }
+      ]
+    },
+    {
+      "item": 67,
+      "text": "Fixed `permissions.additionalDirectories` changes not applying mid-session — removed directories lose access immediately and added ones work without restart",
+      "entries": [
+        {
+          "id": "behavior:additional-directories-midsession",
+          "status": "ported",
+          "notes": "settings.permissions.additionalDirectories 的会话内变更即时生效：移除的目录立即失去访问，新增的目录无需重启；而 --add-dir / /add-dir / 会话授予的同名目录不被设置编辑收回（2.1.98 #20/#21）。applySettingsChange 在同步权限规则后调用 reconcileAdditionalDirectories。"
+        }
+      ]
+    },
+    {
+      "item": 68,
+      "text": "Fixed removing a directory from `additionalDirectories` revoking access to the same directory passed via `--add-dir`",
+      "entries": [
+        {
+          "id": "behavior:additional-directories-midsession",
+          "status": "ported",
+          "notes": "settings.permissions.additionalDirectories 的会话内变更即时生效：移除的目录立即失去访问，新增的目录无需重启；而 --add-dir / /add-dir / 会话授予的同名目录不被设置编辑收回（2.1.98 #20/#21）。applySettingsChange 在同步权限规则后调用 reconcileAdditionalDirectories。"
+        }
+      ]
+    },
+    {
+      "item": 69,
+      "text": "Fixed `Bash(cmd:*)` and `Bash(git commit *)` wildcard permission rules failing to match commands with extra spaces or tabs",
+      "entries": [
+        {
+          "id": "behavior:bash-rule-whitespace",
+          "status": "ported",
+          "notes": "通配/前缀规则匹配前把连续空格与 tab 归一为单空格，Bash(git commit *) 可命中 git  commit 与带 tab 的命令（2.1.98 #22）。"
+        }
+      ]
+    },
+    {
+      "item": 70,
+      "text": "Fixed `Bash(...)` deny rules being downgraded to a prompt for piped commands that mix `cd` with other segments",
+      "entries": [
+        {
+          "id": "behavior:bash-permission-hardening",
+          "status": "already-present",
+          "notes": "Bash 权限加固与降噪：SAFE_ENV_VARS 白名单（LANG/TZ/NO_COLOR）只在安全变量下跳过 env 前缀，process wrapper（timeout/nice/nohup 等）去壳后再匹配，backslash 转义空白守卫，piped cd 与 deny 规则的 cd+git 门控均在 src/tools/BashTool/bashPermissions.ts；网络重定向在 pathValidation.ts。均无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 71,
+      "text": "Fixed false Bash permission prompts for `cut -d /`, `paste -d /`, `column -s /`, `awk '{print $1}' file`, and filenames containing `%`",
+      "entries": [
+        {
+          "id": "behavior:bash-readonly-flag-values",
+          "status": "ported",
+          "notes": "cut/paste/column 的分隔符/分隔字段（-d /、-s /、--output-delimiter 等）按取值跳过而不是当路径；awk 跳过程序体、把 -f/-E 的程序文件纳入校验。修复只读命令的误提示（2.1.98 #24）。"
+        }
+      ]
+    },
+    {
+      "item": 72,
+      "text": "Fixed permission rules with names matching JavaScript prototype properties (e.g. `toString`) causing `settings.json` to be silently ignored",
+      "entries": [
+        {
+          "id": "behavior:prototype-rule-names",
+          "status": "ported",
+          "notes": "工具名别名表用 Object.hasOwn 查表，toString/constructor 等原型属性名不再解析成函数导致 settings.json 规则被静默忽略（2.1.97 #8）。"
+        }
+      ]
+    },
+    {
+      "item": 73,
+      "text": "Fixed agent team members not inheriting the leader's permission mode when using `--dangerously-skip-permissions`",
+      "entries": [
+        {
+          "id": "behavior:team-permission-inherit",
+          "status": "approximated",
+          "notes": "teammates 现固定 default 或继承 currentTask.permissionMode；未确认在 --dangerously-skip-permissions 下继承 leader 模式，登记近似（src/utils/swarm/inProcessRunner.ts）。"
+        }
+      ]
+    },
+    {
+      "item": 74,
+      "text": "Fixed a crash in fullscreen mode when hovering over MCP tool results",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-mcp-hover-crash",
+          "status": "approximated",
+          "notes": "本仓库渲染层无对应「悬停 MCP 工具结果崩溃」路径，未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 75,
+      "text": "Fixed copying wrapped URLs in fullscreen mode inserting spaces at line breaks",
+      "entries": [
+        {
+          "id": "bundle-only:noflicker-copy-wrapped-urls",
+          "status": "approximated",
+          "notes": "NO_FLICKER/fullscreen 渲染层为手写精简实现，未移植「复制换行 URL 插入空格」的修复，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 76,
+      "text": "Fixed file-edit diffs disappearing from the UI on `--resume` when the edited file was larger than 10KB",
+      "entries": [
+        {
+          "id": "behavior:file-edit-diff-on-resume",
+          "status": "ported",
+          "notes": "修复 --resume 后 >10KB 文件的编辑 diff 消失（2.1.96 #18 / 2.1.100 #76）：2.1.98 #44 落盘时把 toolUseResult.originalFile（>10KB）置 null 以压 transcript，但回放该 tool_result 的渲染直接 originalFile.split 抛错/空白，diff 整块丢失。上游 v100（fc4）改为 firstLine:_?DO(_):null、fileContent:_||void 0，缺 originalFile 时改由 structuredPatch 渲染。移植到 src/tools/FileEditTool/UI.tsx 的 renderToolResultMessage；Write 侧本就以 content 取 firstLine 且 fileContent 已 ?? undefined，无需改。见 notes R17。"
+        }
+      ]
+    },
+    {
+      "item": 77,
+      "text": "Fixed several `/resume` picker issues: `--resume <name>` opening uneditable, filter reload wiping search state, empty list swallowing arrow keys, cross-project staleness, and transient task-status text replacing conversation summaries",
+      "entries": [
+        {
+          "id": "behavior:resume-picker-fixes",
+          "status": "approximated",
+          "notes": "/resume 选择器为手写实现；上游若干交互修复（--resume <name> 可编辑、Ctrl+A/筛选重载重置、空列表吞导航、跨项目陈旧、任务状态覆盖摘要）未逐条移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 78,
+      "text": "Fixed `/export` not honoring absolute paths and `~`, and silently rewriting user-supplied extensions to `.txt`",
+      "entries": [
+        {
+          "id": "behavior:export-command",
+          "status": "already-present",
+          "notes": "/export 命令在 src/commands/export/export.tsx 已实现（含路径处理）。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 79,
+      "text": "Fixed `/effort max` being denied for unknown or future model IDs",
+      "entries": [
+        {
+          "id": "behavior:effort-max-unknown-models",
+          "status": "ported",
+          "notes": "/effort max 不再对未知/未来模型 ID 因为「非 opus-4-6」而被拒。上游 2.1.96 改为：先归一化模型名（取首个 claude-* token，去 -vN[:M] 与 -YYYYMMDD 后缀），haiku 一律 false，其余仅当命中遗留模型 denylist 才 false，未知/未来模型默认支持 max。移植到 src/utils/effort.ts：modelSupportsMaxEffort + MAX_EFFORT_DENYLIST + normalizeMaxEffortModel，测试 src/utils/__tests__/effort.test.ts。"
+        }
+      ]
+    },
+    {
+      "item": 80,
+      "text": "Fixed slash command picker breaking when a plugin's frontmatter `name` is a YAML boolean keyword",
+      "entries": [
+        {
+          "id": "behavior:plugin-frontmatter-name-coercion",
+          "status": "approximated",
+          "notes": "插件命令名由文件名派生，frontmatter.name 仅 `as string` 用于展示；YAML 布尔关键字（yes/on）解析成 boolean 时未强制转字符串，与上游「不再让选择器崩坏」的修复不完全等价。"
+        }
+      ]
+    },
+    {
+      "item": 81,
+      "text": "Fixed rate-limit upsell text being hidden after message remounts",
+      "entries": [
+        {
+          "id": "behavior:rate-limit-upsell-visibility",
+          "status": "approximated",
+          "notes": "压缩后/重新挂载后 rate-limit 升级提示可见性为 UI 细节，未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 82,
+      "text": "Fixed MCP tools with `_meta[\"anthropic/maxResultSizeChars\"]` not bypassing the token-based persist layer",
+      "entries": [
+        {
+          "id": "behavior:mcp-max-result-size",
+          "status": "already-present",
+          "notes": "MCP 工具 _meta[\"anthropic/maxResultSizeChars\"] 在 src/Tool.ts 中处理。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 83,
+      "text": "Fixed voice mode leaking dozens of space characters into the input when re-holding the push-to-talk key while the previous transcript is still processing",
+      "entries": [
+        {
+          "id": "bundle-only:voice-mode-input",
+          "status": "approximated",
+          "notes": "语音模式重新按住 push-to-talk 时泄漏空格属输入层细节，未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 84,
+      "text": "Fixed `DISABLE_AUTOUPDATER` not fully suppressing the npm registry version check and symlink modification on npm-based installs",
+      "entries": [
+        {
+          "id": "behavior:disable-autoupdater",
+          "status": "already-present",
+          "notes": "DISABLE_AUTOUPDATER 在 src/utils/config.ts 中被读取以抑制自动更新检查。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 85,
+      "text": "Fixed a memory leak where Remote Control permission handler entries were retained for the lifetime of the session",
+      "entries": [
+        {
+          "id": "behavior:remote-permission-handler-leak",
+          "status": "ported",
+          "notes": "修复 Remote Control 权限处理器条目在会话生命周期内泄漏（上游 #85）。上游 v100 在 handleInteractivePermission 里把 bridge 的 onResponse 退订函数提升为外层变量（v94 它是块内 const），并在所有本地获胜路径（onAbort / onAllow / onReject / recheckPermission、channel 回复、hook、classifier）调用它，删除 pendingPermissionHandlers 里的条目并移除 abort 监听器；v94 局部获胜时只调用 channel 的退订，bridge 条目（及其 abort 监听器）一直留到会话结束。移植：interactiveHandler.ts 新增 hoisted bridgeUnsubscribe，bridge 块按 channel 块同样的方式包装退订（map delete + removeEventListener），并在各本地获胜点及 bridge 回复处理里调用；useReplBridge 的 handlePermissionResponse 仍先 delete 再回调，覆盖 CCR 回复路径。该桥接/权限子系统在外部 bundle 里被 tree-shaking 裁剪（classifier 分支不可见），本轮以 typecheck/lint 与 bundle 对拍钉住；证据 bundle:12392576（提升后的 W=onResponse 赋值）、bundle:12391504（onAbort 的 W?.(),D?.() 双退订）。见 notes R23。"
+        }
+      ]
+    },
+    {
+      "item": 86,
+      "text": "Fixed background subagents that fail with an error not reporting partial progress to the parent agent",
+      "entries": [
+        {
+          "id": "behavior:background-agent-partial-progress-on-failure",
+          "status": "ported",
+          "notes": "修复后台子代理因错误失败时，父代理收不到它失败前已产出的部分进度（2.1.100 #86）。上游 v100 的后台代理生命周期在失败的 enqueueAgentNotification 里补 `finalMessage: o88(agentMessages)`（o88=extractPartialResult，取最后一条非空 assistant 文本）；此前只有 killed 分支带 finalMessage，failed 分支只报 error。任务通知消费端（enqueueAgentNotification 的 resultSection）对任意 status 都渲染 <result>，故补上后父代理即可见部分进度。本仓库该生命周期被复制在两处：src/tools/AgentTool/AgentTool.tsx（内联 async-from-start 路径）与 src/tools/AgentTool/agentToolUtils.ts（runAsyncAgentLifecycle，供 async-from-start 与 resumeAgentBackground 共用），两处 failed 分支均补 finalMessage: extractPartialResult(agentMessages)。见 notes R21。"
+        }
+      ]
+    },
+    {
+      "item": 87,
+      "text": "Fixed prompt-type Stop/SubagentStop hooks failing on long sessions, and hook evaluator API errors showing \"JSON validation failed\" instead of the real message",
+      "entries": [
+        {
+          "id": "behavior:stop-hook-long-session-truncation",
+          "status": "ported",
+          "notes": "修复 Stop/SubagentStop 提示词钩子（LLM 判定）在长会话下把整段 transcript 塞给评估模型导致上下文溢出、钩子报错（2.1.98 #21）以及评估器返回 API 错误时错误文案不可读（2.1.98 #87）。上游 v100（drK）：① 在传给 queryModelWithoutStreaming 前用 nlY 截断 transcript —— 预算 floor((has1mContext?1e6:200k)*0.7)，先用 tokenCountFromLastAPIResponse 快判，超出则按 assistant message.id 边界分轮（CQ8），从最近整轮向前保留到预算内（至少保留最近一轮），丢弃前缀时在最前面插入一条说明用 user 消息并记 tengu_hook_prompt_transcript_truncated；② 评估器返回 isApiErrorMessage 时，取文本 trim 后作为 non_blocking_error（stderr `Hook evaluator API error: …`），不再把错误正文送进 JSON 解析。移植到 src/utils/hooks/execPromptHook.ts，新增 hookModel（hook.model ?? getSmallFastModel）统一用于截断预算与 options.model，并新增 groupMessagesByTurn / estimateTurnTokens / truncateStopHookTranscript。见 notes R20。"
+        }
+      ]
+    },
+    {
+      "item": 88,
+      "text": "Fixed feedback survey rendering when dismissed",
+      "entries": [
+        {
+          "id": "bundle-only:feedback-survey",
+          "status": "approximated",
+          "notes": "反馈调查 dismissed 时的渲染修复属 UI 细节，未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 89,
+      "text": "Fixed Bash `grep -f FILE` / `rg -f FILE` not prompting when reading a pattern file outside the working directory",
+      "entries": [
+        {
+          "id": "behavior:grep-pattern-file",
+          "status": "ported",
+          "notes": "grep/rg 的 -f/--file 模式文件被当作待校验路径，工作目录外的模式文件会触发提示（2.1.98 #42）。"
+        }
+      ]
+    },
+    {
+      "item": 90,
+      "text": "Fixed stale subagent worktree cleanup removing worktrees that contain untracked files",
+      "entries": [
+        {
+          "id": "behavior:stale-worktree-untracked",
+          "status": "ported",
+          "notes": "清理陈旧子代理 worktree 时把未跟踪文件也算作改动，含未跟踪文件的残留 worktree 不再被 --force 删除（去掉 status --porcelain 的 -uno，2.1.98 #90），避免误删用户未提交的产出。"
+        }
+      ]
+    },
+    {
+      "item": 91,
+      "text": "Fixed `sandbox.network.allowMachLookup` not taking effect on macOS",
+      "entries": [
+        {
+          "id": "bundle-only:sandbox-allowmachlookup",
+          "status": "ignored-dependency",
+          "notes": "sandbox.network.allowMachLookup 的 macOS 生效由打包依赖 @anthropic-ai/sandbox-runtime 实现，src 不直接读取该字段（依赖实现）。"
+        }
+      ]
+    },
+    {
+      "item": 92,
+      "text": "Improved `/resume` filter hint labels and added project/worktree/branch names in the filter indicator",
+      "entries": [
+        {
+          "id": "behavior:resume-filter-hints",
+          "status": "approximated",
+          "notes": "/resume 筛选提示标签与 project/worktree/branch 名展示属选择器 UI，手写实现未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 93,
+      "text": "Improved footer indicators (Focus, notifications) to stay on the mode-indicator row instead of wrapping at narrow terminal widths",
+      "entries": [
+        {
+          "id": "behavior:footer-indicator-layout",
+          "status": "approximated",
+          "notes": "footer 指示器（Focus/通知）布局属 UI 细节，本仓库为手写布局，未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 94,
+      "text": "Improved `/agents` with a tabbed layout: a Running tab shows live subagents, and the Library tab adds Run agent and View running instance actions",
+      "entries": [
+        {
+          "id": "behavior:agents-running-tab",
+          "status": "approximated",
+          "notes": "/agents 为手写实现，未加 Running/Library 双 tab 与 Run agent / View running instance 动作，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 95,
+      "text": "Improved `/reload-plugins` to pick up plugin-provided skills without requiring a restart",
+      "entries": [
+        {
+          "id": "behavior:reload-plugins-skills",
+          "status": "already-present",
+          "notes": "/reload-plugins 已注册并重载插件提供的 skills/命令（src/commands.ts 与插件加载器）。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 96,
+      "text": "Improved Accept Edits mode to auto-approve filesystem commands prefixed with safe env vars or process wrappers",
+      "entries": [
+        {
+          "id": "behavior:bash-permission-hardening",
+          "status": "already-present",
+          "notes": "Bash 权限加固与降噪：SAFE_ENV_VARS 白名单（LANG/TZ/NO_COLOR）只在安全变量下跳过 env 前缀，process wrapper（timeout/nice/nohup 等）去壳后再匹配，backslash 转义空白守卫，piped cd 与 deny 规则的 cd+git 门控均在 src/tools/BashTool/bashPermissions.ts；网络重定向在 pathValidation.ts。均无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 97,
+      "text": "Improved Vim mode: `j`/`k` in NORMAL mode now navigate history and select the footer pill at the input boundary",
+      "entries": [
+        {
+          "id": "behavior:vim-normal-history",
+          "status": "approximated",
+          "notes": "Vim NORMAL 模式 j/k 在输入边界导航历史/选择 footer pill 属输入层交互，未逐条对拍，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 98,
+      "text": "Improved hook errors in the transcript to include the first line of stderr for self-diagnosis without `--debug`",
+      "entries": [
+        {
+          "id": "behavior:hook-error-stderr-first-line",
+          "status": "ported",
+          "notes": "transcript 里的 hook 错误补上 stderr 首行以便无需 --debug 自查。上游 vzY：stderr 非空优先、否则 stdout，截掉 `Expected schema:` 之后内容，取首个非空行，超 200 字符加省略号。移植为 AttachmentMessage 的 getHookErrorFirstLine，并在 hook_non_blocking_error 渲染中作为第二行显示；测试 src/components/messages/__tests__/getHookErrorFirstLine.test.ts。"
+        }
+      ]
+    },
+    {
+      "item": 99,
+      "text": "Improved OTEL tracing: interaction spans now correctly wrap full turns under concurrent SDK calls, and headless turns end spans per-turn",
+      "entries": [
+        {
+          "id": "behavior:otel-interaction-span-per-turn",
+          "status": "ported",
+          "notes": "改进 OTEL 交互 span（2.1.100 #99）：① 并发 SDK 调用下 interaction span 需正确包住整个 turn；② headless 的每个 turn 各自结束 span。上游 v100 新增 `Ib8(prompt, fn)` 帮助函数：`dvz(prompt)` 起 interaction span 后 `cd.run(getStore(), fn)` 用 AsyncLocalStorage.run 把 store 绑定到该 turn 的异步树（并发 turn 各持独立 context，不再靠 enterWith 抢占共享槽），`finally` 里仅当 `getStore()===原 store` 时才 `enterWith(void 0)`，避免并发的另一 turn 被误清。两处调用：interactive 的 handlePromptSubmit（包住 processUserInput 循环 + onQuery 整个 turn，finally 调 `ld()`=endInteractionSpan）与 headless 的 print 循环（包住单轮 ask 迭代）。相应地 startInteractionSpan 从 processTextPrompt 移除，改由 wrapper 统一启动。移植：sessionTracing.ts 新增 runWithInteractionSpan（Ib8 等价），handlePromptSubmit.ts 与 print.ts 各自把 runWithWorkload 的 turn 体再包一层 runWithInteractionSpan 并在 finally 调 endInteractionSpan；processTextPrompt.ts 去掉 startInteractionSpan。headless/interactive E2E 全绿。见 notes R22。"
+        }
+      ]
+    },
+    {
+      "item": 100,
+      "text": "Improved transcript entries to carry final token usage instead of streaming placeholders",
+      "entries": [
+        {
+          "id": "behavior:transcript-final-token-usage",
+          "status": "already-present",
+          "notes": "transcript 条目记录最终 token 用量而非流式占位：src/utils/tokens.ts、src/services/api/claude.ts、src/utils/forkedAgent.ts 装配 usage。无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 101,
+      "text": "Updated the `/claude-api` skill to cover Managed Agents alongside Claude API",
+      "entries": [
+        {
+          "id": "bundle-only:claude-api-skill-managed-agents",
+          "status": "approximated",
+          "notes": "/claude-api skill 存在（src/skills/bundled/claude-api），但未含「Managed Agents」章节；属技能文档内容，未逐字移植，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 102,
+      "text": "[VSCode] Fixed false-positive \"requires git-bash\" error on Windows when `CLAUDE_CODE_GIT_BASH_PATH` is set or Git is installed at a default location",
+      "entries": [
+        {
+          "id": "bundle-only:vscode-git-bash",
+          "status": "approximated",
+          "notes": "「requires git-bash」误报修复属 VSCode 扩展侧行为，CLI 无对应实现，登记近似。"
+        }
+      ]
+    },
+    {
+      "item": 103,
+      "text": "Fixed `CLAUDE_CODE_MAX_CONTEXT_TOKENS` to honor `DISABLE_COMPACT` when it is set.",
+      "entries": [
+        {
+          "id": "env:CLAUDE_CODE_MAX_CONTEXT_TOKENS",
+          "status": "already-present",
+          "notes": "上游 2.1.100 新增（2.1.98 release #56：设置时需尊重 DISABLE_COMPACT）。本仓库 src/utils/context.ts 早已支持该变量，无需改动。"
+        }
+      ]
+    },
+    {
+      "item": 104,
+      "text": "Dropped `/compact` hints when `DISABLE_COMPACT` is set.",
+      "entries": [
+        {
+          "id": "behavior:effective-compact-gating",
+          "status": "already-present",
+          "notes": "DISABLE_COMPACT 设置时去掉 /compact 提示：src/utils/contextSuggestions.ts 与 src/services/compact/autoCompact.ts 均以 isEnvTruthy(DISABLE_COMPACT) 门控。无需改动。"
+        }
+      ]
+    }
+  ],
+  "unreferenced": [
+    {
+      "id": "env:CLAUDE_CODE_HOST_HTTP_PROXY_PORT",
+      "status": "approximated",
+      "notes": "由打包依赖 @anthropic-ai/sandbox-runtime 注入沙箱子进程；src/ 不直接读取（依赖噪声，沿用 2.1.94 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT",
+      "status": "approximated",
+      "notes": "同 HOST_HTTP_PROXY_PORT：sandbox-runtime 依赖注入，src/ 不直接读取（依赖噪声，沿用 2.1.94 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_THRESHOLD_MINUTES",
+      "status": "approximated",
+      "notes": "resume-return 提示阈值，本仓库无此提示（沿用 2.1.94 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_TOKEN_THRESHOLD",
+      "status": "approximated",
+      "notes": "resume-return 提示阈值，本仓库无此提示（沿用 2.1.94 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_SM_COMPACT",
+      "status": "approximated",
+      "notes": "扫描器 ENV_RE 从 ENABLE_/DISABLE_CLAUDE_CODE_SM_COMPACT 截取的子串名，真实读取点带前缀（扫描噪声，沿用 2.1.94 台账）。"
+    }
+  ],
+  "uncovered": [],
+  "unknown": []
+}
