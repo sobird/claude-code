@@ -10,6 +10,7 @@ import { useTranslations } from 'next-intl'
 import { summarizeToolCall } from '@/lib/tool-summary'
 import { cx } from '@/lib/utils'
 
+import { CollapsibleOutput } from './CollapsibleOutput'
 import { formatOutput, OUTPUT_LIMIT, truncate } from './format'
 import type { ToolViewProps } from './types'
 
@@ -43,11 +44,7 @@ export function GenericToolBody({ tool }: ToolViewProps) {
           </pre>
         </details>
       ) : null}
-      {hasOutput ? (
-        <pre className={cx(styles.pre, tool.status === 'error' ? styles.preError : styles.preOutput)}>
-          {formatOutput(tool)}
-        </pre>
-      ) : null}
+      {hasOutput ? <CollapsibleOutput text={formatOutput(tool)} errored={tool.status === 'error'} /> : null}
     </>
   )
 }

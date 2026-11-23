@@ -152,6 +152,32 @@
   color: var(--color-text-muted);
 }
 
+.diffStat {
+  margin-left: 0.375rem;
+  display: inline-flex;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.diffAdded {
+  color: var(--color-diff-add-text);
+}
+
+.diffRemoved {
+  color: var(--color-diff-remove-text);
+}
+
+.exitCode {
+  margin-left: 0.375rem;
+  padding: 0 0.25rem;
+  border-radius: 0.25rem;
+  background-color: var(--color-diff-remove-bg);
+  color: var(--color-diff-remove-text);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .runningLabel {
   font-size: 10px;
   color: var(--color-status-running);
@@ -241,16 +267,6 @@
   margin-top: 0.25rem;
   background-color: var(--color-surface-1);
   color: var(--color-text-secondary);
-}
-
-.preOutput {
-  background-color: var(--color-surface-1);
-  color: var(--color-text-secondary);
-}
-
-.preError {
-  background-color: color-mix(in oklab, var(--color-status-error) 10%, transparent);
-  color: var(--color-status-error);
 }
 
 .subagent {

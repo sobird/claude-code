@@ -21,7 +21,23 @@ describe('bashViewModel', () => {
       description: 'List files',
       output: 'a.txt\nb.txt',
       errored: false,
+      exitCode: null,
     })
+  })
+
+  test('reads the exit code the CLI appends to failed output', () => {
+    const model = bashViewModel(
+      tool({ status: 'error', rawInput: { command: 'false' }, rawOutput: { output: 'boom\nExit code 2' } }),
+    )
+    expect(model?.exitCode).toBe(2)
+    expect(model?.errored).toBe(true)
+  })
+
+  test('ignores exit-code-looking text when it is not its own line', () => {
+    const model = bashViewModel(
+      tool({ rawInput: { command: 'echo hi' }, rawOutput: { output: 'Exit code documentation' } }),
+    )
+    expect(model?.exitCode).toBeNull()
   })
 
   test('marks a failed call as errored', () => {

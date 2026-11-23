@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import type { ToolCallData } from '@/lib/session-reducer'
 
-import { fileViewModel } from '../file-model'
+import { diffStats, fileViewModel } from '../file-model'
 
 function tool(title: string, rawInput: Record<string, unknown>, overrides: Partial<ToolCallData> = {}): ToolCallData {
   return { id: 't1', title, status: 'complete', rawInput, ...overrides }
@@ -54,5 +54,24 @@ describe('fileViewModel', () => {
 
   test('returns null without a path', () => {
     expect(fileViewModel(tool('Edit', { old_string: 'x', new_string: 'y' }))).toBeNull()
+  })
+})
+
+describe('diffStats', () => {
+  test('counts only changed lines', () => {
+    expect(diffStats([{ before: 'a\nb\nc', after: 'a\nB\nc' }])).toEqual({ added: 1, removed: 1 })
+  })
+
+  test('sums every hunk of a multi-edit', () => {
+    expect(
+      diffStats([
+        { before: 'a', after: 'b' },
+        { before: '', after: 'new\nlines', isNewFile: true },
+      ]),
+    ).toEqual({ added: 3, removed: 1 })
+  })
+
+  test('ignores trailing-newline noise', () => {
+    expect(diffStats([{ before: 'a\n', after: 'a\n' }])).toEqual({ added: 0, removed: 0 })
   })
 })

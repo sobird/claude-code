@@ -4,8 +4,7 @@
 
 import { Globe } from 'lucide-react'
 
-import { cx } from '@/lib/utils'
-
+import { CollapsibleOutput } from './CollapsibleOutput'
 import { GenericToolBody } from './GenericToolBody'
 import type { ToolViewProps } from './types'
 import { safeHttpUrl, webViewModel } from './web-model'
@@ -28,9 +27,7 @@ export function WebToolView({ tool }: ToolViewProps) {
           <span className={styles.target}>{model.url || model.query}</span>
         )}
       </div>
-      {model.output ? (
-        <pre className={cx(styles.output, model.errored && styles.outputError)}>{model.output}</pre>
-      ) : null}
+      {model.output ? <CollapsibleOutput text={model.output} errored={model.errored} /> : null}
     </>
   )
 }

@@ -14,6 +14,8 @@ const BY_NAME: Readonly<Partial<Record<string, ToolViewKind>>> = {
   Glob: 'search',
   WebFetch: 'web',
   WebSearch: 'web',
+  TodoWrite: 'todo',
+  AskUserQuestion: 'question',
 }
 
 /** 返回工具应使用的正文视图族，未知工具返回 `null`。 */

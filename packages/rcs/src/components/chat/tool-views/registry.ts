@@ -2,7 +2,9 @@ import type { ComponentType } from 'react'
 
 import { BashToolView } from './BashToolView'
 import { FileToolView } from './FileToolView'
+import { QuestionToolView } from './QuestionToolView'
 import { SearchToolView } from './SearchToolView'
+import { TodoToolView } from './TodoToolView'
 import type { ToolViewKind, ToolViewProps } from './types'
 import { WebToolView } from './WebToolView'
 
@@ -12,4 +14,6 @@ export const TOOL_VIEWS: Readonly<Partial<Record<ToolViewKind, ComponentType<Too
   file: FileToolView,
   search: SearchToolView,
   web: WebToolView,
+  todo: TodoToolView,
+  question: QuestionToolView,
 }

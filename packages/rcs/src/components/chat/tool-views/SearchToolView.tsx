@@ -4,8 +4,7 @@
 
 import { Search } from 'lucide-react'
 
-import { cx } from '@/lib/utils'
-
+import { CollapsibleOutput } from './CollapsibleOutput'
 import { GenericToolBody } from './GenericToolBody'
 import { searchViewModel } from './search-model'
 import type { ToolViewProps } from './types'
@@ -23,9 +22,7 @@ export function SearchToolView({ tool }: ToolViewProps) {
         {model.path ? <span className={styles.meta}>{model.path}</span> : null}
         {model.glob ? <span className={styles.meta}>{model.glob}</span> : null}
       </div>
-      {model.output ? (
-        <pre className={cx(styles.output, model.errored && styles.outputError)}>{model.output}</pre>
-      ) : null}
+      {model.output ? <CollapsibleOutput text={model.output} errored={model.errored} /> : null}
     </>
   )
 }

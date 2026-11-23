@@ -1,0 +1,92 @@
+.status {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 0.0625rem 0.375rem;
+  font-size: 10px;
+}
+
+.answered {
+  background-color: var(--color-diff-add-bg);
+  color: var(--color-diff-add-text);
+}
+
+.awaiting {
+  background-color: color-mix(in oklab, var(--color-status-running) 15%, transparent);
+  color: var(--color-status-running);
+}
+
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.question + .question {
+  margin-top: 0.5rem;
+}
+
+.header {
+  align-self: flex-start;
+  border-radius: 0.25rem;
+  background-color: var(--color-surface-1);
+  padding: 0.0625rem 0.375rem;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.selected {
+  border-color: color-mix(in oklab, var(--color-status-active) 50%, transparent);
+  background-color: color-mix(in oklab, var(--color-diff-add-bg) 50%, transparent);
+}
+
+.optionLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.selectedChip {
+  border-radius: 999px;
+  background-color: var(--color-diff-add-bg);
+  padding: 0 0.25rem;
+  font-size: 9px;
+  color: var(--color-diff-add-text);
+}
+
+.optionDescription {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.other {
+  margin: 0;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}

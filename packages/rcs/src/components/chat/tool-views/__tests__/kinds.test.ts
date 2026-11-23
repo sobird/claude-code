@@ -11,8 +11,13 @@ describe('toolViewKind', () => {
     expect(toolViewKind('Bash (timeout)')).toBe('bash')
   })
 
+  test('maps the prompt tools to their own bodies', () => {
+    expect(toolViewKind('TodoWrite')).toBe('todo')
+    expect(toolViewKind('AskUserQuestion')).toBe('question')
+  })
+
   test('leaves unregistered tools on the generic body', () => {
-    expect(toolViewKind('TodoWrite')).toBeNull()
+    expect(toolViewKind('Task')).toBeNull()
     expect(toolViewKind('mcp__thing__do')).toBeNull()
   })
 })

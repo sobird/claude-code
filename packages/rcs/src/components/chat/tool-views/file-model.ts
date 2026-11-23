@@ -1,5 +1,5 @@
 import type { ToolCallData } from '@/lib/session-reducer'
-import { toolEditPreview, type EditPreviewHunk } from '@/lib/text-diff'
+import { diffLines, toolEditPreview, type EditPreviewHunk } from '@/lib/text-diff'
 
 import { firstString, formatOutput } from './format'
 
@@ -9,6 +9,19 @@ export interface FileViewModel {
   hunks: EditPreviewHunk[] | null
   output: string
   errored: boolean
+}
+
+/** 汇总所有 hunk 的增删行数，用于卡片头部的 `+N -M`。 */
+export function diffStats(hunks: EditPreviewHunk[]): { added: number; removed: number } {
+  let added = 0
+  let removed = 0
+  for (const hunk of hunks) {
+    for (const line of diffLines(hunk.before, hunk.after)) {
+      if (line.type === 'add') added++
+      else if (line.type === 'remove') removed++
+    }
+  }
+  return { added, removed }
 }
 
 /** 提取文件卡片所需路径与差异；缺少路径时返回 `null` 以便回退到通用正文。 */

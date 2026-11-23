@@ -20,6 +20,8 @@ import { canonicalToolName, summarizeToolCall } from '@/lib/tool-summary'
 import { cx, uniqueKeys } from '@/lib/utils'
 
 import { AssistantBubble } from './MessageBubble'
+import { bashViewModel } from './tool-views/bash-model'
+import { diffStats, fileViewModel } from './tool-views/file-model'
 import { GenericToolBody } from './tool-views/GenericToolBody'
 import { toolViewKind } from './tool-views/kinds'
 import { TOOL_VIEWS } from './tool-views/registry'
@@ -152,6 +154,9 @@ function SingleToolCard({
   const summary = summarizeToolCall(tool.title, tool.rawInput)
   const kind = toolViewKind(tool.title)
   const ToolView = kind ? TOOL_VIEWS[kind] : undefined
+  const hunks = kind === 'file' ? fileViewModel(tool)?.hunks : undefined
+  const stats = hunks ? diffStats(hunks) : null
+  const exitCode = kind === 'bash' ? (bashViewModel(tool)?.exitCode ?? null) : null
 
   return (
     <div className={cx(styles.card, compact ? styles.cardCompact : styles.cardRoomy)}>
@@ -160,6 +165,13 @@ function SingleToolCard({
         <span className={styles.cardTitle}>
           {summary.name || t('toolFallback')}
           {summary.summary ? <span className={styles.cardTitleSuffix}>{summary.summary}</span> : null}
+          {stats && (stats.added > 0 || stats.removed > 0) ? (
+            <span className={styles.diffStat} aria-label={t('diffStatAria', stats)}>
+              <span className={styles.diffAdded} aria-hidden="true">{`+${stats.added}`}</span>
+              <span className={styles.diffRemoved} aria-hidden="true">{`-${stats.removed}`}</span>
+            </span>
+          ) : null}
+          {exitCode !== null ? <span className={styles.exitCode}>{t('exitCode', { code: exitCode })}</span> : null}
         </span>
         {tool.status === 'running' ? <span className={styles.runningLabel}>{t('running')}</span> : null}
         {tool.status === 'waiting_for_confirmation' ? (
