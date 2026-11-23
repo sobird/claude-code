@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 
-import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories } from '@/db/testing'
 import type { SessionEvent } from '@/transport/event-bus'
 import {
   AcpEventBus,
@@ -15,6 +16,13 @@ import {
   removeAcpEventBus,
   removeEventBus,
 } from '@/transport/event-bus'
+
+/** 事件表 session_id 有外键，持久化前得先有父会话行。 */
+async function makeRepos(): Promise<Repositories> {
+  const repos = await createTestRepositories()
+  await repos.sessions.create({ id: 's1' })
+  return repos
+}
 
 let nextSeq = 1
 
@@ -154,7 +162,7 @@ describe('publishSessionEvent', () => {
   })
 
   test('persists the event before publishing it to the bus', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     const bus = getEventBus('s1')
     const received: SessionEvent[] = []
     bus.subscribe((event) => received.push(event))
@@ -171,7 +179,7 @@ describe('publishSessionEvent', () => {
   })
 
   test('publishes the normalized payload with raw preserved', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     const event = await publishSessionEvent(repos, getEventBus('s1'), 's1', 'assistant', { content: 'hi' }, 'inbound')
 
     const payload = event.payload as Record<string, unknown>
@@ -180,7 +188,7 @@ describe('publishSessionEvent', () => {
   })
 
   test('publishes even when no bus is supplied', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     const event = await publishSessionEvent(repos, null, 's1', 'user', { content: 'x' }, 'outbound')
     expect(event.seqNum).toBeGreaterThan(0)
     expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(1)
@@ -189,7 +197,7 @@ describe('publishSessionEvent', () => {
 
 describe('loadEventReplayWindow', () => {
   test('applies the direction filter before the limit', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     await publishSessionEvent(repos, null, 's1', 'user', { content: 'in' }, 'inbound')
     const outbound = await publishSessionEvent(repos, null, 's1', 'assistant', { content: 'out' }, 'outbound')
     await publishSessionEvent(repos, null, 's1', 'user', { content: 'in2' }, 'inbound')
@@ -203,7 +211,7 @@ describe('loadEventReplayWindow', () => {
 
 describe('publishInboundEvent', () => {
   test('drops a message whose uuid is already persisted', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     const first = await publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'a1' })
     expect(first).not.toBeNull()
 
@@ -213,7 +221,7 @@ describe('publishInboundEvent', () => {
   })
 
   test('drops a replay whose uuid was persisted outbound (a web prompt echo)', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     // The web composer persisted the prompt outbound; the bridge acks it inbound.
     const prompt = await publishSessionEvent(repos, null, 's1', 'user', { uuid: 'u1', content: 'hi' }, 'outbound')
     expect(prompt).not.toBeNull()
@@ -223,7 +231,7 @@ describe('publishInboundEvent', () => {
   })
 
   test('streaming deltas are live-only and never become durable messages', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     // Stream chunks share the eventual assistant uuid but are distinct live-only events.
     expect(await publishInboundEvent(repos, null, 's1', 'stream_event', { uuid: 'a1' })).not.toBeNull()
     expect(await publishInboundEvent(repos, null, 's1', 'partial_assistant', { uuid: 'a1' })).not.toBeNull()
@@ -237,7 +245,7 @@ describe('publishInboundEvent', () => {
   })
 
   test('publishes ephemeral deltas live without allocating durable rows', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     const bus = getEventBus('ephemeral-live')
     const received: SessionEvent[] = []
     bus.subscribe((event) => received.push(event))
@@ -259,7 +267,7 @@ describe('publishInboundEvent', () => {
   })
 
   test('honors an explicit ephemeral flag for any type', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     const event = await publishInboundEvent(repos, null, 's1', 'assistant', { uuid: 'm1' }, { ephemeral: true })
 
     expect(event?.ephemeral).toBe(true)
@@ -267,7 +275,7 @@ describe('publishInboundEvent', () => {
   })
 
   test('allocates distinct sequence numbers to ephemeral events', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     const first = await publishInboundEvent(repos, null, 's1', 'stream_event', { uuid: 'm1' })
     const second = await publishInboundEvent(repos, null, 's1', 'stream_event', { uuid: 'm1' })
 
@@ -277,7 +285,7 @@ describe('publishInboundEvent', () => {
   })
 
   test('concurrent duplicate writes persist exactly one event', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     // Both pass the read-side check before either insert lands; the durable unique key must
     // still let only one through, or the next model request sees duplicate tool_use blocks.
     const results = await Promise.all([
@@ -290,7 +298,7 @@ describe('publishInboundEvent', () => {
   })
 
   test('persists events without a uuid every time', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await makeRepos()
     expect(await publishInboundEvent(repos, null, 's1', 'control_request', { request_id: 'r1' })).not.toBeNull()
     expect(await publishInboundEvent(repos, null, 's1', 'control_request', { request_id: 'r1' })).not.toBeNull()
     expect(await repos.events.listSince('s1', 0, 10)).toHaveLength(2)

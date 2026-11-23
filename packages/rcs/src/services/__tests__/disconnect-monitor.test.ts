@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 
 import type { GatewayConfig } from '@/config'
 import { loadConfig } from '@/config'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories, TEST_USER_IDS } from '@/db/testing'
 import {
   isSessionStale,
   runDisconnectMonitorSweep,
@@ -83,9 +83,9 @@ describe('Disconnect Monitor Logic', () => {
   let repos: Repositories
   let config: GatewayConfig
 
-  beforeEach(() => {
+  beforeEach(async () => {
     process.env.RCS_AUTH_SECRET = AUTH_SECRET
-    repos = createMemoryRepositories()
+    repos = await createTestRepositories({ seedUsers: true })
     config = { ...loadConfig(), disconnectTimeout: DISCONNECT_TIMEOUT_SECONDS, heartbeatInterval: 20 }
     for (const [key] of getAllEventBuses()) {
       removeEventBus(key)
@@ -95,7 +95,7 @@ describe('Disconnect Monitor Logic', () => {
   test('environment times out when lastPollAt is too old', async () => {
     const timeoutMs = DISCONNECT_TIMEOUT_SECONDS * 1000
     const env = await repos.environments.create({
-      ownerUserId: 'user_1',
+      ownerUserId: TEST_USER_IDS.user1,
       lastPollAt: new Date(Date.now() - timeoutMs - 60_000),
     })
 
@@ -105,7 +105,7 @@ describe('Disconnect Monitor Logic', () => {
   })
 
   test('environment stays active when lastPollAt is recent', async () => {
-    const env = await repos.environments.create({ ownerUserId: 'user_1', lastPollAt: new Date() })
+    const env = await repos.environments.create({ ownerUserId: TEST_USER_IDS.user1, lastPollAt: new Date() })
 
     await runDisconnectMonitorSweep(repos, config)
 
@@ -115,7 +115,7 @@ describe('Disconnect Monitor Logic', () => {
   test('ACP agents are marked offline instead of disconnected', async () => {
     const timeoutMs = DISCONNECT_TIMEOUT_SECONDS * 1000
     const env = await repos.environments.create({
-      ownerUserId: 'user_1',
+      ownerUserId: TEST_USER_IDS.user1,
       workerType: 'acp',
       lastPollAt: new Date(Date.now() - timeoutMs - 60_000),
     })
@@ -167,7 +167,7 @@ describe('Disconnect Monitor Logic', () => {
     // the environment's poll proves the worker machine is still connected.
     const now = Date.now() + timeoutMs * 2 + 60_000
     const env = await repos.environments.create({
-      ownerUserId: 'user_1',
+      ownerUserId: TEST_USER_IDS.user1,
       lastPollAt: new Date(now - 30_000),
     })
     const session = await repos.sessions.create({ environmentId: env.id })

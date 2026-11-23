@@ -9,14 +9,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 
 import { loadConfig } from '@/config'
-import { createMemoryRepositories } from '@/db/repositories'
+import { createTestRepositories } from '@/db/testing'
 import { createGateway } from '@/gateway'
 
-function makeGateway() {
+async function makeGateway() {
   // Next's global types make `NODE_ENV` required on `ProcessEnv`; the same cast is used in
   // contracts.test.ts.
   const config = loadConfig({ RCS_AUTH_SECRET: 'test-secret' } as unknown as NodeJS.ProcessEnv)
-  const repos = createMemoryRepositories()
+  const repos = await createTestRepositories()
   return { config, repos, app: createGateway({ config, repos }) }
 }
 
@@ -26,7 +26,7 @@ describe('createGateway', () => {
   })
 
   test('health returns version and unauthenticated web routes 401', async () => {
-    const { config, app } = makeGateway()
+    const { config, app } = await makeGateway()
 
     const health = await app.request('/health')
     expect(health.status).toBe(200)
@@ -38,7 +38,7 @@ describe('createGateway', () => {
   })
 
   test('v1/v2/apc routes are mounted behind auth', async () => {
-    const { app, repos } = makeGateway()
+    const { app, repos } = await makeGateway()
     await repos.sessions.create({ id: 'cse_mount', title: 'mount test' })
 
     // 401 (not 404) proves each module is mounted at the old path.
@@ -52,7 +52,7 @@ describe('createGateway', () => {
   })
 
   test('normalizes double-slash paths before routing', async () => {
-    const { app } = makeGateway()
+    const { app } = await makeGateway()
 
     const response = await app.request('//health')
     expect(response.status).toBe(200)
@@ -60,7 +60,7 @@ describe('createGateway', () => {
   })
 
   test('injects repositories into the context for every request', async () => {
-    const { app } = makeGateway()
+    const { app } = await makeGateway()
 
     // The health handler does not read repos, so assert through an authenticated route:
     // a 401 proves middleware ran, while a missing `repos` would surface as a 500.

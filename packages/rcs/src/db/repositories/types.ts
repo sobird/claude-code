@@ -193,7 +193,7 @@ export interface PushSettingsRepository {
   set(keys: PushVapidKeys): Promise<void>
 }
 
-/** Every repository module, composed by `createRepositories` / `createMemoryRepositories`. */
+/** Every repository module, composed by `createRepositories`. */
 export interface Repositories {
   users: UserRepository
   apiKeys: ApiKeyRepository

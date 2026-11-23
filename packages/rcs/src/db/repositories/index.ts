@@ -1,25 +1,24 @@
 /**
  * Repository composition.
  *
- * `createRepositories` / `createMemoryRepositories` are the production and test
- * factories, composing every repository module (users, API keys, environments,
- * sessions, work items, session workers, events). The `*UserRepositories` aliases are
- * kept for earlier consumers that only need the user-facing subset.
+ * `createRepositories` is the production factory, composing every repository module
+ * (users, API keys, environments, sessions, work items, session workers, events).
+ * 测试用 `@/db/testing` 的 PGlite 数据库配同一个工厂，不再维护内存副本。
  */
 
 import type { Database } from '@/db/client'
 
-import { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys'
-import { createAttachmentRepository, createMemoryAttachmentRepository } from './attachments'
-import { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments'
-import { createEventRepository, createMemoryEventRepository } from './events'
-import { createMemoryPushSettingsRepository, createPushSettingsRepository } from './push-settings'
-import { createMemoryPushSubscriptionRepository, createPushSubscriptionRepository } from './push-subscriptions'
-import { createMemorySessionWorkerRepository, createSessionWorkerRepository } from './session-workers'
-import { createMemorySessionRepository, createSessionRepository } from './sessions'
+import { createApiKeyRepository } from './api-keys'
+import { createAttachmentRepository } from './attachments'
+import { createEnvironmentRepository } from './environments'
+import { createEventRepository } from './events'
+import { createPushSettingsRepository } from './push-settings'
+import { createPushSubscriptionRepository } from './push-subscriptions'
+import { createSessionWorkerRepository } from './session-workers'
+import { createSessionRepository } from './sessions'
 import type { Repositories } from './types'
-import { createMemoryUserRepository, createUserRepository } from './users'
-import { createMemoryWorkItemRepository, createWorkItemRepository } from './work-items'
+import { createUserRepository } from './users'
+import { createWorkItemRepository } from './work-items'
 
 export function createRepositories(db: Database): Repositories {
   return {
@@ -36,35 +35,17 @@ export function createRepositories(db: Database): Repositories {
   }
 }
 
-export function createMemoryRepositories(): Repositories {
-  return {
-    users: createMemoryUserRepository(),
-    apiKeys: createMemoryApiKeyRepository(),
-    environments: createMemoryEnvironmentRepository(),
-    sessions: createMemorySessionRepository(),
-    workItems: createMemoryWorkItemRepository(),
-    sessionWorkers: createMemorySessionWorkerRepository(),
-    events: createMemoryEventRepository(),
-    attachments: createMemoryAttachmentRepository(),
-    pushSubscriptions: createMemoryPushSubscriptionRepository(),
-    pushSettings: createMemoryPushSettingsRepository(),
-  }
-}
-
 /** Kept for earlier consumers; identical to `createRepositories`. */
 export const createUserRepositories = createRepositories
 
-/** Kept for earlier consumers; identical to `createMemoryRepositories`. */
-export const createMemoryUserRepositories = createMemoryRepositories
-
-export { createApiKeyRepository, createMemoryApiKeyRepository } from './api-keys'
-export { createAttachmentRepository, createMemoryAttachmentRepository } from './attachments'
-export { createEnvironmentRepository, createMemoryEnvironmentRepository } from './environments'
-export { createEventRepository, createMemoryEventRepository } from './events'
-export { createMemoryPushSettingsRepository, createPushSettingsRepository } from './push-settings'
-export { createMemoryPushSubscriptionRepository, createPushSubscriptionRepository } from './push-subscriptions'
-export { createMemorySessionRepository, createSessionRepository } from './sessions'
-export { createMemorySessionWorkerRepository, createSessionWorkerRepository } from './session-workers'
+export { createApiKeyRepository } from './api-keys'
+export { createAttachmentRepository } from './attachments'
+export { createEnvironmentRepository } from './environments'
+export { createEventRepository } from './events'
+export { createPushSettingsRepository } from './push-settings'
+export { createPushSubscriptionRepository } from './push-subscriptions'
+export { createSessionRepository } from './sessions'
+export { createSessionWorkerRepository } from './session-workers'
 export type {
   ApiKeyRepository,
   AppendEventInput,
@@ -92,5 +73,5 @@ export type {
   UserRepository,
   WorkItemRepository,
 } from './types'
-export { createMemoryUserRepository, createUserRepository } from './users'
-export { createMemoryWorkItemRepository, createWorkItemRepository } from './work-items'
+export { createUserRepository } from './users'
+export { createWorkItemRepository } from './work-items'

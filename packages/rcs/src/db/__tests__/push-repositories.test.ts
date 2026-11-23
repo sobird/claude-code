@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 import { eq } from 'drizzle-orm'
 
 import { createPgliteDatabase, runMigrations } from '@/db/client'
-import { createMemoryUserRepositories, createUserRepositories } from '@/db/repositories'
+import { createUserRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories'
 import { users } from '@/db/schema'
 
@@ -91,7 +91,6 @@ function suite(name: string, makeRepos: () => Repositories): void {
 }
 
 suite('postgres', () => createUserRepositories(ctx.db))
-suite('memory', () => createMemoryUserRepositories())
 
 test('deleting a user cascades to their subscriptions', async () => {
   const repos = createUserRepositories(ctx.db)

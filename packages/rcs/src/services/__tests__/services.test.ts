@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 
 import { verifyEnvironmentToken } from '@/auth/tokens'
 import { toCompatibleCodeSessionId, toWebSessionId } from '@/contracts'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories, TEST_USER_IDS } from '@/db/testing'
 import {
   deregisterEnvironment,
   listActiveEnvironments,
@@ -55,9 +55,9 @@ async function expectRejects(promise: Promise<unknown>, pattern: RegExp): Promis
 describe('Session Service', () => {
   let repos: Repositories
 
-  beforeEach(() => {
+  beforeEach(async () => {
     process.env.RCS_AUTH_SECRET = AUTH_SECRET
-    repos = createMemoryRepositories()
+    repos = await createTestRepositories({ seedUsers: true })
     resetEventBuses()
   })
 
@@ -73,10 +73,10 @@ describe('Session Service', () => {
     })
 
     test('creates a session with all options', async () => {
-      const env = await repos.environments.create({ ownerUserId: 'user_1' })
+      const env = await repos.environments.create({ ownerUserId: TEST_USER_IDS.user1 })
       const resp = await createSession(repos, {
         environmentId: env.id,
-        ownerUserId: 'user_1',
+        ownerUserId: TEST_USER_IDS.user1,
         title: 'My Session',
         source: 'cli',
         permissionMode: 'auto',
@@ -88,8 +88,8 @@ describe('Session Service', () => {
     })
 
     test('creates session with owner', async () => {
-      const resp = await createSession(repos, { ownerUserId: 'alice' })
-      expect(resp.owner_user_id).toBe('alice')
+      const resp = await createSession(repos, { ownerUserId: TEST_USER_IDS.alice })
+      expect(resp.owner_user_id).toBe(TEST_USER_IDS.alice)
     })
   })
 
@@ -212,15 +212,15 @@ describe('Session Service', () => {
     })
 
     test('makes the session visible in the owner listing again', async () => {
-      const s = await createSession(repos, { ownerUserId: 'alice' })
+      const s = await createSession(repos, { ownerUserId: TEST_USER_IDS.alice })
       await archiveSession(repos, s.id)
-      expect(await listWebSessionsByOwner(repos, { id: 'alice', role: 'member' })).toHaveLength(0)
+      expect(await listWebSessionsByOwner(repos, { id: TEST_USER_IDS.alice, role: 'member' })).toHaveLength(0)
 
       await unarchiveSession(repos, s.id)
 
-      expect((await listWebSessionsByOwner(repos, { id: 'alice', role: 'member' })).map((item) => item.id)).toEqual([
-        s.id,
-      ])
+      expect(
+        (await listWebSessionsByOwner(repos, { id: TEST_USER_IDS.alice, role: 'member' })).map((item) => item.id),
+      ).toEqual([s.id])
     })
   })
 
@@ -239,21 +239,21 @@ describe('Session Service', () => {
 
   describe('listWebSessionsByOwner', () => {
     test('filters by owner and maps to web ids', async () => {
-      await createSession(repos, { ownerUserId: 'alice' })
-      await createSession(repos, { ownerUserId: 'bob' })
-      const sessions = await listWebSessionsByOwner(repos, { id: 'alice', role: 'member' })
+      await createSession(repos, { ownerUserId: TEST_USER_IDS.alice })
+      await createSession(repos, { ownerUserId: TEST_USER_IDS.bob })
+      const sessions = await listWebSessionsByOwner(repos, { id: TEST_USER_IDS.alice, role: 'member' })
       expect(sessions).toHaveLength(1)
-      expect(sessions[0].owner_user_id).toBe('alice')
+      expect(sessions[0].owner_user_id).toBe(TEST_USER_IDS.alice)
       expect(sessions[0].id).toMatch(/^session_/)
     })
 
     test('skips archived sessions but lists inactive ones so they can be resumed', async () => {
-      const archived = await createSession(repos, { ownerUserId: 'alice' })
+      const archived = await createSession(repos, { ownerUserId: TEST_USER_IDS.alice })
       await updateSessionStatus(repos, archived.id, 'archived')
-      const inactive = await createSession(repos, { ownerUserId: 'alice' })
+      const inactive = await createSession(repos, { ownerUserId: TEST_USER_IDS.alice })
       await updateSessionStatus(repos, inactive.id, 'inactive')
 
-      const sessions = await listWebSessionsByOwner(repos, { id: 'alice', role: 'member' })
+      const sessions = await listWebSessionsByOwner(repos, { id: TEST_USER_IDS.alice, role: 'member' })
       expect(sessions.map((session) => session.id)).toEqual([inactive.id])
     })
 
@@ -268,55 +268,55 @@ describe('Session Service', () => {
 
   describe('resolveOwnedWebSessionId', () => {
     test('returns the canonical id for the owner', async () => {
-      const session = await createSession(repos, { ownerUserId: 'alice' })
-      const resolved = await resolveOwnedWebSessionId(repos, session.id, { id: 'alice', role: 'member' })
+      const session = await createSession(repos, { ownerUserId: TEST_USER_IDS.alice })
+      const resolved = await resolveOwnedWebSessionId(repos, session.id, { id: TEST_USER_IDS.alice, role: 'member' })
       expect(resolved).toBe(toCompatibleCodeSessionId(session.id))
     })
 
     test('claims an unowned session for the first caller only', async () => {
       const session = await createCodeSession(repos, {})
-      const claimed = await resolveOwnedWebSessionId(repos, session.id, { id: 'alice', role: 'member' })
+      const claimed = await resolveOwnedWebSessionId(repos, session.id, { id: TEST_USER_IDS.alice, role: 'member' })
       expect(claimed).toBe(session.id)
-      expect(await resolveOwnedWebSessionId(repos, session.id, { id: 'bob', role: 'member' })).toBeNull()
+      expect(await resolveOwnedWebSessionId(repos, session.id, { id: TEST_USER_IDS.bob, role: 'member' })).toBeNull()
     })
 
     test('rejects another member session but allows an admin', async () => {
-      const session = await createCodeSession(repos, { ownerUserId: 'bob' })
-      expect(await resolveOwnedWebSessionId(repos, session.id, { id: 'alice', role: 'member' })).toBeNull()
+      const session = await createCodeSession(repos, { ownerUserId: TEST_USER_IDS.bob })
+      expect(await resolveOwnedWebSessionId(repos, session.id, { id: TEST_USER_IDS.alice, role: 'member' })).toBeNull()
       expect(await resolveOwnedWebSessionId(repos, session.id, { id: 'root', role: 'admin' })).toBe(session.id)
     })
   })
 
   describe('resolveAccessibleSession', () => {
     test('reports not_found for an unknown session', async () => {
-      expect(await resolveAccessibleSession(repos, 'nope', { id: 'alice', role: 'member' })).toEqual({
+      expect(await resolveAccessibleSession(repos, 'nope', { id: TEST_USER_IDS.alice, role: 'member' })).toEqual({
         ok: false,
         reason: 'not_found',
       })
     })
 
     test('reports forbidden for another member session', async () => {
-      const session = await createCodeSession(repos, { ownerUserId: 'bob' })
-      expect(await resolveAccessibleSession(repos, session.id, { id: 'alice', role: 'member' })).toEqual({
+      const session = await createCodeSession(repos, { ownerUserId: TEST_USER_IDS.bob })
+      expect(await resolveAccessibleSession(repos, session.id, { id: TEST_USER_IDS.alice, role: 'member' })).toEqual({
         ok: false,
         reason: 'forbidden',
       })
     })
 
     test('returns the canonical id for the owner', async () => {
-      const session = await createCodeSession(repos, { ownerUserId: 'alice' })
+      const session = await createCodeSession(repos, { ownerUserId: TEST_USER_IDS.alice })
       expect(
-        await resolveAccessibleSession(repos, toWebSessionId(session.id), { id: 'alice', role: 'member' }),
+        await resolveAccessibleSession(repos, toWebSessionId(session.id), { id: TEST_USER_IDS.alice, role: 'member' }),
       ).toEqual({ ok: true, sessionId: session.id })
     })
   })
 
   describe('authorizeSessionWrite', () => {
     test('reports the archived status for a closed session', async () => {
-      const session = await createSession(repos, { ownerUserId: 'alice' })
+      const session = await createSession(repos, { ownerUserId: TEST_USER_IDS.alice })
       await updateSessionStatus(repos, session.id, 'archived')
 
-      expect(await authorizeSessionWrite(repos, session.id, { id: 'alice', role: 'member' })).toEqual({
+      expect(await authorizeSessionWrite(repos, session.id, { id: TEST_USER_IDS.alice, role: 'member' })).toEqual({
         ok: false,
         reason: 'closed',
         status: 'archived',
@@ -324,17 +324,20 @@ describe('Session Service', () => {
     })
 
     test('revives an inactive session and returns its canonical id', async () => {
-      const session = await createCodeSession(repos, { ownerUserId: 'alice' })
+      const session = await createCodeSession(repos, { ownerUserId: TEST_USER_IDS.alice })
       await updateSessionStatus(repos, session.id, 'inactive')
 
-      const access = await authorizeSessionWrite(repos, toWebSessionId(session.id), { id: 'alice', role: 'member' })
+      const access = await authorizeSessionWrite(repos, toWebSessionId(session.id), {
+        id: TEST_USER_IDS.alice,
+        role: 'member',
+      })
       expect(access).toEqual({ ok: true, sessionId: session.id })
       expect((await getSession(repos, session.id))?.status).toBe('idle')
     })
 
     test('passes through forbidden without touching the session', async () => {
-      const session = await createCodeSession(repos, { ownerUserId: 'bob' })
-      expect(await authorizeSessionWrite(repos, session.id, { id: 'alice', role: 'member' })).toEqual({
+      const session = await createCodeSession(repos, { ownerUserId: TEST_USER_IDS.bob })
+      expect(await authorizeSessionWrite(repos, session.id, { id: TEST_USER_IDS.alice, role: 'member' })).toEqual({
         ok: false,
         reason: 'forbidden',
       })
@@ -343,7 +346,7 @@ describe('Session Service', () => {
 
   describe('listSessionsByEnvironment', () => {
     test('filters by environment', async () => {
-      const env = await repos.environments.create({ ownerUserId: 'user_1' })
+      const env = await repos.environments.create({ ownerUserId: TEST_USER_IDS.user1 })
       await createSession(repos, { environmentId: env.id })
       await createSession(repos, {})
       const sessions = await listSessionsByEnvironment(repos, env.id)
@@ -358,32 +361,32 @@ describe('Session Service', () => {
 describe('Environment Service', () => {
   let repos: Repositories
 
-  beforeEach(() => {
+  beforeEach(async () => {
     process.env.RCS_AUTH_SECRET = AUTH_SECRET
-    repos = createMemoryRepositories()
+    repos = await createTestRepositories({ seedUsers: true })
   })
 
   describe('registerEnvironment', () => {
     test('registers environment with defaults', async () => {
-      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const result = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       expect(result.environment_id).toMatch(/^env_/)
       expect(result.environment_secret).toBeTruthy()
       expect(result.status).toBe('active')
       const record = await repos.environments.getById(result.environment_id)
-      expect(record?.ownerUserId).toBe('user_1')
+      expect(record?.ownerUserId).toBe(TEST_USER_IDS.user1)
       expect(record?.workerType).toBe('claude_code')
       expect(record?.maxSessions).toBe(1)
     })
 
     test('returns an environment secret accepted as an environment token', async () => {
-      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const result = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       const verified = await verifyEnvironmentToken(result.environment_secret)
-      expect(verified).toEqual({ environmentId: result.environment_id, userId: 'user_1' })
+      expect(verified).toEqual({ environmentId: result.environment_id, userId: TEST_USER_IDS.user1 })
     })
 
     test('registers with options', async () => {
       const result = await registerEnvironment(repos, {
-        ownerUserId: 'user_1',
+        ownerUserId: TEST_USER_IDS.user1,
         machineName: 'mac1',
         directory: '/home/user',
         branch: 'main',
@@ -401,10 +404,10 @@ describe('Environment Service', () => {
     })
 
     test('reuses a reusable environment id for the same owner', async () => {
-      const first = await registerEnvironment(repos, { ownerUserId: 'user_1', machineName: 'mac1' })
+      const first = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1, machineName: 'mac1' })
       const second = await registerEnvironment(repos, {
         environmentId: first.environment_id,
-        ownerUserId: 'user_1',
+        ownerUserId: TEST_USER_IDS.user1,
         machineName: 'mac2',
       })
       expect(second.environment_id).toBe(first.environment_id)
@@ -414,39 +417,46 @@ describe('Environment Service', () => {
     })
 
     test('reuses a disconnected environment id instead of creating a new one', async () => {
-      const first = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const first = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       await repos.environments.update(first.environment_id, { status: 'disconnected' })
       const second = await registerEnvironment(repos, {
         environmentId: first.environment_id,
-        ownerUserId: 'user_1',
+        ownerUserId: TEST_USER_IDS.user1,
       })
       expect(second.environment_id).toBe(first.environment_id)
       expect((await repos.environments.getById(first.environment_id))?.status).toBe('active')
     })
 
     test('creates a new environment when re-registering with a foreign environment id', async () => {
-      const owner = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const owner = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       const intruder = await registerEnvironment(repos, {
         environmentId: owner.environment_id,
-        ownerUserId: 'user_2',
+        ownerUserId: TEST_USER_IDS.user2,
       })
       expect(intruder.environment_id).not.toBe(owner.environment_id)
-      expect((await repos.environments.getById(owner.environment_id))?.ownerUserId).toBe('user_1')
-      expect((await repos.environments.getById(intruder.environment_id))?.ownerUserId).toBe('user_2')
+      expect((await repos.environments.getById(owner.environment_id))?.ownerUserId).toBe(TEST_USER_IDS.user1)
+      expect((await repos.environments.getById(intruder.environment_id))?.ownerUserId).toBe(TEST_USER_IDS.user2)
     })
 
     test('creates a new environment when re-registering with a stale environment id', async () => {
-      const result = await registerEnvironment(repos, { environmentId: 'env_missing', ownerUserId: 'user_1' })
+      const result = await registerEnvironment(repos, {
+        environmentId: 'env_missing',
+        ownerUserId: TEST_USER_IDS.user1,
+      })
       expect(result.environment_id).toMatch(/^env_/)
       expect(result.environment_id).not.toBe('env_missing')
     })
 
     test('creates and reuses an ACP agent session', async () => {
-      const first = await registerEnvironment(repos, { ownerUserId: 'user_1', machineName: 'mac1', workerType: 'acp' })
+      const first = await registerEnvironment(repos, {
+        ownerUserId: TEST_USER_IDS.user1,
+        machineName: 'mac1',
+        workerType: 'acp',
+      })
       expect(first.session_id).toMatch(/^cse_/)
       const second = await registerEnvironment(repos, {
         environmentId: first.environment_id,
-        ownerUserId: 'user_1',
+        ownerUserId: TEST_USER_IDS.user1,
         machineName: 'mac1',
         workerType: 'acp',
       })
@@ -460,7 +470,7 @@ describe('Environment Service', () => {
 
     test('maps an environment to the response shape', async () => {
       const result = await registerEnvironment(repos, {
-        ownerUserId: 'user_1',
+        ownerUserId: TEST_USER_IDS.user1,
         machineName: 'mac1',
         capabilities: { os: 'darwin' },
       })
@@ -468,7 +478,7 @@ describe('Environment Service', () => {
       const response = toEnvironmentResponse(record!)
       expect(response.id).toBe(result.environment_id)
       expect(response.machine_name).toBe('mac1')
-      expect(response.owner_user_id).toBe('user_1')
+      expect(response.owner_user_id).toBe(TEST_USER_IDS.user1)
       expect(response.last_poll_at).toBeGreaterThan(0)
       expect(response.channel_group_id).toBeNull()
       expect(response.capabilities).toEqual({ os: 'darwin' })
@@ -477,7 +487,7 @@ describe('Environment Service', () => {
 
   describe('deregisterEnvironment', () => {
     test('sets status to deregistered', async () => {
-      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const result = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       await deregisterEnvironment(repos, result.environment_id)
       expect((await repos.environments.getById(result.environment_id))?.status).toBe('deregistered')
     })
@@ -485,7 +495,7 @@ describe('Environment Service', () => {
 
   describe('updatePollTime', () => {
     test('updates lastPollAt', async () => {
-      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const result = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       const before = await repos.environments.getById(result.environment_id)
       await updatePollTime(repos, result.environment_id)
       const after = await repos.environments.getById(result.environment_id)
@@ -493,14 +503,14 @@ describe('Environment Service', () => {
     })
 
     test('revives a disconnected environment when it polls', async () => {
-      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const result = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       await repos.environments.update(result.environment_id, { status: 'disconnected' })
       await updatePollTime(repos, result.environment_id)
       expect((await repos.environments.getById(result.environment_id))?.status).toBe('active')
     })
 
     test('does not revive a deregistered environment', async () => {
-      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const result = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       await deregisterEnvironment(repos, result.environment_id)
       await updatePollTime(repos, result.environment_id)
       expect((await repos.environments.getById(result.environment_id))?.status).toBe('deregistered')
@@ -509,19 +519,19 @@ describe('Environment Service', () => {
 
   describe('listActiveEnvironments', () => {
     test('returns active environments', async () => {
-      await registerEnvironment(repos, { ownerUserId: 'user_1' })
-      await registerEnvironment(repos, { ownerUserId: 'user_2' })
+      await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
+      await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user2 })
       expect(await listActiveEnvironments(repos, { isAdmin: true })).toHaveLength(2)
     })
 
     test('filters by owner when not admin', async () => {
-      await registerEnvironment(repos, { ownerUserId: 'user_1' })
-      await registerEnvironment(repos, { ownerUserId: 'user_2' })
-      expect(await listActiveEnvironments(repos, { ownerUserId: 'user_1', isAdmin: false })).toHaveLength(1)
+      await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
+      await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user2 })
+      expect(await listActiveEnvironments(repos, { ownerUserId: TEST_USER_IDS.user1, isAdmin: false })).toHaveLength(1)
     })
 
     test('skips deregistered environments', async () => {
-      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const result = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       await deregisterEnvironment(repos, result.environment_id)
       expect(await listActiveEnvironments(repos, { isAdmin: true })).toHaveLength(0)
     })
@@ -529,7 +539,7 @@ describe('Environment Service', () => {
 
   describe('reconnectEnvironment', () => {
     test('sets status back to active', async () => {
-      const result = await registerEnvironment(repos, { ownerUserId: 'user_1' })
+      const result = await registerEnvironment(repos, { ownerUserId: TEST_USER_IDS.user1 })
       await deregisterEnvironment(repos, result.environment_id)
       expect((await repos.environments.getById(result.environment_id))?.status).toBe('deregistered')
       await reconnectEnvironment(repos, result.environment_id)

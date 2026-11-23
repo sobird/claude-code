@@ -7,8 +7,8 @@ import { hashPassword } from '@/auth/password'
 import { signAccessToken } from '@/auth/tokens'
 import { loadConfig } from '@/config'
 import type { UserRecord } from '@/contracts'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories } from '@/db/testing'
 import webPush from '@/routes/web/push'
 import { initPushNotifier, resetPushNotifierForTests, type PushNotifierProvider } from '@/services/push-notifier'
 
@@ -50,7 +50,7 @@ interface Seed {
 }
 
 async function seed(): Promise<Seed> {
-  const repos = createMemoryRepositories()
+  const repos = await createTestRepositories()
   const passwordHash = await hashPassword('secret')
   const member = await repos.users.create({ username: 'member', passwordHash, role: 'member' })
   const other = await repos.users.create({ username: 'other', passwordHash, role: 'member' })

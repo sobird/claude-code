@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 
 import { loadConfig } from '@/config'
 import { toWebSessionId } from '@/contracts'
-import { createMemoryRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories } from '@/db/testing'
 import { connectPresence, resetPresenceForTests, setPresenceVisible } from '@/services/presence'
 import {
   getPushPublicConfig,
@@ -30,7 +31,7 @@ const confirmation = {
   request: { subtype: 'can_use_tool', tool_name: 'Bash', description: 'Run tests' },
 }
 
-async function seedSession(repos: ReturnType<typeof createMemoryRepositories>) {
+async function seedSession(repos: Repositories) {
   const user = await repos.users.create({ username: 'push-owner', passwordHash: 'x', role: 'member' })
   const session = await repos.sessions.create({ ownerUserId: user.id, title: 'Fix tests' })
   return { user, session }
@@ -59,7 +60,7 @@ beforeEach(() => {
 
 describe('push notifier service', () => {
   test('does nothing before initialization', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { sent } = fakeProvider()
     const { user, session } = await seedSession(repos)
     await repos.pushSubscriptions.upsertForUser(user.id, {
@@ -75,7 +76,7 @@ describe('push notifier service', () => {
   })
 
   test('sends to every subscription of the owner with the right payload', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider, sent } = fakeProvider()
     const { user, session } = await seedSession(repos)
     await repos.pushSubscriptions.upsertForUser(user.id, {
@@ -103,7 +104,7 @@ describe('push notifier service', () => {
   })
 
   test('ignores sessions without an owner', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider, sent } = fakeProvider()
     const session = await repos.sessions.create({ ownerUserId: null, title: 'Unowned' })
 
@@ -115,7 +116,7 @@ describe('push notifier service', () => {
   })
 
   test('ignores non-confirmation events', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider, sent } = fakeProvider()
     const { user, session } = await seedSession(repos)
     await repos.pushSubscriptions.upsertForUser(user.id, {
@@ -132,7 +133,7 @@ describe('push notifier service', () => {
   })
 
   test('skips the push while a client is visibly on the session, then sends once it leaves', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider, sent } = fakeProvider()
     const { user, session } = await seedSession(repos)
     await repos.pushSubscriptions.upsertForUser(user.id, {
@@ -157,7 +158,7 @@ describe('push notifier service', () => {
   })
 
   test('still sends while the connected client is hidden', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider, sent } = fakeProvider()
     const { user, session } = await seedSession(repos)
     await repos.pushSubscriptions.upsertForUser(user.id, {
@@ -177,7 +178,7 @@ describe('push notifier service', () => {
   })
 
   test('drops a 410 subscription and keeps sending to the rest', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider, sent } = fakeProvider({
       async sendNotification(subscription, payload) {
         if (subscription.endpoint === 'https://push.example/a') {
@@ -209,7 +210,7 @@ describe('push notifier service', () => {
   })
 
   test('dedupes the same request id', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider, sent } = fakeProvider()
     const { user, session } = await seedSession(repos)
     await repos.pushSubscriptions.upsertForUser(user.id, {
@@ -227,7 +228,7 @@ describe('push notifier service', () => {
   })
 
   test('waits for initialization when notified during init', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider, sent } = fakeProvider()
     const { user, session } = await seedSession(repos)
     await repos.pushSubscriptions.upsertForUser(user.id, {
@@ -250,7 +251,7 @@ describe('push notifier service', () => {
   })
 
   test('uses stored VAPID keys when env is absent', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const vapidCalls: Array<[string, string, string]> = []
     const { provider } = fakeProvider({
       setVapidDetails(subject, publicKey, privateKey) {
@@ -278,7 +279,7 @@ describe('push notifier service', () => {
   })
 
   test('uses stored VAPID keys when env is partially set', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const vapidCalls: Array<[string, string, string]> = []
     const { provider } = fakeProvider({
       setVapidDetails(subject, publicKey, privateKey) {
@@ -300,7 +301,7 @@ describe('push notifier service', () => {
   })
 
   test('generates and persists keys when neither exists', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider } = fakeProvider()
 
     await initPushNotifier({
@@ -316,7 +317,7 @@ describe('push notifier service', () => {
   })
 
   test('is disabled when only one env key is set and no stored row', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const { provider, sent } = fakeProvider()
     const { user, session } = await seedSession(repos)
     await repos.pushSubscriptions.upsertForUser(user.id, {
@@ -336,7 +337,7 @@ describe('push notifier service', () => {
   // No `provider`: these load the real `web-push` package, proving it resolves
   // under Bun (the gateway bundle embeds the same module for the Docker image).
   test('loads the real web-push module and enables push with env keys', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
 
     await initPushNotifier({
       config: config({
@@ -350,7 +351,7 @@ describe('push notifier service', () => {
   })
 
   test('generates and persists keys via the real web-push module', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
 
     await initPushNotifier({
       config: config({ RCS_VAPID_PUBLIC_KEY: '', RCS_VAPID_PRIVATE_KEY: '' }),

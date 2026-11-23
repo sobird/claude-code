@@ -11,8 +11,8 @@ import type { AppEnv, AuthUser } from '@/auth/context'
 import { encodeWebSocketAuthProtocol } from '@/auth/context'
 import { signAccessToken } from '@/auth/tokens'
 import type { UserRecord } from '@/contracts'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories } from '@/db/testing'
 import acpRoutes, { websocket as acpWebsocket } from '@/routes/acp'
 import { handleRelayOpen } from '@/transport/acp-relay-handler'
 import { handleAcpWsClose, handleAcpWsMessage, handleAcpWsOpen } from '@/transport/acp-ws-handler'
@@ -69,7 +69,7 @@ interface Seed {
 }
 
 async function seed(): Promise<Seed> {
-  const repos = createMemoryRepositories()
+  const repos = await createTestRepositories()
   const admin = await repos.users.create({ username: 'admin', passwordHash: 'hash', role: 'admin' })
   const member = await repos.users.create({ username: 'member', passwordHash: 'hash', role: 'member' })
   const other = await repos.users.create({ username: 'other', passwordHash: 'hash', role: 'member' })

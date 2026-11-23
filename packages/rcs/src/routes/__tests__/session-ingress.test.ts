@@ -7,8 +7,8 @@ process.env.RCS_API_KEYS = 'test-api-key'
 
 import type { AppEnv } from '@/auth/context'
 import { encodeWebSocketAuthProtocol } from '@/auth/context'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories } from '@/db/testing'
 import sessionIngress, {
   decodeSessionIngressWsMessage,
   handleSessionIngressWsPayload,
@@ -32,7 +32,7 @@ const AUTH_HEADERS = {
 }
 
 async function seedRepos(): Promise<Repositories> {
-  const repos = createMemoryRepositories()
+  const repos = await createTestRepositories()
   await repos.users.create({ username: 'admin', passwordHash: 'hash', role: 'admin' })
   return repos
 }

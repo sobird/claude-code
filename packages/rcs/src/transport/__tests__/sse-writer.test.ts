@@ -5,8 +5,8 @@ import { Hono } from 'hono'
 process.env.RCS_AUTH_SECRET = 'test-secret'
 
 import type { AppEnv } from '@/auth/context'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories } from '@/db/testing'
 import { getAllEventBuses, getEventBus, publishSessionEvent, removeEventBus } from '@/transport/event-bus'
 import { createSSEStream, createWorkerEventStream } from '@/transport/sse-writer'
 
@@ -95,9 +95,13 @@ async function readDataFrames(res: Response, count: number, timeoutMs = 1500): P
 let repos: Repositories
 let app: Hono<AppEnv>
 
-beforeEach(() => {
+beforeEach(async () => {
   for (const [key] of getAllEventBuses()) removeEventBus(key)
-  repos = createMemoryRepositories()
+  repos = await createTestRepositories()
+  // 事件表 session_id 有外键：先建出测试用到的会话行。
+  for (const id of ['s1', 's2', 's3', 's5', 's6', 's8', 's10', 'race', 'w1', 'w2', 'wrace']) {
+    await repos.sessions.create({ id })
+  }
   app = createApp(repos)
 })
 

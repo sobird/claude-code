@@ -43,12 +43,14 @@ app.post('/', legacyUserAuth, async (c) => {
   const user = c.get('user')
   const body = await readJson(c)
 
-  const environmentId = typeof body.environment_id === 'string' ? body.environment_id : null
-  if (environmentId) {
-    // Guard against cross-tenant dispatch before creating anything. An unknown environment
-    // keeps the legacy behavior: the session is still created and dispatch is skipped.
-    const access = await resolveDispatchEnvironment(c, environmentId)
+  const requestedEnvironmentId = typeof body.environment_id === 'string' ? body.environment_id : null
+  let environmentId = requestedEnvironmentId
+  if (requestedEnvironmentId) {
+    // 先做跨租户派发防护。未知环境保持旧行为：会话照常创建、跳过派发；真实外键下
+    // 不能把不存在的环境 id 写进 sessions 行，所以降级为 null。
+    const access = await resolveDispatchEnvironment(c, requestedEnvironmentId)
     if (access.forbiddenForCaller) return forbidden(c, 'Environment belongs to another user')
+    if (!access.environment) environmentId = null
   }
   const session = await createSession(repos, {
     environmentId,

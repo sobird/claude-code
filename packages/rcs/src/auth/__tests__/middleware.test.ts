@@ -20,8 +20,8 @@ import {
 } from '@/auth/middleware'
 import { signAccessToken, signEnvironmentToken, signWorkerToken } from '@/auth/tokens'
 import type { UserRecord } from '@/contracts'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories } from '@/db/testing'
 
 process.env.RCS_AUTH_SECRET = 'test-secret'
 
@@ -43,7 +43,7 @@ interface Seed {
 }
 
 async function seed(): Promise<Seed> {
-  const repos = createMemoryRepositories()
+  const repos = await createTestRepositories()
   const admin = await repos.users.create({ username: 'admin', passwordHash: 'x', role: 'admin' })
   const member = await repos.users.create({ username: 'member', passwordHash: 'x', role: 'member' })
   const other = await repos.users.create({ username: 'other', passwordHash: 'x', role: 'member' })
@@ -254,7 +254,7 @@ describe('legacy keys and the user credential chain', () => {
   })
 
   test('legacy keys are rejected when the user API-key lookup and no admin exist', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     await repos.users.create({ username: 'member', passwordHash: 'x', role: 'member' })
     const app = new Hono<AppEnv>()
     app.use('*', async (c, next) => {

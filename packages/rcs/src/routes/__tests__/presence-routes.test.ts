@@ -7,8 +7,8 @@ import { hashPassword } from '@/auth/password'
 import { signAccessToken } from '@/auth/tokens'
 import { toWebSessionId } from '@/contracts'
 import type { SessionRecord, UserRecord } from '@/contracts'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories } from '@/db/testing'
 import webSessions from '@/routes/web/sessions'
 import { connectPresence, isSessionVisible, resetPresenceForTests, setPresenceVisible } from '@/services/presence'
 
@@ -30,7 +30,7 @@ interface Seed {
 }
 
 async function seed(): Promise<Seed> {
-  const repos = createMemoryRepositories()
+  const repos = await createTestRepositories()
   const passwordHash = await hashPassword('secret')
   const owner = await repos.users.create({ username: 'owner', passwordHash, role: 'member' })
   const other = await repos.users.create({ username: 'other', passwordHash, role: 'member' })

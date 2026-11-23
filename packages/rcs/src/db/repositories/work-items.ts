@@ -1,5 +1,5 @@
 /**
- * Work-item repository: Postgres (Drizzle) and in-memory implementations.
+ * Work-item repository: Postgres (Drizzle) implementation.
  *
  * Items move `pending → dispatched → acked → completed`. `claimNext` is the dispatch
  * primitive: it selects the oldest pending row inside a transaction with
@@ -17,11 +17,10 @@
 
 import { and, asc, eq, lt, sql } from 'drizzle-orm'
 
-import type { WorkItemRecord } from '@/contracts'
 import type { Database } from '@/db/client'
 import { workItems } from '@/db/schema'
 
-import type { EnqueueWorkItemInput, WorkItemRepository } from './types'
+import type { WorkItemRepository } from './types'
 
 export function createWorkItemRepository(db: Database): WorkItemRepository {
   return {
@@ -97,91 +96,6 @@ export function createWorkItemRepository(db: Database): WorkItemRepository {
 
     async bump(id) {
       await db.update(workItems).set({ updatedAt: new Date() }).where(eq(workItems.id, id))
-    },
-  }
-}
-
-function cloneWorkItem(record: WorkItemRecord): WorkItemRecord {
-  return {
-    ...record,
-    createdAt: new Date(record.createdAt),
-    updatedAt: new Date(record.updatedAt),
-  }
-}
-
-export function createMemoryWorkItemRepository(): WorkItemRepository {
-  const byId = new Map<string, WorkItemRecord>()
-
-  return {
-    async enqueue(input: EnqueueWorkItemInput) {
-      const now = new Date()
-      // Same one-in-flight invariant as the Postgres implementation.
-      const inFlight = [...byId.values()].find(
-        (record) =>
-          record.sessionId === input.sessionId && (record.state === 'pending' || record.state === 'dispatched'),
-      )
-      if (inFlight) {
-        inFlight.secret = input.secret
-        inFlight.updatedAt = now
-        return cloneWorkItem(inFlight)
-      }
-
-      const record: WorkItemRecord = {
-        id: `work_${crypto.randomUUID()}`,
-        environmentId: input.environmentId,
-        sessionId: input.sessionId,
-        state: 'pending',
-        secret: input.secret,
-        createdAt: now,
-        updatedAt: now,
-      }
-      byId.set(record.id, record)
-      return cloneWorkItem(record)
-    },
-
-    async claimNext(environmentId, options) {
-      const reclaimOlderThanMs = options?.reclaimOlderThanMs
-      if (reclaimOlderThanMs !== undefined && Number.isFinite(reclaimOlderThanMs) && reclaimOlderThanMs > 0) {
-        const cutoff = Date.now() - reclaimOlderThanMs
-        for (const record of byId.values()) {
-          if (
-            record.environmentId === environmentId &&
-            record.state === 'dispatched' &&
-            record.updatedAt.getTime() < cutoff
-          ) {
-            record.state = 'pending'
-            record.updatedAt = new Date()
-          }
-        }
-      }
-
-      // No `await` between the scan and the write, so this is synchronous-atomic.
-      const candidate = [...byId.values()]
-        .filter((record) => record.environmentId === environmentId && record.state === 'pending')
-        .toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))[0]
-      if (!candidate) return null
-
-      candidate.state = 'dispatched'
-      candidate.updatedAt = new Date()
-      return cloneWorkItem(candidate)
-    },
-
-    async getById(id) {
-      const record = byId.get(id)
-      return record ? cloneWorkItem(record) : null
-    },
-
-    async setState(id, state) {
-      const record = byId.get(id)
-      if (!record) return
-      record.state = state
-      record.updatedAt = new Date()
-    },
-
-    async bump(id) {
-      const record = byId.get(id)
-      if (!record) return
-      record.updatedAt = new Date()
     },
   }
 }

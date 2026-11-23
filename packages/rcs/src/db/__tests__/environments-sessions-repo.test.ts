@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 
 import { createPgliteDatabase, runMigrations } from '@/db/client'
-import { createMemoryUserRepositories, createUserRepositories } from '@/db/repositories'
+import { createUserRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories'
 
 const ctx = await createPgliteDatabase()
@@ -9,9 +9,8 @@ await runMigrations(ctx.db)
 afterAll(() => ctx.close())
 
 /**
- * Both implementations must satisfy the same assertions. The Postgres half shares one
- * migrated PGlite database (each test uses unique users/ids, so ownership queries stay
- * scoped); the memory half gets a fresh empty store per test.
+ * 契约测试直接跑在迁移过的 PGlite 上。所有测试共享同一个数据库，各自使用唯一的
+ * user/环境 id，因此归属查询彼此隔离。
  */
 function repositorySuite(name: string, makeRepos: () => Repositories): void {
   describe(name, () => {
@@ -352,4 +351,3 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
 }
 
 repositorySuite('environments and sessions (PGlite)', () => createUserRepositories(ctx.db))
-repositorySuite('environments and sessions (memory)', () => createMemoryUserRepositories())

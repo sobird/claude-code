@@ -1,5 +1,5 @@
 /**
- * VAPID settings repository: Postgres (Drizzle) and in-memory implementations.
+ * VAPID settings repository: Postgres (Drizzle) implementation.
  *
  * There is a single settings row (`id = 'default'`); `set` upserts it so the VAPID key
  * pair can be rotated in place.
@@ -7,7 +7,6 @@
 
 import { eq } from 'drizzle-orm'
 
-import type { PushVapidKeys } from '@/contracts'
 import type { Database } from '@/db/client'
 import { pushSettings } from '@/db/schema'
 
@@ -44,20 +43,6 @@ export function createPushSettingsRepository(db: Database): PushSettingsReposito
             updatedAt: now,
           },
         })
-    },
-  }
-}
-
-export function createMemoryPushSettingsRepository(): PushSettingsRepository {
-  let stored: PushVapidKeys | null = null
-
-  return {
-    async get() {
-      return stored ? { ...stored } : null
-    },
-
-    async set(keys) {
-      stored = { publicKey: keys.publicKey, privateKey: keys.privateKey, subject: keys.subject }
     },
   }
 }

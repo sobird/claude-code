@@ -1,8 +1,8 @@
 /**
  * In-process gateway smoke check.
  *
- * Boots the gateway on the in-memory repository bundle (no network, no Postgres)
- * and exercises the three paths that break first when auth or routing regresses:
+ * 在进程内 PGlite（嵌入式 Postgres，无需外部服务）上启动网关，覆盖最容易因认证或
+ * 路由回归而坏掉的三条路径：
  *
  * - `GET /health` returns 200
  * - `POST /v1/environments/bridge` accepts a real user API key and returns a
@@ -22,8 +22,11 @@ delete process.env.RCS_BASE_URL
 
 import { generateApiKey } from '@/auth/api-key'
 import { verifyEnvironmentToken } from '@/auth/tokens'
+import type { GatewayConfig } from '@/config'
 import { loadConfig } from '@/config'
-import { createMemoryRepositories } from '@/db/repositories'
+import { createPgliteDatabase, runMigrations } from '@/db/client'
+import { createRepositories } from '@/db/repositories'
+import type { Repositories } from '@/db/repositories/types'
 import { createGateway } from '@/gateway'
 import { ensureBootstrapAdmin } from '@/lib/bootstrap'
 
@@ -54,8 +57,16 @@ async function readJson(response: Response): Promise<Record<string, unknown>> {
 
 async function main(): Promise<void> {
   const config = loadConfig()
-  const repos = createMemoryRepositories()
+  const ctx = await createPgliteDatabase()
+  try {
+    await runMigrations(ctx.db)
+    await runChecks(config, createRepositories(ctx.db))
+  } finally {
+    await ctx.close()
+  }
+}
 
+async function runChecks(config: GatewayConfig, repos: Repositories): Promise<void> {
   await ensureBootstrapAdmin(repos)
   const admin = await repos.users.getByUsername('smoke-admin')
   if (!admin) {

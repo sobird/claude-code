@@ -7,8 +7,8 @@ import { hashPassword, verifyPassword } from '@/auth/password'
 import { signAccessToken } from '@/auth/tokens'
 import { loadConfig } from '@/config'
 import type { UserRecord } from '@/contracts'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories, TEST_USER_IDS } from '@/db/testing'
 import v1Environments from '@/routes/v1/environments'
 import v1EnvironmentsWork from '@/routes/v1/environments.work'
 import v1Sessions from '@/routes/v1/sessions'
@@ -91,7 +91,7 @@ interface Seed {
 }
 
 async function seed(): Promise<Seed> {
-  const repos = createMemoryRepositories()
+  const repos = await createTestRepositories()
   const passwordHash = await hashPassword('secret')
   const admin = await repos.users.create({ username: 'admin', passwordHash, role: 'admin' })
   const member = await repos.users.create({ username: 'member', passwordHash, role: 'member' })
@@ -1963,7 +1963,8 @@ describe('Web Admin Routes', () => {
   })
 
   test('PATCH /web/admin/users/:id 404 for unknown user', async () => {
-    const res = await app.request('/web/admin/users/nope', {
+    // 用合法但不存在的 uuid：真实 Postgres 会对 malformed uuid 直接报 22P02，不是 404 路径。
+    const res = await app.request(`/web/admin/users/${TEST_USER_IDS.user1}`, {
       method: 'PATCH',
       headers: bearer(s.adminToken),
       body: JSON.stringify({ role: 'member' }),

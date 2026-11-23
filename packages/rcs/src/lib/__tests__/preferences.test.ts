@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { createMemoryRepositories } from '@/db/repositories'
+import { createTestRepositories } from '@/db/testing'
 import { parseLocalePreference, setUserLocale } from '@/lib/preferences'
 
 describe('parseLocalePreference', () => {
@@ -16,7 +16,7 @@ describe('parseLocalePreference', () => {
 
 describe('setUserLocale', () => {
   test('persists a valid locale and rejects an invalid one', async () => {
-    const repos = createMemoryRepositories()
+    const repos = await createTestRepositories()
     const user = await repos.users.create({ username: 'pref-user', passwordHash: 'x', role: 'member' })
 
     expect(await setUserLocale(repos, user.id, { locale: 'en' })).toEqual({ ok: true, locale: 'en' })

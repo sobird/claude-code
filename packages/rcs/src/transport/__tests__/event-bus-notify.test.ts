@@ -2,7 +2,7 @@ import { beforeEach, expect, test } from 'bun:test'
 
 import { loadConfig } from '@/config'
 import { toWebSessionId } from '@/contracts'
-import { createMemoryRepositories } from '@/db/repositories'
+import { createTestRepositories } from '@/db/testing'
 import { initPushNotifier, resetPushNotifierForTests } from '@/services/push-notifier'
 import { publishInboundEvent } from '@/transport/event-bus'
 
@@ -14,7 +14,7 @@ const confirmation = {
 beforeEach(() => resetPushNotifierForTests())
 
 test('publishing an inbound confirmation reaches the owner’s subscription', async () => {
-  const repos = createMemoryRepositories()
+  const repos = await createTestRepositories()
   const user = await repos.users.create({ username: 'notify-owner', passwordHash: 'x', role: 'member' })
   const session = await repos.sessions.create({ ownerUserId: user.id, title: 'Edit things' })
   await repos.pushSubscriptions.upsertForUser(user.id, { endpoint: 'https://e/1', p256dh: 'k', auth: 'a' })
@@ -44,7 +44,7 @@ test('publishing an inbound confirmation reaches the owner’s subscription', as
 })
 
 test('publishing an outbound-style event type does not notify', async () => {
-  const repos = createMemoryRepositories()
+  const repos = await createTestRepositories()
   const user = await repos.users.create({ username: 'notify-owner2', passwordHash: 'x', role: 'member' })
   const session = await repos.sessions.create({ ownerUserId: user.id })
   await repos.pushSubscriptions.upsertForUser(user.id, { endpoint: 'https://e/2', p256dh: 'k', auth: 'a' })

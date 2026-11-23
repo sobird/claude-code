@@ -3,8 +3,8 @@ import { Buffer } from 'node:buffer'
 
 import { verifyWorkerToken } from '@/auth/tokens'
 import { toWebSessionId } from '@/contracts'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories, TEST_USER_IDS } from '@/db/testing'
 import {
   ackWork,
   createWorkItem,
@@ -40,8 +40,8 @@ describe('Work Dispatch', () => {
   beforeEach(async () => {
     process.env.RCS_AUTH_SECRET = AUTH_SECRET
     process.env.RCS_BASE_URL = BASE_URL
-    repos = createMemoryRepositories()
-    const env = await repos.environments.create({ ownerUserId: 'user_1', lastPollAt: new Date() })
+    repos = await createTestRepositories({ seedUsers: true })
+    const env = await repos.environments.create({ ownerUserId: TEST_USER_IDS.user1, lastPollAt: new Date() })
     envId = env.id
     const session = await repos.sessions.create({ environmentId: envId })
     sessionId = session.id
@@ -61,7 +61,7 @@ describe('Work Dispatch', () => {
     })
 
     test('throws for inactive environment', async () => {
-      const inactiveEnv = await repos.environments.create({ ownerUserId: 'user_1', status: 'deregistered' })
+      const inactiveEnv = await repos.environments.create({ ownerUserId: TEST_USER_IDS.user1, status: 'deregistered' })
       await expectRejects(createWorkItem(repos, inactiveEnv.id, sessionId), /not active/)
     })
 
@@ -137,7 +137,7 @@ describe('Work Dispatch', () => {
     })
 
     test('does not return work for a different environment', async () => {
-      const env2 = await repos.environments.create({ ownerUserId: 'user_1' })
+      const env2 = await repos.environments.create({ ownerUserId: TEST_USER_IDS.user1 })
       await createWorkItem(repos, envId, sessionId)
       const result = await pollWork(repos, env2.id, 0.1)
       expect(result).toBeNull()
@@ -218,7 +218,7 @@ describe('Work Dispatch', () => {
     })
 
     test('returns empty for environment with no sessions', async () => {
-      const emptyEnv = await repos.environments.create({ ownerUserId: 'user_1' })
+      const emptyEnv = await repos.environments.create({ ownerUserId: TEST_USER_IDS.user1 })
       const workIds = await reconnectWorkForEnvironment(repos, emptyEnv.id)
       expect(workIds).toHaveLength(0)
     })

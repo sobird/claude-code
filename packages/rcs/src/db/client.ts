@@ -32,7 +32,10 @@ export function createPostgresDatabase(url: string): Database {
   return db
 }
 
-export async function createPgliteDatabase(): Promise<{ db: Database; close(): Promise<void> }> {
+export async function createPgliteDatabase(): Promise<{
+  db: PgliteDatabase<typeof schema>
+  close(): Promise<void>
+}> {
   const [{ PGlite }, { drizzle: drizzlePglite }] = await Promise.all([
     import('@electric-sql/pglite'),
     import('drizzle-orm/pglite'),

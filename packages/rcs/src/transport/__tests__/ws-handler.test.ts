@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
 import type { GatewayConfig } from '@/config'
-import { createMemoryRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
+import { createTestRepositories } from '@/db/testing'
 import { requestBridgeControl } from '@/transport/bridge-requests'
 import type { SessionEvent } from '@/transport/event-bus'
 import { getAllEventBuses, getEventBus, removeEventBus } from '@/transport/event-bus'
@@ -91,11 +91,13 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 let repos: Repositories
 
-beforeEach(() => {
+beforeEach(async () => {
   rawSeq = 0
   for (const [key] of getAllEventBuses()) removeEventBus(key)
   closeAllConnections()
-  repos = createMemoryRepositories()
+  repos = await createTestRepositories()
+  // 事件表 session_id 有外键：先建出测试用到的会话行。
+  for (const id of ['s1', 'ctl', 's3', 'limit', 'race']) await repos.sessions.create({ id })
 })
 
 afterEach(() => {

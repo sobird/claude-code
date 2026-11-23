@@ -5,11 +5,10 @@
 
 import { and, eq } from 'drizzle-orm'
 
-import type { AttachmentRecord } from '@/contracts'
 import type { Database } from '@/db/client'
 import { attachments } from '@/db/schema'
 
-import type { AttachmentRepository, CreateAttachmentInput } from './types'
+import type { AttachmentRepository } from './types'
 
 export function createAttachmentRepository(db: Database): AttachmentRepository {
   return {
@@ -33,35 +32,6 @@ export function createAttachmentRepository(db: Database): AttachmentRepository {
     async getById(id) {
       const [row] = await db.select().from(attachments).where(eq(attachments.id, id)).limit(1)
       return row ?? null
-    },
-  }
-}
-
-function clone(record: AttachmentRecord): AttachmentRecord {
-  return { ...record, data: new Uint8Array(record.data), createdAt: new Date(record.createdAt) }
-}
-
-export function createMemoryAttachmentRepository(): AttachmentRepository {
-  const byId = new Map<string, AttachmentRecord>()
-
-  return {
-    async createOrGet(input: CreateAttachmentInput) {
-      for (const record of byId.values()) {
-        if (record.ownerUserId === input.ownerUserId && record.sha256 === input.sha256) return clone(record)
-      }
-      const record: AttachmentRecord = {
-        id: `att_${crypto.randomUUID()}`,
-        ...input,
-        data: new Uint8Array(input.data),
-        createdAt: new Date(),
-      }
-      byId.set(record.id, record)
-      return clone(record)
-    },
-
-    async getById(id) {
-      const record = byId.get(id)
-      return record ? clone(record) : null
     },
   }
 }
