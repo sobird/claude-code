@@ -258,6 +258,30 @@ export function endInteractionSpan(): void {
   interactionContext.enterWith(undefined)
 }
 
+/**
+ * Start an interaction span and run `fn` with its context bound to this turn.
+ *
+ * Uses AsyncLocalStorage.run() rather than relying on the enterWith() done by
+ * startInteractionSpan: run() scopes the store to `fn`'s async tree and
+ * restores the caller's store when it returns, so concurrent turns (multiple
+ * SDK structured inputs, detached background work) each keep their own
+ * interaction context instead of clobbering a shared slot (2.1.100 #99). After
+ * the turn, the store is cleared only if this turn still owns it, so a turn
+ * that already ended (or was superseded by a concurrent one) isn't
+ * double-cleared — which would otherwise drop a live turn's parent context.
+ */
+export async function runWithInteractionSpan<T>(userPrompt: string, fn: () => Promise<T>): Promise<T> {
+  startInteractionSpan(userPrompt)
+  const spanContext = interactionContext.getStore()
+  try {
+    return await interactionContext.run(spanContext, fn)
+  } finally {
+    if (interactionContext.getStore() === spanContext) {
+      interactionContext.enterWith(undefined)
+    }
+  }
+}
+
 export function startLLMRequestSpan(
   model: string,
   newContext?: LLMRequestNewContext,

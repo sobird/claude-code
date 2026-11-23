@@ -191,3 +191,34 @@ Stop / SubagentStop 的提示词钩子（prompt hook）会把整段会话 transc
 本仓库这段生命周期被复制到两处，均需同步：`src/tools/AgentTool/AgentTool.tsx`（内联 async-from-start 路径）与 `src/tools/AgentTool/agentToolUtils.ts`（`runAsyncAgentLifecycle`，async-from-start 与 `resumeAgentBackground` 共用）。两处 failed 分支各自补 `finalMessage: extractPartialResult(agentMessages)`（`extractPartialResult` 已在 killed 分支与文件内使用，无需新导入）。
 
 差异：上游是单一函数，仓库因历史拆分有两份同构实现；两处等价修改，行为与上游一致。无针对该错误分支的现成单测（依赖真实后台 agent 生命周期），本轮以 typecheck/lint 与 bundle 对拍钉住。证据：`bundle:7526435`（v100 failed 通知里的 `o88(J)` 标识符起点）、`bundle:7524741`（`o88` 即 extractPartialResult 定义处）；v94 同位置 failed 分支无 `finalMessage`（对拍确认）。
+
+### R22：OTEL 交互 span 并发隔离 + headless 按 turn 结束（2.1.100 #99）
+
+两处改进：① 并发 SDK 调用下 interaction span 应正确包住整个 turn；② headless（print/SDK）的每个 turn 各自结束 span（此前 span 只在进程 shutdown 时结束，一个 span 横跨所有 turn）。
+
+上游 v100 新增帮助函数 `Ib8(prompt, fn)`：
+
+```js
+function Ib8(q, K) {
+  dvz(q) // startInteractionSpan(prompt)
+  let _ = cd.getStore() // 刚 enterWith 进去的 store
+  try {
+    return cd.run(_, K)
+  } finally {
+    // 用 AsyncLocalStorage.run 把 store 绑定到 K 的异步树
+    if (cd.getStore() === _) cd.enterWith(void 0)
+  } // 仅当仍持有才清
+}
+```
+
+关键点：`run()` 把 store 作用域限定到该 turn 的异步树并在返回后恢复调用方 store，因此并发 turn 各持独立 context，不再像 `enterWith` 那样抢占/覆盖共享槽；`finally` 的 `getStore()===_` 守卫避免误清一个已被并发 turn 接管的 store。两处调用：interactive 的 handlePromptSubmit 把「processUserInput 循环 + onQuery」整个 turn 包进 `Ib8`，并在回调 finally 调 `ld()`（=endInteractionSpan）；headless 的 print 循环把单轮 `ask()` 迭代包进 `Ib8`，同样 finally 调 `ld()`。相应地把 `startInteractionSpan` 从 processTextPrompt 移除，改由 wrapper 统一启动（v100 中 `dvz` 仅由 `Ib8` 调用）。
+
+移植：
+
+- `src/utils/telemetry/sessionTracing.ts` 新增 `runWithInteractionSpan<T>(prompt, fn)`（`Ib8` 等价：start + `interactionContext.run(getStore(), fn)` + 条件清除）。
+- `src/utils/handlePromptSubmit.ts` / `src/cli/print.ts`：在既有 `runWithWorkload` 的 turn 体外再包一层 `runWithInteractionSpan(interactionPromptText, async () => { try { ...原 turn 体... } finally { endInteractionSpan() } })`；prompt 文本取首个输入的字符串或 `extractTextContent(input, '\n')`，与 v100 的 `Ib8` 实参一致。
+- `src/utils/processUserInput/processTextPrompt.ts`：删除 `startInteractionSpan` 调用与 import。
+
+差异：v100 在 interactive 的 Ib8 回调末尾（无消息分支与 finally）调 `ld()`；本仓库 interactive 的 endInteractionSpan 原在 REPL.resetLoadingState 中按 turn 调用，现新增在外层 wrapper 的 finally 调一次，二者幂等（span.ended 守卫），不重复结束同一 span。QueryEngine（in-process SDK / cowork，`querySource:'sdk'`）在 v100 下同样不再经 processTextPrompt 启动 span（上游只在那 2 个 Ib8 点启动），本移植保持一致。
+
+验证：typecheck/lint/fmt:check 通过；headless E2E（tests/e2e/print-chain.test.ts、hooks.test.ts，共 11 例）与 interactive E2E（interactive.test.ts，1 例）全绿，证明包住 turn 后交互与无头两种执行都不受影响。证据：`bundle:7051653`（`Ib8` 定义，标识符起点）、`bundle:12409639` / `bundle:13248687`（interactive / headless 两处 `Ib8` 调用，标识符起点）。

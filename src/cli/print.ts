@@ -189,7 +189,7 @@ import {
   subscribeToCommandQueue,
   getCommandsByMaxPriority,
 } from 'src/utils/messageQueueManager.js'
-import { createModelSwitchBreadcrumbs } from 'src/utils/messages.js'
+import { createModelSwitchBreadcrumbs, extractTextContent } from 'src/utils/messages.js'
 import { toInternalMessages, toSDKRateLimitInfo } from 'src/utils/messages/mappers.js'
 import {
   getDefaultMainLoopModel,
@@ -251,6 +251,7 @@ import { runSideQuestion } from 'src/utils/sideQuestion.js'
 import type { Stream } from 'src/utils/stream.js'
 import { installStreamJsonStdoutGuard } from 'src/utils/streamJsonStdoutGuard.js'
 import { createStreamlinedTransformer } from 'src/utils/streamlinedTransform.js'
+import { endInteractionSpan, runWithInteractionSpan } from 'src/utils/telemetry/sessionTracing.js'
 import type { ThinkingConfig } from 'src/utils/thinking.js'
 import { modelSupportsAdaptiveThinking } from 'src/utils/thinking.js'
 import { mergeAndFilterTools } from 'src/utils/toolPool.js'
@@ -1862,101 +1863,110 @@ function runHeadlessStreaming(
           // const-capture: TS loses `while ((command = dequeue()))` narrowing
           // inside the closure.
           const cmd = command
-          await runWithWorkload(cmd.workload ?? options.workload, async () => {
-            for await (const message of ask({
-              commands: uniqBy([...currentCommands, ...appState.mcp.commands], 'name'),
-              prompt: input,
-              promptUuid: cmd.uuid,
-              isMeta: cmd.isMeta,
-              cwd: cwd(),
-              tools: allTools,
-              verbose: options.verbose,
-              mcpClients: allMcpClients,
-              thinkingConfig: options.thinkingConfig,
-              maxTurns: options.maxTurns,
-              maxBudgetUsd: options.maxBudgetUsd,
-              taskBudget: options.taskBudget,
-              canUseTool,
-              userSpecifiedModel: activeUserSpecifiedModel,
-              fallbackModel: options.fallbackModel,
-              jsonSchema: getInitJsonSchema() ?? options.jsonSchema,
-              mutableMessages,
-              getReadFileCache: () =>
-                pendingSeeds.size === 0 ? readFileState : mergeFileStateCaches(readFileState, pendingSeeds),
-              setReadFileCache: (cache) => {
-                readFileState = cache
-                for (const [path, seed] of pendingSeeds.entries()) {
-                  const existing = readFileState.get(path)
-                  if (!existing || seed.timestamp > existing.timestamp) {
-                    readFileState.set(path, seed)
+          const interactionPromptText = typeof input === 'string' ? input : extractTextContent(input, '\n')
+          await runWithWorkload(cmd.workload ?? options.workload, () =>
+            runWithInteractionSpan(interactionPromptText, async () => {
+              try {
+                for await (const message of ask({
+                  commands: uniqBy([...currentCommands, ...appState.mcp.commands], 'name'),
+                  prompt: input,
+                  promptUuid: cmd.uuid,
+                  isMeta: cmd.isMeta,
+                  cwd: cwd(),
+                  tools: allTools,
+                  verbose: options.verbose,
+                  mcpClients: allMcpClients,
+                  thinkingConfig: options.thinkingConfig,
+                  maxTurns: options.maxTurns,
+                  maxBudgetUsd: options.maxBudgetUsd,
+                  taskBudget: options.taskBudget,
+                  canUseTool,
+                  userSpecifiedModel: activeUserSpecifiedModel,
+                  fallbackModel: options.fallbackModel,
+                  jsonSchema: getInitJsonSchema() ?? options.jsonSchema,
+                  mutableMessages,
+                  getReadFileCache: () =>
+                    pendingSeeds.size === 0 ? readFileState : mergeFileStateCaches(readFileState, pendingSeeds),
+                  setReadFileCache: (cache) => {
+                    readFileState = cache
+                    for (const [path, seed] of pendingSeeds.entries()) {
+                      const existing = readFileState.get(path)
+                      if (!existing || seed.timestamp > existing.timestamp) {
+                        readFileState.set(path, seed)
+                      }
+                    }
+                    pendingSeeds.clear()
+                  },
+                  customSystemPrompt: options.systemPrompt,
+                  appendSystemPrompt: options.appendSystemPrompt,
+                  excludeDynamicSystemPromptSections: options.excludeDynamicSystemPromptSections,
+                  getAppState,
+                  setAppState,
+                  abortController,
+                  replayUserMessages: options.replayUserMessages,
+                  includePartialMessages: options.includePartialMessages,
+                  handleElicitation: (serverName, params, elicitSignal) =>
+                    structuredIO.handleElicitation(
+                      serverName,
+                      params.message,
+                      undefined,
+                      elicitSignal,
+                      params.mode,
+                      params.url,
+                      'elicitationId' in params ? params.elicitationId : undefined,
+                    ),
+                  agents: currentAgents,
+                  orphanedPermission: cmd.orphanedPermission,
+                  deferredToolUse: pendingDeferredToolUse,
+                  setSDKStatus: (status) => {
+                    output.enqueue({
+                      type: 'system',
+                      subtype: 'status',
+                      status,
+                      session_id: getSessionId(),
+                      uuid: randomUUID(),
+                    })
+                  },
+                })) {
+                  // Forward messages to bridge incrementally (mid-turn) so
+                  // claude.ai sees progress and the connection stays alive
+                  // while blocked on permission requests.
+                  forwardMessagesToBridge()
+
+                  if (message.type === 'result') {
+                    // Flush pending SDK events so they appear before result on the stream.
+                    for (const event of drainSdkEvents()) {
+                      output.enqueue(event)
+                    }
+
+                    // Hold-back: don't emit result while background agents are running
+                    const currentState = getAppState()
+                    if (
+                      getRunningTasks(currentState).some(
+                        (t) => (t.type === 'local_agent' || t.type === 'local_workflow') && isBackgroundTask(t),
+                      )
+                    ) {
+                      heldBackResult = message
+                    } else {
+                      heldBackResult = null
+                      output.enqueue(message)
+                    }
+                  } else {
+                    // Flush SDK events (task_started, task_progress) so background
+                    // agent progress is streamed in real-time, not batched until result.
+                    for (const event of drainSdkEvents()) {
+                      output.enqueue(event)
+                    }
+                    output.enqueue(message)
                   }
                 }
-                pendingSeeds.clear()
-              },
-              customSystemPrompt: options.systemPrompt,
-              appendSystemPrompt: options.appendSystemPrompt,
-              excludeDynamicSystemPromptSections: options.excludeDynamicSystemPromptSections,
-              getAppState,
-              setAppState,
-              abortController,
-              replayUserMessages: options.replayUserMessages,
-              includePartialMessages: options.includePartialMessages,
-              handleElicitation: (serverName, params, elicitSignal) =>
-                structuredIO.handleElicitation(
-                  serverName,
-                  params.message,
-                  undefined,
-                  elicitSignal,
-                  params.mode,
-                  params.url,
-                  'elicitationId' in params ? params.elicitationId : undefined,
-                ),
-              agents: currentAgents,
-              orphanedPermission: cmd.orphanedPermission,
-              deferredToolUse: pendingDeferredToolUse,
-              setSDKStatus: (status) => {
-                output.enqueue({
-                  type: 'system',
-                  subtype: 'status',
-                  status,
-                  session_id: getSessionId(),
-                  uuid: randomUUID(),
-                })
-              },
-            })) {
-              // Forward messages to bridge incrementally (mid-turn) so
-              // claude.ai sees progress and the connection stays alive
-              // while blocked on permission requests.
-              forwardMessagesToBridge()
-
-              if (message.type === 'result') {
-                // Flush pending SDK events so they appear before result on the stream.
-                for (const event of drainSdkEvents()) {
-                  output.enqueue(event)
-                }
-
-                // Hold-back: don't emit result while background agents are running
-                const currentState = getAppState()
-                if (
-                  getRunningTasks(currentState).some(
-                    (t) => (t.type === 'local_agent' || t.type === 'local_workflow') && isBackgroundTask(t),
-                  )
-                ) {
-                  heldBackResult = message
-                } else {
-                  heldBackResult = null
-                  output.enqueue(message)
-                }
-              } else {
-                // Flush SDK events (task_started, task_progress) so background
-                // agent progress is streamed in real-time, not batched until result.
-                for (const event of drainSdkEvents()) {
-                  output.enqueue(event)
-                }
-                output.enqueue(message)
+              } finally {
+                // End the per-turn interaction span; the wrapper then clears
+                // the scoped ALS context (2.1.100 #99).
+                endInteractionSpan()
               }
-            }
-          }) // end runWithWorkload
+            }),
+          ) // end runWithWorkload
 
           // The deferred marker only applies to the first ask(); subsequent
           // turns are ordinary conversation.

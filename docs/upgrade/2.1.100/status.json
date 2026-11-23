@@ -870,6 +870,23 @@
         "files": ["src/tools/AgentTool/AgentTool.tsx", "src/tools/AgentTool/agentToolUtils.ts"],
         "symbols": ["extractPartialResult", "enqueueAgentNotification"]
       }
+    },
+    {
+      "id": "behavior:otel-interaction-span-per-turn",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [99],
+      "evidence": ["bundle:7051653", "bundle:12409639", "bundle:13248687"],
+      "notes": "改进 OTEL 交互 span（2.1.100 #99）：① 并发 SDK 调用下 interaction span 需正确包住整个 turn；② headless 的每个 turn 各自结束 span。上游 v100 新增 `Ib8(prompt, fn)` 帮助函数：`dvz(prompt)` 起 interaction span 后 `cd.run(getStore(), fn)` 用 AsyncLocalStorage.run 把 store 绑定到该 turn 的异步树（并发 turn 各持独立 context，不再靠 enterWith 抢占共享槽），`finally` 里仅当 `getStore()===原 store` 时才 `enterWith(void 0)`，避免并发的另一 turn 被误清。两处调用：interactive 的 handlePromptSubmit（包住 processUserInput 循环 + onQuery 整个 turn，finally 调 `ld()`=endInteractionSpan）与 headless 的 print 循环（包住单轮 ask 迭代）。相应地 startInteractionSpan 从 processTextPrompt 移除，改由 wrapper 统一启动。移植：sessionTracing.ts 新增 runWithInteractionSpan（Ib8 等价），handlePromptSubmit.ts 与 print.ts 各自把 runWithWorkload 的 turn 体再包一层 runWithInteractionSpan 并在 finally 调 endInteractionSpan；processTextPrompt.ts 去掉 startInteractionSpan。headless/interactive E2E 全绿。见 notes R22。",
+      "srcEvidence": {
+        "files": [
+          "src/utils/telemetry/sessionTracing.ts",
+          "src/utils/handlePromptSubmit.ts",
+          "src/cli/print.ts",
+          "src/utils/processUserInput/processTextPrompt.ts"
+        ],
+        "symbols": ["runWithInteractionSpan", "endInteractionSpan"]
+      }
     }
   ]
 }
