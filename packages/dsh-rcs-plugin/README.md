@@ -39,15 +39,15 @@ Web 端也可以走 **Plugins** 菜单用「安装本地插件」添加同一个
     workdir: /srv/work
 ```
 
-| 字段（config / 环境变量）            | 必填 | 默认                    | 说明                          |
-| ------------------------------------ | ---- | ----------------------- | ----------------------------- |
-| `apiKey` / `RCS_API_KEY`             | 是   | —                       | 能创建会话的用户 API key      |
-| `rcsBaseUrl` / `RCS_BASE_URL`        | 否   | `http://localhost:4000` | RCS 网关根地址                |
-| `workdir` / `DSH_WORKDIR`            | 否   | dsh 进程当前目录        | dsh 会话工作目录              |
-| `sessionTitle` / `RCS_SESSION_TITLE` | 否   | —                       | 新建 RCS 会话的标题           |
-| `provider` / `DSH_PROVIDER`          | 否   | `deepseek-official`     | dsh 的 provider               |
-| `model` / `DSH_MODEL`                | 否   | `deepseek-v4-flash`     | dsh 的模型                    |
-| `sessionId` / `RCS_SESSION_ID`       | 否   | —                       | 复用既有 RCS 会话（不再新建） |
+| 字段（config / 环境变量）            | 必填 | 默认                    | 说明                                       |
+| ------------------------------------ | ---- | ----------------------- | ------------------------------------------ |
+| `apiKey` / `RCS_API_KEY`             | 是   | —                       | 能创建会话的用户 API key                   |
+| `rcsBaseUrl` / `RCS_BASE_URL`        | 否   | `http://localhost:4000` | RCS 网关根地址                             |
+| `workdir` / `DSH_WORKDIR`            | 否   | dsh 进程当前目录        | dsh 会话工作目录                           |
+| `sessionTitle` / `RCS_SESSION_TITLE` | 否   | —                       | 新建 RCS 会话的标题，同时设为 dsh 会话标题 |
+| `provider` / `DSH_PROVIDER`          | 否   | `deepseek-official`     | dsh 的 provider                            |
+| `model` / `DSH_MODEL`                | 否   | `deepseek-v4-flash`     | dsh 的模型                                 |
+| `sessionId` / `RCS_SESSION_ID`       | 否   | —                       | 复用既有 RCS 会话（不再新建）              |
 
 模型凭据（例如 `DEEPSEEK_API_KEY`）由 dsh 宿主自己读取，插件不碰。
 
@@ -61,6 +61,9 @@ Web 端也可以走 **Plugins** 菜单用「安装本地插件」添加同一个
 
 - **会话**：首次收到 prompt 时才 `ctx.agents.create`（或按 `sessionId` 命中
   `sessionPersistence` 时 `resume`），避免与 agent-loop 的加载顺序竞争。
+- **工作区**：建/恢复会话后把 `workdir` 注册成工作区（已注册则复用）并挂载该会话，
+  dsh 侧边栏才会按工作区分组；`sessionTitle` 同时重命名为 dsh 会话标题。缺少
+  `workspaceRegistry` 服务（例如 SDK profile）或挂载失败只记 stderr，会话仍落在「未分组」。
 - **入站**：文本直接转成冻结的 user message；图片经 `attachments.admitPromptContent`
   换成持久引用（profile 缺该服务时报错并回一条 error result）。
 - **出站**：`session/event` 按 `translateSessionEvent` 翻译成 `assistant` / `tool_use` /

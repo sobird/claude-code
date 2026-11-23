@@ -14,16 +14,22 @@ import type {
   ResumeAgentOptionsLike,
   SessionEventLike,
   SessionLike,
+  SessionRefLike,
+  SessionTitleLike,
+  WorkspaceLike,
+  WorkspaceRegistryLike,
 } from '../../src/types'
 
 /** 只记录调用；turn/end 由测试显式 emit，模拟 agent 的正常收尾。 */
 export class FakeAgent implements AgentLike {
   readonly id: string
+  readonly session: SessionRefLike
   readonly followups: UserMessageLike[] = []
   readonly cancels: unknown[] = []
 
   constructor(id: string) {
     this.id = id
+    this.session = { id }
   }
 
   followup(message: UserMessageLike): void {
@@ -56,6 +62,46 @@ export class FakeAgents implements AgentsServiceLike {
     const agent = new FakeAgent(options.resumeSessionId)
     this.live.set(options.resumeSessionId, agent)
     return { agent }
+  }
+}
+
+/** 记录挂到本工作区的会话 id。 */
+export class FakeWorkspace implements WorkspaceLike {
+  readonly attachments: string[] = []
+  readonly order: string[]
+
+  constructor(order: string[]) {
+    this.order = order
+  }
+
+  async attachSession(sessionId: string): Promise<void> {
+    this.attachments.push(sessionId)
+    this.order.push(`attach:${sessionId}`)
+  }
+}
+
+/** 记录 `create` 收到的目录，并按注册顺序返回同一个工作区。 */
+export class FakeWorkspaceRegistry implements WorkspaceRegistryLike {
+  readonly creates: string[] = []
+  readonly order: string[] = []
+  readonly workspace = new FakeWorkspace(this.order)
+  failure: Error | null = null
+
+  async create(path: string, title?: string): Promise<WorkspaceLike> {
+    if (this.failure) throw this.failure
+    this.creates.push(path)
+    this.order.push(`create:${path}`)
+    void title
+    return this.workspace
+  }
+}
+
+/** 记录标题重命名调用。 */
+export class FakeSessionTitle implements SessionTitleLike {
+  readonly renames: { sessionId: string; title: string }[] = []
+
+  rename(session: SessionRefLike, title: string): void {
+    this.renames.push({ sessionId: session.id, title })
   }
 }
 

@@ -4,8 +4,12 @@ import type { UserMessageLike } from './message'
 
 /** 只声明插件实际用到的 dsh 结构；主机不提供类型包，运行时由 dsh 保证。 */
 
+/** 会话的最小引用；工作区挂载与标题服务只认这个活会话对象。 */
+export type SessionRefLike = { readonly id: string }
+
 export interface AgentLike {
   readonly id: string
+  readonly session?: SessionRefLike
   followup(message: UserMessageLike): void
   cancel(cause: unknown, options?: { keepInbox?: boolean }): void
 }
@@ -83,6 +87,29 @@ export interface AttachmentsLike {
 
 export function isAttachments(value: unknown): value is AttachmentsLike {
   return isRecord(value) && typeof value.admitPromptContent === 'function'
+}
+
+/** dsh 工作区：会话只有挂到工作区，侧边栏才会按工作区分组。 */
+export interface WorkspaceLike {
+  attachSession(sessionId: string): Promise<void>
+}
+
+/** 工作区注册表：`create` 对已注册目录直接复用，否则新建一条记录。 */
+export interface WorkspaceRegistryLike {
+  create(path: string, title?: string): Promise<WorkspaceLike>
+}
+
+export function isWorkspaceRegistry(value: unknown): value is WorkspaceRegistryLike {
+  return isRecord(value) && typeof value.create === 'function'
+}
+
+/** 会话标题服务：把自动生成的标题换成显式标题。 */
+export interface SessionTitleLike {
+  rename(session: SessionRefLike, title: string): unknown
+}
+
+export function isSessionTitle(value: unknown): value is SessionTitleLike {
+  return isRecord(value) && typeof value.rename === 'function'
 }
 
 /** 会话持久化服务：只需判断某个会话 id 是否已有落盘记录。 */

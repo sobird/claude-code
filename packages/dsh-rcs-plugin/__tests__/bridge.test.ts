@@ -4,7 +4,7 @@ import { FakeRcs, waitFor } from '@sobird/dsh-bridge/testing'
 
 import { startPluginBridge, type PluginBridge } from '../src/bridge'
 import type { ResolvedConfig } from '../src/config'
-import { FakeAgent, FakeContext } from './helpers/fake-ctx'
+import { FakeAgent, FakeContext, FakeSessionTitle, FakeWorkspaceRegistry } from './helpers/fake-ctx'
 
 const SESSION_ID = 'cse_plugin'
 
@@ -64,6 +64,47 @@ describe('dsh-rcs-plugin bridge', () => {
       source: { kind: 'user' },
     })
     await waitFor(() => rcs.statuses.find((entry) => entry.status === 'running'), 'running status')
+  }, 15000)
+
+  test('a prompt attaches the new session to the workdir workspace and syncs its title', async () => {
+    const registry = new FakeWorkspaceRegistry()
+    const sessionTitle = new FakeSessionTitle()
+    ctx.provide('workspaceRegistry', registry)
+    ctx.provide('sessionTitle', sessionTitle)
+
+    rcs.push({ type: 'user', message: { role: 'user', content: 'hello workspace' } })
+
+    await waitFor(() => registry.workspace.attachments[0], 'workspace attach')
+    expect(registry.creates).toEqual(['/tmp/rcs-work'])
+    expect(registry.order).toEqual(['create:/tmp/rcs-work', `attach:${SESSION_ID}`])
+    await waitFor(() => sessionTitle.renames[0], 'title rename')
+    expect(sessionTitle.renames[0]).toEqual({ sessionId: SESSION_ID, title: 'integration' })
+  }, 15000)
+
+  test('a workspace attach failure is logged without failing the prompt', async () => {
+    const registry = new FakeWorkspaceRegistry()
+    registry.failure = new Error('workspace unavailable')
+    ctx.provide('workspaceRegistry', registry)
+
+    rcs.push({ type: 'user', message: { role: 'user', content: 'still works' } })
+
+    const agent = await waitFor(() => ctx.agents.live.get(SESSION_ID), 'live agent')
+    await waitFor(() => agent.followups[0], 'followup despite attach failure')
+    expect(rcs.events.some((event) => event.type === 'result')).toBe(false)
+  }, 15000)
+
+  test('a resumed session is attached to the workspace too', async () => {
+    await bridge.stop()
+    ctx.provide('sessionPersistence', { stat: async () => ({ header: { cwd: '/tmp/rcs-work' } }) })
+    const registry = new FakeWorkspaceRegistry()
+    ctx.provide('workspaceRegistry', registry)
+    bridge = await startPluginBridge(ctx, { ...config(), sessionId: SESSION_ID })
+
+    rcs.push({ type: 'user', message: { role: 'user', content: 'resume me' } })
+
+    await waitFor(() => ctx.agents.resumes[0], 'agent resume')
+    await waitFor(() => registry.workspace.attachments[0], 'workspace attach after resume')
+    expect(registry.workspace.attachments).toEqual([SESSION_ID])
   }, 15000)
 
   test('session events translate to RCS events in order and finish idle', async () => {

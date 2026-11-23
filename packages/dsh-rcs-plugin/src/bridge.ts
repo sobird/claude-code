@@ -27,6 +27,8 @@ import { createUserMessage } from './message'
 import {
   isAttachments,
   isSessionPersistence,
+  isSessionTitle,
+  isWorkspaceRegistry,
   type AgentLike,
   type AgentStatusLike,
   type ApprovalOutcomeLike,
@@ -326,6 +328,7 @@ class InProcessBridge implements PluginBridge {
       if (isSessionPersistence(persistence) && (await persistence.stat(this.sessionId))) {
         const handle = await this.ctx.agents.resume({ resumeSessionId: this.sessionId, agentOptions })
         this.agent = handle.agent
+        await this.registerSession(handle.agent)
         return handle.agent
       }
     }
@@ -335,7 +338,34 @@ class InProcessBridge implements PluginBridge {
       agentOptions,
     })
     this.agent = handle.agent
+    await this.registerSession(handle.agent)
     return handle.agent
+  }
+
+  /**
+   * 把新建/恢复的会话挂到 `workdir` 对应的工作区，并按需同步 RCS 标题。
+   * 不挂工作区的会话只会落在 dsh 侧边栏的「未分组」；这里失败只记日志，不影响桥接。
+   */
+  private async registerSession(agent: AgentLike): Promise<void> {
+    const registry = this.ctx.get('workspaceRegistry')
+    if (isWorkspaceRegistry(registry)) {
+      try {
+        const workspace = await registry.create(this.config.workdir)
+        await workspace.attachSession(this.sessionId)
+      } catch (error) {
+        log(`workspace attach: ${errorMessage(error)}`)
+      }
+    }
+
+    const sessionTitle = this.ctx.get('sessionTitle')
+    const title = this.config.sessionTitle
+    if (title && agent.session !== undefined && isSessionTitle(sessionTitle)) {
+      try {
+        sessionTitle.rename(agent.session, title)
+      } catch (error) {
+        log(`session title: ${errorMessage(error)}`)
+      }
+    }
   }
 
   private startHeartbeat(): void {
