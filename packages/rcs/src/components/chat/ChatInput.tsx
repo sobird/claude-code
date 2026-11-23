@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Chat composer. Enter sends (mid-turn messages are queued by the CLI), Shift+Enter
- * inserts a newline, and Escape/Stop interrupt while the agent is running.
+ * Chat composer. Enter 发送（运行中即插话），Cmd/Ctrl+Enter 排队到本轮结束，
+ * Shift+Enter 换行，Escape/Stop 在 agent 运行时中断。
  */
 
 import { ImagePlus, Loader2, MessageCircleQuestion, Send, Square, X } from 'lucide-react'
@@ -11,6 +11,7 @@ import { type DragEvent as ReactDragEvent, useCallback, useEffect, useMemo, useR
 
 import { MAX_ATTACHMENTS_PER_MESSAGE, type AttachmentRef } from '@/lib/attachments'
 import { isImageFile, prepareImageFile } from '@/lib/attachments-client'
+import { type SubmitDelivery } from '@/lib/chat-delivery'
 import { acceptCommand, commandQuery, filterCommands, moveIndex } from '@/lib/command-menu'
 import { resolveComposerKey } from '@/lib/composer-keys'
 import { applyFileSuggestion, fileQuery, type FileQueryToken } from '@/lib/file-completion'
@@ -49,7 +50,7 @@ function loadHistory(): string[] {
 
 interface ChatInputProps {
   /** May reject; on rejection the draft is kept so the user can retry. */
-  onSubmit: (text: string, attachments: AttachmentRef[]) => Promise<void> | void
+  onSubmit: (text: string, attachments: AttachmentRef[], delivery: SubmitDelivery) => Promise<void> | void
   /**
    * Sends a `/btw <question>` aside instead of a normal turn. Absent leaves the
    * command to go out as plain text (the CLI swallows it in headless mode).
@@ -295,45 +296,50 @@ export function ChatInput({
   // route and the answer lands in a transient card.
   const btwMode = onSideQuestion !== undefined && isBtwCommand(text)
 
-  const handleSubmit = useCallback(async () => {
-    const trimmed = text.trim()
-    const attachments = imagesRef.current.flatMap((image) => (image.status === 'ready' && image.ref ? [image.ref] : []))
-    const uploading = imagesRef.current.some((image) => image.status === 'uploading')
-    if (disabled || sending || uploading) return
-    // A bare `/btw` has no question yet; keep the draft so the user can finish it.
-    if (onSideQuestion !== undefined && isBtwCommand(trimmed) && parseBtwCommand(trimmed) === null) return
-    if (!trimmed && attachments.length === 0) return
-    const aside = onSideQuestion !== undefined ? parseBtwCommand(trimmed) : null
-    setSending(true)
-    try {
-      if (aside !== null && onSideQuestion !== undefined) {
-        await onSideQuestion(aside)
-      } else {
-        await onSubmit(trimmed, attachments)
+  const handleSubmit = useCallback(
+    async (delivery: SubmitDelivery = 'steer') => {
+      const trimmed = text.trim()
+      const attachments = imagesRef.current.flatMap((image) =>
+        image.status === 'ready' && image.ref ? [image.ref] : [],
+      )
+      const uploading = imagesRef.current.some((image) => image.status === 'uploading')
+      if (disabled || sending || uploading) return
+      // A bare `/btw` has no question yet; keep the draft so the user can finish it.
+      if (onSideQuestion !== undefined && isBtwCommand(trimmed) && parseBtwCommand(trimmed) === null) return
+      if (!trimmed && attachments.length === 0) return
+      const aside = onSideQuestion !== undefined ? parseBtwCommand(trimmed) : null
+      setSending(true)
+      try {
+        if (aside !== null && onSideQuestion !== undefined) {
+          await onSideQuestion(aside)
+        } else {
+          await onSubmit(trimmed, attachments, delivery)
+        }
+        // Only clear once the send resolved; a failure keeps the draft so the
+        // user can retry (the parent surfaces the error).
+        setText('')
+        setFileToken(null)
+        setFileItems([])
+        setSearchOpen(false)
+        setSearchQuery('')
+        if (trimmed) {
+          setHistory((prev) => appendHistory(prev, trimmed))
+          setHistoryIndex(null)
+          historyDraftRef.current = ''
+        }
+        for (const image of imagesRef.current) URL.revokeObjectURL(image.previewUrl)
+        commitImages(() => [])
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto'
+        }
+      } catch {
+        // Keep the draft; the parent already shows the error.
+      } finally {
+        setSending(false)
       }
-      // Only clear once the send resolved; a failure keeps the draft so the
-      // user can retry (the parent surfaces the error).
-      setText('')
-      setFileToken(null)
-      setFileItems([])
-      setSearchOpen(false)
-      setSearchQuery('')
-      if (trimmed) {
-        setHistory((prev) => appendHistory(prev, trimmed))
-        setHistoryIndex(null)
-        historyDraftRef.current = ''
-      }
-      for (const image of imagesRef.current) URL.revokeObjectURL(image.previewUrl)
-      commitImages(() => [])
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-      }
-    } catch {
-      // Keep the draft; the parent already shows the error.
-    } finally {
-      setSending(false)
-    }
-  }, [text, disabled, sending, onSubmit, onSideQuestion, commitImages])
+    },
+    [text, disabled, sending, onSubmit, onSideQuestion, commitImages],
+  )
 
   const handleInput = useCallback(
     (target: HTMLTextAreaElement) => {
@@ -724,12 +730,13 @@ export function ChatInput({
               const action = resolveComposerKey({
                 key: event.key,
                 shiftKey: event.shiftKey,
+                queueModifier: (event.metaKey || event.ctrlKey) && !event.altKey,
                 isComposing: composing,
                 isLoading,
               })
-              if (action === 'submit') {
+              if (action === 'submit' || action === 'submit-queued') {
                 event.preventDefault()
-                void handleSubmit()
+                void handleSubmit(action === 'submit-queued' ? 'queue' : 'steer')
               } else if (action === 'interrupt') {
                 event.preventDefault()
                 onInterrupt?.()

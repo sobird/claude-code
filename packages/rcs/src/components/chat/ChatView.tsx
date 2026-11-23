@@ -38,6 +38,7 @@ import { createApiClient } from '@/lib/api-client'
 import { withPendingApprovalCount } from '@/lib/approval-alert'
 import { buildUserContent, type AttachmentRef } from '@/lib/attachments'
 import { buildStopTaskRequest } from '@/lib/background-tasks'
+import type { SubmitDelivery } from '@/lib/chat-delivery'
 import {
   copyTextForEntry,
   cursorEnterAction,
@@ -649,7 +650,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   }, [streaming])
 
   const sendWithUuid = useCallback(
-    async (text: string, uuid: string, attachments: AttachmentRef[] = []) => {
+    async (text: string, uuid: string, attachments: AttachmentRef[] = [], delivery: SubmitDelivery = 'steer') => {
       setActionError(null)
       // Images ride as reference blocks the gateway hydrates into base64 before
       // the CLI sees them; a wire message needs `role` for the CLI normalizer.
@@ -662,11 +663,12 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           uuid,
           content,
           message,
+          delivery,
         })
         const event = result?.event
         setExtraEvents((prev) => [
           ...prev,
-          event ?? { id: uuid, type: 'user', direction: 'outbound', payload: { content, message, uuid } },
+          event ?? { id: uuid, type: 'user', direction: 'outbound', payload: { content, message, uuid, delivery } },
         ])
         setFailedSend(null)
         scrollToBottom()
@@ -680,11 +682,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   )
 
   const handleSend = useCallback(
-    async (text: string, attachments: AttachmentRef[]) => {
+    async (text: string, attachments: AttachmentRef[], delivery: SubmitDelivery) => {
       // Generate the uuid once so the send body, the response event, a retry,
       // and a history reload all agree on the same entry id (reducer dedupes
       // by it, so a retry that the server already accepted cannot duplicate).
-      await sendWithUuid(text, randomUuid(), attachments)
+      await sendWithUuid(text, randomUuid(), attachments, delivery)
     },
     [sendWithUuid],
   )

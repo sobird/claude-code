@@ -19,6 +19,7 @@ import {
   startBackgroundTask,
   type BackgroundTask,
 } from './background-tasks'
+import type { SubmitDelivery } from './chat-delivery'
 import { normalizeModel } from './model-settings'
 import { isWebPermissionMode, type WebPermissionMode } from './permission-modes'
 import type { PermissionSuggestion } from './permission-suggestions'
@@ -66,8 +67,10 @@ export interface UserMessageEntry {
   content: string
   /** 从 `/web/attachments/:id` 渲染的已存储图片引用。 */
   attachments?: AttachmentRef[]
-  /** 在 agent 运行期间发送；CLI 会在本轮结束后处理它。 */
+  /** 在 agent 运行期间发送，尚未被 CLI 消费。 */
   queued?: boolean
+  /** 投递通道（缺省视为插话）；决定 `queued` 徽标的文案。 */
+  delivery?: SubmitDelivery
 }
 
 export interface AssistantMessageEntry {
@@ -1256,6 +1259,7 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
       // queued = CLI 正处于一轮之中。bridge 不总会发布
       // session_status，因此开放的轮次是可靠的信号。
       const queued = state.status === 'running' || state.turnOpen
+      const delivery: SubmitDelivery = asText(payload.delivery) === 'queue' ? 'queue' : 'steer'
       return {
         ...state,
         entries: [
@@ -1266,6 +1270,7 @@ function applyEvent(state: ChatState, event: SessionEventInput): ChatState {
             content: text,
             ...(attachments.length > 0 ? { attachments } : {}),
             ...(queued ? { queued: true } : {}),
+            ...(delivery === 'queue' ? { delivery } : {}),
           },
         ],
         // 新的一轮从零开始；先前的失败不再描述它。

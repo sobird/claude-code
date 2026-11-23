@@ -63,6 +63,9 @@ export function toClientPayload(event: SessionEvent): Record<string, unknown> {
       uuid: messageUuid,
       session_id: event.sessionId,
       ...(payload?.isSynthetic === true ? { isSynthetic: true } : {}),
+      // 投递通道（steer/queue）：CLI 据此映射到队列优先级。持久化载荷的顶层
+      // 有该字段（见 normalizePayload），随帧下发。
+      ...(typeof payload?.delivery === 'string' ? { delivery: payload.delivery } : {}),
       message: unwrapWireMessage(payload) ?? {
         role: 'user',
         content:

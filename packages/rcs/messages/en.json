@@ -241,7 +241,8 @@
     "turnDuration": "Took {seconds}s",
     "turnSummary": "{tools, plural, one {# tool} other {# tools}} · took {seconds}s",
     "turnSummaryWithErrors": "{tools, plural, one {# tool} other {# tools}} · {errors} failed · took {seconds}s",
-    "queued": "Queued",
+    "steering": "Steering — next tool call",
+    "queuedTurnEnd": "Queued — after this turn",
     "expandAll": "Expand all tools",
     "collapseAll": "Collapse all tools",
     "verbose": {
@@ -380,6 +381,7 @@
       "navigation": "Message navigation",
       "transcript": "Transcript",
       "send": "Send the message",
+      "sendQueued": "Queue until this turn ends",
       "newline": "Insert a new line",
       "interrupt": "Interrupt the agent",
       "history": "Recall previous prompts",

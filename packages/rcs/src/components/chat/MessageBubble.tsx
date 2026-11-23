@@ -189,7 +189,7 @@ export function UserBubble({
             {entry.queued ? (
               <span data-testid="queued-message" className={styles.queued}>
                 <Clock className={styles.queuedIcon} aria-hidden="true" />
-                {t('queued')}
+                {entry.delivery === 'queue' ? t('queuedTurnEnd') : t('steering')}
               </span>
             ) : null}
             {entry.content && onEdit ? (

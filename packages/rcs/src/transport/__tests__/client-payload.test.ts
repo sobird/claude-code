@@ -162,6 +162,18 @@ describe('toClientPayload — user message', () => {
     const result = toClientPayload(makeEvent({ type: 'user', sessionId: 'sess-8', payload: { content: 'hi' } }))
     expect(result.uuid).toBe('evt-1')
   })
+
+  test('forwards delivery so the CLI can map the queue priority', () => {
+    const result = toClientPayload(
+      makeEvent({ type: 'user', sessionId: 'sess-9', payload: { content: 'hi', delivery: 'queue' } }),
+    )
+    expect((result as { delivery?: string }).delivery).toBe('queue')
+  })
+
+  test('omits delivery when not provided', () => {
+    const result = toClientPayload(makeEvent({ type: 'user', sessionId: 'sess-10', payload: { content: 'hi' } }))
+    expect((result as { delivery?: string }).delivery).toBeUndefined()
+  })
 })
 
 // =============================================================================

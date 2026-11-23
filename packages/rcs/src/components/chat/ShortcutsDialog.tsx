@@ -16,6 +16,7 @@ const SECTIONS = [
     title: 'composer',
     items: [
       { keys: 'Enter', label: 'send' },
+      { keys: 'Cmd/Ctrl+Enter', label: 'sendQueued' },
       { keys: 'Shift+Enter', label: 'newline' },
       { keys: 'Esc', label: 'interrupt' },
       { keys: '↑ / ↓', label: 'history' },

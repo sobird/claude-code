@@ -1708,6 +1708,16 @@ describe('queued prompts', () => {
     expect(state.entries.filter((entry) => entry.type === 'user_message')).toHaveLength(1)
     expect(userEntry(state)?.queued).toBeUndefined()
   })
+
+  test('the queue lane is kept on the entry; steering stays the implicit default', () => {
+    let state = reduceSessionEvent(initialChatState, event('session_status', { status: 'running' }))
+    state = reduceSessionEvent(state, event('user', { content: 'later', uuid: 'u1', delivery: 'queue' }))
+    state = reduceSessionEvent(state, event('user', { content: 'now', uuid: 'u2', delivery: 'steer' }))
+
+    const entries = state.entries.filter((entry) => entry.type === 'user_message')
+    expect(entries[0]?.type === 'user_message' ? entries[0].delivery : undefined).toBe('queue')
+    expect(entries[1]?.type === 'user_message' ? entries[1].delivery : undefined).toBeUndefined()
+  })
 })
 
 // The CLI emits subagent traffic as ordinary assistant/user messages that carry

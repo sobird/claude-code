@@ -84,6 +84,15 @@ describe('normalizePayload — field preservation', () => {
     expect(normalizePayload('assistant', { isSynthetic: true }).isSynthetic).toBe(true)
   })
 
+  test('hoists delivery for user events so reducers and the CLI read it at the top level', () => {
+    expect(normalizePayload('user', { content: 'hi', delivery: 'queue' }).delivery).toBe('queue')
+    expect(normalizePayload('user_message', { content: 'hi', delivery: 'steer' }).delivery).toBe('steer')
+  })
+
+  test('does not hoist delivery for non-user event types', () => {
+    expect(normalizePayload('assistant', { content: 'hi', delivery: 'queue' }).delivery).toBeUndefined()
+  })
+
   test('preserves status string', () => {
     expect(normalizePayload('assistant', { status: 'running' }).status).toBe('running')
   })

@@ -35,7 +35,7 @@ import {
 import { buildBridgeConnectUrl } from 'src/bridge/bridgeStatusUtil.js'
 import { collectFileSuggestions } from 'src/bridge/fileSuggestions.js'
 import { resolveAndPrepend } from 'src/bridge/inboundAttachments.js'
-import { extractInboundMessageFields } from 'src/bridge/inboundMessages.js'
+import { extractInboundMessageFields, inboundDeliveryOf, queuePriorityOf } from 'src/bridge/inboundMessages.js'
 import type { ReplBridgeHandle } from 'src/bridge/replBridge.js'
 import { installOAuthTokens } from 'src/cli/handlers/auth.js'
 import { RemoteIO } from 'src/cli/remoteIO.js'
@@ -3448,6 +3448,7 @@ function runHeadlessStreaming(
                       value: content,
                       mode: 'prompt' as const,
                       uuid,
+                      priority: queuePriorityOf(inboundDeliveryOf(msg)),
                       skipSlashCommands: true,
                     })
                     void run()

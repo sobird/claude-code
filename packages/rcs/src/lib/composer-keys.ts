@@ -1,23 +1,34 @@
 /**
  * Keyboard policy for the chat composer, extracted so it is testable without a DOM.
  *
- * Enter always sends — a message typed mid-turn is queued by the CLI print engine,
- * matching the TUI. Escape is the interrupt key while the agent is running.
+ * Enter 发送：运行中默认插话（CLI 在下一个工具结果后注入）。Cmd/Ctrl+Enter
+ * 改为排队到本轮结束再发。Escape 在 agent 运行时中断。
  */
 
-export type ComposerKeyAction = 'submit' | 'interrupt' | 'newline' | 'ignore'
+export type ComposerKeyAction = 'submit' | 'submit-queued' | 'interrupt' | 'newline' | 'ignore'
 
 export interface ComposerKeyInput {
   key: string
   shiftKey: boolean
+  /** Cmd（macOS）或 Ctrl——把消息排队到本轮结束而不是插话。 */
+  queueModifier: boolean
   /** IME composition in progress; the key belongs to the input method, not the composer. */
   isComposing: boolean
   isLoading: boolean
 }
 
-export function resolveComposerKey({ key, shiftKey, isComposing, isLoading }: ComposerKeyInput): ComposerKeyAction {
+export function resolveComposerKey({
+  key,
+  shiftKey,
+  queueModifier,
+  isComposing,
+  isLoading,
+}: ComposerKeyInput): ComposerKeyAction {
   if (isComposing) return 'ignore'
-  if (key === 'Enter') return shiftKey ? 'newline' : 'submit'
+  if (key === 'Enter') {
+    if (shiftKey) return 'newline'
+    return queueModifier ? 'submit-queued' : 'submit'
+  }
   if (key === 'Escape' && isLoading) return 'interrupt'
   return 'ignore'
 }

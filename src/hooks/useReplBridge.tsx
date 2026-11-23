@@ -10,7 +10,7 @@ import {
 } from '../bridge/bridgePermissionCallbacks.js'
 import { buildBridgeConnectUrl } from '../bridge/bridgeStatusUtil.js'
 import { collectFileSuggestions } from '../bridge/fileSuggestions.js'
-import { extractInboundMessageFields } from '../bridge/inboundMessages.js'
+import { extractInboundMessageFields, inboundDeliveryOf, queuePriorityOf } from '../bridge/inboundMessages.js'
 import type { BridgeState, ReplBridgeHandle } from '../bridge/replBridge.js'
 import { setReplBridgeHandle } from '../bridge/replBridgeHandle.js'
 import type { Command } from '../commands.js'
@@ -223,6 +223,8 @@ export function useReplBridge(
                 value: content,
                 mode: 'prompt' as const,
                 uuid,
+                // Web 端可显式选择"本轮结束再发"；缺省仍是插话（next）。
+                priority: queuePriorityOf(inboundDeliveryOf(msg)),
                 // skipSlashCommands stays true as defense-in-depth —
                 // processUserInputBase overrides it internally when bridgeOrigin
                 // is set AND the resolved command passes isBridgeSafeCommand.

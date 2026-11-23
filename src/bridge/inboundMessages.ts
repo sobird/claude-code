@@ -42,6 +42,26 @@ export function extractInboundMessageFields(
  * Fast-path scan returns the original array reference when no
  * normalization is needed (zero allocation on the happy path).
  */
+/**
+ * 投递通道：`queue` 等本轮结束再当新 query 处理；`steer`（默认）在当前工具调用
+ * 结束后、下一次 API 往返前注入。Web 端随事件 payload 携带。
+ */
+export type InboundDelivery = 'steer' | 'queue'
+
+/**
+ * 读取客户端附带的投递通道。旧客户端不带该字段，按插话处理以保持既有行为
+ *（bridge 入站一直入队默认 `next` 优先级）。
+ */
+export function inboundDeliveryOf(msg: unknown): InboundDelivery {
+  if (typeof msg !== 'object' || msg === null || !('delivery' in msg)) return 'steer'
+  return typeof msg.delivery === 'string' && msg.delivery === 'queue' ? 'queue' : 'steer'
+}
+
+/** 把投递通道映射到 CLI 队列优先级。 */
+export function queuePriorityOf(delivery: InboundDelivery): 'next' | 'later' {
+  return delivery === 'queue' ? 'later' : 'next'
+}
+
 export function normalizeImageBlocks(blocks: Array<ContentBlockParam>): Array<ContentBlockParam> {
   if (!blocks.some(isMalformedBase64Image)) return blocks
 

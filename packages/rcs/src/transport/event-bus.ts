@@ -233,6 +233,11 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
 
   if (typeof p.uuid === 'string' && p.uuid) normalized.uuid = p.uuid
   if (typeof p.isSynthetic === 'boolean') normalized.isSynthetic = p.isSynthetic
+  // 用户消息的投递通道（steer/queue）。Web reducer 和 CLI 的优先级映射都从
+  // 规范化载荷顶层读取，因此从 `raw` 提到这里。
+  if ((type === 'user' || type === 'user_message') && typeof p.delivery === 'string') {
+    normalized.delivery = p.delivery
+  }
   // subagent 流量指向它的 Agent 工具调用；Web 端 reducer 据此嵌套。
   if (typeof p.parent_tool_use_id === 'string') normalized.parent_tool_use_id = p.parent_tool_use_id
   if (typeof p.status === 'string') normalized.status = p.status
