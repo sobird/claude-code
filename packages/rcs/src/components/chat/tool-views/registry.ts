@@ -7,6 +7,7 @@ import { BashToolView } from './BashToolView'
 import { FileToolView } from './FileToolView'
 import { QuestionToolView } from './QuestionToolView'
 import { SearchToolView } from './SearchToolView'
+import { TaskToolView } from './TaskToolView'
 import { TodoToolView } from './TodoToolView'
 import type { ToolViewKind, ToolViewProps } from './types'
 import { WebToolView } from './WebToolView'
@@ -29,6 +30,7 @@ const TOOL_VIEW_DEFINITIONS: readonly ToolViewDefinition[] = [
   { kind: 'search', tools: ['Grep', 'Glob'], component: SearchToolView },
   { kind: 'web', tools: ['WebFetch', 'WebSearch'], component: WebToolView },
   { kind: 'agent', tools: ['Agent'], component: AgentToolView },
+  { kind: 'task', tools: ['TaskCreate', 'TaskUpdate', 'TaskGet', 'TaskList'], component: TaskToolView },
   { kind: 'todo', tools: ['TodoWrite'], component: TodoToolView },
   { kind: 'question', tools: ['AskUserQuestion'], component: QuestionToolView },
 ]

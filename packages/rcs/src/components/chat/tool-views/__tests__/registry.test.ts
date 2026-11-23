@@ -22,6 +22,13 @@ describe('toolViewKind', () => {
     expect(toolViewKind('task')).toBe('agent')
   })
 
+  test('maps the task list tools to the task body', () => {
+    expect(toolViewKind('TaskCreate')).toBe('task')
+    expect(toolViewKind('TaskUpdate')).toBe('task')
+    expect(toolViewKind('TaskGet')).toBe('task')
+    expect(toolViewKind('TaskList')).toBe('task')
+  })
+
   test('leaves unregistered tools on the generic body', () => {
     expect(toolViewKind('mcp__thing__do')).toBeNull()
   })
@@ -29,7 +36,7 @@ describe('toolViewKind', () => {
 
 describe('TOOL_VIEWS', () => {
   test('provides a component for every kind a tool resolves to', () => {
-    for (const name of ['Bash', 'Read', 'Grep', 'WebFetch', 'TodoWrite', 'AskUserQuestion', 'Agent']) {
+    for (const name of ['Bash', 'Read', 'Grep', 'WebFetch', 'TodoWrite', 'AskUserQuestion', 'Agent', 'TaskCreate']) {
       const kind = toolViewKind(name)
       expect(kind).not.toBeNull()
       expect(kind ? TOOL_VIEWS[kind] : undefined).toBeDefined()

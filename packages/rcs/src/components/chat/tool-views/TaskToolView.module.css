@@ -1,0 +1,116 @@
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.idChip {
+  border-radius: 0.25rem;
+  background-color: color-mix(in oklab, var(--color-brand) 16%, transparent);
+  padding: 0 0.25rem;
+  color: var(--color-brand);
+  font-variant-numeric: tabular-nums;
+}
+
+.activeChip,
+.ownerChip,
+.fieldChip {
+  border-radius: 0.25rem;
+  background-color: color-mix(in oklab, var(--color-surface-2) 70%, transparent);
+  padding: 0 0.25rem;
+}
+
+.statusChip {
+  border-radius: 0.25rem;
+  padding: 0 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pending {
+  background-color: color-mix(in oklab, var(--color-surface-2) 70%, transparent);
+  color: var(--color-text-muted);
+}
+
+.in_progress {
+  background-color: color-mix(in oklab, var(--color-status-running) 16%, transparent);
+  color: var(--color-status-running);
+}
+
+.completed {
+  background-color: color-mix(in oklab, var(--color-status-active) 18%, transparent);
+  color: var(--color-status-active);
+}
+
+.deleted {
+  background-color: color-mix(in oklab, var(--color-status-error) 14%, transparent);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.notice {
+  font-size: 12px;
+  color: var(--color-status-warning);
+}
+
+.link {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.subject {
+  font-size: 12px;
+  line-height: 1.25rem;
+  color: var(--color-text-primary);
+}
+
+.description {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  font-size: 12px;
+  line-height: 1.25rem;
+  color: var(--color-text-secondary);
+}
+
+.done {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-size: 12px;
+  line-height: 1.25rem;
+  color: var(--color-text-secondary);
+}
+
+.icon {
+  height: 0.8125rem;
+  width: 0.8125rem;
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--color-text-muted);
+}
+
+.iconCurrent {
+  color: var(--color-status-running);
+}
+
+.iconDone {
+  color: var(--color-status-active);
+}
