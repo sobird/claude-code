@@ -753,6 +753,21 @@
         "files": ["src/utils/effort.ts", "src/utils/__tests__/effort.test.ts"],
         "symbols": ["modelSupportsMaxEffort", "MAX_EFFORT_DENYLIST", "normalizeMaxEffortModel"]
       }
+    },
+    {
+      "id": "behavior:hook-error-stderr-first-line",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [98],
+      "evidence": ["bundle:hook error"],
+      "notes": "transcript 里的 hook 错误补上 stderr 首行以便无需 --debug 自查。上游 vzY：stderr 非空优先、否则 stdout，截掉 `Expected schema:` 之后内容，取首个非空行，超 200 字符加省略号。移植为 AttachmentMessage 的 getHookErrorFirstLine，并在 hook_non_blocking_error 渲染中作为第二行显示；测试 src/components/messages/__tests__/getHookErrorFirstLine.test.ts。",
+      "srcEvidence": {
+        "files": [
+          "src/components/messages/AttachmentMessage.tsx",
+          "src/components/messages/__tests__/getHookErrorFirstLine.test.ts"
+        ],
+        "symbols": ["getHookErrorFirstLine"]
+      }
     }
   ]
 }

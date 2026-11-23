@@ -36,6 +36,22 @@ type Props = {
   isTranscriptMode?: boolean
 }
 
+/**
+ * First meaningful line of a hook's stderr (falling back to stdout), with the
+ * "Expected schema:" hint stripped and capped so a stray multi-KB dump can't
+ * flood the transcript. Lets hook errors be self-diagnosable without --debug.
+ */
+export function getHookErrorFirstLine(stderr: string | undefined, stdout: string | undefined): string {
+  const raw = stderr?.trim() ? stderr : stdout?.trim() ? stdout : ''
+  if (!raw) return ''
+  const beforeSchema = raw.split('Expected schema:')[0].trim()
+  for (const line of beforeSchema.split('\n')) {
+    const text = line.trim()
+    if (text) return text.length > 200 ? `${text.slice(0, 200)}…` : text
+  }
+  return ''
+}
+
 export function AttachmentMessage({ attachment, addMargin, verbose, isTranscriptMode }: Props): React.ReactNode {
   const bg = useSelectedMessageBg()
   // Hoisted to mount-time — per-message component, re-renders on every scroll.
@@ -340,8 +356,15 @@ export function AttachmentMessage({ attachment, addMargin, verbose, isTranscript
       if (attachment.hookEvent === 'Stop' || attachment.hookEvent === 'SubagentStop') {
         return null
       }
-      // Full hook output is logged to debug log via hookEvents.ts
-      return <Line color="error">{attachment.hookName} hook error</Line>
+      // Surface the first stderr line so the failure is diagnosable without
+      // --debug; the full output still goes to the debug log via hookEvents.ts.
+      const detail = getHookErrorFirstLine(attachment.stderr, attachment.stdout)
+      return (
+        <>
+          <Line color="error">{attachment.hookName} hook error</Line>
+          {detail ? <Line color="error">{detail}</Line> : null}
+        </>
+      )
     }
     case 'hook_error_during_execution':
       // Stop hooks are rendered as a summary in SystemStopHookSummaryMessage

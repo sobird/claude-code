@@ -99,3 +99,7 @@
 ### R11：`/effort max` 对未知模型放行（2.1.96 #79）
 
 旧逻辑 `modelSupportsMaxEffort` 仅在模型名含 `opus-4-6`（或 ant 模型）时返回 true，其余一律 false，导致未知/未来模型的 `max` 被 `resolveAppliedEffort` 降级为 `high`。上游改为 denylist 语义：先 `normalizeMaxEffortModel` 归一化（取首个 `claude-*` token，去 `-vN[:M]`、`-YYYYMMDD` 后缀），`haiku` 直接 false，其余仅命中遗留模型 denylist 才 false，未知/未来模型默认放行。已按上游常量 `MAX_EFFORT_DENYLIST` 移植并加测试。
+
+### R12：hook 错误显示 stderr 首行（2.1.98 #98）
+
+transcript 里 `hook_non_blocking_error` 原本只显示「{hook} hook error」，完整输出只进 debug 日志。上游 `vzY` 取 stderr（空则 stdout）首行、截掉 `Expected schema:` 之后、超 200 字符加省略号，作为第二行显示。移植为 `AttachmentMessage.getHookErrorFirstLine`，测试 `src/components/messages/__tests__/getHookErrorFirstLine.test.ts`。
