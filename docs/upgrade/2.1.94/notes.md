@@ -13,8 +13,8 @@ inventory 对拍（2.1.92 → 2.1.94）结果：
 
 ## 台账统计
 
-- `ported`：22 个 behavior + 2 个 `cmd:` + 5 个 `env:`。
-- `approximated`：`behavior:mantle-bedrock`（R1）+ `behavior:scrollback-diff-repeat`（R2，未移植）+ 3 个 VSCode behavior（R3）+ 5 个沿用的依赖/扫描噪声 `env:`（R6）。
+- `ported`：23 个 behavior + 2 个 `cmd:` + 5 个 `env:`（`behavior:mantle-bedrock` 用 SDK 原生类后转为 ported，见 R1）。
+- `approximated`：`behavior:scrollback-diff-repeat`（R2，未移植）+ 3 个 VSCode behavior（R3）+ 5 个沿用的依赖/扫描噪声 `env:`（R6）。
 - 无 `unresolved`；`missingInSrc` / `unexpectedInSrc` / `unregistered` / `evidenceErrors` / `srcEvidenceErrors` / `uncoveredReleaseItems` 均为空（release 说明 1..25 全覆盖）。
 
 ## changelog 25 条对照
@@ -47,7 +47,7 @@ inventory 对拍（2.1.92 → 2.1.94）结果：
 
 ## 验收补充（R 编号）
 
-- R1：`behavior:mantle-bedrock` 记为 `approximated`。已安装的 `@anthropic-ai/sdk` 0.81.0 / `@anthropic-ai/bedrock-sdk` 0.26.4 均无 `AnthropicBedrockMantle` 类，`client.ts` 改用 `AnthropicBedrock` + `baseURL`（默认 `https://bedrock-mantle.<region>.api.aws/anthropic`，可用 `ANTHROPIC_BEDROCK_MANTLE_BASE_URL` 覆盖）实现，SigV4 签名路径与上游一致；`CLAUDE_CODE_SKIP_MANTLE_AUTH` 时置 `skipAuth`。差异仅在客户端类名与构造参数形态，网络协议与鉴权行为对齐。
+- R1：`behavior:mantle-bedrock` 记为 `ported`。原 `@anthropic-ai/bedrock-sdk` 0.26.4 无 `AnthropicBedrockMantle`，已升级到 1.1.3（与上游 bundle 内嵌的同类一致），`client.ts` mantle 分支直接用 `AnthropicBedrockMantle`，按 `awsRegion`/`skipAuth`（`CLAUDE_CODE_SKIP_MANTLE_AUTH`）/缓存凭证构造，`baseURL` 与 `ANTHROPIC_BEDROCK_MANTLE_BASE_URL` 由该类内部处理。bedrock-sdk 1.x 依赖 `@anthropic-ai/sdk >=1.0.0 <2`，为消除双版本已把主 `@anthropic-ai/sdk` 一并升到 1.12.0（`vertex-sdk`/`foundry-sdk` 同步到 1.x），`AnthropicBedrockMantle` 与本仓 `Anthropic` 现共用同一 SDK 主版本，顶层不再并存 `0.81.0`，返回处的 `as unknown as Anthropic` 仍保留为 bedrock-sdk ↔ 主 sdk 的真实边界断言。升级 1.x 的连带改动：`BetaUsage` 新增必填 `fallback_credit`/`output_tokens_details`（`NonNullableUsage` 对 `fallback_credit` 保持可空、`output_tokens_details` 默认 `{thinking_tokens:0}`，`updateUsage`/`accumulateUsage` 透传并累加）；`BetaMessage` 新增 `diagnostics`/`stop_details`（合成消息置 `null`）；`tool_result` 内容新增 `BrowserStateBlockParam`（并入 `MediaCandidate`/token 估算）；`temperature` 已从请求类型移除（校验用探针调用不再传，主查询路径经未标注的 `BetaMessageStreamParams` 字面量仍会透传，未改动）；`models.list` 的 `betas` 改由请求头 `anthropic-beta` 发送。此外主 SDK 1.x 把 `apiKey` 默认作为 `Authorization: Bearer` 发送（不再是 `x-api-key`）；`anthropicAws.ts` 为保留 Claude Platform on AWS 的 `x-api-key` 契约，改为把 key 放进 `defaultHeaders` 并传 `apiKey: null`，SigV4 分支不受影响。
 - R2：第 12 条（长会话回滚缓冲重复 diff / 空白页）未移植。该改动为纯逻辑（无新增字面量），本地 minified bundle 无法定位到可靠实现点，证据仅有 `bundle:scrollback` 关键词；未改动 `src/`，台账如实记 `approximated`。
 - R3：第 23–25 条为 `[VSCode]` 扩展侧改动（冷启动子进程、下拉选择、settings.json 解析横幅），本仓库只有 CLI，无对应扩展代码，未移植；台账记 `approximated` 并写明原因。
 - R4：两个新命令为近似实现。

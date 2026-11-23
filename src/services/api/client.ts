@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import type { ClientOptions as BedrockClientOptions } from '@anthropic-ai/bedrock-sdk'
+import type { BedrockMantleClientOptions, ClientOptions as BedrockClientOptions } from '@anthropic-ai/bedrock-sdk'
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
 import type { ClientOptions as VertexClientOptions } from '@anthropic-ai/vertex-sdk'
 import type { GoogleAuth } from 'google-auth-library'
@@ -165,18 +165,14 @@ export async function getAnthropicClient({
   }
 
   // Amazon Bedrock powered by Mantle: per-model routing (primary mantle, or
-  // the bedrock+mantle secondary provider for Mantle-native IDs). The stock
-  // SDK has no dedicated AnthropicBedrockMantle class, but AnthropicBedrock
-  // accepts a baseURL and shares the same SigV4 signing, so point it at the
-  // Mantle endpoint.
+  // the bedrock+mantle secondary provider for Mantle-native IDs). Uses the
+  // SDK's dedicated AnthropicBedrockMantle client (SigV4 over bedrock-mantle).
   if (getProviderForModel(model) === 'mantle') {
-    const { AnthropicBedrock } = await import('@anthropic-ai/bedrock-sdk')
-    const awsRegion = getAWSRegion()
+    const { AnthropicBedrockMantle } = await import('@anthropic-ai/bedrock-sdk')
     const skipAuth = isEnvTruthy(process.env.CLAUDE_CODE_SKIP_MANTLE_AUTH)
-    const mantleArgs: BedrockClientOptions = {
+    const mantleArgs: BedrockMantleClientOptions = {
       ...ARGS,
-      awsRegion,
-      baseURL: process.env.ANTHROPIC_BEDROCK_MANTLE_BASE_URL ?? `https://bedrock-mantle.${awsRegion}.api.aws/anthropic`,
+      awsRegion: getAWSRegion(),
       ...(skipAuth && { skipAuth: true }),
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     }
@@ -184,13 +180,15 @@ export async function getAnthropicClient({
       const cachedCredentials = await refreshAndGetAwsCredentials()
       if (cachedCredentials) {
         mantleArgs.awsAccessKey = cachedCredentials.accessKeyId
-        mantleArgs.awsSecretKey = cachedCredentials.secretAccessKey
+        mantleArgs.awsSecretAccessKey = cachedCredentials.secretAccessKey
         mantleArgs.awsSessionToken = cachedCredentials.sessionToken
       }
     }
-    return new AnthropicBedrock(
-      mantleArgs as unknown as ConstructorParameters<typeof AnthropicBedrock>[0],
-    ) as unknown as Anthropic
+    // Like the Bedrock/Vertex/Foundry branches below, the declared return type is
+    // the first-party client while Mantle implements only `messages` /
+    // `beta.messages` (no models, batches, or countTokens). This is a true
+    // external-SDK boundary, so the cast stays.
+    return new AnthropicBedrockMantle(mantleArgs) as unknown as Anthropic
   }
 
   if (isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK)) {

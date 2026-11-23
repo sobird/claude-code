@@ -66,6 +66,11 @@ function stripToolSearchFieldsFromMessages(
   messages: Anthropic.Beta.Messages.BetaMessageParam[],
 ): Anthropic.Beta.Messages.BetaMessageParam[] {
   return messages.map((message) => {
+    // System messages have no tool_use/tool_result blocks to strip, and their
+    // content union is narrower than user/assistant (no image/document/etc.).
+    if (message.role === 'system') {
+      return message
+    }
     if (!Array.isArray(message.content)) {
       return message
     }
@@ -335,7 +340,12 @@ export function roughTokenCountEstimationForMessage(message: Message): number {
 function roughTokenCountEstimationForContent(
   content:
     | string
-    | Array<Anthropic.ContentBlock | Anthropic.ContentBlockParam | Anthropic.ToolReferenceBlockParam>
+    | Array<
+        | Anthropic.ContentBlock
+        | Anthropic.ContentBlockParam
+        | Anthropic.BrowserStateBlockParam
+        | Anthropic.ToolReferenceBlockParam
+      >
     | undefined,
 ): number {
   if (!content) {
@@ -352,7 +362,12 @@ function roughTokenCountEstimationForContent(
 }
 
 function roughTokenCountEstimationForBlock(
-  block: string | Anthropic.ContentBlock | Anthropic.ContentBlockParam | Anthropic.ToolReferenceBlockParam,
+  block:
+    | string
+    | Anthropic.ContentBlock
+    | Anthropic.ContentBlockParam
+    | Anthropic.BrowserStateBlockParam
+    | Anthropic.ToolReferenceBlockParam,
 ): number {
   if (typeof block === 'string') {
     return roughTokenCountEstimation(block)

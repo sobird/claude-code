@@ -7,13 +7,13 @@
     {
       "id": "behavior:mantle-bedrock",
       "kind": "behavior",
-      "status": "approximated",
+      "status": "ported",
       "evidence": ["bundle:CLAUDE_CODE_USE_MANTLE", "bundle:AnthropicBedrockMantle"],
-      "notes": "Amazon Bedrock powered by Mantle：providers.ts 新增 mantle provider（getAPIProvider 顺序、getSecondaryProvider、按模型 getProviderForModel）；configs.ts 每个模型加 mantle 键（haiku-4-5 为 anthropic.claude-haiku-4-5）；client.ts 该 provider 走 Mantle 端点。差异：已装 @anthropic-ai/sdk/bedrock-sdk 无 AnthropicBedrockMantle 类，改用 AnthropicBedrock + baseURL(https://bedrock-mantle.<region>.api.aws/anthropic 或 ANTHROPIC_BEDROCK_MANTLE_BASE_URL) 实现，见 notes R1。",
+      "notes": "Amazon Bedrock powered by Mantle：providers.ts 新增 mantle provider（getAPIProvider 顺序、getSecondaryProvider、按模型 getProviderForModel）；configs.ts 每个模型加 mantle 键（haiku-4-5 为 anthropic.claude-haiku-4-5）；client.ts mantle 分支用 @anthropic-ai/bedrock-sdk 的 AnthropicBedrockMantle（升级到 1.1.3，与上游同类），按 awsRegion / skipAuth / 缓存凭证构造，见 notes R1。",
       "releaseItems": [1],
       "srcEvidence": {
         "files": ["src/utils/model/providers.ts", "src/utils/model/configs.ts", "src/services/api/client.ts"],
-        "symbols": ["getSecondaryProvider", "getProviderForModel", "CLAUDE_CODE_USE_MANTLE"]
+        "symbols": ["getSecondaryProvider", "getProviderForModel", "CLAUDE_CODE_USE_MANTLE", "AnthropicBedrockMantle"]
       }
     },
     {

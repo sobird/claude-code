@@ -1,7 +1,11 @@
 import { feature } from 'bun:bundle'
 
 import { APIError } from '@anthropic-ai/sdk'
-import type { BetaStopReason, BetaUsage as Usage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import type {
+  BetaOutputConfig,
+  BetaStopReason,
+  BetaUsage as Usage,
+} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import {
   addToTotalDurationState,
   consumePostCompaction,
@@ -15,7 +19,6 @@ import type { QueryChainTracking } from 'src/Tool.js'
 import { isConnectorTextBlock } from 'src/types/connectorText.js'
 import type { AssistantMessage } from 'src/types/message.js'
 import { logForDebugging } from 'src/utils/debug.js'
-import type { EffortLevel } from 'src/utils/effort.js'
 import { logError } from 'src/utils/log.js'
 import { getAPIProviderForStatsig } from 'src/utils/model/providers.js'
 import type { PermissionMode } from 'src/utils/permissions/PermissionMode.js'
@@ -166,7 +169,7 @@ export function logAPIQuery({
   querySource: string
   queryTracking?: QueryChainTracking
   thinkingType?: 'adaptive' | 'enabled' | 'disabled'
-  effortValue?: EffortLevel | null
+  effortValue?: BetaOutputConfig['effort']
   fastMode?: boolean
   previousRequestId?: string | null
 }): void {

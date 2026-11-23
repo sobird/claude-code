@@ -47,7 +47,14 @@ export interface AwsCredentials {
 
 type ProviderChainResolver = () => Promise<() => Promise<AwsCredentials>>
 
-export interface AnthropicAwsClientOptions extends ClientOptions {
+export interface AnthropicAwsClientOptions extends Omit<ClientOptions, 'apiKey' | 'defaultHeaders'> {
+  // The AWS platform key is always a plain string (sent as `x-api-key`), never
+  // the base SDK's `ApiKeySetter` callback form.
+  apiKey?: string | null
+  // Restricted to the plain record shape the caller always passes, so the
+  // workspace-id / x-api-key entries can be layered in without narrowing
+  // `HeadersLike` (which also admits Headers/array forms) via a cast.
+  defaultHeaders?: Record<string, string | null | undefined>
   awsRegion?: string
   awsAccessKey?: string | null
   awsSecretAccessKey?: string | null
@@ -123,15 +130,20 @@ export function createAnthropicAwsClient({
   // default header: the SDK records it as explicitly omitted (so it does not
   // demand apiKey/authToken) and emits nothing, then the signing fetch below
   // adds the AWS4-HMAC-SHA256 header.
+  //
+  // The Claude Platform on AWS authenticates an API key via `x-api-key`, not
+  // the base SDK's newer `Authorization: Bearer` mapping, so the key is
+  // supplied as a default header and never handed to the SDK as `apiKey`.
   const defaultHeaders: Record<string, string | null | undefined> = {
-    ...(rest.defaultHeaders as Record<string, string | null | undefined> | undefined),
+    ...rest.defaultHeaders,
     ...(resolvedWorkspaceId && { 'anthropic-workspace-id': resolvedWorkspaceId }),
     ...(signing && { authorization: null }),
+    ...(resolvedApiKey && { 'x-api-key': resolvedApiKey }),
   }
 
   return new Anthropic({
     ...rest,
-    apiKey: resolvedApiKey ?? null,
+    apiKey: null,
     baseURL,
     // Sign only when no API key is available; otherwise pass a caller-supplied
     // fetch straight through (proxy fetch, test doubles).

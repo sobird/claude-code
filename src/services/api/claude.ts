@@ -19,7 +19,12 @@ import type {
   BetaUsage,
   BetaMessageParam as MessageParam,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import type { ContentBlockParam, TextBlockParam, ToolReferenceBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import type {
+  BrowserStateBlockParam,
+  ContentBlockParam,
+  TextBlockParam,
+  ToolReferenceBlockParam,
+} from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
 import { getAPIProvider, shouldAttachClientRequestId } from 'src/utils/model/providers.js'
 
@@ -464,7 +469,6 @@ export async function verifyApiKey(apiKey: string, isNonInteractiveSession: bool
             model,
             max_tokens: 1,
             messages,
-            temperature: 1,
             ...(betas.length > 0 && { betas }),
             metadata: getAPIMetadata(),
             ...getExtraBodyParams(),
@@ -817,7 +821,7 @@ function getPreviousRequestIdFromMessages(messages: Message[]): string | undefin
   return undefined
 }
 
-type MediaCandidate = BetaContentBlockParam | ContentBlockParam | ToolReferenceBlockParam
+type MediaCandidate = BetaContentBlockParam | ContentBlockParam | BrowserStateBlockParam | ToolReferenceBlockParam
 
 function isMedia(block: MediaCandidate): block is BetaImageBlockParam | BetaRequestDocumentBlock {
   return block.type === 'image' || block.type === 'document'
@@ -2641,6 +2645,13 @@ export function updateUsage(
     inference_geo: usage.inference_geo,
     iterations: partUsage.iterations ?? usage.iterations,
     speed: (partUsage as BetaUsage).speed ?? usage.speed,
+    // Same > 0 guard as the token fields: message_delta can omit the breakdown
+    // or report 0 for one that message_start already populated.
+    output_tokens_details:
+      partUsage.output_tokens_details != null && partUsage.output_tokens_details.thinking_tokens > 0
+        ? partUsage.output_tokens_details
+        : usage.output_tokens_details,
+    fallback_credit: partUsage.fallback_credit ?? usage.fallback_credit,
   }
 }
 
@@ -2682,6 +2693,11 @@ export function accumulateUsage(
     inference_geo: messageUsage.inference_geo, // Use the most recent
     iterations: messageUsage.iterations, // Use the most recent
     speed: messageUsage.speed, // Use the most recent
+    output_tokens_details: {
+      thinking_tokens:
+        totalUsage.output_tokens_details.thinking_tokens + messageUsage.output_tokens_details.thinking_tokens,
+    },
+    fallback_credit: messageUsage.fallback_credit, // Use the most recent
   }
 }
 

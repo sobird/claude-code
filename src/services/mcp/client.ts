@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
 
-import type { Base64ImageSource, ContentBlockParam, MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import type { Base64ImageSource, ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport, type SSEClientTransportOptions } from '@modelcontextprotocol/sdk/client/sse.js'
 import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/sdk/client/stdio.js'
@@ -2264,7 +2264,7 @@ export async function transformResultContent(
           const imageBuffer = Buffer.from(resource.blob, 'base64')
           const ext = resource.mimeType?.split('/')[1] || 'png'
           const resized = await maybeResizeAndDownsampleImageBuffer(imageBuffer, imageBuffer.length, ext)
-          const content: MessageParam['content'] = []
+          const content: ContentBlockParam[] = []
           if (prefix) {
             content.push({
               type: 'text',
