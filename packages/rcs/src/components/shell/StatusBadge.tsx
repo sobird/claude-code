@@ -37,9 +37,27 @@ function isLabeledStatus(value: string): value is LabeledStatus {
   return LABELED_STATUS_SET.has(value)
 }
 
+/** 色彩变体：awaiting 细分（审批/提问/计划）复用同一枚徽标，只换色调。 */
+export type StatusTone = 'warning' | 'info' | 'plan'
+
+const toneStyles: Record<StatusTone, string> = {
+  warning: styles.requiresAction,
+  info: styles.info,
+  plan: styles.plan,
+}
+
+interface StatusBadgeProps {
+  status: string
+  /** 覆盖默认文案，例如把 `requires_action` 细分成"待审批"。 */
+  label?: string
+  /** 覆盖默认配色。 */
+  tone?: StatusTone
+}
+
 /** Small pill describing a session or environment status. */
-export function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({ status, label, tone }: StatusBadgeProps) {
   const t = useTranslations('common')
-  const label = isLabeledStatus(status) ? t(`status.${status}`) : status
-  return <span className={cx(styles.badge, statusStyles[status] ?? styles.fallback)}>{label}</span>
+  const text = label ?? (isLabeledStatus(status) ? t(`status.${status}`) : status)
+  const toneClass = tone ? toneStyles[tone] : (statusStyles[status] ?? styles.fallback)
+  return <span className={cx(styles.badge, toneClass)}>{text}</span>
 }

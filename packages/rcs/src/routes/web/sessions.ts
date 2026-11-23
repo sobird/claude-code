@@ -11,7 +11,7 @@ import { Hono } from 'hono'
 
 import type { AppContext, AppEnv } from '@/auth/context'
 import { isSessionClosedStatus, toWebSessionId } from '@/contracts'
-import type { SessionRecord } from '@/contracts'
+import type { SessionReadStateRecord, SessionRecord, SessionWorkerRecord } from '@/contracts'
 import { defaultSessionTitle, requestLocale } from '@/i18n/default-titles'
 import {
   jsonError,
@@ -59,7 +59,34 @@ async function listVisibleRecords(c: AppContext): Promise<SessionRecord[]> {
   return records.filter((record) => !isSessionClosedStatus(record.status))
 }
 
-function toSummary(record: SessionRecord) {
+type AwaitingKind = 'permission' | 'question' | 'plan'
+
+interface AwaitingView {
+  kind: AwaitingKind
+  tool_name: string | null
+  /** CLI 给出的可读说明，例如 "Editing src/foo.ts"。 */
+  description: string | null
+}
+
+/** 把 worker 上报的阻塞原因归到列表能显示的三类。 */
+function awaitingView(record: SessionRecord, worker: SessionWorkerRecord | undefined): AwaitingView | null {
+  if (record.status !== 'requires_action') return null
+  const details = worker?.requiresActionDetails
+  const tool = details && typeof details.tool_name === 'string' ? details.tool_name : null
+  const description = details && typeof details.action_description === 'string' ? details.action_description : null
+  const kind: AwaitingKind = tool === 'AskUserQuestion' ? 'question' : tool === 'ExitPlanMode' ? 'plan' : 'permission'
+  return { kind, tool_name: tool, description }
+}
+
+/** 未读只看最近一次轮次结束的水位；运行中还没有"新结果"可言。 */
+function unreadOf(record: SessionRecord, read: SessionReadStateRecord | undefined): boolean {
+  if (record.status === 'running') return false
+  if (!read) return false
+  if (read.manualUnread) return true
+  return (record.lastResultSeq ?? 0) > read.lastReadSeq
+}
+
+function toSummary(record: SessionRecord, worker?: SessionWorkerRecord, read?: SessionReadStateRecord) {
   return {
     id: toWebSessionId(record.id),
     title: record.title,
@@ -67,6 +94,10 @@ function toSummary(record: SessionRecord) {
     environment_id: record.environmentId,
     owner_user_id: record.ownerUserId,
     updated_at: record.updatedAt.getTime() / 1000,
+    last_result_seq: record.lastResultSeq,
+    last_result_failed: record.lastResultFailed,
+    awaiting: awaitingView(record, worker),
+    unread: unreadOf(record, read),
   }
 }
 
@@ -133,8 +164,29 @@ app.get('/sessions', legacyUserAuth, async (c) => {
 
 /** GET /web/sessions/all — Compact summaries of the caller's open sessions. */
 app.get('/sessions/all', legacyUserAuth, async (c) => {
+  const repos = c.get('repos')
+  const user = c.get('user')
   const records = await listVisibleRecords(c)
-  return c.json(records.map(toSummary), 200)
+  const ids = records.map((record) => record.id)
+  const [workers, reads] = await Promise.all([
+    repos.sessionWorkers.listBySessionIds(ids),
+    repos.sessionReads.listByUser(user.id, ids),
+  ])
+  const workerById = new Map(workers.map((worker) => [worker.sessionId, worker]))
+  const readById = new Map(reads.map((read) => [read.sessionId, read]))
+  // 首次见到（或本功能上线前就存在）的会话按当前水位建立已读基线，
+  // 否则列表会把这些历史一次性全部标成未读。
+  const missing = records.filter((record) => !readById.has(record.id))
+  if (missing.length > 0) {
+    await repos.sessionReads.ensureBaseline(
+      user.id,
+      missing.map((record) => ({ sessionId: record.id, lastResultSeq: record.lastResultSeq })),
+    )
+  }
+  return c.json(
+    records.map((record) => toSummary(record, workerById.get(record.id), readById.get(record.id))),
+    200,
+  )
 })
 
 /**
@@ -150,7 +202,10 @@ app.get('/sessions/archived', legacyUserAuth, async (c) => {
     user.role === 'admin'
       ? await listAllSessions(repos, { includeArchived: true })
       : await repos.sessions.listByOwner(user.id, { includeArchived: true })
-  return c.json(records.filter((record) => isSessionClosedStatus(record.status)).map(toSummary), 200)
+  return c.json(
+    records.filter((record) => isSessionClosedStatus(record.status)).map((record) => toSummary(record)),
+    200,
+  )
 })
 
 /** GET /web/sessions/:id — Session detail with optional automation state. */
@@ -273,6 +328,45 @@ app.post('/sessions/:id/presence', legacyUserAuth, async (c) => {
 
   setPresenceVisible(owned, clientId, body.visible === true)
   return c.body(null, 204)
+})
+
+/**
+ * POST /web/sessions/:id/read — 更新当前账号的阅读状态。
+ *
+ * `acknowledge` 是查看会话时的自动确认：只单调推进已读水位，不清除手动未读；
+ * `read` / `unread` 对应列表里的显式标记。水位以服务端的最近一次轮次结束为上限，
+ * 客户端无法把"未产生的结果"标成已读。
+ */
+app.post('/sessions/:id/read', legacyUserAuth, async (c) => {
+  const repos = c.get('repos')
+  const user = c.get('user')
+  const session = await getSession(repos, c.req.param('id'))
+  if (!session) return webNotFound(c)
+  // 只读访问不认领无主会话：看列表不应该改变归属。
+  if (user.role !== 'admin' && session.owner_user_id !== null && session.owner_user_id !== user.id) {
+    return webForbidden(c)
+  }
+
+  const body = await readJson(c)
+  const action = body.action
+  if (action !== 'acknowledge' && action !== 'read' && action !== 'unread') {
+    return c.json({ error: 'action must be acknowledge, read, or unread', code: 'invalid_action' }, 400)
+  }
+
+  const watermark = session.last_result_seq ?? 0
+  const requested =
+    typeof body.resultSeq === 'number' && Number.isFinite(body.resultSeq) ? Math.trunc(body.resultSeq) : watermark
+  const through = Math.min(Math.max(requested, 0), watermark)
+
+  if (action === 'unread') await repos.sessionReads.markUnread(user.id, session.id)
+  else if (action === 'read') await repos.sessionReads.markRead(user.id, session.id, through)
+  else await repos.sessionReads.acknowledge(user.id, session.id, through)
+
+  const row = await repos.sessionReads.get(user.id, session.id)
+  return c.json(
+    { last_read_seq: row?.lastReadSeq ?? through, manual_unread: row?.manualUnread ?? action === 'unread' },
+    200,
+  )
 })
 
 export default app

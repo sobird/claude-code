@@ -8,12 +8,15 @@
 
 import { sql } from 'drizzle-orm'
 import {
+  bigint,
   bigserial,
+  boolean,
   customType,
   index,
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -97,6 +100,13 @@ export const sessions = pgTable(
     source: text('source').notNull().default('remote-control'),
     permissionMode: text('permission_mode'),
     workerEpoch: integer('worker_epoch').notNull().default(0),
+    /**
+     * 最近一次入站 `result` 事件的 seq。未读判定只认"轮次结束"，不看中间事件，
+     * 所以改权限模式之类的写入不会把会话标成未读。旧数据为 null，按全部已读处理。
+     */
+    lastResultSeq: bigint('last_result_seq', { mode: 'number' }),
+    /** 最近一次结束的轮次是否失败（`result` 的 subtype 不是 success）。 */
+    lastResultFailed: boolean('last_result_failed').notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     archivedAt: timestamp('archived_at', { withTimezone: true, mode: 'date' }),
@@ -119,6 +129,29 @@ export const sessionWorkers = pgTable('session_workers', {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 })
+
+/**
+ * 账号级的会话阅读记录。列表里的"未读"= 用户没有确认到最近一次轮次结束，
+ * 多端共享；已读位置只能单调前进（见 `POST /web/sessions/:id/read`）。
+ */
+export const sessionReadState = pgTable(
+  'session_read_state',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    /** 已确认读到的 `sessions.last_result_seq` 水位。 */
+    lastReadSeq: bigint('last_read_seq', { mode: 'number' }).notNull().default(0),
+    /** 手动标记的未读；自动确认不会清除它。 */
+    manualUnread: boolean('manual_unread').notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.sessionId] })],
+)
 
 export const workItems = pgTable(
   'work_items',
@@ -234,6 +267,7 @@ export type ApiKeyRecord = typeof apiKeys.$inferSelect
 export type EnvironmentRecord = typeof environments.$inferSelect
 export type SessionRecord = typeof sessions.$inferSelect
 export type SessionWorkerRecord = typeof sessionWorkers.$inferSelect
+export type SessionReadStateRecord = typeof sessionReadState.$inferSelect
 export type WorkItemRecord = typeof workItems.$inferSelect
 export type SessionEventRecord = typeof sessionEvents.$inferSelect
 export type AttachmentRecord = typeof attachments.$inferSelect
@@ -247,6 +281,7 @@ export const schema = {
   environments,
   sessions,
   sessionWorkers,
+  sessionReadState,
   workItems,
   sessionEvents,
   attachments,

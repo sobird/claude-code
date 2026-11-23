@@ -17,6 +17,7 @@ export type {
   PushVapidKeys,
   Role,
   SessionEventRecord,
+  SessionReadStateRecord,
   SessionRecord,
   SessionWorkerRecord,
   UserRecord,

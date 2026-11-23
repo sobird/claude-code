@@ -1504,6 +1504,23 @@ describe('turn duration', () => {
   })
 })
 
+describe('result watermark', () => {
+  test('records the seqNum of the latest result and never regresses', () => {
+    let state = reduceSessionEvent(initialChatState, event('result', { subtype: 'success' }, { seqNum: 7 }))
+    expect(state.lastResultSeq).toBe(7)
+
+    state = reduceSessionEvent(state, event('assistant', { content: 'later' }, { seqNum: 8 }))
+    expect(state.lastResultSeq).toBe(7)
+
+    // 重连重放旧帧不应把水位拉回去。
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }, { seqNum: 3 }))
+    expect(state.lastResultSeq).toBe(7)
+
+    state = reduceSessionEvent(state, event('result', { subtype: 'success' }, { seqNum: 11 }))
+    expect(state.lastResultSeq).toBe(11)
+  })
+})
+
 describe('session tasks', () => {
   function todoBlock(todos: unknown[]) {
     return { type: 'tool_use', id: 'tool-1', name: 'TodoWrite', input: { todos } }

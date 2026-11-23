@@ -14,6 +14,7 @@ import { createEnvironmentRepository } from './environments'
 import { createEventRepository } from './events'
 import { createPushSettingsRepository } from './push-settings'
 import { createPushSubscriptionRepository } from './push-subscriptions'
+import { createSessionReadRepository } from './session-reads'
 import { createSessionWorkerRepository } from './session-workers'
 import { createSessionRepository } from './sessions'
 import type { Repositories } from './types'
@@ -28,6 +29,7 @@ export function createRepositories(db: Database): Repositories {
     sessions: createSessionRepository(db),
     workItems: createWorkItemRepository(db),
     sessionWorkers: createSessionWorkerRepository(db),
+    sessionReads: createSessionReadRepository(db),
     events: createEventRepository(db),
     attachments: createAttachmentRepository(db),
     pushSubscriptions: createPushSubscriptionRepository(db),
@@ -44,6 +46,7 @@ export { createEnvironmentRepository } from './environments'
 export { createEventRepository } from './events'
 export { createPushSettingsRepository } from './push-settings'
 export { createPushSubscriptionRepository } from './push-subscriptions'
+export { createSessionReadRepository } from './session-reads'
 export { createSessionRepository } from './sessions'
 export { createSessionWorkerRepository } from './session-workers'
 export type {
@@ -67,6 +70,8 @@ export type {
   Repositories,
   SessionListOptions,
   SessionPatch,
+  SessionReadBaseline,
+  SessionReadRepository,
   SessionRepository,
   SessionWorkerPatch,
   SessionWorkerRepository,

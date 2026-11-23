@@ -159,6 +159,8 @@ export interface ChatState {
   status: string | null
   closed: boolean
   lastSeqNum: number
+  /** 最近一次轮次结束事件（`result`）的 seqNum；自动确认已读以此为水位。 */
+  lastResultSeq: number
   seenSeqNums: Set<number>
   /** 没有数值 `seqNum` 的事件改用 uuid 去重。 */
   seenEventIds: Set<string>
@@ -233,6 +235,7 @@ export const initialChatState: ChatState = {
   status: null,
   closed: false,
   lastSeqNum: 0,
+  lastResultSeq: 0,
   seenSeqNums: new Set<number>(),
   seenEventIds: new Set<string>(),
   seenAssistantUuids: new Set<string>(),
@@ -1180,12 +1183,14 @@ function handleResult(state: ChatState, event: SessionEventInput): ChatState {
   }
   // result 结束本轮；agents/workflows 已完成（它们保留 `result`），
   // 但后台 shell 可能仍在运行。
+  const resultSeqNum = numericSeqNum(event)
   const closed = {
     ...base,
     entries,
     turnStartedAt: null,
     turnOpen: false,
     backgroundTasks: retainPersistentTasks(state.backgroundTasks),
+    lastResultSeq: resultSeqNum !== null ? Math.max(base.lastResultSeq, resultSeqNum) : base.lastResultSeq,
   }
 
   const subtype = asText(payload.subtype)

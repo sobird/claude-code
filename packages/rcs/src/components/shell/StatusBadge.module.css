@@ -34,6 +34,16 @@
   color: var(--color-status-warning);
 }
 
+.info {
+  background-color: color-mix(in oklab, var(--color-status-running) 15%, transparent);
+  color: var(--color-status-running);
+}
+
+.plan {
+  background-color: color-mix(in oklab, var(--color-status-idle) 15%, transparent);
+  color: var(--color-status-idle);
+}
+
 .error {
   background-color: color-mix(in oklab, var(--color-status-error) 15%, transparent);
   color: var(--color-status-error);

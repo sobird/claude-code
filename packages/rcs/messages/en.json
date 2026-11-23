@@ -57,6 +57,10 @@
         "command": "CLAUDE_BRIDGE_BASE_URL='<gateway-link>' claude remote-control"
       }
     },
+    "awaiting": {
+      "title": "Needs you",
+      "description": "Sessions waiting for your approval or answer."
+    },
     "unclaimed": {
       "title": "Unclaimed",
       "description": "Sessions that are not owned by anyone yet."
@@ -81,7 +85,13 @@
   },
   "session": {
     "list": {
-      "empty": "No sessions yet."
+      "empty": "No sessions yet.",
+      "unread": "New result"
+    },
+    "awaiting": {
+      "permission": "Needs approval",
+      "question": "Waiting for answer",
+      "plan": "Plan to confirm"
     },
     "archive": {
       "action": "Archive",

@@ -12,6 +12,7 @@ import { useDashboardData } from './DashboardData'
 import { EnvironmentList } from './EnvironmentList'
 import { NewSessionDialog } from './NewSessionDialog'
 import { selectVisibleEnvironments, selectVisibleSessions } from './selectors'
+import { splitAwaiting } from './session-status'
 import { SessionList } from './SessionList'
 import { toOwnedEnvironments, toOwnedSessions, type CreatedSession, type DashboardUser } from './types'
 
@@ -66,8 +67,10 @@ export function Dashboard({ user }: { user: DashboardUser }) {
   const [archivedExpanded, setArchivedExpanded] = useState(false)
 
   const visibleSessions = selectVisibleSessions(toOwnedSessions(sessions), user)
-  const claimedSessions = visibleSessions.filter((session) => session.owner !== null)
-  const unclaimedSessions = visibleSessions.filter((session) => session.owner === null)
+  // “等你处理”的会话从常规分组里抽出来置顶，避免被埋在未认领/已认领列表里。
+  const { awaiting: awaitingSessions, rest: restSessions } = splitAwaiting(visibleSessions)
+  const claimedSessions = restSessions.filter((session) => session.owner !== null)
+  const unclaimedSessions = restSessions.filter((session) => session.owner === null)
   const visibleEnvironments = selectVisibleEnvironments(toOwnedEnvironments(environments), user)
   const archivedVisible = selectVisibleSessions(toOwnedSessions(archivedSessions), user)
   // 归档时刷新过 updated_at，而归档期间不再写入，所以列表本身就是归档时间倒序。
@@ -104,6 +107,18 @@ export function Dashboard({ user }: { user: DashboardUser }) {
             {tCommon('retry')}
           </Button>
         </div>
+      ) : null}
+
+      {awaitingSessions.length > 0 ? (
+        <section aria-labelledby="awaiting-heading" className={styles.section}>
+          <div className={styles.intro}>
+            <h2 id="awaiting-heading" className={styles.sectionTitle}>
+              {t('awaiting.title')}
+            </h2>
+            <p className={styles.muted}>{t('awaiting.description')}</p>
+          </div>
+          <SessionList sessions={awaitingSessions} onArchive={openArchive} />
+        </section>
       ) : null}
 
       <section aria-labelledby="environments-heading" className={styles.section}>

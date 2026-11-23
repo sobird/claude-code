@@ -6,7 +6,7 @@
  * (`null` clears it), matching the legacy worker heartbeat protocol.
  */
 
-import { eq, sql } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 
 import type { Database } from '@/db/client'
 import { sessionWorkers } from '@/db/schema'
@@ -18,6 +18,14 @@ export function createSessionWorkerRepository(db: Database): SessionWorkerReposi
     async get(sessionId) {
       const [row] = await db.select().from(sessionWorkers).where(eq(sessionWorkers.sessionId, sessionId)).limit(1)
       return row ?? null
+    },
+
+    async listBySessionIds(sessionIds) {
+      if (sessionIds.length === 0) return []
+      return db
+        .select()
+        .from(sessionWorkers)
+        .where(inArray(sessionWorkers.sessionId, [...sessionIds]))
     },
 
     async upsert(sessionId, patch) {

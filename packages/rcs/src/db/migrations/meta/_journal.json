@@ -57,6 +57,13 @@
       "when": 1794948589782,
       "tag": "0007_dark_the_hood",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795442115694,
+      "tag": "0008_slippery_songbird",
+      "breakpoints": true
     }
   ]
 }

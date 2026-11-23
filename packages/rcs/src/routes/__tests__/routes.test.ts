@@ -1345,6 +1345,170 @@ describe('Web Session Routes', () => {
     expect(sessions[0].owner_user_id).toBe(s.member.id)
   })
 
+  test('GET /web/sessions/all derives awaiting from the worker state', async () => {
+    const id = await createWebSession(s.memberToken)
+    const canonical = canonicalSessionId(id)
+    await s.repos.sessions.update(canonical, { status: 'requires_action' })
+    await s.repos.sessionWorkers.upsert(canonical, {
+      workerStatus: 'requires_action',
+      requiresActionDetails: { tool_name: 'Bash', action_description: 'Running npm test', request_id: 'req_1' },
+    })
+
+    const sessions = (await resJson(
+      await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }),
+    )) as Array<{ awaiting: { kind: string; tool_name: string | null; description: string | null } | null }>
+    expect(sessions[0]?.awaiting).toEqual({ kind: 'permission', tool_name: 'Bash', description: 'Running npm test' })
+
+    await s.repos.sessionWorkers.upsert(canonical, {
+      requiresActionDetails: { tool_name: 'AskUserQuestion', action_description: 'Pick an option' },
+    })
+    const question = (await resJson(
+      await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }),
+    )) as Array<{ awaiting: { kind: string } | null }>
+    expect(question[0]?.awaiting?.kind).toBe('question')
+  })
+
+  test('GET /web/sessions/all baselines history as read and reports new turn results', async () => {
+    const id = await createWebSession(s.memberToken)
+    const canonical = canonicalSessionId(id)
+
+    const first = (await resJson(await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }))) as Array<{
+      unread: boolean
+    }>
+    expect(first[0]?.unread).toBe(false)
+
+    const event = await publishSessionEvent(
+      s.repos,
+      null,
+      canonical,
+      'result',
+      {
+        uuid: crypto.randomUUID(),
+        subtype: 'success',
+      },
+      'inbound',
+    )
+
+    const second = (await resJson(
+      await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }),
+    )) as Array<{ unread: boolean; last_result_seq: number | null }>
+    expect(second[0]?.last_result_seq).toBe(event?.seqNum ?? -1)
+    expect(second[0]?.unread).toBe(true)
+  })
+
+  test('POST /web/sessions/:id/read acknowledges without clearing a manual mark', async () => {
+    const id = await createWebSession(s.memberToken)
+    const canonical = canonicalSessionId(id)
+    const event = await publishSessionEvent(
+      s.repos,
+      null,
+      canonical,
+      'result',
+      {
+        uuid: crypto.randomUUID(),
+        subtype: 'success',
+      },
+      'inbound',
+    )
+
+    const ack = await app.request(`/web/sessions/${id}/read`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ action: 'acknowledge', resultSeq: event?.seqNum ?? 0 }),
+    })
+    expect(ack.status).toBe(200)
+    expect((await resJson(ack)).manual_unread).toBe(false)
+
+    const unread = await app.request(`/web/sessions/${id}/read`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ action: 'unread' }),
+    })
+    expect((await resJson(unread)).manual_unread).toBe(true)
+
+    // 自动确认保留手动未读；显式已读才清除。
+    await app.request(`/web/sessions/${id}/read`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ action: 'acknowledge' }),
+    })
+    const afterAck = (await resJson(
+      await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }),
+    )) as Array<{ unread: boolean }>
+    expect(afterAck[0]?.unread).toBe(true)
+
+    await app.request(`/web/sessions/${id}/read`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ action: 'read' }),
+    })
+    const afterRead = (await resJson(
+      await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }),
+    )) as Array<{ unread: boolean }>
+    expect(afterRead[0]?.unread).toBe(false)
+  })
+
+  test('POST /web/sessions/:id/read requires access and a known action', async () => {
+    const foreign = await createWebSession(s.otherToken)
+    const forbidden = await app.request(`/web/sessions/${foreign}/read`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ action: 'read' }),
+    })
+    expect(forbidden.status).toBe(403)
+
+    const own = await createWebSession(s.memberToken)
+    const invalid = await app.request(`/web/sessions/${own}/read`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ action: 'nope' }),
+    })
+    expect(invalid.status).toBe(400)
+
+    const missing = await app.request('/web/sessions/session_missing/read', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ action: 'read' }),
+    })
+    expect(missing.status).toBe(404)
+  })
+
+  test('GET /web/sessions/all does not mark a running session unread', async () => {
+    const id = await createWebSession(s.memberToken)
+    const canonical = canonicalSessionId(id)
+    await publishSessionEvent(
+      s.repos,
+      null,
+      canonical,
+      'result',
+      {
+        uuid: crypto.randomUUID(),
+        subtype: 'success',
+      },
+      'inbound',
+    )
+
+    // 第一次列表建立基线；随后进入 running 的新 result 不算"有新"。
+    await app.request('/web/sessions/all', { headers: bearer(s.memberToken) })
+    await publishSessionEvent(
+      s.repos,
+      null,
+      canonical,
+      'result',
+      {
+        uuid: crypto.randomUUID(),
+        subtype: 'success',
+      },
+      'inbound',
+    )
+    await s.repos.sessions.update(canonical, { status: 'running' })
+
+    const sessions = (await resJson(
+      await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }),
+    )) as Array<{ unread: boolean }>
+    expect(sessions[0]?.unread).toBe(false)
+  })
+
   test('GET /web/sessions/all shares unowned sessions with members', async () => {
     const own = await createWebSession(s.memberToken)
     const foreign = await createWebSession(s.otherToken)

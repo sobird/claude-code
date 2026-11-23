@@ -40,6 +40,9 @@ export interface SessionResponse {
   permission_mode: string | null
   worker_epoch: number
   owner_user_id: string | null
+  /** 最近一次轮次结束的事件 seq；列表的未读判定以此为准。 */
+  last_result_seq: number | null
+  last_result_failed: boolean
   created_at: number
   updated_at: number
 }
@@ -54,6 +57,8 @@ export function toSessionResponse(row: SessionRecord): SessionResponse {
     permission_mode: row.permissionMode,
     worker_epoch: row.workerEpoch,
     owner_user_id: row.ownerUserId,
+    last_result_seq: row.lastResultSeq,
+    last_result_failed: row.lastResultFailed,
     created_at: row.createdAt.getTime() / 1000,
     updated_at: row.updatedAt.getTime() / 1000,
   }

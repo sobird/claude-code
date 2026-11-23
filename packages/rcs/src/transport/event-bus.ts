@@ -310,6 +310,26 @@ function messageUuidOf(type: string, normalizedPayload: unknown): string | null 
   return typeof uuid === 'string' && uuid ? uuid : null
 }
 
+/**
+ * 记录本轮结束的水位。未读判定只认 `result`（轮次结束），不看中间事件，
+ * 所以改权限模式之类的写入不会把会话标成未读。`result` 的 subtype 不是
+ * `success` 时顺带标记失败，列表用它区分"有新"和"有新且失败"。
+ */
+async function recordTurnResult(
+  repos: Repositories,
+  sessionId: string,
+  type: string,
+  seqNum: number,
+  normalized: Record<string, unknown>,
+): Promise<void> {
+  if (type !== 'result' && type !== 'result_success') return
+  const subtype = typeof normalized.subtype === 'string' ? normalized.subtype : null
+  await repos.sessions.update(sessionId, {
+    lastResultSeq: seqNum,
+    lastResultFailed: subtype !== null && subtype !== 'success',
+  })
+}
+
 async function appendAndPublish(
   repos: Repositories,
   eventBus: EventBus | null,
@@ -320,6 +340,7 @@ async function appendAndPublish(
   messageUuid: string | null,
 ): Promise<SessionEvent> {
   const record = await repos.events.append({ sessionId, type, payload: normalized, direction, messageUuid })
+  if (direction === 'inbound') await recordTurnResult(repos, sessionId, type, record.id, normalized)
   const event = toSessionEvent(record)
   eventBus?.publish(event)
   return event
@@ -420,6 +441,7 @@ export async function publishInboundEvent(
     messageUuid,
   })
   if (!record) return null
+  await recordTurnResult(repos, sessionId, type, record.id, normalized)
   const event = toSessionEvent(record)
   eventBus?.publish(event)
   notifyInboundEvent(sessionId, type, normalized)

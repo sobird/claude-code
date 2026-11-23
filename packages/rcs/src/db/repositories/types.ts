@@ -15,6 +15,7 @@ import type {
   PushVapidKeys,
   Role,
   SessionEventRecord,
+  SessionReadStateRecord,
   SessionRecord,
   SessionWorkerRecord,
   UserRecord,
@@ -201,6 +202,7 @@ export interface Repositories {
   sessions: SessionRepository
   workItems: WorkItemRepository
   sessionWorkers: SessionWorkerRepository
+  sessionReads: SessionReadRepository
   events: EventRepository
   attachments: AttachmentRepository
   pushSubscriptions: PushSubscriptionRepository
@@ -271,8 +273,30 @@ export interface SessionWorkerPatch {
 
 export interface SessionWorkerRepository {
   get(sessionId: string): Promise<SessionWorkerRecord | null>
+  /** 批量读取 worker 行，供列表接口一次拿到 `requires_action_details`。 */
+  listBySessionIds(sessionIds: readonly string[]): Promise<SessionWorkerRecord[]>
   /** Insert when missing, otherwise merge the patch and bump `updatedAt`. */
   upsert(sessionId: string, patch: SessionWorkerPatch): Promise<SessionWorkerRecord>
+}
+
+/** 首次见到的会话按当前水位建立"已读"基线。 */
+export interface SessionReadBaseline {
+  sessionId: string
+  lastResultSeq: number | null
+}
+
+export interface SessionReadRepository {
+  get(userId: string, sessionId: string): Promise<SessionReadStateRecord | null>
+  /** 某用户的阅读记录；传入 `sessionIds` 时只取这些会话。 */
+  listByUser(userId: string, sessionIds?: readonly string[]): Promise<SessionReadStateRecord[]>
+  /** 为还没有记录行的会话写入已读基线；已有行不受影响。 */
+  ensureBaseline(userId: string, entries: readonly SessionReadBaseline[]): Promise<void>
+  /** 自动确认：只单调推进已读水位，不清除手动未读。 */
+  acknowledge(userId: string, sessionId: string, throughSeq: number): Promise<void>
+  /** 显式标记已读：推进水位并清除手动未读。 */
+  markRead(userId: string, sessionId: string, throughSeq: number): Promise<void>
+  /** 显式标记未读。 */
+  markUnread(userId: string, sessionId: string): Promise<void>
 }
 
 export interface AppendEventInput {

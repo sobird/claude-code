@@ -57,6 +57,10 @@
         "command": "CLAUDE_BRIDGE_BASE_URL='<gateway-link>' claude remote-control"
       }
     },
+    "awaiting": {
+      "title": "需要你处理",
+      "description": "正在等你审批或回答的会话。"
+    },
     "unclaimed": {
       "title": "未认领",
       "description": "尚未归属任何人的会话。"
@@ -81,7 +85,13 @@
   },
   "session": {
     "list": {
-      "empty": "暂无会话。"
+      "empty": "暂无会话。",
+      "unread": "有新结果"
+    },
+    "awaiting": {
+      "permission": "待审批",
+      "question": "待回答",
+      "plan": "待确认计划"
     },
     "archive": {
       "action": "归档",

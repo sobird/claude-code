@@ -568,6 +568,48 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     if (atBottomRef.current) scrollToBottom()
   }, [entryCount, scrollToBottom])
 
+  // 查看会话即确认已读：页面可见且聚焦、停在最新处、看到过这次轮次结束后，
+  // 才把已读水位推进到 `lastResultSeq`。每个水位只确认一次；失败时不打扰，
+  // 等下次可见/聚焦或新结果到达再重试。略作延迟，翻页路过不算"看过"。
+  const acknowledgedSeqRef = useRef(0)
+  const ackInFlightRef = useRef(false)
+  const lastResultSeq = chat.lastResultSeq
+  const sessionLoaded = session !== null
+  useEffect(() => {
+    if (!sessionLoaded || lastResultSeq <= acknowledgedSeqRef.current) return undefined
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const attempt = () => {
+      if (ackInFlightRef.current || lastResultSeq <= acknowledgedSeqRef.current) return
+      if (document.visibilityState !== 'visible' || !document.hasFocus()) return
+      if (!atBottomRef.current) return
+      ackInFlightRef.current = true
+      api
+        .post(`/web/sessions/${encodeURIComponent(sessionId)}/read`, {
+          action: 'acknowledge',
+          resultSeq: lastResultSeq,
+        })
+        .then(() => {
+          acknowledgedSeqRef.current = Math.max(acknowledgedSeqRef.current, lastResultSeq)
+        })
+        .catch(() => {})
+        .finally(() => {
+          ackInFlightRef.current = false
+        })
+    }
+    const schedule = () => {
+      if (timer !== undefined) clearTimeout(timer)
+      timer = setTimeout(attempt, 500)
+    }
+    schedule()
+    document.addEventListener('visibilitychange', schedule)
+    window.addEventListener('focus', schedule)
+    return () => {
+      if (timer !== undefined) clearTimeout(timer)
+      document.removeEventListener('visibilitychange', schedule)
+      window.removeEventListener('focus', schedule)
+    }
+  }, [api, sessionId, sessionLoaded, lastResultSeq, atBottom])
+
   // A hidden tab shows a count in its title while approvals wait, so the user
   // knows to come back without watching the page.
   const pendingApprovalCount = chat.pendingPermissions.length
