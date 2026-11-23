@@ -79,3 +79,13 @@
 - `statusLine.refreshInterval`（`z.number().min(1)`）：设置后 `StatusLine` 用 `setInterval(max(1,N)*1000)` 额外触发一次 `doUpdate`，与事件驱动更新并存。
 - `workspace.git_worktree`：当前目录位于 linked git worktree 时填该 worktree 名。复用 `src/utils/git/gitFilesystem.ts` 的 `resolveGitDir`，新增 `getGitWorktreeName`（普通仓库 gitdir 的 basename 为 `.git` → null；仅 `<common>/worktrees/<name>` 取 `<name>`），测试见 `src/utils/git/__tests__/getGitWorktreeName.test.ts`。
 - 已存在、仅登记 `releaseItems` 的下游项：OTEL `TRACEPARENT`（#46/#54）、LSP `clientInfo`（#55）、print `--exclude-dynamic-system-prompt-sections`（#52）。
+
+### R9：release 覆盖批次一（安全/权限 already-present + 跨版本重复合并）
+
+`verify --release-notes` 未覆盖项 75 → 38。本批：
+
+- `already-present`（src 已有，只登记）：Bash 权限加固 #8/#35/#56/#58/#70/#96；429 Retry-After 退避 #15/#61；MCP OAuth metadata 刷新 #14/#62；Bedrock 空串认证 #1/#34；`DISABLE_COMPACT` 去掉提示 #104；`/export` #78；`/reload-plugins` #95；MCP `maxResultSizeChars` #82；`DISABLE_AUTOUPDATER` #84；transcript 最终 token 用量 #45/#100。
+- `ignored-dependency`：`sandbox.network.allowMachLookup` #37/#91（sandbox-runtime 依赖实现）。
+- `approximated`（手写实现差异，未逐条对拍）：插件 frontmatter 布尔名 #25/#80；`/resume` 选择器 UI #17/#77；NO_FLICKER 复制 URL / MCP 悬停 #26/#28/#74/#75；footer 指示器布局 #41/#93；`/agents` Running tab #5/#94；`/claude-api` skill Managed Agents #47/#101；沙箱网络自动批准 #36；teammates 权限继承 #73。
+
+剩余 38 条（核心行为移植 + 其它 transcript/UI 项）留待批次二。

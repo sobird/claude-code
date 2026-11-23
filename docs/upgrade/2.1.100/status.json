@@ -333,6 +333,246 @@
         "files": ["src/main.tsx", "src/utils/queryContext.ts", "src/constants/prompts.ts"],
         "symbols": ["--exclude-dynamic-system-prompt-sections"]
       }
+    },
+    {
+      "id": "behavior:bash-permission-hardening",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [8, 35, 56, 58, 70, 96],
+      "evidence": ["bundle:LANG"],
+      "notes": "Bash 权限加固与降噪：SAFE_ENV_VARS 白名单（LANG/TZ/NO_COLOR）只在安全变量下跳过 env 前缀，process wrapper（timeout/nice/nohup 等）去壳后再匹配，backslash 转义空白守卫，piped cd 与 deny 规则的 cd+git 门控均在 src/tools/BashTool/bashPermissions.ts；网络重定向在 pathValidation.ts。均无需改动。",
+      "srcEvidence": {
+        "files": ["src/tools/BashTool/bashPermissions.ts", "src/tools/BashTool/pathValidation.ts"],
+        "symbols": ["SAFE_ENV_VARS", "getSimpleCommandPrefix"]
+      }
+    },
+    {
+      "id": "behavior:retry-after-backoff",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [15, 61],
+      "evidence": ["bundle:retry-after"],
+      "notes": "429 且 Retry-After 很小时不再瞬间耗尽重试：src/services/api/withRetry.ts 的 getRetryDelay(persistentAttempt, retryAfter, ...) 以指数退避为下限，且有 SHORT_RETRY_THRESHOLD_MS / cooldown 分流。无需改动。",
+      "srcEvidence": {
+        "files": ["src/services/api/withRetry.ts"],
+        "symbols": ["getRetryDelay", "SHORT_RETRY_THRESHOLD_MS"]
+      }
+    },
+    {
+      "id": "behavior:mcp-oauth-metadata-refresh",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [14, 62],
+      "evidence": ["bundle:authServerMetadataUrl"],
+      "notes": "MCP OAuth 的 oauth.authServerMetadataUrl 在重启后刷新 token 时被沿用：src/services/mcp/auth.ts 与 types.ts 均带该字段。无需改动。",
+      "srcEvidence": {
+        "files": ["src/services/mcp/auth.ts", "src/services/mcp/types.ts"],
+        "symbols": ["authServerMetadataUrl"]
+      }
+    },
+    {
+      "id": "behavior:bedrock-empty-auth",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [1, 34],
+      "evidence": ["bundle:AWS_BEARER_TOKEN_BEDROCK"],
+      "notes": "Bedrock 在 AWS_BEARER_TOKEN_BEDROCK / CLAUDE_CODE_SKIP_BEDROCK_AUTH 为空字符串时不再误判：src/utils/model/bedrock.ts 用 isEnvTruthy 与 `!process.env.X`（空串为假值）判定，空串等同未设置。无需改动。",
+      "srcEvidence": {
+        "files": ["src/utils/model/bedrock.ts"],
+        "symbols": ["isEnvTruthy", "CLAUDE_CODE_SKIP_BEDROCK_AUTH"]
+      }
+    },
+    {
+      "id": "behavior:effective-compact-gating",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [104],
+      "evidence": ["bundle:DISABLE_COMPACT"],
+      "notes": "DISABLE_COMPACT 设置时去掉 /compact 提示：src/utils/contextSuggestions.ts 与 src/services/compact/autoCompact.ts 均以 isEnvTruthy(DISABLE_COMPACT) 门控。无需改动。",
+      "srcEvidence": {
+        "files": ["src/utils/contextSuggestions.ts", "src/services/compact/autoCompact.ts"],
+        "symbols": ["DISABLE_COMPACT"]
+      }
+    },
+    {
+      "id": "behavior:export-command",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [78],
+      "evidence": ["bundle:/export"],
+      "notes": "/export 命令在 src/commands/export/export.tsx 已实现（含路径处理）。无需改动。",
+      "srcEvidence": {
+        "files": ["src/commands/export/export.tsx", "src/commands/export/index.ts"],
+        "symbols": ["export"]
+      }
+    },
+    {
+      "id": "behavior:reload-plugins-skills",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [95],
+      "evidence": ["bundle:reload-plugins"],
+      "notes": "/reload-plugins 已注册并重载插件提供的 skills/命令（src/commands.ts 与插件加载器）。无需改动。",
+      "srcEvidence": {
+        "files": ["src/commands.ts", "src/utils/plugins/loadPluginCommands.ts"],
+        "symbols": ["reload-plugins"]
+      }
+    },
+    {
+      "id": "behavior:mcp-max-result-size",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [82],
+      "evidence": ["bundle:maxResultSizeChars"],
+      "notes": "MCP 工具 _meta[\"anthropic/maxResultSizeChars\"] 在 src/Tool.ts 中处理。无需改动。",
+      "srcEvidence": {
+        "files": ["src/Tool.ts"],
+        "symbols": ["maxResultSizeChars"]
+      }
+    },
+    {
+      "id": "behavior:disable-autoupdater",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [84],
+      "evidence": ["bundle:DISABLE_AUTOUPDATER"],
+      "notes": "DISABLE_AUTOUPDATER 在 src/utils/config.ts 中被读取以抑制自动更新检查。无需改动。",
+      "srcEvidence": {
+        "files": ["src/utils/config.ts", "src/utils/managedEnvConstants.ts"],
+        "symbols": ["DISABLE_AUTOUPDATER"]
+      }
+    },
+    {
+      "id": "behavior:transcript-final-token-usage",
+      "kind": "behavior",
+      "status": "already-present",
+      "releaseItems": [45, 100],
+      "evidence": ["bundle:output_tokens"],
+      "notes": "transcript 条目记录最终 token 用量而非流式占位：src/utils/tokens.ts、src/services/api/claude.ts、src/utils/forkedAgent.ts 装配 usage。无需改动。",
+      "srcEvidence": {
+        "files": ["src/utils/tokens.ts", "src/services/api/claude.ts"],
+        "symbols": ["output_tokens"]
+      }
+    },
+    {
+      "id": "bundle-only:sandbox-allowmachlookup",
+      "kind": "behavior",
+      "status": "ignored-dependency",
+      "releaseItems": [37, 91],
+      "evidence": ["bundle:allowMachLookup"],
+      "notes": "sandbox.network.allowMachLookup 的 macOS 生效由打包依赖 @anthropic-ai/sandbox-runtime 实现，src 不直接读取该字段（依赖实现）。",
+      "srcEvidence": {
+        "files": ["src/utils/sandbox/sandbox-adapter.ts"],
+        "symbols": ["sandbox"]
+      }
+    },
+    {
+      "id": "behavior:plugin-frontmatter-name-coercion",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [25, 80],
+      "evidence": ["bundle:frontmatter"],
+      "notes": "插件命令名由文件名派生，frontmatter.name 仅 `as string` 用于展示；YAML 布尔关键字（yes/on）解析成 boolean 时未强制转字符串，与上游「不再让选择器崩坏」的修复不完全等价。",
+      "srcEvidence": {
+        "files": ["src/utils/plugins/loadPluginCommands.ts"],
+        "symbols": ["getCommandNameFromFile"]
+      }
+    },
+    {
+      "id": "behavior:resume-picker-fixes",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [17, 77],
+      "evidence": ["bundle:/resume"],
+      "notes": "/resume 选择器为手写实现；上游若干交互修复（--resume <name> 可编辑、Ctrl+A/筛选重载重置、空列表吞导航、跨项目陈旧、任务状态覆盖摘要）未逐条移植，登记近似。",
+      "srcEvidence": {
+        "files": ["src/commands/resume"],
+        "symbols": ["resume"]
+      }
+    },
+    {
+      "id": "bundle-only:noflicker-copy-wrapped-urls",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [26, 75],
+      "evidence": ["bundle:NO_FLICKER"],
+      "notes": "NO_FLICKER/fullscreen 渲染层为手写精简实现，未移植「复制换行 URL 插入空格」的修复，登记近似。",
+      "srcEvidence": {
+        "files": ["src/utils/fullscreen.ts"],
+        "symbols": ["isFullscreenEnvEnabled"]
+      }
+    },
+    {
+      "id": "bundle-only:noflicker-mcp-hover-crash",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [28, 74],
+      "evidence": ["bundle:NO_FLICKER"],
+      "notes": "本仓库渲染层无对应「悬停 MCP 工具结果崩溃」路径，未逐条移植，登记近似。",
+      "srcEvidence": {
+        "files": ["src/utils/fullscreen.ts"],
+        "symbols": ["isFullscreenEnvEnabled"]
+      }
+    },
+    {
+      "id": "behavior:footer-indicator-layout",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [41, 93],
+      "evidence": ["bundle:NO_FLICKER"],
+      "notes": "footer 指示器（Focus/通知）布局属 UI 细节，本仓库为手写布局，未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/components/StatusLine.tsx"],
+        "symbols": ["StatusLine"]
+      }
+    },
+    {
+      "id": "behavior:agents-running-tab",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [5, 94],
+      "evidence": ["bundle:/agents"],
+      "notes": "/agents 为手写实现，未加 Running/Library 双 tab 与 Run agent / View running instance 动作，登记近似。",
+      "srcEvidence": {
+        "files": ["src/commands/agents"],
+        "symbols": ["agents"]
+      }
+    },
+    {
+      "id": "bundle-only:claude-api-skill-managed-agents",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [47, 101],
+      "evidence": ["bundle:/claude-api"],
+      "notes": "/claude-api skill 存在（src/skills/bundled/claude-api），但未含「Managed Agents」章节；属技能文档内容，未逐字移植，登记近似。",
+      "srcEvidence": {
+        "files": ["src/skills/bundled/claude-api", "src/skills/bundled/claudeApiContent.ts"],
+        "symbols": ["claude-api"]
+      }
+    },
+    {
+      "id": "behavior:sandbox-network-autoapprove",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [36],
+      "evidence": ["bundle:sandbox"],
+      "notes": "auto / bypass-permissions 下自动批准沙箱网络提示的细节未逐条对拍，登记近似（沙箱配置见 src/utils/sandbox/）。",
+      "srcEvidence": {
+        "files": ["src/utils/sandbox/sandbox-adapter.ts"],
+        "symbols": ["sandbox"]
+      }
+    },
+    {
+      "id": "behavior:team-permission-inherit",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [73],
+      "evidence": ["bundle:dangerously-skip-permissions"],
+      "notes": "teammates 现固定 default 或继承 currentTask.permissionMode；未确认在 --dangerously-skip-permissions 下继承 leader 模式，登记近似（src/utils/swarm/inProcessRunner.ts）。",
+      "srcEvidence": {
+        "files": ["src/utils/swarm/inProcessRunner.ts"],
+        "symbols": ["permissionMode"]
+      }
     }
   ]
 }
