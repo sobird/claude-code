@@ -2,11 +2,17 @@ import { randomUUID } from 'node:crypto'
 
 import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
 
+import {
+  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  logEvent,
+} from '../../services/analytics/index.js'
 import { queryModelWithoutStreaming } from '../../services/api/claude.js'
+import { roughTokenCountEstimationForMessage } from '../../services/tokenEstimation.js'
 import type { ToolUseContext } from '../../Tool.js'
 import type { Message } from '../../types/message.js'
 import { createAttachmentMessage } from '../attachments.js'
 import { createCombinedAbortSignal } from '../combinedAbortSignal.js'
+import { has1mContext, MODEL_CONTEXT_WINDOW_DEFAULT } from '../context.js'
 import { logForDebugging } from '../debug.js'
 import { errorMessage } from '../errors.js'
 import type { HookResult } from '../hooks.js'
@@ -14,8 +20,102 @@ import { safeParseJSON } from '../json.js'
 import { createUserMessage, extractTextContent } from '../messages.js'
 import { getSmallFastModel } from '../model/model.js'
 import type { PromptHook } from '../settings/types.js'
+import { jsonStringify } from '../slowOperations.js'
 import { asSystemPrompt } from '../systemPromptType.js'
+import { tokenCountFromLastAPIResponse } from '../tokens.js'
 import { addArgumentsToPrompt, hookResponseSchema } from './hookHelpers.js'
+
+/** Fraction of the evaluator's context window we allow the Stop transcript to fill. */
+const STOP_HOOK_TRUNCATION_FRACTION = 0.7
+
+/**
+ * Split a transcript into turns at assistant-message boundaries: a fresh
+ * assistant message id starts a new turn (when the current one is non-empty),
+ * while everything else (tool results, attachments, progress) stays with the
+ * turn it follows. Truncation then drops whole turns instead of cutting one
+ * mid-stream.
+ */
+function groupMessagesByTurn(messages: Message[]): Message[][] {
+  const turns: Message[][] = []
+  let current: Message[] = []
+  let lastAssistantId: string | undefined
+  for (const message of messages) {
+    if (message.type === 'assistant' && message.message.id !== lastAssistantId && current.length > 0) {
+      turns.push(current)
+      current = [message]
+    } else {
+      current.push(message)
+    }
+    if (message.type === 'assistant') {
+      lastAssistantId = message.message.id
+    }
+  }
+  if (current.length > 0) {
+    turns.push(current)
+  }
+  return turns
+}
+
+function estimateTurnTokens(turn: Message[]): number {
+  let total = 0
+  for (const message of turn) {
+    total +=
+      message.type === 'assistant' || message.type === 'user'
+        ? roughTokenCountEstimationForMessage(message)
+        : jsonStringify(message).length / 4
+  }
+  return Math.ceil(total)
+}
+
+/**
+ * Keep the most recent whole turns that fit the Stop-hook evaluator's context
+ * budget, prepending a notice when older turns are dropped (2.1.100 #21/#87).
+ * Long sessions otherwise overflow the evaluator's window and the hook errors
+ * out instead of judging the transcript.
+ */
+function truncateStopHookTranscript(messages: Message[], model: string): Message[] {
+  const contextWindow = has1mContext(model) ? 1_000_000 : MODEL_CONTEXT_WINDOW_DEFAULT
+  const budget = Math.floor(contextWindow * STOP_HOOK_TRUNCATION_FRACTION)
+  if (tokenCountFromLastAPIResponse(messages) <= budget) {
+    return messages
+  }
+
+  const turns = groupMessagesByTurn(messages)
+  let keptTokens = 0
+  let startIndex = turns.length
+  for (let i = turns.length - 1; i >= 0; i--) {
+    const turnTokens = estimateTurnTokens(turns[i])
+    // Always keep at least the most recent turn, even if it alone exceeds the
+    // budget; older turns are dropped once adding them would overflow.
+    if (startIndex < turns.length && keptTokens + turnTokens > budget) {
+      break
+    }
+    keptTokens += turnTokens
+    startIndex = i
+  }
+
+  const kept = turns.slice(startIndex).flat()
+  const dropped = messages.length - kept.length
+  if (dropped <= 0) {
+    return messages
+  }
+
+  logForDebugging(
+    `Hooks: truncated Stop transcript ${messages.length}→${kept.length} msgs (budget ${budget}, model ${model})`,
+  )
+  logEvent('tengu_hook_prompt_transcript_truncated', {
+    droppedMessages: dropped,
+    keptMessages: kept.length,
+    budget,
+    evaluatorModel: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  })
+  return [
+    createUserMessage({
+      content: `[Earlier conversation truncated to fit the hook evaluator's context window — ${dropped} earlier messages omitted. Evaluate the condition against the recent transcript below; if the required evidence may be in the omitted prefix, return {"ok": false, "reason": "insufficient evidence in transcript"}.]`,
+    }),
+    ...kept,
+  ]
+}
 
 /**
  * Execute a prompt-based hook using an LLM
@@ -46,9 +146,15 @@ export async function execPromptHook(
     // Create user message directly - no need for processUserInput which would
     // trigger UserPromptSubmit hooks and cause infinite recursion
     const userMessage = createUserMessage({ content: processedPrompt })
+    const hookModel = hook.model ?? getSmallFastModel()
 
-    // Prepend conversation history if provided
-    const messagesToQuery = messages && messages.length > 0 ? [...messages, userMessage] : [userMessage]
+    // Prepend conversation history if provided. Long sessions are trimmed to
+    // the evaluator's context budget so the Stop hook doesn't overflow the
+    // small/fast model and error out (2.1.100 #21/#87).
+    const messagesToQuery =
+      messages && messages.length > 0
+        ? [...truncateStopHookTranscript(messages, hookModel), userMessage]
+        : [userMessage]
 
     logForDebugging(`Hooks: Querying model with ${messagesToQuery.length} messages`)
 
@@ -88,7 +194,7 @@ Always include a "reason" field.`,
             const appState = toolUseContext.getAppState()
             return appState.toolPermissionContext
           },
-          model: hook.model ?? getSmallFastModel(),
+          model: hookModel,
           toolChoice: undefined,
           isNonInteractiveSession: true,
           hasAppendSystemPrompt: false,
@@ -112,6 +218,28 @@ Always include a "reason" field.`,
       })
 
       cleanupSignal()
+
+      // The evaluator itself can fail (e.g. context overflow) and come back as
+      // an API-error message rather than a judgement. Surface it as a
+      // non-blocking hook error with a recognizable message instead of feeding
+      // the error text into JSON parsing (2.1.100 #21/#87).
+      if (response.isApiErrorMessage) {
+        const apiErrorText = extractTextContent(response.message.content).trim()
+        logForDebugging(`Hooks: prompt-hook evaluator API error: ${apiErrorText}`, { level: 'error' })
+        return {
+          hook,
+          outcome: 'non_blocking_error',
+          message: createAttachmentMessage({
+            type: 'hook_non_blocking_error',
+            hookName,
+            toolUseID: effectiveToolUseID,
+            hookEvent,
+            stderr: `Hook evaluator API error: ${apiErrorText}`,
+            stdout: '',
+            exitCode: 1,
+          }),
+        }
+      }
 
       // Extract text content from response
       const content = extractTextContent(response.message.content)

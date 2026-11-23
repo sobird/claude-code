@@ -846,6 +846,18 @@
         "files": ["src/services/mcp/client.ts"],
         "symbols": ["wrapFetchWithTimeout"]
       }
+    },
+    {
+      "id": "behavior:stop-hook-long-session-truncation",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [21, 87],
+      "evidence": ["bundle:11670571", "bundle:11668445", "bundle:11668509"],
+      "notes": "修复 Stop/SubagentStop 提示词钩子（LLM 判定）在长会话下把整段 transcript 塞给评估模型导致上下文溢出、钩子报错（2.1.98 #21）以及评估器返回 API 错误时错误文案不可读（2.1.98 #87）。上游 v100（drK）：① 在传给 queryModelWithoutStreaming 前用 nlY 截断 transcript —— 预算 floor((has1mContext?1e6:200k)*0.7)，先用 tokenCountFromLastAPIResponse 快判，超出则按 assistant message.id 边界分轮（CQ8），从最近整轮向前保留到预算内（至少保留最近一轮），丢弃前缀时在最前面插入一条说明用 user 消息并记 tengu_hook_prompt_transcript_truncated；② 评估器返回 isApiErrorMessage 时，取文本 trim 后作为 non_blocking_error（stderr `Hook evaluator API error: …`），不再把错误正文送进 JSON 解析。移植到 src/utils/hooks/execPromptHook.ts，新增 hookModel（hook.model ?? getSmallFastModel）统一用于截断预算与 options.model，并新增 groupMessagesByTurn / estimateTurnTokens / truncateStopHookTranscript。见 notes R20。",
+      "srcEvidence": {
+        "files": ["src/utils/hooks/execPromptHook.ts"],
+        "symbols": ["truncateStopHookTranscript", "groupMessagesByTurn", "execPromptHook"]
+      }
     }
   ]
 }

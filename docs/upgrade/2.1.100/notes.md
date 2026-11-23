@@ -166,3 +166,18 @@ compaction 的摘要走 prompt-cache 共享分支：`streamCompactSummary` 用 `
 上游 v100（`Bc1`）改为：`parentSignal` 已 abort 时直接 `controller.abort`，否则注册 `{ once: true }` 监听并常驻到 response 生命周期；`finally` 只 `clearTimeout`，不再 `removeEventListener`。这样重连的 abort 能真正取消仍在传输的 body 并释放缓冲。移植到 `src/services/mcp/client.ts` 的 `wrapFetchWithTimeout`（外层 `if (parentSignal)` 收窄，避免断言；删掉旧的 `abort`/`cleanup` 帮助函数）。
 
 验证：typecheck/lint + bundle 对拍（v94 成功路径 `removeEventListener`，v100 改为 `once` + `finally{clearTimeout}`）。证据：`bundle:6894457`（`Bc1` 标识符起点）、`bundle:6894848`（`{ once:!0 }` 的 `once`）。
+
+### R20：Stop 提示词钩子长会话截断 + 评估器错误文案（2.1.98 #21/#87）
+
+Stop / SubagentStop 的提示词钩子（prompt hook）会把整段会话 transcript 连同判定 prompt 一起交给小/快模型评估，长会话直接撑爆评估模型上下文，钩子报错而非给出判定（#21）；评估器自身返回 API 错误（如溢出）时，原实现把错误正文当模型输出送进 JSON 解析，最终只显示 `JSON validation failed`，看不出真实原因（#87）。
+
+上游 v100（`drK`）两处改动：
+
+1. **截断 transcript**（`nlY`）：预算 `budget = floor((has1mContext(model) ? 1e6 : 200k) * 0.7)`（`dlY=0.7`）。先 `tokenCountFromLastAPIResponse(messages) <= budget` 快判，未超则原样返回。超出时按 `CQ8` 以 assistant `message.id` 为界把消息切成「轮」（新的 assistant id 且当前轮非空即开新轮，其余消息归入其所在轮），再从最近一轮向前累加 `llY` 估算 token，保留能放进 budget 的最近若干整轮（至少保留最近一轮，向后更早的只要加上会超 budget 就停）。丢弃了前缀时在最前面插入一条说明用 `createUserMessage`，并 `logForDebugging` + `logEvent('tengu_hook_prompt_transcript_truncated', {droppedMessages, keptMessages, budget, evaluatorModel})`。
+2. **评估器 API 错误**：`cleanupSignal()` 后判断 `response.isApiErrorMessage`，取 `extractTextContent(...).trim()` 作为 `non_blocking_error` 的 `stderr`（`Hook evaluator API error: …`）、`stdout:''`、`exitCode:1`，并 `logForDebugging(..., { level: 'error' })`，不再把错误正文当正常响应解析。
+
+移植到 `src/utils/hooks/execPromptHook.ts`：引入 `groupMessagesByTurn`（CQ8）/ `estimateTurnTokens`（llY，assistant/user 用 `roughTokenCountEstimationForMessage`，其余用 `jsonStringify(m).length/4` 后 `Math.ceil`）/ `truncateStopHookTranscript`（nlY）；把 `hook.model ?? getSmallFastModel()` 提取为 `hookModel`，同时用于截断预算与 `options.model`；`messages` 非空时改为 `[...truncateStopHookTranscript(messages, hookModel), userMessage]`；在 `cleanupSignal()` 之后、正常文本提取之前插入 `isApiErrorMessage` 守卫。
+
+差异说明：`llY` 对 attachment 等非 assistant/user 类型，上游用 `jsonStringify(message).length/4`，本仓库对 assistant/user 用 `roughTokenCountEstimationForMessage`（内部即 `roughTokenCountEstimationForContent`），语义等价；非 assistant/user 走 `jsonStringify(...)/4` 与上游一致。`evaluatorModel` 是字符串，按仓库遥测边界 `as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS` 收窄。
+
+该函数依赖 `queryModelWithoutStreaming`（真实模型调用），仓库无 hook 单测；截断/分轮是纯逻辑，本轮以 typecheck/lint 与 bundle 对拍钉住，未新增单测。证据：`bundle:11670571`（`nlY` 标识符起点）、`bundle:11668445`（`drK` 内 `T.isApiErrorMessage` 标识符起点）、`bundle:11668509`（`Hooks: prompt-hook evaluator API error: ` 字面量）。
