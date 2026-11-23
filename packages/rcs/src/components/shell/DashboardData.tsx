@@ -44,6 +44,8 @@ interface DashboardDataValue {
   openArchive: (target: ArchiveSessionTarget, onArchived?: () => void) => void
   /** 恢复已归档会话；失败时抛出错误，由调用方按入口展示。 */
   restoreSession: (id: string) => Promise<void>
+  /** 显式切换某会话的已读状态；成功后重新拉取列表。失败时抛出错误。 */
+  setSessionRead: (id: string, action: 'read' | 'unread') => Promise<void>
 }
 
 const DashboardDataContext = createContext<DashboardDataValue | undefined>(undefined)
@@ -130,6 +132,14 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     [api, load],
   )
 
+  const setSessionRead = useCallback(
+    async (id: string, action: 'read' | 'unread'): Promise<void> => {
+      await api.post(`/web/sessions/${encodeURIComponent(id)}/read`, { action })
+      void load()
+    },
+    [api, load],
+  )
+
   const openArchive = useCallback((target: ArchiveSessionTarget, onArchived?: () => void) => {
     archiveDoneRef.current = onArchived ?? null
     setArchiveTarget(target)
@@ -208,6 +218,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       createSession,
       openArchive,
       restoreSession,
+      setSessionRead,
     }),
     [
       sessions,
@@ -220,6 +231,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       createSession,
       openArchive,
       restoreSession,
+      setSessionRead,
     ],
   )
 

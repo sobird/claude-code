@@ -1,6 +1,6 @@
 'use client'
 
-import { Archive, ArchiveRestore } from 'lucide-react'
+import { Archive, ArchiveRestore, Mail, MailOpen } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 
@@ -28,10 +28,14 @@ interface SessionListProps {
   onRestore?: (session: SessionSummary) => void
   /** 正在恢复的会话 id；该行按钮在请求期间禁用。 */
   restoringId?: string
+  /** 提供时非 awaiting 行悬停显示"标为已读/未读"。 */
+  onSetRead?: (session: SessionSummary, action: 'read' | 'unread') => void
+  /** 正在写入已读状态的会话 id；该行按钮在请求期间禁用。 */
+  markingId?: string
 }
 
 /** Newest-first session rows; each links to `/<session id>`. */
-export function SessionList({ sessions, onArchive, onRestore, restoringId }: SessionListProps) {
+export function SessionList({ sessions, onArchive, onRestore, restoringId, onSetRead, markingId }: SessionListProps) {
   const t = useTranslations('session')
   const tAwaiting = useTranslations('session.awaiting')
   const tArchive = useTranslations('session.archive')
@@ -51,7 +55,11 @@ export function SessionList({ sessions, onArchive, onRestore, restoringId }: Ses
         const awaiting = session.awaiting
         const showUnread = face === 'unread'
         return (
-          <div key={session.id} className={cx(styles.row, face === 'awaiting' && styles.rowAwaiting)} data-face={face}>
+          <div
+            key={session.id}
+            className={cx(styles.row, face === 'unread' && styles.rowUnread, face === 'awaiting' && styles.rowAwaiting)}
+            data-face={face}
+          >
             <Link href={`/${session.id}`} className={styles.rowLink} title={awaiting?.description ?? undefined}>
               <div className={styles.rowBody}>
                 <div className={cx(styles.title, showUnread && styles.titleUnread)}>
@@ -80,6 +88,35 @@ export function SessionList({ sessions, onArchive, onRestore, restoringId }: Ses
                 <span className={styles.date}>{formatEpochSeconds(session.updated_at, locale)}</span>
               </div>
             </Link>
+            {onSetRead && face !== 'awaiting' ? (
+              <div className={styles.rowActions}>
+                {session.unread ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t('list.markRead')}
+                    title={t('list.markRead')}
+                    disabled={markingId === session.id}
+                    onClick={() => onSetRead(session, 'read')}
+                  >
+                    <MailOpen className={styles.actionIcon} />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t('list.markUnread')}
+                    title={t('list.markUnread')}
+                    disabled={markingId === session.id}
+                    onClick={() => onSetRead(session, 'unread')}
+                  >
+                    <Mail className={styles.actionIcon} />
+                  </Button>
+                )}
+              </div>
+            ) : null}
             {onArchive ? (
               <Button
                 type="button"

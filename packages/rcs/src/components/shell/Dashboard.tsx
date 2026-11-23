@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -12,7 +12,7 @@ import { useDashboardData } from './DashboardData'
 import { EnvironmentList } from './EnvironmentList'
 import { NewSessionDialog } from './NewSessionDialog'
 import { selectVisibleEnvironments, selectVisibleSessions } from './selectors'
-import { splitAwaiting } from './session-status'
+import { sessionCounts, splitAwaiting } from './session-status'
 import { SessionList } from './SessionList'
 import { toOwnedEnvironments, toOwnedSessions, type CreatedSession, type DashboardUser } from './types'
 
@@ -60,11 +60,14 @@ export function Dashboard({ user }: { user: DashboardUser }) {
     createSession,
     openArchive,
     restoreSession,
+    setSessionRead,
   } = useDashboardData()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [restoringId, setRestoringId] = useState<string | null>(null)
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const [archivedExpanded, setArchivedExpanded] = useState(false)
+  const [markingId, setMarkingId] = useState<string | null>(null)
+  const [rowError, setRowError] = useState<string | null>(null)
 
   const visibleSessions = selectVisibleSessions(toOwnedSessions(sessions), user)
   // “等你处理”的会话从常规分组里抽出来置顶，避免被埋在未认领/已认领列表里。
@@ -76,9 +79,46 @@ export function Dashboard({ user }: { user: DashboardUser }) {
   // 归档时刷新过 updated_at，而归档期间不再写入，所以列表本身就是归档时间倒序。
   const archivedList = archivedExpanded ? archivedVisible : archivedVisible.slice(0, ARCHIVED_PREVIEW_COUNT)
 
+  const counts = sessionCounts(visibleSessions)
+  const attention = counts.awaiting + counts.unread
+
+  // 标签页隐藏时把"需要你处理"的会话数写进标题，切回来之前也能看到。
+  useEffect(() => {
+    const base = document.title
+    let applied = false
+    const sync = () => {
+      const show = document.visibilityState === 'hidden' && attention > 0
+      if (show && !applied) {
+        document.title = `(${attention}) ${base}`
+        applied = true
+      } else if (!show && applied) {
+        document.title = base
+        applied = false
+      }
+    }
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      document.removeEventListener('visibilitychange', sync)
+      if (applied) document.title = base
+    }
+  }, [attention])
+
   function handleCreated(session: CreatedSession): void {
     setDialogOpen(false)
     router.push(`/${session.id}`)
+  }
+
+  async function handleSetRead(session: { id: string }, action: 'read' | 'unread'): Promise<void> {
+    setMarkingId(session.id)
+    setRowError(null)
+    try {
+      await setSessionRead(session.id, action)
+    } catch (markFailure) {
+      setRowError(describeError(markFailure, 'session.list.readStateFailed'))
+    } finally {
+      setMarkingId(null)
+    }
   }
 
   async function handleRestore(session: { id: string }): Promise<void> {
@@ -109,6 +149,12 @@ export function Dashboard({ user }: { user: DashboardUser }) {
         </div>
       ) : null}
 
+      {rowError ? (
+        <div role="alert" className={styles.errorBanner}>
+          <span>{rowError}</span>
+        </div>
+      ) : null}
+
       {awaitingSessions.length > 0 ? (
         <section aria-labelledby="awaiting-heading" className={styles.section}>
           <div className={styles.intro}>
@@ -117,7 +163,12 @@ export function Dashboard({ user }: { user: DashboardUser }) {
             </h2>
             <p className={styles.muted}>{t('awaiting.description')}</p>
           </div>
-          <SessionList sessions={awaitingSessions} onArchive={openArchive} />
+          <SessionList
+            sessions={awaitingSessions}
+            onArchive={openArchive}
+            onSetRead={handleSetRead}
+            markingId={markingId ?? undefined}
+          />
         </section>
       ) : null}
 
@@ -146,7 +197,12 @@ export function Dashboard({ user }: { user: DashboardUser }) {
         ) : error && visibleSessions.length === 0 ? null : visibleSessions.length === 0 ? (
           <CliHint />
         ) : claimedSessions.length === 0 ? null : (
-          <SessionList sessions={claimedSessions} onArchive={openArchive} />
+          <SessionList
+            sessions={claimedSessions}
+            onArchive={openArchive}
+            onSetRead={handleSetRead}
+            markingId={markingId ?? undefined}
+          />
         )}
       </section>
 
@@ -158,7 +214,12 @@ export function Dashboard({ user }: { user: DashboardUser }) {
             </h2>
             <p className={styles.muted}>{t('unclaimed.description')}</p>
           </div>
-          <SessionList sessions={unclaimedSessions} onArchive={openArchive} />
+          <SessionList
+            sessions={unclaimedSessions}
+            onArchive={openArchive}
+            onSetRead={handleSetRead}
+            markingId={markingId ?? undefined}
+          />
         </section>
       ) : null}
 

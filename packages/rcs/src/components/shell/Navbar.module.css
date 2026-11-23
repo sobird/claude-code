@@ -36,10 +36,33 @@
   flex-shrink: 0;
 }
 
+.menuButton {
+  position: relative;
+}
+
 @media (min-width: 48rem) {
   .menuButton {
     display: none;
   }
+}
+
+/* "需要你处理"的会话数：贴在会话抽屉按钮右上角。 */
+.attentionBadge {
+  position: absolute;
+  top: -0.125rem;
+  right: -0.125rem;
+  display: flex;
+  min-width: 1rem;
+  height: 1rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: var(--color-status-warning);
+  padding-inline: 0.25rem;
+  font-size: 0.625rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--color-text-inverted);
 }
 
 .icon {
@@ -194,4 +217,10 @@
 
 .drawerBody {
   max-height: 60vh;
+}
+
+.drawerError {
+  font-size: 0.75rem;
+  line-height: calc(1.25 / 0.75);
+  color: var(--color-status-error);
 }

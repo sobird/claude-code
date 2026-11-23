@@ -34,6 +34,21 @@ export function sortSessions<T extends SessionSummary>(sessions: readonly T[]): 
   return sessions.toSorted(compareSessions)
 }
 
+/**
+ * 角标用的计数：与 `sessionFace` 同一口径，awaiting 优先于 unread，
+ * 所以两者互斥，合计就是"需要你处理"的会话数。
+ */
+export function sessionCounts(sessions: readonly SessionSummary[]): { awaiting: number; unread: number } {
+  let awaiting = 0
+  let unread = 0
+  for (const session of sessions) {
+    const face = sessionFace(session)
+    if (face === 'awaiting') awaiting += 1
+    else if (face === 'unread') unread += 1
+  }
+  return { awaiting, unread }
+}
+
 /** 拆出"需要你处理"分组，其余保持原顺序。 */
 export function splitAwaiting<T extends SessionSummary>(
   sessions: readonly T[],

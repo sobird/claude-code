@@ -38,7 +38,8 @@
       "offline": "离线"
     },
     "defaultSessionTitle": "新会话",
-    "defaultApiKeyName": "API 密钥"
+    "defaultApiKeyName": "API 密钥",
+    "attentionCount": "有 {count} 个会话需要处理"
   },
   "dashboard": {
     "description": "活跃的环境以及你的 Claude Code 会话。",
@@ -86,7 +87,10 @@
   "session": {
     "list": {
       "empty": "暂无会话。",
-      "unread": "有新结果"
+      "unread": "有新结果",
+      "markRead": "标为已读",
+      "markUnread": "标为未读",
+      "readStateFailed": "已读状态更新失败"
     },
     "awaiting": {
       "permission": "待审批",

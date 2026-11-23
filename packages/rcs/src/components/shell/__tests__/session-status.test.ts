@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { compareSessions, sessionFace, splitAwaiting, sortSessions } from '../session-status'
+import { compareSessions, sessionCounts, sessionFace, splitAwaiting, sortSessions } from '../session-status'
 import type { SessionSummary } from '../types'
 
 let seq = 0
@@ -59,6 +59,19 @@ describe('session presentation', () => {
     const older = session({ updated_at: 10 })
     const newer = session({ updated_at: 20 })
     expect(compareSessions(newer, older)).toBeLessThan(0)
+  })
+
+  test('sessionCounts counts awaiting and unread without double counting', () => {
+    const awaiting = session({
+      unread: true,
+      awaiting: { kind: 'permission', tool_name: 'Bash', description: null },
+    })
+    const unread = session({ unread: true })
+    const running = session({ status: 'running' })
+    const idle = session()
+
+    expect(sessionCounts([awaiting, unread, running, idle])).toEqual({ awaiting: 1, unread: 1 })
+    expect(sessionCounts([])).toEqual({ awaiting: 0, unread: 0 })
   })
 
   test('splitAwaiting separates blocking sessions without reordering the rest', () => {

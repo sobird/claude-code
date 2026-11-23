@@ -18,9 +18,11 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { ScrollArea } from '@/components/ui/ScrollArea'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
 
 import { useDashboardData } from './DashboardData'
 import { selectVisibleSessions } from './selectors'
+import { sessionCounts } from './session-status'
 import { SessionList } from './SessionList'
 import { toOwnedSessions, type DashboardUser } from './types'
 
@@ -57,11 +59,28 @@ function BrandMark() {
 
 /** Sticky top bar: brand, connection badge, theme toggle, and account menu. */
 export function Navbar({ user, signOutAction }: NavbarProps) {
-  const { sessions, connection, openArchive } = useDashboardData()
+  const { sessions, connection, openArchive, setSessionRead } = useDashboardData()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [markingId, setMarkingId] = useState<string | null>(null)
+  const [drawerError, setDrawerError] = useState<string | null>(null)
   const t = useTranslations('common')
+  const describeError = useApiErrorMessage()
 
   const visibleSessions = selectVisibleSessions(toOwnedSessions(sessions), user)
+  const counts = sessionCounts(visibleSessions)
+  const attention = counts.awaiting + counts.unread
+
+  async function handleSetRead(session: { id: string }, action: 'read' | 'unread'): Promise<void> {
+    setMarkingId(session.id)
+    setDrawerError(null)
+    try {
+      await setSessionRead(session.id, action)
+    } catch (markFailure) {
+      setDrawerError(describeError(markFailure, 'session.list.readStateFailed'))
+    } finally {
+      setMarkingId(null)
+    }
+  }
   const initial = (user.name || '?').charAt(0).toUpperCase()
   const roleLabel = user.role === 'admin' || user.role === 'member' ? t(`role.${user.role}`) : user.role
 
@@ -75,9 +94,14 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
             size="icon-sm"
             className={styles.menuButton}
             onClick={() => setDrawerOpen(true)}
-            aria-label={t('openSessions')}
+            aria-label={attention > 0 ? t('attentionCount', { count: attention }) : t('openSessions')}
           >
             <Menu className={styles.icon} />
+            {attention > 0 ? (
+              <span className={styles.attentionBadge} aria-hidden="true">
+                {attention > 99 ? '99+' : attention}
+              </span>
+            ) : null}
           </Button>
 
           <Link href="/" className={styles.brand}>
@@ -142,6 +166,11 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
             <DialogTitle className={styles.drawerTitle}>{t('sessions')}</DialogTitle>
             <DialogDescription className={styles.drawerDescription}>{t('sessionsDescription')}</DialogDescription>
           </DialogHeader>
+          {drawerError ? (
+            <p role="alert" className={styles.drawerError}>
+              {drawerError}
+            </p>
+          ) : null}
           <ScrollArea className={styles.drawerBody}>
             <SessionList
               sessions={visibleSessions}
@@ -149,6 +178,8 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
                 setDrawerOpen(false)
                 openArchive(session)
               }}
+              onSetRead={handleSetRead}
+              markingId={markingId ?? undefined}
             />
           </ScrollArea>
         </DialogContent>

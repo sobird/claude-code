@@ -33,6 +33,32 @@
   background-color: var(--color-surface-2);
 }
 
+/* 未读：极轻的品牌色底，与标题加粗、圆点一起提示，不只靠单一颜色。 */
+.rowUnread {
+  background-color: color-mix(in oklab, var(--color-brand) 7%, var(--color-surface-1));
+}
+
+/* 已读切换按钮默认隐藏，悬停或键盘聚焦时出现；触屏设备始终可见。 */
+.rowActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.125rem;
+  opacity: 0;
+  transition: opacity 150ms;
+}
+
+.row:hover .rowActions,
+.row:focus-within .rowActions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .rowActions {
+    opacity: 1;
+  }
+}
+
 .rowLink {
   display: flex;
   flex: 1 1 0%;
@@ -54,7 +80,8 @@
   flex-shrink: 0;
 }
 
-.archiveIcon {
+.archiveIcon,
+.actionIcon {
   width: 1rem;
   height: 1rem;
 }

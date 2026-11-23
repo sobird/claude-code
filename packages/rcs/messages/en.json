@@ -38,7 +38,8 @@
       "offline": "Offline"
     },
     "defaultSessionTitle": "New Session",
-    "defaultApiKeyName": "API key"
+    "defaultApiKeyName": "API key",
+    "attentionCount": "{count, plural, one {# session needs you} other {# sessions need you}}"
   },
   "dashboard": {
     "description": "Active environments and your Claude Code sessions.",
@@ -86,7 +87,10 @@
   "session": {
     "list": {
       "empty": "No sessions yet.",
-      "unread": "New result"
+      "unread": "New result",
+      "markRead": "Mark as read",
+      "markUnread": "Mark as unread",
+      "readStateFailed": "Couldn't update the read state"
     },
     "awaiting": {
       "permission": "Needs approval",
