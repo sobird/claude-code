@@ -32,7 +32,8 @@ import { createBashShellProvider } from './shell/bashProvider.js'
 import { getCachedPowerShellPath } from './shell/powershellDetection.js'
 import { createPowerShellProvider } from './shell/powershellProvider.js'
 import type { ShellProvider, ShellType } from './shell/shellProvider.js'
-import { subprocessEnv } from './subprocessEnv.js'
+import { enforceScriptCaps, subprocessEnv } from './subprocessEnv.js'
+import { getTraceparent } from './telemetry/sessionTracing.js'
 import { posixPathToWindowsPath } from './windowsPaths.js'
 
 const DEFAULT_TIMEOUT = 30 * 60 * 1000 // 30 minutes
@@ -175,6 +176,8 @@ export async function exec(
   const { timeout, onProgress, preventCwdChanges, shouldUseSandbox, shouldAutoBackground, onStdout } = options ?? {}
   const commandTimeout = timeout || DEFAULT_TIMEOUT
 
+  enforceScriptCaps(command)
+
   const provider = await resolveProvider[shellType]()
 
   const id = Math.floor(Math.random() * 0x10000)
@@ -277,6 +280,9 @@ export async function exec(
     )
   }
 
+  // Parent the child's spans into Claude Code's trace tree when OTEL tracing is on.
+  const traceparent = getTraceparent()
+
   try {
     const childProcess = spawn(spawnBinary, shellArgs, {
       env: {
@@ -285,6 +291,7 @@ export async function exec(
         GIT_EDITOR: 'true',
         CLAUDECODE: '1',
         ...envOverrides,
+        ...(traceparent && { TRACEPARENT: traceparent }),
         ...(process.env.USER_TYPE === 'ant'
           ? {
               CLAUDE_CODE_SESSION_ID: getSessionId(),

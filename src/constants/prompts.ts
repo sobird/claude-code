@@ -385,11 +385,11 @@ export async function getSystemPrompt(
   tools: Tools,
   model: string,
   additionalWorkingDirectories?: string[],
+  options?: { excludeDynamicSections?: boolean },
 ): Promise<string[]> {
   if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
-    return [
-      `You are Claude Code, Anthropic's official CLI for Claude.\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`,
-    ]
+    const intro = `You are Claude Code, Anthropic's official CLI for Claude.`
+    return [options?.excludeDynamicSections ? intro : `${intro}\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`]
   }
 
   const cwd = getCwd()
@@ -421,9 +421,11 @@ ${CYBER_RISK_INSTRUCTION}`,
 
   const dynamicSections = [
     systemPromptSection('session_guidance', () => getSessionSpecificGuidanceSection(enabledTools, skillToolCommands)),
-    systemPromptSection('memory', () => loadMemoryPrompt()),
+    ...(options?.excludeDynamicSections ? [] : [systemPromptSection('memory', () => loadMemoryPrompt())]),
     systemPromptSection('ant_model_override', () => getAntModelOverrideSection()),
-    systemPromptSection('env_info_simple', () => computeSimpleEnvInfo(model, additionalWorkingDirectories)),
+    ...(options?.excludeDynamicSections
+      ? []
+      : [systemPromptSection('env_info_simple', () => computeSimpleEnvInfo(model, additionalWorkingDirectories))]),
     systemPromptSection('language', () => getLanguageSection(settings.language)),
     systemPromptSection('output_style', () => getOutputStyleSection(outputStyleConfig)),
     systemPromptSection('scratchpad', () => getScratchpadInstructions()),
@@ -567,6 +569,41 @@ export async function computeSimpleEnvInfo(modelId: string, additionalWorkingDir
   return [`# Environment`, `You have been invoked in the following environment: `, ...prependBullets(envItems)].join(
     `\n`,
   )
+}
+
+/**
+ * With --exclude-dynamic-system-prompt-sections, `getSystemPrompt` omits the
+ * per-machine `memory` and `env_info` sections so the system prompt prefix is
+ * identical across users (maximizing cross-user prompt-cache hits). This
+ * recomputes those omitted sections and splits each into `{ heading: body }`
+ * so the caller can re-inject them into the first user message.
+ */
+export async function getExcludedDynamicSectionsContent(
+  model: string,
+  additionalWorkingDirectories?: string[],
+): Promise<Record<string, string>> {
+  const [envInfo, memory] = await Promise.all([
+    computeSimpleEnvInfo(model, additionalWorkingDirectories),
+    loadMemoryPrompt(),
+  ])
+  const out: Record<string, string> = {}
+  for (const section of [envInfo, memory]) {
+    if (!section) continue
+    const { heading, body } = splitHeadingFromBody(section)
+    out[heading] = body
+  }
+  return out
+}
+
+function splitHeadingFromBody(section: string): { heading: string; body: string } {
+  const nl = section.indexOf('\n')
+  const firstLine = nl === -1 ? section : section.slice(0, nl)
+  if (!firstLine.startsWith('# ')) {
+    throw new Error(
+      `getExcludedDynamicSectionsContent: expected section body to start with a "# <heading>" line, got "${firstLine}"`,
+    )
+  }
+  return { heading: firstLine.slice(2), body: nl === -1 ? '' : section.slice(nl + 1) }
 }
 
 // @[MODEL LAUNCH]: Add a knowledge cutoff date for the new model.

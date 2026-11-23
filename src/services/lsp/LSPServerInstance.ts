@@ -161,6 +161,12 @@ export function createLSPServerInstance(name: string, config: ScopedLspServerCon
       const initParams: InitializeParams = {
         processId: process.pid,
 
+        // Identify ourselves so servers can log/attribute the client
+        clientInfo: {
+          name: 'Claude Code',
+          version: MACRO.VERSION,
+        },
+
         // Pass server-specific initialization options from plugin config
         // Required by vue-language-server, optional for others
         // Provide empty object as default to avoid undefined errors in servers

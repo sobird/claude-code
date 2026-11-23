@@ -10,7 +10,7 @@
  */
 
 import type { Command } from '../commands.js'
-import { getSystemPrompt } from '../constants/prompts.js'
+import { getExcludedDynamicSectionsContent, getSystemPrompt } from '../constants/prompts.js'
 import { getSystemContext, getUserContext } from '../context.js'
 import type { MCPServerConnection } from '../services/mcp/types.js'
 import type { AppState } from '../state/AppStateStore.js'
@@ -43,11 +43,13 @@ export async function fetchSystemPromptParts({
   mainLoopModel,
   additionalWorkingDirectories,
   customSystemPrompt,
+  excludeDynamicSections,
 }: {
   tools: Tools
   mainLoopModel: string
   additionalWorkingDirectories: string[]
   customSystemPrompt: string | undefined
+  excludeDynamicSections?: boolean
 }): Promise<{
   defaultSystemPrompt: string[]
   userContext: { [k: string]: string }
@@ -56,11 +58,51 @@ export async function fetchSystemPromptParts({
   const [defaultSystemPrompt, userContext, systemContext] = await Promise.all([
     customSystemPrompt !== undefined
       ? Promise.resolve([])
-      : getSystemPrompt(tools, mainLoopModel, additionalWorkingDirectories),
+      : getSystemPrompt(tools, mainLoopModel, additionalWorkingDirectories, { excludeDynamicSections }),
     getUserContext(),
     customSystemPrompt !== undefined ? Promise.resolve({}) : getSystemContext(),
   ])
+  if (excludeDynamicSections) {
+    // Move per-machine sections into the first user message so the system
+    // prompt prefix is byte-identical across users (cross-user cache reuse).
+    return {
+      defaultSystemPrompt,
+      ...(await foldDynamicSectionsIntoUserContext({
+        userContext,
+        systemContext,
+        mainLoopModel,
+        additionalWorkingDirectories,
+        useDefaultSystemPrompt: customSystemPrompt === undefined,
+      })),
+    }
+  }
   return { defaultSystemPrompt, userContext, systemContext }
+}
+
+/**
+ * With --exclude-dynamic-system-prompt-sections, fold the system context and
+ * the omitted dynamic sections (env info, memory) into the user context —
+ * rendered in the first user message — and leave the system context empty.
+ * The system prompt must already have been built with
+ * `{ excludeDynamicSections: true }` so it omits memory + env info.
+ *
+ * Shared by the SDK/print path (via fetchSystemPromptParts) and the interactive
+ * REPL, which assembles the three parts inline.
+ */
+export async function foldDynamicSectionsIntoUserContext(params: {
+  userContext: { [k: string]: string }
+  systemContext: { [k: string]: string }
+  mainLoopModel: string
+  additionalWorkingDirectories: string[]
+  useDefaultSystemPrompt: boolean
+}): Promise<{ userContext: { [k: string]: string }; systemContext: { [k: string]: string } }> {
+  const moved = params.useDefaultSystemPrompt
+    ? await getExcludedDynamicSectionsContent(params.mainLoopModel, params.additionalWorkingDirectories)
+    : {}
+  return {
+    userContext: { ...params.systemContext, ...params.userContext, ...moved },
+    systemContext: {},
+  }
 }
 
 /**
@@ -85,6 +127,7 @@ export async function buildSideQuestionFallbackParams({
   setAppState,
   customSystemPrompt,
   appendSystemPrompt,
+  excludeDynamicSections,
   thinkingConfig,
   agents,
 }: {
@@ -97,6 +140,7 @@ export async function buildSideQuestionFallbackParams({
   setAppState: (f: (prev: AppState) => AppState) => void
   customSystemPrompt: string | undefined
   appendSystemPrompt: string | undefined
+  excludeDynamicSections: boolean | undefined
   thinkingConfig: ThinkingConfig | undefined
   agents: AgentDefinition[]
 }): Promise<CacheSafeParams> {
@@ -108,6 +152,7 @@ export async function buildSideQuestionFallbackParams({
     mainLoopModel,
     additionalWorkingDirectories: Array.from(appState.toolPermissionContext.additionalWorkingDirectories.keys()),
     customSystemPrompt,
+    excludeDynamicSections,
   })
 
   const systemPrompt = asSystemPrompt([

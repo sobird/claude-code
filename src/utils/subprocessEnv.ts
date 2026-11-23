@@ -108,6 +108,67 @@ export function shouldUseMcpAllowlistEnv(): boolean {
   return process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent'
 }
 
+// CLAUDE_CODE_SCRIPT_CAPS: JSON object mapping a substring to the maximum number
+// of times across the session that Bash commands may contain it. Only enforced
+// when subprocess env scrubbing is on (the same untrusted-content gate), and it
+// pairs with subprocess isolation to stop data exfiltration via repeated writes.
+let scriptCaps: Record<string, number> | null | undefined
+const scriptCapCounts = new Map<string, number>()
+
+function parseScriptCaps(): Record<string, number> | null {
+  if (scriptCaps !== undefined) return scriptCaps
+  const raw = process.env.CLAUDE_CODE_SCRIPT_CAPS
+  if (!raw) {
+    scriptCaps = null
+    return scriptCaps
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const filtered: Record<string, number> = {}
+      for (const [key, value] of Object.entries(parsed)) {
+        if (typeof value === 'number' && Number.isFinite(value) && key.trim().length > 0) {
+          filtered[key] = value
+        }
+      }
+      scriptCaps = Object.keys(filtered).length > 0 ? filtered : null
+    } else {
+      scriptCaps = null
+    }
+  } catch {
+    scriptCaps = null
+  }
+  return scriptCaps
+}
+
+/**
+ * Enforce CLAUDE_CODE_SCRIPT_CAPS against a Bash command about to run. No-op
+ * unless subprocess env scrubbing is enabled and caps are configured. Throws
+ * when a substring's cumulative occurrence count exceeds its cap.
+ */
+export function enforceScriptCaps(command: string): void {
+  if (!shouldScrubSubprocessEnv()) return
+  const caps = parseScriptCaps()
+  if (!caps) return
+  for (const [pattern, cap] of Object.entries(caps)) {
+    const occurrences = command.split(pattern).length - 1
+    if (occurrences > 0) {
+      const total = (scriptCapCounts.get(pattern) ?? 0) + occurrences
+      scriptCapCounts.set(pattern, total)
+      if (total > cap) {
+        throw new Error(
+          `Script call limit exceeded: ${pattern} has been called ${total} times (cap: ${cap}). This limit prevents data exfiltration via repeated write operations in untrusted-input workflows.`,
+        )
+      }
+    }
+  }
+}
+
+export function _resetScriptCapsForTesting(): void {
+  scriptCapCounts.clear()
+  scriptCaps = undefined
+}
+
 export function subprocessEnv(): NodeJS.ProcessEnv {
   const proxyEnv = upstreamProxyEnv()
 

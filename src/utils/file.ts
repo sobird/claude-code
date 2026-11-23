@@ -8,6 +8,7 @@ import { logEvent } from 'src/services/analytics/index.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import { getCwd } from '../utils/cwd.js'
 import { logForDebugging } from './debug.js'
+import { isEnvTruthy } from './envUtils.js'
 import { isENOENT, isFsInaccessible } from './errors.js'
 import { detectEncodingForResolvedPath, detectLineEndingsForString, type LineEndingType } from './fileRead.js'
 import { fileReadCache } from './fileReadCache.js'
@@ -19,6 +20,27 @@ import { getPlatform } from './platform.js'
 export type File = {
   filename: string
   content: string
+}
+
+/**
+ * Perforce workspaces track writability: files not yet opened for edit
+ * (`p4 edit`) are read-only. When CLAUDE_CODE_PERFORCE_MODE is set we refuse to
+ * overwrite such files so edits go through Perforce instead of silently
+ * bypassing it.
+ */
+export const PERFORCE_READ_ONLY_MESSAGE =
+  'File is read-only — it has not been opened for edit in Perforce. Run `p4 edit <file>` to check it out, then retry. Do not chmod the file writable; that bypasses Perforce tracking.'
+
+export function isPerforceMode(): boolean {
+  return isEnvTruthy(process.env.CLAUDE_CODE_PERFORCE_MODE)
+}
+
+/**
+ * True when Perforce mode is on and the file is missing its owner-write bit
+ * (0o200), i.e. it has not been opened for edit.
+ */
+export function isPerforceReadOnly(mode: number): boolean {
+  return isPerforceMode() && (mode & 0o200) === 0
 }
 
 /**

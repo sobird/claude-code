@@ -392,6 +392,7 @@ export async function runHeadless(
     taskBudget: { total: number } | undefined
     systemPrompt: string | undefined
     appendSystemPrompt: string | undefined
+    excludeDynamicSystemPromptSections: boolean | undefined
     userSpecifiedModel: string | undefined
     fallbackModel: string | undefined
     teleport: string | true | null | undefined
@@ -878,6 +879,7 @@ function runHeadlessStreaming(
     taskBudget: { total: number } | undefined
     systemPrompt: string | undefined
     appendSystemPrompt: string | undefined
+    excludeDynamicSystemPromptSections: boolean | undefined
     userSpecifiedModel: string | undefined
     fallbackModel: string | undefined
     replayUserMessages?: boolean | undefined
@@ -1891,6 +1893,7 @@ function runHeadlessStreaming(
               },
               customSystemPrompt: options.systemPrompt,
               appendSystemPrompt: options.appendSystemPrompt,
+              excludeDynamicSystemPromptSections: options.excludeDynamicSystemPromptSections,
               getAppState,
               setAppState,
               abortController,
@@ -2609,6 +2612,7 @@ function runHeadlessStreaming(
                 agentDefinitions: appState.agentDefinitions,
                 customSystemPrompt: options.systemPrompt,
                 appendSystemPrompt: options.appendSystemPrompt,
+                excludeDynamicSections: options.excludeDynamicSystemPromptSections,
               },
             })
             sendControlResponseSuccess(message, { ...data })
@@ -3387,6 +3391,7 @@ function runHeadlessStreaming(
                     setAppState,
                     customSystemPrompt: options.systemPrompt,
                     appendSystemPrompt: options.appendSystemPrompt,
+                    excludeDynamicSections: options.excludeDynamicSystemPromptSections,
                     thinkingConfig: options.thinkingConfig,
                     agents: currentAgents,
                   })

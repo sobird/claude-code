@@ -1318,6 +1318,12 @@ async function run(): Promise<CommanderCommand> {
         .hideHelp(),
     )
     .addOption(
+      new Option(
+        '--exclude-dynamic-system-prompt-sections',
+        'Move per-machine sections (cwd, env info, memory paths, git status) from the system prompt into the first user message. Improves cross-user prompt-cache reuse. Only applies with the default system prompt (ignored with --system-prompt).',
+      ).default(false),
+    )
+    .addOption(
       new Option('--permission-mode <mode>', 'Permission mode to use for the session')
         .argParser(String)
         .choices(PERMISSION_MODES),
@@ -3387,6 +3393,7 @@ async function run(): Promise<CommanderCommand> {
             taskBudget: options.taskBudget ? { total: options.taskBudget } : undefined,
             systemPrompt,
             appendSystemPrompt,
+            excludeDynamicSystemPromptSections: options.excludeDynamicSystemPromptSections,
             userSpecifiedModel: effectiveModel,
             fallbackModel: userSpecifiedFallbackModel,
             teleport,

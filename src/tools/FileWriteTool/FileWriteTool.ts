@@ -21,7 +21,12 @@ import { logForDebugging } from '../../utils/debug.js'
 import { countLinesChanged, getPatchFromContents } from '../../utils/diff.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { isENOENT } from '../../utils/errors.js'
-import { getFileModificationTime, writeTextContent } from '../../utils/file.js'
+import {
+  getFileModificationTime,
+  isPerforceReadOnly,
+  PERFORCE_READ_ONLY_MESSAGE,
+  writeTextContent,
+} from '../../utils/file.js'
 import { fileHistoryEnabled, fileHistoryTrackEdit } from '../../utils/fileHistory.js'
 import { logFileOperation } from '../../utils/fileOperationAnalytics.js'
 import { readFileSyncWithMetadata } from '../../utils/fileRead.js'
@@ -185,6 +190,9 @@ export const FileWriteTool = buildTool({
     try {
       const fileStat = await fs.stat(fullFilePath)
       fileMtimeMs = fileStat.mtimeMs
+      if (isPerforceReadOnly(fileStat.mode)) {
+        return { result: false, message: PERFORCE_READ_ONLY_MESSAGE, errorCode: 6 }
+      }
     } catch (e) {
       if (isENOENT(e)) {
         return { result: true }

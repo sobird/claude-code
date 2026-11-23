@@ -26,6 +26,7 @@ type CollectContextDataInput = {
     agentDefinitions: AgentDefinitionsResult
     customSystemPrompt?: string
     appendSystemPrompt?: string
+    excludeDynamicSections?: boolean
   }
 }
 
@@ -33,7 +34,7 @@ export async function collectContextData(context: CollectContextDataInput): Prom
   const {
     messages,
     getAppState,
-    options: { mainLoopModel, tools, agentDefinitions, customSystemPrompt, appendSystemPrompt },
+    options: { mainLoopModel, tools, agentDefinitions, customSystemPrompt, appendSystemPrompt, excludeDynamicSections },
   } = context
 
   let apiView = getMessagesAfterCompactBoundary(messages)
@@ -60,6 +61,7 @@ export async function collectContextData(context: CollectContextDataInput): Prom
     { options: { customSystemPrompt, appendSystemPrompt } } as Pick<ToolUseContext, 'options'>,
     undefined, // mainThreadAgentDefinition
     apiView, // original messages for API usage extraction
+    excludeDynamicSections,
   )
 }
 

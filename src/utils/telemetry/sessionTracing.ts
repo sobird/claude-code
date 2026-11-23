@@ -728,6 +728,27 @@ export function getCurrentSpan(): Span | null {
   return toolContext.getStore()?.span ?? interactionContext.getStore()?.span ?? null
 }
 
+/**
+ * Build a W3C `traceparent` header (`00-<traceId>-<spanId>-<flags>`) for the
+ * span currently active in this async context.
+ *
+ * Exported so subprocesses spawned by the Bash tool can inherit `TRACEPARENT`
+ * and parent their spans into Claude Code's trace tree. Returns undefined when
+ * tracing is off, no span is active, or the trace id is the all-zero sentinel.
+ */
+export function getTraceparent(): string | undefined {
+  const span = getCurrentSpan()
+  if (!span) {
+    return undefined
+  }
+  const ctx = span.spanContext()
+  if (!ctx.traceId || ctx.traceId === '00000000000000000000000000000000') {
+    return undefined
+  }
+  const flags = (ctx.traceFlags & 0x01) === 0x01 ? '01' : '00'
+  return `00-${ctx.traceId}-${ctx.spanId}-${flags}`
+}
+
 export async function executeInSpan<T>(
   spanName: string,
   fn: (span: Span) => Promise<T>,

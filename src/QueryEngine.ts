@@ -103,6 +103,7 @@ export type QueryEngineConfig = {
   readFileCache: FileStateCache
   customSystemPrompt?: string
   appendSystemPrompt?: string
+  excludeDynamicSystemPromptSections?: boolean
   userSpecifiedModel?: string
   fallbackModel?: string
   thinkingConfig?: ThinkingConfig
@@ -245,6 +246,7 @@ export class QueryEngine {
       canUseTool,
       customSystemPrompt,
       appendSystemPrompt,
+      excludeDynamicSystemPromptSections,
       userSpecifiedModel,
       fallbackModel,
       jsonSchema,
@@ -309,6 +311,7 @@ export class QueryEngine {
         initialAppState.toolPermissionContext.additionalWorkingDirectories.keys(),
       ),
       customSystemPrompt: customPrompt,
+      excludeDynamicSections: excludeDynamicSystemPromptSections,
     })
     headlessProfilerCheckpoint('after_getSystemPrompt')
     const userContext = {
@@ -1242,6 +1245,7 @@ export async function* ask({
   setReadFileCache,
   customSystemPrompt,
   appendSystemPrompt,
+  excludeDynamicSystemPromptSections,
   userSpecifiedModel,
   fallbackModel,
   jsonSchema,
@@ -1272,6 +1276,7 @@ export async function* ask({
   mutableMessages?: Message[]
   customSystemPrompt?: string
   appendSystemPrompt?: string
+  excludeDynamicSystemPromptSections?: boolean
   userSpecifiedModel?: string
   fallbackModel?: string
   jsonSchema?: Record<string, unknown>
@@ -1301,6 +1306,7 @@ export async function* ask({
     readFileCache: cloneFileStateCache(getReadFileCache()),
     customSystemPrompt,
     appendSystemPrompt,
+    excludeDynamicSystemPromptSections,
     userSpecifiedModel,
     fallbackModel,
     thinkingConfig,
