@@ -1,6 +1,8 @@
 /**
- * Web environment listing. Members see their own active environments plus the
- * legacy unowned ones (unclaimed environments are shared); admins see all.
+ * Web environment listing. Members see their own live environments plus the legacy
+ * unowned ones (unclaimed environments are shared); admins see all. "Live" covers
+ * `active`/`disconnected`/`offline` so a reaped-but-alive worker keeps its row instead
+ * of flickering out of the list until its next poll.
  */
 
 import { Hono } from 'hono'
@@ -8,21 +10,21 @@ import { Hono } from 'hono'
 import type { AppEnv } from '@/auth/context'
 import type { EnvironmentRecord } from '@/contracts'
 import { legacyUserAuth } from '@/routes/common'
-import { listActiveEnvironments, toEnvironmentResponse } from '@/services/environment'
+import { listVisibleEnvironments, toEnvironmentResponse } from '@/services/environment'
 
 const app = new Hono<AppEnv>()
 
-/** GET /web/environments — Active environments visible to the caller. */
+/** GET /web/environments — Live environments visible to the caller, with their status. */
 app.get('/environments', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const user = c.get('user')
   let environments: EnvironmentRecord[]
   if (user.role === 'admin') {
-    environments = await listActiveEnvironments(repos, { isAdmin: true })
+    environments = await listVisibleEnvironments(repos, { isAdmin: true })
   } else {
     const byId = new Map<string, EnvironmentRecord>()
-    for (const record of await listActiveEnvironments(repos, { ownerUserId: user.id })) byId.set(record.id, record)
-    for (const record of await repos.environments.listActive()) {
+    for (const record of await listVisibleEnvironments(repos, { ownerUserId: user.id })) byId.set(record.id, record)
+    for (const record of await repos.environments.listVisible()) {
       if (record.ownerUserId === null) byId.set(record.id, record)
     }
     environments = [...byId.values()]

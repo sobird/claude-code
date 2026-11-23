@@ -1738,6 +1738,22 @@ describe('Web Environment Routes', () => {
     expect(envs[0].owner_user_id).toBe(s.member.id)
   })
 
+  test('GET /web/environments includes disconnected environments with their status', async () => {
+    const memberEnvRes = await app.request('/v1/environments/bridge', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ machine_name: 'member-mac' }),
+    })
+    const memberEnvId = (await resJson(memberEnvRes)).environment_id
+    await s.repos.environments.update(memberEnvId, { status: 'disconnected' })
+
+    const envs = (await resJson(await app.request('/web/environments', { headers: bearer(s.memberToken) }))) as Array<{
+      id: string
+      status: string
+    }>
+    expect(envs.find((env) => env.id === memberEnvId)?.status).toBe('disconnected')
+  })
+
   test('GET /web/environments shares unowned active environments with members', async () => {
     const memberEnvRes = await app.request('/v1/environments/bridge', {
       method: 'POST',

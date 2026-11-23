@@ -111,6 +111,33 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect(scoped).not.toContain(inactive.id)
     })
 
+    test('listVisible returns liveness statuses (active/disconnected/offline), excluding deregistered', async () => {
+      const owner = await repos.users.create({ username: 'env-visible-owner', passwordHash: 'x', role: 'member' })
+      const other = await repos.users.create({ username: 'env-visible-other', passwordHash: 'x', role: 'member' })
+      const active = await repos.environments.create({ ownerUserId: owner.id })
+      const disconnected = await repos.environments.create({ ownerUserId: owner.id })
+      const offline = await repos.environments.create({ ownerUserId: owner.id })
+      const foreign = await repos.environments.create({ ownerUserId: other.id })
+      const deregistered = await repos.environments.create({ ownerUserId: owner.id })
+      await repos.environments.update(disconnected.id, { status: 'disconnected' })
+      await repos.environments.update(offline.id, { status: 'offline' })
+      await repos.environments.update(deregistered.id, { status: 'deregistered' })
+
+      const all = (await repos.environments.listVisible()).map((env) => env.id)
+      expect(all).toContain(active.id)
+      expect(all).toContain(disconnected.id)
+      expect(all).toContain(offline.id)
+      expect(all).toContain(foreign.id)
+      expect(all).not.toContain(deregistered.id)
+
+      const scoped = (await repos.environments.listVisible({ ownerUserId: owner.id })).map((env) => env.id)
+      expect(scoped).toContain(active.id)
+      expect(scoped).toContain(disconnected.id)
+      expect(scoped).toContain(offline.id)
+      expect(scoped).not.toContain(foreign.id)
+      expect(scoped).not.toContain(deregistered.id)
+    })
+
     test('listByWorkerType returns all statuses, ordered, optionally scoped to an owner', async () => {
       const owner = await repos.users.create({ username: 'wt-owner', passwordHash: 'x', role: 'member' })
       const other = await repos.users.create({ username: 'wt-other', passwordHash: 'x', role: 'member' })

@@ -120,6 +120,14 @@ export interface EnvironmentRepository {
   update(id: string, patch: EnvironmentPatch): Promise<void>
   /** Active environments; scoped to `ownerUserId` when supplied. */
   listActive(options?: ListActiveEnvironmentsOptions): Promise<EnvironmentRecord[]>
+  /**
+   * Environments a user should still see in the UI — `active`, `disconnected`, and
+   * `offline`. The reaper flips a quiet worker to a liveness status without the
+   * environment going away, so listing only `active` makes rows flicker out and back.
+   * `deregistered` is a deliberate owner action and stays hidden. Scoped to `ownerUserId`
+   * when supplied.
+   */
+  listVisible(options?: ListActiveEnvironmentsOptions): Promise<EnvironmentRecord[]>
   /** Active environment owned by `ownerUserId`, or `null` (never another user's). */
   findReusable(input: FindReusableEnvironmentInput): Promise<EnvironmentRecord | null>
   /**

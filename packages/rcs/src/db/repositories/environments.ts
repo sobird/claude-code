@@ -19,6 +19,13 @@ import type { CreateEnvironmentInput, EnvironmentPatch, EnvironmentRepository } 
 /** Statuses a returning worker may reclaim; deregistered/archived ids are not reusable. */
 const REUSABLE_ENVIRONMENT_STATUSES = ['active', 'disconnected', 'offline']
 
+/**
+ * Statuses the web list shows. The reaper moves a quiet environment to `disconnected`
+ * (`offline` for ACP) without removing it, so these count as present; only the explicit
+ * `deregistered` action hides a row.
+ */
+const VISIBLE_ENVIRONMENT_STATUSES = ['active', 'disconnected', 'offline']
+
 export function createEnvironmentRepository(db: Database): EnvironmentRepository {
   return {
     async create(input) {
@@ -59,6 +66,18 @@ export function createEnvironmentRepository(db: Database): EnvironmentRepository
 
     async listActive(options) {
       const conditions = [eq(environments.status, 'active')]
+      if (options?.ownerUserId !== undefined) {
+        conditions.push(eq(environments.ownerUserId, options.ownerUserId))
+      }
+      return db
+        .select()
+        .from(environments)
+        .where(and(...conditions))
+        .orderBy(asc(environments.createdAt), asc(environments.id))
+    },
+
+    async listVisible(options) {
+      const conditions = [inArray(environments.status, VISIBLE_ENVIRONMENT_STATUSES)]
       if (options?.ownerUserId !== undefined) {
         conditions.push(eq(environments.ownerUserId, options.ownerUserId))
       }
@@ -155,6 +174,17 @@ export function createMemoryEnvironmentRepository(): EnvironmentRepository {
         .filter(
           (record) =>
             record.status === 'active' &&
+            (options?.ownerUserId === undefined || record.ownerUserId === options.ownerUserId),
+        )
+        .map(cloneEnvironment)
+        .toSorted((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
+    },
+
+    async listVisible(options) {
+      return [...byId.values()]
+        .filter(
+          (record) =>
+            VISIBLE_ENVIRONMENT_STATUSES.includes(record.status) &&
             (options?.ownerUserId === undefined || record.ownerUserId === options.ownerUserId),
         )
         .map(cloneEnvironment)

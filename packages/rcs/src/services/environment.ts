@@ -179,3 +179,18 @@ export async function listActiveEnvironments(
   }
   return repos.environments.listActive({ ownerUserId: options.ownerUserId })
 }
+
+/**
+ * Environments still shown in the UI (`active`/`disconnected`/`offline`). Used by the web
+ * list so a reaped-but-alive worker keeps its row with a status badge instead of vanishing
+ * and reappearing each time the disconnect threshold trips.
+ */
+export async function listVisibleEnvironments(
+  repos: Repositories,
+  options: ListActiveEnvironmentsOptions = {},
+): Promise<EnvironmentRecord[]> {
+  if (options.isAdmin || !options.ownerUserId) {
+    return repos.environments.listVisible()
+  }
+  return repos.environments.listVisible({ ownerUserId: options.ownerUserId })
+}

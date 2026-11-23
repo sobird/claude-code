@@ -34,7 +34,10 @@ const DEFAULT_POLL_TIMEOUT = 8
 const DEFAULT_HEARTBEAT_INTERVAL = 20
 const DEFAULT_JWT_EXPIRES_IN = 3600
 const DEFAULT_ENV_TOKEN_TTL = 2592000
-const DEFAULT_DISCONNECT_TIMEOUT = 300
+// The CLI bridge polls every 600s once its sessions are at capacity, so a 300s threshold
+// reaped a live worker between polls and made its environment flicker. Keep the default
+// comfortably above the at-capacity poll interval.
+const DEFAULT_DISCONNECT_TIMEOUT = 1200
 const DEFAULT_WS_IDLE_TIMEOUT = 30
 const DEFAULT_WS_KEEPALIVE_INTERVAL = 20
 const DEFAULT_EVENT_REPLAY_LIMIT = 5000
