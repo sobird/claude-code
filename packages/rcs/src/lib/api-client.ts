@@ -25,16 +25,22 @@ export interface ApiClient {
   upload: <T>(path: string, body: Blob, contentType?: string) => Promise<T>
 }
 
-/** Error thrown for non-2xx responses, carrying the HTTP status, message, and stable code. */
+/**
+ * Error thrown for non-2xx responses, carrying the HTTP status, message, stable code,
+ * and any structured `details` the gateway attached (e.g. the activity list behind a
+ * `409 session_active`).
+ */
 export class ApiError extends Error {
   readonly status: number
   readonly code?: string
+  readonly details?: unknown
 
-  constructor(status: number, message: string, code?: string) {
+  constructor(status: number, message: string, code?: string, details?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
+    this.details = details
   }
 }
 
@@ -58,10 +64,11 @@ export function getApiBaseUrl(): string {
   return ''
 }
 
-/** Stable code and/or human-readable message from either gateway error shape. */
+/** Stable code, human-readable message, and optional structured details. */
 export interface ExtractedApiError {
   code?: string
   message?: string
+  details?: unknown
 }
 
 /**
@@ -80,7 +87,7 @@ export function extractApiError(body: unknown): ExtractedApiError {
   }
 
   if (error && typeof error === 'object') {
-    const nested = error as { type?: unknown; message?: unknown; code?: unknown }
+    const nested = error as { type?: unknown; message?: unknown; code?: unknown; details?: unknown }
     const result: ExtractedApiError = {}
     const code =
       typeof nested.code === 'string' && nested.code.length > 0
@@ -90,6 +97,7 @@ export function extractApiError(body: unknown): ExtractedApiError {
           : undefined
     if (code !== undefined) result.code = code
     if (typeof nested.message === 'string' && nested.message.length > 0) result.message = nested.message
+    if (nested.details !== undefined) result.details = nested.details
     return result
   }
 
@@ -125,7 +133,7 @@ export function createApiClient({ getToken, refreshToken, baseUrl }: ApiClientOp
       const parsed = await parseBody(response)
       const extracted = extractApiError(parsed)
       const message = extracted.message ?? (response.statusText || `HTTP ${response.status}`)
-      throw new ApiError(response.status, message, extracted.code)
+      throw new ApiError(response.status, message, extracted.code, extracted.details)
     }
     return response
   }

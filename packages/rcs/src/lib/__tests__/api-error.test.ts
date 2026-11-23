@@ -23,6 +23,22 @@ describe('extractApiError', () => {
     expect(extractErrorMessage({ error: { type: 'x', message: 'm' } }, 'fallback')).toBe('m')
     expect(extractErrorMessage({}, 'fallback')).toBe('fallback')
   })
+
+  test('keeps nested details for structured errors', () => {
+    expect(
+      extractApiError({
+        error: { type: 'session_active', message: 'Session has active work', details: { activity: [] } },
+      }),
+    ).toEqual({ code: 'session_active', message: 'Session has active work', details: { activity: [] } })
+  })
+})
+
+describe('ApiError', () => {
+  test('carries optional structured details', () => {
+    const error = new ApiError(409, 'Session has active work', 'session_active', { activity: [] })
+    expect(error.details).toEqual({ activity: [] })
+    expect(new ApiError(409, 'm').details).toBeUndefined()
+  })
 })
 
 describe('errorTranslationKey', () => {

@@ -44,7 +44,7 @@ export function Dashboard({ user }: { user: DashboardUser }) {
   const router = useRouter()
   const t = useTranslations('dashboard')
   const tCommon = useTranslations('common')
-  const { sessions, environments, loading, error, refresh, createSession } = useDashboardData()
+  const { sessions, environments, loading, error, refresh, createSession, openArchive } = useDashboardData()
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const visibleSessions = selectVisibleSessions(toOwnedSessions(sessions), user)
@@ -98,7 +98,7 @@ export function Dashboard({ user }: { user: DashboardUser }) {
         ) : error && visibleSessions.length === 0 ? null : visibleSessions.length === 0 ? (
           <CliHint />
         ) : claimedSessions.length === 0 ? null : (
-          <SessionList sessions={claimedSessions} />
+          <SessionList sessions={claimedSessions} onArchive={openArchive} />
         )}
       </section>
 
@@ -110,7 +110,7 @@ export function Dashboard({ user }: { user: DashboardUser }) {
             </h2>
             <p className={styles.muted}>{t('unclaimed.description')}</p>
           </div>
-          <SessionList sessions={unclaimedSessions} />
+          <SessionList sessions={unclaimedSessions} onArchive={openArchive} />
         </section>
       ) : null}
 

@@ -1,0 +1,55 @@
+/* Breakpoints follow Tailwind defaults: sm = 40rem (640px). */
+
+.dialog {
+  border-radius: 1rem;
+  border-color: var(--color-border);
+  background-color: var(--color-surface-1);
+}
+
+@media (min-width: 40rem) {
+  .dialog {
+    max-width: 28rem;
+  }
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.description {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-muted);
+}
+
+.activity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0.75rem 0.75rem 0.75rem 2rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-2);
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-primary);
+}
+
+.activityItem {
+  list-style: disc;
+}
+
+.error {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--color-status-error) 30%, transparent);
+  background-color: color-mix(in oklab, var(--color-status-error) 10%, transparent);
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-status-error);
+}

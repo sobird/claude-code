@@ -13,6 +13,7 @@ export const KNOWN_ERROR_CODES = [
   'forbidden',
   'environment_forbidden',
   'session_closed',
+  'session_active',
   'user_not_found',
   'current_password_incorrect',
   'new_password_required',

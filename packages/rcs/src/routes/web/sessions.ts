@@ -14,6 +14,7 @@ import { isSessionClosedStatus, toWebSessionId } from '@/contracts'
 import type { SessionRecord } from '@/contracts'
 import { defaultSessionTitle, requestLocale } from '@/i18n/default-titles'
 import {
+  jsonError,
   legacyUserAuth,
   readJson,
   resolveDispatchEnvironment,
@@ -24,6 +25,7 @@ import {
 import { getAutomationStateSnapshot } from '@/services/automationState'
 import { connectPresence, setPresenceVisible } from '@/services/presence'
 import {
+  archiveSession,
   authorizeSessionWrite,
   createSession,
   getSession,
@@ -199,6 +201,28 @@ app.get('/sessions/:id/events', legacyUserAuth, async (c) => {
   const clientId = (c.req.query('client_id') ?? '').trim().slice(0, 128)
   const release = clientId ? connectPresence(owned, clientId) : undefined
   return createSSEStream(c, repos, owned, fromSeqNum, release)
+})
+
+/**
+ * POST /web/sessions/:id/archive — 归档会话；有活动时拒绝并返回活动清单。
+ *
+ * 与 v1 同语义：不带 `stop_activity` 时先做活动守卫，命中则 409 `session_active`
+ * 并在 `details.activity` 里列出占用项；带 `stop_activity: true` 时先写终态再停活动。
+ * 已归档会话重复归档是幂等的。
+ */
+app.post('/sessions/:id/archive', legacyUserAuth, async (c) => {
+  const repos = c.get('repos')
+  const access = await resolveAccessibleSession(repos, c.req.param('id'), c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? webNotFound(c) : webForbidden(c)
+
+  const body = await readJson(c)
+  const result = await archiveSession(repos, access.sessionId, { stopActivity: body.stop_activity === true })
+  if (!result.ok) {
+    return jsonError(c, 'session_active', 'Session has active work', 409, 'session_active', {
+      activity: result.activity,
+    })
+  }
+  return c.json({ status: 'ok' }, 200)
 })
 
 /** POST /web/sessions/:id/presence — Report whether this client can see the session. */

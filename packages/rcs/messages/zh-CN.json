@@ -77,6 +77,23 @@
     "list": {
       "empty": "暂无会话。"
     },
+    "archive": {
+      "action": "归档",
+      "title": "归档会话？",
+      "description": "归档“{title}”？归档后会话会离开仪表盘，且不能再接收新消息。",
+      "confirm": "归档",
+      "archiving": "正在归档…",
+      "activeTitle": "会话仍在活动",
+      "activeDescription": "停止下列活动并归档该会话？",
+      "kind": {
+        "work_item": "有进行中的工作项",
+        "bridge": "CLI 桥接仍连接",
+        "control": "有待处理的控制请求"
+      },
+      "stopAndArchive": "停止并归档",
+      "stopping": "正在停止…",
+      "failed": "归档会话失败。"
+    },
     "view": {
       "back": "返回仪表盘",
       "loading": {
@@ -529,6 +546,7 @@
       "forbidden": "你没有访问此资源的权限。",
       "environment_forbidden": "该环境属于其他用户。",
       "session_closed": "该会话已关闭。",
+      "session_active": "该会话仍有进行中的活动。",
       "user_not_found": "用户不存在。",
       "current_password_incorrect": "当前密码不正确。",
       "new_password_required": "需要提供新密码。",

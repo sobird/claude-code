@@ -1385,6 +1385,88 @@ describe('Web Session Routes', () => {
     expect((await resJson(res)).id).toBe(id)
   })
 
+  function canonicalSessionId(webId: string): string {
+    return webId.replace(/^session_/, 'cse_')
+  }
+
+  async function enqueueWorkFor(webId: string) {
+    const env = await s.repos.environments.create({ id: `env_${crypto.randomUUID()}` })
+    return await s.repos.workItems.enqueue({
+      environmentId: env.id,
+      sessionId: canonicalSessionId(webId),
+      secret: 's',
+    })
+  }
+
+  test('POST /web/sessions/:id/archive archives the session and drops it from the list', async () => {
+    const id = await createWebSession(s.memberToken)
+
+    const res = await app.request(`/web/sessions/${id}/archive`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(200)
+    expect(await resJson(res)).toEqual({ status: 'ok' })
+
+    const detail = await resJson(await app.request(`/web/sessions/${id}`, { headers: bearer(s.memberToken) }))
+    expect(detail.status).toBe('archived')
+
+    const all = (await resJson(await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }))) as Array<{
+      id: string
+    }>
+    expect(all.some((sess) => sess.id === id)).toBe(false)
+  })
+
+  test('POST /web/sessions/:id/archive returns 409 with the activity list while work is in flight', async () => {
+    const id = await createWebSession(s.memberToken)
+    const item = await enqueueWorkFor(id)
+
+    const res = await app.request(`/web/sessions/${id}/archive`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(409)
+    const body = await resJson(res)
+    expect(body.error.type).toBe('session_active')
+    expect(body.error.code).toBe('session_active')
+    expect(body.error.details.activity).toEqual([{ kind: 'work_item', id: item.id, label: 'Queued work item' }])
+    expect((await s.repos.sessions.getById(canonicalSessionId(id)))?.status).not.toBe('archived')
+  })
+
+  test('POST /web/sessions/:id/archive stops activity when stop_activity is true', async () => {
+    const id = await createWebSession(s.memberToken)
+    const item = await enqueueWorkFor(id)
+
+    const res = await app.request(`/web/sessions/${id}/archive`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ stop_activity: true }),
+    })
+    expect(res.status).toBe(200)
+    expect((await s.repos.workItems.getById(item.id))?.state).toBe('completed')
+    expect((await s.repos.sessions.getById(canonicalSessionId(id)))?.status).toBe('archived')
+  })
+
+  test('POST /web/sessions/:id/archive rejects another member session', async () => {
+    const id = await createWebSession(s.otherToken)
+
+    const res = await app.request(`/web/sessions/${id}/archive`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(403)
+    expect((await resJson(res)).error.type).toBe('forbidden')
+    expect((await s.repos.sessions.getById(canonicalSessionId(id)))?.status).not.toBe('archived')
+  })
+
+  test('POST /web/sessions/:id/archive returns 404 for an unknown session', async () => {
+    const res = await app.request('/web/sessions/session_missing/archive', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(404)
+  })
+
   test('GET /web/sessions/:id includes automation_state when present', async () => {
     const id = await createWebSession(s.memberToken)
     const canonical = id.replace(/^session_/, 'cse_')

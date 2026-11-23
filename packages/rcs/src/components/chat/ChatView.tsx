@@ -11,6 +11,7 @@
  */
 
 import {
+  Archive,
   ArrowDown,
   ArrowLeft,
   Gauge,
@@ -26,6 +27,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { memo, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
+import { useDashboardData } from '@/components/shell/DashboardData'
 import { StatusBadge } from '@/components/shell/StatusBadge'
 import { Button } from '@/components/ui/Button'
 import { isSessionClosedStatus } from '@/contracts'
@@ -192,7 +194,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const tCommon = useTranslations('common')
   const tChat = useTranslations('chat')
   const tShortcuts = useTranslations('chat.shortcuts')
+  const tArchive = useTranslations('session.archive')
   const describeError = useApiErrorMessage()
+  const { openArchive } = useDashboardData()
   const { token, refresh: refreshToken, error: tokenError } = useAccessToken()
   const tokenRef = useRef(token)
 
@@ -999,6 +1003,23 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             onSelect={handleModeSelect}
           />
           <StatusBadge status={displayStatus} />
+          {closed ? null : (
+            <button
+              type="button"
+              onClick={() =>
+                openArchive({ id: sessionId, title: session?.title ?? null }, () =>
+                  // 立即翻转本地状态；SSE 的 session_status archived 也会到达。
+                  setSession((prev) => (prev ? { ...prev, status: 'archived' } : prev)),
+                )
+              }
+              aria-label={tArchive('action')}
+              title={tArchive('action')}
+              data-testid="archive-session"
+              className={styles.iconButton}
+            >
+              <Archive className={styles.iconButtonIcon} />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {

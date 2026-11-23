@@ -16,7 +16,9 @@ import type { ConnectionState } from '@/components/ui/ConnectionStatus'
 import { useAccessToken } from '@/hooks/useAccessToken'
 import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
 import { createApiClient } from '@/lib/api-client'
+import { readSessionActivity, type SessionActivityItem } from '@/lib/session-activity'
 
+import { ArchiveSessionDialog, type ArchiveSessionTarget } from './ArchiveSessionDialog'
 import type { CreatedSession, EnvironmentSummary, SessionSummary } from './types'
 
 const POLL_INTERVAL_MS = 10_000
@@ -36,6 +38,8 @@ interface DashboardDataValue {
   connection: ConnectionState
   refresh: () => void
   createSession: (input: CreateSessionInput) => Promise<CreatedSession>
+  /** 打开共享的归档弹窗；`onArchived` 在归档成功后执行（例如详情页翻转本地状态）。 */
+  openArchive: (target: ArchiveSessionTarget, onArchived?: () => void) => void
 }
 
 const DashboardDataContext = createContext<DashboardDataValue | undefined>(undefined)
@@ -52,6 +56,12 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [connection, setConnection] = useState<ConnectionState>('connecting')
+
+  const [archiveTarget, setArchiveTarget] = useState<ArchiveSessionTarget | null>(null)
+  const [archiveActivity, setArchiveActivity] = useState<SessionActivityItem[] | null>(null)
+  const [archivePending, setArchivePending] = useState(false)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
+  const archiveDoneRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     tokenRef.current = token
@@ -105,6 +115,53 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     [api, load],
   )
 
+  const openArchive = useCallback((target: ArchiveSessionTarget, onArchived?: () => void) => {
+    archiveDoneRef.current = onArchived ?? null
+    setArchiveTarget(target)
+    setArchiveActivity(null)
+    setArchiveError(null)
+    setArchivePending(false)
+  }, [])
+
+  const closeArchive = useCallback(() => {
+    archiveDoneRef.current = null
+    setArchiveTarget(null)
+    setArchiveActivity(null)
+    setArchiveError(null)
+  }, [])
+
+  const submitArchive = useCallback(
+    async (stopActivity: boolean): Promise<void> => {
+      const target = archiveTarget
+      if (!target) return
+      setArchivePending(true)
+      setArchiveError(null)
+      try {
+        await api.post(
+          `/web/sessions/${encodeURIComponent(target.id)}/archive`,
+          stopActivity ? { stop_activity: true } : {},
+        )
+        const done = archiveDoneRef.current
+        archiveDoneRef.current = null
+        setArchiveTarget(null)
+        setArchiveActivity(null)
+        done?.()
+        void load()
+      } catch (submitError) {
+        // 409 session_active 变为“停止并归档”阶段；其他错误留在确认弹窗里。
+        const activity = readSessionActivity(submitError)
+        if (activity !== null) {
+          setArchiveActivity(activity)
+          return
+        }
+        setArchiveError(describeError(submitError, 'session.archive.failed'))
+      } finally {
+        setArchivePending(false)
+      }
+    },
+    [api, archiveTarget, describeError, load],
+  )
+
   useEffect(() => {
     if (token === null) {
       // The token hook reports failures once its first attempt settles; only
@@ -133,11 +190,24 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       connection,
       refresh,
       createSession,
+      openArchive,
     }),
-    [sessions, environments, loading, error, connection, refresh, createSession],
+    [sessions, environments, loading, error, connection, refresh, createSession, openArchive],
   )
 
-  return <DashboardDataContext.Provider value={value}>{children}</DashboardDataContext.Provider>
+  return (
+    <DashboardDataContext.Provider value={value}>
+      {children}
+      <ArchiveSessionDialog
+        target={archiveTarget}
+        activity={archiveActivity}
+        pending={archivePending}
+        error={archiveError}
+        onClose={closeArchive}
+        onSubmit={(stopActivity) => void submitArchive(stopActivity)}
+      />
+    </DashboardDataContext.Provider>
+  )
 }
 
 export function useDashboardData(): DashboardDataValue {

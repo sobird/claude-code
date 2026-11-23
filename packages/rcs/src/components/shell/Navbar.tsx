@@ -57,7 +57,7 @@ function BrandMark() {
 
 /** Sticky top bar: brand, connection badge, theme toggle, and account menu. */
 export function Navbar({ user, signOutAction }: NavbarProps) {
-  const { sessions, connection } = useDashboardData()
+  const { sessions, connection, openArchive } = useDashboardData()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const t = useTranslations('common')
 
@@ -143,7 +143,13 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
             <DialogDescription className={styles.drawerDescription}>{t('sessionsDescription')}</DialogDescription>
           </DialogHeader>
           <ScrollArea className={styles.drawerBody}>
-            <SessionList sessions={visibleSessions} />
+            <SessionList
+              sessions={visibleSessions}
+              onArchive={(session) => {
+                setDrawerOpen(false)
+                openArchive(session)
+              }}
+            />
           </ScrollArea>
         </DialogContent>
       </Dialog>

@@ -77,6 +77,23 @@
     "list": {
       "empty": "No sessions yet."
     },
+    "archive": {
+      "action": "Archive",
+      "title": "Archive session?",
+      "description": "Archive “{title}”? It will leave the dashboard and accept no new messages.",
+      "confirm": "Archive",
+      "archiving": "Archiving…",
+      "activeTitle": "Session has active work",
+      "activeDescription": "Stop the activity below and archive the session?",
+      "kind": {
+        "work_item": "Work item in flight",
+        "bridge": "CLI bridge connected",
+        "control": "Pending control request"
+      },
+      "stopAndArchive": "Stop and archive",
+      "stopping": "Stopping…",
+      "failed": "Couldn’t archive this session."
+    },
     "view": {
       "back": "Back to dashboard",
       "loading": {
@@ -529,6 +546,7 @@
       "forbidden": "You do not have access to this resource.",
       "environment_forbidden": "That environment belongs to another user.",
       "session_closed": "This session is closed.",
+      "session_active": "This session still has active work.",
       "user_not_found": "User not found.",
       "current_password_incorrect": "Current password is incorrect.",
       "new_password_required": "A new password is required.",
