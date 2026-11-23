@@ -573,6 +573,174 @@
         "files": ["src/utils/swarm/inProcessRunner.ts"],
         "symbols": ["permissionMode"]
       }
+    },
+    {
+      "id": "bundle-only:noflicker-terminal-fixes",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [2, 27, 29, 30, 31, 32, 33],
+      "evidence": ["bundle:NO_FLICKER"],
+      "notes": "NO_FLICKER/fullscreen 的 Focus 视图、zellij 滚动、流式内存、Windows Terminal 滚轮、短终端状态行、Warp 快捷键、Windows 复制乱码均为手写精简渲染层未覆盖的终端专属细节，未逐条移植，登记近似。",
+      "srcEvidence": {
+        "files": ["src/utils/fullscreen.ts", "src/components/StatusLine.tsx"],
+        "symbols": ["isFullscreenEnvEnabled"]
+      }
+    },
+    {
+      "id": "bundle-only:terminal-keyboard-unicode",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [63, 64],
+      "evidence": ["bundle:NO_FLICKER"],
+      "notes": "kitty keyboard protocol 下大小写丢失、macOS 文本替换删触发词属终端/输入法细节，手写输入层未逐条修复，登记近似。",
+      "srcEvidence": {
+        "files": ["src/components/PromptInput/utils.ts"],
+        "symbols": ["PromptInput"]
+      }
+    },
+    {
+      "id": "behavior:rate-limit-upsell-visibility",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [16, 81],
+      "evidence": ["bundle:rate_limits"],
+      "notes": "压缩后/重新挂载后 rate-limit 升级提示可见性为 UI 细节，未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/services/claudeAiLimits.ts", "src/components/StatusLine.tsx"],
+        "symbols": ["getRawUtilization"]
+      }
+    },
+    {
+      "id": "behavior:context-low-footer-notification",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [42],
+      "evidence": ["bundle:context"],
+      "notes": "context 偏低提示改为 transient footer 通知的展示细节未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/utils/contextSuggestions.ts"],
+        "symbols": ["DISABLE_COMPACT"]
+      }
+    },
+    {
+      "id": "bundle-only:markdown-blockquote-bar",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [43],
+      "evidence": ["bundle:blockquote"],
+      "notes": "markdown 引用块跨行连续左竖线属渲染细节，手写 markdown 渲染未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/components/StatusLine.tsx"],
+        "symbols": ["StatusLine"]
+      }
+    },
+    {
+      "id": "behavior:image-compression-budget",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [38],
+      "evidence": ["bundle:image"],
+      "notes": "粘贴/附件图片压缩到与 Read 相同的 token 预算，src 有 src/utils/imageResizer.ts 但预算是否完全对齐未逐行核对，登记近似。",
+      "srcEvidence": {
+        "files": ["src/utils/imageResizer.ts", "src/utils/imageStore.ts"],
+        "symbols": ["imageResizer"]
+      }
+    },
+    {
+      "id": "behavior:cjk-completion-trigger",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [39],
+      "evidence": ["bundle:mention"],
+      "notes": "斜杠命令与 @ 提及在中日韩句末标点后触发的输入细节未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/components/PromptInput/utils.ts"],
+        "symbols": ["PromptInput"]
+      }
+    },
+    {
+      "id": "behavior:bridge-session-card",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [40],
+      "evidence": ["bundle:session_id"],
+      "notes": "Bridge 会话卡片展示本地 git 仓库/分支/工作目录属 claude.ai 侧卡片渲染，CLI 仅提供数据，未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/bridge/bridgeMain.ts"],
+        "symbols": ["bridge"]
+      }
+    },
+    {
+      "id": "bundle-only:vscode-git-bash",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [102],
+      "evidence": ["bundle:CLAUDE_CODE_GIT_BASH_PATH"],
+      "notes": "「requires git-bash」误报修复属 VSCode 扩展侧行为，CLI 无对应实现，登记近似。",
+      "srcEvidence": {
+        "files": ["src/utils/Shell.ts"],
+        "symbols": ["CLAUDE_CODE_GIT_BASH_PATH"]
+      }
+    },
+    {
+      "id": "bundle-only:voice-mode-input",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [83],
+      "evidence": ["bundle:voice"],
+      "notes": "语音模式重新按住 push-to-talk 时泄漏空格属输入层细节，未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/components/PromptInput/utils.ts"],
+        "symbols": ["PromptInput"]
+      }
+    },
+    {
+      "id": "bundle-only:feedback-survey",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [88],
+      "evidence": ["bundle:feedback"],
+      "notes": "反馈调查 dismissed 时的渲染修复属 UI 细节，未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/components/StatusLine.tsx"],
+        "symbols": ["StatusLine"]
+      }
+    },
+    {
+      "id": "behavior:resume-filter-hints",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [92],
+      "evidence": ["bundle:/resume"],
+      "notes": "/resume 筛选提示标签与 project/worktree/branch 名展示属选择器 UI，手写实现未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/commands/resume"],
+        "symbols": ["resume"]
+      }
+    },
+    {
+      "id": "behavior:vim-normal-history",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [97],
+      "evidence": ["bundle:NORMAL"],
+      "notes": "Vim NORMAL 模式 j/k 在输入边界导航历史/选择 footer pill 属输入层交互，未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/components/PromptInput/utils.ts"],
+        "symbols": ["isVimModeEnabled"]
+      }
+    },
+    {
+      "id": "behavior:cedar-highlighting",
+      "kind": "behavior",
+      "status": "approximated",
+      "releaseItems": [6],
+      "evidence": ["bundle:cedar"],
+      "notes": "Cedar 策略文件（.cedar/.cedarpolicy）语法高亮属高亮器细节，手写高亮未逐条对拍，登记近似。",
+      "srcEvidence": {
+        "files": ["src/utils/fullscreen.ts"],
+        "symbols": ["highlight"]
+      }
     }
   ]
 }

@@ -89,3 +89,9 @@
 - `approximated`（手写实现差异，未逐条对拍）：插件 frontmatter 布尔名 #25/#80；`/resume` 选择器 UI #17/#77；NO_FLICKER 复制 URL / MCP 悬停 #26/#28/#74/#75；footer 指示器布局 #41/#93；`/agents` Running tab #5/#94；`/claude-api` skill Managed Agents #47/#101；沙箱网络自动批准 #36；teammates 权限继承 #73。
 
 剩余 38 条（核心行为移植 + 其它 transcript/UI 项）留待批次二。
+
+### R10：release 覆盖批次二（UI/终端项分类）
+
+未覆盖项 38 → 16，均为手写实现差异，统一登记 `approximated` 并写明原因：NO_FLICKER/fullscreen 终端项（#2/#27/#29/#30/#31/#32/#33）、终端键盘/Unicode（#63/#64）、rate-limit upsell 可见性（#16/#81）、context-low footer 通知（#42）、markdown 引用竖线（#43）、图片压缩预算（#38）、CJK 补全触发（#39）、bridge 会话卡片（#40）、VSCode git-bash（#102）、语音输入（#83）、反馈调查（#88）、/resume 筛选提示（#92）、Vim NORMAL 历史（#97）、Cedar 高亮（#6）。
+
+剩余 16 条为需真实移植的核心行为：MCP 缓冲 #13、transcript 持久化/大小 #18/#19/#20/#44/#76、hooks 长会话 #21/#87、compaction 重复文件 #23、plugin update #24、流式回落 #60、/effort max #79、Remote Control 句柄泄漏 #85、后台子代理部分进度 #86、hook stderr #98、OTEL 交互 span #99。

@@ -6,7 +6,7 @@ OK: true
 | ------------------ | ----- |
 | already-present    | 16    |
 | ported             | 15    |
-| approximated       | 14    |
+| approximated       | 28    |
 | ignored-dependency | 1     |
 | retained-internal  | 3     |
 | unresolved         | 0     |
