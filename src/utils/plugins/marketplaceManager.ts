@@ -2141,13 +2141,25 @@ export async function refreshAllMarketplaces(): Promise<void> {
 export async function refreshMarketplace(
   name: string,
   onProgress?: MarketplaceProgressCallback,
-  options?: { disableCredentialHelper?: boolean },
+  options?: { disableCredentialHelper?: boolean; skipIfRecent?: boolean },
 ): Promise<void> {
   const config = await loadKnownMarketplacesConfig()
   const entry = config[name]
 
   if (!entry) {
     throw new Error(`Marketplace '${name}' not found. Available marketplaces: ${Object.keys(config).join(', ')}`)
+  }
+
+  // Callers that refresh as a side effect of another operation (e.g. the
+  // pre-update pull) set `skipIfRecent` to avoid a redundant network round
+  // trip when the marketplace was pulled moments ago — notably the autoupdate
+  // path, which already refreshes before calling updatePluginOp.
+  if (options?.skipIfRecent && entry.lastUpdated) {
+    const ageMs = Date.now() - new Date(entry.lastUpdated).getTime()
+    if (ageMs >= 0 && ageMs < 30_000) {
+      logForDebugging(`Skipping refresh for marketplace '${name}' — refreshed ${Math.round(ageMs / 1000)}s ago`)
+      return
+    }
   }
 
   // Clear the memoization cache for this specific marketplace

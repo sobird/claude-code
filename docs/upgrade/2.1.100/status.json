@@ -768,6 +768,30 @@
         ],
         "symbols": ["getHookErrorFirstLine"]
       }
+    },
+    {
+      "id": "behavior:plugin-update-refresh-marketplace",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [24],
+      "evidence": ["bundle:10759490", "bundle:9836922"],
+      "notes": "claude plugin update 对 git/github/url 来源的 marketplace 在计算版本前先 git pull，否则陈旧本地 clone 会让 update 误报「already at the latest version」（上游 2.1.97）。移植：updatePluginOp 在 getPluginById 前按 source 类型调用 refreshMarketplace(name, undefined, { skipIfRecent: true }) 并吞掉失败回退缓存；refreshMarketplace 新增 skipIfRecent 选项（lastUpdated 在 30s 内则跳过，避免 autoupdate 已刷新后的重复拉取）。见 notes R13。",
+      "srcEvidence": {
+        "files": ["src/services/plugins/pluginOperations.ts", "src/utils/plugins/marketplaceManager.ts"],
+        "symbols": ["updatePluginOp", "refreshMarketplace"]
+      }
+    },
+    {
+      "id": "behavior:streaming-stall-nonstreaming-fallback",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [60],
+      "evidence": ["bundle:11797120", "bundle:11796856"],
+      "notes": "流式卡住（idle watchdog 触发）时应回落到非流式，而不是当成可重试超时。上游 2.1.98：当 watchdog 已 fire（streamIdleAborted）时，SDK 抛 APIUserAbortError 且信号未中止也不再抛 `Request timed out`（改为 `else if(!streamIdleAborted)`，落到下方回落分支）；并把对外错误替换为 `Error('Stream idle timeout - no chunks received')`（用于日志与 fallback_disabled 时的 throw）。移植到 src/services/api/claude.ts 的 catch 分支。见 notes R14。",
+      "srcEvidence": {
+        "files": ["src/services/api/claude.ts"],
+        "symbols": ["streamIdleAborted", "fallbackError"]
+      }
     }
   ]
 }

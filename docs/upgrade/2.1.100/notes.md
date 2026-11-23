@@ -103,3 +103,19 @@
 ### R12：hook 错误显示 stderr 首行（2.1.98 #98）
 
 transcript 里 `hook_non_blocking_error` 原本只显示「{hook} hook error」，完整输出只进 debug 日志。上游 `vzY` 取 stderr（空则 stdout）首行、截掉 `Expected schema:` 之后、超 200 字符加省略号，作为第二行显示。移植为 `AttachmentMessage.getHookErrorFirstLine`，测试 `src/components/messages/__tests__/getHookErrorFirstLine.test.ts`。
+
+### R13：`claude plugin update` 先刷新 git marketplace（2.1.97 #24）
+
+对 git / github / url 来源的 marketplace，`updatePluginOp` 在计算新版本前先拉取一次本地 clone —— 否则陈旧的 `rev-parse HEAD` 会让 update 误报「already at the latest version」，即便远端已有新提交（2.1.97 修复）。
+
+上游 `XI6` 在 `getPluginById` 之前读 `loadKnownMarketplacesConfig()[marketplace].source`，仅当 `source=='github'|'git'|'url'` 时 `await refreshMarketplace(name, undefined, {skipIfRecent:true})`，失败吞掉并 `warn` 回退缓存。`refreshMarketplace` 新增 `skipIfRecent`：`lastUpdated` 在 30s 内直接 return，避免 autoupdate 路径已刷新后的重复拉取。
+
+移植到 `src/services/plugins/pluginOperations.ts`（`updatePluginOp`）与 `src/utils/plugins/marketplaceManager.ts`（`refreshMarketplace` 的 `skipIfRecent`）。该子系统无现成单测（读写真实 marketplace/fs），本轮以 typecheck/lint 与 bundle 对拍钉住语义；证据 `bundle:10759490`（update 前置刷新块）、`bundle:9836922`（skipIfRecent 跳过日志）。
+
+### R14：卡住的流式回落非流式（2.1.98 #60）
+
+上游 v94 的 catch 分支里，SDK 抛 `APIUserAbortError` 且我们的 signal 未中止时无条件 `throw APIConnectionTimeoutError('Request timed out')`，于是 idle watchdog 触发的卡住被当作可重试超时，走了 withRetry 超时而不是回落非流式。
+
+2.1.98 的两处改动（`v100` 的 catch）：① 该 throw 加守卫 `else if(!streamIdleAborted)` —— watchdog 已 fire 时不再抛超时，落到下面的回落分支；② 计算 `$1 = streamIdleAborted ? Error('Stream idle timeout - no chunks received') : E8`，用于日志文案、`tengu_streaming_fallback_to_non_streaming` 的 `error` 名，以及 `fallback_disabled` 为真时的 `throw`（此时抛出的是 idle-timeout 错误而非原始超时）。
+
+移植到 `src/services/api/claude.ts`：`else if (!streamIdleAborted)`；新增 `fallbackError`，disableFallback 日志/throw 与回落日志/事件统一改用 `fallbackError`。该生成器依赖真实 SDK 流、无现成单测，本轮以 typecheck/lint 与 bundle 对拍钉住；证据 `bundle:11797120`（`$1=E6?Error("Stream idle timeout…")`）、`bundle:11796856`（`Streaming timeout (SDK abort)` 守卫处）。

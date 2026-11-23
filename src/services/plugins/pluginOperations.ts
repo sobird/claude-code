@@ -16,7 +16,8 @@ import { dirname, join } from 'node:path'
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import { isBuiltinPluginId } from '../../plugins/builtinPlugins.js'
 import type { LoadedPlugin, PluginManifest } from '../../types/plugin.js'
-import { isENOENT, toError } from '../../utils/errors.js'
+import { logForDebugging } from '../../utils/debug.js'
+import { errorMessage, isENOENT, toError } from '../../utils/errors.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'
 import { logError } from '../../utils/log.js'
 import { clearAllCaches, markPluginVersionOrphaned } from '../../utils/plugins/cacheUtils.js'
@@ -27,7 +28,12 @@ import {
   removePluginInstallation,
   updateInstallationPathOnDisk,
 } from '../../utils/plugins/installedPluginsManager.js'
-import { getMarketplace, getPluginById, loadKnownMarketplacesConfig } from '../../utils/plugins/marketplaceManager.js'
+import {
+  getMarketplace,
+  getPluginById,
+  loadKnownMarketplacesConfig,
+  refreshMarketplace,
+} from '../../utils/plugins/marketplaceManager.js'
 import { deletePluginDataDir } from '../../utils/plugins/pluginDirectories.js'
 import { parsePluginIdentifier, scopeToSettingSource } from '../../utils/plugins/pluginIdentifier.js'
 import { formatResolutionError, installResolvedPlugin } from '../../utils/plugins/pluginInstallationHelpers.js'
@@ -758,6 +764,26 @@ export async function updatePluginOp(plugin: string, scope: PluginScope): Promis
   // Parse the plugin identifier to get the full plugin ID
   const { name: pluginName, marketplace: marketplaceName } = parsePluginIdentifier(plugin)
   const pluginId = marketplaceName ? `${pluginName}@${marketplaceName}` : plugin
+
+  // Pull a git/url-sourced marketplace before computing the version: a stale
+  // local clone makes the update report "already at the latest version" even
+  // when the remote has newer commits (2.1.97). `skipIfRecent` suppresses the
+  // pull when the marketplace was refreshed moments ago — the autoupdate path
+  // already calls refreshMarketplace before invoking this. A failed refresh
+  // falls back to the cached clone instead of aborting the update.
+  if (marketplaceName) {
+    const source = (await loadKnownMarketplacesConfig())[marketplaceName]?.source
+    if (source && (source.source === 'github' || source.source === 'git' || source.source === 'url')) {
+      try {
+        await refreshMarketplace(marketplaceName, undefined, { skipIfRecent: true })
+      } catch (error) {
+        logForDebugging(
+          `Failed to refresh marketplace '${marketplaceName}' before update; using cached data: ${errorMessage(error)}`,
+          { level: 'warn' },
+        )
+      }
+    }
+  }
 
   // Get plugin info from marketplace
   const pluginInfo = await getPluginById(plugin)

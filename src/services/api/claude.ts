@@ -2179,14 +2179,23 @@ async function* queryModel(
             })
           }
           throw streamingError
-        } else {
-          // The SDK threw APIUserAbortError but our signal wasn't aborted
-          // This means it's a timeout from the SDK's internal timeout
+        } else if (!streamIdleAborted) {
+          // The SDK threw APIUserAbortError but our signal wasn't aborted.
+          // This means it's a timeout from the SDK's internal timeout.
+          // Exception: when our own idle watchdog fired (streamIdleAborted),
+          // the abort is ours, not the SDK's — fall through to the
+          // non-streaming fallback instead of surfacing a bare timeout (2.1.98).
           logForDebugging(`Streaming timeout (SDK abort): ${streamingError.message}`, { level: 'error' })
           // Throw a more specific error for timeout
           throw new APIConnectionTimeoutError({ message: 'Request timed out' })
         }
       }
+
+      // If the idle watchdog drove this exit, surface the stall as an explicit
+      // idle-timeout error rather than the underlying abort/timeout, so it is
+      // classified as a stall (logged and, when fallback is disabled, thrown as
+      // such) instead of a retryable timeout (2.1.98).
+      const fallbackError = streamIdleAborted ? new Error('Stream idle timeout - no chunks received') : streamingError
 
       // When the flag is enabled, skip the non-streaming fallback and let the
       // error propagate to withRetry. The mid-stream fallback causes double tool
@@ -2198,15 +2207,15 @@ async function* queryModel(
         getFeatureValue_CACHED_MAY_BE_STALE('tengu_disable_streaming_to_non_streaming_fallback', false)
 
       if (disableFallback) {
-        logForDebugging(`Error streaming (non-streaming fallback disabled): ${errorMessage(streamingError)}`, {
+        logForDebugging(`Error streaming (non-streaming fallback disabled): ${errorMessage(fallbackError)}`, {
           level: 'error',
         })
         logEvent('tengu_streaming_fallback_to_non_streaming', {
           model: options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           error:
-            streamingError instanceof Error
-              ? (streamingError.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
-              : (String(streamingError) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS),
+            fallbackError instanceof Error
+              ? (fallbackError.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+              : (String(fallbackError) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS),
           attemptNumber,
           maxOutputTokens,
           thinkingType: thinkingConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -2216,10 +2225,10 @@ async function* queryModel(
             ? 'watchdog'
             : 'other') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         })
-        throw streamingError
+        throw fallbackError
       }
 
-      logForDebugging(`Error streaming, falling back to non-streaming mode: ${errorMessage(streamingError)}`, {
+      logForDebugging(`Error streaming, falling back to non-streaming mode: ${errorMessage(fallbackError)}`, {
         level: 'error',
       })
       didFallBackToNonStreaming = true
@@ -2230,9 +2239,9 @@ async function* queryModel(
       logEvent('tengu_streaming_fallback_to_non_streaming', {
         model: options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         error:
-          streamingError instanceof Error
-            ? (streamingError.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
-            : (String(streamingError) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS),
+          fallbackError instanceof Error
+            ? (fallbackError.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+            : (String(fallbackError) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS),
         attemptNumber,
         maxOutputTokens,
         thinkingType: thinkingConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
