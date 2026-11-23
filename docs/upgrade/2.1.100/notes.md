@@ -140,3 +140,11 @@ v98/v100 改为默认全落盘，仅排除显式列出的类型（黑名单 `KlY
 `CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT` 原先只在旧白名单分支读取；改成黑名单后失去唯一读取点，随上游一并移除（inventory 差异登记 `removed`，台账条目删除，见 R1）。
 
 测试：`src/utils/__tests__/transcriptStorageCap.test.ts`（external 用户下 `queued_command` 落盘、空/非空 `hook_success` 仍按 #44 规则过滤）。证据：`bundle:11617350`（`QM6` 标识符起点）、`bundle:11627130`（`KlY=new Set([])` 黑名单）。
+
+### R17：`--resume` 后大文件编辑 diff 恢复显示（#18 / #76）
+
+#44（R15）在落盘时把 Edit/Write 结果中 >10KB 的 `originalFile` 置 null 以压 transcript 体积。`--resume` 回放该 tool_result 时，`src/tools/FileEditTool/UI.tsx` 的 `renderToolResultMessage` 直接 `originalFile.split('\n')[0]`，对 null 抛错（或整块空白），编辑 diff 消失（2.1.96 #18 报告，2.1.100 #76 复修）。
+
+上游 v100（`fc4`）把该渲染改为 `firstLine: _ ? DO(_) : null, fileContent: _ || void 0`——缺 `originalFile` 时 `firstLine=null`、`fileContent=undefined`，由始终落盘的 `structuredPatch` 渲染 diff。移植：`firstLine={originalFile ? firstLineOf(originalFile) : null}`、`fileContent={originalFile || undefined}`（`firstLineOf` 即上游 `DO`）。`originalFile` 的 zod 契约仍为 `string`，运行时 null 由真值守卫兼容，无需断言。Write 侧渲染本就用 `content` 取 firstLine、`fileContent ?? undefined`，不受影响。
+
+验证：typecheck/lint + bundle 对拍（`fc4` 守卫）。证据：`bundle:7278514`（`firstLine` 守卫）、`bundle:7278537`（`fileContent` 回落）。

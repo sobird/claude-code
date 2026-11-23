@@ -91,8 +91,11 @@ export function renderToolResultMessage(
     <FileEditToolUpdatedMessage
       filePath={filePath}
       structuredPatch={structuredPatch}
-      firstLine={originalFile.split('\n')[0] ?? null}
-      fileContent={originalFile}
+      // originalFile is null when a >10KB pre-edit copy was capped on write to
+      // the transcript (2.1.98 #44); render the diff from structuredPatch
+      // instead of crashing on the missing copy (2.1.100 #18/#76).
+      firstLine={originalFile ? firstLineOf(originalFile) : null}
+      fileContent={originalFile || undefined}
       style={style}
       verbose={verbose}
       previewHint={isPlanFile ? '/plan to preview' : undefined}

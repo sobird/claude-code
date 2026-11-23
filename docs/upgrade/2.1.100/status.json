@@ -810,6 +810,18 @@
         "files": ["src/utils/sessionStorage.ts"],
         "symbols": ["isLoggableMessage", "NON_ANT_ATTACHMENT_DENYLIST"]
       }
+    },
+    {
+      "id": "behavior:file-edit-diff-on-resume",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [18, 76],
+      "evidence": ["bundle:7278514", "bundle:7278537"],
+      "notes": "修复 --resume 后 >10KB 文件的编辑 diff 消失（2.1.96 #18 / 2.1.100 #76）：2.1.98 #44 落盘时把 toolUseResult.originalFile（>10KB）置 null 以压 transcript，但回放该 tool_result 的渲染直接 originalFile.split 抛错/空白，diff 整块丢失。上游 v100（fc4）改为 firstLine:_?DO(_):null、fileContent:_||void 0，缺 originalFile 时改由 structuredPatch 渲染。移植到 src/tools/FileEditTool/UI.tsx 的 renderToolResultMessage；Write 侧本就以 content 取 firstLine 且 fileContent 已 ?? undefined，无需改。见 notes R17。",
+      "srcEvidence": {
+        "files": ["src/tools/FileEditTool/UI.tsx"],
+        "symbols": ["renderToolResultMessage"]
+      }
     }
   ]
 }
