@@ -15,7 +15,7 @@
  * instead of stacking a duplicate the worker could launch twice.
  */
 
-import { and, asc, eq, lt, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, lt, sql } from 'drizzle-orm'
 
 import type { Database } from '@/db/client'
 import { workItems } from '@/db/schema'
@@ -87,6 +87,15 @@ export function createWorkItemRepository(db: Database): WorkItemRepository {
 
     async getById(id) {
       const [row] = await db.select().from(workItems).where(eq(workItems.id, id)).limit(1)
+      return row ?? null
+    },
+
+    async getInflightBySession(sessionId) {
+      const [row] = await db
+        .select()
+        .from(workItems)
+        .where(and(eq(workItems.sessionId, sessionId), inArray(workItems.state, ['pending', 'dispatched'])))
+        .limit(1)
       return row ?? null
     },
 

@@ -52,7 +52,8 @@ export const workerOrEnvironmentAuth: MiddlewareHandler<AppEnv> = async (c, next
 
 /**
  * Nested gateway error shape. `code` is optional and only emitted by Web callers;
- * v1/v2/ACP responses must stay byte-identical, so omit it there.
+ * 既有 v1/v2/ACP 错误必须保持字节不变，因此那里继续省略 `code`。`details` 只用于
+ * 新增的错误（例如 409 `session_active` 携带活动清单），同样不影响既有响应。
  */
 export function jsonError(
   c: AppContext,
@@ -60,8 +61,12 @@ export function jsonError(
   message: string,
   status: 400 | 403 | 404 | 409 | 413 | 415 | 502 | 504,
   code?: string,
+  details?: Record<string, unknown>,
 ) {
-  return c.json(code === undefined ? { error: { type, message } } : { error: { type, message, code } }, status)
+  const error: Record<string, unknown> = { type, message }
+  if (code !== undefined) error.code = code
+  if (details !== undefined) error.details = details
+  return c.json({ error }, status)
 }
 
 export function notFound(c: AppContext, message = 'Session not found') {

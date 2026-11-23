@@ -146,6 +146,22 @@ describe('POST /v2/session_ingress/session/:id/events', () => {
     expect(res.status).toBe(404)
   })
 
+  test('rejects events for an archived session', async () => {
+    const session = await repos.sessions.create({ status: 'archived' })
+
+    const res = await app.request(`/v2/session_ingress/session/${session.id}/events`, {
+      method: 'POST',
+      headers: AUTH_HEADERS,
+      body: JSON.stringify({ events: [{ type: 'assistant', content: 'late reply' }] }),
+    })
+
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: { type: 'session_closed', message: 'Session is archived', code: 'session_closed' },
+    })
+    expect(await repos.events.listSince(session.id, 0, 10)).toHaveLength(0)
+  })
+
   test('resolves compatible web session ids to the canonical row', async () => {
     const session = await repos.sessions.create({})
     const compatId = `session_${session.id.slice('cse_'.length)}`
@@ -261,6 +277,24 @@ describe('GET /v2/session_ingress/ws/:id', () => {
 
     try {
       const code = await closeCodeFor(`ws://127.0.0.1:${server.port}/v2/session_ingress/ws/cse_missing`, [
+        encodeWebSocketAuthProtocol('test-api-key'),
+      ])
+      expect(code).toBe(4001)
+    } finally {
+      await server.stop(true)
+    }
+  })
+
+  test('closes with 4001 after upgrading when the session is archived', async () => {
+    const session = await repos.sessions.create({ status: 'archived' })
+    const server = Bun.serve({
+      port: 0,
+      fetch: app.fetch,
+      websocket: { ...sessionIngressWebsocket, idleTimeout: 30 },
+    })
+
+    try {
+      const code = await closeCodeFor(`ws://127.0.0.1:${server.port}/v2/session_ingress/ws/${session.id}`, [
         encodeWebSocketAuthProtocol('test-api-key'),
       ])
       expect(code).toBe(4001)

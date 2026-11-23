@@ -93,6 +93,29 @@ function repositorySuite(name: string, makeRepos: () => Repositories): void {
       expect(await repos.workItems.getById('work_missing')).toBeNull()
     })
 
+    test('getInflightBySession finds a pending or dispatched item and ignores finished ones', async () => {
+      const { environmentId, sessionId } = await makeEnvironmentAndSession()
+      expect(await repos.workItems.getInflightBySession(sessionId)).toBeNull()
+
+      const item = await repos.workItems.enqueue({ environmentId, sessionId, secret: 's' })
+      expect((await repos.workItems.getInflightBySession(sessionId))?.id).toBe(item.id)
+
+      await repos.workItems.claimNext(environmentId)
+      expect((await repos.workItems.getInflightBySession(sessionId))?.state).toBe('dispatched')
+
+      await repos.workItems.setState(item.id, 'completed')
+      expect(await repos.workItems.getInflightBySession(sessionId)).toBeNull()
+    })
+
+    test('getInflightBySession is scoped to one session', async () => {
+      const mine = await makeEnvironmentAndSession()
+      const other = await makeEnvironmentAndSession()
+      await repos.workItems.enqueue({ environmentId: mine.environmentId, sessionId: mine.sessionId, secret: 'a' })
+
+      expect(await repos.workItems.getInflightBySession(other.sessionId)).toBeNull()
+      expect(await repos.workItems.getInflightBySession('cse_missing')).toBeNull()
+    })
+
     test('claimNext dispatches the oldest pending item for the environment only', async () => {
       const target = await makeEnvironmentAndSession()
       const other = await makeEnvironmentAndSession()

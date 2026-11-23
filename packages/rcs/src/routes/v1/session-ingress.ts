@@ -14,8 +14,9 @@ import type { AppEnv } from '@/auth/context'
 import { extractWebSocketAuthToken } from '@/auth/context'
 import { resolveSessionIngressAuth } from '@/auth/middleware'
 import { loadConfig } from '@/config'
+import { isSessionClosedStatus } from '@/contracts'
 import type { Repositories } from '@/db/repositories/types'
-import { legacySessionIngressAuth, readLegacyKeys } from '@/routes/common'
+import { legacySessionIngressAuth, readLegacyKeys, sessionClosed } from '@/routes/common'
 import {
   handleWebSocketClose,
   handleWebSocketMessage,
@@ -31,6 +32,10 @@ const app = new Hono<AppEnv>()
 app.post('/session/:id/events', legacySessionIngressAuth, async (c) => {
   const repos = c.get('repos')
   const sessionId = c.get('workerSessionId')
+
+  // 归档是终态：迟到的 bridge 写入直接拒绝，避免把新事件追进已归档会话。
+  const record = await repos.sessions.getById(sessionId)
+  if (record && isSessionClosedStatus(record.status)) return sessionClosed(c, record.status)
 
   const body: unknown = await c.req.json().catch(() => ({}))
   const direct = body as Record<string, unknown> | null
@@ -82,6 +87,12 @@ app.get(
     const sessionId = auth.workerSessionId
     return {
       async onOpen(_event, ws) {
+        // 4001 让 CLI 把它当作永久拒绝（停止重连），与已删除会话同一处理路径。
+        const record = await repos.sessions.getById(sessionId)
+        if (record && isSessionClosedStatus(record.status)) {
+          ws.close(WS_CLOSE_SESSION_NOT_FOUND, 'session archived')
+          return
+        }
         await handleWebSocketOpen(repos, config, ws, sessionId)
       },
       onMessage(event, ws) {

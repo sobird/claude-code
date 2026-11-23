@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import {
   cancelBridgeRequest,
   clearBridgeResponses,
+  hasPendingControlRequests,
   MAX_SUGGESTION_PATHS,
   modelOptionsFromResponse,
   requestBridgeControl,
@@ -62,6 +63,18 @@ describe('requestBridgeControl', () => {
     cancelBridgeRequest('s1', 'r1')
     await expect(promise).resolves.toBeNull()
     expect(settleBridgeResponse('s1', { request_id: 'r1' })).toBe(false)
+  })
+
+  it('reports whether a session has a pending control request', async () => {
+    expect(hasPendingControlRequests('s1')).toBe(false)
+
+    const promise = request('s1', 'r1')
+    expect(hasPendingControlRequests('s1')).toBe(true)
+    expect(hasPendingControlRequests('s2')).toBe(false)
+
+    settleBridgeResponse('s1', { request_id: 'r1' })
+    await promise
+    expect(hasPendingControlRequests('s1')).toBe(false)
   })
 })
 

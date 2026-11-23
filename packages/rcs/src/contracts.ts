@@ -28,7 +28,8 @@ const WEB_SESSION_PREFIX = 'session_'
 /**
  * Statuses that make a session terminal. `inactive` is deliberately excluded: it is a
  * liveness signal set by the disconnect monitor, and a user can resume such a session
- * (see `reactivateInactiveSession`). Only an explicit archive is final.
+ * (see `reactivateInactiveSession`). Only an explicit archive is final, and it must pass
+ * the activity guard first (in-flight work item, live bridge, pending control request).
  */
 const CLOSED_SESSION_STATUSES = new Set(['archived'])
 

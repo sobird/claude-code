@@ -16,6 +16,8 @@ import {
 import type { Repositories, SessionListOptions } from '@/db/repositories/types'
 import { getAllEventBuses, removeEventBus } from '@/transport/event-bus'
 
+import { listSessionActivity, stopSessionActivity, type SessionActivity } from './session-activity.js'
+
 export interface ServiceUser {
   id: string
   role: Role
@@ -253,11 +255,37 @@ export async function reactivateInactiveSession(repos: Repositories, sessionId: 
   return 'idle'
 }
 
-export async function archiveSession(repos: Repositories, sessionId: string): Promise<void> {
+export type ArchiveSessionResult = { ok: true } | { ok: false; activity: SessionActivity[] }
+
+export interface ArchiveSessionOptions {
+  /**
+   * 调用方显式要求停止活动（`stop_activity: true`）。此时跳过活动守卫，先写归档
+   * 终态、再结束在途活动；不传则维持"有活动就拒绝"的默认语义。
+   */
+  stopActivity?: boolean
+}
+
+/**
+ * 归档会话，但只要网关还能看到活动（在途 work item、存活的 bridge 连接、挂起的
+ * control 请求）就拒绝。归档对用户是终态，所以守卫返回活动清单而不是把它藏起来；
+ * 调用方把 `{ ok: false }` 映射成 409。观察清单见 `listSessionActivity`。
+ */
+export async function archiveSession(
+  repos: Repositories,
+  sessionId: string,
+  options: ArchiveSessionOptions = {},
+): Promise<ArchiveSessionResult> {
   const canonicalId = await resolveSessionId(repos, sessionId)
-  if (!canonicalId) return
+  if (!canonicalId) return { ok: true }
+  if (!options.stopActivity) {
+    const activity = await listSessionActivity(repos, canonicalId)
+    if (activity.length > 0) return { ok: false, activity }
+  }
+  // 先写后停：终态先落库，任何停止动作都发生在归档之后。
   await updateSessionStatus(repos, canonicalId, 'archived')
+  if (options.stopActivity) await stopSessionActivity(repos, canonicalId)
   removeEventBus(canonicalId)
+  return { ok: true }
 }
 
 /**

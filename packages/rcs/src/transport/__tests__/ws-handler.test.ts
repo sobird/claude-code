@@ -8,9 +8,11 @@ import type { SessionEvent } from '@/transport/event-bus'
 import { getAllEventBuses, getEventBus, removeEventBus } from '@/transport/event-bus'
 import {
   closeAllConnections,
+  closeBridgeConnection,
   handleWebSocketClose,
   handleWebSocketMessage,
   handleWebSocketOpen,
+  hasBridgeConnection,
   ingestBridgeMessage,
   sendToBridge,
 } from '@/transport/ws-handler'
@@ -527,6 +529,29 @@ describe('ingestBridgeMessage', () => {
 })
 
 describe('handleWebSocketOpen', () => {
+  test('reports a live bridge connection per session', async () => {
+    await repos.sessions.create({ id: 'live1' })
+    expect(hasBridgeConnection('live1')).toBe(false)
+
+    const ws = createMockWs()
+    await handleWebSocketOpen(repos, makeConfig(), ws as never, 'live1')
+    expect(hasBridgeConnection('live1')).toBe(true)
+    expect(hasBridgeConnection('live2')).toBe(false)
+
+    handleWebSocketClose(ws as never, 'live1', 1000, 'done')
+    expect(hasBridgeConnection('live1')).toBe(false)
+  })
+
+  test('does not report a closed socket as a live connection', async () => {
+    await repos.sessions.create({ id: 'live2' })
+    const ws = createMockWs()
+    await handleWebSocketOpen(repos, makeConfig(), ws as never, 'live2')
+    ws.readyState = 3
+
+    expect(hasBridgeConnection('live2')).toBe(false)
+    handleWebSocketClose(ws as never, 'live2', 1000, 'done')
+  })
+
   test("replays outbound events only, never the child's own inbound history", async () => {
     // The bridge dedupes replayed *user* messages against its local transcript, but
     // injects every replayed *assistant* message into the live conversation. Replaying
@@ -974,6 +999,28 @@ describe('toSDKMessage (via live outbound delivery)', () => {
     const message = sentJson(ws, ws.sent.length - 1)
     expect(message.type).toBe('control_request')
     expect(message.request_id).toBe('req10')
+  })
+})
+
+describe('closeBridgeConnection', () => {
+  test('closes one session socket without touching the others', async () => {
+    const first = createMockWs()
+    const second = createMockWs()
+    await handleWebSocketOpen(repos, makeConfig(), first as never, 'close1')
+    await handleWebSocketOpen(repos, makeConfig(), second as never, 'close2')
+
+    closeBridgeConnection('close1', 1001, 'session_archived')
+
+    expect(first.closes).toEqual([{ code: 1001, reason: 'session_archived' }])
+    expect(hasBridgeConnection('close1')).toBe(false)
+    expect(hasBridgeConnection('close2')).toBe(true)
+    handleWebSocketClose(second as never, 'close2', 1000, 'done')
+  })
+
+  test('clears pending control waiters even without a socket', async () => {
+    const pending = requestBridgeControl('close3', 'r1', { subtype: 'file_suggestions' }, 50)
+    closeBridgeConnection('close3')
+    await expect(pending).resolves.toBeNull()
   })
 })
 

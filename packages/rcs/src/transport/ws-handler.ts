@@ -82,6 +82,11 @@ export function sendToBridge(sessionId: string, payload: Record<string, unknown>
   return true
 }
 
+/** True while the session's CLI bridge socket is open; the archive guard uses it as a liveness signal. */
+export function hasBridgeConnection(sessionId: string): boolean {
+  return cleanupBySession.get(sessionId)?.ws.readyState === 1
+}
+
 /**
  * Called from `onOpen`: subscribe before reading durable history so no event can slip
  * across the replay→live boundary, then replay the newest `config.eventReplayLimit`
@@ -389,6 +394,28 @@ export async function ingestBridgeMessage(
   // Dedupes by message uuid: replayed assistant history is echoed back unmarked, and
   // persisting each echo grows the replay window on every reconnect.
   return publishInboundEvent(repos, getEventBus(sessionId), sessionId, eventType, payload)
+}
+
+/**
+ * Close one session's bridge socket (the archive stop path). Mirrors `closeAllConnections`
+ * for a single session and always drops pending control waiters and the cached model
+ * catalog, so a session with no socket is still cleaned up.
+ */
+export function closeBridgeConnection(sessionId: string, code = 1001, reason = 'session_archived'): void {
+  const entry = cleanupBySession.get(sessionId)
+  if (entry) {
+    try {
+      entry.unsub()
+      stopKeepalive(entry)
+      if (entry.ws.readyState === 1) entry.ws.close(code, reason)
+    } catch {
+      // The socket may already be gone; the cleanup below still runs.
+    }
+    cleanupBySession.delete(sessionId)
+    activeConnections.delete(entry.ws)
+  }
+  clearBridgeResponses(sessionId)
+  clearModelCatalog(sessionId)
 }
 
 /** Gracefully close every active WebSocket connection (server shutdown). */

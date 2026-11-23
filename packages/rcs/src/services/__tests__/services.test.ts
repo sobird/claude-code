@@ -174,9 +174,76 @@ describe('Session Service', () => {
     test('sets status to archived and removes event bus', async () => {
       const s = await createCodeSession(repos, {})
       getEventBus(s.id)
-      await archiveSession(repos, s.id)
+
+      expect(await archiveSession(repos, s.id)).toEqual({ ok: true })
       expect((await getSession(repos, s.id))?.status).toBe('archived')
       expect(getAllEventBuses().has(s.id)).toBe(false)
+    })
+
+    test('refuses a session with in-flight work and reports what is running', async () => {
+      const s = await createCodeSession(repos, {})
+      const env = await repos.environments.create({ id: `env_${crypto.randomUUID()}` })
+      const item = await repos.workItems.enqueue({ environmentId: env.id, sessionId: s.id, secret: 's' })
+      getEventBus(s.id)
+
+      expect(await archiveSession(repos, s.id)).toEqual({
+        ok: false,
+        activity: [{ kind: 'work_item', id: item.id, label: 'Queued work item' }],
+      })
+      // A refused archive must not write the terminal status or tear down the bus.
+      expect((await getSession(repos, s.id))?.status).not.toBe('archived')
+      expect(getAllEventBuses().has(s.id)).toBe(true)
+    })
+
+    test('names a leased work item separately from a queued one', async () => {
+      const s = await createCodeSession(repos, {})
+      const env = await repos.environments.create({ id: `env_${crypto.randomUUID()}` })
+      const item = await repos.workItems.enqueue({ environmentId: env.id, sessionId: s.id, secret: 's' })
+      await repos.workItems.claimNext(env.id)
+
+      expect(await archiveSession(repos, s.id)).toEqual({
+        ok: false,
+        activity: [{ kind: 'work_item', id: item.id, label: 'Leased work item' }],
+      })
+    })
+
+    test('archives once the in-flight work item has finished', async () => {
+      const s = await createCodeSession(repos, {})
+      const env = await repos.environments.create({ id: `env_${crypto.randomUUID()}` })
+      const item = await repos.workItems.enqueue({ environmentId: env.id, sessionId: s.id, secret: 's' })
+      await repos.workItems.setState(item.id, 'completed')
+
+      expect(await archiveSession(repos, s.id)).toEqual({ ok: true })
+      expect((await getSession(repos, s.id))?.status).toBe('archived')
+    })
+
+    test('archives through in-flight work when stopActivity is requested', async () => {
+      const s = await createCodeSession(repos, {})
+      const env = await repos.environments.create({ id: `env_${crypto.randomUUID()}` })
+      const item = await repos.workItems.enqueue({ environmentId: env.id, sessionId: s.id, secret: 's' })
+      getEventBus(s.id)
+
+      expect(await archiveSession(repos, s.id, { stopActivity: true })).toEqual({ ok: true })
+      expect((await getSession(repos, s.id))?.status).toBe('archived')
+      expect((await repos.workItems.getById(item.id))?.state).toBe('completed')
+      expect(getAllEventBuses().has(s.id)).toBe(false)
+    })
+
+    test('writes the archived status before publishing the interrupt', async () => {
+      const s = await createCodeSession(repos, {})
+      const env = await repos.environments.create({ id: `env_${crypto.randomUUID()}` })
+      await repos.workItems.enqueue({ environmentId: env.id, sessionId: s.id, secret: 's' })
+      getEventBus(s.id)
+
+      await archiveSession(repos, s.id, { stopActivity: true })
+
+      const events = await repos.events.listSince(s.id, 0, 20)
+      const status = events.find((event) => event.type === 'session_status')
+      const interrupt = events.find((event) => event.type === 'interrupt')
+      expect(status?.payload).toEqual({ status: 'archived' })
+      // 持久化时会归一化：原始载荷落在 `raw` 下。
+      expect(interrupt?.payload).toMatchObject({ raw: { action: 'interrupt' } })
+      expect(status?.id).toBeLessThan(interrupt?.id ?? 0)
     })
   })
 

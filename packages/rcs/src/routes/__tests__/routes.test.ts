@@ -55,6 +55,7 @@ function toWebSessionId(sessionId: string): string {
 interface MockBridgeWs {
   readyState: number
   sent: string[]
+  closes: Array<{ code?: number; reason?: string }>
   send(data: string): void
   close(code?: number, reason?: string): void
 }
@@ -63,10 +64,12 @@ function createBridgeWs(): MockBridgeWs {
   return {
     readyState: 1,
     sent: [],
+    closes: [],
     send(data) {
       this.sent.push(data)
     },
-    close() {
+    close(code, reason) {
+      this.closes.push({ code, reason })
       this.readyState = 3
     },
   }
@@ -243,6 +246,78 @@ describe('V1 Session Routes', () => {
     const body = await resJson(getRes)
     expect(body.id).toBe(session.id)
     expect(body.status).toBe('archived')
+  })
+
+  test('POST /v1/sessions/:id/archive returns 409 session_active while work is in flight', async () => {
+    const createRes = await app.request('/v1/code/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({}),
+    })
+    const { session } = await resJson(createRes)
+    const env = await s.repos.environments.create({ id: `env_${crypto.randomUUID()}` })
+    const item = await s.repos.workItems.enqueue({ environmentId: env.id, sessionId: session.id, secret: 's' })
+
+    const archiveRes = await app.request(`/v1/sessions/${session.id}/archive`, {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+    })
+    expect(archiveRes.status).toBe(409)
+    const body = await resJson(archiveRes)
+    expect(body.error.code).toBe('session_active')
+    expect(body.error.details.activity).toEqual([{ kind: 'work_item', id: item.id, label: 'Queued work item' }])
+
+    // The refusal leaves the session writable and visible.
+    const getRes = await app.request(`/v1/sessions/${session.id}`, { headers: bearer(s.adminToken) })
+    expect((await resJson(getRes)).status).not.toBe('archived')
+  })
+
+  test('POST /v1/sessions/:id/archive returns 409 while a bridge is connected', async () => {
+    const createRes = await app.request('/v1/code/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({}),
+    })
+    const { session } = await resJson(createRes)
+    const ws = createBridgeWs()
+    await handleWebSocketOpen(s.repos, loadConfig(), ws as never, session.id)
+
+    try {
+      const archiveRes = await app.request(`/v1/sessions/${session.id}/archive`, {
+        method: 'POST',
+        headers: bearer(s.adminToken),
+      })
+      expect(archiveRes.status).toBe(409)
+      const body = await resJson(archiveRes)
+      expect(body.error.details.activity.map((entry: { kind: string }) => entry.kind)).toContain('bridge')
+    } finally {
+      handleWebSocketClose(ws as never, session.id, 1000, 'done')
+    }
+  })
+
+  test('POST /v1/sessions/:id/archive stops activity when stop_activity is true', async () => {
+    const createRes = await app.request('/v1/code/sessions', {
+      method: 'POST',
+      headers: bearer(s.adminToken),
+      body: JSON.stringify({}),
+    })
+    const { session } = await resJson(createRes)
+    const env = await s.repos.environments.create({ id: `env_${crypto.randomUUID()}` })
+    const item = await s.repos.workItems.enqueue({ environmentId: env.id, sessionId: session.id, secret: 's' })
+    const ws = createBridgeWs()
+    await handleWebSocketOpen(s.repos, loadConfig(), ws as never, session.id)
+
+    const archiveRes = await app.request(`/v1/sessions/${session.id}/archive`, {
+      method: 'POST',
+      headers: { ...bearer(s.adminToken), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stop_activity: true }),
+    })
+    expect(archiveRes.status).toBe(200)
+    expect((await s.repos.workItems.getById(item.id))?.state).toBe('completed')
+    expect(ws.closes).toEqual([{ code: 1001, reason: 'session_archived' }])
+
+    const getRes = await app.request(`/v1/sessions/${session.id}`, { headers: bearer(s.adminToken) })
+    expect((await resJson(getRes)).status).toBe('archived')
   })
 
   test('POST /v1/sessions/:id/unarchive restores an archived session', async () => {

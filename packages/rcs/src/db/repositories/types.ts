@@ -253,6 +253,8 @@ export interface WorkItemRepository {
    */
   claimNext(environmentId: string, options?: ClaimNextOptions): Promise<WorkItemRecord | null>
   getById(id: string): Promise<WorkItemRecord | null>
+  /** The session's in-flight (`pending`/`dispatched`) item, or null when it has none. */
+  getInflightBySession(sessionId: string): Promise<WorkItemRecord | null>
   /** Transition the item's state (`pending`/`dispatched`/`acked`/`completed`). */
   setState(id: string, state: string): Promise<void>
   /** Heartbeat / lease extension: bumps `updatedAt` without changing state. */

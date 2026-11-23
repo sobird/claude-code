@@ -10,7 +10,7 @@ import { Hono } from 'hono'
 
 import type { AppEnv } from '@/auth/context'
 import { toCompatibleCodeSessionId } from '@/contracts'
-import { forbidden, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '@/routes/common'
+import { forbidden, jsonError, legacyUserAuth, notFound, readJson, resolveDispatchEnvironment } from '@/routes/common'
 import {
   archiveSession,
   createSession,
@@ -112,7 +112,7 @@ app.patch('/:id', legacyUserAuth, async (c) => {
   return c.json(await getSession(repos, owned), 200)
 })
 
-/** POST /v1/sessions/:id/archive — Archive a session. */
+/** POST /v1/sessions/:id/archive — Archive a session once it has no visible activity. */
 app.post('/:id/archive', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
   const requested = c.req.param('id')
@@ -120,7 +120,13 @@ app.post('/:id/archive', legacyUserAuth, async (c) => {
   if (!access.ok) return access.reason === 'not_found' ? notFound(c) : forbidden(c)
   const owned = access.sessionId
 
-  await archiveSession(repos, owned)
+  const body = await readJson(c)
+  const result = await archiveSession(repos, owned, { stopActivity: body.stop_activity === true })
+  if (!result.ok) {
+    return jsonError(c, 'session_active', 'Session has active work', 409, 'session_active', {
+      activity: result.activity,
+    })
+  }
   return c.json({ status: 'ok' }, 200)
 })
 

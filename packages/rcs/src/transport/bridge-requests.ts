@@ -91,6 +91,11 @@ export function cancelBridgeRequest(sessionId: string, requestId: string): void 
   waitersBySession.get(sessionId)?.get(requestId)?.resolve(null)
 }
 
+/** True while a control round-trip for the session is still awaiting its response. */
+export function hasPendingControlRequests(sessionId: string): boolean {
+  return (waitersBySession.get(sessionId)?.size ?? 0) > 0
+}
+
 /**
  * Resolve every pending request for a session with `null`. Called when the bridge socket
  * goes away so callers fail fast instead of waiting out their timeout.
