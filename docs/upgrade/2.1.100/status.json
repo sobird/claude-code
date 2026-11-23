@@ -858,6 +858,18 @@
         "files": ["src/utils/hooks/execPromptHook.ts"],
         "symbols": ["truncateStopHookTranscript", "groupMessagesByTurn", "execPromptHook"]
       }
+    },
+    {
+      "id": "behavior:background-agent-partial-progress-on-failure",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [86],
+      "evidence": ["bundle:7526435", "bundle:7524741"],
+      "notes": "修复后台子代理因错误失败时，父代理收不到它失败前已产出的部分进度（2.1.100 #86）。上游 v100 的后台代理生命周期在失败的 enqueueAgentNotification 里补 `finalMessage: o88(agentMessages)`（o88=extractPartialResult，取最后一条非空 assistant 文本）；此前只有 killed 分支带 finalMessage，failed 分支只报 error。任务通知消费端（enqueueAgentNotification 的 resultSection）对任意 status 都渲染 <result>，故补上后父代理即可见部分进度。本仓库该生命周期被复制在两处：src/tools/AgentTool/AgentTool.tsx（内联 async-from-start 路径）与 src/tools/AgentTool/agentToolUtils.ts（runAsyncAgentLifecycle，供 async-from-start 与 resumeAgentBackground 共用），两处 failed 分支均补 finalMessage: extractPartialResult(agentMessages)。见 notes R21。",
+      "srcEvidence": {
+        "files": ["src/tools/AgentTool/AgentTool.tsx", "src/tools/AgentTool/agentToolUtils.ts"],
+        "symbols": ["extractPartialResult", "enqueueAgentNotification"]
+      }
     }
   ]
 }

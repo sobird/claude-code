@@ -181,3 +181,13 @@ Stop / SubagentStop 的提示词钩子（prompt hook）会把整段会话 transc
 差异说明：`llY` 对 attachment 等非 assistant/user 类型，上游用 `jsonStringify(message).length/4`，本仓库对 assistant/user 用 `roughTokenCountEstimationForMessage`（内部即 `roughTokenCountEstimationForContent`），语义等价；非 assistant/user 走 `jsonStringify(...)/4` 与上游一致。`evaluatorModel` 是字符串，按仓库遥测边界 `as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS` 收窄。
 
 该函数依赖 `queryModelWithoutStreaming`（真实模型调用），仓库无 hook 单测；截断/分轮是纯逻辑，本轮以 typecheck/lint 与 bundle 对拍钉住，未新增单测。证据：`bundle:11670571`（`nlY` 标识符起点）、`bundle:11668445`（`drK` 内 `T.isApiErrorMessage` 标识符起点）、`bundle:11668509`（`Hooks: prompt-hook evaluator API error: ` 字面量）。
+
+### R21：后台子代理失败时上报部分进度（2.1.100 #86）
+
+后台子代理在运行中抛错进入 failed 分支时，原实现只把错误文本报给父代理，失败前已产出的 assistant 文本被丢弃；只有用户取消（killed）分支带了 `finalMessage: extractPartialResult(agentMessages)`（2.1.100 #86）。
+
+上游 v100 后台代理生命周期（`Wx8` 系列）的 failed `enqueueAgentNotification` 补上 `finalMessage: o88(agentMessages)`，其中 `o88` 即 `extractPartialResult`（从末尾向前找第一条非空 assistant 文本）。任务通知消费端 `enqueueAgentNotification` 的 `resultSection` 对任意 status 都渲染 `<result>…</result>`，因此 failed 通知带上 finalMessage 后父代理即可看到部分进度。
+
+本仓库这段生命周期被复制到两处，均需同步：`src/tools/AgentTool/AgentTool.tsx`（内联 async-from-start 路径）与 `src/tools/AgentTool/agentToolUtils.ts`（`runAsyncAgentLifecycle`，async-from-start 与 `resumeAgentBackground` 共用）。两处 failed 分支各自补 `finalMessage: extractPartialResult(agentMessages)`（`extractPartialResult` 已在 killed 分支与文件内使用，无需新导入）。
+
+差异：上游是单一函数，仓库因历史拆分有两份同构实现；两处等价修改，行为与上游一致。无针对该错误分支的现成单测（依赖真实后台 agent 生命周期），本轮以 typecheck/lint 与 bundle 对拍钉住。证据：`bundle:7526435`（v100 failed 通知里的 `o88(J)` 标识符起点）、`bundle:7524741`（`o88` 即 extractPartialResult 定义处）；v94 同位置 failed 分支无 `finalMessage`（对拍确认）。

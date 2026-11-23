@@ -1199,6 +1199,9 @@ export const AgentTool = buildTool({
                         error: errMsg,
                         setAppState: rootSetAppState,
                         toolUseId: toolUseContext.toolUseId,
+                        // Include whatever the agent produced before it failed
+                        // so the parent still sees partial progress (2.1.100 #86).
+                        finalMessage: extractPartialResult(agentMessages),
                         ...worktreeResult,
                       })
                     } finally {
