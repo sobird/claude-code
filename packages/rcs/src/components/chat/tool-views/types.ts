@@ -8,7 +8,7 @@
 import type { ToolCallData } from '@/lib/session-reducer'
 
 /** 正文视图族；同一族的工具共用一套渲染。 */
-export type ToolViewKind = 'bash' | 'file' | 'search' | 'web' | 'todo' | 'question' | 'agent' | 'task'
+export type ToolViewKind = 'bash' | 'file' | 'search' | 'web' | 'todo' | 'question' | 'agent' | 'task' | 'background'
 
 export interface ToolViewProps {
   tool: ToolCallData

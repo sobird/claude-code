@@ -3,6 +3,7 @@ import type { ComponentType } from 'react'
 import { canonicalToolName } from '@/lib/tool-summary'
 
 import { AgentToolView } from './AgentToolView'
+import { BackgroundTaskToolView } from './BackgroundTaskToolView'
 import { BashToolView } from './BashToolView'
 import { FileToolView } from './FileToolView'
 import { QuestionToolView } from './QuestionToolView'
@@ -31,6 +32,11 @@ const TOOL_VIEW_DEFINITIONS: readonly ToolViewDefinition[] = [
   { kind: 'web', tools: ['WebFetch', 'WebSearch'], component: WebToolView },
   { kind: 'agent', tools: ['Agent'], component: AgentToolView },
   { kind: 'task', tools: ['TaskCreate', 'TaskUpdate', 'TaskGet', 'TaskList'], component: TaskToolView },
+  {
+    kind: 'background',
+    tools: ['TaskOutput', 'AgentOutputTool', 'BashOutputTool', 'BashOutput', 'TaskStop', 'KillShell'],
+    component: BackgroundTaskToolView,
+  },
   { kind: 'todo', tools: ['TodoWrite'], component: TodoToolView },
   { kind: 'question', tools: ['AskUserQuestion'], component: QuestionToolView },
 ]

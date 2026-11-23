@@ -57,9 +57,14 @@ export function summarizeToolCall(
       add('command', input.command)
       add('description', input.description)
       break
+    case 'TaskOutput':
     case 'BashOutput':
+    case 'AgentOutput':
+    case 'BashOutputTool':
+    case 'AgentOutputTool':
+    case 'TaskStop':
     case 'KillShell':
-      add('shell_id', input.shell_id ?? input.bash_id)
+      add('task_id', input.task_id ?? input.shell_id ?? input.bash_id)
       break
     case 'Read':
     case 'Write':
