@@ -1,5 +1,5 @@
 import type { ToolCallData, ToolResultImage } from '@/lib/session-reducer'
-import { diffLines, toolEditPreview, type EditPreviewHunk } from '@/lib/text-diff'
+import { diffLines, toolEditPreview, type DiffLine, type EditPreviewHunk } from '@/lib/text-diff'
 
 import { firstString, formatOutput, toolImages } from './format'
 
@@ -36,6 +36,61 @@ const NUMBERED_RATIO = 0.6
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
+}
+
+/** 对话内最多渲染的 diff 行数；完整差异留给查看弹层。 */
+export const DIFF_PREVIEW_LINES = 24
+
+export interface ClippedDiffHunk {
+  hunk: EditPreviewHunk
+  lines: DiffLine[]
+}
+
+export interface ClippedDiff {
+  hunks: ClippedDiffHunk[]
+  /** 因超过上限而未渲染的行数；0 表示完整显示。 */
+  hidden: number
+}
+
+/**
+ * 截断对话内的 diff：从第一个 hunk 起保留前 `maxLines` 行，剩余行数交给
+ * 「查看完整差异」入口。用 `Infinity` 取全量行数，避免 diffLines 自带的
+ * 400 行上限把隐藏行数算少。
+ */
+export function clipDiff(hunks: EditPreviewHunk[], maxLines = DIFF_PREVIEW_LINES): ClippedDiff {
+  const full = hunks.map((hunk) => ({ hunk, lines: diffLines(hunk.before, hunk.after, Number.POSITIVE_INFINITY) }))
+  const total = full.reduce((sum, item) => sum + item.lines.length, 0)
+  if (total <= maxLines) return { hunks: full, hidden: 0 }
+
+  const clipped: ClippedDiffHunk[] = []
+  let remaining = maxLines
+  for (const item of full) {
+    if (remaining <= 0) break
+    const lines = item.lines.slice(0, remaining)
+    remaining -= lines.length
+    clipped.push({ hunk: item.hunk, lines })
+  }
+  return { hunks: clipped, hidden: total - maxLines }
+}
+
+export interface FoldedLines<T> {
+  head: T[]
+  /** 折叠时被收起的中部；短内容为空，表示不折叠。 */
+  middle: T[]
+  tail: T[]
+}
+
+/**
+ * 按首尾行数切出可折叠的中部。行数不超过首尾之和时不做折叠，
+ * 直接整体放进 `head`，避免出现重叠或丢失。
+ */
+export function splitFold<T>(lines: T[], headCount: number, tailCount: number): FoldedLines<T> {
+  if (lines.length <= headCount + tailCount) return { head: lines, middle: [], tail: [] }
+  return {
+    head: lines.slice(0, headCount),
+    middle: lines.slice(headCount, lines.length - tailCount),
+    tail: lines.slice(lines.length - tailCount),
+  }
 }
 
 /** 汇总所有 hunk 的增删行数，用于卡片头部的 `+N -M`。 */

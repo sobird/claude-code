@@ -66,7 +66,7 @@ export function FilePreviewDialog({ model, onClose }: { model: FileViewModel; on
             <div className={styles.diffs}>
               {model.hunks.map((hunk, hunkIndex) => (
                 <pre key={hunkIndex} className={styles.diff}>
-                  {diffLines(hunk.before, hunk.after).map((line, lineIndex) => (
+                  {diffLines(hunk.before, hunk.after, Number.POSITIVE_INFINITY).map((line, lineIndex) => (
                     <div
                       key={lineIndex}
                       className={cx(

@@ -2,11 +2,45 @@ import { describe, expect, test } from 'bun:test'
 
 import type { ToolCallData } from '@/lib/session-reducer'
 
-import { diffStats, fileViewModel, formatInputSize, previewBodyKind, readLinesFromOutput } from '../file-model'
+import {
+  clipDiff,
+  DIFF_PREVIEW_LINES,
+  diffStats,
+  fileViewModel,
+  formatInputSize,
+  previewBodyKind,
+  readLinesFromOutput,
+  splitFold,
+} from '../file-model'
 
 function tool(title: string, rawInput: Record<string, unknown>, overrides: Partial<ToolCallData> = {}): ToolCallData {
   return { id: 't1', title, status: 'complete', rawInput, ...overrides }
 }
+
+describe('splitFold', () => {
+  const numbered = (count: number): number[] => Array.from({ length: count }, (_, index) => index + 1)
+
+  test('keeps short input whole, with no middle', () => {
+    const folded = splitFold(numbered(15), 10, 5)
+    expect(folded.head).toEqual(numbered(15))
+    expect(folded.middle).toEqual([])
+    expect(folded.tail).toEqual([])
+  })
+
+  test('splits long input into head, middle, tail without overlap or gaps', () => {
+    const lines = numbered(40)
+    const folded = splitFold(lines, 10, 5)
+    expect(folded.head).toEqual(lines.slice(0, 10))
+    expect(folded.middle).toEqual(lines.slice(10, 35))
+    expect(folded.tail).toEqual(lines.slice(35))
+    expect([...folded.head, ...folded.middle, ...folded.tail]).toEqual(lines)
+  })
+
+  test('folds the single overflow line at the boundary', () => {
+    const folded = splitFold(numbered(16), 10, 5)
+    expect(folded.middle).toEqual([11])
+  })
+})
 
 describe('fileViewModel', () => {
   test('an Edit yields one old/new hunk', () => {
@@ -202,6 +236,43 @@ describe('formatInputSize', () => {
     expect(formatInputSize(1536)).toBe('1.5 KB')
     expect(formatInputSize(1024)).toBe('1.0 KB')
     expect(formatInputSize(1024 * 1024)).toBe('1024.0 KB')
+  })
+})
+
+describe('clipDiff', () => {
+  test('keeps a short diff intact', () => {
+    const clipped = clipDiff([{ before: 'a\nb', after: 'a\nB' }])
+    expect(clipped.hidden).toBe(0)
+    expect(clipped.hunks).toHaveLength(1)
+    expect(clipped.hunks[0]?.lines).toEqual([
+      { type: 'context', text: 'a' },
+      { type: 'remove', text: 'b' },
+      { type: 'add', text: 'B' },
+    ])
+  })
+
+  test('cuts an oversized diff at the preview limit', () => {
+    const after = Array.from({ length: DIFF_PREVIEW_LINES + 10 }, (_, index) => `line ${index}`).join('\n')
+    const clipped = clipDiff([{ before: '', after, isNewFile: true }])
+    expect(clipped.hidden).toBe(10)
+    expect(clipped.hunks).toHaveLength(1)
+    expect(clipped.hunks[0]?.lines).toHaveLength(DIFF_PREVIEW_LINES)
+  })
+
+  test('spans hunks and drops whole hunks past the limit', () => {
+    const first = Array.from({ length: DIFF_PREVIEW_LINES }, (_, index) => `a${index}`).join('\n')
+    const clipped = clipDiff([
+      { before: '', after: first, isNewFile: true },
+      { before: 'x', after: 'y' },
+    ])
+    expect(clipped.hidden).toBe(2)
+    expect(clipped.hunks).toHaveLength(1)
+  })
+
+  test('counts hidden lines past the LCS size limit', () => {
+    const after = Array.from({ length: 600 }, (_, index) => `line ${index}`).join('\n')
+    const clipped = clipDiff([{ before: '', after, isNewFile: true }])
+    expect(clipped.hidden).toBe(600 - DIFF_PREVIEW_LINES)
   })
 })
 

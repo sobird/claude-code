@@ -206,6 +206,7 @@
     "expandOutput": "Show all ({lines} lines)",
     "collapseOutput": "Collapse",
     "hiddenLines": "… {count} lines hidden · show all",
+    "viewFullDiff": "View full diff ({count} more lines)",
     "searchFiles": "{count} files",
     "searchMatches": "{count} matches",
     "webSources": "{count} sources",

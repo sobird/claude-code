@@ -206,6 +206,7 @@
     "expandOutput": "展开全部（{lines} 行）",
     "collapseOutput": "收起",
     "hiddenLines": "… 已折叠 {count} 行 · 展开全部",
+    "viewFullDiff": "查看完整差异（还有 {count} 行）",
     "searchFiles": "{count} 个文件",
     "searchMatches": "{count} 处匹配",
     "webSources": "{count} 个来源",
