@@ -1,0 +1,24 @@
+import { errorMessage } from '@sobird/dsh-bridge/core'
+
+import { startPluginBridge } from './bridge'
+import { resolveConfig } from './config'
+import type { PluginContextLike } from './types'
+
+/** Cordis 插件名；与 `cordis.patch.yml` 的行 id 区分（行 id 是 `rcs-bridge`）。 */
+export const name = 'rcs-bridge'
+
+/** 只为等待 agents 服务；agent 本身在首条消息时懒创建，避开 agent-loop 的加载顺序。 */
+export const inject = ['agents']
+
+/** 把当前 dsh 进程接到一条 RCS 会话；卸载时中止桥接。 */
+export async function apply(ctx: PluginContextLike, config: unknown): Promise<void> {
+  try {
+    const resolved = resolveConfig(config)
+    const bridge = await startPluginBridge(ctx, resolved)
+    process.stderr.write(`[dsh-rcs-plugin] attached to ${resolved.rcsBaseUrl} session ${bridge.sessionId}\n`)
+    ctx.effect(() => () => bridge.stop())
+  } catch (error) {
+    process.stderr.write(`[dsh-rcs-plugin] failed: ${errorMessage(error)}\n`)
+    throw error
+  }
+}

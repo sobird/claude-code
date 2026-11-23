@@ -5,8 +5,12 @@
 消息喂给 dsh，再把 dsh 的事件、审批、提问翻译回 RCS。dsh 一律以
 「SDK profile + RCS 的 `cse_` 会话 id」运行，停止后可用同一 id 恢复。
 
-它不是 dsh 插件：RCS 传输（建会话、worker JWT、SSE、心跳、`requires_action`）留在桥里，
+它本身不是 dsh 插件：RCS 传输（建会话、worker JWT、SSE、心跳、`requires_action`）留在桥里，
 停止语义依赖杀掉 dsh 进程组，因此保持进程隔离更简单、更可重启。
+
+也可以把同样的桥装进 dsh 宿主进程，从插件菜单添加：[`@sobird/dsh-rcs-plugin`](../dsh-rcs-plugin)。
+它复用本包的 core（事件/审批翻译与 RCS 客户端），省掉子进程与 JSON-RPC，停止走 `agent.cancel()`；
+本独立包保留给需要进程隔离或独立重启的场景。
 
 ## 运行
 

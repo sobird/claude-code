@@ -234,9 +234,14 @@ export function allowRulesOf(resolution: ControlResolution): { toolName: string;
   return rules
 }
 
-/** dsh 审批只接受一次性判决；「总是允许」由适配器自己短路。 */
+/** dsh 审批只接受一次性判决；「总是允许」由调用方自己短路。 */
+export function approvalOutcome(resolution: ControlResolution): 'allowed-once' | 'rejected' {
+  return resolution.approved ? 'allowed-once' : 'rejected'
+}
+
+/** SDK 反向请求的答复形状；进程内插件直接用 `approvalOutcome`。 */
 export function approvalResult(resolution: ControlResolution): Record<string, unknown> {
-  return { outcome: resolution.approved ? 'allowed-once' : 'rejected' }
+  return { outcome: approvalOutcome(resolution) }
 }
 
 /** dsh `approval/request` → RCS 权限卡。 */

@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./core": "./src/core.ts",
+    "./testing": "./src/testing/fake-rcs.ts"
+  },
   "scripts": {
     "dev": "bun run src/index.ts",
     "e2e": "bun scripts/e2e.ts",

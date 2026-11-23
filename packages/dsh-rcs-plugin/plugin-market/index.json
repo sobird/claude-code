@@ -1,0 +1,29 @@
+{
+  "format": 1,
+  "title": { "en": "RCS bridge", "zh": "RCS 桥" },
+  "description": {
+    "en": "Plugins that attach RCS remote-control sessions.",
+    "zh": "把 RCS 远程控制会话接入 dsh 的插件。"
+  },
+  "plugins": [
+    {
+      "name": "@sobird/dsh-rcs-plugin",
+      "title": "RCS bridge",
+      "description": "每个 RCS 的 cse_ 会话绑定一条专属 dsh 会话，事件/审批/提问双向翻译。",
+      "author": "sobird",
+      "homepage": "https://github.com/sobird/claude-code/tree/main/packages/dsh-rcs-plugin#readme",
+      "repository": {
+        "url": "https://github.com/sobird/claude-code",
+        "directory": "packages/dsh-rcs-plugin"
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1795449600,
+          "source": { "type": "npm" },
+          "engines": { "dsh": ">=0.2.3-alpha.2 <0.3.0" }
+        }
+      ]
+    }
+  ]
+}

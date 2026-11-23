@@ -1,0 +1,397 @@
+import { randomUUID } from 'node:crypto'
+
+import {
+  RcsClient,
+  approvalOutcome,
+  approvalRequestEvent,
+  asNumber,
+  asText,
+  errorMessage,
+  isRecord,
+  parseControlResponse,
+  promptBlocks,
+  questionRequestEvent,
+  questionResult,
+  translateSessionEvent,
+  type ControlResolution,
+  type DshPromptBlock,
+  type RcsEvent,
+  type RequiresActionDetails,
+  type WorkerFrame,
+  type WorkerSession,
+  type WorkerStatus,
+} from '@sobird/dsh-bridge/core'
+
+import type { ResolvedConfig } from './config'
+import { createUserMessage } from './message'
+import {
+  isAttachments,
+  isSessionPersistence,
+  type AgentLike,
+  type AgentStatusLike,
+  type ApprovalOutcomeLike,
+  type ApprovalRequestLike,
+  type PluginContextLike,
+  type QuestionAnswerLike,
+  type QuestionRequestLike,
+  type SessionEventLike,
+  type SessionLike,
+} from './types'
+
+const HEARTBEAT_MS = 30_000
+const RECONNECT_MS = 1_000
+
+/** 挂起的人工请求；`settle(null)` 表示被取消（中断/停止/信号中止）。 */
+type PendingHuman = (resolution: ControlResolution | null) => void
+
+export interface PluginBridge {
+  sessionId: string
+  /** 中止 pump/心跳、收尾挂起卡片并停止 agent。 */
+  stop(): Promise<void>
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function log(line: string): void {
+  process.stderr.write(`[dsh-rcs-plugin] ${line}\n`)
+}
+
+/**
+ * 一条 RCS 会话在 dsh 进程内的桥接：RCS 入站消息 → `agent.followup`，
+ * 会话事件/审批/提问 → RCS。dsh 会话 id 直接复用 `cse_...`。
+ */
+class InProcessBridge implements PluginBridge {
+  readonly sessionId: string
+
+  private readonly ctx: PluginContextLike
+  private readonly config: ResolvedConfig
+  private readonly rcs: RcsClient
+  private readonly worker: WorkerSession
+  private readonly abort = new AbortController()
+  private readonly pendingHuman = new Map<string, PendingHuman>()
+  private readonly alwaysAllow = new Set<string>()
+
+  private agent: AgentLike | null = null
+  private starting: Promise<AgentLike> | null = null
+  private heartbeat: ReturnType<typeof setInterval> | null = null
+  private lastSequence = 0
+  private turnOpen = false
+  private stopping = false
+  /** 串行化上报，保证 dsh 事件到 RCS 的顺序与产生顺序一致。 */
+  private posting: Promise<void> = Promise.resolve()
+
+  constructor(ctx: PluginContextLike, config: ResolvedConfig, rcs: RcsClient, worker: WorkerSession) {
+    this.ctx = ctx
+    this.config = config
+    this.rcs = rcs
+    this.worker = worker
+    this.sessionId = worker.sessionId
+  }
+
+  async begin(): Promise<void> {
+    this.ctx.on('session/event', this.onSessionEvent)
+    this.ctx.on('agent/status', this.onAgentStatus)
+    this.ctx.on('approval/request', this.onApproval, { prepend: true })
+    this.ctx.on('user-questions/request', this.onQuestion, { prepend: true })
+    await this.setStatus('idle')
+    this.startHeartbeat()
+    void this.pump()
+  }
+
+  async stop(): Promise<void> {
+    if (this.stopping) return
+    this.stopping = true
+    if (this.heartbeat) clearInterval(this.heartbeat)
+    this.heartbeat = null
+    await this.cancelPendingHuman('Interrupted')
+    this.currentAgent()?.cancel({ kind: 'user' })
+    await this.posting
+    await this.setStatus('idle')
+    this.abort.abort()
+  }
+
+  private onSessionEvent = (session: SessionLike, event: SessionEventLike): void => {
+    if (session.id !== this.sessionId) return
+    const type = asText(event.type)
+    if (type === 'turn/start') this.turnOpen = true
+    if (type === 'turn/end') this.turnOpen = false
+    const events = translateSessionEvent({
+      type,
+      seq: asNumber(event.seq),
+      data: isRecord(event.data) ? event.data : {},
+    })
+    void this.post(events)
+    if (type === 'turn/end' && this.pendingHuman.size === 0) void this.setStatus('idle')
+  }
+
+  private onAgentStatus = (event: AgentStatusLike): void => {
+    if (event.agent?.id !== this.sessionId) return
+    if (this.pendingHuman.size > 0) return
+    const status = asText(event.status)
+    if (status === 'running') void this.setStatus('running')
+    if (status === 'idle') void this.setStatus('idle')
+  }
+
+  private onApproval = async (
+    request: ApprovalRequestLike,
+    next: () => Promise<ApprovalOutcomeLike>,
+  ): Promise<ApprovalOutcomeLike> => {
+    if (request.agent?.id !== this.sessionId) return next()
+    const toolName = asText(request.toolName) || 'unknown'
+    // 「总是允许」只记在插件内存里：命中后直接放行，不再打扰 RCS。
+    if (this.alwaysAllow.has(`${this.sessionId}:${toolName}`)) return 'allowed-once'
+
+    const requestId = `perm_${randomUUID()}`
+    const pending = this.awaitHuman(requestId, request.signal)
+    await this.post([approvalRequestEvent(requestId, request)])
+    await this.setStatus('requires_action', { toolName, description: asText(request.reason) })
+    const resolution = await pending
+    if (!resolution) return 'cancelled'
+    if (resolution.approved) this.rememberAllowRules(resolution)
+    return approvalOutcome(resolution)
+  }
+
+  private onQuestion = async (
+    request: QuestionRequestLike,
+    next: () => Promise<QuestionAnswerLike>,
+  ): Promise<QuestionAnswerLike> => {
+    if (request.agent?.id !== this.sessionId) return next()
+    const questions = Array.isArray(request.questions) ? request.questions : []
+    const first = isRecord(questions[0]) ? questions[0] : null
+    const intent = isRecord(first?.intent) ? first.intent : null
+    const toolName = intent?.kind === 'plan-review' ? 'ExitPlanMode' : 'AskUserQuestion'
+
+    const requestId = `ask_${randomUUID()}`
+    const pending = this.awaitHuman(requestId, request.signal)
+    await this.post([questionRequestEvent(requestId, request)])
+    await this.setStatus('requires_action', { toolName, description: asText(first?.question) })
+    const resolution = await pending
+    return resolution ? questionResult(request, resolution) : { cancelled: true }
+  }
+
+  private rememberAllowRules(resolution: ControlResolution): void {
+    for (const rule of resolution.updatedPermissions) {
+      if (rule.type !== 'addRules') continue
+      if (asText(rule.behavior) !== 'allow') continue
+      for (const item of Array.isArray(rule.rules) ? rule.rules : []) {
+        if (!isRecord(item)) continue
+        const toolName = asText(item.toolName)
+        if (toolName) this.alwaysAllow.add(`${this.sessionId}:${toolName}`)
+      }
+    }
+  }
+
+  private awaitHuman(requestId: string, signal: AbortSignal | undefined): Promise<ControlResolution | null> {
+    return new Promise((resolve) => {
+      let detach: (() => void) | undefined
+      const settle = (resolution: ControlResolution | null): void => {
+        if (!this.pendingHuman.delete(requestId)) return
+        detach?.()
+        resolve(resolution)
+      }
+      this.pendingHuman.set(requestId, settle)
+      if (signal) {
+        const onAbort = (): void => settle(null)
+        signal.addEventListener('abort', onAbort, { once: true })
+        detach = () => signal.removeEventListener('abort', onAbort)
+      }
+    })
+  }
+
+  /** 待处理卡片统一收尾；同时补发 control_response，避免 UI 卡片卡住。 */
+  private async cancelPendingHuman(message: string): Promise<void> {
+    const pending = [...this.pendingHuman.entries()]
+    if (pending.length === 0) return
+    const events: RcsEvent[] = []
+    for (const [requestId, settle] of pending) {
+      settle(null)
+      events.push({
+        type: 'control_response',
+        payload: {
+          type: 'control_response',
+          response: {
+            subtype: 'success',
+            request_id: requestId,
+            response: { behavior: 'deny', message },
+          },
+        },
+      })
+    }
+    await this.post(events)
+  }
+
+  private async pump(): Promise<void> {
+    while (!this.abort.signal.aborted) {
+      try {
+        for await (const frame of this.rcs.streamEvents(this.worker, this.lastSequence, this.abort.signal)) {
+          await this.handleFrame(frame)
+        }
+      } catch (error) {
+        if (this.abort.signal.aborted) return
+        log(`worker stream: ${errorMessage(error)}`)
+      }
+      if (this.abort.signal.aborted) return
+      await sleep(RECONNECT_MS)
+    }
+  }
+
+  private async handleFrame(frame: WorkerFrame): Promise<void> {
+    if (frame.sequenceNum !== null) this.lastSequence = Math.max(this.lastSequence, frame.sequenceNum)
+    const payload = frame.payload
+    const type = asText(payload.type) || frame.eventType
+
+    if (type === 'user' || frame.eventType === 'user') {
+      await this.handleUser(payload)
+      return
+    }
+    if (type === 'control_response' || type === 'permission_response') {
+      await this.handleControlResponse(payload)
+      return
+    }
+    if (type === 'control_request') {
+      const request = isRecord(payload.request) ? payload.request : null
+      if (request?.subtype === 'interrupt') await this.interrupt()
+      return
+    }
+    if (frame.eventType === 'interrupt') await this.interrupt()
+  }
+
+  private async handleUser(payload: Record<string, unknown>): Promise<void> {
+    const blocks = promptBlocks(payload)
+    if (blocks.length === 0) return
+    try {
+      const agent = await this.ensureAgent()
+      this.turnOpen = true
+      await this.setStatus('running')
+      agent.followup(createUserMessage(await this.admit(blocks)))
+    } catch (error) {
+      this.turnOpen = false
+      await this.postResultError(errorMessage(error))
+      await this.setStatus('idle')
+    }
+  }
+
+  /** 图片需要附件服务换成持久引用；纯文本直接通过。 */
+  private async admit(blocks: readonly DshPromptBlock[]): Promise<readonly unknown[]> {
+    if (!blocks.some((block) => block.type === 'image')) return blocks
+    const attachments = this.ctx.get('attachments')
+    if (!isAttachments(attachments)) {
+      throw new Error('image prompts require the attachments service in this dsh profile')
+    }
+    return attachments.admitPromptContent(blocks)
+  }
+
+  private async handleControlResponse(payload: Record<string, unknown>): Promise<void> {
+    const response = isRecord(payload.response) ? payload.response : null
+    const requestId = asText(response?.request_id) || asText(payload.request_id)
+    const resolution = parseControlResponse(payload)
+    if (!requestId || !resolution) return
+    const pending = this.pendingHuman.get(requestId)
+    if (!pending) return
+    pending(resolution)
+    if (this.pendingHuman.size === 0) await this.setStatus('running')
+  }
+
+  /** 停止当前轮：给挂起卡片补应答，再取消 agent；aborted result 由 turn/end 产生。 */
+  private async interrupt(): Promise<void> {
+    await this.cancelPendingHuman('Interrupted')
+    this.currentAgent()?.cancel({ kind: 'user' })
+  }
+
+  /** 优先用已创建的 agent；插件启动时不建 agent，停止/中断时要回落到服务里查。 */
+  private currentAgent(): AgentLike | null {
+    const agent = this.agent ?? this.ctx.agents.get(this.sessionId) ?? null
+    if (agent) this.agent = agent
+    return agent
+  }
+
+  private ensureAgent(): Promise<AgentLike> {
+    const existing = this.ctx.agents.get(this.sessionId)
+    if (existing) {
+      this.agent = existing
+      return Promise.resolve(existing)
+    }
+    this.starting ??= this.createAgent().finally(() => {
+      this.starting = null
+    })
+    return this.starting
+  }
+
+  private async createAgent(): Promise<AgentLike> {
+    const agentOptions = { provider: this.config.provider, model: this.config.model }
+    if (this.config.sessionId) {
+      const persistence = this.ctx.get('sessionPersistence')
+      if (isSessionPersistence(persistence) && (await persistence.stat(this.sessionId))) {
+        const handle = await this.ctx.agents.resume({ resumeSessionId: this.sessionId, agentOptions })
+        this.agent = handle.agent
+        return handle.agent
+      }
+    }
+    const handle = await this.ctx.agents.create({
+      sessionId: this.sessionId,
+      meta: { cwd: this.config.workdir },
+      agentOptions,
+    })
+    this.agent = handle.agent
+    return handle.agent
+  }
+
+  private startHeartbeat(): void {
+    const beat = (): void => {
+      void this.rcs.heartbeat(this.worker).catch((error: unknown) => {
+        log(`heartbeat: ${errorMessage(error)}`)
+      })
+    }
+    beat()
+    this.heartbeat = setInterval(beat, HEARTBEAT_MS)
+    this.heartbeat.unref?.()
+  }
+
+  private post(events: readonly RcsEvent[]): Promise<void> {
+    if (events.length === 0) return this.posting
+    const payloads = events.map((event) => ({ type: event.type, ...event.payload }))
+    this.posting = this.posting.then(async () => {
+      try {
+        await this.rcs.postEvents(this.worker, payloads)
+      } catch (error) {
+        log(`post events: ${errorMessage(error)}`)
+      }
+    })
+    return this.posting
+  }
+
+  private async postResultError(message: string): Promise<void> {
+    await this.post([
+      {
+        type: 'result',
+        payload: {
+          type: 'result',
+          subtype: 'error',
+          uuid: `dsh-error-${randomUUID()}`,
+          is_error: true,
+          result: message,
+        },
+      },
+    ])
+  }
+
+  private async setStatus(status: WorkerStatus, details?: RequiresActionDetails): Promise<void> {
+    try {
+      await this.rcs.setWorkerStatus(this.worker, status, details)
+    } catch (error) {
+      log(`status ${status}: ${errorMessage(error)}`)
+    }
+  }
+}
+
+/** 建 RCS 会话（或复用 `sessionId`）、换 worker 凭据并开始桥接。 */
+export async function startPluginBridge(ctx: PluginContextLike, config: ResolvedConfig): Promise<PluginBridge> {
+  const rcs = new RcsClient({ baseUrl: config.rcsBaseUrl, apiKey: config.apiKey })
+  const sessionId = config.sessionId ?? (await rcs.createSession(config.sessionTitle))
+  const worker = await rcs.openWorker(sessionId)
+  const bridge = new InProcessBridge(ctx, config, rcs, worker)
+  await bridge.begin()
+  return bridge
+}

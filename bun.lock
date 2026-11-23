@@ -176,6 +176,17 @@
         "highlight.js": "^11.11.1",
       },
     },
+    "packages/dsh-bridge": {
+      "name": "@sobird/dsh-bridge",
+      "version": "0.0.0",
+    },
+    "packages/dsh-rcs-plugin": {
+      "name": "@sobird/dsh-rcs-plugin",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@sobird/dsh-bridge": "workspace:*",
+      },
+    },
     "packages/image-processor-napi": {
       "name": "image-processor-napi",
       "version": "1.0.0",
@@ -1120,6 +1131,10 @@
     "@smithy/util-utf8": ["@smithy/util-utf8@4.2.2", "https://registry.npmmirror.com/@smithy/util-utf8/-/util-utf8-4.2.2.tgz", { "dependencies": { "@smithy/util-buffer-from": "^4.2.2", "tslib": "^2.6.2" } }, "sha512-75MeYpjdWRe8M5E3AW0O4Cx3UadweS+cwdXjwYGBW5h/gxxnbeZ877sLPX/ZJA9GVTlL/qG0dXP29JWFCD1Ayw=="],
 
     "@smithy/uuid": ["@smithy/uuid@1.1.2", "https://registry.npmmirror.com/@smithy/uuid/-/uuid-1.1.2.tgz", { "dependencies": { "tslib": "^2.6.2" } }, "sha512-O/IEdcCUKkubz60tFbGA7ceITTAJsty+lBjNoorP4Z6XRqaFb/OjQjZODophEcuq68nKm6/0r+6/lLQ+XVpk8g=="],
+
+    "@sobird/dsh-bridge": ["@sobird/dsh-bridge@workspace:packages/dsh-bridge"],
+
+    "@sobird/dsh-rcs-plugin": ["@sobird/dsh-rcs-plugin@workspace:packages/dsh-rcs-plugin"],
 
     "@sobird/rcs": ["@sobird/rcs@workspace:packages/rcs"],
 

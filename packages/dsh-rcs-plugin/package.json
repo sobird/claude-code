@@ -1,0 +1,44 @@
+{
+  "name": "@sobird/dsh-rcs-plugin",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Bridge a deepseek-harness session to a remote RCS gateway as a dsh host plugin.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sobird/claude-code.git",
+    "directory": "packages/dsh-rcs-plugin"
+  },
+  "files": [
+    "lib/index.js",
+    "cordis.patch.yml",
+    "src",
+    "README.md"
+  ],
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "e2e": "bun run scripts/e2e.ts",
+    "prepublishOnly": "bun run build",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@sobird/dsh-bridge": "workspace:*"
+  },
+  "engines": {
+    "dsh": ">=0.2.3-alpha.2 <0.3.0",
+    "node": "^24.22.3 || >=26.13.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
