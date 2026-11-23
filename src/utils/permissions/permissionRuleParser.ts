@@ -26,7 +26,11 @@ const LEGACY_TOOL_NAME_ALIASES: Record<string, string> = {
 }
 
 export function normalizeLegacyToolName(name: string): string {
-  return LEGACY_TOOL_NAME_ALIASES[name] ?? name
+  // Object.hasOwn guards against rule names that collide with Object.prototype
+  // properties (e.g. "toString", "constructor"), which would otherwise resolve
+  // to a function and make settings.json rules silently unparseable
+  // (upstream 2.1.97 #8).
+  return Object.hasOwn(LEGACY_TOOL_NAME_ALIASES, name) ? (LEGACY_TOOL_NAME_ALIASES[name] ?? name) : name
 }
 
 export function getLegacyToolNames(canonicalName: string): string[] {

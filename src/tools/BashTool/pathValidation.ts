@@ -131,6 +131,37 @@ function filterOutFlags(args: string[]): string[] {
   return result
 }
 
+/**
+ * Like filterOutFlags, but also skips the value of flags that take one.
+ *
+ * `cut -d /`, `paste -d /` and `column -s /` pass the delimiter/separator as a
+ * separate argument; treating it as a path caused false permission prompts for
+ * read-only commands (upstream 2.1.98 #24). Inline `--flag=value` needs no
+ * extra skip.
+ */
+function filterOutFlagsWithValues(flagsWithValues: Set<string>): (args: string[]) => string[] {
+  return (args) => {
+    const result: string[] = []
+    let afterDoubleDash = false
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i]
+      if (arg === undefined || arg === null) continue
+      if (afterDoubleDash) {
+        result.push(arg)
+      } else if (arg === '--') {
+        afterDoubleDash = true
+      } else if (arg.startsWith('-')) {
+        const eqIdx = arg.indexOf('=')
+        const flag = eqIdx >= 0 ? arg.slice(0, eqIdx) : arg
+        if (eqIdx < 0 && flagsWithValues.has(flag)) i++
+      } else {
+        result.push(arg)
+      }
+    }
+    return result
+  }
+}
+
 // Helper: Parse grep/rg style commands (pattern then paths)
 function parsePatternCommand(args: string[], flagsWithArgs: Set<string>, defaults: string[] = []): string[] {
   const paths: string[] = []
@@ -276,13 +307,60 @@ export const PATH_EXTRACTORS: Record<PathCommand, (args: string[]) => string[]> 
   sort: filterOutFlags,
   uniq: filterOutFlags,
   wc: filterOutFlags,
-  cut: filterOutFlags,
-  paste: filterOutFlags,
-  column: filterOutFlags,
+  cut: filterOutFlagsWithValues(
+    new Set(['-d', '--delimiter', '-f', '--fields', '-b', '--bytes', '-c', '--characters', '--output-delimiter']),
+  ),
+  paste: filterOutFlagsWithValues(new Set(['-d', '--delimiters'])),
+  column: filterOutFlagsWithValues(new Set(['-s', '--separator', '-o', '--output-separator', '-c', '--output-width'])),
   file: filterOutFlags,
   stat: filterOutFlags,
   diff: filterOutFlags,
-  awk: filterOutFlags,
+  // awk: the program is the first positional arg and is not a path; `-f`/`-E`
+  // name a program file that must itself be validated.
+  awk: (args) => {
+    const valueFlags = new Set(['-F', '--field-separator', '-v', '--assign', '-e', '--source'])
+    const fileFlags = new Set(['-f', '--file', '-E', '--exec'])
+    const paths: string[] = []
+    let programFound = false
+    let afterDoubleDash = false
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i]
+      if (arg === undefined || arg === null) continue
+      if (!afterDoubleDash && arg === '--') {
+        afterDoubleDash = true
+        continue
+      }
+      if (!afterDoubleDash && arg.startsWith('-')) {
+        const eqIdx = arg.indexOf('=')
+        const flag = eqIdx >= 0 ? arg.slice(0, eqIdx) : arg
+        if (eqIdx < 0 && valueFlags.has(flag)) {
+          if (flag === '-e' || flag === '--source') programFound = true
+          i++
+          continue
+        }
+        if (fileFlags.has(flag)) {
+          programFound = true
+          if (eqIdx >= 0) {
+            paths.push(arg.slice(eqIdx + 1))
+          } else {
+            const fileArg = args[i + 1]
+            if (fileArg !== undefined && fileArg !== null) {
+              paths.push(fileArg)
+              i++
+            }
+          }
+          continue
+        }
+        continue
+      }
+      if (!programFound) {
+        programFound = true
+        continue
+      }
+      paths.push(arg)
+    }
+    return paths
+  },
   strings: filterOutFlags,
   hexdump: filterOutFlags,
   od: filterOutFlags,
@@ -732,8 +810,14 @@ export function createPathChecker(command: PathCommand, operationTypeOverride?: 
         }
       }
 
-      // For write operations, also suggest enabling accept-edits mode
-      if (operationType === 'write' || operationType === 'create') {
+      // For write operations, also suggest enabling accept-edits mode — but only
+      // when that would be an upgrade. In bypassPermissions everything is already
+      // allowed; in auto/acceptEdits it silently downgrades the session mode when
+      // the host applies the suggestion on "Always allow" (upstream 2.1.98 #18).
+      if (
+        (operationType === 'write' || operationType === 'create') &&
+        (context.mode === 'default' || context.mode === 'plan')
+      ) {
         suggestions.push({
           type: 'setMode',
           mode: 'acceptEdits',

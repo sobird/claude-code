@@ -1,0 +1,218 @@
+{
+  "source": {
+    "reference": "2.1.94",
+    "target": "2.1.100"
+  },
+  "entries": [
+    {
+      "id": "cmd:setup-vertex",
+      "kind": "cmd",
+      "status": "ported",
+      "evidence": ["bundle:setup-vertex"],
+      "notes": "新增登录页 3rd-party platform 的 Google Vertex AI 交互式向导（GCP 认证 → 项目/区域 → 凭证校验 → 模型钉定）。移植为 src/commands/setup-vertex/*、src/components/VertexSetupWizard.tsx、src/utils/vertexSetup.ts，并在 cliLaunch.ts 加 execRelaunch() 重启进入向导。见 notes R3。",
+      "srcEvidence": {
+        "files": [
+          "src/commands/setup-vertex/index.ts",
+          "src/commands/setup-vertex/setup-vertex.tsx",
+          "src/components/VertexSetupWizard.tsx",
+          "src/utils/vertexSetup.ts",
+          "src/utils/cliLaunch.ts",
+          "src/commands.ts"
+        ],
+        "symbols": ["execRelaunch"]
+      },
+      "releaseItems": [48]
+    },
+    {
+      "id": "cmd:buddy",
+      "kind": "cmd",
+      "status": "retained-internal",
+      "evidence": ["bundle:absent:name:\"buddy\""],
+      "notes": "上游 2.1.100 移除了 buddy 命令（target bundle 里不再有 name:\"buddy\" 的命令注册），本仓库有意保留 src/commands/buddy，故登记 retained-internal，不随上游删除。",
+      "srcEvidence": {
+        "files": ["src/commands/buddy"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_MAX_CONTEXT_TOKENS",
+      "kind": "env",
+      "status": "already-present",
+      "evidence": ["bundle:CLAUDE_CODE_MAX_CONTEXT_TOKENS"],
+      "notes": "上游 2.1.100 新增（2.1.98 release #56：设置时需尊重 DISABLE_COMPACT）。本仓库 src/utils/context.ts 早已支持该变量，无需改动。",
+      "srcEvidence": {
+        "files": ["src/utils/context.ts"],
+        "symbols": ["CLAUDE_CODE_MAX_CONTEXT_TOKENS"]
+      },
+      "releaseItems": [103]
+    },
+    {
+      "id": "env:CLAUDE_CODE_PERFORCE_MODE",
+      "kind": "env",
+      "status": "already-present",
+      "evidence": ["bundle:CLAUDE_CODE_PERFORCE_MODE"],
+      "notes": "上游 2.1.98 新增：只读文件上 Edit/Write/NotebookEdit 失败并提示 p4 edit。本仓库 src/context.ts 与 src/utils/file.ts 早有该变量与 PERFORCE_READ_ONLY_MESSAGE/isPerforceReadOnly，三个编辑工具均已接线。",
+      "srcEvidence": {
+        "files": ["src/context.ts", "src/utils/file.ts"],
+        "symbols": ["CLAUDE_CODE_PERFORCE_MODE", "isPerforceReadOnly"]
+      },
+      "releaseItems": [49]
+    },
+    {
+      "id": "env:CLAUDE_CODE_SCRIPT_CAPS",
+      "kind": "env",
+      "status": "already-present",
+      "evidence": ["bundle:CLAUDE_CODE_SCRIPT_CAPS"],
+      "notes": "上游 2.1.98 新增：限制每会话脚本调用次数（配合 Linux PID namespace 沙箱）。本仓库 src/utils/subprocessEnv.ts 早已有 SCRIPT_CAPS/SUBPROCESS_ENV_SCRUB，并在 Shell.ts 的 enforceScriptCaps/subprocessEnv 接线。",
+      "srcEvidence": {
+        "files": ["src/utils/subprocessEnv.ts"],
+        "symbols": ["CLAUDE_CODE_SCRIPT_CAPS"]
+      },
+      "releaseItems": [51]
+    },
+    {
+      "id": "env:CLAUDE_CODE_REPL",
+      "kind": "env",
+      "status": "retained-internal",
+      "evidence": ["bundle:absent:CLAUDE_CODE_REPL"],
+      "notes": "上游 2.1.100 移除该变量（REPL 特性下线），本仓库 src/tools/REPLTool/constants.ts 仍有 REPLTool 前提，故保留并登记 retained-internal。若后续跟进去 REPL，再改为删除。",
+      "srcEvidence": {
+        "files": ["src/tools/REPLTool/constants.ts"],
+        "symbols": ["CLAUDE_CODE_REPL"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT",
+      "kind": "env",
+      "status": "retained-internal",
+      "evidence": ["bundle:absent:CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT"],
+      "notes": "上游 2.1.100 移除该变量，本仓库 src/utils/sessionStorage.ts 仍用它控制 hook additionalContext 的落盘，故保留并登记 retained-internal。",
+      "srcEvidence": {
+        "files": ["src/utils/sessionStorage.ts"],
+        "symbols": ["CLAUDE_CODE_SAVE_HOOK_ADDITIONAL_CONTEXT"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_HTTP_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_HOST_HTTP_PROXY_PORT"],
+      "notes": "由打包依赖 @anthropic-ai/sandbox-runtime 注入沙箱子进程；src/ 不直接读取（依赖噪声，沿用 2.1.94 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT"],
+      "notes": "同 HOST_HTTP_PROXY_PORT：sandbox-runtime 依赖注入，src/ 不直接读取（依赖噪声，沿用 2.1.94 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_THRESHOLD_MINUTES",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_RESUME_THRESHOLD_MINUTES"],
+      "notes": "resume-return 提示阈值，本仓库无此提示（沿用 2.1.94 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_TOKEN_THRESHOLD",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_RESUME_TOKEN_THRESHOLD"],
+      "notes": "resume-return 提示阈值，本仓库无此提示（沿用 2.1.94 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_SM_COMPACT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:CLAUDE_CODE_SM_COMPACT"],
+      "notes": "扫描器 ENV_RE 从 ENABLE_/DISABLE_CLAUDE_CODE_SM_COMPACT 截取的子串名，真实读取点带前缀（扫描噪声，沿用 2.1.94 台账）。"
+    },
+    {
+      "id": "behavior:bash-readonly-flag-values",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [71],
+      "evidence": ["bundle:extract columns from files in", "test:src/tools/BashTool/__tests__/pathValidation.test.ts"],
+      "notes": "cut/paste/column 的分隔符/分隔字段（-d /、-s /、--output-delimiter 等）按取值跳过而不是当路径；awk 跳过程序体、把 -f/-E 的程序文件纳入校验。修复只读命令的误提示（2.1.98 #24）。",
+      "srcEvidence": {
+        "files": ["src/tools/BashTool/pathValidation.ts"],
+        "symbols": ["filterOutFlagsWithValues"]
+      }
+    },
+    {
+      "id": "behavior:protected-path-mode-downgrade",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [7, 65],
+      "evidence": ["test:src/tools/BashTool/__tests__/pathValidation.test.ts"],
+      "notes": "写保护路径获批后不再把会话悄悄降级到 accept-edits：Bash 路径检查器只在 default/plan 模式下建议 setMode:acceptEdits，filesystem.ts 的 generateSuggestions 早已有同一守卫。",
+      "srcEvidence": {
+        "files": ["src/tools/BashTool/pathValidation.ts", "src/utils/permissions/filesystem.ts"],
+        "symbols": ["createPathChecker", "generateSuggestions"]
+      }
+    },
+    {
+      "id": "behavior:prototype-rule-names",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [9, 72],
+      "evidence": ["test:src/utils/permissions/__tests__/permissionRuleParser.test.ts"],
+      "notes": "工具名别名表用 Object.hasOwn 查表，toString/constructor 等原型属性名不再解析成函数导致 settings.json 规则被静默忽略（2.1.97 #8）。",
+      "srcEvidence": {
+        "files": ["src/utils/permissions/permissionRuleParser.ts"],
+        "symbols": ["normalizeLegacyToolName", "Object.hasOwn"]
+      }
+    },
+    {
+      "id": "behavior:network-device-redirect",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [59],
+      "evidence": [
+        "bundle:network_device",
+        "bundle:Redirect involving /dev/tcp or /dev/udp opens a network connection",
+        "test:src/utils/bash/__tests__/commands.test.ts"
+      ],
+      "notes": "重定向目标为 /dev/tcp|udp 时标记 network_device 并强制询问；字符串与 AST 两条路径都带原因，消息区分网络设备与 shell 展开。",
+      "srcEvidence": {
+        "files": ["src/utils/bash/commands.ts", "src/tools/BashTool/pathValidation.ts"],
+        "symbols": ["NETWORK_DEVICE_REDIRECT", "dangerousRedirectionReason"]
+      }
+    },
+    {
+      "id": "behavior:bash-rule-whitespace",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [69],
+      "evidence": ["test:src/utils/permissions/__tests__/shellRuleMatching.test.ts"],
+      "notes": "通配/前缀规则匹配前把连续空格与 tab 归一为单空格，Bash(git commit *) 可命中 git  commit 与带 tab 的命令（2.1.98 #22）。",
+      "srcEvidence": {
+        "files": ["src/utils/permissions/shellRuleMatching.ts", "src/tools/BashTool/bashPermissions.ts"],
+        "symbols": ["matchWildcardPattern"]
+      }
+    },
+    {
+      "id": "behavior:grep-pattern-file",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [89],
+      "evidence": ["test:src/tools/BashTool/__tests__/pathValidation.test.ts"],
+      "notes": "grep/rg 的 -f/--file 模式文件被当作待校验路径，工作目录外的模式文件会触发提示（2.1.98 #42）。",
+      "srcEvidence": {
+        "files": ["src/tools/BashTool/pathValidation.ts"],
+        "symbols": ["PATH_EXTRACTORS", "parsePatternCommand"]
+      }
+    },
+    {
+      "id": "behavior:monitor-tool",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [50],
+      "evidence": ["bundle:Monitor"],
+      "notes": "Monitor 工具改为流式：每条 stdout 行作为事件通知，令牌桶 10/2s、200ms 批聚合、支持 timeout/persistent，权限复用 bashToolHasPermission。见 notes R4。",
+      "srcEvidence": {
+        "files": ["src/tools/MonitorTool/MonitorTool.tsx", "src/components/permissions/PermissionRequest.tsx"],
+        "symbols": ["MonitorTool"]
+      }
+    }
+  ]
+}
