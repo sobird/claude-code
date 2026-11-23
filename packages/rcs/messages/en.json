@@ -224,6 +224,8 @@
     "toolStatusCanceled": "Canceled",
     "planTitle": "Execution plan",
     "turnDuration": "Took {seconds}s",
+    "turnSummary": "{tools, plural, one {# tool} other {# tools}} · took {seconds}s",
+    "turnSummaryWithErrors": "{tools, plural, one {# tool} other {# tools}} · {errors} failed · took {seconds}s",
     "queued": "Queued",
     "expandAll": "Expand all tools",
     "collapseAll": "Collapse all tools",

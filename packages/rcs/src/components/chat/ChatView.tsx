@@ -70,6 +70,7 @@ import { isHelpShortcut } from '@/lib/shortcut-help'
 import { buildSetThinkingRequest, type ThinkingChoice } from '@/lib/thinking'
 import { formatTokenCount, promptTokens } from '@/lib/token-usage'
 import { formatTurnSeconds } from '@/lib/turn-duration'
+import { summarizeTurns, type TurnSummary } from '@/lib/turn-summary'
 import { cx, uniqueKeys } from '@/lib/utils'
 
 import { BackgroundTaskPanel } from './BackgroundTaskPanel'
@@ -116,10 +117,10 @@ interface EventActionResponse {
 }
 
 type GroupedItem =
-  | { kind: 'entry'; entry: Exclude<ThreadEntry, ToolCallEntry> }
+  | { kind: 'entry'; entry: Exclude<ThreadEntry, ToolCallEntry>; turnSummary?: TurnSummary }
   | { kind: 'tools'; entries: ToolCallEntry[] }
 
-function groupToolCalls(entries: ThreadEntry[]): GroupedItem[] {
+function groupToolCalls(entries: ThreadEntry[], summaries: Map<string, TurnSummary>): GroupedItem[] {
   const result: GroupedItem[] = []
   let tools: ToolCallEntry[] = []
 
@@ -133,7 +134,7 @@ function groupToolCalls(entries: ThreadEntry[]): GroupedItem[] {
       tools.push(entry)
     } else {
       flush()
-      result.push({ kind: 'entry', entry })
+      result.push({ kind: 'entry', entry, turnSummary: summaries.get(entry.id) })
     }
   }
   flush()
@@ -415,7 +416,10 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   // Only a bounded window of grouped items is mounted; older ones are revealed
   // a chunk at a time before the server page behind them is fetched.
-  const keyed = useMemo<KeyedItem[]>(() => uniqueKeys(groupToolCalls(tree.top), itemKey), [tree.top])
+  const keyed = useMemo<KeyedItem[]>(
+    () => uniqueKeys(groupToolCalls(tree.top, summarizeTurns(tree.top)), itemKey),
+    [tree.top],
+  )
   const windowKeys = useMemo(() => keyed.map((item) => item.key), [keyed])
   const windowStart = windowStartIndex(windowKeys, pinnedKey)
   const visibleItems = useMemo(() => keyed.slice(windowStart), [keyed, windowStart])
@@ -1337,6 +1341,8 @@ function sameMessageRow(prev: MessageRowProps, next: MessageRowProps): boolean {
     return true
   }
   if (after.kind !== 'entry' || before.entry !== after.entry) return false
+  // 摘要每次重建都会产生新对象；按值比较，避免整屏轮尾行跟着每次事件重渲染。
+  if (!sameTurnSummary(before.turnSummary, after.turnSummary)) return false
   if (prev.onEdit !== next.onEdit || prev.onRegenerate !== next.onRegenerate) return false
   if (prev.editingId !== next.editingId && (before.entry.id === prev.editingId || before.entry.id === next.editingId)) {
     return false
@@ -1348,6 +1354,12 @@ function sameMessageRow(prev: MessageRowProps, next: MessageRowProps): boolean {
     return false
   }
   return true
+}
+
+function sameTurnSummary(before?: TurnSummary, after?: TurnSummary): boolean {
+  if (before === after) return true
+  if (before === undefined || after === undefined) return false
+  return before.tools === after.tools && before.errors === after.errors && before.durationMs === after.durationMs
 }
 
 const MessageRow = memo(function MessageRow({
@@ -1387,6 +1399,7 @@ const MessageRow = memo(function MessageRow({
     >
       <EntryRenderer
         entry={item.entry}
+        turnSummary={item.turnSummary}
         editingId={editingId}
         onStartEdit={onStartEdit}
         onCancelEdit={onCancelEdit}
@@ -1400,6 +1413,7 @@ const MessageRow = memo(function MessageRow({
 
 function EntryRenderer({
   entry,
+  turnSummary,
   editingId,
   onStartEdit,
   onCancelEdit,
@@ -1408,6 +1422,7 @@ function EntryRenderer({
   onRegenerate,
 }: {
   entry: Exclude<ThreadEntry, ToolCallEntry>
+  turnSummary?: TurnSummary
   editingId: string | null
   onStartEdit: (id: string) => void
   onCancelEdit: () => void
@@ -1433,7 +1448,7 @@ function EntryRenderer({
     case 'system':
       return <SystemRow entry={entry} />
     case 'turn_end':
-      return <TurnEndLine entry={entry} />
+      return <TurnEndLine entry={entry} summary={turnSummary} />
     default:
       return null
   }
@@ -1498,12 +1513,19 @@ function MessageActionsBar({ enterLabel, showPrimary }: { enterLabel: string | n
   )
 }
 
-function TurnEndLine({ entry }: { entry: TurnEndEntry }) {
+function TurnEndLine({ entry, summary }: { entry: TurnEndEntry; summary?: TurnSummary }) {
   const t = useTranslations('chat')
+  const seconds = formatTurnSeconds(entry.durationMs)
+  const label =
+    summary === undefined || summary.tools === 0
+      ? t('turnDuration', { seconds })
+      : summary.errors > 0
+        ? t('turnSummaryWithErrors', { tools: summary.tools, errors: summary.errors, seconds })
+        : t('turnSummary', { tools: summary.tools, seconds })
   return (
     <div className={styles.turnEnd}>
       <Timer className={styles.turnEndIcon} aria-hidden="true" />
-      {t('turnDuration', { seconds: formatTurnSeconds(entry.durationMs) })}
+      {label}
     </div>
   )
 }

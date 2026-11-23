@@ -224,6 +224,8 @@
     "toolStatusCanceled": "已取消",
     "planTitle": "执行计划",
     "turnDuration": "用时 {seconds} 秒",
+    "turnSummary": "{tools} 个工具 · 用时 {seconds} 秒",
+    "turnSummaryWithErrors": "{tools} 个工具（{errors} 个失败）· 用时 {seconds} 秒",
     "queued": "排队中",
     "expandAll": "展开全部工具",
     "collapseAll": "折叠全部工具",
