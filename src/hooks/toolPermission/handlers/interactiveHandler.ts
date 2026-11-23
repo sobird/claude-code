@@ -77,6 +77,10 @@ function handleInteractivePermission(
   // phone, and a stale "yes abc123" after local-resolve falls through
   // tryConsumeReply (entry gone) and gets enqueued as normal chat.
   let channelUnsubscribe: (() => void) | undefined
+  // Hoisted so local/hook/classifier wins — and the CCR response handler —
+  // can delete the pending bridge handler entry. Otherwise the entry (and its
+  // abort listener) lived for the lifetime of the session (2.1.100 #85).
+  let bridgeUnsubscribe: (() => void) | undefined
 
   const permissionPromptStartTimeMs = Date.now()
   const displayInput = result.updatedInput ?? ctx.input
@@ -136,6 +140,7 @@ function handleInteractivePermission(
         })
         bridgeCallbacks.cancelRequest(bridgeRequestId)
       }
+      bridgeUnsubscribe?.()
       channelUnsubscribe?.()
       ctx.logCancelled()
       ctx.logDecision({ decision: 'reject', source: { type: 'user_abort' } }, { permissionPromptStartTimeMs })
@@ -157,6 +162,7 @@ function handleInteractivePermission(
         })
         bridgeCallbacks.cancelRequest(bridgeRequestId)
       }
+      bridgeUnsubscribe?.()
       channelUnsubscribe?.()
 
       resolveOnce(
@@ -180,6 +186,7 @@ function handleInteractivePermission(
         })
         bridgeCallbacks.cancelRequest(bridgeRequestId)
       }
+      bridgeUnsubscribe?.()
       channelUnsubscribe?.()
 
       ctx.logDecision(
@@ -213,6 +220,7 @@ function handleInteractivePermission(
         if (bridgeCallbacks && bridgeRequestId) {
           bridgeCallbacks.cancelRequest(bridgeRequestId)
         }
+        bridgeUnsubscribe?.()
         channelUnsubscribe?.()
         ctx.removeFromQueue()
         ctx.logDecision({ decision: 'accept', source: 'config' })
@@ -253,7 +261,7 @@ function handleInteractivePermission(
     const signal = ctx.toolUseContext.abortController.signal
     const unsubscribe = bridgeCallbacks.onResponse(bridgeRequestId, (response) => {
       if (!claim()) return // Local user/hook/classifier already responded
-      signal.removeEventListener('abort', unsubscribe)
+      bridgeUnsubscribe?.() // delete the pending entry + drop the abort listener
       clearClassifierChecking(ctx.toolUseID)
       clearClassifierIndicator()
       ctx.removeFromQueue()
@@ -289,7 +297,16 @@ function handleInteractivePermission(
       }
     })
 
-    signal.addEventListener('abort', unsubscribe, { once: true })
+    // Same teardown discipline as the channel block below: deleting the
+    // pending handler entry AND removing its abort listener at every win
+    // site, not just on abort. Previously a local/hook/classifier win only
+    // removed the listener, leaving the map entry alive for the session
+    // (2.1.100 #85).
+    bridgeUnsubscribe = () => {
+      unsubscribe()
+      signal.removeEventListener('abort', bridgeUnsubscribe!)
+    }
+    signal.addEventListener('abort', bridgeUnsubscribe, { once: true })
   }
 
   // Channel permission relay — races alongside the bridge block above. Send a
@@ -356,10 +373,12 @@ function handleInteractivePermission(
         clearClassifierChecking(ctx.toolUseID)
         clearClassifierIndicator()
         ctx.removeFromQueue()
-        // Bridge is the other remote — tell it we're done.
+        // Bridge is the other remote — tell it we're done and drop its
+        // pending handler entry.
         if (bridgeCallbacks && bridgeRequestId) {
           bridgeCallbacks.cancelRequest(bridgeRequestId)
         }
+        bridgeUnsubscribe?.()
 
         if (response.behavior === 'allow') {
           ctx.logDecision(
@@ -409,6 +428,7 @@ function handleInteractivePermission(
       if (bridgeCallbacks && bridgeRequestId) {
         bridgeCallbacks.cancelRequest(bridgeRequestId)
       }
+      bridgeUnsubscribe?.()
       channelUnsubscribe?.()
       ctx.removeFromQueue()
       resolveOnce(hookDecision)
@@ -441,6 +461,7 @@ function handleInteractivePermission(
           if (bridgeCallbacks && bridgeRequestId) {
             bridgeCallbacks.cancelRequest(bridgeRequestId)
           }
+          bridgeUnsubscribe?.()
           channelUnsubscribe?.()
           clearClassifierChecking(ctx.toolUseID)
 

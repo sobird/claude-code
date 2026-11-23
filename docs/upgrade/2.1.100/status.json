@@ -887,6 +887,18 @@
         ],
         "symbols": ["runWithInteractionSpan", "endInteractionSpan"]
       }
+    },
+    {
+      "id": "behavior:remote-permission-handler-leak",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [85],
+      "evidence": ["bundle:12392576", "bundle:12391504"],
+      "notes": "修复 Remote Control 权限处理器条目在会话生命周期内泄漏（上游 #85）。上游 v100 在 handleInteractivePermission 里把 bridge 的 onResponse 退订函数提升为外层变量（v94 它是块内 const），并在所有本地获胜路径（onAbort / onAllow / onReject / recheckPermission、channel 回复、hook、classifier）调用它，删除 pendingPermissionHandlers 里的条目并移除 abort 监听器；v94 局部获胜时只调用 channel 的退订，bridge 条目（及其 abort 监听器）一直留到会话结束。移植：interactiveHandler.ts 新增 hoisted bridgeUnsubscribe，bridge 块按 channel 块同样的方式包装退订（map delete + removeEventListener），并在各本地获胜点及 bridge 回复处理里调用；useReplBridge 的 handlePermissionResponse 仍先 delete 再回调，覆盖 CCR 回复路径。该桥接/权限子系统在外部 bundle 里被 tree-shaking 裁剪（classifier 分支不可见），本轮以 typecheck/lint 与 bundle 对拍钉住；证据 bundle:12392576（提升后的 W=onResponse 赋值）、bundle:12391504（onAbort 的 W?.(),D?.() 双退订）。见 notes R23。",
+      "srcEvidence": {
+        "files": ["src/hooks/toolPermission/handlers/interactiveHandler.ts"],
+        "symbols": ["bridgeUnsubscribe"]
+      }
     }
   ]
 }

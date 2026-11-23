@@ -222,3 +222,15 @@ function Ib8(q, K) {
 差异：v100 在 interactive 的 Ib8 回调末尾（无消息分支与 finally）调 `ld()`；本仓库 interactive 的 endInteractionSpan 原在 REPL.resetLoadingState 中按 turn 调用，现新增在外层 wrapper 的 finally 调一次，二者幂等（span.ended 守卫），不重复结束同一 span。QueryEngine（in-process SDK / cowork，`querySource:'sdk'`）在 v100 下同样不再经 processTextPrompt 启动 span（上游只在那 2 个 Ib8 点启动），本移植保持一致。
 
 验证：typecheck/lint/fmt:check 通过；headless E2E（tests/e2e/print-chain.test.ts、hooks.test.ts，共 11 例）与 interactive E2E（interactive.test.ts，1 例）全绿，证明包住 turn 后交互与无头两种执行都不受影响。证据：`bundle:7051653`（`Ib8` 定义，标识符起点）、`bundle:12409639` / `bundle:13248687`（interactive / headless 两处 `Ib8` 调用，标识符起点）。
+
+### R23：Remote Control 权限处理器条目泄漏（上游 #85）
+
+Remote Control 交互式权限里，`handleInteractivePermission` 通过 `bridgeCallbacks.onResponse(requestId, handler)` 把 handler 注册进 `useReplBridge` 的 `pendingPermissionHandlers` Map（`bridgeRequestId` 为 key）。v94 中该退订函数是块内 `const unsubscribe`，只被当作 abort 监听器注册：`signal.addEventListener('abort', unsubscribe, { once: true })`。于是除 CCR 主动回复（`handlePermissionResponse` 先 `delete` 再回调）和会话 abort 外，**任何本地获胜路径都不会删除该条目**——用户本地允许/拒绝、hook 判定、classifier 自动放行都只调 `bridgeCallbacks.cancelRequest` 通知对端关闭提示，但没调退订，Map 条目（连同其闭包与 abort 监听器）一直留到会话结束（上游 #85）。
+
+上游 v100（`Iq5`）把退订函数提升到函数外层变量 `W`，在每个本地获胜点与 bridge 回复处理里 `W?.()`，从而删除条目；同时 channel 通道的退订（重命名 `D`）与 bridge 的 `W` 在每个获胜点成对调用（例如 onAbort 的 `W?.(),D?.()`）。移植到 `src/hooks/toolPermission/handlers/interactiveHandler.ts`：
+
+- 新增 hoisted `let bridgeUnsubscribe: (() => void) | undefined`。
+- bridge 块按下方 channel 块同样的方式包装：`bridgeUnsubscribe = () => { unsubscribe(); signal.removeEventListener('abort', bridgeUnsubscribe!) }`，并以它作为 abort 监听器；bridge 回复处理里改调 `bridgeUnsubscribe?.()`（`onResponse` 已由 `handlePermissionResponse` 先 `delete`，`Map.delete` 幂等）。
+- 各本地获胜点（`onAbort` / `onAllow` / `onReject` / `recheckPermission`、channel 回复处理、hook 分支、classifier `onAllow`）在既有 `channelUnsubscribe?.()` 旁补 `bridgeUnsubscribe?.()`。
+
+`useReplBridge.handlePermissionResponse` 不动：CCR 回复路径仍是「取 handler → delete → 回调」，删条目在前。该桥接/权限子系统在外部 bundle 里被 tree-shaking 部分裁剪（classifier 分支不在 bundle 内），无法用 probe 驱动，本轮以 typecheck/lint/fmt + bundle 对拍钉住；证据 `bundle:12392576`（提升后的 `W=O.onResponse(P,…)` 赋值，标识符起点）、`bundle:12391504`（onAbort 的 `W?.(),D?.()` 双退订，标识符起点）。无既有单测覆盖 `handleInteractivePermission`（未导出、强依赖 React/ctx），故未新增测试。
