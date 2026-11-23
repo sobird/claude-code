@@ -55,6 +55,8 @@
 - 权限规则名与 `Object.prototype` 属性同名（`toString`）时不再让 settings.json 规则被静默忽略（`Object.hasOwn` 查表）。
 - 反斜杠转义空白、环境变量前缀等其余条目在 src 中已具备（backslash guard、safe env 白名单、Map 规则聚合）。
 - 复合 Bash 命令在 auto / bypass 模式下不再绕过强制询问（2.1.98 #57）：`hasAskRuleDecision` / `hasSafetyCheck` 递归进 `subcommandResults`，多子命令同时触发 ask/safety 时依然命中 1f/1g，bypass 不会在 2a 直接放行。
+- 带 worktree 隔离或 `cwd:` 覆盖的子代理不再把 `cd` 泄漏回父会话（2.1.98 #22）：`src/utils/cwd.ts` 的 ALS 存储改为可变 `{cwd}`，`setCwdForCurrentContext` 在覆盖内只改本地、覆盖外才写全局；`Shell` 的默认 cwd 变更只在非覆盖上下文更新 session env 缓存与 CwdChanged hook。
+- 陈旧子代理 worktree 清理把未跟踪文件也算作改动（2.1.98 #90）：去掉 `git status --porcelain` 的 `-uno`，含未跟踪文件的残留 worktree 不再被 `--force` 删除。
 
 ### R6：设置会话内生效（2.1.98 #20/#21、2.1.98 #10 / 2.1.100 #66）
 

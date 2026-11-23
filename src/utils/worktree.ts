@@ -918,9 +918,9 @@ const EPHEMERAL_WORKTREE_PATTERNS = [
  * Safety:
  * - Only touches slugs matching ephemeral patterns (never user-named worktrees)
  * - Skips the current session's worktree
- * - Fail-closed: skips if git status fails or shows tracked changes
- *   (-uno: untracked files in a 30-day-old crashed agent worktree are build
- *   artifacts; skipping the untracked scan is 5-10× faster on large repos)
+ * - Fail-closed: skips if git status fails or shows any changes, including
+ *   untracked files. A stale-looking worktree may still hold a user's untracked
+ *   work, so it must not be force-removed (upstream 2.1.98 #90).
  * - Fail-closed: skips if any commits aren't reachable from a remote
  *
  * `git worktree remove --force` handles both the directory and git's internal
@@ -969,7 +969,7 @@ export async function cleanupStaleAgentWorktrees(cutoffDate: Date): Promise<numb
     // worktree, git not recognizing it, etc.) means skip — we don't know
     // what's in there.
     const [status, unpushed] = await Promise.all([
-      execFileNoThrowWithCwd(gitExe(), ['--no-optional-locks', 'status', '--porcelain', '-uno'], { cwd: worktreePath }),
+      execFileNoThrowWithCwd(gitExe(), ['--no-optional-locks', 'status', '--porcelain'], { cwd: worktreePath }),
       execFileNoThrowWithCwd(gitExe(), ['rev-list', '--max-count=1', 'HEAD', '--not', '--remotes'], {
         cwd: worktreePath,
       }),

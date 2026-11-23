@@ -7,9 +7,9 @@ import { join as posixJoin } from 'node:path/posix'
 import memoize from 'lodash-es/memoize.js'
 import { logEvent } from 'src/services/analytics/index.js'
 
-import { getOriginalCwd, getSessionId, setCwdState } from '../bootstrap/state.js'
+import { getOriginalCwd, getSessionId } from '../bootstrap/state.js'
 import { generateTaskId } from '../Task.js'
-import { pwd } from './cwd.js'
+import { isInCwdOverride, pwd, setCwdForCurrentContext } from './cwd.js'
 import { logForDebugging } from './debug.js'
 import { errorMessage, isENOENT } from './errors.js'
 import { getFsImplementation } from './fsOperations.js'
@@ -206,7 +206,7 @@ export async function exec(
     logForDebugging(`Shell CWD "${cwd}" no longer exists, recovering to "${fallback}"`)
     try {
       await realpath(fallback)
-      setCwdState(fallback)
+      setCwdForCurrentContext(fallback)
       cwd = fallback
     } catch {
       return createFailedCommand(
@@ -366,8 +366,13 @@ export async function exec(
           // don't false-positive as "changed" on every command.
           if (newCwd.normalize('NFC') !== cwd) {
             setCwd(newCwd, cwd)
-            invalidateSessionEnvCache()
-            void onCwdChangedForHooks(cwd, newCwd)
+            // A subagent's `cd` stays inside its own cwd override — don't touch
+            // the shared session env cache or fire the parent's CwdChanged hooks
+            // (upstream 2.1.98 #22).
+            if (!isInCwdOverride()) {
+              invalidateSessionEnvCache()
+              void onCwdChangedForHooks(cwd, newCwd)
+            }
           }
         } catch {
           logEvent('tengu_shell_set_cwd', { success: false })
@@ -420,7 +425,7 @@ export function setCwd(path: string, relativeTo?: string): void {
     throw e
   }
 
-  setCwdState(physicalPath)
+  setCwdForCurrentContext(physicalPath)
   if (process.env.NODE_ENV !== 'test') {
     try {
       logEvent('tengu_shell_set_cwd', {

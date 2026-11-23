@@ -249,6 +249,30 @@
         "files": ["src/utils/permissions/permissions.ts"],
         "symbols": ["hasAskRuleDecision", "hasSafetyCheck"]
       }
+    },
+    {
+      "id": "behavior:subagent-cwd-isolation",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [22],
+      "evidence": ["test:src/utils/__tests__/cwd.test.ts"],
+      "notes": "带 worktree 隔离或 cwd: 覆盖的子代理不再把工作目录泄漏回父会话的 Bash 工具：cwd 覆盖改存可变对象 {cwd}，setCwdForCurrentContext 在覆盖内只改本地上下文、覆盖外才写全局 setCwdState；Shell 默认 cwd 变更时仅在非覆盖上下文更新 session env 缓存与 CwdChanged hook（2.1.98 #22）。",
+      "srcEvidence": {
+        "files": ["src/utils/cwd.ts", "src/utils/Shell.ts"],
+        "symbols": ["setCwdForCurrentContext", "isInCwdOverride", "runWithCwdOverride"]
+      }
+    },
+    {
+      "id": "behavior:stale-worktree-untracked",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [90],
+      "evidence": ["test:src/utils/__tests__/worktreeStaleCleanup.test.ts"],
+      "notes": "清理陈旧子代理 worktree 时把未跟踪文件也算作改动，含未跟踪文件的残留 worktree 不再被 --force 删除（去掉 status --porcelain 的 -uno，2.1.98 #90），避免误删用户未提交的产出。",
+      "srcEvidence": {
+        "files": ["src/utils/worktree.ts"],
+        "symbols": ["cleanupStaleAgentWorktrees"]
+      }
     }
   ]
 }
