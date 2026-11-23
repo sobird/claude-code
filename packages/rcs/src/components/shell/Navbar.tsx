@@ -120,9 +120,14 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
             variant="ghost"
             size="icon-sm"
             className={styles.dashboardButton}
-            aria-label={t('dashboard')}
+            aria-label={attention > 0 ? t('attentionCount', { count: attention }) : t('dashboard')}
           >
             <LayoutGrid className={styles.icon} />
+            {attention > 0 ? (
+              <span className={styles.attentionBadge} aria-hidden="true">
+                {attention > 99 ? '99+' : attention}
+              </span>
+            ) : null}
           </Button>
 
           <ThemeToggle />
@@ -159,6 +164,13 @@ export function Navbar({ user, signOutAction }: NavbarProps) {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* 计数变化时让读屏播报一次；没有待处理会话时不渲染，避免重复打扰。 */}
+      {attention > 0 ? (
+        <span className={styles.srOnly} role="status" aria-live="polite">
+          {t('attentionCount', { count: attention })}
+        </span>
+      ) : null}
 
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DialogContent className={styles.drawer}>

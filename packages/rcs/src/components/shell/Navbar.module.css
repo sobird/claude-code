@@ -46,7 +46,17 @@
   }
 }
 
-/* "需要你处理"的会话数：贴在会话抽屉按钮右上角。 */
+/* 仅供读屏：把视觉上不可见的实时播报文字移出布局。 */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* "需要你处理"的会话数：贴在会话抽屉/仪表盘按钮右上角。 */
 .attentionBadge {
   position: absolute;
   top: -0.125rem;
@@ -116,6 +126,7 @@
 }
 
 .dashboardButton {
+  position: relative;
   display: none;
 }
 
