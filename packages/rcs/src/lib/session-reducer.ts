@@ -586,6 +586,8 @@ interface ToolResultBlock {
   content: string
   images: ToolResultImage[]
   isError: boolean
+  /** stream-json 携带的结构化工具输出（各工具自己的 Output 对象）。 */
+  toolUseResult: unknown
 }
 
 /** 拼接 tool_result 内容中的文本块。 */
@@ -629,6 +631,9 @@ function collectUserToolResults(payload: Record<string, unknown>): ToolResultBlo
   const content = message && Array.isArray(message.content) ? message.content : payload.content
   if (!Array.isArray(content)) return []
 
+  // CLI 把本次工具的结构化输出挂在整条 user 事件上（`tool_use_result`），
+  // 一条事件通常只对应一个 tool_result 块。
+  const toolUseResult = payload.tool_use_result
   const results: ToolResultBlock[] = []
   for (const item of content) {
     const block = asRecord(item)
@@ -640,6 +645,7 @@ function collectUserToolResults(payload: Record<string, unknown>): ToolResultBlo
       content: textFromBlocks(block.content),
       images: imagesFromBlocks(block.content),
       isError: block.is_error === true,
+      toolUseResult,
     })
   }
   return results
@@ -655,7 +661,11 @@ function settleToolResult(entries: ThreadEntry[], result: ToolResultBlock): Thre
     toolCall: {
       ...entry.toolCall,
       status: result.isError ? 'error' : 'complete',
-      rawOutput: { output: result.content, ...(result.images.length > 0 ? { images: result.images } : {}) },
+      rawOutput: {
+        output: result.content,
+        ...(result.images.length > 0 ? { images: result.images } : {}),
+        ...(result.toolUseResult !== undefined ? { toolUseResult: result.toolUseResult } : {}),
+      },
     },
   })
 }
@@ -675,12 +685,17 @@ function handleToolResult(state: ChatState, event: SessionEventInput): ChatState
   const content = payload.content ?? payload.output ?? ''
   const output = Array.isArray(content) ? textFromBlocks(content) : content
   const images = imagesFromBlocks(payload.content)
+  const toolUseResult = payload.tool_use_result
   const next: ToolCallEntry = {
     ...entry,
     toolCall: {
       ...entry.toolCall,
       status: payload.is_error === true ? 'error' : 'complete',
-      rawOutput: { output, ...(images.length > 0 ? { images } : {}) },
+      rawOutput: {
+        output,
+        ...(images.length > 0 ? { images } : {}),
+        ...(toolUseResult !== undefined ? { toolUseResult } : {}),
+      },
     },
   }
   return { ...state, entries: replaceEntry(state.entries, index, next) }

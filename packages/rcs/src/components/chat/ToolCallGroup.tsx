@@ -23,8 +23,7 @@ import { AssistantBubble } from './MessageBubble'
 import { bashViewModel } from './tool-views/bash-model'
 import { diffStats, fileViewModel, formatInputSize } from './tool-views/file-model'
 import { GenericToolBody } from './tool-views/GenericToolBody'
-import { toolViewKind } from './tool-views/kinds'
-import { TOOL_VIEWS } from './tool-views/registry'
+import { TOOL_VIEWS, toolViewKind } from './tool-views/registry'
 
 import styles from './ToolCallGroup.module.css'
 

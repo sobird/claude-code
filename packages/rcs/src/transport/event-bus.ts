@@ -254,6 +254,9 @@ export function normalizePayload(type: string, payload: unknown): Record<string,
   if (p.updated_permissions !== undefined) normalized.updated_permissions = p.updated_permissions
 
   if (p.message) normalized.message = p.message
+  // CLI 把本次工具的结构化输出（HTTP 状态、字节数、搜索统计等）挂在事件顶层；
+  // Web 端卡片头部要读它，因此从 `raw` 提到顶层。
+  if (p.tool_use_result !== undefined) normalized.tool_use_result = p.tool_use_result
 
   // `system/init` 驱动 Web 端的斜杠命令菜单和权限模式控件，
   // 因此把它的扁平字段从 `raw` 中提到客户端查找它们的位置。详细

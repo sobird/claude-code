@@ -165,6 +165,36 @@ describe('ingestBridgeMessage', () => {
     }
   })
 
+  test('preserves the structured tool_use_result so tool cards can read it', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    const toolUseResult = { code: 200, codeText: 'OK', bytes: 1536, durationMs: 1200 }
+    await ingestBridgeMessage(repos, 's1', {
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call-1', content: 'hi' }] },
+      uuid: 'u_result',
+      tool_use_result: toolUseResult,
+    })
+
+    expect(events).toHaveLength(1)
+    const payload = events[0]?.payload as Record<string, unknown> | undefined
+    expect(payload?.tool_use_result).toEqual(toolUseResult)
+  })
+
+  test('omits tool_use_result from the payload when the bridge sends none', async () => {
+    const events: SessionEvent[] = []
+    getEventBus('s1').subscribe((event) => events.push(event))
+
+    await ingestBridgeMessage(repos, 's1', {
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call-1', content: 'hi' }] },
+      uuid: 'u_plain',
+    })
+
+    expect(events).toHaveLength(1)
+    const payload = events[0]?.payload as Record<string, unknown> | undefined
+    expect(payload && 'tool_use_result' in payload).toBe(false)
+  })
+
   test('derives type from message.role for assistant messages', async () => {
     const events: SessionEvent[] = []
     getEventBus('s1').subscribe((event) => events.push(event))

@@ -343,6 +343,9 @@ export async function ingestBridgeMessage(
       uuid: msg.uuid,
       ...(typeof msg.isSynthetic === 'boolean' ? { isSynthetic: msg.isSynthetic } : {}),
       ...(typeof msg.parent_tool_use_id === 'string' ? { parent_tool_use_id: msg.parent_tool_use_id } : {}),
+      // 结构化工具输出（HTTP 状态、字节数、搜索统计等）由 CLI 挂在 user 事件顶层，
+      // 卡片头部要读它，所以必须在白名单里放行；其余字段不进浏览器。
+      ...(msg.tool_use_result !== undefined ? { tool_use_result: msg.tool_use_result } : {}),
     }
   } else if (eventType === 'system') {
     // `system/init` carries the flat fields the web UI needs (slash commands,

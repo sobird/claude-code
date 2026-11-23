@@ -139,6 +139,61 @@ describe('reduceSessionEvent', () => {
     expect(state.entries.filter((entry) => entry.type === 'user_message')).toHaveLength(0)
   })
 
+  test('keeps the structured tool_use_result from the user turn', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        content: '',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'toolu_1', name: 'WebFetch', input: { url: 'https://x.dev' } }],
+        },
+      }),
+    )
+    const toolUseResult = {
+      code: 200,
+      codeText: 'OK',
+      bytes: 1536,
+      durationMs: 1200,
+      url: 'https://x.dev',
+      result: 'hi',
+    }
+    state = reduceSessionEvent(
+      state,
+      event('user', {
+        tool_use_result: toolUseResult,
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'hi' }],
+        },
+      }),
+    )
+
+    const [call] = tools(state)
+    expect(call?.toolCall.rawOutput).toEqual({ output: 'hi', toolUseResult })
+  })
+
+  test('tool_result events keep the structured tool_use_result too', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        content: '',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'call-1', name: 'Grep', input: { pattern: 'TODO' } }],
+        },
+      }),
+    )
+    const toolUseResult = { mode: 'count', numFiles: 2, numMatches: 3 }
+    state = reduceSessionEvent(
+      state,
+      event('tool_result', { tool_call_id: 'call-1', content: 'ok', tool_use_result: toolUseResult }),
+    )
+
+    const [call] = tools(state)
+    expect(call?.toolCall.rawOutput).toEqual({ output: 'ok', toolUseResult })
+  })
+
   test('keeps base64 image blocks from a tool result alongside the text', () => {
     let state = reduceSessionEvent(
       initialChatState,
