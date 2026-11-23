@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import type { ToolCallData } from '@/lib/session-reducer'
 
-import { diffStats, fileViewModel, formatInputSize, readLinesFromOutput } from '../file-model'
+import { diffStats, fileViewModel, formatInputSize, previewBodyKind, readLinesFromOutput } from '../file-model'
 
 function tool(title: string, rawInput: Record<string, unknown>, overrides: Partial<ToolCallData> = {}): ToolCallData {
   return { id: 't1', title, status: 'complete', rawInput, ...overrides }
@@ -95,6 +95,15 @@ describe('fileViewModel', () => {
     expect(fileViewModel(tool('Edit', { old_string: 'x', new_string: 'y' }))).toBeNull()
   })
 
+  test('Write exposes its full written content for the preview dialog', () => {
+    expect(fileViewModel(tool('Write', { file_path: '/a.ts', content: 'export const a = 1\n' }))?.writtenContent).toBe(
+      'export const a = 1\n',
+    )
+    expect(fileViewModel(tool('Edit', { file_path: '/a.ts', old_string: 'x', new_string: 'y' }))?.writtenContent).toBe(
+      '',
+    )
+  })
+
   test('reports the input size once written content passes 1KB', () => {
     const content = 'x'.repeat(1536)
     expect(fileViewModel(tool('Write', { file_path: '/a.ts', content }))?.inputSize).toBe(1536)
@@ -120,6 +129,33 @@ describe('fileViewModel', () => {
       }),
     )
     expect(model?.inputSize).toBe(1200)
+  })
+})
+
+describe('previewBodyKind', () => {
+  test('prefers numbered lines for a Read', () => {
+    const model = fileViewModel(tool('Read', { file_path: '/a.ts' }, { rawOutput: { output: '     1→a\n     2→b' } }))
+    expect(model && previewBodyKind(model)).toBe('lines')
+  })
+
+  test('shows the full written content for a Write instead of its diff', () => {
+    const model = fileViewModel(tool('Write', { file_path: '/a.ts', content: 'hello' }))
+    expect(model && previewBodyKind(model)).toBe('text')
+  })
+
+  test('shows the diff for an Edit', () => {
+    const model = fileViewModel(tool('Edit', { file_path: '/a.ts', old_string: 'x', new_string: 'y' }))
+    expect(model && previewBodyKind(model)).toBe('diff')
+  })
+
+  test('falls back to the plain text output', () => {
+    const model = fileViewModel(tool('Read', { file_path: '/a.ts' }, { rawOutput: { output: 'const a = 1' } }))
+    expect(model && previewBodyKind(model)).toBe('output')
+  })
+
+  test('is null when the call carries no content', () => {
+    const model = fileViewModel(tool('Read', { file_path: '/a.ts' }, { rawOutput: { output: '' } }))
+    expect(model && previewBodyKind(model)).toBeNull()
   })
 })
 

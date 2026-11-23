@@ -11,6 +11,7 @@ import { cx } from '@/lib/utils'
 
 import { CollapsibleOutput } from './CollapsibleOutput'
 import { fileViewModel, type ReadLine } from './file-model'
+import { FilePreviewDialog } from './FilePreviewDialog'
 import { OUTPUT_MAX_LINES } from './format'
 import { GenericToolBody } from './GenericToolBody'
 import type { ToolViewProps } from './types'
@@ -50,13 +51,16 @@ function LineNumberedView({ lines }: { lines: ReadLine[] }) {
 }
 
 export function FileToolView({ tool }: ToolViewProps) {
+  const [previewing, setPreviewing] = useState(false)
   const model = fileViewModel(tool)
   if (!model) return <GenericToolBody tool={tool} />
   return (
     <>
       <div className={styles.pathRow}>
         <FileCode2 className={styles.pathIcon} aria-hidden="true" />
-        <span className={styles.path}>{model.path}</span>
+        <button type="button" className={styles.pathButton} onClick={() => setPreviewing(true)}>
+          {model.path}
+        </button>
       </div>
       {model.images.length > 0 ? (
         <div className={styles.images}>
@@ -104,6 +108,7 @@ export function FileToolView({ tool }: ToolViewProps) {
       ) : model.output ? (
         <CollapsibleOutput text={model.output} errored={model.errored} />
       ) : null}
+      {previewing ? <FilePreviewDialog model={model} onClose={() => setPreviewing(false)} /> : null}
     </>
   )
 }

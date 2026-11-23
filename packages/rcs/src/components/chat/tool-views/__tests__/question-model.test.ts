@@ -55,6 +55,46 @@ describe('questionViewModel', () => {
     expect(model?.answers['Which approach?']).toBe('Registry, Switch')
   })
 
+  test('derives per-option selection and free-text answers for the card', () => {
+    const model = questionViewModel(
+      tool({
+        rawInput: QUESTIONS,
+        rawOutput: { output: 'User has answered your questions: "Which approach?"="Registry, Something else".' },
+      }),
+    )
+    const item = model?.items[0]
+    expect(item?.multiSelect).toBe(false)
+    expect(item?.options.map((option) => [option.label, option.selected])).toEqual([
+      ['Registry', true],
+      ['Switch', false],
+    ])
+    expect(item?.other).toEqual(['Something else'])
+    expect(item?.answered).toBe(true)
+  })
+
+  test('keeps multiSelect on the derived item', () => {
+    const model = questionViewModel(
+      tool({
+        rawInput: {
+          questions: [
+            {
+              question: 'Pick any',
+              multiSelect: true,
+              options: [{ label: 'A' }, { label: 'B' }, { label: 'C' }],
+            },
+          ],
+        },
+        rawOutput: { output: '"Pick any"="A, C"' },
+      }),
+    )
+    expect(model?.items[0]?.multiSelect).toBe(true)
+    expect(model?.items[0]?.options.filter((option) => option.selected).map((option) => option.label)).toEqual([
+      'A',
+      'C',
+    ])
+    expect(model?.items[0]?.other).toEqual([])
+  })
+
   test('marks a failed call as errored', () => {
     const model = questionViewModel(
       tool({ status: 'error', rawInput: QUESTIONS, rawOutput: { output: 'User declined to answer' } }),

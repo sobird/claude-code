@@ -15,12 +15,17 @@ export interface FileViewModel {
   inputSize: number | null
   /** 读取输出带行号时解析出的行；否则 `null`，退回普通文本输出。 */
   lines: ReadLine[] | null
+  /** Write 写入的完整内容（查看弹层用）；非 Write 或缺失时为 `''`。 */
+  writtenContent: string
 }
 
 export interface ReadLine {
   number: number
   text: string
 }
+
+/** 查看弹层的正文类型；优先级：行号 → Write 全文 → 编辑 diff → 纯文本输出。 */
+export type FilePreviewBodyKind = 'lines' | 'text' | 'diff' | 'output'
 
 const RASTER_IMAGE = /^image\/(png|jpeg|gif|webp)$/
 const INPUT_SIZE_MIN = 1024
@@ -110,6 +115,18 @@ export function readLinesFromOutput(output: string): ReadLine[] | null {
   return lines
 }
 
+/**
+ * 查看弹层该渲染哪种正文。Write 也有 hunk（整文件新增），但弹层要展示的是
+ * 全文而非带 `+` 前缀的 diff，所以 `writtenContent` 排在 `hunks` 之前。
+ */
+export function previewBodyKind(model: FileViewModel): FilePreviewBodyKind | null {
+  if (model.lines) return 'lines'
+  if (model.writtenContent) return 'text'
+  if (model.hunks) return 'diff'
+  if (model.output) return 'output'
+  return null
+}
+
 /** 提取文件卡片所需路径与差异；缺少路径时返回 `null` 以便回退到通用正文。 */
 export function fileViewModel(tool: ToolCallData): FileViewModel | null {
   const input = tool.rawInput ?? {}
@@ -125,5 +142,6 @@ export function fileViewModel(tool: ToolCallData): FileViewModel | null {
     errored: tool.status === 'error',
     inputSize: inputSizeOf(input),
     lines: hunks ? null : readLinesFromOutput(output),
+    writtenContent: typeof input.content === 'string' ? input.content : '',
   }
 }

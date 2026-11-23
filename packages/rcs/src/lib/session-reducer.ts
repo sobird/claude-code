@@ -53,6 +53,11 @@ export interface ToolCallData {
   }
   /** 没有匹配到在途工具调用的权限请求。 */
   isStandalonePermission?: boolean
+  /**
+   * TodoWrite 的前一版清单（该调用出现时的 `state.tasks`），供卡片展示相对变化。
+   * 会话里的第一次 TodoWrite 没有基线；上一版为空列表时同样不记录。
+   */
+  baselineTodos?: TaskItem[]
 }
 
 export interface UserMessageEntry {
@@ -522,12 +527,16 @@ function handleAssistant(state: ChatState, event: SessionEventInput): ChatState 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
     if (!block) continue
-    const entry = toolCallFromBlock(block, `call-${seqNum ?? entries.length}-${i}`, parentToolUseId)
-    entries = [...entries, entry]
+    let entry = toolCallFromBlock(block, `call-${seqNum ?? entries.length}-${i}`, parentToolUseId)
     if (entry.toolCall.title === 'TodoWrite') {
       const parsed = tasksFromTodoWrite(entry.toolCall.rawInput)
-      if (parsed) tasks = parsed
+      if (parsed) {
+        // 上一版清单记为新调用的基线；空列表视作“无基线”。
+        if (tasks.length > 0) entry = { ...entry, toolCall: { ...entry.toolCall, baselineTodos: tasks } }
+        tasks = parsed
+      }
     }
+    entries = [...entries, entry]
   }
 
   return {
@@ -547,6 +556,9 @@ function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
   const input = asRecord(payload.tool_input)
   const title = asText(payload.tool_name) || ''
   const parentToolUseId = parentToolUseIdOf(payload)
+  const parsedTasks = title === 'TodoWrite' ? tasksFromTodoWrite(input) : null
+  // 上一版清单记为新调用的基线；空列表视作“无基线”。
+  const baselineTodos = parsedTasks && state.tasks.length > 0 ? state.tasks : undefined
   const entry: ToolCallEntry = {
     type: 'tool_call',
     toolCall: {
@@ -554,10 +566,10 @@ function handleToolUse(state: ChatState, event: SessionEventInput): ChatState {
       title,
       status: 'running',
       rawInput: input ?? {},
+      ...(baselineTodos ? { baselineTodos } : {}),
     },
     ...(parentToolUseId ? { parentToolUseId } : {}),
   }
-  const parsedTasks = title === 'TodoWrite' ? tasksFromTodoWrite(input) : null
   return { ...state, entries: [...state.entries, entry], ...(parsedTasks ? { tasks: parsedTasks } : {}) }
 }
 

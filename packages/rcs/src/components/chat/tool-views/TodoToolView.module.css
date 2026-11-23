@@ -1,7 +1,33 @@
 .progressRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--color-text-muted);
+}
+
+.deltaChip {
+  border-radius: 0.25rem;
+  background-color: color-mix(in oklab, var(--color-surface-2) 70%, transparent);
+  padding: 0 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.doneChip {
+  border-radius: 0.25rem;
+  background-color: color-mix(in oklab, var(--color-status-active) 18%, transparent);
+  padding: 0 0.25rem;
+  color: var(--color-status-active);
+  font-variant-numeric: tabular-nums;
+}
+
+.addedTag {
+  border-radius: 0.25rem;
+  background-color: color-mix(in oklab, var(--color-brand) 16%, transparent);
+  padding: 0 0.25rem;
+  font-size: 10px;
+  color: var(--color-brand);
 }
 
 .list {

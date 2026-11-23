@@ -1534,6 +1534,61 @@ describe('session tasks', () => {
     expect(state.tasks).toEqual([])
   })
 
+  test('a TodoWrite records the previous list as its baseline', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('assistant', {
+        message: {
+          content: [
+            todoBlock([
+              { content: 'One', status: 'pending' },
+              { content: 'Two', status: 'pending' },
+            ]),
+          ],
+        },
+      }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('assistant', {
+        message: {
+          content: [
+            todoBlock([
+              { content: 'One', status: 'completed' },
+              { content: 'Three', status: 'pending' },
+            ]),
+          ],
+        },
+      }),
+    )
+
+    const calls = tools(state)
+    expect(calls[0]?.toolCall.baselineTodos).toBeUndefined()
+    expect(calls[1]?.toolCall.baselineTodos?.map((task) => task.content)).toEqual(['One', 'Two'])
+  })
+
+  test('a standalone tool_use event also records the baseline', () => {
+    let state = reduceSessionEvent(
+      initialChatState,
+      event('tool_use', {
+        tool_call_id: 'call-a',
+        tool_name: 'TodoWrite',
+        tool_input: { todos: [{ content: 'One', status: 'pending' }] },
+      }),
+    )
+    state = reduceSessionEvent(
+      state,
+      event('tool_use', {
+        tool_call_id: 'call-b',
+        tool_name: 'TodoWrite',
+        tool_input: { todos: [{ content: 'Two', status: 'pending' }] },
+      }),
+    )
+
+    const calls = tools(state)
+    expect(calls[1]?.toolCall.baselineTodos?.map((task) => task.content)).toEqual(['One'])
+  })
+
   test('other tools leave the task list alone', () => {
     let state = reduceSessionEvent(
       initialChatState,
