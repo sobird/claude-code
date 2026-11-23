@@ -384,9 +384,14 @@ export async function clearRemoteManagedSettingsCache(): Promise<void> {
  * Internal function that handles the full load/fetch logic
  * Fails open - returns null if fetch fails and no cache exists
  */
-async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null> {
+interface RemoteManagedSettingsLoadResult {
+  settings: SettingsJson | null
+  fetchSucceeded: boolean
+}
+
+async function fetchAndLoadRemoteManagedSettings(): Promise<RemoteManagedSettingsLoadResult> {
   if (!isRemoteManagedSettingsEligible()) {
-    return null
+    return { settings: null, fetchSucceeded: true }
   }
 
   // 2.1.89 override-file path: when CLAUDE_CODE_REMOTE_SETTINGS_PATH points at
@@ -396,7 +401,7 @@ async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null>
     logForDebugging(
       `Remote settings: Using override file ${overridePath} (CLAUDE_CODE_REMOTE_SETTINGS_PATH), skipping API fetch`,
     )
-    return getRemoteManagedSettingsSyncFromCache()
+    return { settings: getRemoteManagedSettingsSyncFromCache(), fetchSucceeded: true }
   }
 
   // Load cached settings from file
@@ -414,17 +419,17 @@ async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null>
       if (cachedSettings) {
         logForDebugging('Remote settings: Using stale cache after fetch failure')
         setSessionCache(cachedSettings)
-        return cachedSettings
+        return { settings: cachedSettings, fetchSucceeded: false }
       }
       // No cache available - fail open, continue without remote settings
-      return null
+      return { settings: null, fetchSucceeded: false }
     }
 
     // Handle 304 Not Modified - cached settings are still valid
     if (result.settings === null && cachedSettings) {
       logForDebugging('Remote settings: Cache still valid (304 Not Modified)')
       setSessionCache(cachedSettings)
-      return cachedSettings
+      return { settings: cachedSettings, fetchSucceeded: true }
     }
 
     // Save new settings to file (only if non-empty)
@@ -437,13 +442,13 @@ async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null>
       if (!handleSecurityCheckResult(securityResult)) {
         // User rejected - don't apply settings, return cached or null
         logForDebugging('Remote settings: User rejected new settings, using cached settings')
-        return cachedSettings
+        return { settings: cachedSettings, fetchSucceeded: true }
       }
 
       setSessionCache(newSettings)
       await saveSettings(newSettings)
       logForDebugging('Remote settings: Applied new settings successfully')
-      return newSettings
+      return { settings: newSettings, fetchSucceeded: true }
     }
 
     // Empty settings (404 response) - delete cached file if it exists
@@ -461,17 +466,17 @@ async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null>
         )
       }
     }
-    return newSettings
+    return { settings: newSettings, fetchSucceeded: true }
   } catch {
     // On any error, use stale file if available (graceful degradation)
     if (cachedSettings) {
       logForDebugging('Remote settings: Using stale cache after error')
       setSessionCache(cachedSettings)
-      return cachedSettings
+      return { settings: cachedSettings, fetchSucceeded: false }
     }
 
     // No cache available - fail open, continue without remote settings
-    return null
+    return { settings: null, fetchSucceeded: false }
   }
 }
 
@@ -484,7 +489,7 @@ async function fetchAndLoadRemoteManagedSettings(): Promise<SettingsJson | null>
  * waitForRemoteManagedSettingsToLoad() to ensure they don't initialize
  * until remote settings have been fetched.
  */
-export async function loadRemoteManagedSettings(): Promise<void> {
+export async function loadRemoteManagedSettings(): Promise<boolean> {
   // Set up the promise for other systems to wait on
   // Only if the user is eligible for remote settings AND promise not already set up
   // (initializeRemoteManagedSettingsLoadingPromise may have been called earlier)
@@ -505,7 +510,7 @@ export async function loadRemoteManagedSettings(): Promise<void> {
   }
 
   try {
-    const settings = await fetchAndLoadRemoteManagedSettings()
+    const { settings, fetchSucceeded } = await fetchAndLoadRemoteManagedSettings()
 
     // Start background polling to pick up settings changes mid-session
     if (isRemoteManagedSettingsEligible()) {
@@ -518,6 +523,7 @@ export async function loadRemoteManagedSettings(): Promise<void> {
     if (settings !== null) {
       settingsChangeDetector.notifyChange('policySettings')
     }
+    return fetchSucceeded
   } finally {
     // Always resolve the promise, even if fetch failed (fail-open)
     if (loadingCompleteResolve) {
@@ -532,24 +538,33 @@ export async function loadRemoteManagedSettings(): Promise<void> {
  * This is used when login/logout occurs
  * Fails open - if fetch fails, continues without remote settings
  */
-export async function refreshRemoteManagedSettings(): Promise<void> {
+export async function refreshRemoteManagedSettings(): Promise<boolean> {
   // Clear caches first
   await clearRemoteManagedSettingsCache()
 
   // If not enabled, notify that policy settings changed (to empty)
   if (!isRemoteManagedSettingsEligible()) {
     settingsChangeDetector.notifyChange('policySettings')
-    return
+    return true
   }
 
   // Try to load new settings (fails open if fetch fails)
-  await fetchAndLoadRemoteManagedSettings()
+  const { fetchSucceeded } = await fetchAndLoadRemoteManagedSettings()
   logForDebugging('Remote settings: Refreshed after auth change')
 
   // Notify listeners. notifyChange resets the settings cache internally;
   // this triggers hot-reload (AppState update, env var application, etc.)
   settingsChangeDetector.notifyChange('policySettings')
+  return fetchSucceeded
 }
+
+/**
+ * Message shown when `forceRemoteSettingsRefresh` blocks startup because the
+ * remote managed settings could not be fetched (fail-closed policy).
+ */
+export const FORCE_REMOTE_SETTINGS_REFRESH_ERROR =
+  'Your organization requires remote managed settings to load, but they could not be loaded. ' +
+  'Check your network connection and credentials, or contact your administrator.'
 
 /**
  * Background polling callback - fetches settings and triggers hot-reload if changed

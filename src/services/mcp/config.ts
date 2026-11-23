@@ -985,15 +985,15 @@ export function getMcpConfigByName(name: string): ScopedMcpServerConfig | null {
  * Get Claude Code MCP configurations (excludes claude.ai servers from the
  * returned set — they're fetched separately and merged by callers).
  * This is fast: only local file reads; no awaited network calls on the
- * critical path. The optional extraDedupTargets promise (e.g. the in-flight
- * claude.ai connector fetch) is awaited only after loadAllPluginsCacheOnly() completes,
- * so the two overlap rather than serialize.
+ * critical path.
+ *
+ * claude.ai connectors are deliberately NOT dedup targets here: an
+ * unauthenticated connector never connects, so letting it suppress a plugin
+ * server leaves that plugin entry stuck in 'pending' forever. Phase 2 dedups
+ * connectors against manual servers instead (dedupClaudeAiMcpServers).
  * @returns Claude Code server configurations with appropriate scopes
  */
-export async function getClaudeCodeMcpConfigs(
-  dynamicServers: Record<string, ScopedMcpServerConfig> = {},
-  extraDedupTargets: Promise<Record<string, ScopedMcpServerConfig>> = Promise.resolve({}),
-): Promise<{
+export async function getClaudeCodeMcpConfigs(dynamicServers: Record<string, ScopedMcpServerConfig> = {}): Promise<{
   servers: Record<string, ScopedMcpServerConfig>
   errors: PluginError[]
 }> {
@@ -1088,14 +1088,12 @@ export async function getClaudeCodeMcpConfigs(
   // Only servers that will actually connect are valid dedup targets — a
   // disabled manual server mustn't suppress a plugin server, or neither runs
   // (manual is skipped by name at connection time; plugin was removed here).
-  const extraTargets = await extraDedupTargets
   const enabledManualServers: Record<string, ScopedMcpServerConfig> = {}
   for (const [name, config] of Object.entries({
     ...userServers,
     ...approvedProjectServers,
     ...localServers,
     ...dynamicServers,
-    ...extraTargets,
   })) {
     if (!isMcpServerDisabled(name) && isMcpServerAllowedByPolicy(name, config)) {
       enabledManualServers[name] = config
@@ -1167,7 +1165,7 @@ export async function getAllMcpConfigs(): Promise<{
   // Kick off the claude.ai fetch before getClaudeCodeMcpConfigs so it overlaps
   // with loadAllPluginsCacheOnly() inside. Memoized — the awaited call below is a cache hit.
   const claudeaiPromise = fetchClaudeAIMcpConfigsIfEligible()
-  const { servers: claudeCodeServers, errors } = await getClaudeCodeMcpConfigs({}, claudeaiPromise)
+  const { servers: claudeCodeServers, errors } = await getClaudeCodeMcpConfigs()
   const { allowed: claudeaiMcpServers } = filterMcpServersByPolicy(await claudeaiPromise)
 
   // Suppress claude.ai connectors that duplicate an enabled manual server.

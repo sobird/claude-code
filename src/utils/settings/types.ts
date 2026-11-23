@@ -532,6 +532,12 @@ export const SettingsSchema = lazySchema(() =>
         .describe('Force a specific login method: "claudeai" for Claude Pro/Max, "console" for Console billing'),
       // Organization UUID to use for OAuth login (will be added as URL param to authorization URL)
       forceLoginOrgUUID: z.string().optional().describe('Organization UUID to use for OAuth login'),
+      forceRemoteSettingsRefresh: z
+        .boolean()
+        .optional()
+        .describe(
+          'When set in managed settings, the CLI blocks startup until remote managed settings are freshly fetched, and exits if the fetch fails',
+        ),
       otelHeadersHelper: z.string().optional().describe('Path to a script that outputs OpenTelemetry headers'),
       outputStyle: z.string().optional().describe('Controls the output style for assistant responses'),
       language: z

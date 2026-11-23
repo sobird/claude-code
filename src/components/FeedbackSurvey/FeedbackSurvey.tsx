@@ -118,6 +118,8 @@ function FeedbackSurveyThanks({
     isValidDigit: isFollowUpDigit,
     enabled: Boolean(showFollowUp),
     once: true,
+    // The "1" follow-up hotkey is intentional: accept it immediately.
+    mountDelayMs: 0,
     onDigit: () => {
       logEvent('tengu_feedback_survey_event', {
         event_type: 'followup_accepted' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

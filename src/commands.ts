@@ -39,6 +39,7 @@ import rename from './commands/rename/index.js'
 import resume from './commands/resume/index.js'
 import review, { ultrareview } from './commands/review.js'
 import session from './commands/session/index.js'
+import setupBedrock from './commands/setup-bedrock/index.js'
 import share from './commands/share/index.js'
 import skills from './commands/skills/index.js'
 import status from './commands/status/index.js'
@@ -54,7 +55,6 @@ import securityReview from './commands/security-review.js'
 import terminalSetup from './commands/terminalSetup/index.js'
 import theme from './commands/theme/index.js'
 import usage from './commands/usage/index.js'
-import vim from './commands/vim/index.js'
 // Dead code elimination: conditional imports
 /* eslint-disable @typescript-eslint/no-require-imports */
 const proactive = feature('PROACTIVE') || feature('KAIROS') ? require('./commands/proactive.js').default : null
@@ -122,8 +122,8 @@ import sandboxToggle from './commands/sandbox-toggle/index.js'
 import stats from './commands/stats/index.js'
 import statusline from './commands/statusline.js'
 import stickers from './commands/stickers/index.js'
+import stopHook from './commands/stop-hook/index.js'
 import summary from './commands/summary/index.js'
-import tag from './commands/tag/index.js'
 import thinkbackPlay from './commands/thinkback-play/index.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import thinkback from './commands/thinkback/index.js'
@@ -248,6 +248,7 @@ const COMMANDS = memoize((): Command[] => [
   remoteEnv,
   plugin,
   releaseNotes,
+  setupBedrock,
   reloadPlugins,
   rename,
   resume,
@@ -257,7 +258,6 @@ const COMMANDS = memoize((): Command[] => [
   status,
   statusline,
   stickers,
-  tag,
   theme,
   feedback,
   review,
@@ -271,7 +271,6 @@ const COMMANDS = memoize((): Command[] => [
   rateLimitOptions,
   usage,
   usageReport,
-  vim,
   ...(webCmd ? [webCmd] : []),
   ...(forkCmd ? [forkCmd] : []),
   ...(buddy ? [buddy] : []),
@@ -287,6 +286,7 @@ const COMMANDS = memoize((): Command[] => [
   plan,
   privacySettings,
   hooks,
+  stopHook,
   exportCommand,
   sandboxToggle,
   toggleMemory,
@@ -547,7 +547,6 @@ export const REMOTE_SAFE_COMMANDS: Set<Command> = new Set([
   help, // Show help
   theme, // Change terminal theme
   color, // Change agent color
-  vim, // Toggle vim mode
   cost, // Show session cost (local cost tracking)
   usage, // Show usage info
   copy, // Copy last message

@@ -373,6 +373,7 @@ function ModeIndicator({
         hasAnyInProcessTeammates,
         hasRunningAgentTasks,
         isKillAgentsConfirmShowing,
+        hasSelection,
       )
     : []
 
@@ -551,6 +552,7 @@ function getSpinnerHintParts(
   hasTeammates: boolean,
   hasRunningAgentTasks: boolean,
   isKillAgentsConfirmShowing: boolean,
+  hasSelection: boolean,
 ): React.ReactElement[] {
   let toggleAction: string
   if (hasTeammates) {
@@ -575,7 +577,10 @@ function getSpinnerHintParts(
   const showToggleHint = hasTaskItems || hasTeammates
 
   return [
-    ...(isLoading
+    // Suppress "esc to interrupt" while a text selection is active: esc first
+    // clears the selection, so the interrupt hint would be misleading and
+    // would render alongside the copy/native-select hint.
+    ...(isLoading && !hasSelection
       ? [
           <Text dimColor key="esc">
             <KeyboardShortcutHint shortcut={escShortcut} action="interrupt" />

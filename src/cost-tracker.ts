@@ -215,6 +215,51 @@ function formatModelUsage(): string {
   return result
 }
 
+function getModelFamilyName(canonicalName: string): string {
+  const name = canonicalName.toLowerCase()
+  if (name.includes('opus')) return 'opus'
+  if (name.includes('sonnet')) return 'sonnet'
+  if (name.includes('haiku')) return 'haiku'
+  return canonicalName
+}
+
+/**
+ * Per-model-family cost share plus cache hit rate, e.g.
+ * `breakdown · sonnet: 92% · haiku: 8% · cache hit: 61%`.
+ * Returns null when no model usage has been recorded yet.
+ */
+export function getCostBreakdown(): string | null {
+  const modelUsageMap = getModelUsage()
+  const entries = Object.entries(modelUsageMap)
+  if (entries.length === 0) return null
+
+  const costByFamily: { [family: string]: number } = {}
+  let totalCost = 0
+  let inputTokens = 0
+  let cacheReadTokens = 0
+  let cacheCreationTokens = 0
+  for (const [model, usage] of entries) {
+    const family = getModelFamilyName(getCanonicalName(model))
+    costByFamily[family] = (costByFamily[family] ?? 0) + usage.costUSD
+    totalCost += usage.costUSD
+    inputTokens += usage.inputTokens
+    cacheReadTokens += usage.cacheReadInputTokens
+    cacheCreationTokens += usage.cacheCreationInputTokens
+  }
+
+  const parts: string[] = []
+  if (totalCost > 0) {
+    for (const [family, cost] of Object.entries(costByFamily).toSorted((a, b) => b[1] - a[1])) {
+      parts.push(`${family}: ${Math.round((cost / totalCost) * 100)}%`)
+    }
+  }
+  const totalInputTokens = inputTokens + cacheReadTokens + cacheCreationTokens
+  if (totalInputTokens > 0) {
+    parts.push(`cache hit: ${Math.round((cacheReadTokens / totalInputTokens) * 100)}%`)
+  }
+  return parts.length > 0 ? `breakdown · ${parts.join(' · ')}` : null
+}
+
 export function formatTotalCost(): string {
   const costDisplay =
     formatCost(getTotalCostUSD()) +

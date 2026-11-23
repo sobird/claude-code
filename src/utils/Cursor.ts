@@ -427,9 +427,17 @@ export class Cursor {
   }
 
   endOfLine(): Cursor {
-    const { line } = this.getPosition()
-    const column = this.measuredText.getLineLength(line)
-    const offset = this.getOffset({ line, column })
+    const { line, column } = this.getPosition()
+    const lineLength = this.measuredText.getLineLength(line)
+    // Already at the end of this line: advance to the end of the next one so
+    // ctrl+e can reach the true end of long/wrapped lines in multiline prompts
+    // instead of stalling at a wrap boundary.
+    if (column >= lineLength && line < this.measuredText.lineCount - 1) {
+      const nextLineLength = this.measuredText.getLineLength(line + 1)
+      const nextOffset = this.getOffset({ line: line + 1, column: nextLineLength })
+      return new Cursor(this.measuredText, nextOffset, 0)
+    }
+    const offset = this.getOffset({ line, column: lineLength })
     return new Cursor(this.measuredText, offset, 0)
   }
 

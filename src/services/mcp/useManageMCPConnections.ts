@@ -645,8 +645,8 @@ export function useManageMCPConnections(
   // Re-runs on session change (/clear) and on /reload-plugins (pluginReconnectKey).
   // On plugin reload, also disconnects stale plugin MCP servers (scope 'dynamic')
   // that no longer appear in configs — prevents ghost tools from disabled plugins.
-  // Skip claude.ai dedup here to avoid blocking on the network fetch; the connect
-  // useEffect below runs immediately after and dedups before connecting.
+  // claude.ai connectors aren't dedup targets for plugin servers (see
+  // getClaudeCodeMcpConfigs), so this stays a fast local-only read.
   const sessionId = getSessionId()
   useEffect(() => {
     async function initializeServersAsPending() {
@@ -725,7 +725,7 @@ export function useManageMCPConnections(
       // Clear claude.ai MCP cache so we fetch fresh configs with current auth
       // state. This is important when authVersion changes (e.g., after login/
       // logout). Kick off the fetch now so it overlaps with loadAllPlugins()
-      // inside getClaudeCodeMcpConfigs; it's awaited only at the dedup step.
+      // inside getClaudeCodeMcpConfigs.
       // Phase 2 below awaits the same promise — no second network call.
       let claudeaiPromise: Promise<Record<string, ScopedMcpServerConfig>>
       if (isStrictMcpConfig || doesEnterpriseMcpConfigExist()) {
@@ -736,11 +736,12 @@ export function useManageMCPConnections(
       }
 
       // Phase 1: Load Claude Code configs. Plugin MCP servers that duplicate a
-      // --mcp-config entry or a claude.ai connector are suppressed here so they
-      // don't connect alongside the connector in Phase 2.
+      // manually-configured server are suppressed here. claude.ai connectors are
+      // NOT dedup targets — an unauthenticated connector never connects, so it
+      // would strand its plugin twin in 'pending' forever.
       const { servers: claudeCodeConfigs, errors: mcpErrors } = isStrictMcpConfig
         ? { servers: {}, errors: [] }
-        : await getClaudeCodeMcpConfigs(dynamicMcpConfig, claudeaiPromise)
+        : await getClaudeCodeMcpConfigs(dynamicMcpConfig)
       if (cancelled) return
 
       // Add MCP errors to plugin errors for UI visibility (deduplicated)

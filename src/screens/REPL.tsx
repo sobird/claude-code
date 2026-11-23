@@ -323,6 +323,7 @@ import {
 import { recordAttributionSnapshot } from '../utils/sessionStorage.js'
 import { generateSessionTitle } from '../utils/sessionTitle.js'
 import type { ThinkingConfig } from '../utils/thinking.js'
+import { tokenCountWithEstimation } from '../utils/tokens.js'
 import { mergeAndFilterTools } from '../utils/toolPool.js'
 import {
   provisionContentReplacementState,
@@ -4645,7 +4646,10 @@ export function REPL({
     if (getGlobalConfig().idleReturnDismissed) return
 
     const tokenThreshold = Number(process.env.CLAUDE_CODE_IDLE_TOKEN_THRESHOLD ?? 100_000)
-    if (getTotalInputTokens() < tokenThreshold) return
+    // Measure the CURRENT context size, not cumulative session input tokens:
+    // after /clear the hint's "save X tokens" must reflect what stays in
+    // context, and cumulative counting double-counts as context grows.
+    if (tokenCountWithEstimation(getMessagesAfterCompactBoundary(messagesRef.current)) < tokenThreshold) return
 
     const idleThresholdMs = Number(process.env.CLAUDE_CODE_IDLE_THRESHOLD_MINUTES ?? 75) * 60_000
     const elapsed = Date.now() - lastQueryCompletionTime
@@ -4654,8 +4658,8 @@ export function REPL({
     const timer = setTimeout(
       (lqct, addNotif, msgsRef, mode, hintRef) => {
         if (msgsRef.current.length === 0) return
-        const totalTokens = getTotalInputTokens()
-        const formattedTokens = formatTokens(totalTokens)
+        const contextTokens = tokenCountWithEstimation(getMessagesAfterCompactBoundary(msgsRef.current))
+        const formattedTokens = formatTokens(contextTokens)
         const idleMinutes = (Date.now() - lqct) / 60_000
         addNotif({
           key: 'idle-return-hint',
@@ -4682,7 +4686,7 @@ export function REPL({
           variant: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           idleMinutes: Math.round(idleMinutes),
           messageCount: msgsRef.current.length,
-          totalInputTokens: totalTokens,
+          contextTokens,
         })
       },
       Math.max(0, remaining),

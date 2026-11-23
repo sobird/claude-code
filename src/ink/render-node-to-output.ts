@@ -835,11 +835,15 @@ function renderNodeToOutput(
           const prevHeight = contentCached?.height ?? scrollHeight
           const heightDelta = scrollHeight - prevHeight
           const safeForFastPath = !hint || heightDelta === 0 || (hint.delta > 0 && heightDelta === hint.delta)
-          // scrollHint is set above when hint is captured. If safeForFastPath
-          // is false the full path renders a next.screen that doesn't match
-          // the DECSTBM shift — emitting DECSTBM leaves stale rows (seen as
-          // content bleeding through during scroll-up + streaming). Clear it.
-          if (!safeForFastPath) scrollHint = null
+          // The DECSTBM hint is only valid when the fast path below actually
+          // runs: it blits prevScreen's region then shifts it to mirror the
+          // hardware scroll. The full path renders next.screen from scratch at
+          // the new scroll position — emitting DECSTBM on top of that makes the
+          // terminal apply its own scroll as well, so the same rows land at two
+          // offsets (seen as a duplicated message when scrolling up in
+          // fullscreen). Clear the hint unless we have a prevScreen AND the
+          // fast path is safe.
+          if (hint && !(prevScreen && safeForFastPath)) scrollHint = null
           if (hint && prevScreen && safeForFastPath) {
             const { top, bottom, delta } = hint
             const w = Math.floor(width)

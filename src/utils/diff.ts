@@ -49,8 +49,9 @@ export function countLinesChanged(patch: StructuredPatchHunk[], newFileContent?:
   let numRemovals = 0
 
   if (patch.length === 0 && newFileContent) {
-    // For new files, count all lines as additions
-    numAdditions = newFileContent.split(/\r?\n/).length
+    // For new files, count all lines as additions. Count newline matches
+    // instead of split() so large contents don't allocate a line array.
+    numAdditions = (newFileContent.match(/\n/g)?.length ?? 0) + 1
   } else {
     numAdditions = patch.reduce((acc, hunk) => acc + count(hunk.lines, (_) => _.startsWith('+')), 0)
     numRemovals = patch.reduce((acc, hunk) => acc + count(hunk.lines, (_) => _.startsWith('-')), 0)
@@ -73,26 +74,21 @@ export function getPatchFromContents({
   newContent,
   ignoreWhitespace = false,
   singleHunk = false,
+  convertTabs = false,
 }: {
   filePath: string
   oldContent: string
   newContent: string
   ignoreWhitespace?: boolean
   singleHunk?: boolean
+  convertTabs?: boolean
 }): StructuredPatchHunk[] {
-  const result = structuredPatch(
-    filePath,
-    filePath,
-    escapeForDiff(oldContent),
-    escapeForDiff(newContent),
-    undefined,
-    undefined,
-    {
-      ignoreWhitespace,
-      context: singleHunk ? 100_000 : CONTEXT_LINES,
-      timeout: DIFF_TIMEOUT_MS,
-    },
-  )
+  const prepare = convertTabs ? (s: string) => escapeForDiff(convertLeadingTabsToSpaces(s)) : escapeForDiff
+  const result = structuredPatch(filePath, filePath, prepare(oldContent), prepare(newContent), undefined, undefined, {
+    ignoreWhitespace,
+    context: singleHunk ? 100_000 : CONTEXT_LINES,
+    timeout: DIFF_TIMEOUT_MS,
+  })
   if (!result) {
     return []
   }

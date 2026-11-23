@@ -199,6 +199,10 @@ export async function createBashShellProvider(
       }
       const claudeTmuxEnv = getClaudeTmuxEnv()
       const env: Record<string, string> = {}
+      // The shell snapshot's rg/find/grep wrappers dispatch through this
+      // executable (ARGV0 selects the embedded tool), so point them at the
+      // binary we're actually running instead of whatever `claude` is on PATH.
+      env.CLAUDE_CODE_EXECPATH = process.execPath
       // CRITICAL: Override TMUX to isolate ALL tmux commands to Claude's socket.
       // This is NOT the user's TMUX value - it points to Claude's isolated socket.
       // When null (before socket initializes), user's TMUX is preserved.

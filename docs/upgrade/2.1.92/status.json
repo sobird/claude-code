@@ -1,0 +1,387 @@
+{
+  "source": {
+    "reference": "2.1.91",
+    "target": "2.1.92"
+  },
+  "entries": [
+    {
+      "id": "behavior:force-remote-settings-refresh",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:1052685"],
+      "notes": "changelog「新增 forceRemoteSettingsRefresh 策略：设置后启动时阻塞直到远端托管设置拉取成功，拉取失败则退出（fail-closed）」：src/utils/settings/types.ts 增加布尔设置；src/services/remoteManagedSettings/index.ts 的 fetchAndLoadRemoteManagedSettings 返回 {settings, fetchSucceeded}，新增导出 FORCE_REMOTE_SETTINGS_REFRESH_ERROR；src/main.tsx 在首次加载与引导后刷新两处，若策略开启且 fetchSucceeded 为 false 则输出错误并 process.exit(1)。",
+      "releaseItems": [1],
+      "srcEvidence": {
+        "files": ["src/services/remoteManagedSettings/index.ts", "src/utils/settings/types.ts", "src/main.tsx"],
+        "symbols": ["FORCE_REMOTE_SETTINGS_REFRESH_ERROR", "forceRemoteSettingsRefresh", "fetchSucceeded"]
+      }
+    },
+    {
+      "id": "behavior:bedrock-setup-wizard",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10928725", "bundle:10928968"],
+      "notes": "changelog「登录页选择 3rd-party platform 时新增交互式 Bedrock 设置向导（AWS 认证、region、凭证校验、模型固定）」：src/components/ConsoleOAuthFlow.tsx 的 platform_setup 状态改为平台选择器，选 Amazon Bedrock 进入 bedrock_wizard；新增 src/components/BedrockSetupWizard.tsx（分步 UI）与 src/utils/bedrockSetup.ts（认证方式 profile/bearer/accessKey/environment、region、STS 身份校验、模型 pin）。Foundry/Vertex 改为打开对应文档。",
+      "releaseItems": [2],
+      "srcEvidence": {
+        "files": [
+          "src/components/ConsoleOAuthFlow.tsx",
+          "src/components/BedrockSetupWizard.tsx",
+          "src/utils/bedrockSetup.ts",
+          "src/commands/setup-bedrock/index.ts"
+        ],
+        "symbols": ["BedrockSetupWizard", "tengu_oauth_bedrock_wizard_launched", "BEDROCK_STEP"]
+      }
+    },
+    {
+      "id": "behavior:cost-breakdown",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:8746302"],
+      "notes": "changelog「订阅用户 /cost 增加按模型族与缓存命中的拆分」：src/cost-tracker.ts 新增 getCostBreakdown（按 opus/sonnet/haiku 汇总成本占比 + cache read 命中率），src/commands/cost/cost.ts 在订阅分支下由 GrowthBook tengu_amber_lark 门控输出。",
+      "releaseItems": [3],
+      "srcEvidence": {
+        "files": ["src/commands/cost/cost.ts", "src/cost-tracker.ts"],
+        "symbols": ["getCostBreakdown", "tengu_amber_lark"]
+      }
+    },
+    {
+      "id": "behavior:release-notes-version-picker",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10797447"],
+      "notes": "changelog「/release-notes 改为交互式版本选择器」：src/commands/release-notes/index.ts 由 local/supportsNonInteractive 改为 local-jsx；新增 src/commands/release-notes/release-notes.tsx，用 Select+Dialog 列出各版本（含 Show all），删除旧 release-notes.ts。",
+      "releaseItems": [4],
+      "srcEvidence": {
+        "files": ["src/commands/release-notes/index.ts", "src/commands/release-notes/release-notes.tsx"],
+        "symbols": ["ReleaseNotesPicker", "SHOW_ALL_VALUE"]
+      }
+    },
+    {
+      "id": "behavior:remote-control-session-name-prefix",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:11697226"],
+      "notes": "changelog「Remote Control 会话名默认用主机名作前缀（如 myhost-graceful-unicorn），可用 --remote-control-session-name-prefix 覆盖」：src/bridge/bridgeConfig.ts 新增 sanitizeSessionNamePrefix 与 getBridgeSessionNamePrefix（读取 CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX 或 hostname，回退 'remote-control'）；src/bridge/bridgeMain.ts、src/bridge/initReplBridge.ts 用 `${prefix}-${generateShortWordSlug()}` 生成会话标题；src/main.tsx 解析新 flag 并透传。",
+      "releaseItems": [5],
+      "srcEvidence": {
+        "files": [
+          "src/bridge/bridgeConfig.ts",
+          "src/bridge/bridgeMain.ts",
+          "src/bridge/initReplBridge.ts",
+          "src/main.tsx"
+        ],
+        "symbols": ["sanitizeSessionNamePrefix", "getBridgeSessionNamePrefix"]
+      }
+    },
+    {
+      "id": "flag:--remote-control-session-name-prefix",
+      "kind": "flag",
+      "status": "ported",
+      "evidence": ["bundle:11697224"],
+      "notes": "与 behavior:remote-control-session-name-prefix 同一条链路：src/main.tsx 解析该 CLI flag 并通过环境变量传给 bridge。inventory 未把该 flag 收入 flag 清单（帮助/解析路径），此处显式登记以对齐 release 说明。",
+      "releaseItems": [5],
+      "srcEvidence": {
+        "files": ["src/main.tsx"],
+        "symbols": ["remote-control-session-name-prefix"]
+      }
+    },
+    {
+      "id": "behavior:cache-expired-hint",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:12079646", "bundle:12081700"],
+      "notes": "changelog「Pro 用户回到缓存已过期的会话时，页脚提示下一轮大致会以未缓存方式发送多少 token」：src/components/PromptInput/Notifications.tsx 新增 getCacheExpiredHint（tokenUsage≥50k 且距上次 API 完成超过 1h 才提示），由订阅类型 pro + GrowthBook tengu_amber_swift 门控，每 30s 轮询一次。",
+      "releaseItems": [6],
+      "srcEvidence": {
+        "files": ["src/components/PromptInput/Notifications.tsx"],
+        "symbols": ["getCacheExpiredHint", "CACHE_EXPIRED_HINT_MIN_TOKENS", "tengu_amber_swift"]
+      }
+    },
+    {
+      "id": "behavior:tmux-pane-count-cache",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:8172514"],
+      "notes": "changelog「修复长时间运行中 tmux 窗口被杀/重编号后子代理永久报 'Could not determine pane count'」：src/utils/swarm/backends/TmuxBackend.ts 改为在实例上缓存 leader 的稳定窗口目标（@N 窗口 id），避免每次按可能失效的 pane 列表重算。",
+      "releaseItems": [7],
+      "srcEvidence": {
+        "files": ["src/utils/swarm/backends/TmuxBackend.ts"],
+        "symbols": ["cachedLeaderWindowTarget"]
+      }
+    },
+    {
+      "id": "behavior:prompt-stop-hook-reason",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:11514629", "bundle:11515534"],
+      "notes": "changelog「修复 prompt 型 Stop hooks 在小快模型返回 ok:false 时误失败，并恢复非 Stop prompt hooks 的 preventContinuation:true 语义」：src/utils/hooks/execPromptHook.ts 对 Stop/SubagentStop 使用专门的判定系统提示（要求 reason 引用 transcript 证据），工具集改为 []，JSON schema 要求 ok 与 reason；条件未命中时 Stop 类不再设置 preventContinuation（由 stop 流程决定是否继续），非 Stop 类保持 true。",
+      "releaseItems": [8],
+      "srcEvidence": {
+        "files": ["src/utils/hooks/execPromptHook.ts"],
+        "symbols": ["isStopHook", "preventContinuation"]
+      }
+    },
+    {
+      "id": "behavior:coerce-stringified-json-fields",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:9787523"],
+      "notes": "changelog「修复流式响应把 array/object 类型参数以 JSON 字符串发出导致工具输入校验失败」：src/utils/messages.ts 新增 coerceStringifiedJsonFields（按 zod 字段类型判定 array/object，把 JSON 字符串反序列化回声明形状）与 unwrapZodDefType；normalizeContentFromAPI 在调用 normalizeToolInput 前先做该强制转换，失败时回退到转换后的输入。",
+      "releaseItems": [9],
+      "srcEvidence": {
+        "files": ["src/utils/messages.ts"],
+        "symbols": ["coerceStringifiedJsonFields", "unwrapZodDefType"]
+      }
+    },
+    {
+      "id": "behavior:merge-assistant-whitespace-filter",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:4967734"],
+      "notes": "changelog「修复扩展思考同时产出仅空白的 text 块导致的 API 400」：src/utils/messages.ts 的 mergeAssistantMessages 在合并时丢弃 text 为空白的块，但若过滤后只剩 thinking 块则保留原样。",
+      "releaseItems": [10],
+      "srcEvidence": {
+        "files": ["src/utils/messages.ts"],
+        "symbols": ["mergeAssistantMessages", "hasNonThinking"]
+      }
+    },
+    {
+      "id": "behavior:feedback-survey-mount-delay",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:12352100"],
+      "notes": "changelog「修复自动巡航按键与连续提示数字冲突导致误提交反馈问卷」：src/components/FeedbackSurvey/useDebouncedDigitInput.ts 增加 mountDelayMs 挂载/重新启用后的忽略窗口（默认 600ms，重新 enabled 时重置），并把数字归一改为 String.prototype.normalize('NFKC')；FeedbackSurveyView 透传 mountDelayMs，followup 的“1”热键设 mountDelayMs:0 立即接受。",
+      "releaseItems": [11],
+      "srcEvidence": {
+        "files": [
+          "src/components/FeedbackSurvey/useDebouncedDigitInput.ts",
+          "src/components/FeedbackSurvey/FeedbackSurveyView.tsx",
+          "src/components/FeedbackSurvey/FeedbackSurvey.tsx"
+        ],
+        "symbols": ["mountDelayMs", "DEFAULT_MOUNT_DELAY_MS"]
+      }
+    },
+    {
+      "id": "behavior:esc-hint-suppress-on-selection",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:8089809"],
+      "notes": "changelog「全屏模式下处理中存在文本选区时，不再同时显示会误导的 esc to interrupt 与 esc to clear」：src/components/PromptInput/PromptInputFooterLeftSide.tsx 的 getSpinnerHintParts 增加 hasSelection 参数，选区激活时不再渲染 esc to interrupt 提示。",
+      "releaseItems": [12],
+      "srcEvidence": {
+        "files": ["src/components/PromptInput/PromptInputFooterLeftSide.tsx"],
+        "symbols": ["getSpinnerHintParts", "hasSelection"]
+      }
+    },
+    {
+      "id": "behavior:homebrew-cask-channel",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:7877165"],
+      "notes": "changelog「Homebrew 安装更新提示改用 cask 的发布通道（claude-code→stable，claude-code@latest→latest）」：src/utils/nativeInstaller/packageManagers.ts 新增 getHomebrewCaskName（从 /Caskroom/([^/]+)/ 解析 cask 名）；src/components/PackageManagerAutoUpdater.tsx、src/cli/update.ts 据此选择渠道。",
+      "releaseItems": [13],
+      "srcEvidence": {
+        "files": [
+          "src/utils/nativeInstaller/packageManagers.ts",
+          "src/components/PackageManagerAutoUpdater.tsx",
+          "src/cli/update.ts"
+        ],
+        "symbols": ["getHomebrewCaskName"]
+      }
+    },
+    {
+      "id": "behavior:cursor-end-of-line-advance",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:10883795"],
+      "notes": "changelog「修复多行输入中 ctrl+e 在已处于行尾时行为异常」：src/utils/Cursor.ts 的 endOfLine() 在游标已位于行尾时前进到下一行行尾（跨软换行边界），而不是停在原地。release 说明写的是跳到“下一行行尾”；实现与该语义一致（见 R6）。",
+      "releaseItems": [14],
+      "srcEvidence": {
+        "files": ["src/utils/Cursor.ts"],
+        "symbols": ["endOfLine"]
+      }
+    },
+    {
+      "id": "behavior:fullscreen-scroll-dedup",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:3784769"],
+      "notes": "changelog「修复全屏模式下向上滚动时同一条消息出现在两个位置（DEC 2026 终端）」：src/ink/render-node-to-output.ts 仅在存在上一屏且满足 fast-path 高度差时才记录 scrollHint，否则清空；src/ink/selection.ts 在选择区上移时按 min(oldAboveDebt-newAboveDebt, scrolledOffAbove.length) 收缩，避免裁剪后残留重复行。",
+      "releaseItems": [15],
+      "srcEvidence": {
+        "files": ["src/ink/render-node-to-output.ts", "src/ink/selection.ts"],
+        "symbols": ["scrollHint", "safeForFastPath", "scrolledOffAbove"]
+      }
+    },
+    {
+      "id": "behavior:idle-return-context-tokens",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:12500409"],
+      "notes": "changelog「修复 idle-return 的 '/clear to save X tokens' 提示显示累计会话 token 而非当前上下文大小」：src/screens/REPL.tsx 改用 tokenCountWithEstimation(getMessagesAfterCompactBoundary(...)) 计算当前上下文（contextTokens），并作为 analytics 的 contextTokens 上报。",
+      "releaseItems": [16],
+      "srcEvidence": {
+        "files": ["src/screens/REPL.tsx"],
+        "symbols": ["tokenCountWithEstimation", "contextTokens"]
+      }
+    },
+    {
+      "id": "behavior:plugin-mcp-dedup-targets",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:13126870"],
+      "notes": "changelog「修复会话启动时插件 MCP 服务器因重复未认证的 claude.ai connector 而卡在 connecting」：src/services/mcp/config.ts 的 getClaudeCodeMcpConfigs 移除 extraDedupTargets 参数——未认证的 connector 永不连接，若作为插件去重目标会让插件项永久 pending；插件与 connector 的去重改由 Phase 2 的 dedupClaudeAiMcpServers（connector 对 manual 服务器）承担。src/services/mcp/useManageMCPConnections.ts 同步只在 Phase 2 await claude.ai 拉取。",
+      "releaseItems": [17],
+      "srcEvidence": {
+        "files": ["src/services/mcp/config.ts", "src/services/mcp/useManageMCPConnections.ts"],
+        "symbols": ["getClaudeCodeMcpConfigs", "dedupClaudeAiMcpServers"]
+      }
+    },
+    {
+      "id": "behavior:write-diff-convert-tabs",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:8809070"],
+      "notes": "changelog「大文件 Write 工具的 diff 计算提速（含 tab/&/$ 时约快 60%）」：src/utils/diff.ts 新文件按换行计数新增行（不再 split 分配数组），getPatchFromContents 增加 convertTabs 选项（先 convertLeadingTabsToSpaces 再 escapeForDiff）；src/tools/FileWriteTool/FileWriteTool.ts 编辑路径改用 getPatchFromContents({convertTabs:true})，避免 getPatchForDisplay 的整文件替换与三重转义。",
+      "releaseItems": [18],
+      "srcEvidence": {
+        "files": ["src/utils/diff.ts", "src/tools/FileWriteTool/FileWriteTool.ts"],
+        "symbols": ["convertTabs", "getPatchFromContents"]
+      }
+    },
+    {
+      "id": "behavior:remove-tag-command",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:absent:Toggle a searchable tag on the current session"],
+      "notes": "changelog「移除 /tag 命令」：删除 src/commands/tag/（index.ts、tag.tsx），并从 src/utils/sessionStorage.ts 移除 saveTag / getCurrentSessionTag。目标 bundle 已无该命令描述字符串（absent 证据）。",
+      "releaseItems": [19],
+      "srcEvidence": {
+        "files": ["src/utils/sessionStorage.ts"]
+      }
+    },
+    {
+      "id": "behavior:remove-vim-command",
+      "kind": "behavior",
+      "status": "ported",
+      "evidence": ["bundle:absent:Toggle between Vim and Normal editing modes"],
+      "notes": "changelog「移除 /vim 命令（改在 /config → Editor mode 切换 vim 模式）」：删除 src/commands/vim/（index.ts、vim.ts），并移除 commands.ts 中的注册。目标 bundle 已无该命令描述字符串（absent 证据）。",
+      "releaseItems": [20]
+    },
+    {
+      "id": "behavior:apply-seccomp-vendor",
+      "kind": "behavior",
+      "status": "approximated",
+      "evidence": ["bundle:4350872"],
+      "notes": "changelog「Linux 沙箱在 npm 与 native 构建中都附带 apply-seccomp 助手，恢复沙箱命令的 unix socket 阻断」：vendor/seccomp/{x64,arm64}/apply-seccomp 已入库（来自 sandbox-runtime 的预编译助手），src/components/sandbox/SandboxDependenciesTab.tsx 的缺失提示指向 vendor/seccomp/*。差异：本仓库没有上游的打包脚本把该助手注入 npm/native 产物，实际随构建分发的接线在打包侧，见 R5。",
+      "releaseItems": [21],
+      "srcEvidence": {
+        "files": ["vendor/seccomp/x64/apply-seccomp", "vendor/seccomp/arm64/apply-seccomp"],
+        "symbols": ["vendor/seccomp"]
+      }
+    },
+    {
+      "id": "cmd:setup-bedrock",
+      "kind": "cmd",
+      "status": "ported",
+      "evidence": ["bundle:10928968"],
+      "notes": "目标版本新增的 local-jsx 命令 setup-bedrock（Bedrock 已启用时可见，重新配置 AWS 认证/region/模型 pin）；src/commands/setup-bedrock/ 已注册，commands.ts 纳入。",
+      "releaseItems": [2],
+      "srcEvidence": {
+        "files": ["src/commands/setup-bedrock/index.ts", "src/commands/setup-bedrock/setup-bedrock.tsx"],
+        "symbols": ["setup-bedrock", "BedrockSetupWizard"]
+      }
+    },
+    {
+      "id": "cmd:stop-hook",
+      "kind": "cmd",
+      "status": "ported",
+      "evidence": ["bundle:9503363"],
+      "notes": "目标版本新增的 local-jsx 命令 stop-hook（会话级 Stop hook 快捷设置，上游 isEnabled 恒 false、隐藏）；src/commands/stop-hook/ 完整移植，commands.ts 纳入。",
+      "srcEvidence": {
+        "files": ["src/commands/stop-hook/index.ts", "src/commands/stop-hook/stop-hook.tsx"],
+        "symbols": ["stop-hook", "StopHookDialog", "addSessionHook"]
+      }
+    },
+    {
+      "id": "cmd:teleport",
+      "kind": "cmd",
+      "status": "ported",
+      "evidence": ["bundle:11031106"],
+      "notes": "目标版本新增 local-jsx 命令 teleport（从 claude.ai 恢复会话，别名 tp，门控 isClaudeAISubscriber && allow_remote_sessions）。本仓库此前仅有名为 stub 的占位；teleport 机制（src/utils/teleport.tsx、TeleportResumeWrapper、useTeleportResume）早已存在，本次把命令注册补全以匹配上游。见 R4。",
+      "srcEvidence": {
+        "files": ["src/commands/teleport/index.ts", "src/commands/teleport/teleport.tsx"],
+        "symbols": ["TeleportResumeWrapper", "allow_remote_sessions"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_EXECPATH",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:8598257"],
+      "notes": "新增环境变量：shell 快照的 rg/find/grep 包装函数改为运行时读取 CLAUDE_CODE_EXECPATH（ARGV0 选择内嵌工具），src/utils/bash/ShellSnapshot.ts 的 createArgv0ShellFunction 不再写死 binaryPath，src/utils/shell/bashProvider.ts 在 getEnvironmentOverrides 注入 process.execPath。",
+      "srcEvidence": {
+        "files": ["src/utils/bash/ShellSnapshot.ts", "src/utils/shell/bashProvider.ts"],
+        "symbols": ["CLAUDE_CODE_EXECPATH"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_SIMULATE_PROXY_USAGE",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:11629857"],
+      "notes": "新增环境变量：为真时请求剥离全部 beta 头以模拟代理场景，src/services/api/claude.ts 在构造请求时据此把 betas 置空并打调试日志。",
+      "srcEvidence": {
+        "files": ["src/services/api/claude.ts"],
+        "symbols": ["CLAUDE_CODE_SIMULATE_PROXY_USAGE"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_SKIP_FAST_MODE_ORG_CHECK",
+      "kind": "env",
+      "status": "ported",
+      "evidence": ["bundle:2404532"],
+      "notes": "新增环境变量：跳过 org 级 penguin-mode 检查并把 fast mode 视为启用；src/utils/fastMode.ts 新增 skipFastModeOrgCheck，在 getFastModeUnavailableReason 的 disabled 分支、resolveFastModeStatusFromCache 与 prefetchFastModeStatus 三处使用。",
+      "srcEvidence": {
+        "files": ["src/utils/fastMode.ts"],
+        "symbols": ["CLAUDE_CODE_SKIP_FAST_MODE_ORG_CHECK", "skipFastModeOrgCheck"]
+      }
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_HTTP_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:4361089"],
+      "notes": "由打包依赖 @anthropic-ai/sandbox-runtime 的 Linux 沙箱启动代码注入子进程；本仓库该能力由同名依赖提供，src/ 不直接读取，沿用 2.1.91 台账的近似状态（依赖噪声）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_HOST_SOCKS_PROXY_PORT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:4361167"],
+      "notes": "同 HOST_HTTP_PROXY_PORT：由打包依赖 @anthropic-ai/sandbox-runtime 注入沙箱子进程，本仓库由同名依赖提供，src/ 不直接读取（依赖噪声）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_THRESHOLD_MINUTES",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:12477030"],
+      "notes": "resume-return 提示阈值（默认 70），由 GrowthBook tengu_gleaming_fair + resumeReturnDismissed 门控；本仓库无此提示，仅记录（沿用 2.1.91 台账）。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_RESUME_TOKEN_THRESHOLD",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:12477094"],
+      "notes": "resume-return 提示阈值（默认 100000），同 RESUME_THRESHOLD_MINUTES；本仓库无此提示，仅记录。"
+    },
+    {
+      "id": "env:CLAUDE_CODE_SM_COMPACT",
+      "kind": "env",
+      "status": "approximated",
+      "evidence": ["bundle:9572787"],
+      "notes": "扫描器 ENV_RE 从 ENABLE_/DISABLE_CLAUDE_CODE_SM_COMPACT 截取到的子串名；真实读取点为 src/services/compact/sessionMemoryCompact.ts（带前缀的两个变量），以近似记录消化扫描噪声。"
+    }
+  ]
+}

@@ -452,7 +452,10 @@ export function shiftSelection(s: SelectionState, dRow: number, minRow: number, 
   const newBelowDebt = Math.max(0, Math.max(vAnchor, vFocus) - maxRow)
   if (newAboveDebt < oldAboveDebt) {
     // scrolledOffAbove pushes newest at the end (closest to on-screen).
-    const drop = oldAboveDebt - newAboveDebt
+    // Clamp the drop to the accumulator length: the debt can exceed what was
+    // actually captured (e.g. capture ran with a different clamp range), and
+    // a negative length would corrupt subsequent slice/splice math.
+    const drop = Math.min(oldAboveDebt - newAboveDebt, s.scrolledOffAbove.length)
     s.scrolledOffAbove.length -= drop
     s.scrolledOffAboveSW.length = s.scrolledOffAbove.length
   }

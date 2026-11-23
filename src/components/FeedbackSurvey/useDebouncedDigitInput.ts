@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react'
 
-import { normalizeFullWidthDigits } from '../../utils/stringUtils.js'
-
 // Delay before accepting a digit as a response, to prevent accidental
 // submissions when users start messages with numbers (e.g., numbered lists).
 // Short enough to feel instant for intentional presses, long enough to
 // cancel when the user types more characters.
 const DEFAULT_DEBOUNCE_MS = 400
+
+// Ignore digit input immediately after the widget mounts (or is re-enabled),
+// so a keypress meant for the previous prompt isn't captured by a survey that
+// just appeared (auto-pilot keypresses, consecutive-prompt collisions).
+const DEFAULT_MOUNT_DELAY_MS = 600
 
 /**
  * Detects when the user types a single valid digit into the prompt input,
@@ -24,6 +27,7 @@ export function useDebouncedDigitInput<T extends string = string>({
   enabled = true,
   once = false,
   debounceMs = DEFAULT_DEBOUNCE_MS,
+  mountDelayMs = DEFAULT_MOUNT_DELAY_MS,
 }: {
   inputValue: string
   setInputValue: (value: string) => void
@@ -32,10 +36,19 @@ export function useDebouncedDigitInput<T extends string = string>({
   enabled?: boolean
   once?: boolean
   debounceMs?: number
+  mountDelayMs?: number
 }): void {
   const initialInputValue = useRef(inputValue)
   const hasTriggeredRef = useRef(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mountTimeRef = useRef(enabled ? Date.now() : null)
+  const wasEnabledRef = useRef(enabled)
+  // Re-arm the mount guard whenever the widget transitions from disabled back
+  // to enabled (e.g. a new survey appears right after the previous one).
+  if (enabled && !wasEnabledRef.current) {
+    mountTimeRef.current = Date.now()
+  }
+  wasEnabledRef.current = enabled
 
   // Latest-ref pattern so callers can pass inline callbacks without causing
   // the effect to re-run (which would reset the debounce timer every render).
@@ -52,8 +65,12 @@ export function useDebouncedDigitInput<T extends string = string>({
       debounceRef.current = null
     }
 
+    if (mountTimeRef.current !== null && Date.now() - mountTimeRef.current < mountDelayMs) {
+      return
+    }
+
     if (inputValue !== initialInputValue.current) {
-      const lastChar = normalizeFullWidthDigits(inputValue.slice(-1))
+      const lastChar = inputValue.slice(-1).normalize('NFKC')
       if (callbacksRef.current.isValidDigit(lastChar)) {
         const trimmed = inputValue.slice(0, -1)
         debounceRef.current = setTimeout(
@@ -79,5 +96,5 @@ export function useDebouncedDigitInput<T extends string = string>({
         debounceRef.current = null
       }
     }
-  }, [inputValue, enabled, once, debounceMs])
+  }, [inputValue, enabled, once, debounceMs, mountDelayMs])
 }

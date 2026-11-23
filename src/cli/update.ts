@@ -8,7 +8,7 @@ import { getDoctorDiagnostic } from 'src/utils/doctorDiagnostic.js'
 import { gracefulShutdown } from 'src/utils/gracefulShutdown.js'
 import { installOrUpdateClaudePackage, localInstallationExists } from 'src/utils/localInstaller.js'
 import { installLatest as installLatestNative, removeInstalledSymlink } from 'src/utils/nativeInstaller/index.js'
-import { getPackageManager } from 'src/utils/nativeInstaller/packageManagers.js'
+import { detectHomebrew, getHomebrewCaskName, getPackageManager } from 'src/utils/nativeInstaller/packageManagers.js'
 import { writeToStdout } from 'src/utils/process.js'
 import { gte } from 'src/utils/semver.js'
 import { getInitialSettings } from 'src/utils/settings/settings.js'
@@ -17,7 +17,17 @@ export async function update() {
   logEvent('tengu_update_check', {})
   writeToStdout(`Current version: ${MACRO.VERSION}\n`)
 
-  const channel = getInitialSettings()?.autoUpdatesChannel ?? 'latest'
+  const settingsChannel = getInitialSettings()?.autoUpdatesChannel ?? 'latest'
+  // A Homebrew cask pins its own release channel: `claude-code` tracks stable,
+  // `claude-code@latest` tracks latest. Other Homebrew installs are stable.
+  const homebrewCask = getHomebrewCaskName()
+  const channel = homebrewCask
+    ? homebrewCask === 'claude-code@latest'
+      ? 'latest'
+      : 'stable'
+    : detectHomebrew()
+      ? 'stable'
+      : settingsChannel
   writeToStdout(`Checking for updates to ${channel} version...\n`)
 
   logForDebugging('update: Starting update check')
@@ -102,7 +112,7 @@ export async function update() {
         writeToStdout(`Update available: ${MACRO.VERSION} → ${latest}\n`)
         writeToStdout('\n')
         writeToStdout('To update, run:\n')
-        writeToStdout(chalk.bold('  brew upgrade claude-code') + '\n')
+        writeToStdout(chalk.bold(`  brew upgrade ${homebrewCask ?? 'claude-code'}`) + '\n')
       } else {
         writeToStdout('Claude is up to date!\n')
       }

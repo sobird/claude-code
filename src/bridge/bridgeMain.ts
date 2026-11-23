@@ -20,6 +20,7 @@ import { errorMessage } from '../utils/errors.js'
 import { truncateToWidth } from '../utils/format.js'
 import { logError } from '../utils/log.js'
 import { sleep } from '../utils/sleep.js'
+import { generateShortWordSlug } from '../utils/words.js'
 import { createAgentWorktree, removeAgentWorktree } from '../utils/worktree.js'
 import {
   BridgeFatalError,
@@ -28,6 +29,7 @@ import {
   isSuppressible403,
   validateBridgeId,
 } from './bridgeApi.js'
+import { getBridgeSessionNamePrefix } from './bridgeConfig.js'
 import { formatDuration } from './bridgeStatusUtil.js'
 import { createBridgeLogger } from './bridgeUI.js'
 import { createCapacityWake } from './capacityWake.js'
@@ -1417,6 +1419,8 @@ export type ParsedArgs = {
   sessionTimeoutMs?: number
   permissionMode?: string
   name?: string
+  /** Value passed to --remote-control-session-name-prefix (if any). */
+  sessionNamePrefix?: string
   /** Value passed to --spawn (if any); undefined if no --spawn flag was given. */
   spawnMode: SpawnMode | undefined
   /** Value passed to --capacity (if any); undefined if no --capacity flag was given. */
@@ -1455,6 +1459,7 @@ export function parseArgs(args: string[]): ParsedArgs {
   let sessionTimeoutMs: number | undefined
   let permissionMode: string | undefined
   let name: string | undefined
+  let sessionNamePrefix: string | undefined
   let help = false
   let spawnMode: SpawnMode | undefined
   let capacity: number | undefined
@@ -1488,6 +1493,10 @@ export function parseArgs(args: string[]): ParsedArgs {
       name = args[++i]!
     } else if (arg.startsWith('--name=')) {
       name = arg.slice('--name='.length)
+    } else if (arg === '--remote-control-session-name-prefix' && i + 1 < args.length) {
+      sessionNamePrefix = args[++i]!
+    } else if (arg.startsWith('--remote-control-session-name-prefix=')) {
+      sessionNamePrefix = arg.slice('--remote-control-session-name-prefix='.length)
     } else if (feature('KAIROS') && arg === '--session-id' && i + 1 < args.length) {
       sessionId = args[++i]!
       if (!sessionId) {
@@ -1556,6 +1565,7 @@ export function parseArgs(args: string[]): ParsedArgs {
     sessionTimeoutMs,
     permissionMode,
     name,
+    sessionNamePrefix,
     spawnMode,
     capacity,
     createSessionInDir,
@@ -1572,6 +1582,7 @@ export function parseArgs(args: string[]): ParsedArgs {
       sessionTimeoutMs,
       permissionMode,
       name,
+      sessionNamePrefix,
       spawnMode,
       capacity,
       createSessionInDir,
@@ -1621,6 +1632,10 @@ USAGE
   claude remote-control [options]
 OPTIONS
   --name <name>                    Name for the session (shown in claude.ai/code)
+  --remote-control-session-name-prefix <prefix>
+                                   Prefix for auto-generated session names
+                                   (default: hostname; env:
+                                   CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX)
 ${
   feature('KAIROS')
     ? `  -c, --continue                   Resume the last session in this directory
@@ -1692,12 +1707,18 @@ export async function bridgeMain(args: string[]): Promise<void> {
     sessionTimeoutMs,
     permissionMode,
     name,
+    sessionNamePrefix,
     spawnMode: parsedSpawnMode,
     capacity: parsedCapacity,
     createSessionInDir: parsedCreateSessionInDir,
     sessionId: parsedSessionId,
     continueSession,
   } = parsed
+  // --remote-control-session-name-prefix feeds the env var consumed by
+  // getBridgeSessionNamePrefix() when auto-generating session titles.
+  if (sessionNamePrefix) {
+    process.env.CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX = sessionNamePrefix
+  }
   // Mutable so --continue can set it from the pointer file. The #20460
   // resume flow below then treats it the same as an explicit --session-id.
   let resumeSessionId = parsedSessionId
@@ -2309,7 +2330,7 @@ export async function bridgeMain(args: string[]): Promise<void> {
     try {
       initialSessionId = await createBridgeSession({
         environmentId,
-        title: name,
+        title: name ?? `${getBridgeSessionNamePrefix()}-${generateShortWordSlug()}`,
         events: [],
         gitRepoUrl,
         branch,
@@ -2543,7 +2564,7 @@ export async function runBridgeHeadless(opts: HeadlessBridgeOpts, signal: AbortS
     try {
       const sid = await createBridgeSession({
         environmentId,
-        title: opts.name,
+        title: opts.name ?? `${getBridgeSessionNamePrefix()}-${generateShortWordSlug()}`,
         events: [],
         gitRepoUrl,
         branch,

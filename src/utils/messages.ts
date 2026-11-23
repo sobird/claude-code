@@ -2165,11 +2165,19 @@ export function mergeUserMessagesAndToolResults(a: UserMessage, b: UserMessage):
 }
 
 export function mergeAssistantMessages(a: AssistantMessage, b: AssistantMessage): AssistantMessage {
+  const combined = [...a.message.content, ...b.message.content]
+  // Extended thinking can emit a whitespace-only text block alongside real
+  // content; the API rejects it with a 400. Drop such blocks when merging, but
+  // keep the originals if filtering would leave only thinking blocks.
+  const filtered = combined.filter(
+    (block) => block.type !== 'text' || block.text.length === 0 || block.text.trim() !== '',
+  )
+  const hasNonThinking = filtered.some((block) => block.type !== 'thinking' && block.type !== 'redacted_thinking')
   return {
     ...a,
     message: {
       ...a.message,
-      content: [...a.message.content, ...b.message.content],
+      content: hasNonThinking ? filtered : combined,
     },
   }
 }
@@ -2397,6 +2405,66 @@ export function mergeUserContentBlocks(a: ContentBlockParam[], b: ContentBlockPa
   return [...a.slice(0, -1), smooshed, ...toolResults]
 }
 
+// Structural view of zod v4's internal def. Only used to detect whether a
+// field is declared as array/object, so a loose shape is enough.
+type ZodSchemaLike = { _zod?: { def?: ZodDefLike } }
+type ZodDefLike = {
+  type?: string
+  shape?: Record<string, ZodSchemaLike>
+  innerType?: ZodSchemaLike
+  in?: ZodSchemaLike
+}
+
+/** Follows optional/nullable/default/pipe wrappers down to the field's core type. */
+function unwrapZodDefType(schema: ZodSchemaLike): string {
+  let def = schema._zod?.def
+  while (def) {
+    switch (def.type) {
+      case 'optional':
+      case 'nullable':
+      case 'default': {
+        if (!def.innerType) return def.type
+        def = def.innerType._zod?.def
+        break
+      }
+      case 'pipe': {
+        if (!def.in) return def.type
+        def = def.in._zod?.def
+        break
+      }
+      default:
+        return def.type ?? 'unknown'
+    }
+  }
+  return 'unknown'
+}
+
+/**
+ * The streaming API occasionally emits array/object tool parameters as
+ * JSON-encoded strings. Coerce those top-level fields back to their declared
+ * shape before validation so the client-side parser doesn't reject valid calls.
+ */
+export function coerceStringifiedJsonFields<T extends Record<string, unknown>>(input: T, schema: unknown): T {
+  const def = (schema as ZodSchemaLike)._zod?.def
+  if (def?.type !== 'object' || !def.shape) return input
+  let result = input
+  for (const [key, fieldSchema] of Object.entries(def.shape)) {
+    const value = input[key]
+    if (typeof value !== 'string') continue
+    const kind = unwrapZodDefType(fieldSchema)
+    if (kind !== 'array' && kind !== 'object') continue
+    const parsed = safeParseJSON(value, false)
+    const matches =
+      kind === 'array' ? Array.isArray(parsed) : parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+    if (!matches) continue
+    if (result === input) result = { ...input }
+    // Object.assign instead of result[key] = ...: a generic T can only be
+    // indexed for reading, and this keeps the write free of assertions.
+    result = Object.assign(result, { [key]: parsed })
+  }
+  return result
+}
+
 // Sometimes the API returns empty messages (eg. "\n\n"). We need to filter these out,
 // otherwise they will give an API error when we send them to the API next time we call query().
 export function normalizeContentFromAPI(
@@ -2445,11 +2513,13 @@ export function normalizeContentFromAPI(
         if (typeof normalizedInput === 'object' && normalizedInput !== null) {
           const tool = findToolByName(tools, contentBlock.name)
           if (tool) {
+            const coerced = coerceStringifiedJsonFields(normalizedInput as { [key: string]: unknown }, tool.inputSchema)
             try {
-              normalizedInput = normalizeToolInput(tool, normalizedInput as { [key: string]: unknown }, agentId)
+              normalizedInput = normalizeToolInput(tool, coerced, agentId)
             } catch (error) {
               logError(new Error('Error normalizing tool input: ' + error))
-              // Keep the original input if normalization fails
+              // Keep the coerced input if normalization fails
+              normalizedInput = coerced
             }
           }
         }

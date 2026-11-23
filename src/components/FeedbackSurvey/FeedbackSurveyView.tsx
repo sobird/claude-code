@@ -9,6 +9,7 @@ type Props = {
   inputValue: string
   setInputValue: (value: string) => void
   message?: string
+  mountDelayMs?: number
 }
 
 const RESPONSE_INPUTS = ['0', '1', '2', '3'] as const
@@ -31,12 +32,14 @@ export function FeedbackSurveyView({
   inputValue,
   setInputValue,
   message = DEFAULT_MESSAGE,
+  mountDelayMs,
 }: Props): React.ReactNode {
   useDebouncedDigitInput({
     inputValue,
     setInputValue,
     isValidDigit: isValidResponseInput,
     onDigit: (digit) => onSelect(inputToResponse[digit]),
+    mountDelayMs,
   })
 
   return (

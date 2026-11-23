@@ -1469,6 +1469,15 @@ async function* queryModel(
       logForDebugging('Cache editing beta header enabled for cached microcompact')
     }
 
+    // CLAUDE_CODE_SIMULATE_PROXY_USAGE reproduces a proxy that strips beta
+    // headers: log what gets dropped, then send none of them.
+    const simulateProxyUsage = isEnvTruthy(process.env.CLAUDE_CODE_SIMULATE_PROXY_USAGE)
+    if (simulateProxyUsage) {
+      logForDebugging(
+        `[API:client] SIMULATE_PROXY_USAGE: stripping ${betasParams.length} beta headers from request: ${betasParams.join(', ')}`,
+      )
+    }
+
     // Only send temperature when thinking is disabled — the API requires
     // temperature: 1 when thinking is enabled, which is already the default.
     const temperature = !hasThinking ? (options.temperatureOverride ?? 1) : undefined
@@ -1489,7 +1498,7 @@ async function* queryModel(
       system,
       tools: allTools,
       tool_choice: options.toolChoice,
-      ...(useBetas && { betas: betasParams }),
+      ...(useBetas && { betas: simulateProxyUsage ? [] : betasParams }),
       metadata: getAPIMetadata(),
       max_tokens: maxOutputTokens,
       thinking,

@@ -18,9 +18,6 @@ import type { CreatePaneResult, PaneBackend, PaneId } from './types.js'
 // Track whether the first pane has been used for external swarm session
 let firstPaneUsedForExternal = false
 
-// Cached leader window target (session:window format) to avoid repeated queries
-let cachedLeaderWindowTarget: string | null = null
-
 // Lock mechanism to prevent race conditions when spawning teammates in parallel
 let paneCreationLock: Promise<void> = Promise.resolve()
 
@@ -296,16 +293,22 @@ export class TmuxBackend implements PaneBackend {
     return result.stdout.trim()
   }
 
+  // Cached leader window id, scoped to this backend instance. tmux window ids
+  // (`@N`) survive sibling windows being killed or renumbered, unlike the
+  // `session:window_index` target the old code cached — that went stale and
+  // made pane-count lookups fail permanently mid-session.
+  private cachedLeaderWindowTarget: string | null = null
+
   /**
-   * Gets the leader's window target (session:window format).
+   * Gets the leader's window target (stable `@N` window id).
    * Uses the leader's pane ID to query for its window, ensuring we get the
    * correct window even if the user has switched to a different window.
    * Caches the result since the leader's window won't change.
    */
   private async getCurrentWindowTarget(): Promise<string | null> {
     // Return cached value if available
-    if (cachedLeaderWindowTarget) {
-      return cachedLeaderWindowTarget
+    if (this.cachedLeaderWindowTarget) {
+      return this.cachedLeaderWindowTarget
     }
 
     // Build the command - use -t to target the leader's pane specifically
@@ -314,7 +317,7 @@ export class TmuxBackend implements PaneBackend {
     if (leaderPane) {
       args.push('-t', leaderPane)
     }
-    args.push('-p', '#{session_name}:#{window_index}')
+    args.push('-p', '#{window_id}')
 
     const result = await execFileNoThrow(TMUX_COMMAND, args)
 
@@ -323,8 +326,8 @@ export class TmuxBackend implements PaneBackend {
       return null
     }
 
-    cachedLeaderWindowTarget = result.stdout.trim()
-    return cachedLeaderWindowTarget
+    this.cachedLeaderWindowTarget = result.stdout.trim()
+    return this.cachedLeaderWindowTarget
   }
 
   /**

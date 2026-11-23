@@ -11,7 +11,11 @@ import {
 } from '../utils/autoUpdater.js'
 import { isAutoUpdaterDisabled } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
-import { getPackageManager, type PackageManager } from '../utils/nativeInstaller/packageManagers.js'
+import {
+  getHomebrewCaskName,
+  getPackageManager,
+  type PackageManager,
+} from '../utils/nativeInstaller/packageManagers.js'
 import { gt, gte } from '../utils/semver.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
 
@@ -27,6 +31,7 @@ type Props = {
 export function PackageManagerAutoUpdater({ verbose }: Props): React.ReactNode {
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [packageManager, setPackageManager] = useState<PackageManager>('unknown')
+  const [homebrewCask, setHomebrewCask] = useState<string | null>(null)
 
   const checkForUpdates = React.useCallback(async () => {
     if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
@@ -37,11 +42,21 @@ export function PackageManagerAutoUpdater({ verbose }: Props): React.ReactNode {
       return
     }
 
-    const [channel, pm] = await Promise.all([
+    const [settingsChannel, pm] = await Promise.all([
       Promise.resolve(getInitialSettings()?.autoUpdatesChannel ?? 'latest'),
       getPackageManager(),
     ])
     setPackageManager(pm)
+
+    // A Homebrew cask pins its own release channel: `claude-code` tracks
+    // stable, `claude-code@latest` tracks latest. Override the configured
+    // channel so the update prompt matches what `brew upgrade` will install.
+    let channel = settingsChannel
+    if (pm === 'homebrew') {
+      const cask = getHomebrewCaskName()
+      setHomebrewCask(cask)
+      channel = cask === 'claude-code@latest' ? 'latest' : 'stable'
+    }
 
     let latest = await getLatestVersionFromGcs(channel)
 
@@ -88,7 +103,7 @@ export function PackageManagerAutoUpdater({ verbose }: Props): React.ReactNode {
   // rpm: dnf/yum/zypper)
   const updateCommand =
     packageManager === 'homebrew'
-      ? 'brew upgrade claude-code'
+      ? `brew upgrade ${homebrewCask ?? 'claude-code'}`
       : packageManager === 'winget'
         ? 'winget upgrade Anthropic.ClaudeCode'
         : packageManager === 'apk'

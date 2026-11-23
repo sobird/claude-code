@@ -34,7 +34,13 @@ import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
 import { getCurrentSessionTitle } from '../utils/sessionStorage.js'
 import { extractConversationText, generateSessionTitle } from '../utils/sessionTitle.js'
 import { generateShortWordSlug } from '../utils/words.js'
-import { getBridgeAccessToken, getBridgeBaseUrl, getBridgeOrgUUID, getBridgeTokenOverride } from './bridgeConfig.js'
+import {
+  getBridgeAccessToken,
+  getBridgeBaseUrl,
+  getBridgeOrgUUID,
+  getBridgeSessionNamePrefix,
+  getBridgeTokenOverride,
+} from './bridgeConfig.js'
 import {
   checkBridgeMinVersion,
   isBridgeEnabledBlocking,
@@ -224,10 +230,11 @@ export async function initReplBridge(options?: InitBridgeOptions): Promise<ReplB
   // the count-1 re-derivation but not count-3). The onUserMessage callback
   // (wired to both v1 and v2 below) derives from the 1st prompt and again
   // from the 3rd so mobile/web show a title that reflects more context.
-  // The slug fallback (e.g. "remote-control-graceful-unicorn") makes
-  // auto-started sessions distinguishable in the claude.ai list before the
-  // first prompt.
-  let title = `remote-control-${generateShortWordSlug()}`
+  // The slug fallback (e.g. "myhost-graceful-unicorn") makes auto-started
+  // sessions distinguishable in the claude.ai list before the first prompt.
+  // The prefix defaults to the hostname (CLAUDE_REMOTE_CONTROL_SESSION_NAME_
+  // PREFIX overrides it).
+  let title = `${getBridgeSessionNamePrefix()}-${generateShortWordSlug()}`
   let hasTitle = false
   let hasExplicitTitle = false
   if (initialName) {

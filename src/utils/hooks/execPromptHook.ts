@@ -32,9 +32,15 @@ export async function execPromptHook(
 ): Promise<HookResult> {
   // Use provided toolUseID or generate a new one
   const effectiveToolUseID = toolUseID || `hook-${randomUUID()}`
+  // Stop-class hooks judge the transcript after the fact; their default prompt
+  // ("did the task finish?") is useless without pointing the model at it.
+  const isStopHook = hookEvent === 'Stop' || hookEvent === 'SubagentStop'
   try {
     // Replace $ARGUMENTS with the JSON input
-    const processedPrompt = addArgumentsToPrompt(hook.prompt, jsonInput)
+    const promptText = isStopHook
+      ? `Based on the conversation transcript above, has the following stopping condition been satisfied? Answer based on transcript evidence only.\n\nCondition: ${hook.prompt}`
+      : hook.prompt
+    const processedPrompt = addArgumentsToPrompt(promptText, jsonInput)
     logForDebugging(`Hooks: Processing prompt hook with prompt: ${processedPrompt}`)
 
     // Create user message directly - no need for processUserInput which would
@@ -58,14 +64,24 @@ export async function execPromptHook(
       const response = await queryModelWithoutStreaming({
         messages: messagesToQuery,
         systemPrompt: asSystemPrompt([
-          `You are evaluating a hook in Claude Code.
+          isStopHook
+            ? `You are evaluating a stop-condition hook in Claude Code. Read the conversation transcript carefully, then judge whether the user-provided condition is satisfied.
 
-Your response must be a JSON object matching one of the following schemas:
-1. If the condition is met, return: {"ok": true}
-2. If the condition is not met, return: {"ok": false, "reason": "Reason for why it is not met"}`,
+Your response must be a JSON object with one of these shapes:
+- {"ok": true, "reason": "<quote evidence from the transcript that satisfies the condition>"}
+- {"ok": false, "reason": "<quote what is missing or what blocks the condition>"}
+
+Always include a "reason" field, quoting specific text from the transcript whenever possible. If the transcript does not contain clear evidence that the condition is satisfied, return {"ok": false, "reason": "insufficient evidence in transcript"}.`
+            : `You are evaluating a hook condition in Claude Code. Judge whether the user-provided condition is met.
+
+Your response must be a JSON object with one of these shapes:
+- {"ok": true, "reason": "<reason the condition is met>"}
+- {"ok": false, "reason": "<reason the condition is not met>"}
+
+Always include a "reason" field.`,
         ]),
         thinkingConfig: { type: 'disabled' as const },
-        tools: toolUseContext.options.tools,
+        tools: [],
         signal: combinedSignal,
         options: {
           async getToolPermissionContext() {
@@ -88,7 +104,7 @@ Your response must be a JSON object matching one of the following schemas:
                 ok: { type: 'boolean' },
                 reason: { type: 'string' },
               },
-              required: ['ok'],
+              required: ['ok', 'reason'],
               additionalProperties: false,
             },
           },
@@ -142,23 +158,25 @@ Your response must be a JSON object matching one of the following schemas:
         }
       }
 
-      // Failed to meet condition
+      // Failed to meet condition. Stop-class hooks report the miss as a
+      // blocking error but must not set preventContinuation — the stop flow
+      // decides whether to continue; non-Stop prompt hooks still do.
       if (!parsed.data.ok) {
         logForDebugging(`Hooks: Prompt hook condition was not met: ${parsed.data.reason}`)
         return {
           hook,
           outcome: 'blocking',
           blockingError: {
-            blockingError: `Prompt hook condition was not met: ${parsed.data.reason}`,
+            blockingError: `[${hook.prompt}]: ${parsed.data.reason}`,
             command: hook.prompt,
           },
-          preventContinuation: true,
+          preventContinuation: !isStopHook,
           stopReason: parsed.data.reason,
         }
       }
 
       // Condition was met
-      logForDebugging(`Hooks: Prompt hook condition was met`)
+      logForDebugging(`Hooks: Prompt hook condition was met: ${parsed.data.reason}`)
       return {
         hook,
         outcome: 'success',

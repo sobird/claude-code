@@ -6,6 +6,7 @@ import { type Notification, useNotifications } from 'src/context/notifications.j
 import { logEvent } from 'src/services/analytics/index.js'
 import { useAppState } from 'src/state/AppState.js'
 
+import { getLastApiCompletionTimestamp } from '../../bootstrap/state.js'
 import { useVoiceState } from '../../context/voice.js'
 import type { VerificationStatus } from '../../hooks/useApiKeyVerification.js'
 import { useIdeConnectionStatus } from '../../hooks/useIdeConnectionStatus.js'
@@ -13,6 +14,7 @@ import type { IDESelection } from '../../hooks/useIdeSelection.js'
 import { useMainLoopModel } from '../../hooks/useMainLoopModel.js'
 import { useVoiceEnabled } from '../../hooks/useVoiceEnabled.js'
 import { Box, Text } from '../../ink.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { useClaudeAiLimits } from '../../services/claudeAiLimitsHook.js'
 import { calculateTokenWarningState } from '../../services/compact/autoCompact.js'
 import type { MCPServerConnection } from '../../services/mcp/types.js'
@@ -41,6 +43,27 @@ const VoiceIndicator: typeof import('./VoiceIndicator.js').VoiceIndicator = feat
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 export const FOOTER_TEMPORARY_STATUS_TIMEOUT = 5000
+
+const CACHE_EXPIRED_HINT_MIN_TOKENS = 50_000
+const CACHE_EXPIRED_HINT_MIN_IDLE_MS = 3_600_000
+const CACHE_EXPIRED_HINT_POLL_MS = 30_000
+
+/**
+ * Pro-only footer hint shown once the prompt cache has likely expired: the
+ * next turn will re-send roughly this many tokens uncached. Returns null when
+ * the context is small, no API call has completed yet, or the last one is
+ * recent enough that the cache is probably still warm.
+ */
+export function getCacheExpiredHint(
+  tokenUsage: number,
+  lastApiCompletionTimestamp: number | null,
+  now = Date.now(),
+): string | null {
+  if (lastApiCompletionTimestamp === null) return null
+  if (tokenUsage < CACHE_EXPIRED_HINT_MIN_TOKENS) return null
+  if (now - lastApiCompletionTimestamp <= CACHE_EXPIRED_HINT_MIN_IDLE_MS) return null
+  return `~${Math.round(tokenUsage / 1000)}k uncached · /clear to start fresh`
+}
 
 type Props = {
   apiKeyStatus: VerificationStatus
@@ -227,6 +250,23 @@ function NotificationContent({
     return () => clearInterval(interval)
   }, [])
 
+  // Pro-only cache-expiry hint. Polls because idle time elapses with no state
+  // change to re-render on; the feature flag lets us roll it out slowly.
+  const [cacheExpiredHint, setCacheExpiredHint] = useState<string | null>(null)
+  useEffect(() => {
+    if (getSubscriptionType() !== 'pro' || !getFeatureValue_CACHED_MAY_BE_STALE('tengu_amber_swift', false)) {
+      setCacheExpiredHint((prev) => (prev === null ? prev : null))
+      return
+    }
+    const update = () => {
+      const next = getCacheExpiredHint(tokenUsage, getLastApiCompletionTimestamp())
+      setCacheExpiredHint((prev) => (prev === next ? prev : next))
+    }
+    update()
+    const interval = setInterval(update, CACHE_EXPIRED_HINT_POLL_MS)
+    return () => clearInterval(interval)
+  }, [tokenUsage])
+
   // Voice state (VOICE_MODE builds only, runtime-gated by GrowthBook)
   const voiceState = feature('VOICE_MODE')
     ? // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
@@ -300,6 +340,13 @@ function NotificationContent({
         <Box>
           <Text dimColor wrap="truncate">
             {tokenUsage} tokens
+          </Text>
+        </Box>
+      )}
+      {cacheExpiredHint && (
+        <Box>
+          <Text dimColor wrap="truncate">
+            {cacheExpiredHint}
           </Text>
         </Box>
       )}

@@ -27,6 +27,11 @@ export function isFastModeEnabled(): boolean {
   return !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_FAST_MODE)
 }
 
+/** Skip the org-level penguin-mode check and treat fast mode as enabled. */
+function skipFastModeOrgCheck(): boolean {
+  return isEnvTruthy(process.env.CLAUDE_CODE_SKIP_FAST_MODE_ORG_CHECK)
+}
+
 export function isFastModeAvailable(): boolean {
   if (!isFastModeEnabled()) {
     return false
@@ -91,7 +96,7 @@ export function getFastModeUnavailableReason(): string | null {
     return reason
   }
 
-  if (orgStatus.status === 'disabled') {
+  if (orgStatus.status === 'disabled' && !skipFastModeOrgCheck()) {
     if (orgStatus.reason === 'network_error' || orgStatus.reason === 'unknown') {
       // The org check can fail behind corporate proxies that block the
       // endpoint. We add CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS=1 to
@@ -342,6 +347,10 @@ export function resolveFastModeStatusFromCache(): void {
   if (orgStatus.status !== 'pending') {
     return
   }
+  if (skipFastModeOrgCheck()) {
+    orgStatus = { status: 'enabled' }
+    return
+  }
   const isAnt = process.env.USER_TYPE === 'ant'
   const cachedEnabled = getGlobalConfig().penguinModeOrgEnabled === true
   orgStatus = isAnt || cachedEnabled ? { status: 'enabled' } : { status: 'disabled', reason: 'unknown' }
@@ -354,6 +363,11 @@ export async function prefetchFastModeStatus(): Promise<void> {
   }
 
   if (!isFastModeEnabled()) {
+    return
+  }
+
+  if (skipFastModeOrgCheck()) {
+    orgStatus = { status: 'enabled' }
     return
   }
 

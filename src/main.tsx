@@ -58,7 +58,11 @@ import {
   refreshPolicyLimits,
   waitForPolicyLimitsToLoad,
 } from './services/policyLimits/index.js'
-import { loadRemoteManagedSettings, refreshRemoteManagedSettings } from './services/remoteManagedSettings/index.js'
+import {
+  FORCE_REMOTE_SETTINGS_REFRESH_ERROR,
+  loadRemoteManagedSettings,
+  refreshRemoteManagedSettings,
+} from './services/remoteManagedSettings/index.js'
 import type { ToolInputJSONSchema } from './Tool.js'
 import { getTools } from './tools.js'
 import {
@@ -1116,8 +1120,18 @@ async function run(): Promise<CommanderCommand> {
     // Load remote managed settings for enterprise customers (non-blocking)
     // Fails open - if fetch fails, continues without remote settings
     // Settings are applied via hot-reload when they arrive
-    // Must happen after init() to ensure config reading is allowed
-    void loadRemoteManagedSettings()
+    // Must happen after init() to ensure config reading is allowed.
+    // `forceRemoteSettingsRefresh` turns this into fail-closed: block startup
+    // until the fetch succeeds and exit if it fails.
+    if (getSettingsForSource('policySettings')?.forceRemoteSettingsRefresh) {
+      const fetchSucceeded = await loadRemoteManagedSettings().catch(() => false)
+      if (!fetchSucceeded) {
+        process.stderr.write(`${FORCE_REMOTE_SETTINGS_REFRESH_ERROR}\n`)
+        process.exit(1)
+      }
+    } else {
+      void loadRemoteManagedSettings()
+    }
     void loadPolicyLimits()
 
     profileCheckpoint('preAction_after_remote_settings')
@@ -1679,6 +1693,13 @@ async function run(): Promise<CommanderCommand> {
       let remoteControl = false
       const remoteControlName =
         typeof remoteControlOption === 'string' && remoteControlOption.length > 0 ? remoteControlOption : undefined
+      // --remote-control-session-name-prefix is carried through the env var
+      // that getBridgeSessionNamePrefix() reads when auto-naming sessions.
+      const remoteControlSessionNamePrefix = (options as { remoteControlSessionNamePrefix?: string })
+        .remoteControlSessionNamePrefix
+      if (remoteControlSessionNamePrefix) {
+        process.env.CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX = remoteControlSessionNamePrefix
+      }
 
       // Validate session ID if provided
       if (sessionId) {
@@ -2787,8 +2808,17 @@ async function run(): Promise<CommanderCommand> {
 
         if (onboardingShown) {
           // Refresh auth-dependent services now that the user has logged in during onboarding.
-          // Keep in sync with the post-login logic in src/commands/login.tsx
-          void refreshRemoteManagedSettings()
+          // Keep in sync with the post-login logic in src/commands/login.tsx.
+          // Under `forceRemoteSettingsRefresh` the refresh is fail-closed.
+          if (getSettingsForSource('policySettings')?.forceRemoteSettingsRefresh) {
+            const fetchSucceeded = await refreshRemoteManagedSettings().catch(() => false)
+            if (!fetchSucceeded) {
+              process.stderr.write(`${FORCE_REMOTE_SETTINGS_REFRESH_ERROR}\n`)
+              process.exit(1)
+            }
+          } else {
+            void refreshRemoteManagedSettings()
+          }
           void refreshPolicyLimits()
           // Clear user data cache BEFORE GrowthBook refresh so it picks up fresh credentials
           resetUserCache()
@@ -4546,6 +4576,10 @@ async function run(): Promise<CommanderCommand> {
     )
     program.addOption(
       new Option('--rc [name]', 'Alias for --remote-control').argParser((value) => value || true).hideHelp(),
+    )
+    program.option(
+      '--remote-control-session-name-prefix <prefix>',
+      'Prefix for auto-generated Remote Control session names (default: hostname)',
     )
   }
 
