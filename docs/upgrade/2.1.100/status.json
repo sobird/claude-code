@@ -237,6 +237,18 @@
         "files": ["src/utils/permissions/permissions.ts"],
         "symbols": ["syncPermissionRulesFromDisk"]
       }
+    },
+    {
+      "id": "behavior:compound-ask-safety-bypass",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [57],
+      "evidence": ["test:src/utils/permissions/__tests__/compoundDecisionReason.test.ts"],
+      "notes": "复合 Bash 命令不再在 auto/bypass 模式下绕过强制询问：显式 ask 规则与安全路径检查（safetyCheck）现在会递归进 subcommandResults，即使多个子命令同时需要确认也会命中。之前只检查顶层 decisionReason，多子命令聚合出的 type:'subcommandResults' 让 1f/1g 判定落空，bypass 的 2a 直接放行（2.1.98 #57）。",
+      "srcEvidence": {
+        "files": ["src/utils/permissions/permissions.ts"],
+        "symbols": ["hasAskRuleDecision", "hasSafetyCheck"]
+      }
     }
   ]
 }

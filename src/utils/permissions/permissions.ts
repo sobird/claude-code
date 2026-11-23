@@ -466,7 +466,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
       // auto. classifierApprovable safetyChecks (sensitive-file paths) fall
       // through to the classifier — the fast-paths below naturally don't fire
       // because the tool's own checkPermissions still returns 'ask'.
-      if (result.decisionReason?.type === 'safetyCheck' && !result.decisionReason.classifierApprovable) {
+      if (hasSafetyCheck(result.decisionReason, (reason) => !reason.classifierApprovable)) {
         if (appState.toolPermissionContext.shouldAvoidPermissionPrompts) {
           return {
             behavior: 'deny',
@@ -905,6 +905,45 @@ function handleDenialLimitExceeded(
   }
 }
 
+type SafetyCheckReason = Extract<PermissionDecisionReason, { type: 'safetyCheck' }>
+
+/**
+ * Whether a decision carries a content-specific ask rule (e.g. Bash(npm
+ * publish:*)), which must prompt even in bypass/auto modes. Compound Bash
+ * commands aggregate their per-subcommand decisions under
+ * `subcommandResults`, so recurse into each result — otherwise a multi-command
+ * prompt hides the ask rule and bypass mode allows it (2.1.98 #57).
+ */
+export function hasAskRuleDecision(reason: PermissionDecisionReason | undefined): boolean {
+  if (reason?.type === 'rule') return reason.rule.ruleBehavior === 'ask'
+  if (reason?.type === 'subcommandResults') {
+    for (const result of reason.reasons.values()) {
+      if (result.behavior === 'ask' && hasAskRuleDecision(result.decisionReason)) return true
+    }
+  }
+  return false
+}
+
+/**
+ * Whether a decision carries a safety check (.git/, .claude/, shell configs, …)
+ * that is bypass-immune and must prompt even in bypass mode. Recurses into
+ * compound `subcommandResults` (2.1.98 #57). The optional filter lets auto mode
+ * ignore classifier-approvable checks.
+ */
+export function hasSafetyCheck(
+  reason: PermissionDecisionReason | undefined,
+  filter: (reason: SafetyCheckReason) => boolean = () => true,
+): boolean {
+  if (reason === undefined) return false
+  if (reason.type === 'safetyCheck') return filter(reason)
+  if (reason.type === 'subcommandResults') {
+    for (const result of reason.reasons.values()) {
+      if (hasSafetyCheck(result.decisionReason, filter)) return true
+    }
+  }
+  return false
+}
+
 /**
  * Check only the rule-based steps of the permission pipeline — the subset
  * that bypassPermissions mode respects (everything that fires before step 2a).
@@ -981,18 +1020,14 @@ export async function checkRuleBasedPermissions(
 
   // 1f. Content-specific ask rules from tool.checkPermissions
   // (e.g. Bash(npm publish:*) → {ask, type:'rule', ruleBehavior:'ask'})
-  if (
-    toolPermissionResult?.behavior === 'ask' &&
-    toolPermissionResult.decisionReason?.type === 'rule' &&
-    toolPermissionResult.decisionReason.rule.ruleBehavior === 'ask'
-  ) {
+  if (toolPermissionResult?.behavior === 'ask' && hasAskRuleDecision(toolPermissionResult.decisionReason)) {
     return toolPermissionResult
   }
 
   // 1g. Safety checks (e.g. .git/, .claude/, .vscode/, shell configs) are
   // bypass-immune — they must prompt even when a PreToolUse hook returned
   // allow. checkPathSafetyForAutoEdit returns {type:'safetyCheck'} for these.
-  if (toolPermissionResult?.behavior === 'ask' && toolPermissionResult.decisionReason?.type === 'safetyCheck') {
+  if (toolPermissionResult?.behavior === 'ask' && hasSafetyCheck(toolPermissionResult.decisionReason)) {
     return toolPermissionResult
   }
 
@@ -1083,18 +1118,14 @@ async function hasPermissionsToUseToolInner(
   // checkPermissions returns {behavior:'ask', decisionReason:{type:'rule',
   // rule:{ruleBehavior:'ask'}}}. This must be respected even in bypass mode,
   // just as deny rules are respected at step 1d.
-  if (
-    toolPermissionResult?.behavior === 'ask' &&
-    toolPermissionResult.decisionReason?.type === 'rule' &&
-    toolPermissionResult.decisionReason.rule.ruleBehavior === 'ask'
-  ) {
+  if (toolPermissionResult?.behavior === 'ask' && hasAskRuleDecision(toolPermissionResult.decisionReason)) {
     return toolPermissionResult
   }
 
   // 1g. Safety checks (e.g. .git/, .claude/, .vscode/, shell configs) are
   // bypass-immune — they must prompt even in bypassPermissions mode.
   // checkPathSafetyForAutoEdit returns {type:'safetyCheck'} for these paths.
-  if (toolPermissionResult?.behavior === 'ask' && toolPermissionResult.decisionReason?.type === 'safetyCheck') {
+  if (toolPermissionResult?.behavior === 'ask' && hasSafetyCheck(toolPermissionResult.decisionReason)) {
     return toolPermissionResult
   }
 

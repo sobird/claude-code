@@ -54,6 +54,7 @@
 - 写保护路径获批后不再悄悄降级会话模式：Bash 路径检查器只在 default/plan 下建议 `setMode:acceptEdits`。
 - 权限规则名与 `Object.prototype` 属性同名（`toString`）时不再让 settings.json 规则被静默忽略（`Object.hasOwn` 查表）。
 - 反斜杠转义空白、环境变量前缀等其余条目在 src 中已具备（backslash guard、safe env 白名单、Map 规则聚合）。
+- 复合 Bash 命令在 auto / bypass 模式下不再绕过强制询问（2.1.98 #57）：`hasAskRuleDecision` / `hasSafetyCheck` 递归进 `subcommandResults`，多子命令同时触发 ask/safety 时依然命中 1f/1g，bypass 不会在 2a 直接放行。
 
 ### R6：设置会话内生效（2.1.98 #20/#21、2.1.98 #10 / 2.1.100 #66）
 
