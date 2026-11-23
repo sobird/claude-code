@@ -149,13 +149,22 @@ function parsePatternCommand(args: string[], flagsWithArgs: Set<string>, default
     }
 
     if (!afterDoubleDash && arg.startsWith('-')) {
-      const flag = arg.split('=')[0]
-      // Pattern flags mark that we've found the pattern
-      if (flag && ['-e', '--regexp', '-f', '--file'].includes(flag)) {
+      const eqIdx = arg.indexOf('=')
+      const flag = eqIdx >= 0 ? arg.slice(0, eqIdx) : arg
+      const inlineValue = eqIdx >= 0 ? arg.slice(eqIdx + 1) : undefined
+      // `-f`/`--file` name a pattern *file* to read. Capture it as a path so a
+      // pattern file outside the working directory is validated (and prompts),
+      // instead of being silently skipped as an ordinary flag argument.
+      if (flag === '-f' || flag === '--file') {
+        patternFound = true
+        const fileArg = inlineValue ?? args[i + 1]
+        if (fileArg !== undefined && fileArg !== null) paths.push(fileArg)
+      } else if (flag === '-e' || flag === '--regexp') {
+        // Pattern flags mark that we've found the pattern
         patternFound = true
       }
       // Skip next arg if flag needs it
-      if (flag && flagsWithArgs.has(flag) && !arg.includes('=')) {
+      if (flagsWithArgs.has(flag) && inlineValue === undefined) {
         i++
       }
       continue
