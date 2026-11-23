@@ -741,6 +741,18 @@
         "files": ["src/utils/fullscreen.ts"],
         "symbols": ["highlight"]
       }
+    },
+    {
+      "id": "behavior:effort-max-unknown-models",
+      "kind": "behavior",
+      "status": "ported",
+      "releaseItems": [79],
+      "evidence": ["bundle:max_effort"],
+      "notes": "/effort max 不再对未知/未来模型 ID 因为「非 opus-4-6」而被拒。上游 2.1.96 改为：先归一化模型名（取首个 claude-* token，去 -vN[:M] 与 -YYYYMMDD 后缀），haiku 一律 false，其余仅当命中遗留模型 denylist 才 false，未知/未来模型默认支持 max。移植到 src/utils/effort.ts：modelSupportsMaxEffort + MAX_EFFORT_DENYLIST + normalizeMaxEffortModel，测试 src/utils/__tests__/effort.test.ts。",
+      "srcEvidence": {
+        "files": ["src/utils/effort.ts", "src/utils/__tests__/effort.test.ts"],
+        "symbols": ["modelSupportsMaxEffort", "MAX_EFFORT_DENYLIST", "normalizeMaxEffortModel"]
+      }
     }
   ]
 }

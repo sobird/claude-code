@@ -45,20 +45,47 @@ export function modelSupportsEffort(model: string): boolean {
   return usesFirstPartyModelFormat(getProviderForModel(model))
 }
 
+// Legacy models that reject the 'max' effort parameter. Unknown / future model
+// ids are assumed to support 'max' (2.1.96) rather than being denied.
+const MAX_EFFORT_DENYLIST = new Set([
+  'claude-3-opus',
+  'claude-3-sonnet',
+  'claude-3-5-sonnet',
+  'claude-3-7-sonnet',
+  'claude-sonnet-4',
+  'claude-sonnet-4-0',
+  'claude-sonnet-4-5',
+  'claude-opus-4',
+  'claude-opus-4-0',
+  'claude-opus-4-1',
+  'claude-opus-4-5',
+])
+
+/**
+ * Normalize a model id to its bare family name for denylist matching:
+ * take the first `claude-*` token, then strip `-vN[:M]` and `-YYYYMMDD`
+ * suffixes so dated / versioned ids map to their family entry.
+ */
+function normalizeMaxEffortModel(model: string): string {
+  const lower = model.toLowerCase()
+  const matched = lower.match(/claude-[a-z0-9-]+/)
+  let name = matched ? matched[0] : lower
+  name = name.replace(/-v\d+(:\d+)?$/, '')
+  name = name.replace(/-\d{8}$/, '')
+  return name
+}
+
 // @[MODEL LAUNCH]: Add the new model to the allowlist if it supports 'max' effort.
-// Per API docs, 'max' is Opus 4.6 only for public models — other models return an error.
+// Per API docs 'max' is supported by recent models; legacy ones return an error.
 export function modelSupportsMaxEffort(model: string): boolean {
   const supported3P = get3PModelCapabilityOverride(model, 'max_effort')
   if (supported3P !== undefined) {
     return supported3P
   }
-  if (model.toLowerCase().includes('opus-4-6')) {
-    return true
+  if (model.toLowerCase().includes('haiku')) {
+    return false
   }
-  if (process.env.USER_TYPE === 'ant' && resolveAntModel(model)) {
-    return true
-  }
-  return false
+  return !MAX_EFFORT_DENYLIST.has(normalizeMaxEffortModel(model))
 }
 
 export function isEffortLevel(value: string): value is EffortLevel {
