@@ -327,8 +327,13 @@ export const permissionRuleExtractPrefix = sharedPermissionRuleExtractPrefix
  * Match a command against a wildcard pattern (case-sensitive for Bash).
  * Delegates to shared implementation.
  */
-export function matchWildcardPattern(pattern: string, command: string): boolean {
-  return sharedMatchWildcardPattern(pattern, command)
+export function matchWildcardPattern(
+  pattern: string,
+  command: string,
+  caseInsensitive = false,
+  normalizeWhitespace = false,
+): boolean {
+  return sharedMatchWildcardPattern(pattern, command, caseInsensitive, normalizeWhitespace)
 }
 
 /**
@@ -836,12 +841,16 @@ function filterRulesByContentsMatchingInput(
                 if (isCompoundCommand.get(cmdToMatch)) {
                   return false
                 }
+                // Collapse runs of spaces/tabs so a prefix rule matches commands
+                // written with extra spaces or tabs (Bash(cmd:*) vs `cmd\tfoo`).
+                const normalizedCmd = cmdToMatch.replace(/[ \t]+/g, ' ')
+                const prefix = bashRule.prefix.replace(/[ \t]+/g, ' ')
                 // Ensure word boundary: prefix must be followed by space or end of string
                 // This prevents "ls:*" from matching "lsof" or "lsattr"
-                if (cmdToMatch === bashRule.prefix) {
+                if (normalizedCmd === prefix) {
                   return true
                 }
-                if (cmdToMatch.startsWith(bashRule.prefix + ' ')) {
+                if (normalizedCmd.startsWith(prefix + ' ')) {
                   return true
                 }
                 // Also match "xargs <prefix>" for bare xargs with no flags.
@@ -849,11 +858,11 @@ function filterRulesByContentsMatchingInput(
                 // and deny rules like Bash(rm:*) to block "xargs rm file".
                 // Natural word-boundary: "xargs -n1 grep" does NOT start with
                 // "xargs grep " so flagged xargs invocations are not matched.
-                const xargsPrefix = 'xargs ' + bashRule.prefix
-                if (cmdToMatch === xargsPrefix) {
+                const xargsPrefix = 'xargs ' + prefix
+                if (normalizedCmd === xargsPrefix) {
                   return true
                 }
-                return cmdToMatch.startsWith(xargsPrefix + ' ')
+                return normalizedCmd.startsWith(xargsPrefix + ' ')
               }
             }
             break
@@ -871,8 +880,9 @@ function filterRulesByContentsMatchingInput(
             if (isCompoundCommand.get(cmdToMatch)) {
               return false
             }
-            // In prefix mode (after splitting), wildcards can safely match subcommands
-            return matchWildcardPattern(bashRule.pattern, cmdToMatch)
+            // In prefix mode (after splitting), wildcards can safely match subcommands.
+            // Normalize whitespace so rules tolerate extra spaces/tabs in the command.
+            return matchWildcardPattern(bashRule.pattern, cmdToMatch, false, true)
         }
       })
     })

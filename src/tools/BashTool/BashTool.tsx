@@ -596,7 +596,7 @@ export const BashTool = buildTool({
         if (prefix !== null) {
           return cmd === prefix || cmd.startsWith(`${prefix} `)
         }
-        return matchWildcardPattern(pattern, cmd)
+        return matchWildcardPattern(pattern, cmd, false, true)
       })
     }
   },

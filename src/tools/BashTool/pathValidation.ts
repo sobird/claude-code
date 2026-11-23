@@ -981,19 +981,24 @@ export function checkPathConstraints(
   // garbled tokens on a successful parse (not a parse failure, so the
   // fail-closed guard doesn't help). The AST already resolved targets
   // correctly and checkSemantics validated them.
-  const { redirections, hasDangerousRedirection } = astRedirects
+  const { redirections, hasDangerousRedirection, dangerousRedirectionReason } = astRedirects
     ? astRedirectsToOutputRedirections(astRedirects)
     : extractOutputRedirections(input.command)
 
-  // SECURITY: If we found a redirection operator with a target containing shell expansion
-  // syntax ($VAR or %VAR%), require manual approval since the target can't be safely validated.
+  // SECURITY: If we found a redirection operator whose target can't be safely
+  // validated, require manual approval. `/dev/tcp|udp/...` dials a socket;
+  // shell expansion ($VAR, %VAR%, globs) hides the real path.
   if (hasDangerousRedirection) {
+    const reason =
+      dangerousRedirectionReason === 'network_device'
+        ? 'Redirect involving /dev/tcp or /dev/udp opens a network connection'
+        : 'Shell expansion syntax in paths requires manual approval'
     return {
       behavior: 'ask',
-      message: 'Shell expansion syntax in paths requires manual approval',
+      message: reason,
       decisionReason: {
         type: 'other',
-        reason: 'Shell expansion syntax in paths requires manual approval',
+        reason,
       },
     }
   }
@@ -1039,8 +1044,11 @@ export function checkPathConstraints(
 function astRedirectsToOutputRedirections(redirects: Redirect[]): {
   redirections: Array<{ target: string; operator: '>' | '>>' }>
   hasDangerousRedirection: boolean
+  dangerousRedirectionReason?: 'network_device' | 'shell_expansion'
 } {
   const redirections: Array<{ target: string; operator: '>' | '>>' }> = []
+  let hasDangerousRedirection = false
+  let dangerousRedirectionReason: 'network_device' | 'shell_expansion' | undefined
   for (const r of redirects) {
     switch (r.op) {
       case '>':
@@ -1068,8 +1076,21 @@ function astRedirectsToOutputRedirections(redirects: Redirect[]): {
     }
   }
   // AST targets are fully resolved (no shell expansion) — checkSemantics
-  // already validated them. No dangerous redirections are possible.
-  return { redirections, hasDangerousRedirection: false }
+  // already validated them. The one remaining hazard is bash's virtual network
+  // devices: `> /dev/tcp/host/port` dials a socket with no filesystem write.
+  const filtered = redirections.filter((r) => {
+    if (/^\/dev\/(tcp|udp)\//.test(r.target)) {
+      hasDangerousRedirection = true
+      dangerousRedirectionReason = 'network_device'
+      return false
+    }
+    return true
+  })
+  return {
+    redirections: filtered,
+    hasDangerousRedirection,
+    dangerousRedirectionReason,
+  }
 }
 
 // ───────────────────────────────────────────────────────────────────────────

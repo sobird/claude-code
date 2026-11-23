@@ -591,13 +591,23 @@ export function isUnsafeCompoundCommand_DEPRECATED(command: string): boolean {
  *
  * @returns Object containing the command without redirections and the target paths if found
  */
+/** Why a redirection was flagged dangerous. `network_device` covers
+ * `/dev/tcp|udp/...` (a network connection via bash's virtual devices);
+ * `shell_expansion` covers globs/`$VAR`/process substitution in the target. */
+export type DangerousRedirectionReason = 'network_device' | 'shell_expansion'
+
+/** Matches bash's virtual network devices: `> /dev/tcp/host/port` opens a socket. */
+const NETWORK_DEVICE_REDIRECT = /^\/dev\/(tcp|udp)\//
+
 export function extractOutputRedirections(cmd: string): {
   commandWithoutRedirections: string
   redirections: Array<{ target: string; operator: '>' | '>>' }>
   hasDangerousRedirection: boolean
+  dangerousRedirectionReason?: DangerousRedirectionReason
 } {
   const redirections: Array<{ target: string; operator: '>' | '>>' }> = []
   let hasDangerousRedirection = false
+  let dangerousRedirectionReason: DangerousRedirectionReason | undefined
 
   // SECURITY: Extract heredocs BEFORE line-continuation joining AND parsing.
   // This matches splitCommandWithOperators (line 101). Quoted-heredoc bodies
@@ -706,6 +716,9 @@ export function extractOutputRedirections(cmd: string): {
       const { skip, dangerous } = handleRedirection(part, prev, next, parsed[i + 2], parsed[i + 3], redirections, kept)
       if (dangerous) {
         hasDangerousRedirection = true
+        // Network devices take precedence over expansion (upstream behavior) so
+        // `> /dev/tcp/$HOST/80` is reported as a socket, not a glob.
+        dangerousRedirectionReason ??= 'shell_expansion'
       }
       if (skip > 0) {
         i += skip
@@ -716,10 +729,28 @@ export function extractOutputRedirections(cmd: string): {
     kept.push(part)
   }
 
+  // `/dev/tcp/host/port` and `/dev/udp/...` are plain targets (no expansion), so
+  // they reach `redirections` instead of the expansion guard above. Opening them
+  // dials a socket, so flag them as dangerous and drop them from path validation
+  // (validating the path is meaningless — the write never touches the filesystem).
+  if (dangerousRedirectionReason !== 'network_device') {
+    const networkDevices = redirections.filter((r) => NETWORK_DEVICE_REDIRECT.test(r.target))
+    if (networkDevices.length > 0) {
+      hasDangerousRedirection = true
+      dangerousRedirectionReason = 'network_device'
+      redirections.splice(
+        0,
+        redirections.length,
+        ...redirections.filter((r) => !NETWORK_DEVICE_REDIRECT.test(r.target)),
+      )
+    }
+  }
+
   return {
     commandWithoutRedirections: restoreHeredocs([reconstructCommand(kept, processedCommand)], heredocs)[0],
     redirections,
     hasDangerousRedirection,
+    dangerousRedirectionReason,
   }
 }
 

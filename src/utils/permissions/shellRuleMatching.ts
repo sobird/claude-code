@@ -82,9 +82,20 @@ export function hasWildcards(pattern: string): boolean {
  * @param command - The command to match against
  * @returns true if the command matches the pattern
  */
-export function matchWildcardPattern(pattern: string, command: string, caseInsensitive = false): boolean {
-  // Trim leading/trailing whitespace from pattern
-  const trimmedPattern = pattern.trim()
+export function matchWildcardPattern(
+  pattern: string,
+  command: string,
+  caseInsensitive = false,
+  normalizeWhitespace = false,
+): boolean {
+  // Trim leading/trailing whitespace from pattern. When `normalizeWhitespace`
+  // is set, also collapse runs of spaces/tabs to a single space in both the
+  // pattern and the command, so `Bash(git commit *)` matches
+  // `git  commit\t-m x`. Upstream does this only for Bash rule matching — file
+  // paths keep their literal whitespace.
+  const collapse = (s: string): string => (normalizeWhitespace ? s.replace(/[ \t]+/g, ' ') : s)
+  const trimmedPattern = collapse(pattern.trim())
+  if (normalizeWhitespace) command = collapse(command)
 
   // Process the pattern to handle escape sequences: \* and \\
   let processed = ''
