@@ -140,7 +140,11 @@
       },
       "usage": {
         "compact": "{count} tokens",
-        "detail": "Prompt {prompt} · cached {cached} · output {output}"
+        "label": "Token usage",
+        "input": "Prompt",
+        "cached": "Cached",
+        "output": "Output",
+        "total": "Total"
       },
       "model": {
         "label": "Model",

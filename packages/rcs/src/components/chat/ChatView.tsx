@@ -15,7 +15,6 @@ import {
   ArchiveRestore,
   ArrowDown,
   ArrowLeft,
-  Gauge,
   Info,
   Keyboard,
   Loader2,
@@ -68,7 +67,6 @@ import {
 } from '@/lib/session-reducer'
 import { isHelpShortcut } from '@/lib/shortcut-help'
 import { buildSetThinkingRequest, type ThinkingChoice } from '@/lib/thinking'
-import { formatTokenCount, promptTokens } from '@/lib/token-usage'
 import { formatTurnSeconds } from '@/lib/turn-duration'
 import { summarizeTurns, type TurnSummary } from '@/lib/turn-summary'
 import { cx, uniqueKeys } from '@/lib/utils'
@@ -86,6 +84,7 @@ import { SideQuestionCard, type SideQuestionState } from './SideQuestionCard'
 import { TaskPanel } from './TaskPanel'
 import { ThinkingMenu } from './ThinkingMenu'
 import { ToolCallGroup } from './ToolCallGroup'
+import { UsagePopover } from './UsagePopover'
 
 import styles from './ChatView.module.css'
 
@@ -991,20 +990,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           </div>
         </div>
         <div className={styles.headerRight}>
-          {chat.lastUsage ? (
-            <span
-              data-testid="token-usage"
-              title={t('usage.detail', {
-                prompt: String(promptTokens(chat.lastUsage)),
-                cached: String(chat.lastUsage.cached),
-                output: String(chat.lastUsage.output),
-              })}
-              className={styles.usage}
-            >
-              <Gauge className={styles.usageIcon} aria-hidden="true" />
-              {t('usage.compact', { count: formatTokenCount(promptTokens(chat.lastUsage)) })}
-            </span>
-          ) : null}
+          {chat.lastUsage ? <UsagePopover usage={chat.lastUsage} /> : null}
           <ModelMenu
             model={chat.model}
             pending={chat.pendingModel !== null}

@@ -140,7 +140,11 @@
       },
       "usage": {
         "compact": "{count} 令牌",
-        "detail": "提示 {prompt} · 缓存 {cached} · 输出 {output}"
+        "label": "令牌用量",
+        "input": "提示",
+        "cached": "缓存",
+        "output": "输出",
+        "total": "合计"
       },
       "model": {
         "label": "模型",

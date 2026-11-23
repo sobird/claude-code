@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { formatTokenCount, promptTokens, usageFromPayload } from '@/lib/token-usage'
+import { formatTokenCount, promptTokens, usageFromPayload, usageRows } from '@/lib/token-usage'
 
 describe('usageFromPayload', () => {
   test('reads usage nested in the assistant message', () => {
@@ -40,6 +40,17 @@ describe('usageFromPayload', () => {
 describe('promptTokens', () => {
   test('counts cached tokens as part of the prompt', () => {
     expect(promptTokens({ input: 168, cached: 82404, output: 42 })).toBe(82572)
+  })
+})
+
+describe('usageRows', () => {
+  test('splits usage into ordered rows with a prompt total', () => {
+    expect(usageRows({ input: 168, cached: 82404, output: 42 })).toEqual([
+      { key: 'input', value: 168 },
+      { key: 'cached', value: 82404 },
+      { key: 'output', value: 42 },
+      { key: 'total', value: 82572 },
+    ])
   })
 })
 

@@ -49,6 +49,23 @@ export function promptTokens(usage: TokenUsage): number {
   return usage.input + usage.cached
 }
 
+export type UsageRowKey = 'input' | 'cached' | 'output' | 'total'
+
+export interface UsageRow {
+  key: UsageRowKey
+  value: number
+}
+
+/** 弹层里的分行数据：提示、缓存、输出，再加一行提示合计（含缓存）。 */
+export function usageRows(usage: TokenUsage): UsageRow[] {
+  return [
+    { key: 'input', value: usage.input },
+    { key: 'cached', value: usage.cached },
+    { key: 'output', value: usage.output },
+    { key: 'total', value: promptTokens(usage) },
+  ]
+}
+
 /** `999` → `999`, `82_304` → `82.3k`, `2_500_000` → `2.5M`. */
 export function formatTokenCount(count: number): string {
   const value = Math.round(count)
