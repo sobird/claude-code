@@ -158,7 +158,7 @@
       "kind": "behavior",
       "status": "approximated",
       "evidence": ["bundle:scrollback"],
-      "notes": "长会话中回滚缓冲重复同一 diff / 空白页：该修复为纯逻辑改动、无新增字面量，未能在本地 bundle 定位到可靠实现，未改动 src。见 notes R2（未移植）。",
+      "notes": "长会话中回滚缓冲重复同一 diff / 空白页：log-update.ts 的 render() 两版逐 token 等价（仅压缩改名），render-node-to-output.ts 差异仅已移植的第 16 条，ink.tsx 区段仅第 15 条；bundle:scrollback 实为 csi.ts 的 ED 擦除模式枚举，非修复落点，渲染带其余差异为打包依赖内部。无可移植的 src/ 逻辑改动，最可能由 npm 依赖版本带出（ignored-dependency 性质），未改动 src。见 notes R2。",
       "releaseItems": [12]
     },
     {
