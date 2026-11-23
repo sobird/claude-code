@@ -1399,3 +1399,16 @@ export function foldWithCache(cache: FoldCache | null, events: readonly SessionE
   }
   return { events, state: applyHistory(initialChatState, events) }
 }
+
+/**
+ * 事件列表里是否含有客户端尚未持有的 SeqNum。用于分页：实时流已重放过的页
+ * 无需合并，跳过可以省掉一次全量重折叠和整树重渲染。没有 SeqNum 的事件无法
+ * 证明已覆盖，按“未见”处理。
+ */
+export function hasUnseenEvents(events: readonly SessionEventInput[], knownSeqNums: ReadonlySet<number>): boolean {
+  for (const event of events) {
+    if (typeof event.seqNum !== 'number') return true
+    if (!knownSeqNums.has(event.seqNum)) return true
+  }
+  return false
+}

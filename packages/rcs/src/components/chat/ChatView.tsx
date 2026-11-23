@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { StatusBadge } from '@/components/shell/StatusBadge'
 import { Button } from '@/components/ui/Button'
@@ -54,6 +54,7 @@ import {
   activeStreamEvents,
   applyHistory,
   foldWithCache,
+  hasUnseenEvents,
   isEphemeralEvent,
   type FoldCache,
   type SessionEventInput,
@@ -75,6 +76,7 @@ import { ModelMenu } from './ModelMenu'
 import { PermissionModeMenu } from './PermissionModeMenu'
 import { PermissionPanel } from './PermissionPanel'
 import { PlanView } from './PlanView'
+import { sameChildThreads, sameEntryList } from './row-equality'
 import { ShortcutsDialog } from './ShortcutsDialog'
 import { SideQuestionCard, type SideQuestionState } from './SideQuestionCard'
 import { TaskPanel } from './TaskPanel'
@@ -327,34 +329,49 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     [api, sessionId],
   )
 
+  // 并发滚动事件会在 loadingEarlier 状态提交前再次进来，用 ref 挡住重复请求。
+  const loadingEarlierRef = useRef(false)
   const loadEarlier = useCallback(async () => {
-    if (nextBefore === null || loadingEarlier) return
+    if (nextBefore === null || loadingEarlierRef.current) return
+    loadingEarlierRef.current = true
     const path = `/web/sessions/${encodeURIComponent(sessionId)}`
     setLoadingEarlier(true)
     try {
       const page = await api.get<HistoryResponse>(`${path}/history?limit=100&before=${nextBefore}`)
       const older = Array.isArray(page.events) ? page.events : []
-      if (older.length > 0) revealAfterLoadRef.current = true
-      setHistory((prev) => {
-        const merged = new Map<number, HistoryEvent>()
-        for (const event of [...older, ...(prev ?? [])]) {
-          if (!merged.has(event.seqNum)) merged.set(event.seqNum, event)
-        }
-        return [...merged.values()].toSorted((a, b) => a.seqNum - b.seqNum)
+      const nextCursor = typeof page.nextBefore === 'number' ? page.nextBefore : null
+      // 实时流通常已重放整段历史：这类页无需合并，只推进游标，避免一次全量
+      // 重折叠和整树重渲染。
+      if (!hasUnseenEvents(older, knownSeqNumsRef.current)) {
+        setNextBefore(nextCursor)
+        return
+      }
+      revealAfterLoadRef.current = true
+      startTransition(() => {
+        setHistory((prev) => {
+          const merged = new Map<number, HistoryEvent>()
+          for (const event of [...older, ...(prev ?? [])]) {
+            if (!merged.has(event.seqNum)) merged.set(event.seqNum, event)
+          }
+          return [...merged.values()].toSorted((a, b) => a.seqNum - b.seqNum)
+        })
+        setNextBefore(nextCursor)
       })
-      setNextBefore(typeof page.nextBefore === 'number' ? page.nextBefore : null)
     } catch (error) {
       setActionError(error)
     } finally {
+      loadingEarlierRef.current = false
       setLoadingEarlier(false)
     }
-  }, [api, sessionId, nextBefore, loadingEarlier])
+  }, [api, sessionId, nextBefore])
 
   // 按序列号折叠持久事件（历史、实时帧、本地发送），保证回复不会先于提问。
   // 上一批事件仍是新列表的前缀时只折叠新增尾部，避免每帧对整段历史重跑
   // reducer。流式增量没有持久序列号，单独在持久状态之上重放：只有最后一条
   // 终态事件之后的帧仍然是活的。
   const foldCacheRef = useRef<FoldCache | null>(null)
+  // 当前客户端已持有的持久 seqNum，供分页判断该页是否早已由流重放覆盖。
+  const knownSeqNumsRef = useRef<ReadonlySet<number>>(new Set())
   const chat = useMemo(() => {
     const merged: SessionEventInput[] = []
     for (const event of history ?? []) merged.push(event)
@@ -363,6 +380,11 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     const durable = merged
       .filter((event) => !isEphemeralEvent(event))
       .toSorted((a, b) => (a.seqNum ?? 0) - (b.seqNum ?? 0))
+    const knownSeqNums = new Set<number>()
+    for (const event of durable) {
+      if (typeof event.seqNum === 'number') knownSeqNums.add(event.seqNum)
+    }
+    knownSeqNumsRef.current = knownSeqNums
     const base = foldWithCache(foldCacheRef.current, durable)
     foldCacheRef.current = base
     return applyHistory(base.state, activeStreamEvents(stream.events))
@@ -406,6 +428,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     (key: string) => setToolOverrides((prev) => ({ ...prev, [key]: !(prev[key] ?? expandAll) })),
     [expandAll],
   )
+  // 保持引用稳定，否则每一行都会被判定为“回调已变”而重渲染。
+  const cancelEdit = useCallback(() => setEditingId(null), [])
 
   // Pin once the durable history is in, so live frames that beat the fetch do
   // not pin the window to a partial tail.
@@ -1097,7 +1121,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                 expandAll={expandAll}
                 editingId={editingId}
                 onStartEdit={setEditingId}
-                onCancelEdit={() => setEditingId(null)}
+                onCancelEdit={cancelEdit}
                 selectedKey={cursorKey}
                 isToolExpanded={isToolExpanded}
                 onToggleTools={toggleToolExpanded}
@@ -1195,41 +1219,124 @@ function MessageThread({
 }) {
   return (
     <div className={styles.thread}>
-      {items.map(({ item, key }) => {
-        const selected = selectedKey === key
-        const selection = cx(styles.item, selected && styles.itemSelected)
-        return item.kind === 'tools' ? (
-          <div key={key} data-message-key={key} data-selected={selected ? '' : undefined} className={selection}>
-            <ToolCallGroup
-              entries={item.entries}
-              expandAll={expandAll}
-              expanded={isToolExpanded(key)}
-              onToggleExpanded={() => onToggleTools(key)}
-              childrenByParent={childrenByParent}
-            />
-          </div>
-        ) : (
-          <div
-            key={key}
-            data-message-key={key}
-            data-selected={selected ? '' : undefined}
-            className={cx(spacingFor(item.entry), selection)}
-          >
-            <EntryRenderer
-              entry={item.entry}
-              editingId={editingId}
-              onStartEdit={onStartEdit}
-              onCancelEdit={onCancelEdit}
-              onEdit={onEdit}
-              regenerateId={regenerateId}
-              onRegenerate={onRegenerate}
-            />
-          </div>
-        )
-      })}
+      {items.map(({ item, key }) => (
+        <MessageRow
+          key={key}
+          item={item}
+          itemKey={key}
+          selected={selectedKey === key}
+          expandAll={expandAll}
+          expanded={item.kind === 'tools' ? isToolExpanded(key) : false}
+          editingId={editingId}
+          regenerateId={regenerateId}
+          onEdit={onEdit}
+          onRegenerate={onRegenerate}
+          onStartEdit={onStartEdit}
+          onCancelEdit={onCancelEdit}
+          onToggleTools={onToggleTools}
+          childrenByParent={childrenByParent}
+        />
+      ))}
     </div>
   )
 }
+
+interface MessageRowProps {
+  item: GroupedItem
+  itemKey: string
+  selected: boolean
+  expandAll: boolean
+  /** 工具组是否展开；条目行忽略。 */
+  expanded: boolean
+  editingId: string | null
+  regenerateId: string | null
+  onEdit?: (text: string) => Promise<void> | void
+  onRegenerate: () => Promise<void> | void
+  onStartEdit: (id: string) => void
+  onCancelEdit: () => void
+  onToggleTools: (key: string) => void
+  childrenByParent: Map<string, ThreadEntry[]>
+}
+
+/**
+ * 单行记忆化：分组会重建数组与 Map，所以比较元素引用而非容器；编辑/重生成
+ * 状态只让命中该行的那条消息重渲染，光标选择同理。
+ */
+function sameMessageRow(prev: MessageRowProps, next: MessageRowProps): boolean {
+  if (prev.itemKey !== next.itemKey || prev.selected !== next.selected) return false
+  const before = prev.item
+  const after = next.item
+  if (before.kind === 'tools') {
+    if (after.kind !== 'tools') return false
+    if (prev.expandAll !== next.expandAll || prev.expanded !== next.expanded) return false
+    if (!sameEntryList(before.entries, after.entries)) return false
+    if (prev.childrenByParent !== next.childrenByParent) {
+      const ids = before.entries.map((entry) => entry.toolCall.id)
+      if (!sameChildThreads(prev.childrenByParent, next.childrenByParent, ids)) return false
+    }
+    return true
+  }
+  if (after.kind !== 'entry' || before.entry !== after.entry) return false
+  if (prev.onEdit !== next.onEdit || prev.onRegenerate !== next.onRegenerate) return false
+  if (prev.editingId !== next.editingId && (before.entry.id === prev.editingId || before.entry.id === next.editingId)) {
+    return false
+  }
+  if (
+    prev.regenerateId !== next.regenerateId &&
+    (before.entry.id === prev.regenerateId || before.entry.id === next.regenerateId)
+  ) {
+    return false
+  }
+  return true
+}
+
+const MessageRow = memo(function MessageRow({
+  item,
+  itemKey,
+  selected,
+  expandAll,
+  expanded,
+  editingId,
+  regenerateId,
+  onEdit,
+  onRegenerate,
+  onStartEdit,
+  onCancelEdit,
+  onToggleTools,
+  childrenByParent,
+}: MessageRowProps) {
+  const selection = cx(styles.item, selected && styles.itemSelected)
+  if (item.kind === 'tools') {
+    return (
+      <div data-message-key={itemKey} data-selected={selected ? '' : undefined} className={selection}>
+        <ToolCallGroup
+          entries={item.entries}
+          expandAll={expandAll}
+          expanded={expanded}
+          onToggleExpanded={() => onToggleTools(itemKey)}
+          childrenByParent={childrenByParent}
+        />
+      </div>
+    )
+  }
+  return (
+    <div
+      data-message-key={itemKey}
+      data-selected={selected ? '' : undefined}
+      className={cx(spacingFor(item.entry), selection)}
+    >
+      <EntryRenderer
+        entry={item.entry}
+        editingId={editingId}
+        onStartEdit={onStartEdit}
+        onCancelEdit={onCancelEdit}
+        onEdit={onEdit}
+        regenerateId={regenerateId}
+        onRegenerate={onRegenerate}
+      />
+    </div>
+  )
+}, sameMessageRow)
 
 function EntryRenderer({
   entry,

@@ -4,6 +4,7 @@ import {
   activeStreamEvents,
   applyHistory,
   foldWithCache,
+  hasUnseenEvents,
   initialChatState,
   isAppendOnly,
   isEphemeralEvent,
@@ -2257,5 +2258,27 @@ describe('foldWithCache', () => {
     const replaced = [seq(1), seq(9)]
     const folded = foldWithCache(cached, replaced)
     expect(folded.state.entries).toEqual(fullFold(replaced).entries)
+  })
+})
+
+describe('hasUnseenEvents', () => {
+  function seq(seqNum: number | undefined): SessionEventInput {
+    return { seqNum, type: 'assistant', payload: { content: 'x' } }
+  }
+
+  test('reports a page already covered by known sequence numbers', () => {
+    expect(hasUnseenEvents([seq(1), seq(2)], new Set([1, 2, 3]))).toBe(false)
+  })
+
+  test('detects an event the client has not seen', () => {
+    expect(hasUnseenEvents([seq(1), seq(4)], new Set([1, 2]))).toBe(true)
+  })
+
+  test('treats an empty page as fully covered', () => {
+    expect(hasUnseenEvents([], new Set([1]))).toBe(false)
+  })
+
+  test('cannot prove coverage for an event without a sequence number', () => {
+    expect(hasUnseenEvents([seq(undefined)], new Set([1]))).toBe(true)
   })
 })
