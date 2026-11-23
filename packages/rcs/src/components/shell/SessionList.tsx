@@ -1,6 +1,6 @@
 'use client'
 
-import { Archive } from 'lucide-react'
+import { Archive, ArchiveRestore } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 
@@ -16,12 +16,17 @@ interface SessionListProps {
   sessions: SessionSummary[]
   /** 提供时每行显示归档按钮；链接与按钮是兄弟节点，避免交互元素嵌套。 */
   onArchive?: (session: SessionSummary) => void
+  /** 提供时每行显示恢复按钮（用于已归档列表）。 */
+  onRestore?: (session: SessionSummary) => void
+  /** 正在恢复的会话 id；该行按钮在请求期间禁用。 */
+  restoringId?: string
 }
 
 /** Newest-first session rows; each links to `/<session id>`. */
-export function SessionList({ sessions, onArchive }: SessionListProps) {
+export function SessionList({ sessions, onArchive, onRestore, restoringId }: SessionListProps) {
   const t = useTranslations('session')
   const tArchive = useTranslations('session.archive')
+  const tRestore = useTranslations('session.restore')
   const locale = useLocale()
 
   if (sessions.length === 0) {
@@ -55,6 +60,20 @@ export function SessionList({ sessions, onArchive }: SessionListProps) {
               onClick={() => onArchive(session)}
             >
               <Archive className={styles.archiveIcon} />
+            </Button>
+          ) : null}
+          {onRestore ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className={styles.archiveButton}
+              aria-label={tRestore('action')}
+              title={tRestore('action')}
+              disabled={restoringId === session.id}
+              onClick={() => onRestore(session)}
+            >
+              <ArchiveRestore className={styles.archiveIcon} />
             </Button>
           ) : null}
         </div>

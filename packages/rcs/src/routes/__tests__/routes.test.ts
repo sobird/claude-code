@@ -1467,6 +1467,103 @@ describe('Web Session Routes', () => {
     expect(res.status).toBe(404)
   })
 
+  test('GET /web/sessions/archived lists archived sessions that the open lists hide', async () => {
+    const id = await createWebSession(s.memberToken)
+    const openId = await createWebSession(s.memberToken)
+    const archiveRes = await app.request(`/web/sessions/${id}/archive`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(archiveRes.status).toBe(200)
+
+    const archived = (await resJson(
+      await app.request('/web/sessions/archived', { headers: bearer(s.memberToken) }),
+    )) as Array<{ id: string; status: string }>
+    expect(archived.map((sess) => sess.id)).toEqual([id])
+    expect(archived[0].status).toBe('archived')
+
+    const all = (await resJson(await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }))) as Array<{
+      id: string
+    }>
+    expect(all.map((sess) => sess.id)).toContain(openId)
+    expect(all.map((sess) => sess.id)).not.toContain(id)
+  })
+
+  test('GET /web/sessions/archived scopes members to their own sessions while admins see all', async () => {
+    const own = await s.repos.sessions.create({ ownerUserId: s.member.id, status: 'archived' })
+    const foreign = await s.repos.sessions.create({ ownerUserId: s.other.id, status: 'archived' })
+    const unowned = await s.repos.sessions.create({ status: 'archived' })
+
+    const member = (await resJson(
+      await app.request('/web/sessions/archived', { headers: bearer(s.memberToken) }),
+    )) as Array<{ id: string }>
+    expect(member.map((sess) => sess.id)).toEqual([toWebSessionId(own.id)])
+
+    const admin = (await resJson(
+      await app.request('/web/sessions/archived', { headers: bearer(s.adminToken) }),
+    )) as Array<{ id: string }>
+    expect(new Set(admin.map((sess) => sess.id))).toEqual(
+      new Set([toWebSessionId(own.id), toWebSessionId(foreign.id), toWebSessionId(unowned.id)]),
+    )
+  })
+
+  test('POST /web/sessions/:id/unarchive restores the session to the open lists', async () => {
+    const id = await createWebSession(s.memberToken)
+    await app.request(`/web/sessions/${id}/archive`, { method: 'POST', headers: bearer(s.memberToken) })
+
+    const res = await app.request(`/web/sessions/${id}/unarchive`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(200)
+    expect(await resJson(res)).toEqual({ status: 'ok' })
+    expect((await s.repos.sessions.getById(canonicalSessionId(id)))?.status).toBe('idle')
+
+    const archived = (await resJson(
+      await app.request('/web/sessions/archived', { headers: bearer(s.memberToken) }),
+    )) as Array<{ id: string }>
+    expect(archived.some((sess) => sess.id === id)).toBe(false)
+
+    const all = (await resJson(await app.request('/web/sessions/all', { headers: bearer(s.memberToken) }))) as Array<{
+      id: string
+    }>
+    expect(all.some((sess) => sess.id === id)).toBe(true)
+  })
+
+  test('POST /web/sessions/:id/unarchive leaves a non-archived session untouched', async () => {
+    const id = await createWebSession(s.memberToken)
+    const canonical = canonicalSessionId(id)
+    await s.repos.sessions.update(canonical, { status: 'inactive' })
+
+    const res = await app.request(`/web/sessions/${id}/unarchive`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(200)
+    expect((await s.repos.sessions.getById(canonical))?.status).toBe('inactive')
+  })
+
+  test('POST /web/sessions/:id/unarchive rejects another member session', async () => {
+    const id = await createWebSession(s.otherToken)
+    await app.request(`/web/sessions/${id}/archive`, { method: 'POST', headers: bearer(s.otherToken) })
+
+    const res = await app.request(`/web/sessions/${id}/unarchive`, {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(403)
+    expect((await resJson(res)).error.type).toBe('forbidden')
+    expect((await s.repos.sessions.getById(canonicalSessionId(id)))?.status).toBe('archived')
+  })
+
+  test('POST /web/sessions/:id/unarchive returns 404 for an unknown session', async () => {
+    const res = await app.request('/web/sessions/session_missing/unarchive', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+    })
+    expect(res.status).toBe(404)
+  })
+
   test('GET /web/sessions/:id includes automation_state when present', async () => {
     const id = await createWebSession(s.memberToken)
     const canonical = id.replace(/^session_/, 'cse_')

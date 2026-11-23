@@ -12,6 +12,7 @@
 
 import {
   Archive,
+  ArchiveRestore,
   ArrowDown,
   ArrowLeft,
   Gauge,
@@ -195,8 +196,9 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const tChat = useTranslations('chat')
   const tShortcuts = useTranslations('chat.shortcuts')
   const tArchive = useTranslations('session.archive')
+  const tRestore = useTranslations('session.restore')
   const describeError = useApiErrorMessage()
-  const { openArchive } = useDashboardData()
+  const { openArchive, restoreSession } = useDashboardData()
   const { token, refresh: refreshToken, error: tokenError } = useAccessToken()
   const tokenRef = useRef(token)
 
@@ -214,6 +216,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<unknown>(null)
   const [actionError, setActionError] = useState<unknown>(null)
+  const [restoring, setRestoring] = useState(false)
+  const [restoreError, setRestoreError] = useState<string | null>(null)
   // Events folded in from a send response so the message shows immediately even
   // if the live stream hiccups; the SSE echo dedupes by seqNum/uuid.
   const [extraEvents, setExtraEvents] = useState<SessionEventInput[]>([])
@@ -956,6 +960,20 @@ export function SessionView({ sessionId }: { sessionId: string }) {
     findMessageNode(el, cursorKey)?.scrollIntoView({ block: 'nearest' })
   }, [cursorKey])
 
+  async function handleRestore(): Promise<void> {
+    setRestoring(true)
+    setRestoreError(null)
+    try {
+      await restoreSession(sessionId)
+      // 归档时 SSE 已被 409 终止，useSessionStream 无法原地重连；刷新重新拉取
+      // 状态并建立新的事件流（服务端 getEventBus 会重建总线）。
+      window.location.reload()
+    } catch (restoreFailure) {
+      setRestoreError(describeError(restoreFailure, 'session.restore.failed'))
+      setRestoring(false)
+    }
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -1003,7 +1021,19 @@ export function SessionView({ sessionId }: { sessionId: string }) {
             onSelect={handleModeSelect}
           />
           <StatusBadge status={displayStatus} />
-          {closed ? null : (
+          {closed ? (
+            <button
+              type="button"
+              onClick={() => void handleRestore()}
+              disabled={restoring}
+              aria-label={tRestore('action')}
+              title={tRestore('action')}
+              data-testid="restore-session"
+              className={styles.iconButton}
+            >
+              <ArchiveRestore className={styles.iconButtonIcon} />
+            </button>
+          ) : (
             <button
               type="button"
               onClick={() =>
@@ -1186,7 +1216,16 @@ export function SessionView({ sessionId }: { sessionId: string }) {
         />
       ) : null}
 
-      {closed ? <div className={styles.archivedNotice}>{t('archived')}</div> : null}
+      {closed ? (
+        <div className={styles.archivedNotice}>
+          <div>{t('archived')}</div>
+          {restoreError ? (
+            <div role="alert" className={styles.restoreError}>
+              {restoreError}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <SideQuestionCard state={sideQuestion} onClose={closeSideQuestion} onRetry={retrySideQuestion} />
 

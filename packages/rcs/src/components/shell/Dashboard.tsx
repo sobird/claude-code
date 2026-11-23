@@ -6,6 +6,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useApiErrorMessage } from '@/hooks/useApiErrorMessage'
 
 import { useDashboardData } from './DashboardData'
 import { EnvironmentList } from './EnvironmentList'
@@ -44,17 +45,43 @@ export function Dashboard({ user }: { user: DashboardUser }) {
   const router = useRouter()
   const t = useTranslations('dashboard')
   const tCommon = useTranslations('common')
-  const { sessions, environments, loading, error, refresh, createSession, openArchive } = useDashboardData()
+  const describeError = useApiErrorMessage()
+  const {
+    sessions,
+    environments,
+    archivedSessions,
+    loading,
+    error,
+    refresh,
+    createSession,
+    openArchive,
+    restoreSession,
+  } = useDashboardData()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
+  const [restoreError, setRestoreError] = useState<string | null>(null)
 
   const visibleSessions = selectVisibleSessions(toOwnedSessions(sessions), user)
   const claimedSessions = visibleSessions.filter((session) => session.owner !== null)
   const unclaimedSessions = visibleSessions.filter((session) => session.owner === null)
   const visibleEnvironments = selectVisibleEnvironments(toOwnedEnvironments(environments), user)
+  const archivedVisible = selectVisibleSessions(toOwnedSessions(archivedSessions), user)
 
   function handleCreated(session: CreatedSession): void {
     setDialogOpen(false)
     router.push(`/${session.id}`)
+  }
+
+  async function handleRestore(session: { id: string }): Promise<void> {
+    setRestoringId(session.id)
+    setRestoreError(null)
+    try {
+      await restoreSession(session.id)
+    } catch (restoreFailure) {
+      setRestoreError(describeError(restoreFailure, 'session.restore.failed'))
+    } finally {
+      setRestoringId(null)
+    }
   }
 
   return (
@@ -111,6 +138,23 @@ export function Dashboard({ user }: { user: DashboardUser }) {
             <p className={styles.muted}>{t('unclaimed.description')}</p>
           </div>
           <SessionList sessions={unclaimedSessions} onArchive={openArchive} />
+        </section>
+      ) : null}
+
+      {archivedVisible.length > 0 ? (
+        <section aria-labelledby="archived-heading" className={styles.section}>
+          <div className={styles.intro}>
+            <h2 id="archived-heading" className={styles.sectionTitle}>
+              {t('archived.title')}
+            </h2>
+            <p className={styles.muted}>{t('archived.description')}</p>
+          </div>
+          {restoreError ? (
+            <div role="alert" className={styles.errorBanner}>
+              <span>{restoreError}</span>
+            </div>
+          ) : null}
+          <SessionList sessions={archivedVisible} onRestore={handleRestore} restoringId={restoringId ?? undefined} />
         </section>
       ) : null}
 

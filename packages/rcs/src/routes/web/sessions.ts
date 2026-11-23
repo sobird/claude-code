@@ -33,6 +33,7 @@ import {
   listWebSessionsByOwner,
   resolveAccessibleSession,
   toWebSessionResponse,
+  unarchiveSession,
 } from '@/services/session'
 import { createWorkItem } from '@/services/work-dispatch'
 import { createSSEStream } from '@/transport/sse-writer'
@@ -136,6 +137,22 @@ app.get('/sessions/all', legacyUserAuth, async (c) => {
   return c.json(records.map(toSummary), 200)
 })
 
+/**
+ * GET /web/sessions/archived — 已归档会话。
+ *
+ * 必须注册在 `/sessions/:id` 之前（Hono 按注册顺序匹配）。成员只看到自己拥有的归档行，
+ * 不并入 unowned：恢复 unowned 会话会顺带认领，留给 admin 处理。
+ */
+app.get('/sessions/archived', legacyUserAuth, async (c) => {
+  const repos = c.get('repos')
+  const user = c.get('user')
+  const records =
+    user.role === 'admin'
+      ? await listAllSessions(repos, { includeArchived: true })
+      : await repos.sessions.listByOwner(user.id, { includeArchived: true })
+  return c.json(records.filter((record) => isSessionClosedStatus(record.status)).map(toSummary), 200)
+})
+
 /** GET /web/sessions/:id — Session detail with optional automation state. */
 app.get('/sessions/:id', legacyUserAuth, async (c) => {
   const repos = c.get('repos')
@@ -222,6 +239,23 @@ app.post('/sessions/:id/archive', legacyUserAuth, async (c) => {
       activity: result.activity,
     })
   }
+  return c.json({ status: 'ok' }, 200)
+})
+
+/**
+ * POST /web/sessions/:id/unarchive — 恢复已归档会话。
+ *
+ * `unarchiveSession` 会无条件把状态写成 `idle` 并追加事件，所以先做终态守卫：
+ * 非归档会话直接 200 返回，不产生任何副作用（重复恢复幂等）。
+ */
+app.post('/sessions/:id/unarchive', legacyUserAuth, async (c) => {
+  const repos = c.get('repos')
+  const access = await resolveAccessibleSession(repos, c.req.param('id'), c.get('user'))
+  if (!access.ok) return access.reason === 'not_found' ? webNotFound(c) : webForbidden(c)
+
+  const session = await getSession(repos, access.sessionId)
+  if (!session) return webNotFound(c)
+  if (isSessionClosedStatus(session.status)) await unarchiveSession(repos, access.sessionId)
   return c.json({ status: 'ok' }, 200)
 })
 

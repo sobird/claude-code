@@ -32,6 +32,8 @@ export interface CreateSessionInput {
 interface DashboardDataValue {
   sessions: SessionSummary[]
   environments: EnvironmentSummary[]
+  /** 已归档会话；成员只拿到自己拥有的，admin 拿到全部。 */
+  archivedSessions: SessionSummary[]
   /** True until the first load settles (success or failure). */
   loading: boolean
   error: string | null
@@ -40,6 +42,8 @@ interface DashboardDataValue {
   createSession: (input: CreateSessionInput) => Promise<CreatedSession>
   /** 打开共享的归档弹窗；`onArchived` 在归档成功后执行（例如详情页翻转本地状态）。 */
   openArchive: (target: ArchiveSessionTarget, onArchived?: () => void) => void
+  /** 恢复已归档会话；失败时抛出错误，由调用方按入口展示。 */
+  restoreSession: (id: string) => Promise<void>
 }
 
 const DashboardDataContext = createContext<DashboardDataValue | undefined>(undefined)
@@ -53,6 +57,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
 
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [environments, setEnvironments] = useState<EnvironmentSummary[]>([])
+  const [archivedSessions, setArchivedSessions] = useState<SessionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [connection, setConnection] = useState<ConnectionState>('connecting')
@@ -80,12 +85,14 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     if (tokenRef.current === null || inFlightRef.current) return
     inFlightRef.current = true
     try {
-      const [nextSessions, nextEnvironments] = await Promise.all([
+      const [nextSessions, nextEnvironments, nextArchived] = await Promise.all([
         api.get<SessionSummary[]>('/web/sessions/all'),
         api.get<EnvironmentSummary[]>('/web/environments'),
+        api.get<SessionSummary[]>('/web/sessions/archived'),
       ])
       setSessions(Array.isArray(nextSessions) ? nextSessions : [])
       setEnvironments(Array.isArray(nextEnvironments) ? nextEnvironments : [])
+      setArchivedSessions(Array.isArray(nextArchived) ? nextArchived : [])
       setError(null)
       setConnection('connected')
     } catch (loadError) {
@@ -111,6 +118,14 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       const created = await api.post<CreatedSession>('/web/sessions', input)
       void load()
       return created
+    },
+    [api, load],
+  )
+
+  const restoreSession = useCallback(
+    async (id: string): Promise<void> => {
+      await api.post(`/web/sessions/${encodeURIComponent(id)}/unarchive`, {})
+      void load()
     },
     [api, load],
   )
@@ -185,14 +200,27 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     () => ({
       sessions,
       environments,
+      archivedSessions,
       loading,
       error,
       connection,
       refresh,
       createSession,
       openArchive,
+      restoreSession,
     }),
-    [sessions, environments, loading, error, connection, refresh, createSession, openArchive],
+    [
+      sessions,
+      environments,
+      archivedSessions,
+      loading,
+      error,
+      connection,
+      refresh,
+      createSession,
+      openArchive,
+      restoreSession,
+    ],
   )
 
   return (

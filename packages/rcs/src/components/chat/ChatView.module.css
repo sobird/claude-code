@@ -255,6 +255,11 @@
   color: var(--color-text-muted);
 }
 
+.restoreError {
+  margin-top: 0.25rem;
+  color: var(--color-status-error);
+}
+
 /* ---- thread items ---- */
 
 .thread {

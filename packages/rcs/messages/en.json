@@ -61,6 +61,10 @@
       "title": "Unclaimed",
       "description": "Sessions that are not owned by anyone yet."
     },
+    "archived": {
+      "title": "Archived",
+      "description": "Sessions you archived. Restoring puts one back on the dashboard."
+    },
     "newSession": {
       "title": "New Session",
       "description": "Start a session on a connected environment.",
@@ -93,6 +97,11 @@
       "stopAndArchive": "Stop and archive",
       "stopping": "Stopping…",
       "failed": "Couldn’t archive this session."
+    },
+    "restore": {
+      "action": "Restore",
+      "restoring": "Restoring…",
+      "failed": "Couldn’t restore this session."
     },
     "view": {
       "back": "Back to dashboard",

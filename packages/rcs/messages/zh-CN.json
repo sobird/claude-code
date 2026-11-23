@@ -61,6 +61,10 @@
       "title": "未认领",
       "description": "尚未归属任何人的会话。"
     },
+    "archived": {
+      "title": "已归档",
+      "description": "你归档的会话；恢复后会重新出现在仪表盘上。"
+    },
     "newSession": {
       "title": "新建会话",
       "description": "在已连接的环境上启动会话。",
@@ -93,6 +97,11 @@
       "stopAndArchive": "停止并归档",
       "stopping": "正在停止…",
       "failed": "归档会话失败。"
+    },
+    "restore": {
+      "action": "恢复",
+      "restoring": "正在恢复…",
+      "failed": "恢复会话失败。"
     },
     "view": {
       "back": "返回仪表盘",
