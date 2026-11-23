@@ -17,6 +17,9 @@ import { toOwnedEnvironments, toOwnedSessions, type CreatedSession, type Dashboa
 
 import styles from './Dashboard.module.css'
 
+/** 已归档区默认只展开这么多行，其余用“显示更多”展开。 */
+const ARCHIVED_PREVIEW_COUNT = 5
+
 function SectionSkeletons({ rows }: { rows: number }) {
   return (
     <div className={styles.skeletonList} aria-hidden="true">
@@ -60,12 +63,15 @@ export function Dashboard({ user }: { user: DashboardUser }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [restoringId, setRestoringId] = useState<string | null>(null)
   const [restoreError, setRestoreError] = useState<string | null>(null)
+  const [archivedExpanded, setArchivedExpanded] = useState(false)
 
   const visibleSessions = selectVisibleSessions(toOwnedSessions(sessions), user)
   const claimedSessions = visibleSessions.filter((session) => session.owner !== null)
   const unclaimedSessions = visibleSessions.filter((session) => session.owner === null)
   const visibleEnvironments = selectVisibleEnvironments(toOwnedEnvironments(environments), user)
   const archivedVisible = selectVisibleSessions(toOwnedSessions(archivedSessions), user)
+  // 归档时刷新过 updated_at，而归档期间不再写入，所以列表本身就是归档时间倒序。
+  const archivedList = archivedExpanded ? archivedVisible : archivedVisible.slice(0, ARCHIVED_PREVIEW_COUNT)
 
   function handleCreated(session: CreatedSession): void {
     setDialogOpen(false)
@@ -154,7 +160,19 @@ export function Dashboard({ user }: { user: DashboardUser }) {
               <span>{restoreError}</span>
             </div>
           ) : null}
-          <SessionList sessions={archivedVisible} onRestore={handleRestore} restoringId={restoringId ?? undefined} />
+          <SessionList sessions={archivedList} onRestore={handleRestore} restoringId={restoringId ?? undefined} />
+          {archivedVisible.length > ARCHIVED_PREVIEW_COUNT ? (
+            <div className={styles.moreRow}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setArchivedExpanded((expanded) => !expanded)}
+              >
+                {archivedExpanded ? t('archived.showLess') : t('archived.showMore', { count: archivedVisible.length })}
+              </Button>
+            </div>
+          ) : null}
         </section>
       ) : null}
 

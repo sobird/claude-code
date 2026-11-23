@@ -73,6 +73,12 @@
   color: var(--color-text-muted);
 }
 
+.moreRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
 .skeletonList > * + * {
   margin-top: 0.5rem;
 }

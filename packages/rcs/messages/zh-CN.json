@@ -63,7 +63,9 @@
     },
     "archived": {
       "title": "已归档",
-      "description": "你归档的会话；恢复后会重新出现在仪表盘上。"
+      "description": "你归档的会话；恢复后会重新出现在仪表盘上。",
+      "showMore": "显示更多（共 {count} 条）",
+      "showLess": "收起"
     },
     "newSession": {
       "title": "新建会话",

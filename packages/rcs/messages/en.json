@@ -63,7 +63,9 @@
     },
     "archived": {
       "title": "Archived",
-      "description": "Sessions you archived. Restoring puts one back on the dashboard."
+      "description": "Sessions you archived. Restoring puts one back on the dashboard.",
+      "showMore": "Show all ({count})",
+      "showLess": "Show less"
     },
     "newSession": {
       "title": "New Session",
