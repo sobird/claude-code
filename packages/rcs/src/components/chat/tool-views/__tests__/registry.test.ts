@@ -35,6 +35,12 @@ describe('toolViewKind', () => {
     }
   })
 
+  test('maps the skill and message tools', () => {
+    expect(toolViewKind('Skill')).toBe('skill')
+    expect(toolViewKind('Brief')).toBe('message')
+    expect(toolViewKind('SendMessage')).toBe('message')
+  })
+
   test('leaves unregistered tools on the generic body', () => {
     expect(toolViewKind('mcp__thing__do')).toBeNull()
   })
@@ -52,6 +58,8 @@ describe('TOOL_VIEWS', () => {
       'Agent',
       'TaskCreate',
       'TaskOutput',
+      'Skill',
+      'SendMessage',
     ]) {
       const kind = toolViewKind(name)
       expect(kind).not.toBeNull()

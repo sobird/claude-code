@@ -119,6 +119,11 @@ export function summarizeToolCall(
     }
     case 'Brief':
       add('message', input.message)
+      add('status', input.status)
+      break
+    case 'SendMessage':
+      add('to', input.to)
+      add('summary', input.summary)
       break
     case 'Skill':
       add('skill', input.skill ?? input.command)

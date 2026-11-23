@@ -6,8 +6,10 @@ import { AgentToolView } from './AgentToolView'
 import { BackgroundTaskToolView } from './BackgroundTaskToolView'
 import { BashToolView } from './BashToolView'
 import { FileToolView } from './FileToolView'
+import { MessageToolView } from './MessageToolView'
 import { QuestionToolView } from './QuestionToolView'
 import { SearchToolView } from './SearchToolView'
+import { SkillToolView } from './SkillToolView'
 import { TaskToolView } from './TaskToolView'
 import { TodoToolView } from './TodoToolView'
 import type { ToolViewKind, ToolViewProps } from './types'
@@ -37,6 +39,8 @@ const TOOL_VIEW_DEFINITIONS: readonly ToolViewDefinition[] = [
     tools: ['TaskOutput', 'AgentOutputTool', 'BashOutputTool', 'BashOutput', 'TaskStop', 'KillShell'],
     component: BackgroundTaskToolView,
   },
+  { kind: 'skill', tools: ['Skill'], component: SkillToolView },
+  { kind: 'message', tools: ['Brief', 'SendMessage'], component: MessageToolView },
   { kind: 'todo', tools: ['TodoWrite'], component: TodoToolView },
   { kind: 'question', tools: ['AskUserQuestion'], component: QuestionToolView },
 ]
