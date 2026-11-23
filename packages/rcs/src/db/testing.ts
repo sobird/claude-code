@@ -12,12 +12,12 @@
  * 其余用例保持空库，避免 fixture 影响 `users.count()/list()` 之类的断言。
  */
 
-import { sql } from 'drizzle-orm'
+import { getTableName, sql } from 'drizzle-orm'
 
 import { createPgliteDatabase, runMigrations } from '@/db/client'
 import { createRepositories } from '@/db/repositories'
 import type { Repositories } from '@/db/repositories/types'
-import { users } from '@/db/schema'
+import { schema, users } from '@/db/schema'
 
 type TestDatabase = Awaited<ReturnType<typeof createPgliteDatabase>>['db']
 
@@ -41,16 +41,17 @@ export function getTestDatabase(): Promise<TestDatabase> {
   return database
 }
 
-const LIST_PUBLIC_TABLES = sql`select tablename from pg_tables where schemaname = 'public'`
+/** 表名从 schema 推导，避免每次清库都查一遍 catalog；迁移记录在独立 schema，不受影响。 */
+const TRUNCATE_ALL_TABLES = sql.raw(
+  `truncate table ${Object.values(schema)
+    .map((table) => `"${getTableName(table)}"`)
+    .join(', ')} restart identity cascade`,
+)
 
-/** 清空全部应用表；drizzle 的迁移记录在独立 schema，不受影响。 */
+/** 清空全部应用表。 */
 export async function resetTestDatabase(db?: TestDatabase): Promise<void> {
   const target = db ?? (await getTestDatabase())
-  const result = await target.execute(LIST_PUBLIC_TABLES)
-  const tables = result.rows.map((row) => row.tablename).filter((name): name is string => typeof name === 'string')
-  if (tables.length === 0) return
-  const list = tables.map((name) => `"${name}"`).join(', ')
-  await target.execute(sql.raw(`truncate table ${list} restart identity cascade`))
+  await target.execute(TRUNCATE_ALL_TABLES)
 }
 
 const SEED_USERS = [

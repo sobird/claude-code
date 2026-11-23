@@ -18,17 +18,24 @@ import { schema } from './schema'
 
 export type Database = PgliteDatabase<typeof schema> | PostgresJsDatabase<typeof schema>
 
-type Driver = 'postgres' | 'pglite'
+/** Driver-specific runtime the `Database` type does not retain. */
+interface DriverRuntime {
+  close(): Promise<void>
+  migrate(migrationsFolder: string): Promise<void>
+}
 
-/** The `Database` type does not retain which factory produced it, so track it here. */
-const drivers = new WeakMap<Database, Driver>()
-const closers = new WeakMap<Database, () => Promise<void>>()
+const runtimes = new WeakMap<Database, DriverRuntime>()
 
 export function createPostgresDatabase(url: string): Database {
   const client = postgres(url, { max: 10 })
   const db = drizzlePostgres(client, { schema })
-  drivers.set(db, 'postgres')
-  closers.set(db, () => client.end())
+  runtimes.set(db, {
+    close: () => client.end(),
+    async migrate(migrationsFolder) {
+      const { migrate } = await import('drizzle-orm/postgres-js/migrator')
+      await migrate(db, { migrationsFolder })
+    },
+  })
   return db
 }
 
@@ -42,40 +49,34 @@ export async function createPgliteDatabase(): Promise<{
   ])
   const client = new PGlite()
   const db = drizzlePglite(client, { schema })
-  drivers.set(db, 'pglite')
-  const close = () => client.close()
-  closers.set(db, close)
-  return { db, close }
+  const runtime: DriverRuntime = {
+    close: () => client.close(),
+    async migrate(migrationsFolder) {
+      const { migrate } = await import('drizzle-orm/pglite/migrator')
+      await migrate(db, { migrationsFolder })
+    },
+  }
+  runtimes.set(db, runtime)
+  return { db, close: runtime.close }
 }
 
 /** Close the underlying connection for a database created by this module. */
 export async function closeDatabase(db: Database): Promise<void> {
-  const close = closers.get(db)
-  if (!close) return
-  closers.delete(db)
-  await close()
+  const runtime = runtimes.get(db)
+  if (!runtime) return
+  runtimes.delete(db)
+  await runtime.close()
 }
 
-async function applyMigrations(db: Database): Promise<void> {
-  const driver = drivers.get(db)
-  if (!driver) {
+/** Apply committed SQL migrations to `db`. */
+export async function runMigrations(db: Database): Promise<void> {
+  const runtime = runtimes.get(db)
+  if (!runtime) {
     throw new Error('Unknown database driver; create the database with createPostgresDatabase or createPgliteDatabase')
   }
   // Resolved via path APIs (not `new URL(..., import.meta.url)`) so bundlers do
   // not try to inline the migrations directory; this module is also imported by
   // the Next server, which never runs migrations.
   const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), 'migrations')
-  if (driver === 'pglite') {
-    const { migrate } = await import('drizzle-orm/pglite/migrator')
-    await migrate(db as PgliteDatabase<typeof schema>, { migrationsFolder })
-    return
-  }
-  const { migrate } = await import('drizzle-orm/postgres-js/migrator')
-  await migrate(db as PostgresJsDatabase<typeof schema>, { migrationsFolder })
+  await runtime.migrate(migrationsFolder)
 }
-
-/** Apply committed SQL migrations to `db`. */
-export const runMigrations = applyMigrations
-
-/** Semantic alias for test harnesses bootstrapping a fresh database. */
-export const bootstrapSchema = applyMigrations
