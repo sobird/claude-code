@@ -138,3 +138,25 @@ export interface SessionPersistenceLike {
 export function isSessionPersistence(value: unknown): value is SessionPersistenceLike {
   return isRecord(value) && typeof value.stat === 'function'
 }
+
+/** dsh 斜杠命令：handler 收到调用方 agent 与 `/name` 之后的原始输入。 */
+export interface CommandInvocationLike {
+  readonly agent?: { readonly id: string }
+  readonly rawInput: string
+}
+
+export type CommandResultLike = { kind: 'success'; text?: string } | { kind: 'error'; text: string }
+
+export interface CommandDefinitionLike {
+  name: string
+  description: string
+  handler: (invocation: CommandInvocationLike) => CommandResultLike | Promise<CommandResultLike>
+}
+
+export interface CommandsServiceLike {
+  register(definition: CommandDefinitionLike): unknown
+}
+
+export function isCommands(value: unknown): value is CommandsServiceLike {
+  return isRecord(value) && typeof value.register === 'function'
+}
