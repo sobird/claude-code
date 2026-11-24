@@ -96,9 +96,11 @@ export class InProcessBridge implements PluginBridge {
   private readonly ctx: PluginContextLike
   private readonly config: ResolvedConfig
   private readonly rcs: RcsClient
-  private readonly worker: WorkerSession
+  /** worker 凭据会过期：401 时用用户 key 重新握手换票，因此可变。 */
+  private worker: WorkerSession
   private readonly hooks: BridgeHooks | undefined
   private goneNotified = false
+  private refreshing: Promise<boolean> | null = null
   private readonly abort = new AbortController()
   private readonly pendingHuman = new Map<string, PendingHuman>()
   private readonly alwaysAllow = new Set<string>()
@@ -352,7 +354,13 @@ export class InProcessBridge implements PluginBridge {
         }
       } catch (error) {
         if (this.abort.signal.aborted) return
-        log(`worker stream: ${errorMessage(error)}`)
+        // 流用 worker JWT 鉴权；过期时先换票再重连，避免每秒空转 401。
+        if (error instanceof RcsHttpError && error.status === 401) {
+          log(`worker stream: ${errorMessage(error)}; refreshing`)
+          await this.refreshWorker()
+        } else {
+          log(`worker stream: ${errorMessage(error)}`)
+        }
       }
       if (this.abort.signal.aborted) return
       await sleep(RECONNECT_MS)
@@ -490,9 +498,39 @@ export class InProcessBridge implements PluginBridge {
     }
   }
 
+  /** worker 请求的统一换票：401 时重新握手并重试一次；并发请求共用同一次刷新。 */
+  private async withWorker<T>(action: (worker: WorkerSession) => Promise<T>): Promise<T> {
+    try {
+      return await action(this.worker)
+    } catch (error) {
+      if (!(error instanceof RcsHttpError) || error.status !== 401) throw error
+      if (!(await this.refreshWorker())) throw error
+      return action(this.worker)
+    }
+  }
+
+  /** 用用户 key 重新换 worker JWT；失败只记日志，等待下次请求再试。 */
+  private refreshWorker(): Promise<boolean> {
+    this.refreshing ??= this.rcs
+      .openWorker(this.rcsSessionId)
+      .then((worker) => {
+        this.worker = worker
+        log(`worker token refreshed for ${this.rcsSessionId}`)
+        return true
+      })
+      .catch((error: unknown) => {
+        log(`worker refresh: ${errorMessage(error)}`)
+        return false
+      })
+      .finally(() => {
+        this.refreshing = null
+      })
+    return this.refreshing
+  }
+
   private startHeartbeat(): void {
     const beat = (): void => {
-      void this.rcs.heartbeat(this.worker).catch((error: unknown) => {
+      void this.withWorker((worker) => this.rcs.heartbeat(worker)).catch((error: unknown) => {
         log(`heartbeat: ${errorMessage(error)}`)
       })
     }
@@ -506,7 +544,7 @@ export class InProcessBridge implements PluginBridge {
     const payloads = events.map((event) => ({ type: event.type, ...event.payload }))
     this.posting = this.posting.then(async () => {
       try {
-        await this.rcs.postEvents(this.worker, payloads)
+        await this.withWorker((worker) => this.rcs.postEvents(worker, payloads))
       } catch (error) {
         this.notifyGone(error)
         log(`post events: ${errorMessage(error)}`)
@@ -532,7 +570,7 @@ export class InProcessBridge implements PluginBridge {
 
   private async setStatus(status: WorkerStatus, details?: RequiresActionDetails): Promise<void> {
     try {
-      await this.rcs.setWorkerStatus(this.worker, status, details)
+      await this.withWorker((worker) => this.rcs.setWorkerStatus(worker, status, details))
     } catch (error) {
       this.notifyGone(error)
       log(`status ${status}: ${errorMessage(error)}`)

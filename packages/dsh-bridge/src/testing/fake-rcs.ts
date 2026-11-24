@@ -22,11 +22,19 @@ export class FakeRcs {
   /** 非 null 时下一次 poll 返回该状态码并清空。 */
   nextPollStatus: number | null = null
   heartbeats = 0
+  /** bridge 握手（换取 worker JWT）次数；刷新凭据会再握手一次。 */
+  bridgeHandshakes = 0
+  /** 非 null 时常驻地让环境注册返回该状态码，用于验证重注册失败的分支。 */
+  environmentRegisterStatus: number | null = null
+  /** `GET /v1/sessions/:id` 返回的标题。 */
+  sessionTitle: string | undefined = undefined
 
   private readonly workQueue: { id: string; sessionId: string }[] = []
   private workSeq = 0
   /** 让创建会话失败，用来验证「复用成功时不会新建」。 */
   failCreate = false
+  /** worker JWT 是否已过期：过期后所有 worker 请求 401，直到再次握手换票。 */
+  private workerExpired = false
 
   private readonly sessionId: string
   private seq = 0
@@ -54,6 +62,11 @@ export class FakeRcs {
   push(payload: Record<string, unknown>): void {
     this.seq += 1
     this.sendFrame(this.seq, JSON.stringify(payload))
+  }
+
+  /** 模拟 worker JWT 过期：worker 请求一律 401，再次握手后才恢复。 */
+  expireWorker(): void {
+    this.workerExpired = true
   }
 
   /** 往环境工作队列里放一条会话，下一次 poll 会取走。 */
@@ -116,14 +129,21 @@ export class FakeRcs {
       return json({ session: { id: session } })
     }
     if (request.method === 'POST' && path === `/v1/code/sessions/${session}/bridge`) {
+      this.bridgeHandshakes += 1
+      this.workerExpired = false
       return json({ worker_jwt: 'wjwt', api_base_url: this.origin, worker_epoch: 1, expires_in: 3600 })
     }
+    if (request.method === 'GET' && path === `/v1/sessions/${session}`) {
+      return json({ id: session, title: this.sessionTitle ?? null })
+    }
     if (request.method === 'POST' && path === `/v1/code/sessions/${session}/worker/events`) {
+      if (this.workerExpired) return json({ error: 'worker token expired' }, 401)
       const body = await readJson(request)
       if (Array.isArray(body)) for (const event of body) if (isRecord(event)) this.events.push(event)
       return json({ status: 'ok', count: this.events.length })
     }
     if (request.method === 'PUT' && path === `/v1/code/sessions/${session}/worker`) {
+      if (this.workerExpired) return json({ error: 'worker token expired' }, 401)
       const body = await readJson(request)
       if (isRecord(body)) {
         if (typeof body.worker_status === 'string') {
@@ -134,14 +154,19 @@ export class FakeRcs {
       return json({ status: 'ok' })
     }
     if (request.method === 'POST' && path === `/v1/code/sessions/${session}/worker/heartbeat`) {
+      if (this.workerExpired) return json({ error: 'worker token expired' }, 401)
       this.heartbeats += 1
       return json({ status: 'ok' })
     }
     if (request.method === 'GET' && path === `/v1/code/sessions/${session}/worker/events/stream`) {
+      if (this.workerExpired) return json({ error: 'worker token expired' }, 401)
       return new Response(this.openStream(), { headers: { 'content-type': 'text/event-stream' } })
     }
 
     if (request.method === 'POST' && path === '/v1/environments/bridge') {
+      if (this.environmentRegisterStatus !== null) {
+        return json({ error: `register failed ${this.environmentRegisterStatus}` }, this.environmentRegisterStatus)
+      }
       const body = await readJson(request)
       if (isRecord(body)) this.environmentRegistrations.push(body)
       return json({ environment_id: 'env_test', environment_secret: 'env_secret', status: 'active' })

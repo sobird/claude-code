@@ -294,6 +294,22 @@ describe('dsh-rcs-plugin bridge', () => {
     expect(streamDeltas(rcs.events)).toHaveLength(0)
   }, 15000)
 
+  test('a worker 401 refreshes the token and retries the event post', async () => {
+    rcs.expireWorker()
+    ctx.emitSessionEvent(SESSION_ID, {
+      type: 'assistant/message',
+      seq: 1,
+      data: { message: { content: [{ type: 'text', text: 'after expiry' }] } },
+    })
+
+    const forwarded = await waitFor(
+      () => rcs.events.find((event) => event.type === 'assistant'),
+      'event after worker refresh',
+    )
+    expect(forwarded).toMatchObject({ message: { content: [{ type: 'text', text: 'after expiry' }] } })
+    expect(rcs.bridgeHandshakes).toBeGreaterThanOrEqual(2)
+  }, 15000)
+
   test('ignores events from other sessions', async () => {
     ctx.emitSessionEvent('cse_other', {
       type: 'assistant/message',

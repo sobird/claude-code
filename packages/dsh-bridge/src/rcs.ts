@@ -197,7 +197,7 @@ export class RcsClient {
       signal,
     })
     if (!response.ok || !response.body) {
-      throw new Error(`RCS worker stream failed: ${response.status}`)
+      throw new RcsHttpError(`RCS worker stream failed: ${response.status}`, response.status, '')
     }
 
     const reader = response.body.getReader()
