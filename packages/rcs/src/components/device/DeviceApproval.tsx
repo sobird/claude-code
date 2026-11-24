@@ -9,7 +9,7 @@
 
 import { Check, Copy, Laptop } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 
 import { useSettingsApi } from '@/components/settings/use-settings-api'
 import { Button } from '@/components/ui/Button'
@@ -62,9 +62,8 @@ export function DeviceApproval() {
   const installCommand = origin ? `RCS_BASE_URL=${origin} dsh plugin --profile sdk add ${PLUGIN_PATH_PLACEHOLDER}` : ''
   const ready = token !== null
 
-  async function handleLookup(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault()
-    const trimmed = code.trim()
+  async function lookup(raw: string): Promise<void> {
+    const trimmed = raw.trim()
     if (!trimmed || busy || !ready) return
     setBusy('lookup')
     setError(null)
@@ -81,6 +80,26 @@ export function DeviceApproval() {
       setBusy(null)
     }
   }
+
+  async function handleLookup(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault()
+    await lookup(code)
+  }
+
+  // 插件用 `/device#code=XXXX-XXXX` 打开本页：预填并自动查询（只读），批准仍需点击。
+  // fragment 不会发往服务器；读完后立刻从地址栏抹掉，避免留在历史里。
+  const autoLooked = useRef(false)
+  useEffect(() => {
+    if (!ready || autoLooked.current) return
+    autoLooked.current = true
+    const value = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('code')?.trim()
+    if (!value) return
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    setCode(value)
+    void lookup(value)
+    // lookup 每次渲染都会重建；只在登录态就绪时消费一次 hash。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready])
 
   async function handleApprove(): Promise<void> {
     if (busy || !ready) return

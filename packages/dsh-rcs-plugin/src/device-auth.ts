@@ -16,6 +16,8 @@ export interface DeviceGrant {
   deviceCode: string
   userCode: string
   verificationUri: string
+  /** 带 `#code=` 的快捷链接；旧服务端不下发时回退为 `verificationUri`。 */
+  verificationUriComplete: string
   expiresIn: number
   interval: number
 }
@@ -63,10 +65,12 @@ export class DeviceAuthClient {
     const body: unknown = await response.json()
     if (!isRecord(body)) throw new DeviceAuthError(response.status, 'invalid device code response')
 
+    const verificationUri = asText(body.verification_uri)
     return {
       deviceCode: asText(body.device_code),
       userCode: asText(body.user_code),
-      verificationUri: asText(body.verification_uri),
+      verificationUri,
+      verificationUriComplete: asText(body.verification_uri_complete) || verificationUri,
       expiresIn: asInt(body.expires_in, DEFAULT_EXPIRES_IN),
       interval: asInt(body.interval, DEFAULT_INTERVAL),
     }

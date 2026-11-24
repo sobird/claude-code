@@ -8,6 +8,7 @@ const GRANT = {
   device_code: 'device-code-1234567890abcdef',
   user_code: 'ABCD-2345',
   verification_uri: 'https://rcs.example.com/device',
+  verification_uri_complete: 'https://rcs.example.com/device#code=ABCD-2345',
   expires_in: 600,
   interval: 5,
 }
@@ -27,6 +28,7 @@ describe('DeviceAuthClient', () => {
       deviceCode: GRANT.device_code,
       userCode: GRANT.user_code,
       verificationUri: GRANT.verification_uri,
+      verificationUriComplete: GRANT.verification_uri_complete,
       expiresIn: 600,
       interval: 5,
     })
@@ -35,6 +37,16 @@ describe('DeviceAuthClient', () => {
     expect(requests[0].init?.method).toBe('POST')
     expect(requests[0].init?.headers?.authorization).toBeUndefined()
     expect(JSON.parse(requests[0].init?.body ?? '{}')).toEqual({ client: 'dsh-rcs-plugin', hostname: 'mac' })
+  })
+
+  test('falls back to verification_uri when the server omits the complete link', async () => {
+    const { verification_uri_complete: _omitted, ...legacyGrant } = GRANT
+    const fetchImpl: DeviceFetch = async () =>
+      new Response(JSON.stringify(legacyGrant), { status: 200, headers: { 'content-type': 'application/json' } })
+    const client = new DeviceAuthClient({ baseUrl: 'https://rcs.example.com', fetch: fetchImpl })
+
+    const grant = await client.requestCode({ client: 'dsh-rcs-plugin' })
+    expect(grant.verificationUriComplete).toBe(grant.verificationUri)
   })
 
   test('a non-2xx response throws an error carrying the status', async () => {

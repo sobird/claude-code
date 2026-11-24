@@ -174,6 +174,7 @@ export class FakeRcs {
         device_code: 'device-code-1234567890abcdef',
         user_code: 'ABCD-2345',
         verification_uri: 'https://rcs.example.com/device',
+        verification_uri_complete: 'https://rcs.example.com/device#code=ABCD-2345',
         expires_in: 600,
         interval: 5,
       })

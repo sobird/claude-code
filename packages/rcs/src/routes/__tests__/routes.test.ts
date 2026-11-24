@@ -2534,6 +2534,7 @@ describe('device code pairing', () => {
     device_code: string
     user_code: string
     verification_uri: string
+    verification_uri_complete: string
     expires_in: number
     interval: number
   }
@@ -2561,6 +2562,9 @@ describe('device code pairing', () => {
     expect(grant.device_code.length).toBeGreaterThan(20)
     expect(grant.user_code).toMatch(/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/)
     expect(grant.verification_uri).toBe(`${loadConfig().webUrl}/device`)
+    // 短码走 fragment：不发往服务器、不进访问日志/Referer；query 形式会被日志记下来。
+    expect(grant.verification_uri_complete).toBe(`${loadConfig().webUrl}/device#code=${grant.user_code}`)
+    expect(grant.verification_uri_complete).not.toContain('?')
     expect(grant.expires_in).toBe(600)
     expect(grant.interval).toBe(5)
   })

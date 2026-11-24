@@ -67,9 +67,12 @@ export async function runLoginCommand(deps: LoginDeps): Promise<CommandResultLik
     sleep: deps.sleep,
   }).catch((error: unknown) => log(`pairing: ${errorMessage(error)}`))
 
+  // 远程/无头场景用 openUrl 打开的浏览器不在用户身边，链接必须随返回值一起给出。
   return {
     kind: 'success',
-    text: `请在 ${grant.verificationUri} 输入短码 ${grant.userCode} 批准；批准后凭据自动保存，重启 profile 生效`,
+    text:
+      `打开 ${grant.verificationUriComplete}（或 ${grant.verificationUri} 输入短码 ${grant.userCode}）批准；` +
+      '批准后凭据自动保存，重启 profile 生效',
   }
 }
 

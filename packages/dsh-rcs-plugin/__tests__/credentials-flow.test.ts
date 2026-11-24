@@ -11,6 +11,7 @@ const GRANT: DeviceGrant = {
   deviceCode: 'device-code',
   userCode: 'ABCD-2345',
   verificationUri: 'https://rcs.example.com/device',
+  verificationUriComplete: 'https://rcs.example.com/device#code=ABCD-2345',
   expiresIn: 600,
   interval: 5,
 }
@@ -94,8 +95,10 @@ describe('ensureCredentials', () => {
 
     expect(key).toBe('rcs_new')
     expect(calls.requestCode).toBe(1)
-    expect(opened).toEqual(['https://rcs.example.com/device'])
+    // 浏览器打开带 fragment 的完整链接；日志只留 base URL（fragment 不进日志）。
+    expect(opened).toEqual(['https://rcs.example.com/device#code=ABCD-2345'])
     expect(logs.some((line) => line.includes('ABCD-2345'))).toBe(true)
+    expect(logs.some((line) => line.includes('#code='))).toBe(false)
     expect((await readCredentials(dir))?.apiKey).toBe('rcs_new')
     expect((await stat(join(dir, 'credentials.json'))).mode & 0o777).toBe(0o600)
   })

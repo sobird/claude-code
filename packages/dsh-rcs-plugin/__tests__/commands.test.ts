@@ -16,6 +16,7 @@ const GRANT = {
   deviceCode: 'device-code',
   userCode: 'ABCD-2345',
   verificationUri: 'https://rcs.example.com/device',
+  verificationUriComplete: 'https://rcs.example.com/device#code=ABCD-2345',
   expiresIn: 600,
   interval: 5,
 }
@@ -158,7 +159,8 @@ describe('rcs-login / rcs-logout', () => {
 
     expect(result.kind).toBe('success')
     expect(result.text).toContain('ABCD-2345')
-    expect(result.text).toContain('https://rcs.example.com/device')
+    // 远程场景下用户只能从命令结果拿到链接，所以 complete 链接也要回给用户。
+    expect(result.text).toContain('https://rcs.example.com/device#code=ABCD-2345')
     expect(await readCredentials(stateDir)).toBeNull()
     expect(polls).toBeGreaterThanOrEqual(1)
   })

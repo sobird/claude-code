@@ -71,11 +71,14 @@ app.post('/code', async (c) => {
     expiresAt: new Date(now.getTime() + EXPIRES_IN_SECONDS * 1000),
   })
 
+  const webUrl = loadConfig().webUrl
   return c.json(
     {
       device_code: deviceCode,
       user_code: formattedCode,
-      verification_uri: `${loadConfig().webUrl}/device`,
+      verification_uri: `${webUrl}/device`,
+      // 短码放 fragment：不随请求发往服务器，因此不进访问日志/Referer；页面读到后预填。
+      verification_uri_complete: `${webUrl}/device#code=${formattedCode}`,
       expires_in: EXPIRES_IN_SECONDS,
       interval: POLL_INTERVAL_SECONDS,
     },

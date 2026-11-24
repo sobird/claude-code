@@ -52,7 +52,8 @@ export async function requestPairing(client: DeviceAuthLike, notice: PairingNoti
   notice.log(`pairing: open ${grant.verificationUri}`)
   notice.log(`pairing: enter code ${grant.userCode}`)
   try {
-    notice.openUrl(grant.verificationUri)
+    // 浏览器打开带 fragment 的链接（页面预填短码）；日志里仍只留 base URL。
+    notice.openUrl(grant.verificationUriComplete)
   } catch {
     // 打不开浏览器不影响配对：URL 已打印。
   }
