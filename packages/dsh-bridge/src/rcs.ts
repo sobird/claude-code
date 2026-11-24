@@ -122,6 +122,13 @@ export class RcsClient {
     return id
   }
 
+  /** 读取会话元数据；环境派发时用 RCS 标题给 dsh 会话命名。 */
+  async getSession(sessionId: string): Promise<{ title: string | undefined }> {
+    const body = await this.request(`/v1/sessions/${encodeURIComponent(sessionId)}`)
+    const title = asText(body.title).trim()
+    return { title: title || undefined }
+  }
+
   /** 换取 worker JWT；`api_base_url` 可能与创建会话的根地址不同。 */
   async openWorker(sessionId: string): Promise<WorkerSession> {
     const body = await this.request(`/v1/code/sessions/${encodeURIComponent(sessionId)}/bridge`, { method: 'POST' })

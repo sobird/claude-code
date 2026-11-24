@@ -7,7 +7,7 @@ import { FakeRcs, waitFor } from '@sobird/dsh-bridge/testing'
 
 import type { ResolvedConfig } from '../src/config'
 import { startSupervisor } from '../src/supervisor'
-import { FakeContext } from './helpers/fake-ctx'
+import { FakeContext, FakeSessionTitle } from './helpers/fake-ctx'
 
 function envConfig(origin: string): ResolvedConfig {
   return {
@@ -46,6 +46,27 @@ describe('environment supervisor', () => {
       await waitFor(() => (supervisor.bridgeIds().includes('cse_a') ? true : undefined), 'bridge start')
       expect(rcs.acked).toHaveLength(1)
       await waitFor(() => (rcs.statuses.some((entry) => entry.status === 'idle') ? true : undefined), 'idle status')
+    } finally {
+      await supervisor.dispose()
+      rcs.stop()
+    }
+  }, 15000)
+
+  test('a dispatched session adopts the RCS title for dsh naming', async () => {
+    const rcs = new FakeRcs('cse_title')
+    rcs.sessionTitle = 'From RCS'
+    rcs.start()
+    const ctx = new FakeContext()
+    const titles = new FakeSessionTitle()
+    ctx.provide('sessionTitle', titles)
+    const supervisor = await startSupervisor(ctx, envConfig(rcs.origin), { emptyPollDelayMs: 20 })
+    try {
+      rcs.enqueueWork('cse_title')
+      await waitFor(() => (supervisor.bridgeIds().includes('cse_title') ? true : undefined), 'bridge start')
+      rcs.push({ type: 'user', message: { role: 'user', content: 'hello' } })
+
+      const renamed = await waitFor(() => titles.renames[0], 'title rename')
+      expect(renamed).toEqual({ sessionId: 'cse_title', title: 'From RCS' })
     } finally {
       await supervisor.dispose()
       rcs.stop()

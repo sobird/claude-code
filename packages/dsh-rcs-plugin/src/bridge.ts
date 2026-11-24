@@ -62,6 +62,8 @@ type PendingHuman = (resolution: ControlResolution | null) => void
 /** 桥生命周期钩子：`onGone` 在 RCS 返回 404（会话已删）时触发一次。 */
 export interface BridgeHooks {
   onGone?: () => void
+  /** 环境派发时 RCS 侧标题，优先于 `config.sessionTitle` 用作 dsh 会话名。 */
+  sessionTitle?: string
 }
 
 export interface PluginBridge {
@@ -488,7 +490,8 @@ export class InProcessBridge implements PluginBridge {
     }
 
     const sessionTitle = this.ctx.get('sessionTitle')
-    const title = this.config.sessionTitle
+    // RCS 是 id 权威：环境派发时优先采用 RCS 侧标题，回落到配置。
+    const title = this.hooks?.sessionTitle ?? this.config.sessionTitle
     if (title && agent.session !== undefined && isSessionTitle(sessionTitle)) {
       try {
         sessionTitle.rename(agent.session, title)

@@ -171,13 +171,25 @@ class EnvironmentSupervisor implements SessionSupervisor {
     if (this.bridges.has(item.sessionId)) return
     const sidecar = await readSidecar(this.stateDir)
     const agentSessionId = agentIdForRcs(sidecar, item.sessionId) ?? item.sessionId
-    await this.startBridge(item.sessionId, agentSessionId, toWorkerSession(item, this.config.rcsBaseUrl))
+    const title = await this.sessionTitle(item.sessionId)
+    await this.startBridge(item.sessionId, agentSessionId, toWorkerSession(item, this.config.rcsBaseUrl), title)
+  }
+
+  /** 读 RCS 会话标题用于 dsh 命名；失败不影响起桥。 */
+  private async sessionTitle(rcsSessionId: string): Promise<string | undefined> {
+    try {
+      return (await this.rcs.getSession(rcsSessionId)).title
+    } catch (error) {
+      log(`session title ${rcsSessionId}: ${errorMessage(error)}`)
+      return undefined
+    }
   }
 
   private async startBridge(
     rcsSessionId: string,
     agentSessionId: string,
     worker: WorkerSession,
+    sessionTitle?: string,
   ): Promise<PluginBridge | undefined> {
     const existing = this.bridges.get(rcsSessionId)
     if (existing) return existing
@@ -185,6 +197,7 @@ class EnvironmentSupervisor implements SessionSupervisor {
       onGone: () => {
         void this.remove(rcsSessionId)
       },
+      sessionTitle,
     })
     this.bridges.set(rcsSessionId, bridge)
     try {
