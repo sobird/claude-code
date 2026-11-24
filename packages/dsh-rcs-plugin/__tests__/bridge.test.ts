@@ -38,6 +38,9 @@ describe('dsh-rcs-plugin bridge', () => {
     provider: 'test-provider',
     model: 'test-model',
     sessionId: undefined,
+    mode: 'single',
+    environmentId: undefined,
+    maxSessions: 4,
   })
 
   beforeEach(async () => {

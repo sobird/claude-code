@@ -13,6 +13,9 @@ describe('resolveConfig', () => {
       provider: 'deepseek-official',
       model: 'deepseek-v4-flash',
       sessionId: undefined,
+      mode: 'single',
+      environmentId: undefined,
+      maxSessions: 4,
     })
   })
 
@@ -44,6 +47,9 @@ describe('resolveConfig', () => {
       provider: 'custom',
       model: 'custom-model',
       sessionId: 'cse_existing',
+      mode: 'single',
+      environmentId: undefined,
+      maxSessions: 4,
     })
   })
 
@@ -59,5 +65,30 @@ describe('resolveConfig', () => {
 
   test('rejects a missing API key', () => {
     expect(() => resolveConfig({}, {})).toThrow('RCS_API_KEY is required')
+  })
+
+  test('reads environment mode and max sessions from env', () => {
+    expect(resolveConfig({ apiKey: 'k' }, { RCS_BRIDGE_MODE: 'environment', RCS_MAX_SESSIONS: '6' })).toMatchObject({
+      mode: 'environment',
+      maxSessions: 6,
+    })
+  })
+
+  test('config overrides env for mode and max sessions', () => {
+    expect(
+      resolveConfig(
+        { apiKey: 'k', mode: 'environment', maxSessions: 2, environmentId: 'env_cfg' },
+        { RCS_BRIDGE_MODE: 'single', RCS_MAX_SESSIONS: '9', RCS_ENVIRONMENT_ID: 'env_env' },
+      ),
+    ).toMatchObject({ mode: 'environment', maxSessions: 2, environmentId: 'env_cfg' })
+  })
+
+  test('rejects an unknown mode', () => {
+    expect(() => resolveConfig({ apiKey: 'k' }, { RCS_BRIDGE_MODE: 'weird' })).toThrow(/mode/)
+  })
+
+  test('rejects a non-positive max sessions', () => {
+    expect(() => resolveConfig({ apiKey: 'k' }, { RCS_MAX_SESSIONS: '0' })).toThrow(/maxSessions/)
+    expect(() => resolveConfig({ apiKey: 'k' }, { RCS_MAX_SESSIONS: 'abc' })).toThrow(/maxSessions/)
   })
 })
