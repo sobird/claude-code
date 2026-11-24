@@ -68,6 +68,20 @@ describe('environment supervisor', () => {
     }
   }, 15000)
 
+  test('maxSessions changes locally even when re-registering fails', async () => {
+    const rcs = new FakeRcs('cse_c')
+    rcs.start()
+    const supervisor = await startSupervisor(new FakeContext(), envConfig(rcs.origin), { emptyPollDelayMs: 20 })
+    try {
+      rcs.environmentRegisterStatus = 500
+      await supervisor.setMaxSessions(6)
+      expect(supervisor.maxSessions).toBe(6)
+    } finally {
+      await supervisor.dispose()
+      rcs.stop()
+    }
+  }, 15000)
+
   test('a 401 during poll re-registers and keeps working', async () => {
     const rcs = new FakeRcs('cse_b')
     rcs.start()

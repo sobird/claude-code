@@ -27,6 +27,8 @@ const WORKER_TYPE = 'deepseek'
 
 export interface SessionSupervisor {
   readonly environmentId: string
+  /** 当前存活桥上上限（本地立即生效；RCS 侧上报可能滞后）。 */
+  readonly maxSessions: number
   bridgeIds(): readonly string[]
   /** 起一条桥；同一 `rcsSessionId` 幂等，传入 `worker` 时不再握手。 */
   attach(rcsSessionId: string, agentSessionId: string, worker?: WorkerSession): Promise<PluginBridge>
@@ -46,7 +48,7 @@ function log(line: string): void {
 class EnvironmentSupervisor implements SessionSupervisor {
   private environmentIdValue: string
   private environmentSecret: string
-  private maxSessions: number
+  private limit: number
   private readonly stateDir: string
   private readonly bridges = new Map<string, PluginBridge>()
   private readonly abort = new AbortController()
@@ -63,12 +65,16 @@ class EnvironmentSupervisor implements SessionSupervisor {
   ) {
     this.environmentIdValue = registration.environmentId
     this.environmentSecret = registration.environmentSecret
-    this.maxSessions = config.maxSessions
+    this.limit = config.maxSessions
     this.stateDir = stateDir
   }
 
   get environmentId(): string {
     return this.environmentIdValue
+  }
+
+  get maxSessions(): number {
+    return this.limit
   }
 
   bridgeIds(): readonly string[] {
@@ -82,8 +88,8 @@ class EnvironmentSupervisor implements SessionSupervisor {
   async attach(rcsSessionId: string, agentSessionId: string, worker?: WorkerSession): Promise<PluginBridge> {
     const existing = this.bridges.get(rcsSessionId)
     if (existing) return existing
-    if (this.bridges.size >= this.maxSessions) {
-      log(`attach ${rcsSessionId}: over maxSessions=${this.maxSessions}, continuing anyway`)
+    if (this.bridges.size >= this.limit) {
+      log(`attach ${rcsSessionId}: over maxSessions=${this.limit}, continuing anyway`)
     }
     const session = worker ?? (await this.rcs.openWorker(rcsSessionId))
     const bridge = await this.startBridge(rcsSessionId, agentSessionId, session)
@@ -95,9 +101,14 @@ class EnvironmentSupervisor implements SessionSupervisor {
     if (!Number.isInteger(limit) || limit <= 0) {
       throw new Error('maxSessions must be a positive integer')
     }
-    const registration = await this.register(limit)
-    this.maxSessions = limit
-    log(`maxSessions=${limit} (environment ${registration.environmentId})`)
+    // 本地先生效（调高立即恢复 poll、调低立即暂停）；上报失败只记日志。
+    this.limit = limit
+    try {
+      const registration = await this.register(limit)
+      log(`maxSessions=${limit} (environment ${registration.environmentId})`)
+    } catch (error) {
+      log(`maxSessions=${limit} applied locally; report failed: ${errorMessage(error)}`)
+    }
   }
 
   async dispose(): Promise<void> {
@@ -121,7 +132,7 @@ class EnvironmentSupervisor implements SessionSupervisor {
 
   private async pollLoop(): Promise<void> {
     while (!this.abort.signal.aborted) {
-      if (this.bridges.size >= this.maxSessions) {
+      if (this.bridges.size >= this.limit) {
         await this.delay()
         continue
       }
@@ -201,7 +212,7 @@ class EnvironmentSupervisor implements SessionSupervisor {
   private async reRegister(): Promise<void> {
     while (!this.abort.signal.aborted) {
       try {
-        const registration = await this.register(this.maxSessions)
+        const registration = await this.register(this.limit)
         log(`environment re-registered (${registration.environmentId})`)
         return
       } catch (error) {
