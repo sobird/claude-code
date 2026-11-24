@@ -1,5 +1,57 @@
 # Changelog
 
+## [1.2.0](https://github.com/sobird/claude-code/compare/v1.1.0...v1.2.0) (2026-11-24)
+
+
+### Features
+
+* **dsh-bridge:** add rcs environment worker client ([3478249](https://github.com/sobird/claude-code/commit/34782494f0b5b466d51e5cc7f2427b501d17a064))
+* **dsh-bridge:** add typed http errors and environment-aware session creation ([75ab0c6](https://github.com/sobird/claude-code/commit/75ab0c6a1376636b81a96c35334877879920ce4c))
+* **dsh-bridge:** run deepseek-harness sessions over RCS ([d077c5b](https://github.com/sobird/claude-code/commit/d077c5bff16cf58828baf23dd4de530b342ec2f9))
+* **dsh-rcs-plugin:** bridge RCS sessions inside the dsh host ([051f4b4](https://github.com/sobird/claude-code/commit/051f4b45bccdf7db51d98d3ebe89280162b32c67))
+* **dsh-rcs-plugin:** publish the plugin to npm as an independent release ([01c9013](https://github.com/sobird/claude-code/commit/01c9013d99a75c28b2506edb262f3bef2e8b03f1))
+* **dsh-rcs-plugin:** sync dsh UI prompts, stream deltas, and reuse sessions ([c060212](https://github.com/sobird/claude-code/commit/c060212b301baa5d47caf98973ba02fbdab49601))
+* **rcs:** add a production bridge profile for the remote-control launcher ([c978d9f](https://github.com/sobird/claude-code/commit/c978d9ff87cd9b926967dbc97cf7a86f06fdb8a9))
+* **rcs:** let the composer choose steering vs queue-until-turn-end ([0f500f2](https://github.com/sobird/claude-code/commit/0f500f2a5ea7a0c1fbd4b055dadc2c3289415f4a))
+* **rcs:** manage queued messages from a QueueDock ([e830fb2](https://github.com/sobird/claude-code/commit/e830fb21f5a1d5a54ec4845b582cfad479bd9834))
+* **rcs:** pair the dsh plugin with a device code ([c320621](https://github.com/sobird/claude-code/commit/c320621f53b1fd7ea67771e025224e5b46410ac9))
+* **rcs:** prefill the device code from a fragment link ([e20f5a2](https://github.com/sobird/claude-code/commit/e20f5a2e2be26d3740c7283edf08a86d2d51aa7d))
+* **rcs:** require an environment when creating a session and add a dev bridge launcher ([b1b9803](https://github.com/sobird/claude-code/commit/b1b9803e0823bad4e5ffd9f313995d4f31dd334f))
+* **rcs:** type-safe i18n messages and cross-device locale sync ([2a4e060](https://github.com/sobird/claude-code/commit/2a4e060be6f0224487a43db902c916e55d080b20))
+* **upgrade:** add diffbundle subcommand and document pure-logic localization ([2c1ce8a](https://github.com/sobird/claude-code/commit/2c1ce8a003a62eaea3e86414139c9840e691698d))
+* **upgrade:** apply settings-dir and managed-rule changes mid-session ([40a7fb8](https://github.com/sobird/claude-code/commit/40a7fb875d3025298ba2037f8f84a05b83520ede))
+* **upgrade:** generate per-version feature change reports ([9fc6ce9](https://github.com/sobird/claude-code/commit/9fc6ce9ef488b1f64b117e4f92e30facad8332be))
+* **upgrade:** port --thinking-display and align mantle beta routing ([eab2195](https://github.com/sobird/claude-code/commit/eab21959cf7b6e55f53eb2e3557f8e0e9c6d9198))
+* **upgrade:** port --thinking-display and close 2.1.94 R2/R5/R7 ([50e54c2](https://github.com/sobird/claude-code/commit/50e54c2d9e706f9edc88a72e86e9f5fc5303f9b3))
+* **upgrade:** port headless dynamic-section exclusion and Perforce mode ([a4261aa](https://github.com/sobird/claude-code/commit/a4261aa68aaea13b4b442471df72844081eab3bf))
+* **upgrade:** port status line git_worktree and refreshInterval ([9e7f4df](https://github.com/sobird/claude-code/commit/9e7f4df38ea84b09c7e009fd2f38a170ef7e82b4))
+* **upgrade:** port upstream 2.1.92 ([2f6fdad](https://github.com/sobird/claude-code/commit/2f6fdad664bb743294ddb93a02e5a65b455df138))
+* **upgrade:** port upstream 2.1.94 ([002ce2d](https://github.com/sobird/claude-code/commit/002ce2d60c90b74c45adc1c52c289e5b0e7f0fce))
+* **upgrade:** port Vertex setup wizard and the streaming Monitor tool ([eef6891](https://github.com/sobird/claude-code/commit/eef6891dd4c5a209ae4f53d1ec192ad047732946))
+* **upgrade:** reconcile the 2.1.100 ledger and finish 2.1.98 Bash hardening ([652927e](https://github.com/sobird/claude-code/commit/652927ec7f830dc7728e63acf5a1a230a54143b5))
+
+
+### Bug Fixes
+
+* **dsh-rcs-plugin:** name dispatched dsh sessions after the RCS title ([38fad0a](https://github.com/sobird/claude-code/commit/38fad0acc90ac7a39b97851517f6beac2e4a832d))
+* **dsh-rcs-plugin:** refresh expired worker tokens on 401 ([0c6820f](https://github.com/sobird/claude-code/commit/0c6820f82469d796fd40268e2c012963490b1941))
+* **upgrade:** allow /effort max on unknown model ids ([2c7925d](https://github.com/sobird/claude-code/commit/2c7925de9096bbe11f151af91ec955e2349c9b74))
+* **upgrade:** bound Stop-hook transcripts and surface evaluator API errors ([4e675e8](https://github.com/sobird/claude-code/commit/4e675e8c929cc04239b1a0fdc3249b56f3b347cf))
+* **upgrade:** drop Remote Control permission handlers on local resolve ([981d68c](https://github.com/sobird/claude-code/commit/981d68cbffc99cdc8cd888635b0043d70683c580))
+* **upgrade:** flag /dev/tcp redirects and normalize Bash rule whitespace ([895b061](https://github.com/sobird/claude-code/commit/895b061b4566f1ceeaa73ddb6298e8263831cb9b))
+* **upgrade:** isolate subagent cwd and keep untracked-work worktrees ([44676cc](https://github.com/sobird/claude-code/commit/44676cc316c6c9af42d3e3a4c2399ec5437809cc))
+* **upgrade:** keep compound Bash ask/safety prompts in bypass mode ([90667bb](https://github.com/sobird/claude-code/commit/90667bb9f17cb3e9523f0eddac9ef9d989918597))
+* **upgrade:** keep the MCP abort bridge alive across the response body ([66b8c6d](https://github.com/sobird/claude-code/commit/66b8c6dd30f062987a5968ec84da96cf257762a0))
+* **upgrade:** persist non-ant attachments so --resume keeps mid-turn input ([5759cb4](https://github.com/sobird/claude-code/commit/5759cb41afc2da814aa3d9fc93e5771a256e0ff1))
+* **upgrade:** refresh git marketplaces before update and fall back on stalled streams ([cb6ec18](https://github.com/sobird/claude-code/commit/cb6ec18d6641732068ac5f6e482f8d2036b44e88))
+* **upgrade:** render edit diffs from structuredPatch after the transcript cap ([ed3744f](https://github.com/sobird/claude-code/commit/ed3744fc1c7ebee841b80f3ca2dc72fdd7cd315c))
+* **upgrade:** report partial progress when a background subagent fails ([04e94c9](https://github.com/sobird/claude-code/commit/04e94c9620580a7cf8fa8ea186985fca0fd4d7f2))
+* **upgrade:** scope OTEL interaction spans per turn ([cd228dc](https://github.com/sobird/claude-code/commit/cd228dc8b45020cccdf0cf9425d12e6de495ea89))
+* **upgrade:** show hook error stderr first line in transcript ([1e01a22](https://github.com/sobird/claude-code/commit/1e01a22d515c470e67070a70e19336c77735153c))
+* **upgrade:** shrink session transcript from empty hooks and pre-edit copies ([474c6de](https://github.com/sobird/claude-code/commit/474c6deb9b2104ae2f7a6b03ce3109e4bedff4bb))
+* **upgrade:** skip transcript for the compaction fork to stop duplicate MB files ([04b8a2e](https://github.com/sobird/claude-code/commit/04b8a2e8148bfd62fb76e404dc3d2931bd12f47f))
+* **upgrade:** validate grep/rg pattern files (-f) against the working dir ([c5682cb](https://github.com/sobird/claude-code/commit/c5682cb8151c77d42c4adad4a77b118b0d61ae40))
+
 ## [1.1.0](https://github.com/sobird/claude-code/compare/v1.0.0...v1.1.0) (2026-11-21)
 
 
