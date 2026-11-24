@@ -39,6 +39,8 @@ export interface EnvironmentSummary {
   owner_user_id: string | null
   last_poll_at: number | null
   worker_type: string
+  /** 环境注册时声明的并发上限。 */
+  max_sessions: number
   channel_group_id: string | null
   capabilities: Record<string, unknown> | null
 }

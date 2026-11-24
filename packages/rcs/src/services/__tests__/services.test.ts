@@ -539,6 +539,7 @@ describe('Environment Service', () => {
       const result = await registerEnvironment(repos, {
         ownerUserId: TEST_USER_IDS.user1,
         machineName: 'mac1',
+        maxSessions: 5,
         capabilities: { os: 'darwin' },
       })
       const record = await repos.environments.getById(result.environment_id)
@@ -547,6 +548,7 @@ describe('Environment Service', () => {
       expect(response.machine_name).toBe('mac1')
       expect(response.owner_user_id).toBe(TEST_USER_IDS.user1)
       expect(response.last_poll_at).toBeGreaterThan(0)
+      expect(response.max_sessions).toBe(5)
       expect(response.channel_group_id).toBeNull()
       expect(response.capabilities).toEqual({ os: 'darwin' })
     })

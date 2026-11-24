@@ -50,6 +50,14 @@ export function EnvironmentList({ environments }: EnvironmentListProps) {
             typeText = t('environments.deepseek')
             break
         }
+        // 分支/并发上限/最后轮询拼成一行；缺项直接跳过，避免多余分隔符。
+        const metaLine = [
+          environment.branch || '',
+          t('environments.maxSessions', { count: environment.max_sessions }),
+          environment.last_poll_at ? formatEpochSeconds(environment.last_poll_at, locale) : '',
+        ]
+          .filter((part) => part !== '')
+          .join(' · ')
         return (
           <div key={environment.id} className={styles.row}>
             <div className={styles.rowBody}>
@@ -61,11 +69,7 @@ export function EnvironmentList({ environments }: EnvironmentListProps) {
             </div>
             <div className={styles.meta}>
               <StatusBadge status={environment.status} />
-              <div className={styles.metaLine}>
-                {environment.branch || ''}
-                {environment.branch && environment.last_poll_at ? ' · ' : ''}
-                {environment.last_poll_at ? formatEpochSeconds(environment.last_poll_at, locale) : ''}
-              </div>
+              <div className={styles.metaLine}>{metaLine}</div>
             </div>
           </div>
         )

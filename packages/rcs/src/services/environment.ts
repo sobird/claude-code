@@ -43,6 +43,8 @@ export interface EnvironmentResponse {
   owner_user_id: string | null
   last_poll_at: number | null
   worker_type: string
+  /** 该环境注册时声明的并发上限；bridge 类客户端通常保持默认 1。 */
+  max_sessions: number
   channel_group_id: string | null
   capabilities: Record<string, unknown> | null
 }
@@ -62,6 +64,7 @@ export function toEnvironmentResponse(row: EnvironmentRecord): EnvironmentRespon
     owner_user_id: row.ownerUserId,
     last_poll_at: row.lastPollAt ? row.lastPollAt.getTime() / 1000 : null,
     worker_type: row.workerType,
+    max_sessions: row.maxSessions,
     channel_group_id: row.bridgeId,
     capabilities: row.capabilities,
   }
