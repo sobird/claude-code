@@ -4,13 +4,20 @@
   "release-type": "node",
   "include-component-in-tag": false,
   "bootstrap-sha": "8f9661eeca51c3d45821926f65c0d451fa6c6320",
-  "exclude-paths": ["packages/rcs"],
+  "exclude-paths": ["packages/rcs", "packages/dsh-rcs-plugin"],
   "packages": {
     ".": {
       "extra-files": ["bunfig.toml"]
     },
     "packages/rcs": {
       "component": "rcs",
+      "include-component-in-tag": true,
+      "initial-version": "0.1.0",
+      "bump-minor-pre-major": true,
+      "exclude-paths": []
+    },
+    "packages/dsh-rcs-plugin": {
+      "component": "dsh-rcs-plugin",
       "include-component-in-tag": true,
       "initial-version": "0.1.0",
       "bump-minor-pre-major": true,

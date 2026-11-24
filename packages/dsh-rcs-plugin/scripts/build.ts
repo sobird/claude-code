@@ -9,6 +9,8 @@ const result = await Bun.build({
   outdir: resolve(root, 'lib'),
   target: 'node',
   format: 'esm',
+  // 发布产物压缩：与仓库根 CLI 的构建一致。ESM 导出名不受影响。
+  minify: true,
 })
 
 if (!result.success) {

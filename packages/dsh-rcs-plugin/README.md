@@ -11,21 +11,26 @@ RCS 环境，按 RCS Web 的派发起多条会话）。设计见
 
 ## 安装
 
-发布给 dsh 的包必须是**编译后的 ESM JS**（已安装的 dsh CLI 不带 TS loader），所以先构建，
-再把包 checkout 装进 profile：
+发布到 npm 的是**编译后的 ESM JS**（已安装的 dsh CLI 不带 TS loader）：
+
+```bash
+# npm 源；首次会初始化 sdk profile 模板
+dsh plugin --profile sdk add @sobird/dsh-rcs-plugin@0.1.0
+dsh --profile sdk
+```
+
+本地开发则从 checkout 安装（绝对路径指向包目录，链接的是 checkout 本身；改完重新
+`bun run build`，重启 profile 即生效）：
 
 ```bash
 cd packages/dsh-rcs-plugin
 bun run build
-
-# 绝对路径；首次会初始化 sdk profile 模板
 dsh plugin --profile sdk add /abs/path/to/claude-code/packages/dsh-rcs-plugin
 dsh --profile sdk
 ```
 
 启动后插件向 stderr 打印 `[dsh-rcs-plugin] attached to <base> session <cse_...>`，在 RCS 里
-就能看到这条会话。后续更新代码后重新 `bun run build`，重启 profile 即生效（链接的是
-checkout 本身）。
+就能看到这条会话。
 
 首次启动且没有任何凭据时，插件会自动走设备码配对：向 stderr 打印一个短码和
 `<rcsBaseUrl>/device` 链接，打开该链接（未登录会先跳登录）输入短码确认后，插件自动拿到
@@ -180,9 +185,25 @@ bun run e2e
 | `scripts/build.ts`         | Bun.build 打成单个 `lib/index.js`（内联 core，零运行时依赖）        |
 | `plugin-market/`           | 发布到 Discover 的索引样例（npm 源）                                |
 
-## 发布物料
+## 发布
 
-- `bun run build` → `lib/index.js`；`files` 只带 `lib/index.js`、`cordis.patch.yml`、`src`、`README.md`。
+插件独立发布到 npm，版本与仓库里的 CLI、rcs 互不影响：
+
+- 提交用 `feat(dsh-rcs-plugin):` / `fix(dsh-rcs-plugin):` 等 scope；release-please 汇总成
+  独立 release PR，合并后打 `dsh-rcs-plugin-vX.Y.Z` tag。
+- tag 触发 `release.yml` → `publish.yml`：在 tag 上 `npm publish`（`prepublishOnly` 跑
+  `bun run build`），认证走 npm OIDC trusted publishing，自动生成 provenance，无需长期 token。
+- **首次发布需一次性 bootstrap**：包在 npm 上还不存在时 OIDC 不可用。先在本地
+  `packages/dsh-rcs-plugin` 下 `npm login --registry https://registry.npmjs.org/`（仓库
+  `.npmrc` 指向镜像，publishConfig 已锁定 npmjs），手动 `npm publish` 占住 0.1.0；再到
+  npmjs.com 的包设置里把 trusted publisher 配成 repo `sobird/claude-code`、workflow
+  `publish.yml`。
+- 每次发布后同步 `plugin-market/index.json` 里 `versions[0].version` 与 `publishTimestamp`。
+
+发布物料：
+
+- `bun run build` → `lib/index.js`（内联全部依赖）；`files` 只带 `lib/index.js` 与
+  `cordis.patch.yml`，README 由 npm 自动附加。
 - `engines.dsh` 为 `>=0.2.3-alpha.2 <0.3.0`，与快照的 dsh 版本对齐；升级 dsh 时同步调整。
 - `plugin-market/index.json`：`format: 1` 的索引，版本 `source` 为 `npm`。发布后把该文件与
   图标放到任意静态主机，在 dsh 的 Plugins → Discover 里「添加索引源」填它的 URL。

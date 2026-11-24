@@ -21,6 +21,7 @@ jobs:
     outputs:
       cli: ${{ steps.filter.outputs.cli }}
       rcs: ${{ steps.filter.outputs.rcs }}
+      plugin: ${{ steps.filter.outputs.plugin }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -53,6 +54,19 @@ jobs:
               - '.oxlintrc.json'
               - '.oxfmtrc.jsonc'
               - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+            plugin:
+              - 'packages/dsh-rcs-plugin/**'
+              # The plugin's tests and e2e harness import the bridge package.
+              - 'packages/dsh-bridge/**'
+              - 'package.json'
+              - 'bun.lock'
+              - '.bun-version'
+              - '.node-version'
+              - '.oxlintrc.json'
+              - '.oxfmtrc.jsonc'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/publish.yml'
               - '.github/actions/**'
 
   test:
@@ -125,3 +139,31 @@ jobs:
 
       - name: Build
         run: bun run rcs:build
+
+  # The dsh plugin is published to npm independently, so it gets its own gates;
+  # green CI here is what the release pipeline relies on.
+  dsh-rcs-plugin:
+    needs: changes
+    if: needs.changes.outputs.plugin == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up
+        uses: ./.github/actions/setup
+
+      - name: Check formatting
+        run: bun run fmt:check
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Type check
+        run: bun run --filter "@sobird/dsh-rcs-plugin" typecheck
+
+      - name: Test
+        run: bun run --filter "@sobird/dsh-rcs-plugin" test
+
+      - name: Build
+        run: bun run --filter "@sobird/dsh-rcs-plugin" build

@@ -1,11 +1,16 @@
-# Publishes the release artifacts: the CLI to npm and, for an RCS release, the
-# pinned container image the deploy workflow rolls out.
+# Publishes the release artifacts: the CLI to npm, the dsh plugin to npm, and,
+# for an RCS release, the pinned container image the deploy workflow rolls out.
 
 name: Publish
 
 on:
   workflow_call:
     inputs:
+      cli_released:
+        description: Whether this release includes the root CLI package
+        required: false
+        type: boolean
+        default: false
       rcs_released:
         description: Whether this release includes packages/rcs
         required: false
@@ -21,6 +26,16 @@ on:
         required: false
         type: string
         default: ''
+      plugin_released:
+        description: Whether this release includes packages/dsh-rcs-plugin
+        required: false
+        type: boolean
+        default: false
+      plugin_tag:
+        description: dsh plugin git tag, e.g. dsh-rcs-plugin-v0.2.0
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -28,6 +43,7 @@ permissions:
 
 jobs:
   claude-code-npm:
+    if: inputs.cli_released
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -43,6 +59,28 @@ jobs:
         run: bun run build
       - name: Publish to NPM
         run: npm publish ./dist
+
+  # The plugin publishes from its own directory; `prepublishOnly` builds
+  # lib/index.js. Auth is OIDC trusted publishing, so provenance is automatic
+  # and no long-lived npm token is stored. The package name must exist on npm
+  # with this workflow registered as its trusted publisher before the first
+  # automated release — bootstrap it once locally (see the package README).
+  dsh-rcs-plugin-npm:
+    if: inputs.plugin_released
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.plugin_tag }}
+          persist-credentials: false
+
+      - name: Set up
+        uses: ./.github/actions/setup
+
+      - name: Publish to NPM
+        working-directory: packages/dsh-rcs-plugin
+        run: npm publish --access public --provenance
 
   # Builds from the release tag so the image never drifts from the version
   # release-please tagged. Runs only for an RCS release.
