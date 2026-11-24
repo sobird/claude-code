@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 
+import { RcsClient } from '@sobird/dsh-bridge/core'
 import { FakeRcs, waitFor } from '@sobird/dsh-bridge/testing'
 
 import { startPluginBridge, type PluginBridge } from '../src/bridge'
@@ -29,8 +30,8 @@ describe('dsh-rcs-plugin bridge', () => {
   let ctx: FakeContext
   let bridge: PluginBridge
 
-  const config = (): ResolvedConfig => ({
-    rcsBaseUrl: rcs.origin,
+  const config = (origin: string = rcs.origin): ResolvedConfig => ({
+    rcsBaseUrl: origin,
     apiKey: 'test-key',
     workdir: '/tmp/rcs-work',
     sessionTitle: 'integration',
@@ -52,7 +53,7 @@ describe('dsh-rcs-plugin bridge', () => {
   })
 
   test('attaches to a fresh RCS session with heartbeat and idle status', async () => {
-    expect(bridge.sessionId).toBe(SESSION_ID)
+    expect(bridge.rcsSessionId).toBe(SESSION_ID)
     await waitFor(() => (rcs.heartbeats > 0 ? true : undefined), 'first heartbeat')
     await waitFor(() => (rcs.statuses.some((entry) => entry.status === 'idle') ? true : undefined), 'idle status')
   }, 15000)
@@ -132,7 +133,7 @@ describe('dsh-rcs-plugin bridge', () => {
     rcs.failCreate = true
     bridge = await startPluginBridge(ctx, config())
 
-    expect(bridge.sessionId).toBe(SESSION_ID)
+    expect(bridge.rcsSessionId).toBe(SESSION_ID)
     rcs.push({ type: 'user', message: { role: 'user', content: 'after restart' } })
     const resumed = await waitFor(() => ctx.agents.resumes[0], 'agent resume from reused id')
     expect(resumed.resumeSessionId).toBe(SESSION_ID)
@@ -144,7 +145,46 @@ describe('dsh-rcs-plugin bridge', () => {
     bridge = await startPluginBridge(ctx, config())
 
     // FakeRcs 只认自己的会话 id，cse_dead 的 bridge 握手会 404，于是回落到新建。
-    expect(bridge.sessionId).toBe(SESSION_ID)
+    expect(bridge.rcsSessionId).toBe(SESSION_ID)
+  }, 15000)
+
+  test('events route by agent id while posting to the rcs id', async () => {
+    const rcsId = 'cse_rcs'
+    const local = new FakeRcs(rcsId)
+    local.start()
+    const localCtx = new FakeContext()
+    const agentId = 'session-local'
+    const worker = {
+      sessionId: rcsId,
+      apiBaseUrl: local.origin,
+      workerJwt: 'w',
+      workerEpoch: 1,
+      expiresAt: Date.now() + 60_000,
+    }
+    const { InProcessBridge } = await import('../src/bridge')
+    const dual = new InProcessBridge(
+      localCtx,
+      config(local.origin),
+      new RcsClient({ baseUrl: local.origin, apiKey: 'test-key' }),
+      worker,
+      agentId,
+    )
+    await dual.begin()
+    localCtx.agents.live.set(agentId, new FakeAgent(agentId))
+    try {
+      localCtx.emitSessionEvent(agentId, { type: 'turn/end', seq: 9, data: { reason: { kind: 'completed' } } })
+      await waitFor(() => local.events.find((event) => event.type === 'result'), 'result from agent id')
+      localCtx.emitSessionEvent(rcsId, {
+        type: 'assistant/message',
+        seq: 10,
+        data: { message: { content: [{ type: 'text', text: 'x' }] } },
+      })
+      await Bun.sleep(100)
+      expect(local.events.some((event) => event.type === 'assistant')).toBe(false)
+    } finally {
+      await dual.stop()
+      local.stop()
+    }
   }, 15000)
 
   test('session events translate to RCS events in order and finish idle', async () => {

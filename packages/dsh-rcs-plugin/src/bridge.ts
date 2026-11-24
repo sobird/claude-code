@@ -59,7 +59,12 @@ function streamEvent(event: Record<string, unknown>): RcsEvent {
 type PendingHuman = (resolution: ControlResolution | null) => void
 
 export interface PluginBridge {
-  sessionId: string
+  /** RCS 会话 id：上报、心跳与 SSE 都用它。 */
+  readonly rcsSessionId: string
+  /** dsh 侧会话 id：事件过滤与 agent 操作都用它。 */
+  readonly agentSessionId: string
+  /** `rcsSessionId` 的别名，保留给既有调用方。 */
+  readonly sessionId: string
   /** 中止 pump/心跳、收尾挂起卡片并停止 agent。 */
   stop(): Promise<void>
 }
@@ -74,9 +79,12 @@ function log(line: string): void {
 
 /**
  * 一条 RCS 会话在 dsh 进程内的桥接：RCS 入站消息 → `agent.followup`，
- * 会话事件/审批/提问 → RCS。dsh 会话 id 直接复用 `cse_...`。
+ * 会话事件/审批/提问 → RCS。`rcsSessionId` 用于对上上报，`agentSessionId`
+ * 是 dsh 侧身份；环境派发时两者相同，手动同步时 dsh 侧仍是本地会话 id。
  */
-class InProcessBridge implements PluginBridge {
+export class InProcessBridge implements PluginBridge {
+  readonly rcsSessionId: string
+  readonly agentSessionId: string
   readonly sessionId: string
 
   private readonly ctx: PluginContextLike
@@ -102,11 +110,19 @@ class InProcessBridge implements PluginBridge {
   /** 串行化上报，保证 dsh 事件到 RCS 的顺序与产生顺序一致。 */
   private posting: Promise<void> = Promise.resolve()
 
-  constructor(ctx: PluginContextLike, config: ResolvedConfig, rcs: RcsClient, worker: WorkerSession) {
+  constructor(
+    ctx: PluginContextLike,
+    config: ResolvedConfig,
+    rcs: RcsClient,
+    worker: WorkerSession,
+    agentSessionId: string,
+  ) {
     this.ctx = ctx
     this.config = config
     this.rcs = rcs
     this.worker = worker
+    this.rcsSessionId = worker.sessionId
+    this.agentSessionId = agentSessionId
     this.sessionId = worker.sessionId
   }
 
@@ -135,7 +151,7 @@ class InProcessBridge implements PluginBridge {
   }
 
   private onSessionEvent = (session: SessionLike, event: SessionEventLike): void => {
-    if (session.id !== this.sessionId) return
+    if (session.id !== this.agentSessionId) return
     const type = asText(event.type)
     if (type === 'turn/start') this.turnOpen = true
     if (type === 'turn/end') this.turnOpen = false
@@ -164,7 +180,7 @@ class InProcessBridge implements PluginBridge {
 
   /** 把模型增量累积成 RCS 的临时 `stream_event`；最终消息到达前会先 flush。 */
   private onAssistantStream = (payload: AssistantStreamPayloadLike): void => {
-    if (payload.agent?.id !== this.sessionId) return
+    if (payload.agent?.id !== this.agentSessionId) return
     const type = asText(payload.frame?.type)
     if (type === 'start') {
       this.clearStreamBuffer()
@@ -223,7 +239,7 @@ class InProcessBridge implements PluginBridge {
   }
 
   private onAgentStatus = (event: AgentStatusLike): void => {
-    if (event.agent?.id !== this.sessionId) return
+    if (event.agent?.id !== this.agentSessionId) return
     if (this.pendingHuman.size > 0) return
     const status = asText(event.status)
     if (status === 'running') void this.setStatus('running')
@@ -234,10 +250,10 @@ class InProcessBridge implements PluginBridge {
     request: ApprovalRequestLike,
     next: () => Promise<ApprovalOutcomeLike>,
   ): Promise<ApprovalOutcomeLike> => {
-    if (request.agent?.id !== this.sessionId) return next()
+    if (request.agent?.id !== this.agentSessionId) return next()
     const toolName = asText(request.toolName) || 'unknown'
     // 「总是允许」只记在插件内存里：命中后直接放行，不再打扰 RCS。
-    if (this.alwaysAllow.has(`${this.sessionId}:${toolName}`)) return 'allowed-once'
+    if (this.alwaysAllow.has(`${this.agentSessionId}:${toolName}`)) return 'allowed-once'
 
     const requestId = `perm_${randomUUID()}`
     const pending = this.awaitHuman(requestId, request.signal)
@@ -253,7 +269,7 @@ class InProcessBridge implements PluginBridge {
     request: QuestionRequestLike,
     next: () => Promise<QuestionAnswerLike>,
   ): Promise<QuestionAnswerLike> => {
-    if (request.agent?.id !== this.sessionId) return next()
+    if (request.agent?.id !== this.agentSessionId) return next()
     const questions = Array.isArray(request.questions) ? request.questions : []
     const first = isRecord(questions[0]) ? questions[0] : null
     const intent = isRecord(first?.intent) ? first.intent : null
@@ -274,7 +290,7 @@ class InProcessBridge implements PluginBridge {
       for (const item of Array.isArray(rule.rules) ? rule.rules : []) {
         if (!isRecord(item)) continue
         const toolName = asText(item.toolName)
-        if (toolName) this.alwaysAllow.add(`${this.sessionId}:${toolName}`)
+        if (toolName) this.alwaysAllow.add(`${this.agentSessionId}:${toolName}`)
       }
     }
   }
@@ -401,13 +417,13 @@ class InProcessBridge implements PluginBridge {
 
   /** 优先用已创建的 agent；插件启动时不建 agent，停止/中断时要回落到服务里查。 */
   private currentAgent(): AgentLike | null {
-    const agent = this.agent ?? this.ctx.agents.get(this.sessionId) ?? null
+    const agent = this.agent ?? this.ctx.agents.get(this.agentSessionId) ?? null
     if (agent) this.agent = agent
     return agent
   }
 
   private ensureAgent(): Promise<AgentLike> {
-    const existing = this.ctx.agents.get(this.sessionId)
+    const existing = this.ctx.agents.get(this.agentSessionId)
     if (existing) {
       this.agent = existing
       return Promise.resolve(existing)
@@ -422,14 +438,14 @@ class InProcessBridge implements PluginBridge {
     const agentOptions = { provider: this.config.provider, model: this.config.model }
     // 会话 id 就是身份：有落盘记录就恢复（重启复用），否则新建。
     const persistence = this.ctx.get('sessionPersistence')
-    if (isSessionPersistence(persistence) && (await persistence.stat(this.sessionId))) {
-      const handle = await this.ctx.agents.resume({ resumeSessionId: this.sessionId, agentOptions })
+    if (isSessionPersistence(persistence) && (await persistence.stat(this.agentSessionId))) {
+      const handle = await this.ctx.agents.resume({ resumeSessionId: this.agentSessionId, agentOptions })
       this.agent = handle.agent
       await this.registerSession(handle.agent)
       return handle.agent
     }
     const handle = await this.ctx.agents.create({
-      sessionId: this.sessionId,
+      sessionId: this.agentSessionId,
       meta: { cwd: this.config.workdir },
       agentOptions,
     })
@@ -447,7 +463,7 @@ class InProcessBridge implements PluginBridge {
     if (isWorkspaceRegistry(registry)) {
       try {
         const workspace = await registry.create(this.config.workdir)
-        await workspace.attachSession(this.sessionId)
+        await workspace.attachSession(this.agentSessionId)
       } catch (error) {
         log(`workspace attach: ${errorMessage(error)}`)
       }
@@ -559,7 +575,7 @@ export async function startPluginBridge(ctx: PluginContextLike, config: Resolved
   sessionId ??= await rcs.createSession(config.sessionTitle)
   worker ??= await rcs.openWorker(sessionId)
   log(`attached to ${config.rcsBaseUrl} session ${sessionId} (${origin})`)
-  const bridge = new InProcessBridge(ctx, config, rcs, worker)
+  const bridge = new InProcessBridge(ctx, config, rcs, worker, worker.sessionId)
   await bridge.begin()
   return bridge
 }
