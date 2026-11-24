@@ -136,7 +136,34 @@ describe('rcs-max-sessions', () => {
 })
 
 describe('rcs-login / rcs-logout', () => {
-  test('login pairs with force and writes the credential file', async () => {
+  // Web UI 只显示命令返回值，配对码必须立即回给用户；批准后的落盘在后台完成。
+  test('login hands the code back immediately without waiting for approval', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'rcs-login-'))
+    let polls = 0
+    const result = await runLoginCommand({
+      config: envConfig('https://rcs.example.com'),
+      stateDir,
+      openUrl: () => {},
+      deviceClient: {
+        async requestCode() {
+          return GRANT
+        },
+        pollToken() {
+          polls += 1
+          // 永不 resolve：模拟用户还没批准，命令也必须先返回。
+          return new Promise<never>(() => {})
+        },
+      },
+    })
+
+    expect(result.kind).toBe('success')
+    expect(result.text).toContain('ABCD-2345')
+    expect(result.text).toContain('https://rcs.example.com/device')
+    expect(await readCredentials(stateDir)).toBeNull()
+    expect(polls).toBeGreaterThanOrEqual(1)
+  })
+
+  test('login keeps polling in the background and writes the credential file', async () => {
     const stateDir = await mkdtemp(join(tmpdir(), 'rcs-login-'))
     const result = await runLoginCommand({
       config: envConfig('https://rcs.example.com'),
@@ -151,10 +178,15 @@ describe('rcs-login / rcs-logout', () => {
         },
       },
     })
-
     expect(result.kind).toBe('success')
-    expect(result.text).toContain('重启')
-    expect((await readCredentials(stateDir))?.apiKey).toBe('rcs_login')
+
+    let saved = await readCredentials(stateDir)
+    const deadline = Date.now() + 2000
+    while (!saved && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      saved = await readCredentials(stateDir)
+    }
+    expect(saved?.apiKey).toBe('rcs_login')
   })
 
   test('login surfaces failures as an error result', async () => {

@@ -43,6 +43,11 @@ if (tls) {
   process.env.RCS_BASE_URL ||= tls.origin
 }
 
+// Pairing links (`<webUrl>/device`) point at the UI. In dev the UI and gateway
+// are on different ports, so without this they would fall back to the gateway
+// origin and the short code page would 404.
+process.env.RCS_WEB_URL ||= `${uiProtocol}://localhost:${UI_PORT}`
+
 const webCmd = ['bunx', 'next', 'dev', '--port', String(UI_PORT)]
 if (tls) {
   webCmd.push('--experimental-https', '--experimental-https-key', tls.key, '--experimental-https-cert', tls.cert)

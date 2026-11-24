@@ -35,6 +35,63 @@ function defaultSleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+export interface PairingNotice {
+  openUrl: (url: string) => void
+  log: (line: string) => void
+}
+
+export interface PairingWaitOptions {
+  log?: (line: string) => void
+  sleep?: (ms: number) => Promise<void>
+  now?: () => number
+}
+
+/** 申请设备码并把链接/短码告诉用户；返回 grant，批准由 `awaitPairing` 等待。 */
+export async function requestPairing(client: DeviceAuthLike, notice: PairingNotice): Promise<DeviceGrant> {
+  const grant = await client.requestCode({ client: CLIENT_NAME, hostname: osHostname() })
+  notice.log(`pairing: open ${grant.verificationUri}`)
+  notice.log(`pairing: enter code ${grant.userCode}`)
+  try {
+    notice.openUrl(grant.verificationUri)
+  } catch {
+    // 打不开浏览器不影响配对：URL 已打印。
+  }
+  return grant
+}
+
+/** 轮询到批准后落盘并返回 key；过期或超出 grant 有效期时抛出。 */
+export async function awaitPairing(
+  client: DeviceAuthLike,
+  stateDir: string,
+  rcsBaseUrl: string,
+  grant: DeviceGrant,
+  options: PairingWaitOptions = {},
+): Promise<string> {
+  const now = options.now ?? Date.now
+  const sleep = options.sleep ?? defaultSleep
+  const deadline = now() + grant.expiresIn * 1000
+
+  while (now() < deadline) {
+    const result = await client.pollToken(grant.deviceCode)
+    if (result.status === 'approved') {
+      await writeCredentials(stateDir, {
+        version: 1,
+        rcsBaseUrl: stripTrailingSlash(rcsBaseUrl),
+        apiKey: result.apiKey,
+        createdAt: new Date(now()).toISOString(),
+      })
+      options.log?.('pairing: paired')
+      return result.apiKey
+    }
+    if (result.status === 'expired') {
+      throw new Error('rcs-bridge: pairing code expired — run /rcs-login to try again')
+    }
+    await sleep(grant.interval * 1000)
+  }
+
+  throw new Error('rcs-bridge: pairing timed out — run /rcs-login to try again')
+}
+
 /** 返回可用的 API key：文件命中、批准后落盘，或超时抛出。 */
 export async function ensureCredentials(
   connection: { rcsBaseUrl: string },
@@ -47,36 +104,6 @@ export async function ensureCredentials(
     if (stored && stripTrailingSlash(stored.rcsBaseUrl) === baseUrl) return stored.apiKey
   }
 
-  const grant = await options.client.requestCode({ client: CLIENT_NAME, hostname: osHostname() })
-  options.log(`pairing: open ${grant.verificationUri}`)
-  options.log(`pairing: enter code ${grant.userCode}`)
-  try {
-    options.openUrl(grant.verificationUri)
-  } catch {
-    // 打不开浏览器不影响配对：URL 已打印。
-  }
-
-  const now = options.now ?? Date.now
-  const sleep = options.sleep ?? defaultSleep
-  const deadline = now() + grant.expiresIn * 1000
-
-  while (now() < deadline) {
-    const result = await options.client.pollToken(grant.deviceCode)
-    if (result.status === 'approved') {
-      await writeCredentials(options.stateDir, {
-        version: 1,
-        rcsBaseUrl: baseUrl,
-        apiKey: result.apiKey,
-        createdAt: new Date(now()).toISOString(),
-      })
-      options.log('pairing: paired')
-      return result.apiKey
-    }
-    if (result.status === 'expired') {
-      throw new Error('rcs-bridge: pairing code expired — run /rcs-login to try again')
-    }
-    await sleep(grant.interval * 1000)
-  }
-
-  throw new Error('rcs-bridge: pairing timed out — run /rcs-login to try again')
+  const grant = await requestPairing(options.client, options)
+  return awaitPairing(options.client, options.stateDir, baseUrl, grant, options)
 }

@@ -2,8 +2,8 @@ import { errorMessage, type RcsClient } from '@sobird/dsh-bridge/core'
 
 import type { ResolvedConfig } from './config'
 import { clearCredentials } from './credentials'
-import { ensureCredentials, type DeviceAuthLike } from './credentials-flow'
-import { DeviceAuthClient } from './device-auth'
+import { awaitPairing, requestPairing, type DeviceAuthLike } from './credentials-flow'
+import { DeviceAuthClient, type DeviceGrant } from './device-auth'
 import { bridgeStateDir } from './environment-state'
 import { openBrowser } from './open-browser'
 import type { SessionSupervisor } from './supervisor'
@@ -43,24 +43,33 @@ export interface LoginDeps {
   sleep?: (ms: number) => Promise<void>
 }
 
-/** `/rcs-login`：忽略已存凭据，重新配对并覆盖文件（运行中的客户端要重启才换 key）。 */
+/**
+ * `/rcs-login`：忽略已存凭据重新配对。命令结果气泡只显示返回值，所以短码必须立即
+ * 回给用户（Web UI 看不到 stderr）；批准后的轮询与落盘在后台继续，失败只记 stderr。
+ */
 export async function runLoginCommand(deps: LoginDeps): Promise<CommandResultLike> {
+  const stateDir = deps.stateDir ?? bridgeStateDir()
+  const log = (line: string): void => {
+    process.stderr.write(`[dsh-rcs-plugin] ${line}\n`)
+  }
+  const client = deps.deviceClient ?? new DeviceAuthClient({ baseUrl: deps.config.rcsBaseUrl })
+
+  let grant: DeviceGrant
   try {
-    await ensureCredentials(
-      { rcsBaseUrl: deps.config.rcsBaseUrl },
-      {
-        stateDir: deps.stateDir ?? bridgeStateDir(),
-        client: deps.deviceClient ?? new DeviceAuthClient({ baseUrl: deps.config.rcsBaseUrl }),
-        openUrl: deps.openUrl ?? openBrowser,
-        log: (line) => process.stderr.write(`[dsh-rcs-plugin] ${line}\n`),
-        force: true,
-        now: deps.now,
-        sleep: deps.sleep,
-      },
-    )
-    return { kind: 'success', text: '已配对，重启 profile 后生效' }
+    grant = await requestPairing(client, { openUrl: deps.openUrl ?? openBrowser, log })
   } catch (error) {
     return { kind: 'error', text: `配对失败：${errorMessage(error)}` }
+  }
+
+  void awaitPairing(client, stateDir, deps.config.rcsBaseUrl, grant, {
+    log,
+    now: deps.now,
+    sleep: deps.sleep,
+  }).catch((error: unknown) => log(`pairing: ${errorMessage(error)}`))
+
+  return {
+    kind: 'success',
+    text: `请在 ${grant.verificationUri} 输入短码 ${grant.userCode} 批准；批准后凭据自动保存，重启 profile 生效`,
   }
 }
 
