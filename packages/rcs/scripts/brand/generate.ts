@@ -70,7 +70,6 @@ interface IconOptions {
   rounded?: boolean
   contentScale?: number
   withBg?: boolean
-  simplified?: boolean
   bg?: string
   fg?: string
 }
@@ -163,8 +162,8 @@ function placeText(
   return `<g transform="translate(${n(tx)} ${n(ty)}) scale(${n(scale)} ${n(-scale)})"><path d="${run.d}" fill="${color}"/></g>`
 }
 
-function mark(fg: string, contentScale: number, simplified: boolean): string {
-  const dots = simplified ? '' : DOTS.map(({ cx, cy }) => `<circle cx="${cx}" cy="${cy}" r="3" fill="${fg}"/>`).join('')
+function mark(fg: string, contentScale: number): string {
+  const dots = DOTS.map(({ cx, cy }) => `<circle cx="${cx}" cy="${cy}" r="3" fill="${fg}"/>`).join('')
   return `<g transform="translate(32 32) scale(${contentScale}) translate(-32 -32)">
     <path d="${CHEVRON}" fill="none" stroke="${fg}" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}
@@ -173,11 +172,11 @@ function mark(fg: string, contentScale: number, simplified: boolean): string {
 }
 
 function iconSvg(size: number, options: IconOptions = {}): string {
-  const { rounded = true, contentScale = 1, withBg = true, simplified = false, bg = BRAND, fg = CREAM } = options
+  const { rounded = true, contentScale = 1, withBg = true, bg = BRAND, fg = CREAM } = options
   const tile = withBg
     ? `<rect width="64" height="64"${rounded ? ` rx="${n(15 * contentScale)}"` : ''} fill="${bg}"/>`
     : ''
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 64 64">${tile}${mark(fg, contentScale, simplified)}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 64 64">${tile}${mark(fg, contentScale)}</svg>`
 }
 
 async function render(svg: string, relative: string, background?: string): Promise<void> {
@@ -229,7 +228,7 @@ function splashSvg(width: number, height: number, dpr: number, font: Font, name:
   const top = Math.floor((height - (iconSize + gap + textHeight)) / 2)
   const icon = `<g transform="translate(${n((width - iconSize) / 2)} ${top}) scale(${n(iconSize / 64)})">
     <rect width="64" height="64" rx="15" fill="${BRAND}"/>
-    ${mark(CREAM, 1, false)}
+    ${mark(CREAM, 1)}
   </g>`
   const label = placeText(name, font, nameSize, INK, {
     x: width / 2,
@@ -266,7 +265,7 @@ function ogSvg(wordFont: Font, word: Outline, uiFont: Font, tagline: Outline): s
   </g>`
   const icon = `<g transform="translate(96 190) scale(${n(112 / 64)})">
     <rect width="64" height="64" rx="15" fill="${BRAND}"/>
-    ${mark(CREAM, 1, false)}
+    ${mark(CREAM, 1)}
   </g>`
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
     <rect width="1200" height="630" fill="${CREAM}"/>
@@ -292,12 +291,23 @@ async function main(): Promise<void> {
   await writeFile(
     path.join(ROOT, 'public/favicon.ico'),
     ico([
-      { size: 16, data: await png(16, { simplified: true }) },
+      { size: 16, data: await png(16) },
       { size: 32, data: await png(32) },
       { size: 48, data: await png(48) },
     ]),
   )
   console.log('wrote public/favicon.ico')
+
+  await writeFile(
+    path.join(ROOT, 'public/favicon.svg'),
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="rcsFaviconTitle">
+  <title id="rcsFaviconTitle">Sobird</title>
+  <rect width="64" height="64" rx="15" fill="${BRAND}"/>
+  ${mark(CREAM, 1)}
+</svg>
+`,
+  )
+  console.log('wrote public/favicon.svg')
 
   for (const [width, height, dpr] of DEVICES) {
     await render(
