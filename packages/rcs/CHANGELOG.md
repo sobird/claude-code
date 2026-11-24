@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.2.0](https://github.com/sobird/claude-code/compare/rcs-v0.1.0...rcs-v0.2.0) (2026-11-24)
+
+
+### Features
+
+* **dsh-rcs-plugin:** publish the plugin to npm as an independent release ([01c9013](https://github.com/sobird/claude-code/commit/01c9013d99a75c28b2506edb262f3bef2e8b03f1))
+* **dsh-rcs-plugin:** show the pairing code in the /rcs-login result ([e563ebe](https://github.com/sobird/claude-code/commit/e563ebee8150da066909663d19dfdf5da7bf9c95))
+* **rcs:** add a production bridge profile for the remote-control launcher ([c978d9f](https://github.com/sobird/claude-code/commit/c978d9ff87cd9b926967dbc97cf7a86f06fdb8a9))
+* **rcs:** add a stand-alone demo console design study ([45c6342](https://github.com/sobird/claude-code/commit/45c634247942dd988fac73840267dbbf105cdf32))
+* **rcs:** add cards for skill and message tools ([2586f0c](https://github.com/sobird/claude-code/commit/2586f0ced7c60f475f372aa9dde6c9e1d23dacda))
+* **rcs:** archive sessions from the web UI with an activity guard ([cf240d9](https://github.com/sobird/claude-code/commit/cf240d90a499804e0ee309db67abb773ceba1b20))
+* **rcs:** break token usage down in a header popover ([80bf58a](https://github.com/sobird/claude-code/commit/80bf58a1bbb349bf1dca92f32ecb7f870bc2ec53))
+* **rcs:** cap in-chat diffs and make folded read lines searchable ([312c0f4](https://github.com/sobird/claude-code/commit/312c0f4768969df9ef3649d25c636edb01745a3b))
+* **rcs:** collapse long tool output and add todo/question card views ([e5a0273](https://github.com/sobird/claude-code/commit/e5a0273e94bbdf498ced0d7c9e0c8015cbeb8768))
+* **rcs:** collapse the archived section on the dashboard ([ee5c969](https://github.com/sobird/claude-code/commit/ee5c969c2710a6c966279b466d92b2786b80d7ce))
+* **rcs:** feed structured tool results into search and web cards ([d7872da](https://github.com/sobird/claude-code/commit/d7872dac6902681d0597f826a6f895d415ba0255))
+* **rcs:** feed the demo console from live gateway data ([2534507](https://github.com/sobird/claude-code/commit/2534507629cd86e9171937e9f183181f07911bb9))
+* **rcs:** give Agent tool calls a dedicated card ([09e7eab](https://github.com/sobird/claude-code/commit/09e7eabd8b7cdd6816ee8ff6d137767f7ed676ed))
+* **rcs:** give background task tools a dedicated card ([60f1f1a](https://github.com/sobird/claude-code/commit/60f1f1a0448fc751344c3badb4675a1f65676821))
+* **rcs:** give MCP tools a dedicated card ([fa48e79](https://github.com/sobird/claude-code/commit/fa48e79c1d6dc03027a5d4f72e379536b7285f8f))
+* **rcs:** guard archiving with session activity and optional stop ([c78350f](https://github.com/sobird/claude-code/commit/c78350f9db6f2aa8f0e467acab7e20dbcbbb0560))
+* **rcs:** let the composer choose steering vs queue-until-turn-end ([0f500f2](https://github.com/sobird/claude-code/commit/0f500f2a5ea7a0c1fbd4b055dadc2c3289415f4a))
+* **rcs:** manage queued messages from a QueueDock ([e830fb2](https://github.com/sobird/claude-code/commit/e830fb21f5a1d5a54ec4845b582cfad479bd9834))
+* **rcs:** mark sessions read and surface an attention badge ([4626d15](https://github.com/sobird/claude-code/commit/4626d152c2eff6592936035c6db776157d35df39))
+* **rcs:** mirror the attention badge on the desktop dashboard button ([d65026f](https://github.com/sobird/claude-code/commit/d65026faa07edd84cde5bc8e16337b3ab72dc10d))
+* **rcs:** pair the dsh plugin with a device code ([c320621](https://github.com/sobird/claude-code/commit/c320621f53b1fd7ea67771e025224e5b46410ac9))
+* **rcs:** polish tool card summaries and e2e coverage ([368582e](https://github.com/sobird/claude-code/commit/368582ef0b5de6e5e895f8650c67868f7f189445))
+* **rcs:** prefill the device code from a fragment link ([e20f5a2](https://github.com/sobird/claude-code/commit/e20f5a2e2be26d3740c7283edf08a86d2d51aa7d))
+* **rcs:** preview tool-result images and label tool card states ([e620512](https://github.com/sobird/claude-code/commit/e62051211823b75370ff70160ac18b7e3f40778f))
+* **rcs:** render Task tool calls as structured cards ([23fcbbf](https://github.com/sobird/claude-code/commit/23fcbbf4fecb3a0e9ba624787b51fc5a8f68de77))
+* **rcs:** render tool calls with dedicated card views ([03d330f](https://github.com/sobird/claude-code/commit/03d330fccec291d12ebc51e971a2d678c879b0f2))
+* **rcs:** require an environment when creating a session and add a dev bridge launcher ([b1b9803](https://github.com/sobird/claude-code/commit/b1b9803e0823bad4e5ffd9f313995d4f31dd334f))
+* **rcs:** restore archived sessions from the web UI ([d8e60f3](https://github.com/sobird/claude-code/commit/d8e60f3cbbc0c9cc7dbd536ebf5ea0f71c07ca9a))
+* **rcs:** show each environment's concurrent session limit ([3616f55](https://github.com/sobird/claude-code/commit/3616f555bc11b1db5edcf7b35a5353e4a1cff4c0))
+* **rcs:** show TodoWrite deltas, question details, and file previews ([72a856f](https://github.com/sobird/claude-code/commit/72a856fdf871eb06a0817fc0f0076762dde3140e))
+* **rcs:** summarize each turn with tool and error counts ([96287e6](https://github.com/sobird/claude-code/commit/96287e68a064241b1e82ce54e3482f43ddcc83c7))
+* **rcs:** surface awaiting and unread state in the session list ([d8ddd0d](https://github.com/sobird/claude-code/commit/d8ddd0db656f0bc26c61e6a02be0718430ca8c2c))
+* **rcs:** surface background/timeout runs, input size, and Read line numbers ([27c4601](https://github.com/sobird/claude-code/commit/27c4601a2dea7c6e008aa2f67519ec88b9ff0a34))
+* **rcs:** type-safe i18n messages and cross-device locale sync ([2a4e060](https://github.com/sobird/claude-code/commit/2a4e060be6f0224487a43db902c916e55d080b20))
+
+
+### Bug Fixes
+
+* **rcs:** keep the three dots in the favicon at every size ([d4b4b00](https://github.com/sobird/claude-code/commit/d4b4b0064b75b87d9fdd59cf5e301bcad40e0694))
+* **rcs:** label deepseek environments instead of showing Claude Code ([204bcdf](https://github.com/sobird/claude-code/commit/204bcdf93ea6c56470863f5b619981aa8da70071))
+* **rcs:** stop environments flickering out of the web list ([87c523a](https://github.com/sobird/claude-code/commit/87c523a702d21918ded3538f989934a9ddf65bc4))
+* **rcs:** trap focus inside the file preview dialog ([daaab8a](https://github.com/sobird/claude-code/commit/daaab8a4bbb19124584ef7e02bc0499c1b4830c1))
+
+
+### Performance Improvements
+
+* **rcs:** fold durable events incrementally and reveal older items in smaller steps ([6b550b5](https://github.com/sobird/claude-code/commit/6b550b5f2165f776bf44a69460cef511ac6136b1))
+* **rcs:** memoize message rows and skip redundant history paging ([6c9ebc8](https://github.com/sobird/claude-code/commit/6c9ebc847a3e309e5883b13220528795deb3417d))
+
 ## 0.1.0 (2026-11-21)
 
 
