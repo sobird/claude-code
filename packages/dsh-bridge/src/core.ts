@@ -1,6 +1,8 @@
 /** 独立桥与 dsh 插件共用的纯逻辑入口：RCS 客户端、事件/审批翻译与守卫。 */
 export { RcsClient, RcsHttpError } from './rcs'
 export type { RequiresActionDetails, WorkerFrame, WorkerSession, WorkerStatus } from './rcs'
+export { RcsEnvironmentClient, parseWorkSecret, toWorkerSession } from './environment'
+export type { EnvironmentRegistration, WorkItem } from './environment'
 export {
   allowRulesOf,
   approvalOutcome,

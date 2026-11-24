@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer'
+
 import { isRecord } from '../util'
 
 /**
@@ -11,7 +13,18 @@ export class FakeRcs {
   readonly createdSessions: Record<string, unknown>[] = []
   /** `PUT /worker` 收到的 `external_metadata`。 */
   readonly externalMetadata: Record<string, unknown>[] = []
+  /** 环境注册请求体。 */
+  readonly environmentRegistrations: Record<string, unknown>[] = []
+  readonly acked: string[] = []
+  readonly stopped: string[] = []
+  readonly reconnected: string[] = []
+  readonly deregistered: string[] = []
+  /** 非 null 时下一次 poll 返回该状态码并清空。 */
+  nextPollStatus: number | null = null
   heartbeats = 0
+
+  private readonly workQueue: { id: string; sessionId: string }[] = []
+  private workSeq = 0
   /** 让创建会话失败，用来验证「复用成功时不会新建」。 */
   failCreate = false
 
@@ -41,6 +54,12 @@ export class FakeRcs {
   push(payload: Record<string, unknown>): void {
     this.seq += 1
     this.sendFrame(this.seq, JSON.stringify(payload))
+  }
+
+  /** 往环境工作队列里放一条会话，下一次 poll 会取走。 */
+  enqueueWork(sessionId: string): void {
+    this.workSeq += 1
+    this.workQueue.push({ id: `work_${this.workSeq}`, sessionId })
   }
 
   /** 以真实网关的信封形状推帧：`{event_id, sequence_num, event_type, payload}`。 */
@@ -120,6 +139,58 @@ export class FakeRcs {
     }
     if (request.method === 'GET' && path === `/v1/code/sessions/${session}/worker/events/stream`) {
       return new Response(this.openStream(), { headers: { 'content-type': 'text/event-stream' } })
+    }
+
+    if (request.method === 'POST' && path === '/v1/environments/bridge') {
+      const body = await readJson(request)
+      if (isRecord(body)) this.environmentRegistrations.push(body)
+      return json({ environment_id: 'env_test', environment_secret: 'env_secret', status: 'active' })
+    }
+    const deregister = path.match(/^\/v1\/environments\/bridge\/([^/]+)$/)
+    if (request.method === 'DELETE' && deregister) {
+      this.deregistered.push(deregister[1])
+      return json({ status: 'ok' })
+    }
+    const reconnect = path.match(/^\/v1\/environments\/([^/]+)\/bridge\/reconnect$/)
+    if (request.method === 'POST' && reconnect) {
+      this.reconnected.push(reconnect[1])
+      return json({ status: 'ok' })
+    }
+    const poll = path.match(/^\/v1\/environments\/([^/]+)\/work\/poll$/)
+    if (request.method === 'GET' && poll) {
+      if (this.nextPollStatus !== null) {
+        const status = this.nextPollStatus
+        this.nextPollStatus = null
+        return json({ error: `poll failed ${status}` }, status)
+      }
+      const next = this.workQueue.shift()
+      if (!next) return new Response(null, { status: 204 })
+      const secret = Buffer.from(
+        JSON.stringify({
+          version: 1,
+          session_ingress_token: 'work-jwt',
+          api_base_url: this.origin,
+          sources: [],
+          auth: [],
+          use_code_sessions: false,
+        }),
+      ).toString('base64url')
+      return json({
+        id: next.id,
+        type: 'work',
+        environment_id: poll[1],
+        state: 'dispatched',
+        data: { type: 'session', id: next.sessionId },
+        secret,
+        created_at: new Date().toISOString(),
+      })
+    }
+    const workAction = path.match(/^\/v1\/environments\/([^/]+)\/work\/([^/]+)\/(ack|stop|heartbeat)$/)
+    if (request.method === 'POST' && workAction) {
+      const [, , workId, action] = workAction
+      if (action === 'ack') this.acked.push(workId)
+      if (action === 'stop') this.stopped.push(workId)
+      return json({ status: 'ok', lease_extended: true, state: 'dispatched', ttl_seconds: 300 })
     }
     return json({ error: `unhandled ${request.method} ${path}` }, 404)
   }
