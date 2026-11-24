@@ -3,6 +3,7 @@ import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import { RcsClient } from '@sobird/dsh-bridge/core'
 import { FakeRcs, waitFor } from '@sobird/dsh-bridge/testing'
 
 import { registerCommands, runMaxSessionsCommand } from '../src/commands'
@@ -73,7 +74,11 @@ describe('rcs-max-sessions', () => {
       },
     })
 
-    registerCommands(ctx, { supervisor, config: envConfig(rcs.origin) })
+    registerCommands(ctx, {
+      supervisor,
+      config: envConfig(rcs.origin),
+      rcs: new RcsClient({ baseUrl: rcs.origin, apiKey: 'test-key' }),
+    })
 
     expect(definitions[0]?.name).toBe('rcs-max-sessions')
     const result = await definitions[0]?.handler({ rawInput: '3' })

@@ -119,7 +119,7 @@ export function isSessionTitle(value: unknown): value is SessionTitleLike {
 }
 
 /** dsh 会话列表里插件用到的字段；列表与 dsh Web UI 同源。 */
-export type SessionRecordLike = { header?: { id?: unknown; cwd?: unknown } }
+export type SessionRecordLike = { header?: { id?: unknown; cwd?: unknown; title?: unknown } }
 
 /** 会话查询服务：`listSessions` 按创建时间倒序返回全部逻辑会话。 */
 export interface SessionQueryLike {

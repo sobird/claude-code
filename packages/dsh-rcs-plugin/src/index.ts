@@ -1,4 +1,4 @@
-import { errorMessage } from '@sobird/dsh-bridge/core'
+import { RcsClient, errorMessage } from '@sobird/dsh-bridge/core'
 
 import { startPluginBridge } from './bridge'
 import { registerCommands } from './commands'
@@ -21,7 +21,8 @@ export async function apply(ctx: PluginContextLike, config: unknown): Promise<vo
     const resolved = resolveConfig(config)
     if (resolved.mode === 'environment') {
       const supervisor = await startSupervisor(ctx, resolved)
-      registerCommands(ctx, { supervisor, config: resolved })
+      const rcs = new RcsClient({ baseUrl: resolved.rcsBaseUrl, apiKey: resolved.apiKey })
+      registerCommands(ctx, { supervisor, config: resolved, rcs })
       process.stderr.write(
         `[dsh-rcs-plugin] attached to ${resolved.rcsBaseUrl} environment ${supervisor.environmentId}\n`,
       )

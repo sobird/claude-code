@@ -1,7 +1,8 @@
-import { errorMessage } from '@sobird/dsh-bridge/core'
+import { errorMessage, type RcsClient } from '@sobird/dsh-bridge/core'
 
 import type { ResolvedConfig } from './config'
 import type { SessionSupervisor } from './supervisor'
+import { syncSession } from './sync'
 import { isCommands, type CommandResultLike, type PluginContextLike } from './types'
 
 /** `/rcs-max-sessions <n>`：运行时调上限；非法输入不改任何状态。 */
@@ -25,7 +26,7 @@ export async function runMaxSessionsCommand(
 /** 只在 profile 提供 commands 服务时注册；`single` 模式不会调用这里。 */
 export function registerCommands(
   ctx: PluginContextLike,
-  deps: { supervisor: SessionSupervisor; config: ResolvedConfig },
+  deps: { supervisor: SessionSupervisor; config: ResolvedConfig; rcs: RcsClient },
 ): void {
   const commands = ctx.get('commands')
   if (!isCommands(commands)) {
@@ -36,5 +37,11 @@ export function registerCommands(
     name: 'rcs-max-sessions',
     description: '调整 RCS 环境的最大并发会话数（环境模式）',
     handler: (invocation) => runMaxSessionsCommand(deps.supervisor, invocation.rawInput),
+  })
+  commands.register({
+    name: 'rcs-sync',
+    description: '把当前 dsh 会话同步到 RCS（只在环境模式可用，不回填历史）',
+    handler: (invocation) =>
+      syncSession({ ctx, supervisor: deps.supervisor, config: deps.config, rcs: deps.rcs }, invocation.agent?.id ?? ''),
   })
 }
