@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -21,5 +21,18 @@ describe('sidecar', () => {
     await writeFile(join(dir, 'sessions.json'), '{not json')
     expect(await readSidecar(dir)).toEqual({})
     expect(await readFile(join(dir, 'sessions.json.bak'), 'utf8')).toBe('{not json')
+  })
+
+  // 只有「不存在」才等于空表；权限等问题必须暴露出来，否则会把可修复的配置错误静默吞掉。
+  test.skipIf(process.getuid?.() === 0)('a permission error propagates instead of reading as empty', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'rcs-sidecar-'))
+    const path = join(dir, 'sessions.json')
+    await writeFile(path, JSON.stringify({ version: 1, sessions: {} }))
+    await chmod(path, 0o000)
+    try {
+      await expect(readSidecar(dir)).rejects.toThrow()
+    } finally {
+      await chmod(path, 0o600)
+    }
   })
 })

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { mkdtemp } from 'node:fs/promises'
+import { chmod, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { RcsClient } from '@sobird/dsh-bridge/core'
+import { RcsClient, type WorkerSession } from '@sobird/dsh-bridge/core'
 import { FakeRcs, waitFor } from '@sobird/dsh-bridge/testing'
 
 import type { ResolvedConfig } from '../src/config'
@@ -76,6 +76,38 @@ describe('rcs-sync', () => {
     })
     await waitFor(() => rcs.events.find((event) => event.type === 'assistant'), 'assistant event')
   }, 15000)
+
+  // 映射先于换票落盘：即使起桥失败，重试也不会再建一条 RCS 会话。
+  test('a failed worker handshake still leaves the mapping for a retry', async () => {
+    class UnopenableRcs extends RcsClient {
+      override async openWorker(): Promise<WorkerSession> {
+        throw new Error('worker unavailable')
+      }
+    }
+    const failing = { ...deps, rcs: new UnopenableRcs({ baseUrl: rcs.origin, apiKey: 'test-key' }) }
+    const first = await syncSession(failing, 'session-local')
+    expect(first.kind).toBe('error')
+
+    const second = await syncSession(deps, 'session-local')
+    expect(second).toMatchObject({ kind: 'success' })
+    expect(rcs.createdSessions).toHaveLength(1)
+  }, 15000)
+
+  // 写映射失败要变成可读的错误结果，而不是让命令以未捕获异常收场。
+  test.skipIf(process.getuid?.() === 0)(
+    'a sidecar write failure returns an error result',
+    async () => {
+      const stateDir = join(process.env.DSH_HOME ?? '', 'rcs-bridge')
+      await chmod(stateDir, 0o500)
+      try {
+        const result = await syncSession(deps, 'session-local')
+        expect(result.kind).toBe('error')
+      } finally {
+        await chmod(stateDir, 0o700)
+      }
+    },
+    15000,
+  )
 
   test('a cse session is already in rcs', async () => {
     const result = await syncSession(deps, 'cse_existing')

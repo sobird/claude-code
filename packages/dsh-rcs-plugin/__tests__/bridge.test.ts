@@ -431,6 +431,12 @@ describe('dsh-rcs-plugin bridge', () => {
     expect(aborted[0]).toMatchObject({ subtype: 'aborted', is_error: true, result: 'Interrupted' })
   }, 15000)
 
+  test('stop unregisters every listener', async () => {
+    expect(ctx.listenerCount).toBeGreaterThan(0)
+    await bridge.stop()
+    expect(ctx.listenerCount).toBe(0)
+  }, 15000)
+
   test('stop settles pending cards, cancels the agent and reports idle', async () => {
     const agent = new FakeAgent(SESSION_ID)
     ctx.agents.live.set(SESSION_ID, agent)

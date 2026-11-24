@@ -31,7 +31,8 @@ async function titleFor(ctx: PluginContextLike, agentSessionId: string): Promise
 
 /**
  * 把一条既有 dsh 会话手动同步到 RCS：新建 RCS 会话、带环境派发，再按双 id 桥接。
- * 只同步后续轮次，历史不回填；sidecar 记录在桥起成功之后写，失败不留脏映射。
+ * 只同步后续轮次，历史不回填；映射在建会话后立即落盘，这样即使换票/起桥失败，
+ * 后续环境派发也能凭它找回 dsh 会话 id。
  */
 export async function syncSession(deps: SyncDeps, agentSessionId: string): Promise<CommandResultLike> {
   if (!agentSessionId) return { kind: 'error', text: '当前没有可同步的 dsh 会话' }
@@ -48,13 +49,13 @@ export async function syncSession(deps: SyncDeps, agentSessionId: string): Promi
   let worker: WorkerSession
   try {
     rcsSessionId = await deps.rcs.createSession(title, deps.supervisor.environmentId)
+    await recordSync(stateDir, agentSessionId, rcsSessionId)
     worker = await deps.rcs.openWorker(rcsSessionId)
     await deps.supervisor.attach(rcsSessionId, agentSessionId, worker)
   } catch (error) {
     return { kind: 'error', text: `同步失败：${errorMessage(error)}` }
   }
 
-  await recordSync(stateDir, agentSessionId, rcsSessionId)
   try {
     await deps.rcs.setExternalMetadata(worker, { dsh_session_id: agentSessionId })
   } catch (error) {

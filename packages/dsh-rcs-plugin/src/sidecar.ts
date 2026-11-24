@@ -15,14 +15,19 @@ function sidecarPath(dir: string): string {
   return join(dir, 'sessions.json')
 }
 
-/** 解析失败时把原文件改名为 `.bak` 并按空表处理：损坏的映射不能阻断启动。 */
+/**
+ * 解析失败时把原文件改名为 `.bak` 并按空表处理：损坏的映射不能阻断启动。
+ * 只有文件不存在才算空表；权限等其他读取错误上抛，避免把可修复的配置问题吞成「无记录」。
+ */
 export async function readSidecar(dir: string): Promise<SidecarMap> {
   const path = sidecarPath(dir)
   let text: string
   try {
     text = await readFile(path, 'utf8')
-  } catch {
-    return {}
+  } catch (error) {
+    const code = isRecord(error) ? asText(error.code) : ''
+    if (code === 'ENOENT' || code === 'ENOTDIR') return {}
+    throw error
   }
   try {
     const parsed: unknown = JSON.parse(text)

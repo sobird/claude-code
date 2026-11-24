@@ -14,7 +14,7 @@ import {
 import { InProcessBridge, type PluginBridge } from './bridge'
 import type { ResolvedConfig } from './config'
 import { bridgeStateDir, readEnvironmentId, writeEnvironmentId } from './environment-state'
-import { agentIdForRcs, readSidecar } from './sidecar'
+import { agentIdForRcs, readSidecar, type SidecarMap } from './sidecar'
 import type { PluginContextLike } from './types'
 
 /** 环境 token 失效后重注册的退避；注册本身很少失败。 */
@@ -51,6 +51,8 @@ class EnvironmentSupervisor implements SessionSupervisor {
   private limit: number
   private readonly stateDir: string
   private readonly bridges = new Map<string, PluginBridge>()
+  /** `rcsSessionId` → 当前工作项 id；桥收掉时要显式 stop，免得 acked 行一直挂着。 */
+  private readonly workIds = new Map<string, string>()
   private readonly abort = new AbortController()
   private loop: Promise<void> | null = null
 
@@ -123,6 +125,9 @@ class EnvironmentSupervisor implements SessionSupervisor {
         }),
       ),
     )
+    const workIds = [...this.workIds.values()]
+    this.workIds.clear()
+    await Promise.all(workIds.map((workId) => this.stopWork(workId)))
     try {
       await this.client.deregister(this.environmentIdValue)
     } catch (error) {
@@ -169,7 +174,14 @@ class EnvironmentSupervisor implements SessionSupervisor {
       log(`ack ${item.id}: ${errorMessage(error)}`)
     }
     if (this.bridges.has(item.sessionId)) return
-    const sidecar = await readSidecar(this.stateDir)
+    this.workIds.set(item.sessionId, item.id)
+    // 映射只用于找回手工同步的 dsh 会话；读不出来不应拖住环境派发的会话。
+    let sidecar: SidecarMap = {}
+    try {
+      sidecar = await readSidecar(this.stateDir)
+    } catch (error) {
+      log(`sidecar read: ${errorMessage(error)}; continuing without sync mapping`)
+    }
     const agentSessionId = agentIdForRcs(sidecar, item.sessionId) ?? item.sessionId
     const title = await this.sessionTitle(item.sessionId)
     await this.startBridge(item.sessionId, agentSessionId, toWorkerSession(item, this.config.rcsBaseUrl), title)
@@ -204,13 +216,17 @@ class EnvironmentSupervisor implements SessionSupervisor {
       await bridge.begin()
     } catch (error) {
       this.bridges.delete(rcsSessionId)
+      // begin() 可能已注册了部分监听/心跳；失败也要收尾，否则槽位空闲但监听残留。
+      await bridge.stop().catch((stopError: unknown) => {
+        log(`stop failed bridge ${rcsSessionId}: ${errorMessage(stopError)}`)
+      })
       if (error instanceof RcsHttpError && error.status === 404) return undefined
       throw error
     }
     return bridge
   }
 
-  /** RCS 删除会话后释放槽位：停桥并从表里移除。 */
+  /** RCS 删除会话后释放槽位：停桥、结束工作项并从表里移除。 */
   private async remove(rcsSessionId: string): Promise<void> {
     const bridge = this.bridges.get(rcsSessionId)
     if (!bridge) return
@@ -219,6 +235,18 @@ class EnvironmentSupervisor implements SessionSupervisor {
     await bridge.stop().catch((error: unknown) => {
       log(`stop ${rcsSessionId}: ${errorMessage(error)}`)
     })
+    const workId = this.workIds.get(rcsSessionId)
+    this.workIds.delete(rcsSessionId)
+    if (workId) await this.stopWork(workId)
+  }
+
+  /** 结束工作项只认环境 token；失败只记日志（会话可能已被服务端清理）。 */
+  private async stopWork(workId: string): Promise<void> {
+    try {
+      await this.client.stop(this.environmentIdValue, workId, this.environmentSecret)
+    } catch (error) {
+      log(`stop work ${workId}: ${errorMessage(error)}`)
+    }
   }
 
   /** 401 时用用户 key 重注册（带旧 id），换新 secret；失败则退避重试。 */

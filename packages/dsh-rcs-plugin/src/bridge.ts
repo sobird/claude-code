@@ -38,6 +38,7 @@ import {
   type ApprovalRequestLike,
   type AssistantStreamPayloadLike,
   type PluginContextLike,
+  type PluginEvents,
   type QuestionAnswerLike,
   type QuestionRequestLike,
   type SessionEventLike,
@@ -104,6 +105,8 @@ export class InProcessBridge implements PluginBridge {
   private goneNotified = false
   private refreshing: Promise<boolean> | null = null
   private readonly abort = new AbortController()
+  /** 本桥注册的监听器；停止时按需撤回，避免移除会话后事件仍打到旧桥。 */
+  private readonly listenerDisposers: Array<() => void> = []
   private readonly pendingHuman = new Map<string, PendingHuman>()
   private readonly alwaysAllow = new Set<string>()
   /** 插件自己注入的 user 消息 id：它们来自 RCS，会话事件回发时跳过，避免重复。 */
@@ -141,19 +144,40 @@ export class InProcessBridge implements PluginBridge {
   }
 
   async begin(): Promise<void> {
-    this.ctx.on('session/event', this.onSessionEvent)
-    this.ctx.on('agent/status', this.onAgentStatus)
-    this.ctx.on('agent/assistant-stream', this.onAssistantStream)
-    this.ctx.on('approval/request', this.onApproval, { prepend: true })
-    this.ctx.on('user-questions/request', this.onQuestion, { prepend: true })
+    this.listen('session/event', this.onSessionEvent)
+    this.listen('agent/status', this.onAgentStatus)
+    this.listen('agent/assistant-stream', this.onAssistantStream)
+    this.listen('approval/request', this.onApproval, { prepend: true })
+    this.listen('user-questions/request', this.onQuestion, { prepend: true })
     await this.setStatus('idle')
     this.startHeartbeat()
     void this.pump()
   }
 
+  /** 注册监听并记住 Cordis 返回的 disposer；没有返回值时依赖 ctx 卸载。 */
+  private listen<E extends keyof PluginEvents>(
+    event: E,
+    listener: PluginEvents[E],
+    options?: { prepend?: boolean },
+  ): void {
+    const disposer: unknown = this.ctx.on(event, listener, options)
+    if (typeof disposer === 'function') this.listenerDisposers.push(() => disposer())
+  }
+
+  private disposeListeners(): void {
+    for (const dispose of this.listenerDisposers.splice(0)) {
+      try {
+        dispose()
+      } catch (error) {
+        log(`dispose listener: ${errorMessage(error)}`)
+      }
+    }
+  }
+
   async stop(): Promise<void> {
     if (this.stopping) return
     this.stopping = true
+    this.disposeListeners()
     if (this.heartbeat) clearInterval(this.heartbeat)
     this.heartbeat = null
     await this.cancelPendingHuman('Interrupted')

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdir, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -83,6 +83,53 @@ describe('environment supervisor', () => {
       await waitFor(() => (supervisor.bridgeIds().length === 1 ? true : undefined), 'single bridge')
       await Bun.sleep(100)
       expect(supervisor.bridgeIds()).toEqual(['cse_a'])
+    } finally {
+      await supervisor.dispose()
+      rcs.stop()
+    }
+  }, 15000)
+
+  // 桥收掉时对应的工作项要显式停止，否则 acked 行会一直挂着。
+  test('disposing stops every dispatched work item', async () => {
+    const rcs = new FakeRcs('cse_stop')
+    rcs.start()
+    const supervisor = await startSupervisor(new FakeContext(), envConfig(rcs.origin), { emptyPollDelayMs: 20 })
+    rcs.enqueueWork('cse_stop')
+    await waitFor(() => (supervisor.bridgeIds().includes('cse_stop') ? true : undefined), 'bridge start')
+    await supervisor.dispose()
+    rcs.stop()
+    expect(rcs.acked).toHaveLength(1)
+    expect(rcs.stopped).toEqual(rcs.acked)
+  }, 15000)
+
+  // begin() 中途失败时要把半注册的监听器收回来，否则会话槽位看似空闲、监听器却一直残留。
+  test('a failed begin() unregisters its listeners and frees the slot', async () => {
+    const rcs = new FakeRcs('cse_begin')
+    rcs.start()
+    const ctx = new FakeContext()
+    const supervisor = await startSupervisor(ctx, envConfig(rcs.origin), { emptyPollDelayMs: 20 })
+    try {
+      ctx.failNextOn = 'agent/status'
+      rcs.enqueueWork('cse_begin')
+      await waitFor(() => (ctx.failNextOn === null ? true : undefined), 'begin failure')
+      expect(supervisor.bridgeIds()).toEqual([])
+      expect(ctx.listenerCount).toBe(0)
+    } finally {
+      await supervisor.dispose()
+      rcs.stop()
+    }
+  }, 15000)
+
+  // 手工同步映射读不出来时仍应起桥（环境派发的会话本来就不依赖映射）。
+  test('an unreadable sidecar is logged and dispatch still starts the bridge', async () => {
+    // 用同名目录制造 EISDIR，模拟权限/损坏之外的真实读取失败。
+    await mkdir(join(process.env.DSH_HOME ?? '', 'rcs-bridge', 'sessions.json'), { recursive: true })
+    const rcs = new FakeRcs('cse_sidecar')
+    rcs.start()
+    const supervisor = await startSupervisor(new FakeContext(), envConfig(rcs.origin), { emptyPollDelayMs: 20 })
+    try {
+      rcs.enqueueWork('cse_sidecar')
+      await waitFor(() => (supervisor.bridgeIds().includes('cse_sidecar') ? true : undefined), 'bridge start')
     } finally {
       await supervisor.dispose()
       rcs.stop()

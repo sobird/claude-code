@@ -127,20 +127,40 @@ export class FakeContext implements PluginContextLike {
     return this.services.get(name)
   }
 
+  /** 让下一次某个事件的 `on` 抛错，模拟 `begin()` 注册中途失败。 */
+  failNextOn: string | null = null
+
   on<E extends keyof PluginEvents>(event: E, listener: PluginEvents[E], options?: { prepend?: boolean }): unknown {
-    // 测试接缝：泛型擦除后按事件名入桶，类型由各桶自己保证。
-    if (event === 'session/event') this.add(this.sessionListeners, listener as PluginEvents['session/event'], options)
-    else if (event === 'agent/status') this.add(this.statusListeners, listener as PluginEvents['agent/status'], options)
-    else if (event === 'agent/assistant-stream') {
-      this.add(this.streamListeners, listener as PluginEvents['agent/assistant-stream'], options)
-    } else if (event === 'approval/request') {
-      this.add(this.approvalListeners, listener as PluginEvents['approval/request'], options)
-    } else if (event === 'user-questions/request') {
-      this.add(this.questionListeners, listener as PluginEvents['user-questions/request'], options)
-    } else {
-      throw new Error(`fake ctx: unhandled event ${String(event)}`)
+    if (this.failNextOn === event) {
+      this.failNextOn = null
+      throw new Error(`fake ctx: ${String(event)} registration failed`)
     }
-    return undefined
+    // 测试接缝：泛型擦除后按事件名入桶，类型由各桶自己保证。
+    let bucket: unknown[]
+    if (event === 'session/event') bucket = this.sessionListeners
+    else if (event === 'agent/status') bucket = this.statusListeners
+    else if (event === 'agent/assistant-stream') bucket = this.streamListeners
+    else if (event === 'approval/request') bucket = this.approvalListeners
+    else if (event === 'user-questions/request') bucket = this.questionListeners
+    else throw new Error(`fake ctx: unhandled event ${String(event)}`)
+    if (options?.prepend) bucket.unshift(listener)
+    else bucket.push(listener)
+    // 与 Cordis 一致：返回取消注册的 disposer。
+    return () => {
+      const index = bucket.indexOf(listener)
+      if (index >= 0) bucket.splice(index, 1)
+    }
+  }
+
+  /** 当前存活的监听器总数；桥停止后应回到 0。 */
+  get listenerCount(): number {
+    return (
+      this.sessionListeners.length +
+      this.statusListeners.length +
+      this.streamListeners.length +
+      this.approvalListeners.length +
+      this.questionListeners.length
+    )
   }
 
   effect(effect: () => Disposer | Promise<Disposer>): unknown {
@@ -197,10 +217,5 @@ export class FakeContext implements PluginContextLike {
       return listener ? listener(request, next) : terminal()
     }
     return next()
-  }
-
-  private add<T>(list: T[], listener: T, options: { prepend?: boolean } | undefined): void {
-    if (options?.prepend) list.unshift(listener)
-    else list.push(listener)
   }
 }
