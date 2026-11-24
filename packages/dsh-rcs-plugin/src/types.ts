@@ -150,6 +150,8 @@ export type CommandResultLike = { kind: 'success'; text?: string } | { kind: 'er
 export interface CommandDefinitionLike {
   name: string
   description: string
+  /** 声明后 Web 端才接受「带参数的一行」；缺省时该命令只能裸调用。 */
+  input?: { hint: string }
   handler: (invocation: CommandInvocationLike) => CommandResultLike | Promise<CommandResultLike>
 }
 

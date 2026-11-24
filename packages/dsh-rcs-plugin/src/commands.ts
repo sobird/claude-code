@@ -36,6 +36,8 @@ export function registerCommands(
   commands.register({
     name: 'rcs-max-sessions',
     description: '调整 RCS 环境的最大并发会话数（环境模式）',
+    // 不带 input 时，Web composer 会把 `/rcs-max-sessions 3` 当作普通消息发给模型。
+    input: { hint: '<正整数>' },
     handler: (invocation) => runMaxSessionsCommand(deps.supervisor, invocation.rawInput),
   })
   commands.register({

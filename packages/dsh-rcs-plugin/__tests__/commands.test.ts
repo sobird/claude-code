@@ -66,9 +66,13 @@ describe('rcs-max-sessions', () => {
 
   test('registers the command when the commands service exists', async () => {
     const ctx = new FakeContext()
-    const definitions: { name: string; handler: (invocation: { rawInput: string }) => unknown }[] = []
+    const definitions: {
+      name: string
+      input?: { hint: string }
+      handler: (invocation: { rawInput: string }) => unknown
+    }[] = []
     ctx.provide('commands', {
-      register: (definition: { name: string; handler: (invocation: { rawInput: string }) => unknown }) => {
+      register: (definition: (typeof definitions)[number]) => {
         definitions.push(definition)
         return () => undefined
       },
@@ -81,6 +85,8 @@ describe('rcs-max-sessions', () => {
     })
 
     expect(definitions[0]?.name).toBe('rcs-max-sessions')
+    // 无 input 描述符时，Web 端「带参数的一行」会被判为普通消息丢给模型（命令不执行）。
+    expect(definitions[0]?.input).toEqual({ hint: '<正整数>' })
     const result = await definitions[0]?.handler({ rawInput: '3' })
     expect(result).toMatchObject({ kind: 'success' })
   })
