@@ -48,7 +48,8 @@
       "title": "Environments",
       "empty": "No active environments. Start the CLI with <code>claude remote-control</code>.",
       "acpAgent": "ACP Agent",
-      "claudeCode": "Claude Code"
+      "claudeCode": "Claude Code",
+      "deepseek": "DeepSeek Harness"
     },
     "sessions": {
       "new": "+ New Session",

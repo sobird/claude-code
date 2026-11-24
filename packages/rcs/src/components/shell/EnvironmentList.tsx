@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { formatEpochSeconds } from '@/lib/format'
 import { cx } from '@/lib/utils'
 
+import { environmentTypeLabel } from './environment-type'
 import { StatusBadge } from './StatusBadge'
 import type { EnvironmentSummary } from './types'
 
@@ -32,15 +33,29 @@ export function EnvironmentList({ environments }: EnvironmentListProps) {
   return (
     <div className={styles.list}>
       {environments.map((environment) => {
-        const isAcp = environment.worker_type === 'acp'
+        // 未知类型不冒充 Claude Code：文案退回原始 worker_type，徽标用中性色。
+        let typeClass: string = styles.typeOther
+        let typeText: string = environment.worker_type
+        switch (environmentTypeLabel(environment.worker_type)) {
+          case 'acpAgent':
+            typeClass = styles.typeAcp
+            typeText = t('environments.acpAgent')
+            break
+          case 'claudeCode':
+            typeClass = styles.typeClaude
+            typeText = t('environments.claudeCode')
+            break
+          case 'deepseek':
+            typeClass = styles.typeDeepseek
+            typeText = t('environments.deepseek')
+            break
+        }
         return (
           <div key={environment.id} className={styles.row}>
             <div className={styles.rowBody}>
               <div className={styles.nameRow}>
                 <span className={styles.name}>{environment.machine_name || environment.id}</span>
-                <span className={cx(styles.typeBadge, isAcp ? styles.typeAcp : styles.typeClaude)}>
-                  {isAcp ? t('environments.acpAgent') : t('environments.claudeCode')}
-                </span>
+                <span className={cx(styles.typeBadge, typeClass)}>{typeText}</span>
               </div>
               <div className={styles.directory}>{environment.directory || ''}</div>
             </div>

@@ -70,6 +70,16 @@
   color: var(--color-status-running);
 }
 
+.typeDeepseek {
+  background-color: color-mix(in oklab, var(--color-status-idle) 15%, transparent);
+  color: var(--color-status-idle);
+}
+
+.typeOther {
+  background-color: var(--color-surface-3);
+  color: var(--color-text-secondary);
+}
+
 .directory {
   overflow: hidden;
   text-overflow: ellipsis;

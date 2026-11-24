@@ -48,7 +48,8 @@
       "title": "环境",
       "empty": "没有活跃的环境。使用 <code>claude remote-control</code> 启动 CLI。",
       "acpAgent": "ACP 代理",
-      "claudeCode": "Claude Code"
+      "claudeCode": "Claude Code",
+      "deepseek": "DeepSeek Harness"
     },
     "sessions": {
       "new": "+ 新建会话",
