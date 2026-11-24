@@ -2,6 +2,7 @@ import { errorMessage } from '@sobird/dsh-bridge/core'
 
 import { startPluginBridge } from './bridge'
 import { resolveConfig } from './config'
+import { startSupervisor } from './supervisor'
 import type { PluginContextLike } from './types'
 
 /** Cordis 插件名；与 `cordis.patch.yml` 的行 id 区分（行 id 是 `rcs-bridge`）。 */
@@ -17,9 +18,17 @@ export const inject = ['agents', 'sessionQuery']
 export async function apply(ctx: PluginContextLike, config: unknown): Promise<void> {
   try {
     const resolved = resolveConfig(config)
-    const bridge = await startPluginBridge(ctx, resolved)
-    process.stderr.write(`[dsh-rcs-plugin] attached to ${resolved.rcsBaseUrl} session ${bridge.sessionId}\n`)
-    ctx.effect(() => () => bridge.stop())
+    if (resolved.mode === 'environment') {
+      const supervisor = await startSupervisor(ctx, resolved)
+      process.stderr.write(
+        `[dsh-rcs-plugin] attached to ${resolved.rcsBaseUrl} environment ${supervisor.environmentId}\n`,
+      )
+      ctx.effect(() => () => supervisor.dispose())
+    } else {
+      const bridge = await startPluginBridge(ctx, resolved)
+      process.stderr.write(`[dsh-rcs-plugin] attached to ${resolved.rcsBaseUrl} session ${bridge.rcsSessionId}\n`)
+      ctx.effect(() => () => bridge.stop())
+    }
   } catch (error) {
     process.stderr.write(`[dsh-rcs-plugin] failed: ${errorMessage(error)}\n`)
     throw error

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import {
   RcsClient,
+  RcsHttpError,
   approvalOutcome,
   approvalRequestEvent,
   asNumber,
@@ -58,6 +59,11 @@ function streamEvent(event: Record<string, unknown>): RcsEvent {
 /** 挂起的人工请求；`settle(null)` 表示被取消（中断/停止/信号中止）。 */
 type PendingHuman = (resolution: ControlResolution | null) => void
 
+/** 桥生命周期钩子：`onGone` 在 RCS 返回 404（会话已删）时触发一次。 */
+export interface BridgeHooks {
+  onGone?: () => void
+}
+
 export interface PluginBridge {
   /** RCS 会话 id：上报、心跳与 SSE 都用它。 */
   readonly rcsSessionId: string
@@ -91,6 +97,8 @@ export class InProcessBridge implements PluginBridge {
   private readonly config: ResolvedConfig
   private readonly rcs: RcsClient
   private readonly worker: WorkerSession
+  private readonly hooks: BridgeHooks | undefined
+  private goneNotified = false
   private readonly abort = new AbortController()
   private readonly pendingHuman = new Map<string, PendingHuman>()
   private readonly alwaysAllow = new Set<string>()
@@ -116,11 +124,13 @@ export class InProcessBridge implements PluginBridge {
     rcs: RcsClient,
     worker: WorkerSession,
     agentSessionId: string,
+    hooks?: BridgeHooks,
   ) {
     this.ctx = ctx
     this.config = config
     this.rcs = rcs
     this.worker = worker
+    this.hooks = hooks
     this.rcsSessionId = worker.sessionId
     this.agentSessionId = agentSessionId
     this.sessionId = worker.sessionId
@@ -498,6 +508,7 @@ export class InProcessBridge implements PluginBridge {
       try {
         await this.rcs.postEvents(this.worker, payloads)
       } catch (error) {
+        this.notifyGone(error)
         log(`post events: ${errorMessage(error)}`)
       }
     })
@@ -523,8 +534,17 @@ export class InProcessBridge implements PluginBridge {
     try {
       await this.rcs.setWorkerStatus(this.worker, status, details)
     } catch (error) {
+      this.notifyGone(error)
       log(`status ${status}: ${errorMessage(error)}`)
     }
+  }
+
+  /** 404 表示 RCS 已删除该会话；只通知一次，避免 stop 时的收尾请求反复触发。 */
+  private notifyGone(error: unknown): void {
+    if (this.goneNotified) return
+    if (!(error instanceof RcsHttpError) || error.status !== 404) return
+    this.goneNotified = true
+    this.hooks?.onGone?.()
   }
 }
 
