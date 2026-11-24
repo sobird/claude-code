@@ -7,6 +7,10 @@ import { isRecord } from '../util'
 export class FakeRcs {
   readonly events: Record<string, unknown>[] = []
   readonly statuses: { status: string; details: unknown }[] = []
+  /** 创建会话时收到的请求体。 */
+  readonly createdSessions: Record<string, unknown>[] = []
+  /** `PUT /worker` 收到的 `external_metadata`。 */
+  readonly externalMetadata: Record<string, unknown>[] = []
   heartbeats = 0
   /** 让创建会话失败，用来验证「复用成功时不会新建」。 */
   failCreate = false
@@ -88,6 +92,8 @@ export class FakeRcs {
 
     if (request.method === 'POST' && path === '/v1/code/sessions') {
       if (this.failCreate) return json({ error: 'create disabled' }, 500)
+      const body = await readJson(request)
+      if (isRecord(body)) this.createdSessions.push(body)
       return json({ session: { id: session } })
     }
     if (request.method === 'POST' && path === `/v1/code/sessions/${session}/bridge`) {
@@ -101,7 +107,10 @@ export class FakeRcs {
     if (request.method === 'PUT' && path === `/v1/code/sessions/${session}/worker`) {
       const body = await readJson(request)
       if (isRecord(body)) {
-        this.statuses.push({ status: String(body.worker_status ?? ''), details: body.requires_action_details ?? null })
+        if (typeof body.worker_status === 'string') {
+          this.statuses.push({ status: body.worker_status, details: body.requires_action_details ?? null })
+        }
+        if (isRecord(body.external_metadata)) this.externalMetadata.push(body.external_metadata)
       }
       return json({ status: 'ok' })
     }

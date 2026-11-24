@@ -36,6 +36,19 @@ interface RequestInitLike {
   body?: unknown
 }
 
+/** RCS 的非 2xx 响应；调用方按 `status` 区分重注册（401）与会话消失（404）。 */
+export class RcsHttpError extends Error {
+  readonly status: number
+  readonly body: string
+
+  constructor(message: string, status: number, body: string) {
+    super(message)
+    this.name = 'RcsHttpError'
+    this.status = status
+    this.body = body
+  }
+}
+
 function parseJson(text: string): unknown {
   if (!text) return null
   try {
@@ -84,17 +97,24 @@ export class RcsClient {
     })
     const text = await response.text()
     if (!response.ok) {
-      throw new Error(`RCS ${method} ${path} failed: ${response.status} ${text.slice(0, 300)}`)
+      throw new RcsHttpError(
+        `RCS ${method} ${path} failed: ${response.status} ${text.slice(0, 300)}`,
+        response.status,
+        text,
+      )
     }
     const parsed = parseJson(text)
     return isRecord(parsed) ? parsed : {}
   }
 
-  /** 创建一条 code session，返回 `cse_…` 规范 id。 */
-  async createSession(title: string | undefined): Promise<string> {
+  /** 创建一条 code session，返回 `cse_…` 规范 id；带环境时由 RCS 派发给 worker。 */
+  async createSession(title: string | undefined, environmentId?: string): Promise<string> {
     const body = await this.request('/v1/code/sessions', {
       method: 'POST',
-      body: title ? { title } : {},
+      body: {
+        ...(title ? { title } : {}),
+        ...(environmentId ? { environment_id: environmentId } : {}),
+      },
     })
     const session = isRecord(body.session) ? body.session : null
     const id = asText(session?.id)
@@ -142,6 +162,15 @@ export class RcsClient {
               }
             : null,
       },
+    })
+  }
+
+  /** 写入外部元数据（浅合并）；只带该字段，不覆盖 worker 状态。 */
+  async setExternalMetadata(worker: WorkerSession, metadata: Record<string, unknown>): Promise<void> {
+    await this.request(`/v1/code/sessions/${encodeURIComponent(worker.sessionId)}/worker`, {
+      method: 'PUT',
+      token: worker.workerJwt,
+      body: { external_metadata: metadata },
     })
   }
 
