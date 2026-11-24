@@ -19,9 +19,9 @@ export const inject = ['agents', 'sessionQuery']
 export async function apply(ctx: PluginContextLike, config: unknown): Promise<void> {
   try {
     const resolved = resolveConfig(config)
+    const rcs = new RcsClient({ baseUrl: resolved.rcsBaseUrl, apiKey: resolved.apiKey })
     if (resolved.mode === 'environment') {
       const supervisor = await startSupervisor(ctx, resolved)
-      const rcs = new RcsClient({ baseUrl: resolved.rcsBaseUrl, apiKey: resolved.apiKey })
       registerCommands(ctx, { supervisor, config: resolved, rcs })
       process.stderr.write(
         `[dsh-rcs-plugin] attached to ${resolved.rcsBaseUrl} environment ${supervisor.environmentId}\n`,
@@ -29,6 +29,8 @@ export async function apply(ctx: PluginContextLike, config: unknown): Promise<vo
       ctx.effect(() => () => supervisor.dispose())
     } else {
       const bridge = await startPluginBridge(ctx, resolved)
+      // 单会话模式也注册命令：执行时返回「仅在环境模式可用」的提示。
+      registerCommands(ctx, { supervisor: null, config: resolved, rcs })
       process.stderr.write(`[dsh-rcs-plugin] attached to ${resolved.rcsBaseUrl} session ${bridge.rcsSessionId}\n`)
       ctx.effect(() => () => bridge.stop())
     }

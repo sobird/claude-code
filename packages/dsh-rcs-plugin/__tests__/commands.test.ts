@@ -64,6 +64,34 @@ describe('rcs-max-sessions', () => {
     expect(supervisor.bridgeIds()).toEqual(['cse_a'])
   }, 15000)
 
+  // 单会话模式也注册命令，但执行时只回提示，避免用户以为命令静默失效。
+  test('single mode registers the commands with an environment-only hint', async () => {
+    const ctx = new FakeContext()
+    const definitions: {
+      name: string
+      handler: (invocation: { rawInput: string; agent?: { id: string } }) => unknown
+    }[] = []
+    ctx.provide('commands', {
+      register: (definition: (typeof definitions)[number]) => {
+        definitions.push(definition)
+        return () => undefined
+      },
+    })
+
+    registerCommands(ctx, {
+      supervisor: null,
+      config: { ...envConfig(rcs.origin), mode: 'single' },
+      rcs: new RcsClient({ baseUrl: rcs.origin, apiKey: 'test-key' }),
+    })
+
+    expect(definitions.map((definition) => definition.name)).toEqual(['rcs-max-sessions', 'rcs-sync'])
+    for (const definition of definitions) {
+      const result = await definition.handler({ rawInput: '', agent: { id: 'session-local' } })
+      expect(result).toMatchObject({ kind: 'error' })
+      expect(result).toHaveProperty('text', expect.stringContaining('环境模式'))
+    }
+  })
+
   test('registers the command when the commands service exists', async () => {
     const ctx = new FakeContext()
     const definitions: {
