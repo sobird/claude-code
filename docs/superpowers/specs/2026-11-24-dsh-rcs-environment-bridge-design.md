@@ -156,10 +156,11 @@ handler})`，返回 disposer；插件的普通上下文注册的是全局命令�
 - `toWorkerSession(work)` → 现有 `WorkerSession` 形状，`expiresAt` 取保守值（如
   握手响应才有的 TTL 缺失时按 1 小时），401 后由 §5 的换票路径兜底。
 
-`RcsClient` 行为不变，只做两处增量：把非 2xx 抛出的错误换成带 `status` 的
+`RcsClient` 行为不变，只做三处增量：把非 2xx 抛出的错误换成带 `status` 的
 `RcsHttpError`（导出到 `core`）；`createSession(title, environmentId?)` 增加可选的环境
-绑定（`POST /v1/code/sessions` 已接受 `environment_id`）。环境客户端复用同样的
-`fetch` + envelope 解析风格。
+绑定（`POST /v1/code/sessions` 已接受 `environment_id`）；`setExternalMetadata(worker,
+metadata)` 用于手动同步后写入 `{dsh_session_id}`。环境客户端复用同样的 `fetch` +
+envelope 解析风格。
 
 ### 6.3 插件侧
 

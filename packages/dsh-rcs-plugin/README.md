@@ -5,6 +5,10 @@
 `agent.followup`，dsh 的会话事件、审批、提问再翻译回 RCS。相比独立进程的
 [`@sobird/dsh-bridge`](../dsh-bridge)，它没有子进程、没有 JSON-RPC，停止走 `agent.cancel()`。
 
+支持两种模式：`single`（默认，固定接一条 RCS 会话）和 `environment`（把本机注册成
+RCS 环境，按 RCS Web 的派发起多条会话）。设计见
+[`docs/superpowers/specs/2026-11-24-dsh-rcs-environment-bridge-design.md`](../../docs/superpowers/specs/2026-11-24-dsh-rcs-environment-bridge-design.md)。
+
 ## 安装
 
 发布给 dsh 的包必须是**编译后的 ESM JS**（已安装的 dsh CLI 不带 TS loader），所以先构建，
@@ -39,15 +43,18 @@ Web 端也可以走 **Plugins** 菜单用「安装本地插件」添加同一个
     workdir: /srv/work
 ```
 
-| 字段（config / 环境变量）            | 必填 | 默认                    | 说明                                       |
-| ------------------------------------ | ---- | ----------------------- | ------------------------------------------ |
-| `apiKey` / `RCS_API_KEY`             | 是   | —                       | 能创建会话的用户 API key                   |
-| `rcsBaseUrl` / `RCS_BASE_URL`        | 否   | `http://localhost:4000` | RCS 网关根地址                             |
-| `workdir` / `DSH_WORKDIR`            | 否   | dsh 进程当前目录        | dsh 会话工作目录                           |
-| `sessionTitle` / `RCS_SESSION_TITLE` | 否   | —                       | 新建 RCS 会话的标题，同时设为 dsh 会话标题 |
-| `provider` / `DSH_PROVIDER`          | 否   | `deepseek-official`     | dsh 的 provider                            |
-| `model` / `DSH_MODEL`                | 否   | `deepseek-v4-flash`     | dsh 的模型                                 |
-| `sessionId` / `RCS_SESSION_ID`       | 否   | —                       | 复用既有 RCS 会话（不再新建）              |
+| 字段（config / 环境变量）              | 必填 | 默认                    | 说明                                                    |
+| -------------------------------------- | ---- | ----------------------- | ------------------------------------------------------- |
+| `apiKey` / `RCS_API_KEY`               | 是   | —                       | 能创建会话的用户 API key                                |
+| `rcsBaseUrl` / `RCS_BASE_URL`          | 否   | `http://localhost:4000` | RCS 网关根地址                                          |
+| `workdir` / `DSH_WORKDIR`              | 否   | dsh 进程当前目录        | dsh 会话工作目录                                        |
+| `sessionTitle` / `RCS_SESSION_TITLE`   | 否   | —                       | 新建 RCS 会话的标题，同时设为 dsh 会话标题              |
+| `provider` / `DSH_PROVIDER`            | 否   | `deepseek-official`     | dsh 的 provider                                         |
+| `model` / `DSH_MODEL`                  | 否   | `deepseek-v4-flash`     | dsh 的模型                                              |
+| `sessionId` / `RCS_SESSION_ID`         | 否   | —                       | `single` 模式下复用既有 RCS 会话（不再新建）            |
+| `mode` / `RCS_BRIDGE_MODE`             | 否   | `single`                | `single` 或 `environment`；后者注册本机环境             |
+| `environmentId` / `RCS_ENVIRONMENT_ID` | 否   | —                       | 复用既有环境 id；缺省读取 `$DSH_HOME` 里的上次注册      |
+| `maxSessions` / `RCS_MAX_SESSIONS`     | 否   | `4`                     | `environment` 模式并存活桥上限（注册为 `max_sessions`） |
 
 模型凭据（例如 `DEEPSEEK_API_KEY`）由 dsh 宿主自己读取，插件不碰。
 
@@ -84,6 +91,28 @@ Web 端也可以走 **Plugins** 菜单用「安装本地插件」添加同一个
   `aborted` result 由宿主随后的 `turn/end` 自然产生。
 - **卸载**：插件 dispose 时中止 SSE/心跳、收尾挂起卡片、取消 agent 并置 `idle`。
 
+### 环境模式（`mode: environment`）
+
+- **注册**：启动时用用户 API key `POST /v1/environments/bridge` 注册本机环境（`machine_name`
+  = 主机名、`directory` = `workdir`、`max_sessions` = `maxSessions`），把环境 id 写入
+  `$DSH_HOME/rcs-bridge/environment.json`，并尽力 `bridge/reconnect` 重排在飞会话。
+- **派发**：长轮询 `work/poll`，收到 `work` 项后 `ack`，用 work secret 重建 `WorkerSession`，
+  按 sidecar 反查 dsh 会话 id，再起一条 `InProcessBridge`；同一 `cse_` 会话幂等，重复派发
+  不会重复起桥。存活桥数达到 `maxSessions` 时暂停轮询，槽位随桥移除释放。
+- **容错**：poll/上报返回 401 时用用户 key 重注册环境、换新 secret；会话被删（404）时
+  该桥经 `onGone` 自行停止并让出槽位。dispose 时停掉全部桥并注销环境。
+- **斜杠命令**：`/rcs-max-sessions <n>` 运行时改上限（重注册环境，不停存活桥）；
+  `/rcs-sync` 把当前 dsh 会话同步成一条新 RCS 会话（见下）。两者都依赖 profile 的
+  `commands` 服务，缺失时只记 stderr、不注册。
+
+### 手动同步（`/rcs-sync`）
+
+把一条既有 dsh 会话（如 `session-<uuid>`）推给 RCS：以 dsh 会话标题新建一条带
+`environment_id` 的 RCS 会话、`openWorker`、挂到 supervisor 上，并在 sidecar
+（`$DSH_HOME/rcs-bridge/sessions.json`）记录 `dshId ↔ rcsId` 映射。之后该会话的后续轮次
+双向同步；**历史消息不回填**。重复执行命中 sidecar 时只回显既有 rcsId，不再新建；
+`cse_` 开头的会话已由 RCS 管理，直接跳过。
+
 ## 测试
 
 ```bash
@@ -113,16 +142,21 @@ bun run e2e
 
 ## 结构
 
-| 文件               | 职责                                                         |
-| ------------------ | ------------------------------------------------------------ |
-| `src/index.ts`     | 插件入口：`name` / `inject` / `apply`，注册 disposer         |
-| `src/config.ts`    | config + env 的字段级解析与校验                              |
-| `src/message.ts`   | 冻结的 user message（复刻 dsh-llm 的 `createUserMessage`）   |
-| `src/bridge.ts`    | 单会话编排：SSE、事件翻译、审批/提问、interrupt/stop         |
-| `src/types.ts`     | 最小结构化 Cordis 类型与运行时守卫                           |
-| `cordis.patch.yml` | bundle 补丁：`insert` 一行 `rcs-bridge`                      |
-| `scripts/build.ts` | Bun.build 打成单个 `lib/index.js`（内联 core，零运行时依赖） |
-| `plugin-market/`   | 发布到 Discover 的索引样例（npm 源）                         |
+| 文件                       | 职责                                                         |
+| -------------------------- | ------------------------------------------------------------ |
+| `src/index.ts`             | 插件入口：`name` / `inject` / `apply`，注册 disposer         |
+| `src/config.ts`            | config + env 的字段级解析与校验                              |
+| `src/message.ts`           | 冻结的 user message（复刻 dsh-llm 的 `createUserMessage`）   |
+| `src/bridge.ts`            | 单会话编排：SSE、事件翻译、审批/提问、interrupt/stop         |
+| `src/supervisor.ts`        | 环境模式：注册、work 轮询/ack、多桥生命周期、maxSessions     |
+| `src/sync.ts`              | `/rcs-sync`：把既有 dsh 会话推成 RCS 会话（不回填历史）      |
+| `src/commands.ts`          | `/rcs-max-sessions`、`/rcs-sync` 的注册与实现                |
+| `src/sidecar.ts`           | `$DSH_HOME/rcs-bridge/sessions.json` 的读写与双向 id 映射    |
+| `src/environment-state.ts` | 环境 id 的持久化（`environment.json`）                       |
+| `src/types.ts`             | 最小结构化 Cordis 类型与运行时守卫                           |
+| `cordis.patch.yml`         | bundle 补丁：`insert` 一行 `rcs-bridge`                      |
+| `scripts/build.ts`         | Bun.build 打成单个 `lib/index.js`（内联 core，零运行时依赖） |
+| `plugin-market/`           | 发布到 Discover 的索引样例（npm 源）                         |
 
 ## 发布物料
 
@@ -141,3 +175,11 @@ bun run e2e
   `$DSH_HOME` 与 RCS 账号时可能选中对方的会话，请显式配置 `sessionId` 区分。
 - 插件声明依赖 `agents` 与 `sessionQuery`，都由 dsh-base 提供；`sdk-minimal` 这类不叠 base
   的 profile 不会加载本插件。
+- 环境模式的本地状态都在 `$DSH_HOME/rcs-bridge/`：`environment.json`（上次环境 id）、
+  `sessions.json`（`/rcs-sync` 的双向 id 映射）；文件 0600、原子写，损坏时改名 `.bak` 并从空
+  映射重建。
+- 环境模式默认假设「一个 RCS 账号 + 一台本机」。多个 dsh 进程共用同一 `$DSH_HOME`、或同一
+  环境被多台机器注册时，环境 id 与会话归属可能互相覆盖；请显式配置 `environmentId` / `sessionId`。
+- C 路径（重启后重连）依赖 `bridge/reconnect` 让 RCS 重投在飞会话；服务端 `reclaim_older_than_ms`
+  兜底，最坏情况下会话要等 reclaim 窗口过去才会被重新派发。
+- `/rcs-*` 斜杠命令只在 profile 提供 `commands` 服务时注册；`environment` 模式本身不依赖它。

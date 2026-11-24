@@ -12,6 +12,14 @@
 它复用本包的 core（事件/审批翻译与 RCS 客户端），省掉子进程与 JSON-RPC，停止走 `agent.cancel()`；
 本独立包保留给需要进程隔离或独立重启的场景。
 
+`src/core.ts` 是两者共用的纯逻辑入口，除事件/审批翻译与 `RcsClient` 外，还导出环境 worker
+协议：`RcsEnvironmentClient`（注册/长轮询/ack/heartbeat/stop/reconnect/deregister）、
+`parseWorkSecret` / `toWorkerSession`（work secret → `WorkerSession`）、`RcsHttpError`
+（带 `status`/`body` 的类型化错误）。`RcsClient` 新增 `createSession(title, environmentId?)`
+与 `setExternalMetadata(worker, metadata)`，`translate` 新增 `userMessageEvent`（dsh UI 键入的
+消息回发 RCS）。环境模式的设计见
+[`docs/superpowers/specs/2026-11-24-dsh-rcs-environment-bridge-design.md`](../../docs/superpowers/specs/2026-11-24-dsh-rcs-environment-bridge-design.md)。
+
 ## 运行
 
 前置：
@@ -97,14 +105,16 @@ bash 工具轮（`result:success`，输出校验）→ 中断（`result:aborted 
 
 ## 结构
 
-| 文件               | 职责                                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/index.ts`     | 入口：读配置、启动桥、处理信号                                                                                                        |
-| `src/config.ts`    | 环境变量 → 桥配置与 dsh 启动方式                                                                                                      |
-| `src/rcs.ts`       | RCS 客户端：建会话、换 worker 凭据、上报事件/状态、心跳、解析 worker SSE（会拆 `{event_id, sequence_num, event_type, payload}` 信封） |
-| `src/dsh.ts`       | dsh JSON-RPC 客户端：独立进程组启动、按行分帧、反向请求兜底、停进程组                                                                 |
-| `src/translate.ts` | 事件/审批/提问的双向翻译，以及 prompt 内容块转换                                                                                      |
-| `src/session.ts`   | 单会话编排：轮次、审批/提问挂起与答复、interrupt/stop + resume                                                                        |
+| 文件                 | 职责                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/index.ts`       | 入口：读配置、启动桥、处理信号                                                                                                        |
+| `src/config.ts`      | 环境变量 → 桥配置与 dsh 启动方式                                                                                                      |
+| `src/rcs.ts`         | RCS 客户端：建会话、换 worker 凭据、上报事件/状态、心跳、解析 worker SSE（会拆 `{event_id, sequence_num, event_type, payload}` 信封） |
+| `src/environment.ts` | 环境 worker 协议：注册、work 长轮询、ack/heartbeat/stop/reconnect/deregister、work secret 解析                                        |
+| `src/core.ts`        | 独立桥与插件共用的纯逻辑导出（客户端、翻译、守卫、环境协议）                                                                          |
+| `src/dsh.ts`         | dsh JSON-RPC 客户端：独立进程组启动、按行分帧、反向请求兜底、停进程组                                                                 |
+| `src/translate.ts`   | 事件/审批/提问的双向翻译，以及 prompt 内容块转换                                                                                      |
+| `src/session.ts`     | 单会话编排：轮次、审批/提问挂起与答复、interrupt/stop + resume                                                                        |
 
 ## 已知限制
 
