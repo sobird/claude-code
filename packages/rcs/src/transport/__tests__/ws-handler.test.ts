@@ -47,6 +47,7 @@ function makeConfig(overrides: Partial<GatewayConfig> = {}): GatewayConfig {
     host: '0.0.0.0',
     authSecret: 'test-secret',
     baseUrl: 'http://localhost:4000',
+    webUrl: 'http://localhost:4000',
     apiKeys: [],
     pollTimeout: 0,
     heartbeatInterval: 20,

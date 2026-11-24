@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { resolveConfig } from '../src/config'
+import { resolveConfig, resolveConnection } from '../src/config'
 
 describe('resolveConfig', () => {
   test('falls back to defaults when only the API key is provided', () => {
@@ -90,5 +90,36 @@ describe('resolveConfig', () => {
   test('rejects a non-positive max sessions', () => {
     expect(() => resolveConfig({ apiKey: 'k' }, { RCS_MAX_SESSIONS: '0' })).toThrow(/maxSessions/)
     expect(() => resolveConfig({ apiKey: 'k' }, { RCS_MAX_SESSIONS: 'abc' })).toThrow(/maxSessions/)
+  })
+
+  test('env key wins over a paired credential', () => {
+    expect(resolveConfig({}, { RCS_API_KEY: 'env-key' }, { apiKey: 'paired' }).apiKey).toBe('env-key')
+  })
+
+  test('config key wins over a paired credential', () => {
+    expect(resolveConfig({ apiKey: 'cfg' }, {}, { apiKey: 'paired' }).apiKey).toBe('cfg')
+  })
+
+  test('uses the paired credential when config and env leave the key empty', () => {
+    expect(resolveConfig({}, {}, { apiKey: 'paired' }).apiKey).toBe('paired')
+  })
+
+  test('still rejects when neither config, env, nor credentials supply a key', () => {
+    expect(() => resolveConfig({}, {}, { apiKey: '' })).toThrow('RCS_API_KEY is required')
+  })
+})
+
+describe('resolveConnection', () => {
+  test('returns the base URL and leaves the key undefined when nothing supplies one', () => {
+    expect(resolveConnection({}, {})).toEqual({ rcsBaseUrl: 'http://localhost:4000', apiKey: undefined })
+  })
+
+  test('config overrides env and trailing slashes are stripped', () => {
+    expect(
+      resolveConnection(
+        { apiKey: 'cfg', rcsBaseUrl: 'https://cfg/' },
+        { RCS_API_KEY: 'env', RCS_BASE_URL: 'https://env' },
+      ),
+    ).toEqual({ rcsBaseUrl: 'https://cfg', apiKey: 'cfg' })
   })
 })

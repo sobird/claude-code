@@ -10,6 +10,7 @@ import type { Database } from '@/db/client'
 
 import { createApiKeyRepository } from './api-keys'
 import { createAttachmentRepository } from './attachments'
+import { createDeviceCodeRepository } from './device-codes'
 import { createEnvironmentRepository } from './environments'
 import { createEventRepository } from './events'
 import { createPushSettingsRepository } from './push-settings'
@@ -25,6 +26,7 @@ export function createRepositories(db: Database): Repositories {
   return {
     users: createUserRepository(db),
     apiKeys: createApiKeyRepository(db),
+    deviceCodes: createDeviceCodeRepository(db),
     environments: createEnvironmentRepository(db),
     sessions: createSessionRepository(db),
     workItems: createWorkItemRepository(db),
@@ -42,6 +44,7 @@ export const createUserRepositories = createRepositories
 
 export { createApiKeyRepository } from './api-keys'
 export { createAttachmentRepository } from './attachments'
+export { createDeviceCodeRepository } from './device-codes'
 export { createEnvironmentRepository } from './environments'
 export { createEventRepository } from './events'
 export { createPushSettingsRepository } from './push-settings'
@@ -55,10 +58,12 @@ export type {
   AttachmentRepository,
   CreateAttachmentInput,
   CreateApiKeyInput,
+  CreateDeviceCodeInput,
   CreateEnvironmentInput,
   CreatePushSubscriptionInput,
   CreateSessionInput,
   CreateUserInput,
+  DeviceCodeRepository,
   EnqueueWorkItemInput,
   EnvironmentPatch,
   EnvironmentRepository,

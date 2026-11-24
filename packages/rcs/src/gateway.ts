@@ -14,6 +14,7 @@ import type { AppEnv } from '@/auth/context'
 import { webCorsOptions } from '@/auth/cors'
 import type { Repositories } from '@/db/repositories/types'
 import acpRoutes from '@/routes/acp'
+import v1DeviceAuth from '@/routes/v1/device'
 import v1Environments from '@/routes/v1/environments'
 import v1EnvironmentsWork from '@/routes/v1/environments.work'
 import v1SessionIngress from '@/routes/v1/session-ingress'
@@ -27,6 +28,7 @@ import webAdmin from '@/routes/web/admin'
 import webAttachments from '@/routes/web/attachments'
 import webAuth from '@/routes/web/auth'
 import webControl from '@/routes/web/control'
+import webDevice from '@/routes/web/device'
 import webEnvironments from '@/routes/web/environments'
 import webPush from '@/routes/web/push'
 import webSessions from '@/routes/web/sessions'
@@ -69,6 +71,9 @@ export function createGateway({ config, repos }: CreateGatewayOptions): Hono<App
 
   app.route('/v1/sessions', v1Sessions)
 
+  // 设备码配对必须免鉴权：插件正是靠它换取第一把 API key。
+  app.route('/v1/auth/device', v1DeviceAuth)
+
   // Ingress is mounted at both /v1 and /v2 so the CLI's buildSdkUrl works with or without
   // an Envoy proxy rewriting /v1 → /v2.
   app.route('/v1/session_ingress', v1SessionIngress)
@@ -83,6 +88,7 @@ export function createGateway({ config, repos }: CreateGatewayOptions): Hono<App
   app.route('/web', webSessions)
   app.route('/web', webControl)
   app.route('/web', webAttachments)
+  app.route('/web', webDevice)
   app.route('/web', webEnvironments)
   app.route('/web', webAccount)
   app.route('/web', webAdmin)

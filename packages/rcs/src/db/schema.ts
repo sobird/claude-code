@@ -68,6 +68,27 @@ export const apiKeys = pgTable(
   (table) => [index('api_keys_user_id_idx').on(table.userId)],
 )
 
+/**
+ * 设备码配对（RFC 8628 风格）：CLI 先拿到 `device_code`（只存哈希），用户在 Web 端批准
+ * 短码后，token 端点原子占用该行再铸 key。批准本身不落明文，避免 key 留在库里。
+ */
+export const deviceCodes = pgTable(
+  'device_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    deviceCodeHash: text('device_code_hash').notNull().unique(),
+    userCode: text('user_code').notNull(),
+    clientName: text('client_name'),
+    hostname: text('hostname'),
+    approvedByUserId: uuid('approved_by_user_id').references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: true, mode: 'date' }),
+    consumedAt: timestamp('consumed_at', { withTimezone: true, mode: 'date' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index('device_codes_user_code_idx').on(table.userCode)],
+)
+
 export const environments = pgTable(
   'environments',
   {
@@ -264,6 +285,7 @@ export const pushSubscriptions = pgTable(
  */
 export type UserRecord = typeof users.$inferSelect
 export type ApiKeyRecord = typeof apiKeys.$inferSelect
+export type DeviceCodeRecord = typeof deviceCodes.$inferSelect
 export type EnvironmentRecord = typeof environments.$inferSelect
 export type SessionRecord = typeof sessions.$inferSelect
 export type SessionWorkerRecord = typeof sessionWorkers.$inferSelect
@@ -278,6 +300,7 @@ export type PushVapidKeys = Pick<typeof pushSettings.$inferSelect, 'publicKey' |
 export const schema = {
   users,
   apiKeys,
+  deviceCodes,
   environments,
   sessions,
   sessionWorkers,

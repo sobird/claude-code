@@ -12,6 +12,7 @@
 export type {
   ApiKeyRecord,
   AttachmentRecord,
+  DeviceCodeRecord,
   EnvironmentRecord,
   PushSubscriptionRecord,
   PushVapidKeys,

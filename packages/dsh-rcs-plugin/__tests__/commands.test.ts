@@ -6,10 +6,19 @@ import { join } from 'node:path'
 import { RcsClient } from '@sobird/dsh-bridge/core'
 import { FakeRcs, waitFor } from '@sobird/dsh-bridge/testing'
 
-import { registerCommands, runMaxSessionsCommand } from '../src/commands'
+import { registerCommands, runLoginCommand, runLogoutCommand, runMaxSessionsCommand } from '../src/commands'
 import type { ResolvedConfig } from '../src/config'
+import { readCredentials, writeCredentials } from '../src/credentials'
 import { startSupervisor, type SessionSupervisor } from '../src/supervisor'
 import { FakeContext } from './helpers/fake-ctx'
+
+const GRANT = {
+  deviceCode: 'device-code',
+  userCode: 'ABCD-2345',
+  verificationUri: 'https://rcs.example.com/device',
+  expiresIn: 600,
+  interval: 5,
+}
 
 function envConfig(origin: string): ResolvedConfig {
   return {
@@ -84,8 +93,14 @@ describe('rcs-max-sessions', () => {
       rcs: new RcsClient({ baseUrl: rcs.origin, apiKey: 'test-key' }),
     })
 
-    expect(definitions.map((definition) => definition.name)).toEqual(['rcs-max-sessions', 'rcs-sync'])
-    for (const definition of definitions) {
+    expect(definitions.map((definition) => definition.name)).toEqual([
+      'rcs-max-sessions',
+      'rcs-sync',
+      'rcs-login',
+      'rcs-logout',
+    ])
+    // 只有环境管理类命令受模式限制；login/logout 在任何模式下都可用。
+    for (const definition of definitions.slice(0, 2)) {
       const result = await definition.handler({ rawInput: '', agent: { id: 'session-local' } })
       expect(result).toMatchObject({ kind: 'error' })
       expect(result).toHaveProperty('text', expect.stringContaining('环境模式'))
@@ -117,5 +132,62 @@ describe('rcs-max-sessions', () => {
     expect(definitions[0]?.input).toEqual({ hint: '<正整数>' })
     const result = await definitions[0]?.handler({ rawInput: '3' })
     expect(result).toMatchObject({ kind: 'success' })
+  })
+})
+
+describe('rcs-login / rcs-logout', () => {
+  test('login pairs with force and writes the credential file', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'rcs-login-'))
+    const result = await runLoginCommand({
+      config: envConfig('https://rcs.example.com'),
+      stateDir,
+      openUrl: () => {},
+      deviceClient: {
+        async requestCode() {
+          return GRANT
+        },
+        async pollToken() {
+          return { status: 'approved', apiKey: 'rcs_login' }
+        },
+      },
+    })
+
+    expect(result.kind).toBe('success')
+    expect(result.text).toContain('重启')
+    expect((await readCredentials(stateDir))?.apiKey).toBe('rcs_login')
+  })
+
+  test('login surfaces failures as an error result', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'rcs-login-'))
+    const result = await runLoginCommand({
+      config: envConfig('https://rcs.example.com'),
+      stateDir,
+      openUrl: () => {},
+      deviceClient: {
+        async requestCode() {
+          throw new Error('offline')
+        },
+        async pollToken() {
+          throw new Error('offline')
+        },
+      },
+    })
+
+    expect(result.kind).toBe('error')
+    expect(result.text).toContain('offline')
+  })
+
+  test('logout clears the file and is idempotent', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'rcs-logout-'))
+    await writeCredentials(stateDir, {
+      version: 1,
+      rcsBaseUrl: 'https://rcs.example.com',
+      apiKey: 'rcs_saved',
+      createdAt: '2026-11-24T00:00:00.000Z',
+    })
+
+    expect((await runLogoutCommand(stateDir)).kind).toBe('success')
+    expect(await readCredentials(stateDir)).toBeNull()
+    expect((await runLogoutCommand(stateDir)).kind).toBe('success')
   })
 })

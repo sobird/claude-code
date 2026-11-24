@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 
 import { Hono } from 'hono'
 
+import { hashApiKey } from '@/auth/api-key'
 import type { AppEnv } from '@/auth/context'
 import { hashPassword, verifyPassword } from '@/auth/password'
 import { signAccessToken } from '@/auth/tokens'
@@ -9,6 +10,7 @@ import { loadConfig } from '@/config'
 import type { UserRecord } from '@/contracts'
 import type { Repositories } from '@/db/repositories/types'
 import { createTestRepositories, TEST_USER_IDS } from '@/db/testing'
+import v1DeviceAuth from '@/routes/v1/device'
 import v1Environments from '@/routes/v1/environments'
 import v1EnvironmentsWork from '@/routes/v1/environments.work'
 import v1Sessions from '@/routes/v1/sessions'
@@ -20,6 +22,7 @@ import webAccount from '@/routes/web/account'
 import webAdmin from '@/routes/web/admin'
 import webAuth from '@/routes/web/auth'
 import webControl from '@/routes/web/control'
+import webDevice from '@/routes/web/device'
 import webEnvironments from '@/routes/web/environments'
 import webSessions from '@/routes/web/sessions'
 import { settleBridgeResponse } from '@/transport/bridge-requests'
@@ -120,6 +123,7 @@ function createApp(repos: Repositories) {
   app.route('/v1/sessions', v1Sessions)
   app.route('/v1/environments', v1Environments)
   app.route('/v1/environments', v1EnvironmentsWork)
+  app.route('/v1/auth/device', v1DeviceAuth)
   app.route('/v1/code/sessions', v2CodeSessions)
   app.route('/v1/code/sessions', v2Worker)
   app.route('/v1/code/sessions', v2WorkerEventsStream)
@@ -127,6 +131,7 @@ function createApp(repos: Repositories) {
   app.route('/web', webAuth)
   app.route('/web', webSessions)
   app.route('/web', webControl)
+  app.route('/web', webDevice)
   app.route('/web', webEnvironments)
   app.route('/web', webAccount)
   app.route('/web', webAdmin)
@@ -2521,6 +2526,180 @@ describe('Web Admin Routes', () => {
     })
     expect(res.status).toBe(200)
     expect((await s.repos.users.getById(s.admin.id))?.role).toBe('member')
+  })
+})
+
+describe('device code pairing', () => {
+  interface Grant {
+    device_code: string
+    user_code: string
+    verification_uri: string
+    expires_in: number
+    interval: number
+  }
+
+  async function startPairing(body: Record<string, unknown> = { client: 'dsh-rcs-plugin', hostname: 'mac' }) {
+    const res = await app.request('/v1/auth/device/code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    expect(res.status).toBe(200)
+    return (await resJson(res)) as Grant
+  }
+
+  function poll(deviceCode: string) {
+    return app.request('/v1/auth/device/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_code: deviceCode }),
+    })
+  }
+
+  test('issues a grant without authentication', async () => {
+    const grant = await startPairing()
+    expect(grant.device_code.length).toBeGreaterThan(20)
+    expect(grant.user_code).toMatch(/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/)
+    expect(grant.verification_uri).toBe(`${loadConfig().webUrl}/device`)
+    expect(grant.expires_in).toBe(600)
+    expect(grant.interval).toBe(5)
+  })
+
+  test('stays pending until approved and hands the key out exactly once', async () => {
+    const grant = await startPairing()
+
+    const pending = await poll(grant.device_code)
+    expect(pending.status).toBe(200)
+    expect(((await resJson(pending)) as { status?: string }).status).toBe('pending')
+
+    const approvedRow = await s.repos.deviceCodes.approve(grant.user_code.replace('-', ''), s.member.id)
+    expect(approvedRow?.approvedByUserId).toBe(s.member.id)
+
+    const approved = await poll(grant.device_code)
+    expect(approved.status).toBe(200)
+    const body = (await resJson(approved)) as { status: string; api_key: string; prefix: string; name: string }
+    expect(body.status).toBe('approved')
+    expect(body.api_key.startsWith('rcs_')).toBe(true)
+    expect(body.prefix).toBe(body.api_key.slice(0, 12))
+    expect(body.name).toBe('dsh @ mac')
+
+    // 第二次轮询不再返回 key。
+    expect((await poll(grant.device_code)).status).toBe(404)
+
+    // 铸出的 key 就是普通用户凭据。
+    const keys = await app.request('/web/api-keys', { headers: bearer(body.api_key) })
+    expect(keys.status).toBe(200)
+    expect(((await resJson(keys)) as Array<{ prefix: string }>).some((key) => key.prefix === body.prefix)).toBe(true)
+  })
+
+  test('unknown device codes are 404', async () => {
+    expect((await poll('nope')).status).toBe(404)
+  })
+
+  test('expired device codes report their status', async () => {
+    const raw = 'expired-device-code'
+    const code = 'EXPR0001'
+    await s.repos.deviceCodes.create({
+      deviceCodeHash: hashApiKey(raw),
+      userCode: code,
+      clientName: 'dsh-rcs-plugin',
+      hostname: null,
+      expiresAt: new Date(Date.now() - 1000),
+    })
+
+    const res = await poll(raw)
+    expect(res.status).toBe(200)
+    expect(((await resJson(res)) as { status?: string }).status).toBe('expired')
+  })
+})
+
+describe('web device approval', () => {
+  async function startPairing() {
+    const res = await app.request('/v1/auth/device/code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client: 'dsh-rcs-plugin', hostname: 'mac' }),
+    })
+    expect(res.status).toBe(200)
+    return (await resJson(res)) as { device_code: string; user_code: string }
+  }
+
+  test('requires an authenticated user', async () => {
+    expect((await app.request('/web/auth/device/ABCD2345')).status).toBe(401)
+    expect(
+      (await app.request('/web/auth/device/approve', { method: 'POST', body: JSON.stringify({ user_code: 'x' }) }))
+        .status,
+    ).toBe(401)
+  })
+
+  test('previews, approves, and then the public token endpoint hands out the key', async () => {
+    const grant = await startPairing()
+    const typed = grant.user_code.toLowerCase()
+
+    const preview = await app.request(`/web/auth/device/${typed}`, { headers: bearer(s.memberToken) })
+    expect(preview.status).toBe(200)
+    const previewBody = (await resJson(preview)) as {
+      client: string
+      hostname: string
+      expires_at: number
+      status: string
+    }
+    expect(previewBody.client).toBe('dsh-rcs-plugin')
+    expect(previewBody.hostname).toBe('mac')
+    expect(previewBody.expires_at).toBeGreaterThan(Math.floor(Date.now() / 1000))
+    expect(previewBody.status).toBe('pending')
+
+    const approve = await app.request('/web/auth/device/approve', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ user_code: grant.user_code }),
+    })
+    expect(approve.status).toBe(200)
+    expect(await resJson(approve)).toEqual({ ok: true, name: 'dsh @ mac' })
+
+    const token = await app.request('/v1/auth/device/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_code: grant.device_code }),
+    })
+    expect(token.status).toBe(200)
+    expect(((await resJson(token)) as { status: string }).status).toBe('approved')
+
+    // 已消费的码不能再批准第二次。
+    const again = await app.request('/web/auth/device/approve', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ user_code: grant.user_code }),
+    })
+    expect(again.status).toBe(404)
+    expect(((await resJson(again)) as { error: { code: string } }).error.code).toBe('device_code_not_found')
+  })
+
+  test('unknown and expired codes carry stable error codes', async () => {
+    const unknown = await app.request('/web/auth/device/ZZZZ2345', { headers: bearer(s.memberToken) })
+    expect(unknown.status).toBe(404)
+    expect(((await resJson(unknown)) as { error: { code: string } }).error.code).toBe('device_code_not_found')
+
+    const code = 'EXPR2345'
+    await s.repos.deviceCodes.create({
+      deviceCodeHash: hashApiKey('expired-web-code'),
+      userCode: code,
+      clientName: 'dsh-rcs-plugin',
+      hostname: null,
+      expiresAt: new Date(Date.now() - 1000),
+    })
+
+    const expired = await app.request(`/web/auth/device/${code}`, { headers: bearer(s.memberToken) })
+    expect(expired.status).toBe(404)
+    expect(((await resJson(expired)) as { error: { code: string } }).error.code).toBe('device_code_expired')
+
+    const approve = await app.request('/web/auth/device/approve', {
+      method: 'POST',
+      headers: bearer(s.memberToken),
+      body: JSON.stringify({ user_code: code }),
+    })
+    expect(approve.status).toBe(404)
+    expect(((await resJson(approve)) as { error: { code: string } }).error.code).toBe('device_code_expired')
   })
 })
 

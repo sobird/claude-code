@@ -589,6 +589,29 @@
     "question": "Claude 有问题需要你回答",
     "plan": "Claude 的计划等待你确认"
   },
+  "device": {
+    "title": "连接一台机器",
+    "description": "批准正在与本服务器配对的 CLI。",
+    "approveTitle": "批准设备",
+    "approveDescription": "输入 CLI 显示的配对码。配对码十分钟后过期。",
+    "codeLabel": "配对码",
+    "codePlaceholder": "XXXX-XXXX",
+    "lookup": "继续",
+    "lookingUp": "检查中…",
+    "unknownMachine": "未知设备",
+    "unknownClient": "未知客户端",
+    "approve": "批准",
+    "approving": "批准中…",
+    "approved": "已批准",
+    "startOver": "批准其他设备",
+    "install": {
+      "title": "连接一台机器",
+      "description": "在要连接的机器上运行下面的命令。CLI 会显示一个可在此批准的配对码。",
+      "copy": "复制命令",
+      "copied": "已复制",
+      "copyError": "复制失败——请手动选择文本。"
+    }
+  },
   "errors": {
     "generic": "出错了",
     "tokenUnavailable": "无法获取访问令牌——请检查网关。",
@@ -613,7 +636,9 @@
       "session_id_required": "需要提供会话 ID。",
       "bridge_unavailable": "该会话没有在线连接的 agent。",
       "side_question_timeout": "旁问超时。",
-      "side_question_failed": "旁问失败。"
+      "side_question_failed": "旁问失败。",
+      "device_code_not_found": "配对码不存在。",
+      "device_code_expired": "配对码已过期。"
     }
   }
 }

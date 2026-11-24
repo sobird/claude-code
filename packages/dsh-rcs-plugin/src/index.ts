@@ -2,7 +2,11 @@ import { RcsClient, errorMessage } from '@sobird/dsh-bridge/core'
 
 import { startPluginBridge } from './bridge'
 import { registerCommands } from './commands'
-import { resolveConfig } from './config'
+import { resolveConfig, resolveConnection } from './config'
+import { ensureCredentials } from './credentials-flow'
+import { DeviceAuthClient } from './device-auth'
+import { bridgeStateDir } from './environment-state'
+import { openBrowser } from './open-browser'
 import { startSupervisor } from './supervisor'
 import type { PluginContextLike } from './types'
 
@@ -15,10 +19,38 @@ export const name = 'rcs-bridge'
  */
 export const inject = ['agents', 'sessionQuery']
 
-/** 把当前 dsh 进程接到一条 RCS 会话；卸载时中止桥接。 */
-export async function apply(ctx: PluginContextLike, config: unknown): Promise<void> {
+/** 测试可注入的副作用；生产路径全部走默认值。 */
+export interface ApplyDeps {
+  /** 默认 `$DSH_HOME/rcs-bridge`。 */
+  stateDir?: string
+  openUrl?: (url: string) => void
+  now?: () => number
+  sleep?: (ms: number) => Promise<void>
+}
+
+/**
+ * 把当前 dsh 进程接到一条 RCS 会话；卸载时中止桥接。
+ *
+ * 没有任何显式凭据时先走设备码配对（阻塞到批准或超时），拿到 key 后再解析其余配置。
+ */
+export async function apply(ctx: PluginContextLike, config: unknown, deps: ApplyDeps = {}): Promise<void> {
   try {
-    const resolved = resolveConfig(config)
+    const connection = resolveConnection(config)
+    const apiKey =
+      connection.apiKey ??
+      (await ensureCredentials(
+        { rcsBaseUrl: connection.rcsBaseUrl },
+        {
+          stateDir: deps.stateDir ?? bridgeStateDir(process.env),
+          client: new DeviceAuthClient({ baseUrl: connection.rcsBaseUrl }),
+          openUrl: deps.openUrl ?? openBrowser,
+          log: (line) => process.stderr.write(`[dsh-rcs-plugin] ${line}\n`),
+          now: deps.now,
+          sleep: deps.sleep,
+        },
+      ))
+
+    const resolved = resolveConfig(config, process.env, { apiKey })
     const rcs = new RcsClient({ baseUrl: resolved.rcsBaseUrl, apiKey: resolved.apiKey })
     if (resolved.mode === 'environment') {
       const supervisor = await startSupervisor(ctx, resolved)

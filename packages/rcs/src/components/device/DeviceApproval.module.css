@@ -1,0 +1,129 @@
+.root > * + * {
+  margin-top: 1.5rem;
+}
+
+.card {
+  border-color: var(--color-border);
+  background-color: var(--color-surface-1);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.description {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  color: var(--color-text-secondary);
+}
+
+.content > * + * {
+  margin-top: 1rem;
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.input {
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  padding: 0.75rem 1rem;
+}
+
+.machine {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.machineName {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.success {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  padding: 0.75rem 1rem;
+}
+
+.successText {
+  flex: 1 1 12rem;
+}
+
+.successTitle {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.muted {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  color: var(--color-status-active);
+}
+
+.error {
+  font-size: 0.875rem;
+  color: var(--color-status-error);
+}
+
+.command {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-2);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: calc(1.25 / 0.8125);
+  color: var(--color-text-primary);
+  white-space: pre;
+}

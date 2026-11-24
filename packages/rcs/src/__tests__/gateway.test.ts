@@ -51,6 +51,22 @@ describe('createGateway', () => {
     expect((await app.request('/acp/agents')).status).toBe(401)
   })
 
+  test('webUrl defaults to baseUrl and honors RCS_WEB_URL', () => {
+    const defaults = loadConfig({
+      RCS_AUTH_SECRET: 'test-secret',
+      RCS_BASE_URL: 'https://rcs.example.com/',
+    } as unknown as NodeJS.ProcessEnv)
+    expect(defaults.baseUrl).toBe('https://rcs.example.com')
+    expect(defaults.webUrl).toBe('https://rcs.example.com')
+
+    const split = loadConfig({
+      RCS_AUTH_SECRET: 'test-secret',
+      RCS_BASE_URL: 'https://rcs.example.com',
+      RCS_WEB_URL: 'https://ui.example.com/',
+    } as unknown as NodeJS.ProcessEnv)
+    expect(split.webUrl).toBe('https://ui.example.com')
+  })
+
   test('normalizes double-slash paths before routing', async () => {
     const { app } = await makeGateway()
 

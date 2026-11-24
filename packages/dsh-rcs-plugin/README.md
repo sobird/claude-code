@@ -27,12 +27,20 @@ dsh --profile sdk
 就能看到这条会话。后续更新代码后重新 `bun run build`，重启 profile 即生效（链接的是
 checkout 本身）。
 
+首次启动且没有任何凭据时，插件会自动走设备码配对：向 stderr 打印一个短码和
+`<rcsBaseUrl>/device` 链接，打开该链接（未登录会先跳登录）输入短码确认后，插件自动拿到
+API key 并写入 `$DSH_HOME/rcs-bridge/credentials.json`，无需手动生成 key 或改配置。
+
 Web 端也可以走 **Plugins** 菜单用「安装本地插件」添加同一个绝对路径。
 
 ## 配置
 
 字段级优先级：`config.<k>` > 环境变量 > 默认值。插件行默认没有 `config`，纯靠环境变量；
-也可以在 profile 的 `cordis.patch.yml` 里覆盖（包括 `apiKey`）：
+也可以在 profile 的 `cordis.patch.yml` 里覆盖（包括 `apiKey`）。
+
+`apiKey` 的来源优先级是：`config.apiKey` > `RCS_API_KEY` > 本机 `credentials.json`（配对所得）>
+自动设备码配对。前三者任一命中即跳过配对，适合脚本 / CI；headless 环境请显式设
+`RCS_API_KEY`，否则首次启动会阻塞等待配对（最长约 10 分钟）。
 
 ```yaml
 - id: rcs-bridge
@@ -45,7 +53,7 @@ Web 端也可以走 **Plugins** 菜单用「安装本地插件」添加同一个
 
 | 字段（config / 环境变量）              | 必填 | 默认                    | 说明                                                    |
 | -------------------------------------- | ---- | ----------------------- | ------------------------------------------------------- |
-| `apiKey` / `RCS_API_KEY`               | 是   | —                       | 能创建会话的用户 API key                                |
+| `apiKey` / `RCS_API_KEY`               | 否   | 自动设备码配对          | 能创建会话的用户 API key；显式配置则跳过配对            |
 | `rcsBaseUrl` / `RCS_BASE_URL`          | 否   | `http://localhost:4000` | RCS 网关根地址                                          |
 | `workdir` / `DSH_WORKDIR`              | 否   | dsh 进程当前目录        | dsh 会话工作目录                                        |
 | `sessionTitle` / `RCS_SESSION_TITLE`   | 否   | —                       | 新建 RCS 会话的标题，同时设为 dsh 会话标题              |
@@ -105,6 +113,13 @@ Web 端也可以走 **Plugins** 菜单用「安装本地插件」添加同一个
   `/rcs-sync` 把当前 dsh 会话同步成一条新 RCS 会话（见下）。两者都依赖 profile 的
   `commands` 服务，缺失时只记 stderr、不注册。
 
+### 配对命令（与模式无关）
+
+`/rcs-login` 无视已存凭据重新发起设备码配对并覆盖 `credentials.json`（返回值提示重启
+profile 后生效，运行中的客户端仍持旧 key）；`/rcs-logout` 删除本机凭据文件（若环境变量或
+配置仍提供 key，则继续生效）。二者在 `single` / `environment` 两种模式下都注册，单会话模式
+下环境类命令会返回「仅在环境模式可用」的提示。
+
 ### 手动同步（`/rcs-sync`）
 
 把一条既有 dsh 会话（如 `session-<uuid>`）推给 RCS：以 dsh 会话标题新建一条带
@@ -142,21 +157,25 @@ bun run e2e
 
 ## 结构
 
-| 文件                       | 职责                                                         |
-| -------------------------- | ------------------------------------------------------------ |
-| `src/index.ts`             | 插件入口：`name` / `inject` / `apply`，注册 disposer         |
-| `src/config.ts`            | config + env 的字段级解析与校验                              |
-| `src/message.ts`           | 冻结的 user message（复刻 dsh-llm 的 `createUserMessage`）   |
-| `src/bridge.ts`            | 单会话编排：SSE、事件翻译、审批/提问、interrupt/stop         |
-| `src/supervisor.ts`        | 环境模式：注册、work 轮询/ack、多桥生命周期、maxSessions     |
-| `src/sync.ts`              | `/rcs-sync`：把既有 dsh 会话推成 RCS 会话（不回填历史）      |
-| `src/commands.ts`          | `/rcs-max-sessions`、`/rcs-sync` 的注册与实现                |
-| `src/sidecar.ts`           | `$DSH_HOME/rcs-bridge/sessions.json` 的读写与双向 id 映射    |
-| `src/environment-state.ts` | 环境 id 的持久化（`environment.json`）                       |
-| `src/types.ts`             | 最小结构化 Cordis 类型与运行时守卫                           |
-| `cordis.patch.yml`         | bundle 补丁：`insert` 一行 `rcs-bridge`                      |
-| `scripts/build.ts`         | Bun.build 打成单个 `lib/index.js`（内联 core，零运行时依赖） |
-| `plugin-market/`           | 发布到 Discover 的索引样例（npm 源）                         |
+| 文件                       | 职责                                                                |
+| -------------------------- | ------------------------------------------------------------------- |
+| `src/index.ts`             | 插件入口：`name` / `inject` / `apply`，注册 disposer                |
+| `src/config.ts`            | config + env 的字段级解析与校验                                     |
+| `src/message.ts`           | 冻结的 user message（复刻 dsh-llm 的 `createUserMessage`）          |
+| `src/bridge.ts`            | 单会话编排：SSE、事件翻译、审批/提问、interrupt/stop                |
+| `src/supervisor.ts`        | 环境模式：注册、work 轮询/ack、多桥生命周期、maxSessions            |
+| `src/sync.ts`              | `/rcs-sync`：把既有 dsh 会话推成 RCS 会话（不回填历史）             |
+| `src/commands.ts`          | `/rcs-max-sessions`、`/rcs-sync`、`/rcs-login`、`/rcs-logout`       |
+| `src/credentials.ts`       | `credentials.json` 的读写（0700 目录 / 0600 原子写，损坏转 `.bak`） |
+| `src/credentials-flow.ts`  | `ensureCredentials`：命中复用 / 设备码配对编排与轮询                |
+| `src/device-auth.ts`       | 设备码端点客户端（`requestCode` / `pollToken`，免鉴权）             |
+| `src/open-browser.ts`      | 跨平台打开配对链接（仅 http(s)，失败静默）                          |
+| `src/sidecar.ts`           | `$DSH_HOME/rcs-bridge/sessions.json` 的读写与双向 id 映射           |
+| `src/environment-state.ts` | 环境 id 的持久化（`environment.json`）                              |
+| `src/types.ts`             | 最小结构化 Cordis 类型与运行时守卫                                  |
+| `cordis.patch.yml`         | bundle 补丁：`insert` 一行 `rcs-bridge`                             |
+| `scripts/build.ts`         | Bun.build 打成单个 `lib/index.js`（内联 core，零运行时依赖）        |
+| `plugin-market/`           | 发布到 Discover 的索引样例（npm 源）                                |
 
 ## 发布物料
 
@@ -180,6 +199,10 @@ bun run e2e
   映射重建。
 - 环境模式默认假设「一个 RCS 账号 + 一台本机」。多个 dsh 进程共用同一 `$DSH_HOME`、或同一
   环境被多台机器注册时，环境 id 与会话归属可能互相覆盖；请显式配置 `environmentId` / `sessionId`。
+- 首次启动的自动配对会阻塞 `apply`，最长等满设备码有效期（约 10 分钟）。headless / 无人值守
+  场景请设 `RCS_API_KEY` 跳过配对。
+- 凭据文件绑定 `rcsBaseUrl`：换 RCS 服务器会重新配对（有意为之）。明文 key 只经 TLS 传输，
+  部署务必启用 HTTPS。
 - C 路径（重启后重连）依赖 `bridge/reconnect` 让 RCS 重投在飞会话；服务端 `reclaim_older_than_ms`
   兜底，最坏情况下会话要等 reclaim 窗口过去才会被重新派发。
 - `/rcs-*` 斜杠命令只在 profile 提供 `commands` 服务时注册；`environment` 模式本身不依赖它。

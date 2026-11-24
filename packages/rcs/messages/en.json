@@ -589,6 +589,29 @@
     "question": "Claude has a question for you",
     "plan": "Claude has a plan ready for review"
   },
+  "device": {
+    "title": "Connect a machine",
+    "description": "Approve a CLI that is pairing with this server.",
+    "approveTitle": "Approve a device",
+    "approveDescription": "Enter the pairing code shown by the CLI. The code expires after ten minutes.",
+    "codeLabel": "Pairing code",
+    "codePlaceholder": "XXXX-XXXX",
+    "lookup": "Continue",
+    "lookingUp": "Checking...",
+    "unknownMachine": "Unknown device",
+    "unknownClient": "Unknown client",
+    "approve": "Approve",
+    "approving": "Approving...",
+    "approved": "Approved",
+    "startOver": "Approve another device",
+    "install": {
+      "title": "Connect a machine",
+      "description": "Run this on the machine you want to connect. The CLI prints a pairing code you can approve here.",
+      "copy": "Copy command",
+      "copied": "Copied",
+      "copyError": "Could not copy — select the text manually."
+    }
+  },
   "errors": {
     "generic": "Something went wrong",
     "tokenUnavailable": "Unable to obtain an access token — check the gateway.",
@@ -613,7 +636,9 @@
       "session_id_required": "A session ID is required.",
       "bridge_unavailable": "No live agent is connected to this session.",
       "side_question_timeout": "The side question timed out.",
-      "side_question_failed": "The side question failed."
+      "side_question_failed": "The side question failed.",
+      "device_code_not_found": "Pairing code not found.",
+      "device_code_expired": "This pairing code has expired."
     }
   }
 }

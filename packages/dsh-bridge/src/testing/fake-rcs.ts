@@ -15,6 +15,10 @@ export class FakeRcs {
   readonly externalMetadata: Record<string, unknown>[] = []
   /** 环境注册请求体。 */
   readonly environmentRegistrations: Record<string, unknown>[] = []
+  /** 设备码配对：`/v1/auth/device/code` 收到的请求体。 */
+  readonly deviceCodeRequests: Record<string, unknown>[] = []
+  /** 设备码 token 轮询按顺序出队；队空返回 404。 */
+  readonly deviceTokenStates: Record<string, unknown>[] = []
   readonly acked: string[] = []
   readonly stopped: string[] = []
   readonly reconnected: string[] = []
@@ -161,6 +165,23 @@ export class FakeRcs {
     if (request.method === 'GET' && path === `/v1/code/sessions/${session}/worker/events/stream`) {
       if (this.workerExpired) return json({ error: 'worker token expired' }, 401)
       return new Response(this.openStream(), { headers: { 'content-type': 'text/event-stream' } })
+    }
+
+    if (request.method === 'POST' && path === '/v1/auth/device/code') {
+      const body = await readJson(request)
+      if (isRecord(body)) this.deviceCodeRequests.push(body)
+      return json({
+        device_code: 'device-code-1234567890abcdef',
+        user_code: 'ABCD-2345',
+        verification_uri: 'https://rcs.example.com/device',
+        expires_in: 600,
+        interval: 5,
+      })
+    }
+    if (request.method === 'POST' && path === '/v1/auth/device/token') {
+      const next = this.deviceTokenStates.shift()
+      if (!next) return json({ error: 'unknown device code' }, 404)
+      return json(next)
     }
 
     if (request.method === 'POST' && path === '/v1/environments/bridge') {

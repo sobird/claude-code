@@ -26,6 +26,8 @@ export const KNOWN_ERROR_CODES = [
   'bridge_unavailable',
   'side_question_timeout',
   'side_question_failed',
+  'device_code_not_found',
+  'device_code_expired',
 ] as const
 
 export type KnownErrorCode = (typeof KNOWN_ERROR_CODES)[number]

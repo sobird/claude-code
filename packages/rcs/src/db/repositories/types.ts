@@ -10,6 +10,7 @@
 import type {
   ApiKeyRecord,
   AttachmentRecord,
+  DeviceCodeRecord,
   EnvironmentRecord,
   PushSubscriptionRecord,
   PushVapidKeys,
@@ -81,6 +82,33 @@ export interface ApiKeyRepository {
   revoke(id: string, at: Date): Promise<void>
   /** All keys owned by the user, including revoked ones (the UI filters display). */
   listByUser(userId: string): Promise<ApiKeyRecord[]>
+}
+
+export interface CreateDeviceCodeInput {
+  /** sha256 hex of the raw `device_code`; the raw value never reaches this layer. */
+  deviceCodeHash: string
+  /** 归一化后的短码（无连字符），用户在 Web 端输入。 */
+  userCode: string
+  clientName: string | null
+  hostname: string | null
+  expiresAt: Date
+}
+
+/**
+ * 设备码配对。`approve` 只作用于未批准、未消费、未过期的行；`claim` 是 token 端点的
+ * 一次性占用，调用方拿到行后自行铸 key——明文 key 不落库。
+ */
+export interface DeviceCodeRepository {
+  create(input: CreateDeviceCodeInput): Promise<DeviceCodeRecord>
+  findPendingByUserCode(userCode: string, now?: Date): Promise<DeviceCodeRecord | null>
+  /** 按 device_code 哈希查行（含已批准/已消费/已过期），用于轮询时回报状态。 */
+  findByDeviceCodeHash(deviceCodeHash: string): Promise<DeviceCodeRecord | null>
+  /** 任意状态的短码查询（含已过期/已消费），用于 Web 端区分 not_found 与 expired。 */
+  findByUserCode(userCode: string): Promise<DeviceCodeRecord | null>
+  approve(userCode: string, userId: string, now?: Date): Promise<DeviceCodeRecord | null>
+  claim(deviceCodeHash: string, now?: Date): Promise<DeviceCodeRecord | null>
+  /** 清理长期过期的行；只删 `expiresAt` 早于阈值的记录。 */
+  deleteExpiredBefore(before: Date): Promise<void>
 }
 
 export interface CreateEnvironmentInput {
@@ -198,6 +226,7 @@ export interface PushSettingsRepository {
 export interface Repositories {
   users: UserRepository
   apiKeys: ApiKeyRepository
+  deviceCodes: DeviceCodeRepository
   environments: EnvironmentRepository
   sessions: SessionRepository
   workItems: WorkItemRepository

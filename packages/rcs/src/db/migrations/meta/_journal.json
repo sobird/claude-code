@@ -64,6 +64,13 @@
       "when": 1795442115694,
       "tag": "0008_slippery_songbird",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795488842719,
+      "tag": "0009_unique_magma",
+      "breakpoints": true
     }
   ]
 }

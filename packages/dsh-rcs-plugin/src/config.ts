@@ -59,16 +59,48 @@ function configNumber(config: Record<string, unknown>, key: string): number | un
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
-/** 读取插件配置与环境变量；缺少 API key 时直接报错，不做隐式默认。 */
-export function resolveConfig(input: unknown, env: EnvLike = process.env): ResolvedConfig {
+/** 连接三要素里的两项：去哪、用哪把 key（可能还没有）。 */
+export interface ConnectionConfig {
+  rcsBaseUrl: string
+  apiKey: string | undefined
+}
+
+/**
+ * 只解析「服务器地址 + 显式 key」，不关心是否已配对。
+ *
+ * 启动时先跑它：没有显式 key 就先走设备码配对，再把拿到的 key 交给 `resolveConfig`。
+ */
+export function resolveConnection(input: unknown, env: EnvLike = process.env): ConnectionConfig {
   const config = isRecord(input) ? input : {}
   const apiKey = pick(config, env, 'apiKey', 'RCS_API_KEY')
+  return {
+    rcsBaseUrl: stripTrailingSlash(pick(config, env, 'rcsBaseUrl', 'RCS_BASE_URL') || 'http://localhost:4000'),
+    apiKey: apiKey || undefined,
+  }
+}
+
+/** 已配对的凭据（由设备码流程写入）；优先级低于显式 config/env。 */
+export interface CredentialSource {
+  apiKey: string
+}
+
+/** 读取插件配置与环境变量；缺少 API key 时直接报错，不做隐式默认。 */
+export function resolveConfig(
+  input: unknown,
+  env: EnvLike = process.env,
+  credentials?: CredentialSource,
+): ResolvedConfig {
+  const config = isRecord(input) ? input : {}
+  const connection = resolveConnection(config, env)
+  const apiKey = connection.apiKey || credentials?.apiKey
   if (!apiKey) {
-    throw new Error('rcs-bridge: RCS_API_KEY is required (or set config.apiKey to a user API key)')
+    throw new Error(
+      'rcs-bridge: RCS_API_KEY is required (or set config.apiKey, or run /rcs-login to pair this machine)',
+    )
   }
 
   return {
-    rcsBaseUrl: stripTrailingSlash(pick(config, env, 'rcsBaseUrl', 'RCS_BASE_URL') || 'http://localhost:4000'),
+    rcsBaseUrl: connection.rcsBaseUrl,
     apiKey,
     workdir: pick(config, env, 'workdir', 'DSH_WORKDIR') || process.cwd(),
     sessionTitle: pick(config, env, 'sessionTitle', 'RCS_SESSION_TITLE') || undefined,

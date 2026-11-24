@@ -13,6 +13,8 @@ export interface GatewayConfig {
   host: string
   authSecret: string
   baseUrl: string
+  /** UI origin used to render pairing links; defaults to `baseUrl`. */
+  webUrl: string
   apiKeys: string[]
   pollTimeout: number
   heartbeatInterval: number
@@ -72,6 +74,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig 
 
   const port = readInt(env, 'RCS_PORT', DEFAULT_PORT)
   const baseUrl = (env.RCS_BASE_URL?.trim() || `http://localhost:${port}`).replace(/\/+$/, '')
+  // 开发时 Next 在 :3000、网关在 :4000；设备码批准页属于 UI，必须指向 3000。
+  const webUrl = (env.RCS_WEB_URL?.trim() || baseUrl).replace(/\/+$/, '')
 
   return {
     version: pkg.version,
@@ -79,6 +83,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig 
     host: env.RCS_HOST?.trim() || DEFAULT_HOST,
     authSecret,
     baseUrl,
+    webUrl,
     apiKeys: readList(env, 'RCS_API_KEYS'),
     pollTimeout: readInt(env, 'RCS_POLL_TIMEOUT', DEFAULT_POLL_TIMEOUT),
     heartbeatInterval: readInt(env, 'RCS_HEARTBEAT_INTERVAL', DEFAULT_HEARTBEAT_INTERVAL),

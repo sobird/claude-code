@@ -257,7 +257,7 @@ class EnvironmentSupervisor implements SessionSupervisor {
         log(`environment re-registered (${registration.environmentId})`)
         return
       } catch (error) {
-        log(`environment re-register: ${errorMessage(error)}`)
+        log(`environment re-register: ${errorMessage(error)} — 若 key 已失效，运行 /rcs-login 重新配对`)
         await this.delay(REGISTER_BACKOFF_MS)
       }
     }
